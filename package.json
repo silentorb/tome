@@ -1,0 +1,18 @@
+{
+  "name": "tome",
+  "version": "0.1.0",
+  "description": "Markdown database and tooling",
+  "main": "src/index.ts",
+  "author": "Christopher W. Johnson",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "server": "ts-node packages/tome-server/scripts/start"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "dependencies": {
+    "typescript": "^4.9.4"
+  }
+}
