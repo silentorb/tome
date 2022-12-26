@@ -7,5 +7,9 @@
     ],
     "strict": true,
     "newLine": "lf"
-  }
+  },
+  "include": ["./src/**/*"],
+  "references": [
+    {"path": "../tome-common"}
+  ]
 }

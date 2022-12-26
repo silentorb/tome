@@ -1,13 +1,13 @@
 import * as Koa from 'koa'
 import { renderPage } from './rendering'
+import { ServerConfig } from './types'
+import { initializeConfig } from './config'
 
-export function startServer(env: any = process.env) {
+export function startServer(config: ServerConfig = initializeConfig()) {
+  const { port } = config
+
   const app = new Koa()
-  app.use(async context => {
-    context.body = renderPage()
-  })
-
-  const port = env.PORT || 3000
+  app.use(renderPage(config.data))
 
   console.log(`Starting server on port ${port}`)
 

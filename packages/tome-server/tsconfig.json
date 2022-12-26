@@ -2,12 +2,15 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "ES2022",
-    "jsx": "react-jsx",
     "lib": [
       "ES2021"
     ],
+    "jsx": "react-jsx",
     "strict": true,
     "newLine": "lf"
   },
-  "include": ["./scripts/**/*", "./src/**/*"]
+  "include": ["./scripts/**/*", "./src/**/*"],
+  "references": [
+    {"path": "../tome-common"}
+  ]
 }
