@@ -1,13 +1,17 @@
-import * as fs from 'fs'
-import * as path from 'path'
+import fs from 'fs'
+import path from 'path'
 
 export function listFiles(directory: string) {
   return fs.promises.readdir(directory)
 }
 
-export const sanitizeDirectoryPath = (path: string): string =>
-  path.replace(/\\+/g, '/')
+export const sanitizeFilePath = (filePath: string): string =>
+  filePath.replace(/\\+/g, '/')
 
 export function joinPaths(...args: string[]) {
-  return sanitizeDirectoryPath(path.join(...args))
+  return sanitizeFilePath(path.join(...args))
+}
+
+export function readFile(filePath: string) {
+  return fs.promises.readFile(filePath, 'utf8')
 }

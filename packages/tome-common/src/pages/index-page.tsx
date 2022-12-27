@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { LinkRecord } from '../types'
+import { ParentNavigation } from '../components/misc'
 
 interface Props {
   items: LinkRecord[]
@@ -16,9 +17,7 @@ export const IndexPage = (props: Props) => {
   })
 
   const parentNavigation = props.includeParentNavigation
-    ? (<p>
-      <a href="..">&#9194;</a>
-    </p>) : undefined
+    ? <ParentNavigation/> : undefined
 
   return (
     <>

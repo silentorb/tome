@@ -1,9 +1,17 @@
 import * as React from 'react'
+import { ParentNavigation } from '../components/misc'
 
-export const EditDocument = () => {
+interface Props {
+  content: string
+}
+
+export const EditDocument = (props: Props) => {
   return (
     <>
-      This is a document!
+      <ParentNavigation/>
+      <p>
+        {props.content}
+      </p>
     </>
   )
 }
