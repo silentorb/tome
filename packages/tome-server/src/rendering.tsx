@@ -1,6 +1,6 @@
-import * as React from 'react'
+import React from 'react'
 import { ReactElement } from 'react'
-import * as ReactDOMServer from 'react-dom/server'
+import ReactDOMServer from 'react-dom/server'
 import { DefaultContext } from 'koa'
 import { HtmlRenderer } from './types'
 import { htmlTemplate } from './html'

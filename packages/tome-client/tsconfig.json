@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
     "module": "nodenext",
+    "moduleResolution": "nodenext",
     "target": "ES2022",
     "lib": [
-      "ES2021"
+      "ES2021", "dom"
     ],
     "strict": true,
+    "jsx": "react-jsx",
     "newLine": "lf"
   },
   "include": ["./src/**/*"],

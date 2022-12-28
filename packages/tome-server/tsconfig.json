@@ -6,8 +6,8 @@
     "lib": [
       "ES2021"
     ],
-    "jsx": "react-jsx",
     "strict": true,
+    "jsx": "react-jsx",
     "newLine": "lf"
   },
   "include": ["./scripts/**/*", "./src/**/*"],

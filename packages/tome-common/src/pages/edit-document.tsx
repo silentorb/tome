@@ -9,6 +9,7 @@ export const EditDocument = (props: Props) => {
   return (
     <>
       <ParentNavigation/>
+      <div id="editor"/>
       <p>
         {props.content}
       </p>
