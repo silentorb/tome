@@ -7,11 +7,11 @@ export const htmlTemplate = ({ base, title, content }: HtmlProps) => `<!DOCTYPE 
   <title>${title}</title>
   <link rel="icon" href="data:,">
   <base href="${base}"/>
-  <script type="module" src="${process.env.VITE_DEV_SERVER}/@vite/client"></script>
-  <script type="module" src="${process.env.VITE_DEV_SERVER}/src/index.ts"></script>
+  <script type="module" src="/tome-client.js"></script>
 </head>
 <body>
 ${content}
+<div id="app" />
 </body>
 </html>
 `

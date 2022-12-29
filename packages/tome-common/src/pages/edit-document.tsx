@@ -10,9 +10,9 @@ export const EditDocument = (props: Props) => {
     <>
       <ParentNavigation/>
       <div id="editor"/>
-      <p>
+      <div id="raw-content" hidden={true}>
         {props.content}
-      </p>
+      </div>
     </>
   )
 }

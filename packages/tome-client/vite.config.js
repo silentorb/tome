@@ -52,7 +52,10 @@ module.exports = defineConfig(({ mode }) => {
       minify: isProd ? 'esbuild' : undefined,
       manifest: true,
       rollupOptions: {
-        input: 'src/main.tsx'
+        input: 'src/main.tsx',
+        entryFileNames: `assets/[name].js`,
+        chunkFileNames: `assets/[name].js`,
+        assetFileNames: `assets/[name].[ext]`,
       }
     },
     // plugins: [].concat(reactConfiguration),

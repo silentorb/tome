@@ -8,8 +8,8 @@
   "private": true,
   "scripts": {
     "server": "ts-node packages/tome-server/scripts/start",
-    "build": "yarn workspaces run tome-client build",
-    "dev": "yarn workspaces run tome-client dev"
+    "build": "cd packages/tome-client & yarn build",
+    "dev": "cd packages/tome-client & yarn dev"
   },
   "workspaces": [
     "packages/*"
