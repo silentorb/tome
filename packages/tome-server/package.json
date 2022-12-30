@@ -6,9 +6,11 @@
   "license": "MIT",
   "dependencies": {
     "@koa/router": "^12.0.0",
+    "@types/lodash": "^4.14.191",
     "dotenv": "^16.0.3",
     "koa": "^2.14.1",
-    "koa-static": "^5.0.0",
+    "koa-bodyparser": "^4.3.0",
+    "lodash": "^4.17.21",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "remark-gfm": "^3.0.1",
@@ -18,6 +20,7 @@
   },
   "devDependencies": {
     "@types/koa": "^2.13.5",
+    "@types/koa-bodyparser": "^4.3.10",
     "@types/koa__router": "^12.0.0",
     "@types/node": "^18.11.18",
     "@types/react": "^18.0.26",

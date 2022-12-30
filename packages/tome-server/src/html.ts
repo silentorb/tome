@@ -7,7 +7,8 @@ export const htmlTemplate = ({ base, title, content }: HtmlProps) => `<!DOCTYPE 
   <title>${title}</title>
   <link rel="icon" href="data:,">
   <base href="${base}"/>
-  <script type="module" src="/tome-client.js"></script>
+ <script type="module" src="/@vite/client"></script>
+  <script type="module" src="/src/index.ts"></script>
 </head>
 <body>
 ${content}

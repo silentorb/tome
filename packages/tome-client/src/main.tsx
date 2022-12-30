@@ -1,13 +1,12 @@
-import { newEditor } from './editor.js'
+import React from 'react'
+import ReactDOM from 'react-dom/client'
+import { App } from './components'
 
 function main() {
-  const editorContainer = document.getElementById('editor')
-  if (editorContainer) {
-    newEditor()
-    // editorContainer.appendChild(document.createTextNode("Greetings"))
-    // const root = ReactDOM.createRoot(editorContainer)
-    // const element = <h1>Hello, world</h1>
-    // root.render(element)
+  const container = document.getElementById('app')
+  if (container) {
+    const root = ReactDOM.createRoot(container)
+    root.render(<App/>)
   }
 }
 

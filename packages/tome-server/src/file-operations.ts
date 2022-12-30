@@ -15,3 +15,12 @@ export function joinPaths(...args: string[]) {
 export function readFile(filePath: string) {
   return fs.promises.readFile(filePath, 'utf8')
 }
+
+export async function isExistingDirectory(filePath: string) {
+  try {
+    return (await fs.promises.lstat(filePath)).isDirectory()
+  }
+  catch {
+    return false
+  }
+}
