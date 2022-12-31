@@ -7,9 +7,9 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "server": "ts-node packages/tome-server/scripts/start",
-    "build": "cd packages/tome-client & yarn build",
-    "dev": "cd packages/tome-client & yarn dev"
+    "server": "ts-node packages/server/scripts/start",
+    "build": "cd packages/client & yarn build",
+    "dev": "cd packages/client & yarn dev"
   },
   "workspaces": [
     "packages/*"

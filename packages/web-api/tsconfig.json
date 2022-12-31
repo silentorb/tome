@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "module": "nodenext",
+    "target": "ES2022",
+    "lib": [
+      "ES2021"
+    ],
+    "strict": true,
+    "newLine": "lf"
+  },
+  "include": ["./src/**/*"],
+  "references": [
+    {"path": "../data-api"}
+  ]
+}
