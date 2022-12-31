@@ -7,6 +7,7 @@ export interface LinkRecord {
 }
 
 export interface ExpandedDocument {
+  id: string
   content: string
 }
 
@@ -18,7 +19,6 @@ export interface IndexContainer {
 
 export interface DocumentContainer {
   type: 'document'
-  id: string
   document: ExpandedDocument
 }
 

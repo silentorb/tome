@@ -9,6 +9,7 @@
     "build": "esbuild src/index.ts --bundle --outfile=dist/tome-client.js"
   },
   "dependencies": {
+    "@babel/core": "^7.20.7",
     "@milkdown/core": "^6.5.4",
     "@milkdown/plugin-history": "^6.5.4",
     "@milkdown/plugin-listener": "^6.5.4",
@@ -24,6 +25,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-feather": "^2.0.10",
+    "react-is": "^18.2.0",
     "react-router-dom": "^6.6.1",
     "recoil": "^0.7.6",
     "styled-components": "^5.3.6",

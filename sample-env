@@ -1,0 +1,3 @@
+#DATA_PATH=packages/tome-server/test/templates/story
+DATA_PATH=packages/tome-server/temp/story
+VITE_DEV_SERVER=http://localhost:5173/

@@ -7,8 +7,8 @@ export async function getDocument(filePath: string): Promise<DocumentContainer> 
   if (content) {
     return {
       type: 'document',
-      id: idFromPath(filePath),
       document: {
+        id: idFromPath(filePath),
         content,
       },
     }

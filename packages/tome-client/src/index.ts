@@ -1,2 +1,2 @@
 export * from './main'
-export * from './components/ContentEditor'
+export * from './components/MarkdownEditor'

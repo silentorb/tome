@@ -2,4 +2,4 @@
 
 ## Scenes
 
-* [../scenes/introduce-bob.md]
+* [Bob](../scenes/introduce-bob.md)

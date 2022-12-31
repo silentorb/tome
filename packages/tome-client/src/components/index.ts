@@ -1,2 +1,2 @@
 export * from './App'
-export * from './ContentEditor'
+export * from './MarkdownEditor'
