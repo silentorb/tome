@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ParentNavigation } from './misc'
+import { ParentNavigation } from './ParentNavigation'
 import { MarkdownEditor } from './MarkdownEditor'
 import { Form, Formik } from 'formik'
 import { useRef } from 'react'

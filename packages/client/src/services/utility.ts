@@ -8,7 +8,7 @@ export function getIdFromRequest(url: string) {
   //   return '/'
 
   return urlPath
-    .replace(/^\/data/, '')
+    .replace(/^\/data\/?/, '')
 }
 
 export function withRequestId<T>(loader: ResourceLoader<T>) {

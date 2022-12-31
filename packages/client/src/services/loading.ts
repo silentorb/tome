@@ -1,6 +1,6 @@
-import { Endpoints, ExpandedDocument, Get, GetNodeResponse } from '@tome/web-api'
 import axios from 'axios'
 import { GetNodeProps, ResourceLoader } from './types'
+import { Endpoints, GetNodeResponse } from '@tome/web-api'
 
 
 export const loadNode: ResourceLoader<GetNodeResponse> = async id => {
@@ -9,8 +9,5 @@ export const loadNode: ResourceLoader<GetNodeResponse> = async id => {
 }
 
 export const loadNodeContainer: ResourceLoader<GetNodeProps> = async id => {
-  const container = await loadNode(id)
-  return {
-    container
-  }
+  return loadNode(id)
 }

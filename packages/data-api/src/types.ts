@@ -4,7 +4,7 @@ export interface ExpandedDocument {
 
 export interface RecordLink {
   title: string
-  path: string
+  id: string
   isDirectory: boolean
 }
 

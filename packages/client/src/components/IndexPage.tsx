@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { ParentNavigation } from './misc'
+import { ParentNavigation } from './ParentNavigation'
 import { Link } from 'react-router-dom'
 import { File, Folder } from 'react-feather'
 import { RecordLink } from '@tome/data-api'
@@ -11,11 +11,10 @@ interface Props {
 
 export const IndexPage = (props: Props) => {
   const links = props.items.map(item => {
-    const url = item.isDirectory ? item.path + '/' : item.path
     const icon = item.isDirectory ? <Folder/> : <File/>
-    const absolute = new URL(url, document.location.href).pathname
+    const absolute = new URL(item.id, new URL('data/', document.location.origin)).pathname
     return (
-      <div key={item.path}>
+      <div key={item.id}>
         {icon} <Link to={absolute}>{item.title}</Link>
       </div>
     )
