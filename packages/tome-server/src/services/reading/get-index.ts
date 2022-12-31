@@ -1,6 +1,6 @@
-import { capitalizeFirstLetter, idFromPath } from '../string-formatting'
-import { isExistingDirectory, joinPaths, listFiles } from '../file-operations'
-import { IndexContainer, LinkRecord } from 'tome-common'
+import { capitalizeFirstLetter, idFromPath } from '../../string-formatting'
+import { isExistingDirectory, joinPaths, listFiles } from '../../file-operations'
+import { GetIndexResponse, LinkRecord } from 'tome-common'
 
 const newChildLink = (basePath: string) => async (file: string): Promise<LinkRecord> => {
   const shortPath = idFromPath(file)
@@ -12,7 +12,7 @@ const newChildLink = (basePath: string) => async (file: string): Promise<LinkRec
   }
 }
 
-export async function getIndex(filePath: string): Promise<IndexContainer> {
+export async function getIndex(filePath: string): Promise<GetIndexResponse> {
   const files = await listFiles(filePath)
   const items = await Promise.all(files.map(newChildLink(filePath)))
 

@@ -1,14 +1,14 @@
-import { readFile } from '../file-operations'
-import { DocumentContainer } from 'tome-common'
-import { idFromPath } from '../string-formatting'
+import { readFile } from '../../file-operations'
+import { GetDocumentResponse } from 'tome-common'
+import { idFromPath } from '../../string-formatting'
 
-export async function getDocument(filePath: string): Promise<DocumentContainer> {
+export async function getDocument(id: string, filePath: string): Promise<GetDocumentResponse> {
   const content = await readFile(filePath)
   if (content) {
     return {
       type: 'document',
       document: {
-        id: idFromPath(filePath),
+        id,
         content,
       },
     }

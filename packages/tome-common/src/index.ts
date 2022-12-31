@@ -1,2 +1,3 @@
-export * from './pages'
+export * from './responses'
+export * from './requests'
 export * from './types'
