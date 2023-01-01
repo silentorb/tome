@@ -11,8 +11,7 @@
   },
   "include": ["./scripts/**/*", "./src/**/*"],
   "references": [
-    {"path": "../database"},
-    {"path": "../lawn"},
-    {"path": "../web-api"}
+    {"path": "../web-api"},
+    {"path": "../database"}
   ]
 }

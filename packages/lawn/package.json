@@ -1,23 +1,18 @@
 {
-  "name": "@tome/server",
-  "version": "1.0.0",
+  "name": "@vineyard/lawn",
+  "version": "3.0.0",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "license": "MIT",
   "dependencies": {
     "@koa/router": "^12.0.0",
-    "dotenv": "^16.0.3",
     "koa": "^2.14.1",
-    "koa-bodyparser": "^4.3.0",
-    "@tome/web-api": "1.0.0",
-    "@tome/database": "1.0.0",
-    "@vineyard/lawn": "^3.0.0"
+    "koa-bodyparser": "^4.3.0"
   },
   "devDependencies": {
     "@types/koa": "^2.13.5",
     "@types/koa-bodyparser": "^4.3.10",
     "@types/koa__router": "^12.0.0",
-    "@types/node": "^18.11.18",
-    "ts-node": "^10.9.1"
+    "@types/node": "^18.11.18"
   }
 }

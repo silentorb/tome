@@ -5,8 +5,11 @@ export const Endpoints = {
   nodeSet: '/node/set',
 }
 
+export interface GetNodeRequest {
+  id: string
+}
+
 export interface PostDocumentRequest {
   id: string
   document: ExpandedDocument
 }
-

@@ -1,13 +1,10 @@
-import { ServerConfig } from './types'
-import { DefaultContext } from 'koa'
 import { PostDocumentRequest } from '@tome/web-api'
-import { writeDocument } from '@tome/database'
+import { DatabaseConfig, writeDocument } from '@tome/database'
 
-export type DocumentWriter = (config: ServerConfig) => (context: DefaultContext) => Promise<void>
+export type DocumentWriter = (config: DatabaseConfig) => (request: PostDocumentRequest) => Promise<void>
 
-export const writeDocumentFromRequest: DocumentWriter = config => async context => {
-  const body = context.request.body as PostDocumentRequest
-  const { id } = body
-  const { content } = body.document
-  await writeDocument(config.data)({ id, content })
+export const writeDocumentFromRequest: DocumentWriter = config => async request => {
+  const { id } = request
+  const { content } = request.document
+  await writeDocument(config)({ id, content })
 }

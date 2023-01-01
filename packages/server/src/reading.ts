@@ -1,27 +1,14 @@
-import { DefaultContext } from 'koa'
-import { ServerConfig } from './types'
-import { GetNodeResponse } from '@tome/web-api'
-import { getIdFromRequest } from './utility'
-import { loadNode } from '@tome/database'
+import { GetNodeRequest, GetNodeResponse } from '@tome/web-api'
+import { DatabaseConfig, loadNode } from '@tome/database'
 
-export function withJsonResponse<T>(loader: (context: DefaultContext) => Promise<T>) {
-  return async (context: DefaultContext) => {
-    try {
-      context.body = await loader(context)
-    } catch (error: any) {
-      console.error('Error:', error.message, error.stack)
-    }
-  }
-}
+export type NodeLoader = (config: DatabaseConfig) => (request: GetNodeRequest) => Promise<GetNodeResponse>
 
-export type NodeLoader = (config: ServerConfig) => (context: DefaultContext) => Promise<GetNodeResponse>
-
-export const loadNodeFromRequest: NodeLoader = config => async context => {
-  const id = getIdFromRequest(context)
+export const loadNodeFromRequest: NodeLoader = config => async request => {
+  const { id } = request
 
   if (id.indexOf('.') !== -1 || id[0] === '/')
     throw new Error(`Invalid id: ${id}`)
 
-  const node = await loadNode(config.data)(id)
+  const node = await loadNode(config)(id)
   return { node }
 }
