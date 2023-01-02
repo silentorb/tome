@@ -1,11 +1,17 @@
-export interface ExpandedDocument {
-  content: string
-}
-
 export interface RecordLink {
   title: string
   id: string
-  isDirectory: boolean
+  isDirectory?: boolean
+}
+
+export interface DocumentList {
+  name: string
+  items: RecordLink[]
+}
+
+export interface ExpandedDocument {
+  content: string
+  lists: DocumentList[]
 }
 
 export interface IndexNode {

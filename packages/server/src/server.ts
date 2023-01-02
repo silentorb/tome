@@ -3,7 +3,8 @@ import { initializeConfig } from './config'
 import { newRouter, newServer } from '@vineyard/lawn'
 import { newEndpoints } from './routing'
 
-export function startServer(config: ServerConfig = initializeConfig()) {
+export async function startServer(config?: ServerConfig) {
+  config = config || await initializeConfig()
   const { port } = config
   const endpoints = newEndpoints(config)
 

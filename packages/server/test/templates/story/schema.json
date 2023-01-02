@@ -1,0 +1,24 @@
+{
+  "Character": {
+    "path": "characters",
+    "properties": {
+      "scenes": {
+        "type": {
+          "name": "list",
+          "type": "Scene"
+        }
+      }
+    }
+  },
+  "Scene": {
+    "path": "scenes",
+    "properties": {
+      "characters": {
+        "type": {
+          "name": "list",
+          "type": "Character"
+        }
+      }
+    }
+  }
+}
