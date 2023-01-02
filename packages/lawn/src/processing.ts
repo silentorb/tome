@@ -1,7 +1,12 @@
 import { HttpHandler } from './types'
 import { DefaultContext } from 'koa'
-import { contextToRequest } from './routing'
 import { ErrorHandler, sanitizeError } from './errors'
+
+export function contextToRequest<T>(context: DefaultContext): T {
+  const params = context.request.params || {}
+  const body = context.request.body || {}
+  return { ...params, ...body } as T
+}
 
 export const withJsonResponse = (onError: ErrorHandler) => <Request, Response>(loader: HttpHandler<Request, Response>) => async (context: DefaultContext) => {
   let request: any

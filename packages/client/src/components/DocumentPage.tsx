@@ -26,7 +26,7 @@ export const DocumentPage = (props: Props) => {
         onSubmit={(values, actions) => {
           const context = markdownEditor.current?.ctx
           const markdown = getMarkdown()(context)
-          saveDocument({ id, content: markdown })
+          saveDocument({ id, document: { content: markdown } })
             .then(() => {
               actions.setSubmitting(false)
             })

@@ -4,12 +4,6 @@ import { DefaultContext } from 'koa'
 import { withJsonResponse } from './processing'
 import { defaultErrorHandler, sendErrorResponse } from './errors'
 
-export function contextToRequest<T>(context: DefaultContext): T {
-  const params = context.request.params || {}
-  const body = context.request.body || {}
-  return { ...params, ...body } as T
-}
-
 type CreateEndpoints = (router: Router, adapter?: HandlerAdapter<any, any>) => (endpoints: EndpointDefinition[]) => void
 
 export const defaultHandlerAdapter = () => withJsonResponse(defaultErrorHandler())
