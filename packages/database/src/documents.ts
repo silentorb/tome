@@ -2,6 +2,7 @@ import { DataSchema, ExpandedDocument, Structure } from '@tome/data-api'
 import { DatabaseConfig } from './types'
 import path from 'path'
 import { parseMarkdownAST, processHeaders } from './markdown-parsing'
+import { getDefaultDataSource } from './database'
 
 export function getStructureByName(schema: DataSchema, name: string): Structure | undefined {
   return schema.structures.filter(s => s.name == name)[0]
@@ -19,7 +20,7 @@ export function getStructureFromId(config: DatabaseConfig, id: string): Structur
   // TODO: This will also need to route databases based on the first path token once multiple databases are supported
   const pluralName = pathTokens[pathTokens.length - 2]
 
-  const schema = config.schema
+  const schema = getDefaultDataSource(config).schema
   return getStructureByPathname(schema, pluralName)
 }
 

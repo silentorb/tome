@@ -5,10 +5,15 @@ import { DatabaseConfig, loadSchema } from '@tome/database'
 export async function initializeDataConfig(env: any = process.env): Promise<DatabaseConfig> {
   const filePath = path.resolve(env.DATA_PATH)
   const schema = await loadSchema(filePath)
+  const id = path.basename(filePath)
   return {
-    id: path.basename(filePath),
-    filePath,
-    schema
+    sources: {
+      [id]: {
+        id,
+        filePath,
+        schema
+      }
+    }
   }
 }
 

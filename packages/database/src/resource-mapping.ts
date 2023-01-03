@@ -1,5 +1,6 @@
 import { joinPaths } from './file-operations'
 import { DatabaseConfig } from './types'
+import { getDefaultDataSource } from './database'
 
 export const idFromPath = (pathString: string) =>
   pathString
@@ -7,7 +8,7 @@ export const idFromPath = (pathString: string) =>
     .replace(/\.md$/, '')
 
 export const getDocumentFilePath = (config: DatabaseConfig, id: string) =>
-  joinPaths(config.filePath, id)
+  joinPaths(getDefaultDataSource(config).filePath, id)
 
 export const getMarkdownDocumentFilePath = (config: DatabaseConfig, id: string) =>
   `${getDocumentFilePath(config, id)}.md`

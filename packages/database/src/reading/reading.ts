@@ -4,7 +4,8 @@ import { getDocument } from './get-document'
 import { DatabaseConfig } from '../types'
 import { getDocumentFilePath } from '../resource-mapping'
 import { DataQuery, Node } from '@tome/data-api'
-import { getStructureByName, getStructureFromId } from '../documents'
+import { getStructureByName } from '../documents'
+import { getDefaultDataSource } from '../database'
 
 export const loadNode = (config: DatabaseConfig) => async (id: string) => {
   const baseFilePath = getDocumentFilePath(config, id)
@@ -26,7 +27,7 @@ export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): 
 
   const type = query.filters[0].value
 
-  const structure = getStructureByName(config.schema, type)
+  const structure = getStructureByName(getDefaultDataSource(config).schema, type)
 
   return []
   // const baseFilePath = getDocumentFilePath(config, id)
