@@ -1,15 +1,14 @@
 export interface Property {
-
+  name: string
+  displayName: string
 }
-
-export type PropertyMap = { [key: string]: Property }
 
 export interface Structure {
-  properties: PropertyMap
+  name: string // Usually singular
+  path: string // Usually plural
+  properties: Property[]
 }
 
-export type StructureMap = { [key: string]: Structure }
-
 export interface DataSchema {
-  structures: StructureMap
+  structures: Structure[]
 }

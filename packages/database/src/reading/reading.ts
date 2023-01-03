@@ -8,8 +8,8 @@ export const loadNode = (config: DatabaseConfig) => async (id: string) => {
   const baseFilePath = getDocumentFilePath(config, id)
   const isDirectory = await isExistingDirectory(baseFilePath)
   if (isDirectory) {
-   return getIndex(id, baseFilePath)
+    return getIndex(id, baseFilePath)
   } else {
-   return getDocument(id, `${baseFilePath}.md`)
+    return getDocument(config, id, `${baseFilePath}.md`)
   }
 }

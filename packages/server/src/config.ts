@@ -3,11 +3,12 @@ import * as path from 'path'
 import { DatabaseConfig, loadSchema } from '@tome/database'
 
 export async function initializeDataConfig(env: any = process.env): Promise<DatabaseConfig> {
-  const directoryPath = path.resolve(env.DATA_PATH)
-  const schema = await loadSchema(directoryPath)
+  const filePath = path.resolve(env.DATA_PATH)
+  const schema = await loadSchema(filePath)
   return {
-    path: directoryPath,
-    schema,
+    id: path.basename(filePath),
+    filePath,
+    schema
   }
 }
 

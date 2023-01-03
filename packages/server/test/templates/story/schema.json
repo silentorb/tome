@@ -1,24 +1,32 @@
 {
-  "Character": {
-    "path": "characters",
-    "properties": {
-      "scenes": {
-        "type": {
-          "name": "list",
-          "type": "Scene"
+  "structures": [
+    {
+      "name": "Character",
+      "path": "characters",
+      "properties": [
+        {
+          "name": "scenes",
+          "displayName": "Scenes",
+          "type": {
+            "name": "list",
+            "type": "Scene"
+          }
         }
-      }
-    }
-  },
-  "Scene": {
-    "path": "scenes",
-    "properties": {
-      "characters": {
-        "type": {
-          "name": "list",
-          "type": "Character"
+      ]
+    },
+    {
+      "name": "Scene",
+      "path": "scenes",
+      "properties": [
+        {
+          "name": "characters",
+          "displayName": "Characters",
+          "type": {
+            "name": "list",
+            "type": "Character"
+          }
         }
-      }
+      ]
     }
-  }
+  ]
 }

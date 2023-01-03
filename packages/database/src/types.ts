@@ -1,6 +1,7 @@
 import { DataSchema } from '@tome/data-api'
 
 export interface DatabaseConfig {
-  path: string
+  id: string
+  filePath: string
   schema: DataSchema
 }

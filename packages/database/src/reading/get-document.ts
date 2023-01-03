@@ -1,10 +1,11 @@
 import { readFile } from '../file-operations'
-import { DocumentNode } from '@tome/data-api'
+import {  DocumentNode } from '@tome/data-api'
 import { expandDocument } from '../documents'
+import { DatabaseConfig } from '../types'
 
-export async function getDocument(id: string, filePath: string): Promise<DocumentNode> {
+export async function getDocument(config: DatabaseConfig, id: string, filePath: string): Promise<DocumentNode> {
   const content = await readFile(filePath)
-  const document = await expandDocument(content)
+  const document = await expandDocument(config, id, content)
   if (content) {
     return {
       type: 'document',
