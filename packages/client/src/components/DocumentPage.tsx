@@ -7,6 +7,7 @@ import { ReactEditor, getMarkdown } from '@milkdown/react'
 import { getMarkdown } from '@milkdown/utils'
 import { saveDocument } from '../services'
 import { ExpandedDocument } from '@tome/data-api'
+import { LinkList } from './LinkList'
 
 interface Props {
   id: string
@@ -17,6 +18,7 @@ export const DocumentPage = (props: Props) => {
   const { id, document } = props
   const initialValues = {}
   const markdownEditor = useRef<ReactEditor | undefined>(undefined)
+  const linkLists = document.lists.map(list => (<LinkList key={list.name} list={list}/>))
 
   return (
     <>
@@ -26,14 +28,15 @@ export const DocumentPage = (props: Props) => {
         onSubmit={(values, actions) => {
           const context = markdownEditor.current?.ctx
           const markdown = getMarkdown()(context)
-          saveDocument({ id, document: { content: markdown } })
+          saveDocument({ id, document: { content: markdown, lists: [] } })
             .then(() => {
               actions.setSubmitting(false)
             })
         }}
       >
         <Form>
-          <MarkdownEditor editorContainer={markdownEditor} content={document.content}/>
+          <MarkdownEditor editorContainer={markdownEditor} id={id} content={document.content}/>
+          {linkLists}
           <button type="submit">Submit</button>
         </Form>
       </Formik>

@@ -1,2 +1,2 @@
 
-* [Introduce Bob](test/templates/story/scenes/introduce-bob.md)
+* [Introduce Bob](./introduce-bob.md)

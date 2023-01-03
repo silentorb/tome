@@ -3,6 +3,7 @@ import { ParentNavigation } from './ParentNavigation'
 import { Link } from 'react-router-dom'
 import { File, Folder } from 'react-feather'
 import { RecordLink } from '@tome/data-api'
+import { RecordNavigationLink } from './RecordNavigationLink'
 
 interface Props {
   items: RecordLink[]
@@ -10,15 +11,9 @@ interface Props {
 }
 
 export const IndexPage = (props: Props) => {
-  const links = props.items.map(item => {
-    const icon = item.isDirectory ? <Folder/> : <File/>
-    const absolute = new URL(item.id, new URL('data/', document.location.origin)).pathname
-    return (
-      <div key={item.id}>
-        {icon} <Link to={absolute}>{item.title}</Link>
-      </div>
-    )
-  })
+  const links = props.items.map(item => (
+    <RecordNavigationLink item={item}/>
+  ))
 
   const parentNavigation = props.includeParentNavigation
     ? <ParentNavigation/> : undefined

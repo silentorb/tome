@@ -1,3 +1,5 @@
+import { Structure } from './schema'
+
 export interface RecordLink {
   title: string
   id: string
@@ -24,6 +26,16 @@ export interface DocumentNode {
   type: 'document'
   id: string
   document: ExpandedDocument
+  structure?: Structure
 }
 
 export type Node = DocumentNode | IndexNode
+
+export interface QueryFilter {
+  key: string
+  value: any
+}
+
+export interface DataQuery {
+  filters: QueryFilter[]
+}

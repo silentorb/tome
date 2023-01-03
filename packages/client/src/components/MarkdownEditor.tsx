@@ -10,16 +10,18 @@ import { listener, listenerCtx } from '@milkdown/plugin-listener'
 // import { linkPlugin } from './link-plugin'
 
 interface Props {
+  id: string
   content: string
   editorContainer: MutableRefObject<Editor>
 }
 
 export const MarkdownEditor = (props: Props) => {
+  const {id, content} = props
   const editor = useEditor(root =>
       Editor.make()
         .config(context => {
           context.set(rootCtx, root)
-          context.set(defaultValueCtx, props.content)
+          context.set(defaultValueCtx, content)
           context.get(listenerCtx)
             .markdownUpdated((context, markdown, prevMarkdown) => {
               // console.log('markdown', markdown)
@@ -29,11 +31,13 @@ export const MarkdownEditor = (props: Props) => {
         })
         .use(nord)
         .use(gfm)
-        .use(listener)
-    // .use(linkPlugin({ navigateTo }))
+        .use(listener),
+    // .use(linkPlugin({ navigateTo })),
+    [id, content]
   )
 
   props.editorContainer.current = editor.getInstance()
 
   return <ReactEditor editor={editor}/>
 }
+

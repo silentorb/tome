@@ -2,4 +2,4 @@
 
 ## Characters
 
-* [Bob](test/templates/story/characterss/story/characters/bob.md)
+* [Bob](../characters/bob.md)

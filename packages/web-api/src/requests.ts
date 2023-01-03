@@ -1,8 +1,9 @@
-import { ExpandedDocument } from '@tome/data-api'
+import { DataQuery, ExpandedDocument } from '@tome/data-api'
 
 export const Endpoints = {
   nodeGet: '/node/get',
   nodeSet: '/node/set',
+  nodeQuery: '/node/query',
 }
 
 export interface GetNodeRequest {
@@ -13,3 +14,5 @@ export interface PostDocumentRequest {
   id: string
   document: ExpandedDocument
 }
+
+export type QueryNodesRequest = DataQuery

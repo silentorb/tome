@@ -16,5 +16,10 @@ export function newEndpoints(config: ServerConfig): EndpointDefinition[] {
       path: Endpoints.nodeSet,
       handler: writeDocumentFromRequest(config.data),
     },
+    {
+      method: 'post',
+      path: Endpoints.nodeQuery,
+      handler: loadNodeFromRequest(config.data),
+    },
   ]
 }
