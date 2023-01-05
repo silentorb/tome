@@ -1,6 +1,7 @@
-import { DocumentList, RecordLink, Structure } from '@tome/data-api'
+import { DocumentList, GenericType, RecordLink, Structure } from '@tome/data-api'
 import { joinPaths } from './file-operations'
 import { idFromPath } from './pathing'
+import { NodePath } from './types'
 
 // Should be imported from remark-parse but that would require an async import.
 // This can be replaced by an import later.
@@ -78,15 +79,16 @@ function gatherListLinks(localId: string, listNode: any): RecordLink[] {
   return result
 }
 
-export function processHeaders(localId: string, data: Root, structure: Structure): DocumentList[] {
+export function processHeadings(localId: string, nodePath: NodePath, data: Root): DocumentList[] {
   const headingLists = gatherHeadingLists(data)
   const lists: DocumentList[] = []
   for (const headingList of headingLists) {
     const { name } = headingList
-    const property = structure.properties.filter(p => p.displayName == name)[0]
+    const property = nodePath.structure!.properties.filter(p => p.displayName == name)[0]
     if (property) {
       lists.push({
         name,
+        type: joinPaths(nodePath.source!.id, (property.type as GenericType).types[0]),
         items: gatherListLinks(localId, headingList.list)
       })
     }

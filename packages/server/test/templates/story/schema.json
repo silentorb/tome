@@ -9,7 +9,7 @@
           "displayName": "Scenes",
           "type": {
             "name": "list",
-            "type": "Scene"
+            "types": ["scenes"]
           }
         }
       ]
@@ -23,7 +23,7 @@
           "displayName": "Characters",
           "type": {
             "name": "list",
-            "type": "Character"
+            "types": ["characters"]
           }
         }
       ]

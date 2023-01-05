@@ -1,4 +1,4 @@
-import { Node, Structure } from '@tome/data-api'
+import { Node, RecordLink, Structure } from '@tome/data-api'
 
 export type GetNodeResponse = {
   node: Node
@@ -6,4 +6,8 @@ export type GetNodeResponse = {
 
 export type GetNodesResponse = {
   nodes: Node[]
+}
+
+export type GetNodeLinksResponse = {
+  links: RecordLink[]
 }

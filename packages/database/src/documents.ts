@@ -1,10 +1,10 @@
 import { ExpandedDocument, Structure } from '@tome/data-api'
-import { DatabaseConfig } from './types'
+import { DatabaseConfig, NodePath } from './types'
 import path from 'path'
-import { parseMarkdownAST, processHeaders } from './markdown-parsing'
+import { parseMarkdownAST, processHeadings } from './markdown-parsing'
 
-export async function expandDocument(config: DatabaseConfig, id: string, content: string, structure?: Structure): Promise<ExpandedDocument> {
-  if (!structure) {
+export async function expandDocument(config: DatabaseConfig, nodePath: NodePath, content: string): Promise<ExpandedDocument> {
+  if (!nodePath.structure) {
     return {
       content,
       lists: [],
@@ -12,7 +12,7 @@ export async function expandDocument(config: DatabaseConfig, id: string, content
   }
 
   const data = await parseMarkdownAST(content)
-  const lists = processHeaders(path.dirname(id), data, structure)
+  const lists = processHeadings(path.dirname(nodePath.path), nodePath, data)
 
   return {
     content,

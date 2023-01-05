@@ -5,7 +5,7 @@ import { DatabaseConfig, NodePath } from '../types'
 
 export async function getDocument(config: DatabaseConfig, nodePath: NodePath, filePath: string): Promise<DocumentNode> {
   const content = await readFile(filePath)
-  const document = await expandDocument(config, nodePath.path, content, nodePath.structure)
+  const document = await expandDocument(config, nodePath, content)
   if (content) {
     return {
       type: 'document',

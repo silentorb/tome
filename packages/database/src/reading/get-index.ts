@@ -28,10 +28,13 @@ export function getDataSourceIndex(config: DatabaseConfig): IndexNode {
   }
 }
 
+export async function getNodeLinks(id: string, filePath: string): Promise<RecordLink[]> {
+  const files = await listFiles(filePath)
+  return Promise.all(files.map(newChildLink(id, filePath)))
+}
 
 export async function getIndex(id: string, filePath: string): Promise<IndexNode> {
-  const files = await listFiles(filePath)
-  const items = await Promise.all(files.map(newChildLink(id, filePath)))
+  const items = await getNodeLinks(id, filePath)
 
   return {
     type: 'index',

@@ -1,9 +1,11 @@
 import { DatabaseConfig } from '../types'
-import { DataQuery, Node } from '@tome/data-api'
-import { getDefaultDataSource } from '../database'
-import { getStructureByName } from '../pathing'
+import { DataQuery, RecordLink } from '@tome/data-api'
+import { getNodePath } from '../pathing'
+import { joinPaths } from '../file-operations'
+import { BadRequest } from '@vineyard/lawn'
+import { getNodeLinks } from './get-index'
 
-export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): Promise<Node[]> => {
+export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): Promise<RecordLink[]> => {
   if (!query?.filters?.length)
     throw new Error('Unfiltered queries are not supported')
 
@@ -13,9 +15,17 @@ export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): 
 
   const type = query.filters[0].value
 
-  const structure = getStructureByName(getDefaultDataSource(config).schema, type)
+  const nodePath = getNodePath(config, type)
+  if (!nodePath.source)
+    throw new BadRequest('Invalid data source in filter type path')
 
-  return []
+  if (!nodePath.nodeName)
+    throw new BadRequest('Invalid type in filter')
+
+  const filePath = joinPaths(nodePath.source!.filePath, nodePath.nodeName)
+  const items = await getNodeLinks(type, filePath)
+
+  return items
   // const baseFilePath = getDocumentFilePath(config, id)
   // const isDirectory = await isExistingDirectory(baseFilePath)
   // if (isDirectory) {
