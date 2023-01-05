@@ -1,14 +1,14 @@
-import { DatabaseConfig } from '../types'
-import { getMarkdownDocumentFilePath } from '../resource-mapping'
+import { DatabaseConfig, NodePath } from '../types'
 import { writeFile } from '../file-operations'
+import { getMarkdownDocumentFilePath } from '../pathing'
 
 export interface WriteDocumentProps {
-  id: string
+  nodePath: NodePath
   content: string
 }
 
 export const writeDocument = (config: DatabaseConfig) => async (props: WriteDocumentProps) => {
-  const { id, content } = props
-  const filePath = getMarkdownDocumentFilePath(config, id)
+  const { nodePath, content } = props
+  const filePath = getMarkdownDocumentFilePath(nodePath)
   await writeFile(filePath, content)
 }

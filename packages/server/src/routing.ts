@@ -1,6 +1,6 @@
 import { ServerConfig } from './types'
 import { Endpoints } from '@tome/web-api'
-import { loadNodeFromRequest } from './reading'
+import { loadNodeFromRequest, queryNodesFromRequest } from './reading'
 import { writeDocumentFromRequest } from './writing'
 import { EndpointDefinition } from '@vineyard/lawn'
 
@@ -19,7 +19,7 @@ export function newEndpoints(config: ServerConfig): EndpointDefinition[] {
     {
       method: 'post',
       path: Endpoints.nodeQuery,
-      handler: loadNodeFromRequest(config.data),
+      handler: queryNodesFromRequest(config.data),
     },
   ]
 }

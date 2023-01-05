@@ -1,21 +1,7 @@
-import { isExistingDirectory } from '../file-operations'
-import { getIndex } from './get-index'
-import { getDocument } from './get-document'
 import { DatabaseConfig } from '../types'
-import { getDocumentFilePath } from '../resource-mapping'
 import { DataQuery, Node } from '@tome/data-api'
-import { getStructureByName } from '../documents'
 import { getDefaultDataSource } from '../database'
-
-export const loadNode = (config: DatabaseConfig) => async (id: string) => {
-  const baseFilePath = getDocumentFilePath(config, id)
-  const isDirectory = await isExistingDirectory(baseFilePath)
-  if (isDirectory) {
-    return getIndex(id, baseFilePath)
-  } else {
-    return getDocument(config, id, `${baseFilePath}.md`)
-  }
-}
+import { getStructureByName } from '../pathing'
 
 export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): Promise<Node[]> => {
   if (!query?.filters?.length)

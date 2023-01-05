@@ -1,6 +1,6 @@
 import { DocumentList, RecordLink, Structure } from '@tome/data-api'
-import { idFromPath } from './resource-mapping'
 import { joinPaths } from './file-operations'
+import { idFromPath } from './pathing'
 
 // Should be imported from remark-parse but that would require an async import.
 // This can be replaced by an import later.

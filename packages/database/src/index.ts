@@ -1,6 +1,6 @@
 export * from './database'
 export * from './file-operations'
-export * from './resource-mapping'
+export * from './pathing'
 export * from './schema'
 export * from './types'
 export * from './reading'

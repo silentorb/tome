@@ -1,6 +1,7 @@
 import { isExistingDirectory, joinPaths, listFiles } from '../file-operations'
-import { idFromPath } from '../resource-mapping'
 import { IndexNode, RecordLink } from '@tome/data-api'
+import { DatabaseConfig } from '../types'
+import { idFromPath } from '../pathing'
 
 const newChildLink = (parentId: string, basePath: string) => async (file: string): Promise<RecordLink> => {
   const shortPath = idFromPath(file)
@@ -11,6 +12,22 @@ const newChildLink = (parentId: string, basePath: string) => async (file: string
     isDirectory: await isExistingDirectory(joinPaths(basePath, file)),
   }
 }
+
+export function getDataSourceIndex(config: DatabaseConfig): IndexNode {
+  const items = Object.entries(config.sources)
+    .map(([key, value]) => ({
+      title: key,
+      id: key,
+      isDirectory: true,
+    }))
+
+  return {
+    type: 'index',
+    id: '',
+    items,
+  }
+}
+
 
 export async function getIndex(id: string, filePath: string): Promise<IndexNode> {
   const files = await listFiles(filePath)
