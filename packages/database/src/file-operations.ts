@@ -12,6 +12,10 @@ export function joinPaths(...args: string[]) {
   return sanitizeFilePath(path.join(...args))
 }
 
+export function getRelativePath(from: string, to: string) {
+  return sanitizeFilePath(path.relative(from, to))
+}
+
 export function readFile(filePath: string) {
   return fs.promises.readFile(filePath, 'utf8')
 }
@@ -23,8 +27,7 @@ export function writeFile(filePath: string, content: string) {
 export async function isExistingDirectory(filePath: string) {
   try {
     return (await fs.promises.lstat(filePath)).isDirectory()
-  }
-  catch {
+  } catch {
     return false
   }
 }

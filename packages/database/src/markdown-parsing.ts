@@ -91,6 +91,8 @@ export function processHeadings(localId: string, nodePath: NodePath, data: Root)
         type: joinPaths(nodePath.source!.id, (property.type as GenericType).types[0]),
         items: gatherListLinks(localId, headingList.list)
       })
+
+      data.children.splice(headingList.index, 2)
     }
   }
 

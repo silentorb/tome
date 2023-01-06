@@ -10,6 +10,6 @@ export const writeDocumentFromRequest: DocumentWriter = config => async request 
   if (!nodePath.source)
     throw new BadRequest('Invalid data source in resource path')
 
-  const { content } = request.document
-  await writeDocument(config)({ nodePath, content })
+  const { document } = request
+  await writeDocument(config)({ nodePath, document })
 }
