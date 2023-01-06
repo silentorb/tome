@@ -2,4 +2,4 @@
 
 ## Characters
 
-* [Bob](../characters/bob.md)
+*   [Bob](../characters/bob.md)

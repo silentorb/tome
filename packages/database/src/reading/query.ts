@@ -26,11 +26,4 @@ export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): 
   const items = await getNodeLinks(type, filePath)
 
   return items
-  // const baseFilePath = getDocumentFilePath(config, id)
-  // const isDirectory = await isExistingDirectory(baseFilePath)
-  // if (isDirectory) {
-  //   return getIndex(id, baseFilePath)
-  // } else {
-  //   return getDocument(config, id, `${baseFilePath}.md`)
-  // }
 }

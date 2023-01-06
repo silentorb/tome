@@ -8,44 +8,56 @@ import { loadNodesOfType } from '../services'
 
 interface Props {
   list: DocumentList
+  setList: (list: DocumentList) => void
 }
 
 export const LinkList = (props: Props) => {
-  const { list } = props
-  const [newOptions, setNewOptions] = useState<any[] | undefined>(undefined)
+  const { list, setList } = props
+  const [options, setOptions] = useState<any[] | undefined>(undefined)
 
   const rows = list.items.map(item => {
     return (<li key={item.id}><RecordNavigationLink item={item}/></li>)
   })
 
   const checkOptionsLoaded = () => {
-    if (!newOptions) {
+    if (!options) {
       // To prevent reloading
-      setNewOptions([])
+      setOptions([])
       loadNodesOfType(list.type)
         .then(response => {
           const { links } = response
-          setNewOptions(links.map(link => ({ value: link.id, label: link.title })))
+          setOptions(
+            links
+              .filter(link => !list.items.some(item => item.id == link.id))
+              .map(link => ({ value: link.id, label: link.title }))
+          )
         })
     }
   }
 
-  // const loadOptions = (inputValue: string, callback: (options: any[]) => void) => {
-  //   setTimeout(() => {
-  //     callback([{
-  //       value: 'hello',
-  //       label: 'World',
-  //     }]);
-  //   }, 1000);
-  // }
+  const onChange = (selection: any) => {
+    console.log('value', selection)
+    if (selection) {
+      setList({
+        ...list,
+        items: list
+          .items.concat([{ title: selection.label, id: selection.value }])
+          .sort((a,b) => a.title.localeCompare(b.title)),
+      })
+      setOptions(
+        options?.filter(option => option.value !== selection.value)
+      )
+    }
+  }
 
   return (
     <div>
       <h2>{list.name}</h2>
       <Select
-        options={newOptions || []}
+        options={options || []}
         onFocus={checkOptionsLoaded}
-        // loadOptions={loadOptions}
+        onChange={onChange}
+        value={[]}
       />
       <ul>
         {rows}
