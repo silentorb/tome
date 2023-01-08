@@ -1,23 +1,68 @@
 import React, { useState } from 'react'
-import { DocumentList } from '@tome/data-api'
+import { DocumentList, RecordLink } from '@tome/data-api'
 import { RecordNavigationLink } from './RecordNavigationLink'
 import Select from 'react-select'
 import { loadNodesOfType } from '../services'
-
-// import Async from 'react-select/async'
+import { Trash2 } from 'react-feather'
+import styled from 'styled-components'
+import { elementSequence } from './styling'
 
 interface Props {
   list: DocumentList
   setList: (list: DocumentList) => void
 }
 
+interface LinkProps {
+  item: RecordLink
+  onDelete: (link: RecordLink) => void
+}
+
+const LinkItemStyle = styled.li`
+  ${elementSequence}
+`
+
+const IconButton = styled.span`
+  cursor: pointer;
+`
+
+const LinkItem = ({ item, onDelete }: LinkProps) => {
+  return (
+    <LinkItemStyle key={item.id}>
+      <RecordNavigationLink item={item}/>
+      <IconButton onClick={() => onDelete(item)}><Trash2/></IconButton>
+    </LinkItemStyle>
+  )
+}
+
+const linkToOption = (link: RecordLink) => (
+  {
+    value: link.id,
+    label: link.title
+  }
+)
+
+const setListItems = (list: DocumentList, items: RecordLink[]) => ({
+  ...list,
+  items,
+})
+
 export const LinkList = (props: Props) => {
   const { list, setList } = props
   const [options, setOptions] = useState<any[] | undefined>(undefined)
 
-  const rows = list.items.map(item => {
-    return (<li key={item.id}><RecordNavigationLink item={item}/></li>)
-  })
+  const { items } = list
+  const onDelete = (link: RecordLink) => {
+    setList(
+      setListItems(list,
+        items.filter(item => item.id != link.id)
+      )
+    )
+    setOptions(
+      options?.concat(linkToOption(link))
+    )
+  }
+
+  const rows = items.map(item => <LinkItem onDelete={onDelete} item={item}/>)
 
   const checkOptionsLoaded = () => {
     if (!options) {
@@ -27,9 +72,8 @@ export const LinkList = (props: Props) => {
         .then(response => {
           const { links } = response
           setOptions(
-            links
-              .filter(link => !list.items.some(item => item.id == link.id))
-              .map(link => ({ value: link.id, label: link.title }))
+            links.map(linkToOption)
+              .filter(link => !items.some(item => item.id == link.value))
           )
         })
     }
@@ -38,12 +82,13 @@ export const LinkList = (props: Props) => {
   const onChange = (selection: any) => {
     console.log('value', selection)
     if (selection) {
-      setList({
-        ...list,
-        items: list
-          .items.concat([{ title: selection.label, id: selection.value }])
-          .sort((a,b) => a.title.localeCompare(b.title)),
-      })
+      setList(
+        setListItems(list,
+          items
+            .concat([{ title: selection.label, id: selection.value }])
+            .sort((a, b) => a.title.localeCompare(b.title)),
+        )
+      )
       setOptions(
         options?.filter(option => option.value !== selection.value)
       )

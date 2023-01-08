@@ -16,7 +16,7 @@ export const NodePage = (props: Props) => {
       return <IndexPage items={node.items} includeParentNavigation={node.id !== ''}/>
 
     case 'document':
-      return <DocumentPage id={node.id} document={node.document}/>
+      return <DocumentPage key={node.id} id={node.id} document={node.document}/>
 
     default:
       throw Error(`Invalid node type`)
