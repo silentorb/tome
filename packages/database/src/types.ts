@@ -18,3 +18,12 @@ export interface NodePath {
   structure?: Structure
   nodeName?: string
 }
+
+export interface AdvancedNodePath extends NodePath {
+  title: string
+}
+
+export interface ListDiff<T> {
+  additions: T[]
+  removals: T[]
+}

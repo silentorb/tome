@@ -8,7 +8,7 @@ export interface RecordLink {
 
 export interface DocumentList {
   name: string
-  type: string
+  type?: string
   items: RecordLink[]
 }
 

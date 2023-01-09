@@ -31,3 +31,13 @@ export async function isExistingDirectory(filePath: string) {
     return false
   }
 }
+
+// Part of the purpose of this function is to centralize any unbound concurrent processing,
+// because currently this is a naive implementation that runs everything at once and probably should eventually should
+// be replaced with a more robust batching implementation, such as 20 concurrent processes at a time.
+export async function batchProcess<Input, Output>(items: Input[], functor: (item: Input) => Promise<Output>): Promise<Output[]> {
+  return Promise.all(
+    items.map(functor)
+  )
+}
+
