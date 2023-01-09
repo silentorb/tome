@@ -1,20 +1,10 @@
 import { ServerConfig } from './types'
 import * as path from 'path'
-import { DatabaseConfig, loadSchema } from '@tome/database'
+import { DatabaseConfig, loadDatabase } from '@tome/database'
 
 export async function initializeDataConfig(env: any = process.env): Promise<DatabaseConfig> {
   const filePath = path.resolve(env.DATA_PATH)
-  const schema = await loadSchema(filePath)
-  const id = path.basename(filePath)
-  return {
-    sources: {
-      [id]: {
-        id,
-        filePath,
-        schema
-      }
-    }
-  }
+  return loadDatabase(filePath)
 }
 
 export async function initializeConfig(env: any = process.env): Promise<ServerConfig> {

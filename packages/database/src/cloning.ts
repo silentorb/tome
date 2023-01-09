@@ -14,8 +14,8 @@ export function deepClonePlainData<T>(value: T): T {
 
   if (typeof data == 'object') {
     const result: any = {}
-    for (const [key, value] of data) {
-      result[key] = deepClonePlainData(value)
+    for (const key in data) {
+      result[key] = deepClonePlainData(data[key])
     }
     return result
   }
