@@ -1,4 +1,4 @@
-import { DatabaseConfig, NodePath } from './types'
+import { AdvancedNodePath, DatabaseConfig, NodePath } from './types'
 import { DataSchema, Structure } from '@tome/data-api'
 import { joinPaths } from './file-operations'
 
@@ -42,6 +42,14 @@ export function getNodePath(config: DatabaseConfig, resourcePath: string): NodeP
     source,
     structure,
     nodeName,
+  }
+}
+
+export async function geAdvancedNodePath(config: DatabaseConfig, resourcePath: string): Promise<AdvancedNodePath> {
+  const nodePath = getNodePath(config, resourcePath)
+  return {
+    ...nodePath,
+    title: nodePath.nodeName || 'Unknown',
   }
 }
 

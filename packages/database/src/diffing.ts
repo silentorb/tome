@@ -1,9 +1,14 @@
-import { ListDiff } from './types'
-import { DocumentList } from '@tome/data-api'
+import { AdvancedNodePath, DatabaseConfig, FileWriteJob, ListDiff, NodePath } from './types'
+import { DocumentList, ExpandedDocument, Property, RecordLink } from '@tome/data-api'
 import { unique } from './functional'
+import { generateDocumentAppendingAst, generateMarkdown } from './markdown-generation'
+import path from 'path'
+import { deepClonePlainData } from './cloning'
+import { geAdvancedNodePath, getMarkdownDocumentFilePath, getNodePath } from './pathing'
+import { getDocument } from './reading'
 
 export function subtractArray<T>(a: T[], b: T[]) {
-  return a.filter(item => b.indexOf(item) != -1)
+  return a.filter(item => b.indexOf(item) == -1)
 }
 
 export const diffStringSets = (previous: string[], next: string[]): ListDiff<string> => {
@@ -38,4 +43,4 @@ export const diffListLinks = (previous: DocumentList[], next: DocumentList[]): S
 }
 
 export const getAllDiffKeys = (diffs: StringListDiffs) =>
-  diffs.reduce((a, [_, b])=> a.concat(b.additions, b.removals), [] as string[])
+  diffs.reduce((a, [_, b]) => a.concat(b.additions, b.removals), [] as string[])

@@ -1,6 +1,13 @@
 import { assert } from 'chai'
 import * as fse from 'fs-extra'
-import { getNodePath, loadDatabase, loadNode, writeDocument } from '@tome/database'
+import {
+  getMarkdownDocumentFilePath,
+  getNodePath,
+  loadDatabase,
+  loadNode,
+  readFile,
+  writeDocument
+} from '@tome/database'
 import { DocumentNode } from '@tome/data-api'
 
 const tempDirectory = './temp'
@@ -36,13 +43,24 @@ describe('document-test', function () {
       const { document } = node
       const list = document.lists.filter(list => list.name == 'Characters')[0]
       list.items.push({
-        title: 'bob',
-        id: 'story/characters/bob',
+        title: 'alice',
+        id: 'story/characters/alice',
       })
       await writeDocument(config)({
         document,
         nodePath
       })
+
+      const alice = await readFile(
+        getMarkdownDocumentFilePath(getNodePath(config, 'story/characters/alice'))
+      )
+      const expected = `# Alice
+
+## Scenes
+
+*   [introduce-bob](../scenes/introduce-bob.md)
+`
+      assert.strictEqual(alice, expected)
     })
   })
 })

@@ -7,7 +7,6 @@ export interface GenericType {
 export interface Property {
   name: string
   displayName: string
-
   type: string | GenericType
 }
 
