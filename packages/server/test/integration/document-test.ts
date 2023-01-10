@@ -58,7 +58,7 @@ describe('document-test', function () {
 
 ## Scenes
 
-*   [introduce-bob](../scenes/introduce-bob.md)
+*   [Introduce Bob](../scenes/introduce-bob.md)
 `
       assert.strictEqual(alice, expected)
     })

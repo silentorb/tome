@@ -24,11 +24,10 @@ export const writeDocument = (config: DatabaseConfig) => async (props: WriteDocu
   const { nodePath, document } = props
   const filePath = getMarkdownDocumentFilePath(nodePath)
   const content = await stringifyDocument(nodePath, document);
-  console.log(content)
 
   const nodePathWithTitle = {
     ...nodePath,
-    title: nodePath.nodeName || 'Unknown',
+    title: document.title,
   }
 
   const otherFiles = await getDocumentDiffs(config, nodePathWithTitle, document)

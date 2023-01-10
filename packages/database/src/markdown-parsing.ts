@@ -38,6 +38,11 @@ function getNodeText(node: any): string | undefined {
   return textNode ? textNode.value : undefined
 }
 
+export function getMarkdownTitle(node: any): string | undefined {
+  const child = node.children.filter((c: any) => c.type == 'heading' && c.depth === 1)[0]
+  return child ? getNodeText(child) : undefined
+}
+
 function gatherHeadingLists(data: Root): HeadingListInfo[] {
   let index = -1
   const result: HeadingListInfo[] = []

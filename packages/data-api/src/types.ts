@@ -13,6 +13,7 @@ export interface DocumentList {
 }
 
 export interface ExpandedDocument {
+  title: string
   content: string
   lists: DocumentList[]
 }

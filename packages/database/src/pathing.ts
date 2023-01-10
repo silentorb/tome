@@ -45,7 +45,7 @@ export function getNodePath(config: DatabaseConfig, resourcePath: string): NodeP
   }
 }
 
-export async function geAdvancedNodePath(config: DatabaseConfig, resourcePath: string): Promise<AdvancedNodePath> {
+export async function getAdvancedNodePath(config: DatabaseConfig, resourcePath: string): Promise<AdvancedNodePath> {
   const nodePath = getNodePath(config, resourcePath)
   return {
     ...nodePath,

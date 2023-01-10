@@ -1,14 +1,14 @@
 import { AdvancedNodePath, DatabaseConfig, FileWriteJob } from '../types'
 import { DocumentList, ExpandedDocument, Property, RecordLink } from '@tome/data-api'
 import { deepClonePlainData } from '../cloning'
-import { geAdvancedNodePath, getMarkdownDocumentFilePath } from '../pathing'
+import { getMarkdownDocumentFilePath, getNodePath } from '../pathing'
 import { getDocument } from '../reading'
 import { StringListDiffs } from '../diffing'
 import { stringifyDocument } from '../documents'
 
 export function getPropertyReferenceType(property: Property): string | undefined {
   if (typeof property.type === 'object') {
-    const {types} = property.type
+    const { types } = property.type
     return types[types.length - 1]
   }
   return undefined
@@ -68,12 +68,16 @@ export const applyOtherDocumentDiffs = async (
 }
 
 export const getDiffJobs = (config: DatabaseConfig, otherNodePath: AdvancedNodePath, diffs: StringListDiffs) => async (key: string): Promise<FileWriteJob[]> => {
-  const nodePath = await geAdvancedNodePath(config, key)
+  const nodePath = await getNodePath(config, key)
   const document = await getDocument(config, nodePath)
   if (!document)
     return [] // TODO: Create new document once there is a UI to create such situations
 
-  const modifiedDocument = await applyOtherDocumentDiffs(config, nodePath, otherNodePath, diffs, document)
+  const advancedNodePath: AdvancedNodePath = {
+    ...nodePath,
+    title: document.title,
+  }
+  const modifiedDocument = await applyOtherDocumentDiffs(config, advancedNodePath, otherNodePath, diffs, document)
   const content = await stringifyDocument(nodePath, modifiedDocument);
   return [
     {

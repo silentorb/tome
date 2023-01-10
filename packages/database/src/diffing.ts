@@ -4,7 +4,7 @@ import { unique } from './functional'
 import { generateDocumentAppendingAst, generateMarkdown } from './markdown-generation'
 import path from 'path'
 import { deepClonePlainData } from './cloning'
-import { geAdvancedNodePath, getMarkdownDocumentFilePath, getNodePath } from './pathing'
+import { getAdvancedNodePath, getMarkdownDocumentFilePath, getNodePath } from './pathing'
 import { getDocument } from './reading'
 
 export function subtractArray<T>(a: T[], b: T[]) {
