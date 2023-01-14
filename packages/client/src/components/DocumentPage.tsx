@@ -34,7 +34,14 @@ export const DocumentPage = (props: Props) => {
         onSubmit={(values, actions) => {
           const context = markdownEditor.current?.ctx
           const markdown = getMarkdown()(context)
-          saveDocument({ id, document: { content: markdown, lists: listStates.map(l => l[0]) } })
+          saveDocument({
+            id,
+            document: {
+              title: document.title, // Not actually used right now--the server will extract the title from the content
+              content: markdown,
+              lists: listStates.map(l => l[0])
+            }
+          })
             .then(() => {
               actions.setSubmitting(false)
             })

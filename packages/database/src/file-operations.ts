@@ -16,8 +16,13 @@ export function getRelativePath(from: string, to: string) {
   return sanitizeFilePath(path.relative(from, to))
 }
 
-export function readFile(filePath: string) {
+export function readFileOrError(filePath: string) {
   return fs.promises.readFile(filePath, 'utf8')
+}
+
+export function readFile(filePath: string) {
+  return readFileOrError(filePath)
+    .catch(async _ => undefined)
 }
 
 export function writeFile(filePath: string, content: string) {

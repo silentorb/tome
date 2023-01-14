@@ -21,6 +21,7 @@ export interface ExpandedDocument {
 export interface IndexNode {
   type: 'index',
   id: string
+  structure?: string
   items: RecordLink[]
 }
 

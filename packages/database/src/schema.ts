@@ -1,10 +1,10 @@
 import {DataSchema} from '@tome/data-api'
-import { joinPaths, readFile } from './file-operations'
+import { joinPaths, readFile, readFileOrError } from './file-operations'
 import { DatabaseConfig } from './types'
 import path from 'path'
 
 export async function loadSchema(path: string): Promise<DataSchema> {
-  const content = await readFile(joinPaths(path, 'schema.json'))
+  const content = await readFileOrError(joinPaths(path, 'schema.json'))
   return JSON.parse(content) as DataSchema
 }
 

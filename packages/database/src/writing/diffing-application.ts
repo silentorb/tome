@@ -71,7 +71,7 @@ export const getDiffJobs = (config: DatabaseConfig, otherNodePath: AdvancedNodeP
   const nodePath = await getNodePath(config, key)
   const document = await getDocument(config, nodePath)
   if (!document)
-    return [] // TODO: Create new document once there is a UI to create such situations
+    return []
 
   const advancedNodePath: AdvancedNodePath = {
     ...nodePath,

@@ -5,7 +5,7 @@ import Select from 'react-select'
 import { loadNodesOfType } from '../services'
 import { Trash2 } from 'react-feather'
 import styled from 'styled-components'
-import { elementSequence } from './styling'
+import { elementSequence, IconButton } from './styling'
 
 interface Props {
   list: DocumentList
@@ -19,10 +19,6 @@ interface LinkProps {
 
 const LinkItemStyle = styled.li`
   ${elementSequence}
-`
-
-const IconButton = styled.span`
-  cursor: pointer;
 `
 
 const LinkItem = ({ item, onDelete }: LinkProps) => {
@@ -65,7 +61,7 @@ export const LinkList = (props: Props) => {
   const rows = items.map(item => <LinkItem onDelete={onDelete} item={item}/>)
 
   const checkOptionsLoaded = () => {
-    if (!options) {
+    if (!options && list.type) {
       // To prevent reloading
       setOptions([])
       loadNodesOfType(list.type)
