@@ -21,7 +21,7 @@ export interface ExpandedDocument {
 export interface IndexNode {
   type: 'index',
   id: string
-  structure?: string
+  structure?: Structure
   items: RecordLink[]
 }
 
@@ -40,5 +40,6 @@ export interface QueryFilter {
 }
 
 export interface DataQuery {
-  filters: QueryFilter[]
+  filters?: QueryFilter[]
+  order?: string[]
 }

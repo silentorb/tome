@@ -89,7 +89,7 @@ export function processHeadings(localId: string, nodePath: NodePath, data: Root)
   const lists: DocumentList[] = []
   for (const headingList of headingLists) {
     const { name } = headingList
-    const property = nodePath.structure!.properties.filter(p => p.displayName == name)[0]
+    const property = Object.values(nodePath.structure!.properties).filter(p => p.displayName == name)[0]
     if (property) {
       lists.push({
         name,

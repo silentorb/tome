@@ -1,10 +1,9 @@
 {
-  "structures": [
-    {
+  "structures": {
+    "characters": {
       "name": "Character",
-      "path": "characters",
-      "properties": [
-        {
+      "properties": {
+        "scenes": {
           "name": "scenes",
           "displayName": "Scenes",
           "type": {
@@ -12,13 +11,12 @@
             "types": ["scenes"]
           }
         }
-      ]
+      }
     },
-    {
+    "scenes": {
       "name": "Scene",
-      "path": "scenes",
-      "properties": [
-        {
+      "properties": {
+        "characters": {
           "name": "characters",
           "displayName": "Characters",
           "type": {
@@ -26,7 +24,7 @@
             "types": ["characters"]
           }
         }
-      ]
+      }
     }
-  ]
+  }
 }

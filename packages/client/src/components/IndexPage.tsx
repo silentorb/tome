@@ -1,15 +1,15 @@
 import * as React from 'react'
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 import { ParentNavigation } from './ParentNavigation'
-import { RecordLink } from '@tome/data-api'
+import { IndexNode, RecordLink } from '@tome/data-api'
 import { RecordNavigationLink } from './RecordNavigationLink'
-import { PlusCircle, Trash2 } from 'react-feather'
+import { PlusCircle } from 'react-feather'
 import { IconButton } from './styling'
-import { ChangeEvent, FormEvent, useState } from 'react'
 import { getIdFromRequest, saveDocument } from '../services'
+import { capitalizeFirstLetter } from '../string-formatting'
 
 interface Props {
-  items: RecordLink[]
-  includeParentNavigation: boolean
+  node: IndexNode
 }
 
 interface CreationFormProps {
@@ -33,42 +33,55 @@ export const CreationForm = (props: CreationFormProps) => {
   )
 }
 
+const getTitle = (node: IndexNode): string => {
+  const structureName = node.structure?.path
+  return structureName ? capitalizeFirstLetter(structureName) : 'Items'
+}
+
 export const IndexPage = (props: Props) => {
+  const { node } = props
   const [creating, setCreating] = useState<boolean>(false)
-  const [items, setItems] = useState(props.items)
+  const [items, setItems] = useState(node.items)
+  const [initialized, setInitialized] = useState(false)
 
   const links = items.map(item => (
     <RecordNavigationLink key={item.id} item={item}/>
   ))
 
-  const parentNavigation = props.includeParentNavigation
+  const parentNavigation = node.id !== ''
     ? <ParentNavigation/> : undefined
 
   const onStartCreation = () => {
     setCreating(true)
   }
 
+  useEffect(() => {
+    if (!initialized) {
+      setInitialized(true)
+    }
+  }, [initialized])
+
+  useEffect(() => {
+    // Only run when changes happen after initialization
+    if (initialized) {
+      saveDocument({
+        id: node.id,
+        type: "index",
+        items: items,
+      })
+    }
+  }, [items])
+
   const onSetCreationName = (title: string) => {
     const nodeName = title.toLowerCase().replace(/ /g, '-')
     const id = `${getIdFromRequest(window.location.href)}/${nodeName}`
 
-    saveDocument({
-      id,
-      document: {
-        title, // Not actually used right now--the server will extract the title from the content
-        content: `# ${nodeName}\n`,
-        lists: [],
+    setItems(items.concat([
+      {
+        title,
+        id,
       }
-    })
-      .then(() => {
-        setItems(items.concat([
-          {
-            title,
-            id,
-          }
-        ]))
-      })
-
+    ]))
     setCreating(false)
   }
 
@@ -79,6 +92,7 @@ export const IndexPage = (props: Props) => {
 
   return (
     <>
+      <h1>{getTitle(node)}</h1>
       {parentNavigation}
       <div>
         {creationElement}

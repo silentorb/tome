@@ -1,6 +1,6 @@
 import { isExistingDirectory, joinPaths, listFiles } from '../file-operations'
 import { IndexNode, RecordLink } from '@tome/data-api'
-import { DatabaseConfig } from '../types'
+import { DatabaseConfig, NodePath } from '../types'
 import { idFromPath } from '../pathing'
 
 const newChildLink = (parentId: string, basePath: string) => async (file: string): Promise<RecordLink> => {
@@ -33,12 +33,14 @@ export async function getNodeLinks(id: string, filePath: string): Promise<Record
   return Promise.all(files.map(newChildLink(id, filePath)))
 }
 
-export async function getIndex(id: string, filePath: string): Promise<IndexNode> {
+export async function getIndex(nodePath: NodePath, filePath: string): Promise<IndexNode> {
+  const id = nodePath.path
   const items = await getNodeLinks(id, filePath)
 
   return {
     type: 'index',
     id,
+    structure: nodePath.structure,
     items,
   }
 }

@@ -7,10 +7,11 @@
     ],
     "strict": true,
     "jsx": "react-jsx",
-    "newLine": "lf"
+    "newLine": "lf",
+    "outDir": "./dist"
   },
   "include": ["./src/**/*"],
   "references": [
     {"path": "../web-api"}
-  ]
+  ],
 }

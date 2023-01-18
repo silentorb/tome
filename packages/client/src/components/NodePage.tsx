@@ -13,7 +13,7 @@ export const NodePage = (props: Props) => {
 
   switch (node.type) {
     case 'index':
-      return <IndexPage items={node.items} includeParentNavigation={node.id !== ''}/>
+      return <IndexPage key={node.id} node={node}/>
 
     case 'document':
       return <DocumentPage key={node.id} id={node.id} document={node.document}/>

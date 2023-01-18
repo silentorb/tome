@@ -3,8 +3,8 @@ import { ParentNavigation } from './ParentNavigation'
 import { MarkdownEditor } from './MarkdownEditor'
 import { Form, Formik } from 'formik'
 import { useRef, useState } from 'react'
+// @ts-ignore
 import { ReactEditor, getMarkdown } from '@milkdown/react'
-import { getMarkdown } from '@milkdown/utils'
 import { saveDocument } from '../services'
 import { DocumentList, ExpandedDocument } from '@tome/data-api'
 import { LinkList } from './LinkList'
@@ -36,6 +36,7 @@ export const DocumentPage = (props: Props) => {
           const markdown = getMarkdown()(context)
           saveDocument({
             id,
+            type: "document",
             document: {
               title: document.title, // Not actually used right now--the server will extract the title from the content
               content: markdown,

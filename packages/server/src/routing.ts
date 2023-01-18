@@ -1,24 +1,24 @@
 import { ServerConfig } from './types'
-import { Endpoints } from '@tome/web-api'
+import { EndpointPaths } from '@tome/web-api'
 import { loadNodeFromRequest, queryNodesFromRequest } from './reading'
-import { writeDocumentFromRequest } from './writing'
+import { writeNodeFromRequest } from './writing'
 import { EndpointDefinition } from '@vineyard/lawn'
 
 export function newEndpoints(config: ServerConfig): EndpointDefinition[] {
   return [
     {
       method: 'post',
-      path: Endpoints.nodeGet,
+      path: EndpointPaths.nodeGet,
       handler: loadNodeFromRequest(config.data),
     },
     {
       method: 'post',
-      path: Endpoints.nodeSet,
-      handler: writeDocumentFromRequest(config.data),
+      path: EndpointPaths.nodeSet,
+      handler: writeNodeFromRequest(config.data),
     },
     {
       method: 'post',
-      path: Endpoints.nodeQuery,
+      path: EndpointPaths.nodeQuery,
       handler: queryNodesFromRequest(config.data),
     },
   ]

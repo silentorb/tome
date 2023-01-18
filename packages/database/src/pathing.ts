@@ -7,12 +7,12 @@ export const idFromPath = (pathString: string) =>
     .replace(/^\//, '')
     .replace(/\.md$/, '')
 
-export function getStructureByName(schema: DataSchema, name: string): Structure | undefined {
-  return schema.structures.filter(s => s.name == name)[0]
+export function getStructureByTitle(schema: DataSchema, name: string): Structure | undefined {
+  return Object.values(schema.structures).filter(s => s.title == name)[0]
 }
 
-export function getStructureByPathName(schema: DataSchema, name: string): Structure | undefined {
-  return schema.structures.filter(s => s.path == name)[0]
+export function getStructureByPath(schema: DataSchema, name: string): Structure | undefined {
+  return schema.structures[name]
 }
 
 // export function getStructureFromId(config: DatabaseConfig, id: string): Structure | undefined {
@@ -35,7 +35,7 @@ export function getNodePath(config: DatabaseConfig, resourcePath: string): NodeP
   // Todo: Support structure paths with multiple tokens instead of just one
   const structureName = tokens.length > 2 ? tokens[1] : undefined
   const source = sourceName ? config.sources[sourceName] : undefined
-  const structure = source && structureName ? getStructureByPathName(source.schema, structureName) : undefined
+  const structure = source && structureName ? getStructureByPath(source.schema, structureName) : undefined
 
   return {
     path: resourcePath,
