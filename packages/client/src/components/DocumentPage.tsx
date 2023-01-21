@@ -4,7 +4,9 @@ import { MarkdownEditor } from './MarkdownEditor'
 import { Form, Formik } from 'formik'
 import { useRef, useState } from 'react'
 // @ts-ignore
-import { ReactEditor, getMarkdown } from '@milkdown/react'
+import { ReactEditor } from '@milkdown/react'
+// @ts-ignore
+import { getMarkdown } from '@milkdown/utils'
 import { saveDocument } from '../services'
 import { DocumentList, ExpandedDocument } from '@tome/data-api'
 import { LinkList } from './LinkList'

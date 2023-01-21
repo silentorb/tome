@@ -8,7 +8,7 @@ import {
   readFile,
   writeDocument
 } from '@tome/database'
-import { DocumentNode } from '@tome/data-api'
+import { DocumentNode, IndexNode } from '@tome/data-api'
 
 const tempDirectory = './temp'
 const storyPath = `${tempDirectory}/story`
@@ -31,6 +31,16 @@ describe('document-test', function () {
       const config = await loadDatabase(storyPath)
       const node = await loadNode(config)('story/scenes/introduce-bob')
       assert.isObject(node)
+    })
+  })
+
+  describe('loading indexes', function () {
+    it('works', async function () {
+      const config = await loadDatabase(storyPath)
+      const node = (await loadNode(config)('story/scenes')) as IndexNode
+      assert.strictEqual(node.type, 'index')
+      assert.lengthOf(node.items, 2)
+      assert.strictEqual(node.items[0]?.id, 'story/scenes/introduce-bob')
     })
   })
 

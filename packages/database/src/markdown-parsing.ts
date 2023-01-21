@@ -2,6 +2,7 @@ import { DocumentList, GenericType, RecordLink, Structure } from '@tome/data-api
 import { joinPaths } from './file-operations'
 import { idFromPath } from './pathing'
 import { NodePath } from './types'
+import path from 'path'
 
 // Should be imported from remark-parse but that would require an async import.
 // This can be replaced by an import later.
@@ -84,8 +85,9 @@ function gatherListLinks(localId: string, listNode: any): RecordLink[] {
   return result
 }
 
-export function processHeadings(localId: string, nodePath: NodePath, data: Root): DocumentList[] {
+export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] {
   const headingLists = gatherHeadingLists(data)
+  const localId = path.dirname(nodePath.path)
   const lists: DocumentList[] = []
   for (const headingList of headingLists) {
     const { name } = headingList
@@ -102,6 +104,15 @@ export function processHeadings(localId: string, nodePath: NodePath, data: Root)
   }
 
   return lists
+}
+
+export function processIndexList(nodePath: NodePath, data: Root): RecordLink[] {
+  const localId = path.dirname(nodePath.path)
+  const list = findNodeOfType(data, 'list')
+  if (!list)
+    return []
+
+  return gatherListLinks(localId, list)
 }
 
 export async function parseMarkdownAST(content: string) {

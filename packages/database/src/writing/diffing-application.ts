@@ -2,7 +2,7 @@ import { AdvancedNodePath, DatabaseConfig, FileWriteJob } from '../types'
 import { DocumentList, ExpandedDocument, Property, RecordLink } from '@tome/data-api'
 import { deepClonePlainData } from '../cloning'
 import { getMarkdownDocumentFilePath, getNodePath } from '../pathing'
-import { getDocument } from '../reading'
+import { loadExpandedDocument } from '../reading'
 import { StringListDiffs } from '../diffing'
 import { stringifyDocument } from '../documents'
 
@@ -72,7 +72,7 @@ export const applyOtherDocumentDiffs = async (
 
 export const getDiffJobs = (config: DatabaseConfig, otherNodePath: AdvancedNodePath, diffs: StringListDiffs) => async (key: string): Promise<FileWriteJob[]> => {
   const nodePath = await getNodePath(config, key)
-  const document = await getDocument(config, nodePath)
+  const document = await loadExpandedDocument(config, nodePath)
   if (!document)
     return []
 

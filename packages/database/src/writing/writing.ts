@@ -2,7 +2,7 @@ import { AdvancedNodePath, DatabaseConfig, FileWriteJob, NodePath } from '../typ
 import { batchProcess, writeFile } from '../file-operations'
 import { getMarkdownDocumentFilePath } from '../pathing'
 import { ExpandedDocument } from '@tome/data-api'
-import { getDocument } from '../reading'
+import { loadExpandedDocument } from '../reading'
 import { diffListLinks, getAllDiffKeys,  } from '../diffing'
 import { getDiffJobs } from './diffing-application'
 import { stringifyDocument } from '../documents'
@@ -13,7 +13,7 @@ export interface WriteDocumentProps {
 }
 
 async function getDocumentDiffs(config: DatabaseConfig, nodePath: AdvancedNodePath, document: ExpandedDocument): Promise<FileWriteJob[]> {
-  const previousDocument = await getDocument(config, nodePath)
+  const previousDocument = await loadExpandedDocument(config, nodePath)
   const diffs = diffListLinks(previousDocument?.lists || [], document.lists)
   const nodes = getAllDiffKeys(diffs)
   const results = await batchProcess(nodes, getDiffJobs(config, nodePath, diffs))

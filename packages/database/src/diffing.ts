@@ -5,7 +5,7 @@ import { generateDocumentAppendingAst, generateMarkdown } from './markdown-gener
 import path from 'path'
 import { deepClonePlainData } from './cloning'
 import { getAdvancedNodePath, getMarkdownDocumentFilePath, getNodePath } from './pathing'
-import { getDocument } from './reading'
+import { loadExpandedDocument } from './reading'
 
 export function subtractArray<T>(a: T[], b: T[]) {
   return a.filter(item => b.indexOf(item) == -1)

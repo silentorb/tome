@@ -1,6 +1,7 @@
 import { AdvancedNodePath, DatabaseConfig, NodePath } from './types'
 import { DataSchema, Structure } from '@tome/data-api'
 import { joinPaths } from './file-operations'
+import path from 'path'
 
 export const idFromPath = (pathString: string) =>
   pathString
@@ -54,7 +55,10 @@ export async function getAdvancedNodePath(config: DatabaseConfig, resourcePath: 
 }
 
 export const getNodeFilePath = (nodePath: NodePath) => {
-  return joinPaths(nodePath.source?.filePath || '', nodePath.structure?.path || '', nodePath.nodeName || '')
+  const base = nodePath.source?.filePath || ''
+  return nodePath.structure
+    ? joinPaths(base, nodePath.structure.path, nodePath.nodeName || '')
+    : joinPaths(path.dirname(base), nodePath.path)
 }
 
 export const getMarkdownDocumentFilePath = (nodePath: NodePath) => {

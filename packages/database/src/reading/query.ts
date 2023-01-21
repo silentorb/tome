@@ -1,7 +1,6 @@
 import { DatabaseConfig } from '../types'
 import { DataQuery, RecordLink } from '@tome/data-api'
 import { getNodePath } from '../pathing'
-import { joinPaths } from '../file-operations'
 import { BadRequest } from '@vineyard/lawn'
 import { getNodeLinks } from './get-index'
 
@@ -22,8 +21,6 @@ export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): 
   if (!nodePath.nodeName)
     throw new BadRequest('Invalid type in filter')
 
-  const filePath = joinPaths(nodePath.source!.filePath, nodePath.nodeName)
-  const items = await getNodeLinks(type, filePath)
-
-  return items
+  // const filePath = joinPaths(nodePath.source!.filePath, nodePath.nodeName)
+  return getNodeLinks(config, nodePath)
 }

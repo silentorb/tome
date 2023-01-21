@@ -1,22 +1,21 @@
 import { isExistingDirectory } from '../file-operations'
 import { getDataSourceIndex, getIndex } from './get-index'
-import { getDocumentNode } from './get-document'
+import { loadDocumentNode } from './get-document'
 import { DatabaseConfig } from '../types'
-import { getNodeFilePath, getNodePath } from '../pathing'
+import { getMarkdownDocumentFilePath, getNodeFilePath, getNodePath } from '../pathing'
 
 export const loadNode = (config: DatabaseConfig) => async (resourcePath: string) => {
   const nodePath = getNodePath(config, resourcePath)
   if (!nodePath.source) {
     return getDataSourceIndex(config)
   }
-  const baseFilePath = getNodeFilePath(nodePath)
-  const isDirectory = await isExistingDirectory(baseFilePath)
+  const isDirectory = await isExistingDirectory(getNodeFilePath(nodePath))
   if (isDirectory) {
-    return getIndex(nodePath, baseFilePath)
+    return getIndex(config, nodePath)
   } else {
-    const result = await getDocumentNode(config, nodePath)
+    const result = await loadDocumentNode(config, nodePath)
     if (!result)
-      throw new Error('Could not find document file and proper error handling for this is not yet implemented.')
+      throw new Error(`Could not find open ${getMarkdownDocumentFilePath(nodePath)}`)
 
     return result
   }
