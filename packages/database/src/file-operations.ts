@@ -20,6 +20,10 @@ export function readFileOrError(filePath: string) {
   return fs.promises.readFile(filePath, 'utf8')
 }
 
+export function readFileOrErrorSync(filePath: string) {
+  return fs.readFileSync(filePath, 'utf8')
+}
+
 export function readFile(filePath: string) {
   return readFileOrError(filePath)
     .catch(async _ => undefined)
