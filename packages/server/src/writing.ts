@@ -1,5 +1,5 @@
 import { PutNodeRequest } from '@tome/web-api'
-import { DatabaseConfig, getNodePath, writeDocument } from '@tome/database'
+import { DatabaseConfig, getNodePath, writeDocument, writeIndexDocument } from '@tome/database'
 import { BadRequest } from '@vineyard/lawn'
 
 export type DocumentWriter = (config: DatabaseConfig) => (request: PutNodeRequest) => Promise<void>
@@ -14,6 +14,11 @@ export const writeNodeFromRequest: DocumentWriter = config => async request => {
     case 'document': {
       const { document } = request
       await writeDocument(config)({ nodePath, document })
+      break
+    }
+
+    case 'index': {
+      await writeIndexDocument(config)(nodePath, request)
       break
     }
   }

@@ -1,8 +1,8 @@
-import { ExpandedDocument, RecordLink } from '@tome/data-api'
+import { ExpandedDocument, IndexNode, RecordLink } from '@tome/data-api'
 import { DatabaseConfig, NodePath } from './types'
 import path from 'path'
 import { getMarkdownTitle, parseMarkdownAST, processHeadings, processIndexList } from './markdown-parsing'
-import { generateDocumentAppendingAst, generateMarkdown } from './markdown-generation'
+import { generateDocumentAppendingAst, generateIndexListAst, stringifyMarkdown } from './markdown-generation'
 
 function getTitle(data: any, nodePath: NodePath): string {
   return getMarkdownTitle(data) || nodePath.nodeName || 'Unknown'
@@ -21,7 +21,7 @@ export async function expandDocument(config: DatabaseConfig, nodePath: NodePath,
 
   const lists = processHeadings(nodePath, data)
 
-  const updatedContent = await generateMarkdown(data)
+  const updatedContent = await stringifyMarkdown(data)
   return {
     title,
     content: updatedContent,
@@ -35,9 +35,23 @@ export async function expandIndexList(config: DatabaseConfig, nodePath: NodePath
 }
 
 export async function stringifyDocument(nodePath: NodePath, document: ExpandedDocument) {
-  const additionalContent = await generateMarkdown(
+  const additionalContent = await stringifyMarkdown(
     generateDocumentAppendingAst(path.dirname(nodePath.path), document)
   )
 
   return `${document.content}\n${additionalContent}`
+}
+
+export async function stringifyIndex(nodePath: NodePath, node: IndexNode) {
+  const additionalContent = await stringifyMarkdown(
+    generateIndexListAst(path.dirname(nodePath.path), node.items)
+  )
+
+  const { structure } = nodePath
+
+  const titleClause = structure
+    ? `# ${structure?.title}\n\n`
+    : ''
+
+  return `${titleClause}${additionalContent}`
 }

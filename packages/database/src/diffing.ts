@@ -1,7 +1,7 @@
 import { AdvancedNodePath, DatabaseConfig, FileWriteJob, ListDiff, NodePath } from './types'
 import { DocumentList, ExpandedDocument, Property, RecordLink } from '@tome/data-api'
 import { unique } from './functional'
-import { generateDocumentAppendingAst, generateMarkdown } from './markdown-generation'
+import { generateDocumentAppendingAst, stringifyMarkdown } from './markdown-generation'
 import path from 'path'
 import { deepClonePlainData } from './cloning'
 import { getAdvancedNodePath, getMarkdownDocumentFilePath, getNodePath } from './pathing'

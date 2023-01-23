@@ -12,6 +12,7 @@ import {
 import { DocumentNode, IndexNode } from '@tome/data-api'
 import * as fs from 'fs'
 import * as path from 'path'
+import { writeNodeFromRequest } from '../../src/writing'
 
 const tempDirectory = './temp'
 const storyPath = `${tempDirectory}/story`
@@ -78,36 +79,31 @@ describe('document-test', function () {
           nodePath
         })
 
-        const alice = await readFile(
+        const content = await readFile(
           getMarkdownDocumentFilePath(getNodePath(config, 'story/characters/alice'))
         )
         const expected = loadExpectedContent('alice01.md')
-        assert.strictEqual(alice, expected)
+        assert.strictEqual(content, expected)
       })
     })
 
 
     describe('saving documents', function () {
       it('updates referenced documents when list links change', async function () {
-        const resource = 'story/scenes/introduce-bob'
-        const nodePath = getNodePath(config, resource)
-        const node = await loadNode(config)(resource) as DocumentNode
-        const { document } = node
-        const list = document.lists.filter(list => list.name == 'Characters')[0]
-        list.items.push({
-          title: 'alice',
-          id: 'story/characters/alice',
+        const resource = 'story/scenes'
+        const node = await loadNode(config)(resource) as IndexNode
+        const { items } = node
+        items.splice(0, 0, {
+          title: 'Start',
+          id: 'story/scenes/start',
         })
-        await writeDocument(config)({
-          document,
-          nodePath
-        })
+        await writeNodeFromRequest(config)(node)
 
-        const alice = await readFile(
-          getMarkdownDocumentFilePath(getNodePath(config, 'story/characters/alice'))
+        const content = await readFile(
+          getMarkdownDocumentFilePath(getNodePath(config, 'story/scenes/index'))
         )
         const expected = loadExpectedContent('index01.md')
-        assert.strictEqual(alice, expected)
+        assert.strictEqual(content, expected)
       })
     })
   })

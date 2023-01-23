@@ -11,7 +11,7 @@
     "newLine": "lf",
     "outDir": "./dist"
   },
-  "include": ["./scripts/**/*", "./src/**/*"],
+  "include": ["./scripts/**/*", "./src/**/*", "./test/**/*"],
   "references": [
     {"path": "../database"},
     {"path": "../lawn"},
