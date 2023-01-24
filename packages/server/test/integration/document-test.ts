@@ -88,8 +88,8 @@ describe('document-test', function () {
     })
 
 
-    describe('saving documents', function () {
-      it('updates referenced documents when list links change', async function () {
+    describe('saving indexes', function () {
+      it('works', async function () {
         const resource = 'story/scenes'
         const node = await loadNode(config)(resource) as IndexNode
         const { items } = node
@@ -100,7 +100,7 @@ describe('document-test', function () {
         await writeNodeFromRequest(config)(node)
 
         const content = await readFile(
-          getMarkdownDocumentFilePath(getNodePath(config, 'story/scenes/index'))
+          getMarkdownDocumentFilePath(getNodePath(config, resource))
         )
         const expected = loadExpectedContent('index01.md')
         assert.strictEqual(content, expected)

@@ -44,7 +44,7 @@ export async function stringifyDocument(nodePath: NodePath, document: ExpandedDo
 
 export async function stringifyIndex(nodePath: NodePath, node: IndexNode) {
   const additionalContent = await stringifyMarkdown(
-    generateIndexListAst(path.dirname(nodePath.path), node.items)
+    generateIndexListAst(nodePath.path, node.items)
   )
 
   const { structure } = nodePath

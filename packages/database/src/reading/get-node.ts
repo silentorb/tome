@@ -9,8 +9,8 @@ export const loadNode = (config: DatabaseConfig) => async (resourcePath: string)
   if (!nodePath.source) {
     return getDataSourceIndex(config)
   }
-  const isDirectory = await isExistingDirectory(getNodeFilePath(nodePath))
-  if (isDirectory) {
+
+  if (nodePath.nodeName == 'index' || await isExistingDirectory(getNodeFilePath(nodePath))) {
     return getIndex(config, nodePath)
   } else {
     const result = await loadDocumentNode(config, nodePath)

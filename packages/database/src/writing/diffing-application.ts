@@ -15,12 +15,12 @@ export function getPropertyReferenceType(property: Property): string | undefined
 }
 
 export function getOrCreateListItems(lists: DocumentList[], property: Property): RecordLink[] {
-  const existing = lists.filter(list => list.name == property.displayName)[0]
+  const existing = lists.filter(list => list.name == property.title)[0]
   if (existing)
     return existing.items
 
   const newList: DocumentList = {
-    name: property.displayName,
+    name: property.title,
     type: getPropertyReferenceType(property),
     items: [],
   }

@@ -16,6 +16,13 @@ export function getRelativePath(from: string, to: string) {
   return sanitizeFilePath(path.relative(from, to))
 }
 
+export function getRelativeMarkdownPath(from: string, to: string) {
+  const result = sanitizeFilePath(path.relative(from, to))
+  return result[0] != '.'
+    ? `./${result}`
+    : result
+}
+
 export function readFileOrError(filePath: string) {
   return fs.promises.readFile(filePath, 'utf8')
 }

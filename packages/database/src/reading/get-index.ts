@@ -1,7 +1,7 @@
 import { isExistingDirectory, joinPaths, listFiles } from '../file-operations'
 import { IndexNode, RecordLink } from '@tome/data-api'
 import { DatabaseConfig, NodePath } from '../types'
-import { getNodeFilePath, idFromPath } from '../pathing'
+import { getIndexDirectoryPath, getNodeFilePath, idFromPath } from '../pathing'
 import { loadDocumentContent } from './get-document'
 import { expandIndexList } from '../documents'
 
@@ -42,7 +42,7 @@ async function loadIndexList(config: DatabaseConfig, nodePath: NodePath) {
 
 export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath): Promise<RecordLink[]> {
   const id = nodePath.path
-  const filePath = getNodeFilePath(nodePath)
+  const filePath = getIndexDirectoryPath(nodePath)
   const files = await listFiles(filePath)
   const withoutIndex = files.filter(f => f != 'index.md')
   const hasIndex = withoutIndex.length < files.length

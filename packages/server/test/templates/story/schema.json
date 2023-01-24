@@ -1,11 +1,10 @@
 {
   "structures": {
     "characters": {
-      "name": "Character",
+      "title": "Characters",
       "properties": {
         "scenes": {
-          "name": "scenes",
-          "displayName": "Scenes",
+          "title": "Scenes",
           "type": {
             "name": "list",
             "types": ["scenes"]
@@ -14,11 +13,10 @@
       }
     },
     "scenes": {
-      "name": "Scene",
+      "title": "Scenes",
       "properties": {
         "characters": {
-          "name": "characters",
-          "displayName": "Characters",
+          "title": "Characters",
           "type": {
             "name": "list",
             "types": ["characters"]

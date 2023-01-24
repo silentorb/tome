@@ -1,12 +1,16 @@
 import { DocumentList, ExpandedDocument, RecordLink } from '@tome/data-api'
-import { getRelativePath } from './file-operations'
+import { getRelativeMarkdownPath, getRelativePath } from './file-operations'
 
-export async function stringifyMarkdown(ast: any) {
+export async function stringifyMarkdown(ast: any): Promise<string> {
   const { unified } = await import('unified')
   const remarkStringify = await import('remark-stringify')
   return unified()
-    .use(remarkStringify.default)
+    // @ts-ignore
+    .use(remarkStringify.default, {
+      listItemIndent: '1',
+    })
     .stringify(ast)
+    .replace(/\n\n\* /g, '\n* ') // mdast-util-to-markdown is ignoring no spread on lists.
 }
 
 export function generateLinkListAst(localPath: string, items: RecordLink[]) {
@@ -14,7 +18,7 @@ export function generateLinkListAst(localPath: string, items: RecordLink[]) {
     type: 'list',
     ordered: false,
     children: items.map(item => {
-      const relativePath = getRelativePath(localPath, item.id)
+      const relativePath = getRelativeMarkdownPath(localPath, item.id)
       return {
         type: 'listItem',
         spread: false,

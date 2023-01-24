@@ -31,12 +31,16 @@ export function getStructureByPath(schema: DataSchema, name: string): Structure 
 export function getNodePath(config: DatabaseConfig, resourcePath: string): NodePath {
   const tokens = resourcePath.split('/')
   const sourceName = tokens[0]
-  const nodeName = tokens.length > 1 ? tokens[tokens.length - 1] : undefined
 
   // Todo: Support structure paths with multiple tokens instead of just one
-  const structureName = tokens.length > 2 ? tokens[1] : undefined
+  const structureName = tokens[1]
   const source = sourceName ? config.sources[sourceName] : undefined
   const structure = source && structureName ? getStructureByPath(source.schema, structureName) : undefined
+  const nodeName = tokens.length > 2
+    ? tokens[tokens.length - 1]
+    : structure
+      ? 'index'
+      : undefined
 
   return {
     path: resourcePath,
@@ -64,4 +68,12 @@ export const getNodeFilePath = (nodePath: NodePath) => {
 export const getMarkdownDocumentFilePath = (nodePath: NodePath) => {
   const baseFilePath = getNodeFilePath(nodePath)
   return `${baseFilePath}.md`
+}
+
+export const getIndexDirectoryPath = (nodePath: NodePath) => {
+  const newNodePath = nodePath.nodeName == 'index'
+  ? { ...nodePath, nodeName: undefined }
+    : nodePath
+
+  return getNodeFilePath(newNodePath)
 }
