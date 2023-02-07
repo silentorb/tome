@@ -1,7 +1,10 @@
-import { DataSchema } from '@tome/data-api'
+import { DataSchema, DataType, GenericType } from '@tome/data-api'
 import { joinPaths, readFile, readFileOrError, readFileOrErrorSync } from './file-operations'
-import { DatabaseConfig } from './types'
+import { DatabaseConfig, DataSource } from './types'
 import path from 'path'
+
+export const isListType = (type: DataType) =>
+  typeof  type != 'string' && type.name == 'list'
 
 export function expandSerializedSchema(schema: DataSchema) {
   for (const [path, structure] of Object.entries(schema.structures)) {
@@ -28,24 +31,29 @@ export function loadSchemaSync(path: string): DataSchema {
   return parseSchema(content)
 }
 
-function prepareDatabase(schema: DataSchema, filePath: string) {
-  const id = path.basename(filePath)
+function newSource(filePath: string, schema: DataSchema): DataSource {
+  const id = schema.id || path.basename(filePath)
   return {
-    sources: {
-      [id]: {
-        id,
-        filePath,
-        schema
-      }
-    }
+    id,
+    filePath,
+    schema
   }
 }
 
-export async function loadDatabase(filePath: string): Promise<DatabaseConfig> {
-  const schema = await loadSchema(filePath)
-  return prepareDatabase(schema, filePath)
+function prepareDatabases(sources: DataSource[]): DatabaseConfig {
+  return {
+    sources:  Object.fromEntries(
+      sources.map(s => [s.id, s])
+    ),
+  }
 }
-export function loadDatabaseSync(filePath: string): DatabaseConfig {
-  const schema = loadSchemaSync(filePath)
-  return prepareDatabase(schema, filePath)
+
+export async function loadDatabases(filePaths: string[]): Promise<DatabaseConfig> {
+  const sources = await Promise.all(filePaths.map(async filePath => newSource(filePath, await loadSchema(filePath))))
+  return prepareDatabases(sources)
+}
+
+export function loadDatabasesSync(filePaths: string[]): DatabaseConfig {
+  const sources = filePaths.map(filePath => newSource(filePath, loadSchemaSync(filePath)))
+  return prepareDatabases(sources)
 }

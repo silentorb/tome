@@ -1,13 +1,13 @@
 import { assert } from 'chai'
 import * as fse from 'fs-extra'
 import {
-  DatabaseConfig,
   getMarkdownDocumentFilePath,
   getNodePath,
-  loadDatabase, loadDatabaseSync,
+  loadDatabasesSync,
   loadNode,
   readFile,
-  writeDocument
+  writeDocument,
+  writeFile
 } from '@tome/database'
 import { DocumentNode, IndexNode } from '@tome/data-api'
 import * as fs from 'fs'
@@ -34,7 +34,7 @@ function loadExpectedContent(filename: string) {
 
 describe('document-test', function () {
   this.timeout(15000)
-  let config = loadDatabaseSync(storyPath)
+  let config = loadDatabasesSync([storyPath])
 
   describe('reading', function () {
     before(function () {
@@ -45,6 +45,12 @@ describe('document-test', function () {
       it('works', async function () {
         const node = await loadNode(config)('story/scenes/introduce-bob')
         assert.isObject(node)
+      })
+
+      it('loads linked lists', async function () {
+        const node = (await loadNode(config)('story/characters/alice')) as DocumentNode
+        assert.isObject(node)
+        assert.isAtLeast(node.document.lists.length, 1)
       })
     })
 
@@ -87,15 +93,15 @@ describe('document-test', function () {
       })
     })
 
-
     describe('saving indexes', function () {
       it('works', async function () {
         const resource = 'story/scenes'
+        const newDocumentPath = 'story/scenes/start'
         const node = await loadNode(config)(resource) as IndexNode
         const { items } = node
         items.splice(0, 0, {
           title: 'Start',
-          id: 'story/scenes/start',
+          id: newDocumentPath,
         })
         await writeNodeFromRequest(config)(node)
 
@@ -103,6 +109,28 @@ describe('document-test', function () {
           getMarkdownDocumentFilePath(getNodePath(config, resource))
         )
         const expected = loadExpectedContent('index01.md')
+        assert.strictEqual(content, expected)
+
+        // Check that the new child document is created.
+        const childContent = await readFile(
+          getMarkdownDocumentFilePath(getNodePath(config, newDocumentPath))
+        )
+        assert.strictEqual(childContent, loadExpectedContent('start01.md'))
+      })
+    })
+
+    describe('syncing indexes', function () {
+      it('appends missing file references', async function () {
+        const resource = 'story/scenes'
+        const newFilePath = getMarkdownDocumentFilePath(getNodePath(config, 'story/scenes/something-happens'))
+        await writeFile(newFilePath, '# Something happens\n')
+        const node = await loadNode(config)(resource) as IndexNode
+        const { items } = node
+        assert.lengthOf(items, 3)
+        assert.strictEqual(items[items.length - 1]?.title, 'Something happens')
+
+        const content = await readFile(getMarkdownDocumentFilePath(getNodePath(config, resource)))
+        const expected = loadExpectedContent('index02.md')
         assert.strictEqual(content, expected)
       })
     })

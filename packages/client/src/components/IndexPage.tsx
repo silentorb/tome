@@ -1,41 +1,63 @@
 import * as React from 'react'
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 import { ParentNavigation } from './ParentNavigation'
-import { IndexNode, RecordLink } from '@tome/data-api'
+import { IndexNode } from '@tome/data-api'
 import { RecordNavigationLink } from './RecordNavigationLink'
 import { PlusCircle } from 'react-feather'
 import { IconButton } from './styling'
 import { getIdFromRequest, saveDocument } from '../services'
 import { capitalizeFirstLetter } from '../string-formatting'
+import { idFromTitle } from '../id-from-title'
+import styled from 'styled-components'
+
+const TextInput = styled.input`
+  width: 400px;
+`
 
 interface Props {
   node: IndexNode
 }
 
 interface CreationFormProps {
-  onSubmit: (name: string) => void
+  onSubmit: (id: string, name: string) => void
 }
 
 export const CreationForm = (props: CreationFormProps) => {
   const [name, setName] = useState('')
+  const [id, setId] = useState('')
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
-    props.onSubmit(name)
+    props.onSubmit(id, name)
   }
 
-  const onNameChanged = (event: ChangeEvent<HTMLInputElement>) => {
-    setName(event.target.value)
+  const onTextChanged = (set: (value: string) => void) => (event: ChangeEvent<HTMLInputElement>) => {
+    set(event.target.value)
   }
+
+  const idPlaceholder = id
+    ? ''
+    : idFromTitle(name)
+
   return (
     <form onSubmit={onSubmit}>
-      <input autoFocus type="text" value={name} onChange={onNameChanged}/>
+      <div>
+        <label>Name</label><TextInput autoFocus type="text" value={name} onChange={onTextChanged(setName)}/>
+      </div>
+      <div>
+        <label>Id</label><TextInput autoFocus type="text" value={id} onChange={onTextChanged(setId)} placeholder={idPlaceholder}/>
+      </div>
+      <input type="submit" value="Create"/>
     </form>
   )
 }
 
 const getTitle = (node: IndexNode): string => {
   const structureName = node.structure?.path
-  return structureName ? capitalizeFirstLetter(structureName) : 'Items'
+  return node.structure?.title || (
+    structureName
+      ? capitalizeFirstLetter(structureName)
+      : 'Items'
+  )
 }
 
 export const IndexPage = (props: Props) => {
@@ -66,14 +88,14 @@ export const IndexPage = (props: Props) => {
     if (initialized) {
       saveDocument({
         id: node.id,
-        type: "index",
+        type: 'index',
         items: items,
       })
     }
   }, [items])
 
-  const onSetCreationName = (title: string) => {
-    const nodeName = title.toLowerCase().replace(/ /g, '-')
+  const onSetCreationName = (nodeId: string | undefined, title: string) => {
+    const nodeName = nodeId || idFromTitle(title)
     const id = `${getIdFromRequest(window.location.href)}/${nodeName}`
 
     setItems(items.concat([

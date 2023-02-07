@@ -4,13 +4,18 @@ import { getRelativeMarkdownPath, getRelativePath } from './file-operations'
 export async function stringifyMarkdown(ast: any): Promise<string> {
   const { unified } = await import('unified')
   const remarkStringify = await import('remark-stringify')
-  return unified()
+  const raw = unified()
     // @ts-ignore
     .use(remarkStringify.default, {
       listItemIndent: '1',
     })
     .stringify(ast)
-    .replace(/\n\n\* /g, '\n* ') // mdast-util-to-markdown is ignoring no spread on lists.
+
+  // mdast-util-to-markdown is ignoring no spread on lists.
+  // This regex uses lookbehind so it only works with V8 and Edge JavaScript.
+  // TODO: Find a more universal and less-hacky solution to remark-stringify
+  return raw
+    .replace(/(?<=\*[^\r\n]+)\r?\n\r?\n\* /g, '\n* ')
 }
 
 export function generateLinkListAst(localPath: string, items: RecordLink[]) {

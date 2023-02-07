@@ -12,7 +12,7 @@ export type NodeLoader = (config: DatabaseConfig) => (request: GetNodeRequest) =
 export const loadNodeFromRequest: NodeLoader = config => async request => {
   const { id } = request
 
-  if (id.indexOf('.') !== -1 || id[0] === '/')
+  if (id.indexOf('.') !== -1 || id[0] === '/' || id[id.length - 1] == '/')
     throw new Error(`Invalid id: ${id}`)
 
   const node = await loadNode(config)(id)

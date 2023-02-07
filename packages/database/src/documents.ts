@@ -3,14 +3,20 @@ import { DatabaseConfig, NodePath } from './types'
 import path from 'path'
 import { getMarkdownTitle, parseMarkdownAST, processHeadings, processIndexList } from './markdown-parsing'
 import { generateDocumentAppendingAst, generateIndexListAst, stringifyMarkdown } from './markdown-generation'
+import { getMarkdownDocumentFilePath } from './pathing'
+import { loadDocumentContent } from './reading'
 
-function getTitle(data: any, nodePath: NodePath): string {
-  return getMarkdownTitle(data) || nodePath.nodeName || 'Unknown'
+export function titleOrFallback(nodePath: NodePath, title?: string) {
+  return title || nodePath.nodeName || 'Unknown'
+}
+
+export function getDocumentTitle(data: any, nodePath: NodePath): string {
+  return titleOrFallback(nodePath, getMarkdownTitle(data))
 }
 
 export async function expandDocument(config: DatabaseConfig, nodePath: NodePath, content: string): Promise<ExpandedDocument> {
   const data = await parseMarkdownAST(content)
-  const title = getTitle(data, nodePath)
+  const title = getDocumentTitle(data, nodePath)
   if (!nodePath.structure) {
     return {
       title,
@@ -42,9 +48,9 @@ export async function stringifyDocument(nodePath: NodePath, document: ExpandedDo
   return `${document.content}\n${additionalContent}`
 }
 
-export async function stringifyIndex(nodePath: NodePath, node: IndexNode) {
+export async function stringifyIndex(nodePath: NodePath, items: RecordLink[]) {
   const additionalContent = await stringifyMarkdown(
-    generateIndexListAst(nodePath.path, node.items)
+    generateIndexListAst(nodePath.path, items)
   )
 
   const { structure } = nodePath

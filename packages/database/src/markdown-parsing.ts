@@ -3,6 +3,7 @@ import { joinPaths } from './file-operations'
 import { idFromPath } from './pathing'
 import { NodePath } from './types'
 import path from 'path'
+import { isListType } from './schema'
 
 // Should be imported from remark-parse but that would require an async import.
 // This can be replaced by an import later.
@@ -89,16 +90,24 @@ export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] 
   const headingLists = gatherHeadingLists(data)
   const localId = path.dirname(nodePath.path)
   const lists: DocumentList[] = []
-  for (const headingList of headingLists) {
-    const { name } = headingList
-    const property = Object.values(nodePath.structure!.properties).filter(p => p.title == name)[0]
-    if (property) {
-      lists.push({
-        name,
-        type: joinPaths(nodePath.source!.id, (property.type as GenericType).types[0]),
-        items: gatherListLinks(localId, headingList.list)
-      })
+  const properties = nodePath.structure!.properties
+  for (const propertyId in properties) {
+    const property = properties[propertyId]
+    if (!isListType(property.type))
+      continue
 
+    const headingList = headingLists.filter(h => h.name == property.title)[0]
+    const items = headingList
+      ? gatherListLinks(localId, headingList.list)
+      : []
+
+    lists.push({
+      name: property.title,
+      type: joinPaths(nodePath.source!.id, (property.type as GenericType).types[0]),
+      items,
+    })
+
+    if (headingList) {
       data.children.splice(headingList.index, 2)
     }
   }

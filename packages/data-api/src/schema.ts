@@ -3,10 +3,12 @@ export interface GenericType {
   types: string[]
 }
 
+export type DataType = string | GenericType
+
 export interface Property {
   name: string
   title: string
-  type: string | GenericType
+  type: DataType
 }
 
 export type PropertyMap = { [key: string]: Property }
@@ -20,5 +22,7 @@ export interface Structure {
 export type StructureMap = { [key: string]: Structure }
 
 export interface DataSchema {
+  id: string
+  title: string
   structures: StructureMap
 }

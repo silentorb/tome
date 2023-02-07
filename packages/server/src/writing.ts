@@ -18,7 +18,7 @@ export const writeNodeFromRequest: DocumentWriter = config => async request => {
     }
 
     case 'index': {
-      await writeIndexDocument(config)(nodePath, request)
+      await writeIndexDocument(config)(nodePath, request.items)
       break
     }
   }

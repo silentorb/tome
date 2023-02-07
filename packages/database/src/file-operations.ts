@@ -1,5 +1,6 @@
 import fs from 'fs'
 import path from 'path'
+import { Stats } from 'node:fs'
 
 export function listFiles(directory: string) {
   return fs.promises.readdir(directory)
@@ -45,6 +46,14 @@ export async function isExistingDirectory(filePath: string) {
     return (await fs.promises.lstat(filePath)).isDirectory()
   } catch {
     return false
+  }
+}
+
+export async function getFileInfo(filePath: string): Promise<Stats | undefined> {
+  try {
+    return await fs.promises.lstat(filePath)
+  } catch {
+    return undefined
   }
 }
 

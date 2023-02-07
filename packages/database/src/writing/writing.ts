@@ -1,9 +1,9 @@
 import { AdvancedNodePath, DatabaseConfig, FileWriteJob, NodePath } from '../types'
-import { batchProcess, writeFile } from '../file-operations'
-import { getMarkdownDocumentFilePath } from '../pathing'
-import { ExpandedDocument, IndexNode, RecordLink } from '@tome/data-api'
+import { batchProcess, getFileInfo, writeFile } from '../file-operations'
+import { getMarkdownDocumentFilePath, getNodePath } from '../pathing'
+import { ExpandedDocument, RecordLink } from '@tome/data-api'
 import { loadExpandedDocument } from '../reading'
-import { diffListLinks, getAllDiffKeys,  } from '../diffing'
+import { diffListLinks, getAllDiffKeys, } from '../diffing'
 import { getDiffJobs } from './diffing-application'
 import { stringifyDocument, stringifyIndex } from '../documents'
 
@@ -37,17 +37,33 @@ export const writeDocument = (config: DatabaseConfig) => async (props: WriteDocu
   )
 }
 
-export const writeIndexDocument = (config: DatabaseConfig) => async (nodePath: NodePath, node: IndexNode) => {
+interface WriteFileJob {
+  filePath: string
+  content: string
+}
+
+const getMissingIndexChildFiles = async (config: DatabaseConfig, nodePath: NodePath, items: RecordLink[]): Promise<WriteFileJob[]> => {
+  const result: WriteFileJob[] = []
+  for (const item of items) {
+    const childNodePath = getNodePath(config, item.id)
+    const filePath = getMarkdownDocumentFilePath(childNodePath)
+    const info = await getFileInfo(filePath)
+    if (!info) {
+      result.push({
+        filePath,
+        content: `# ${item.title}\n`
+      })
+    }
+  }
+
+  return result
+}
+
+export const writeIndexDocument = (config: DatabaseConfig) => async (nodePath: NodePath, items: RecordLink[]) => {
   const filePath = getMarkdownDocumentFilePath(nodePath)
-  const content = await stringifyIndex(nodePath, node)
-  //
-  // const nodePathWithTitle = {
-  //   ...nodePath,
-  //   title: document.title,
-  // }
-  //
-  // const otherFiles = await getDocumentDiffs(config, nodePathWithTitle, document)
-  const jobs = [{ filePath, content }]//.concat(otherFiles)
+  const content = await stringifyIndex(nodePath, items)
+  const missingFileJobs = await getMissingIndexChildFiles(config, nodePath, items)
+  const jobs = [{ filePath, content }].concat(missingFileJobs)
   await batchProcess(jobs, ({ filePath, content }) =>
     writeFile(filePath, content)
   )
