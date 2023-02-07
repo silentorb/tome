@@ -41,10 +41,11 @@ export const CreationForm = (props: CreationFormProps) => {
   return (
     <form onSubmit={onSubmit}>
       <div>
-        <label>Name</label><TextInput autoFocus type="text" value={name} onChange={onTextChanged(setName)}/>
+        <label>Name</label><TextInput autoFocus type="text" value={name} onChange={onTextChanged(setName)} />
       </div>
       <div>
-        <label>Id</label><TextInput autoFocus type="text" value={id} onChange={onTextChanged(setId)} placeholder={idPlaceholder}/>
+        <label>Id</label><TextInput type="text" value={id} onChange={onTextChanged(setId)}
+                                    placeholder={idPlaceholder}/>
       </div>
       <input type="submit" value="Create"/>
     </form>
@@ -73,7 +74,7 @@ export const IndexPage = (props: Props) => {
   const parentNavigation = node.id !== ''
     ? <ParentNavigation/> : undefined
 
-  const onStartCreation = () => {
+  const startCreation = () => {
     setCreating(true)
   }
 
@@ -95,22 +96,43 @@ export const IndexPage = (props: Props) => {
   }, [items])
 
   const onSetCreationName = (nodeId: string | undefined, title: string) => {
-    const nodeName = nodeId || idFromTitle(title)
-    const id = `${getIdFromRequest(window.location.href)}/${nodeName}`
+    if (title) {
+      const nodeName = nodeId || idFromTitle(title)
+      const id = `${getIdFromRequest(window.location.href)}/${nodeName}`
 
-    setItems(items.concat([
-      {
-        title,
-        id,
-      }
-    ]))
+      setItems(items.concat([
+        {
+          title,
+          id,
+        }
+      ]))
+    }
     setCreating(false)
   }
 
   const creationElement =
     creating
       ? <CreationForm onSubmit={onSetCreationName}/>
-      : <IconButton onClick={() => onStartCreation()}><PlusCircle/></IconButton>
+      : <IconButton onClick={() => startCreation()}><PlusCircle/></IconButton>
+
+  const onKeydown = (e: KeyboardEvent) => {
+    if (e.key === 'n' && e.altKey) {
+      e.preventDefault()
+      if (!creating) {
+        startCreation()
+      }
+    }
+    else if (e.key == 'Escape' && creating) {
+      setCreating(false)
+    }
+  }
+
+  useEffect(() => {
+    window.addEventListener('keydown', onKeydown)
+    return function cleanup() {
+      window.removeEventListener('keydown', onKeydown)
+    }
+  })
 
   return (
     <>
