@@ -25,7 +25,7 @@ export async function loadDocumentTitle(config: DatabaseConfig, nodePath: NodePa
 
 export async function loadExpandedDocument(config: DatabaseConfig, nodePath: NodePath): Promise<ExpandedDocument | undefined> {
   const content = await loadDocumentContent(config, nodePath)
-  if (!content)
+  if (typeof content !== 'string')
     return undefined
 
   return expandDocument(config, nodePath, content)

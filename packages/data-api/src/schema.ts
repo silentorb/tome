@@ -1,14 +1,15 @@
-export interface GenericType {
+export interface DataType {
   name: string
   types: string[]
 }
 
-export type DataType = string | GenericType
+export type ListOrder = 'indexed' | [string, 'asc' | 'desc'][]
 
 export interface Property {
   name: string
   title: string
   type: DataType
+  order?: ListOrder
 }
 
 export type PropertyMap = { [key: string]: Property }

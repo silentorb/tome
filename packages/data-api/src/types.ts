@@ -1,4 +1,4 @@
-import { Structure } from './schema'
+import { ListOrder, Structure } from './schema'
 
 export interface RecordLink {
   title: string
@@ -10,6 +10,7 @@ export interface DocumentList {
   name: string
   type?: string
   items: RecordLink[]
+  order?: ListOrder
 }
 
 export interface ExpandedDocument {

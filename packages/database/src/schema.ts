@@ -1,10 +1,10 @@
-import { DataSchema, DataType, GenericType } from '@tome/data-api'
+import { DataSchema, DataType } from '@tome/data-api'
 import { joinPaths, readFile, readFileOrError, readFileOrErrorSync } from './file-operations'
 import { DatabaseConfig, DataSource } from './types'
 import path from 'path'
 
 export const isListType = (type: DataType) =>
-  typeof  type != 'string' && type.name == 'list'
+  type.name == 'list'
 
 export function expandSerializedSchema(schema: DataSchema) {
   for (const [path, structure] of Object.entries(schema.structures)) {

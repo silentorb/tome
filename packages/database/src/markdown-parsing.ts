@@ -1,4 +1,4 @@
-import { DocumentList, GenericType, RecordLink, Structure } from '@tome/data-api'
+import { DocumentList, RecordLink, Structure } from '@tome/data-api'
 import { joinPaths } from './file-operations'
 import { idFromPath } from './pathing'
 import { NodePath } from './types'
@@ -13,7 +13,7 @@ interface HeadingListInfo {
   index: number
   name: string
   heading: any
-  list: any
+  list?: any
 }
 
 function findNodeOfType(node: any, type: string): any | undefined {
@@ -54,12 +54,12 @@ function gatherHeadingLists(data: Root): HeadingListInfo[] {
     if (child.type == 'heading' && child.depth == 2) {
       const next = children[index + 1]
       const name = getNodeText(child)
-      if (name && next && next.type == 'list') {
+      if (name) {
         result.push({
           index,
           name,
           heading: child,
-          list: next
+          list:  next && next.type == 'list' ? next : undefined
         })
       }
     }
@@ -91,25 +91,38 @@ export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] 
   const localId = path.dirname(nodePath.path)
   const lists: DocumentList[] = []
   const properties = nodePath.structure!.properties
+  const removedContent: number[][] = []
+
   for (const propertyId in properties) {
     const property = properties[propertyId]
-    if (!isListType(property.type))
+    const subType = property.type?.types?.at(0)!
+    if (!isListType(property.type) || !subType)
       continue
 
     const headingList = headingLists.filter(h => h.name == property.title)[0]
-    const items = headingList
-      ? gatherListLinks(localId, headingList.list)
+    const list = headingList?.list
+    const items = list
+      ? gatherListLinks(localId, list)
       : []
 
     lists.push({
       name: property.title,
-      type: joinPaths(nodePath.source!.id, (property.type as GenericType).types[0]),
+      type: joinPaths(nodePath.source!.id, subType),
       items,
+      order: property.order || [['title', 'asc']],
     })
 
     if (headingList) {
-      data.children.splice(headingList.index, 2)
+      removedContent.push([headingList.index, list ? 2 : 1])
     }
+  }
+
+  // Remove sections from last to first to preserve indices.
+  // Currently and incidentally this array doesn't need to be sorted, but it's more robust to sort it for now
+  // in case the previous step ever becomes more complex and no longer sequential.
+  const sortedRemovedContent = removedContent.sort().reverse()
+  for (const [index, count] of sortedRemovedContent) {
+    data.children.splice(index, count)
   }
 
   return lists
