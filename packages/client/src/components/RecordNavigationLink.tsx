@@ -4,6 +4,7 @@ import * as React from 'react'
 import { RecordLink } from '@tome/data-api'
 import styled from 'styled-components'
 import { elementSequence } from './styling'
+import { getAbsoluteResourceUrl } from '../routing'
 
 interface Props {
   item: RecordLink
@@ -16,7 +17,7 @@ const LinkStyle = styled.span`
 export const RecordNavigationLink = (props: Props) => {
   const { item } = props
   const icon = item.isDirectory ? <Folder/> : <File/>
-  const absolute = new URL(item.id, new URL('data/', document.location.origin)).pathname
+  const absolute = getAbsoluteResourceUrl(item.id)
   return (
     <LinkStyle key={item.id}>
       {icon} <Link to={absolute}>{item.title}</Link>

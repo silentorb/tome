@@ -6,10 +6,18 @@ import {
   QueryNodesRequest
 } from '@tome/web-api'
 import { DatabaseConfig, loadNode, queryNodes } from '@tome/database'
+import { DatabaseSchema } from '@tome/data-api/dist/src'
 
 export type NodeLoader = (config: DatabaseConfig) => (request: GetNodeRequest) => Promise<GetNodeResponse>
 
-export const loadNodeFromRequest: NodeLoader = config => async request => {
+export type SchemaLoader = (config: DatabaseConfig) => (request: any) => Promise<DatabaseSchema>
+
+export const fetchSchema: SchemaLoader = config => async _ => {
+  const schemas = config.schemas
+  return { schemas }
+}
+
+export const fetchNode: NodeLoader = config => async request => {
   const { id } = request
 
   if (id.indexOf('.') !== -1 || id[0] === '/' || id[id.length - 1] == '/')

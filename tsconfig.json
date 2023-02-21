@@ -6,9 +6,6 @@
       "ES2021"
     ],
     "strict": true,
-    "newLine": "lf"
-  },
-  "include": [
-    "./scripts/**/*"
-  ]
+    "newLine": "lf",
+  }
 }

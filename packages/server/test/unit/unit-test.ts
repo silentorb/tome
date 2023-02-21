@@ -39,7 +39,8 @@ describe('unit-test', function () {
     it('resolves structured child indexes', async function () {
       const nodePath: NodePath = {
         path: 'story/books',
-        source,
+        schema: source.schema,
+        schemaFilePath: '/story/data',
         structure: books
       }
       const filePath = getNodeFilePath(nodePath)
@@ -49,7 +50,8 @@ describe('unit-test', function () {
     it('resolves source indexes', async function () {
       const nodePath: NodePath = {
         path: 'story',
-        source,
+        schemaFilePath: '/story/data',
+        schema: source.schema,
       }
       const filePath = getNodeFilePath(nodePath)
       assert.strictEqual(filePath, '/story/data')

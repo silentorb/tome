@@ -58,7 +58,9 @@ describe('document-test', function () {
         const node = (await loadNode(config)('story/scenes')) as IndexNode
         assert.strictEqual(node.type, 'index')
         assert.lengthOf(node.items, 2)
-        assert.strictEqual(node.items[0]?.id, 'story/scenes/introduce-bob')
+
+        // No longer using custom order for story/scenes.
+        // assert.strictEqual(node.items[0]?.id, 'story/scenes/introduce-bob')
       })
     })
   })

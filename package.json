@@ -9,12 +9,16 @@
   "scripts": {
     "server": "ts-node packages/server/scripts/start",
     "build": "cd packages/client & yarn build",
-    "dev": "cd packages/client & yarn dev"
+    "dev": "cd packages/client & yarn dev",
+    "app": "concurrently \"yarn server\" \"yarn dev\""
   },
   "workspaces": [
     "packages/*"
   ],
   "dependencies": {
     "typescript": "^4.9.4"
+  },
+  "devDependencies": {
+    "concurrently": "^7.6.0"
   }
 }

@@ -100,11 +100,11 @@ export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] 
       continue
 
     const listLists = headingLists.filter(h => h.name == property.title)
-    const items = listLists.reduce((a, b) => a.concat(gatherListLinks(localId, b.list) || []), [] as RecordLink[])
+    const items = listLists.reduce((a, b) => a.concat(b.list ? gatherListLinks(localId, b.list) : []), [] as RecordLink[])
 
     lists.push({
       name: property.title,
-      type: joinPaths(nodePath.source!.id, subType),
+      type: joinPaths(nodePath.schema!.id, subType),
       items,
       order: property.order || [['title', 'asc']],
     })

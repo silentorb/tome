@@ -1,3 +1,5 @@
+import { DataSource } from '@tome/database/dist/src'
+
 export interface DataType {
   name: string
   types: string[]
@@ -26,4 +28,10 @@ export interface DataSchema {
   id: string
   title: string
   structures: StructureMap
+}
+
+export type DataSchemaMap = { [key: string]: DataSchema }
+
+export interface DatabaseSchema {
+  schemas: DataSchemaMap
 }

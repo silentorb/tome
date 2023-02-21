@@ -7,7 +7,7 @@ export type DocumentWriter = (config: DatabaseConfig) => (request: PutNodeReques
 export const writeNodeFromRequest: DocumentWriter = config => async request => {
   const { id } = request
   const nodePath = getNodePath(config, id)
-  if (!nodePath.source)
+  if (!nodePath.schema)
     throw new BadRequest('Invalid data source in resource path')
 
   switch (request.type) {

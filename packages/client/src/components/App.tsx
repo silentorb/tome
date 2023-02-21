@@ -1,8 +1,16 @@
 import { RouterProvider } from 'react-router-dom'
 import { newRouter } from '../routing'
+import { DatabaseConfig } from '@tome/database'
+import { createContext, useEffect, useState } from 'react'
 
 export const App = () => {
-  const router = newRouter()
+  const [databaseConfig, setDatabaseConfig] = useState<DatabaseConfig | undefined>()
+  const databaseConfigContext = createContext(undefined)
+  useEffect(() => {
+    if (!databaseConfig) {
 
-  return <RouterProvider router={router} />
+    }
+  }, [databaseConfig])
+
+  return <RouterProvider router={newRouter()}/>
 }

@@ -6,6 +6,7 @@ import { loadNodesOfType } from '../services'
 import { Trash2 } from 'react-feather'
 import styled from 'styled-components'
 import { elementSequence, IconButton } from './styling'
+import { getAbsoluteResourceUrl } from '../routing'
 
 interface Props {
   list: DocumentList
@@ -23,7 +24,7 @@ const LinkItemStyle = styled.li`
 
 const LinkItem = ({ item, onDelete }: LinkProps) => {
   return (
-    <LinkItemStyle key={item.id}>
+    <LinkItemStyle>
       <RecordNavigationLink item={item}/>
       <IconButton onClick={() => onDelete(item)}><Trash2/></IconButton>
     </LinkItemStyle>
@@ -58,7 +59,7 @@ export const LinkList = (props: Props) => {
     )
   }
 
-  const rows = items.map(item => <LinkItem onDelete={onDelete} item={item}/>)
+  const rows = items.map(item => <LinkItem onDelete={onDelete} item={item} key={item.id}/>)
 
   const checkOptionsLoaded = () => {
     if (!options && list.type) {
@@ -91,9 +92,13 @@ export const LinkList = (props: Props) => {
     }
   }
 
+  const heading = list.type
+    ? <h2><a href={getAbsoluteResourceUrl(list.type)}>{list.name}</a></h2>
+    : <h2>{list.name}</h2>
+
   return (
     <div>
-      <h2>{list.name}</h2>
+      {heading}
       <Select
         options={options || []}
         onFocus={checkOptionsLoaded}

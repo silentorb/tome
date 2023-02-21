@@ -1,4 +1,3 @@
-export * from './database'
 export * from './diffing'
 export * from './documents'
 export * from './file-operations'

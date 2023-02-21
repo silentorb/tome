@@ -1,15 +1,20 @@
 import { ServerConfig } from './types'
 import { EndpointPaths } from '@tome/web-api'
-import { loadNodeFromRequest, queryNodesFromRequest } from './reading'
+import { fetchNode, fetchSchema, queryNodesFromRequest } from './reading'
 import { writeNodeFromRequest } from './writing'
 import { EndpointDefinition } from '@vineyard/lawn'
 
 export function newEndpoints(config: ServerConfig): EndpointDefinition[] {
   return [
     {
+      method: 'get',
+      path: EndpointPaths.schemaGet,
+      handler: fetchSchema(config.data),
+    },
+    {
       method: 'post',
       path: EndpointPaths.nodeGet,
-      handler: loadNodeFromRequest(config.data),
+      handler: fetchNode(config.data),
     },
     {
       method: 'post',

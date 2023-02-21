@@ -79,3 +79,18 @@ export async function stringifyIndex(nodePath: NodePath, items: RecordLink[]) {
 
   return `${titleClause}${additionalContent}`
 }
+
+export const sortRecordLinks = (items: RecordLink[]): RecordLink[] =>
+  items.sort((a, b) => a.title.localeCompare(b.title))
+
+export const recordLinkListsHaveSameOrder = (first: RecordLink[], second: RecordLink[]): boolean => {
+  if (first.length != second.length)
+    return false
+
+  for (let i = 0; i < first.length; ++i) {
+    if (first[i].id != second[i].id)
+      return false
+  }
+
+  return true
+}

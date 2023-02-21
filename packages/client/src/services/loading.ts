@@ -2,8 +2,12 @@ import axios from 'axios'
 import { GetNodeProps, ResourceLoader } from './types'
 import { EndpointPaths, GetNodeLinksResponse, GetNodeResponse } from '@tome/web-api'
 import { apiUrl } from './utility'
-import { DataQuery } from '@tome/data-api'
+import { DatabaseSchema, DataQuery } from '@tome/data-api'
 
+export const loadSchema: ResourceLoader<DatabaseSchema> = async () => {
+  const response = await axios.get(apiUrl(EndpointPaths.schemaGet))
+  return response.data
+}
 
 export const loadNode: ResourceLoader<GetNodeResponse> = async id => {
   const response = await axios.post(apiUrl(EndpointPaths.nodeGet), { id })

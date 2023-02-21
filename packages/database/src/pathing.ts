@@ -20,21 +20,9 @@ export function getStructureByPath(schema: DataSchema, name: string): Structure 
   return schema.structures[name]
 }
 
-// export function getStructureFromId(config: DatabaseConfig, id: string): Structure | undefined {
-//   const pathTokens = id.split('/')
-//   if (pathTokens.length < 2)
-//     throw new Error(`Incomplete id path: ${id}`)
-//
-//   // TODO: This will also need to route databases based on the first path token once multiple databases are supported
-//   const pluralName = pathTokens[pathTokens.length - 2]
-//
-//   const schema = getDefaultDataSource(config).schema
-//   return getStructureByPathName(schema, pluralName)
-// }
-
-function getStructure(tokens: string[], source: DataSource | undefined): Structure | undefined {
+function getStructure(tokens: string[], schema: DataSchema | undefined): Structure | undefined {
   const structureName = tokens[1]
-  return source && structureName ? getStructureByPath(source.schema, structureName) : undefined
+  return schema && structureName ? getStructureByPath(schema, structureName) : undefined
 }
 
 const getTokens = (resourcePath: string) => resourcePath.split('/')
@@ -44,8 +32,9 @@ export function getNodePath(config: DatabaseConfig, resourcePath: string): NodeP
   const sourceName = tokens[0]
 
   // TODO: Support structure paths with multiple tokens instead of just one
-  const source = sourceName ? config.sources[sourceName] : undefined
-  const structure = getStructure(tokens, source)
+  const schema = config.schemas[sourceName]
+  const source = config.sources[sourceName]
+  const structure = getStructure(tokens, schema)
   const nodeName = tokens.length > 2
     ? tokens[tokens.length - 1]
     : structure
@@ -54,7 +43,8 @@ export function getNodePath(config: DatabaseConfig, resourcePath: string): NodeP
 
   return {
     path: resourcePath,
-    source,
+    schema,
+    schemaFilePath: source?.filePath,
     structure,
     nodeName,
   }
@@ -69,7 +59,7 @@ export async function getAdvancedNodePath(config: DatabaseConfig, resourcePath: 
 }
 
 export const getNodeFilePath = (nodePath: NodePath) => {
-  const base = nodePath.source?.filePath || ''
+  const base = nodePath.schemaFilePath || ''
   return nodePath.structure
     ? joinPaths(base, nodePath.structure.path, nodePath.nodeName || '')
     : joinPaths(base, dropFirstPathToken(nodePath.path)) // This assumes the first token of the child path is already included in the base path
@@ -80,9 +70,9 @@ export const getMarkdownDocumentFilePath = (nodePath: NodePath) => {
   return `${baseFilePath}.md`
 }
 
-export const getIndexDirectoryPath = (nodePath: NodePath) => {
+export const getIndexDirectoryPath = (nodePath: NodePath): string | undefined => {
   if (isDataSource(nodePath))
-    return nodePath.source!!.filePath
+    return nodePath.schemaFilePath
 
   const newNodePath = nodePath.nodeName == 'index'
     ? { ...nodePath, nodeName: undefined }
@@ -93,14 +83,14 @@ export const getIndexDirectoryPath = (nodePath: NodePath) => {
 
 export const childNodePath = (config: DatabaseConfig, parent: NodePath) => (childName: string): NodePath => {
   const path = `${parent.path}/${childName}`
-  const source = parent.source
+  const source = parent.schema
   return {
+    ...parent,
     path,
-    source,
     structure: parent.structure || getStructure(getTokens(path), source),
     nodeName: childName,
   }
 }
 
 export const isDataSource = (nodePath: NodePath): boolean =>
-  nodePath.path == nodePath.source?.id
+  nodePath.path == nodePath.schema?.id

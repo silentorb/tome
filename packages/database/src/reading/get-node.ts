@@ -6,7 +6,7 @@ import { getMarkdownDocumentFilePath, getNodeFilePath, getNodePath, isDataSource
 
 export const loadNode = (config: DatabaseConfig) => async (resourcePath: string) => {
   const nodePath = getNodePath(config, resourcePath)
-  if (!nodePath.source) {
+  if (!nodePath.schema) {
     return getDataSourceIndex(config)
   }
 

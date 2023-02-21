@@ -3,7 +3,7 @@ import { IndexNode, RecordLink } from '@tome/data-api'
 import { DatabaseConfig, NodePath } from '../types'
 import { childNodePath, getIndexDirectoryPath, getNodeFilePath, idFromPath } from '../pathing'
 import { loadDocumentContent, loadDocumentTitle } from './get-document'
-import { expandIndexList } from '../documents'
+import { expandIndexList, recordLinkListsHaveSameOrder, sortRecordLinks } from '../documents'
 import { writeIndexDocument } from '../writing'
 
 const newChildLink = (config: DatabaseConfig) => async (nodePath: NodePath): Promise<RecordLink> => {
@@ -17,9 +17,9 @@ const newChildLink = (config: DatabaseConfig) => async (nodePath: NodePath): Pro
 }
 
 export function getDataSourceIndex(config: DatabaseConfig): IndexNode {
-  const items = Object.entries(config.sources)
+  const items = Object.entries(config.schemas)
     .map(([key, value]) => ({
-      title: value.schema.title || key,
+      title: value.title || key,
       id: key,
       isDirectory: true,
     }))
@@ -63,6 +63,9 @@ function syncIndexList(indexLinks: RecordLink[], directoryLinks: RecordLink[]): 
 
 export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath): Promise<RecordLink[]> {
   const filePath = getIndexDirectoryPath(nodePath)
+  if (!filePath)
+    return []
+
   const allFiles = await listFiles(filePath)
   const files = allFiles.filter(f => !f.includes('.') || f.match(/\.md$/))
   const withoutIndex = files.filter(f => f != 'index.md')
@@ -78,12 +81,13 @@ export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath): 
   if (hasIndex) {
     const indexLinks = await loadIndexList(config, nodePath)
     const [newList, changed] = syncIndexList(indexLinks, directoryLinks)
-    if (changed) {
-      await writeIndexDocument(config)(nodePath, newList)
+    const sortedList = sortRecordLinks(newList)
+    if (changed || !recordLinkListsHaveSameOrder(newList, sortedList)) {
+      await writeIndexDocument(config)(nodePath, sortedList)
     }
-    return newList
+    return sortedList
   } else {
-    return directoryLinks
+    return sortRecordLinks(directoryLinks)
   }
 }
 
