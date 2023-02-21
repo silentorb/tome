@@ -81,7 +81,7 @@ export const getDiffJobs = (config: DatabaseConfig, otherNodePath: AdvancedNodeP
     title: document.title,
   }
   const modifiedDocument = await applyOtherDocumentDiffs(config, advancedNodePath, otherNodePath, diffs, document)
-  const content = await stringifyDocument(nodePath, modifiedDocument);
+  const content = await stringifyDocument(nodePath, modifiedDocument)
   return [
     {
       filePath: getMarkdownDocumentFilePath(nodePath),

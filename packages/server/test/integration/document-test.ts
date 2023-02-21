@@ -13,6 +13,7 @@ import { DocumentNode, IndexNode } from '@tome/data-api'
 import * as fs from 'fs'
 import * as path from 'path'
 import { writeNodeFromRequest } from '../../src/writing'
+import { loadTestResource } from '../utility'
 
 const tempDirectory = './temp'
 const storyPath = `${tempDirectory}/story`
@@ -28,9 +29,7 @@ function initializeTempDirectory() {
   fse.copySync('test/templates', tempDirectory)
 }
 
-function loadExpectedContent(filename: string) {
-  return fs.readFileSync(path.resolve(__dirname, 'expected', filename), 'utf8')
-}
+const loadExpectedContent = loadTestResource(__dirname, 'expected')
 
 describe('document-test', function () {
   this.timeout(15000)

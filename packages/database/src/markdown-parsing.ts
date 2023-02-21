@@ -99,11 +99,8 @@ export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] 
     if (!isListType(property.type) || !subType)
       continue
 
-    const headingList = headingLists.filter(h => h.name == property.title)[0]
-    const list = headingList?.list
-    const items = list
-      ? gatherListLinks(localId, list)
-      : []
+    const listLists = headingLists.filter(h => h.name == property.title)
+    const items = listLists.reduce((a, b) => a.concat(gatherListLinks(localId, b.list) || []), [] as RecordLink[])
 
     lists.push({
       name: property.title,
@@ -112,15 +109,15 @@ export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] 
       order: property.order || [['title', 'asc']],
     })
 
-    if (headingList) {
-      removedContent.push([headingList.index, list ? 2 : 1])
+    for (const headingList of listLists){
+      removedContent.push([headingList.index, headingList.list ? 2 : 1])
     }
   }
 
   // Remove sections from last to first to preserve indices.
   // Currently and incidentally this array doesn't need to be sorted, but it's more robust to sort it for now
   // in case the previous step ever becomes more complex and no longer sequential.
-  const sortedRemovedContent = removedContent.sort().reverse()
+  const sortedRemovedContent = removedContent.sort((a,b) => b[0] - a[0])
   for (const [index, count] of sortedRemovedContent) {
     data.children.splice(index, count)
   }

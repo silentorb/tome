@@ -48,6 +48,24 @@ export async function stringifyDocument(nodePath: NodePath, document: ExpandedDo
   return `${document.content}\n${additionalContent}`
 }
 
+const consolidateListItems = (items: RecordLink[]): RecordLink[] =>
+  items.reduce((a, b) => a.some(i => i.id == b.id) ? a : a.concat([b]), [] as RecordLink[])
+
+export function refineDocument(document: ExpandedDocument): ExpandedDocument {
+  const lists = document.lists.map(list => ({
+    ...list,
+    items: consolidateListItems(list.items),
+  }))
+  return {
+    ...document,
+    lists,
+  }
+}
+
+export async function refineAndStringifyDocument(nodePath: NodePath, document: ExpandedDocument) {
+  return stringifyDocument(nodePath, refineDocument(document))
+}
+
 export async function stringifyIndex(nodePath: NodePath, items: RecordLink[]) {
   const additionalContent = await stringifyMarkdown(
     generateIndexListAst(nodePath.path, items)

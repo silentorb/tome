@@ -1,5 +1,6 @@
 export * from './database'
 export * from './diffing'
+export * from './documents'
 export * from './file-operations'
 export * from './pathing'
 export * from './schema'

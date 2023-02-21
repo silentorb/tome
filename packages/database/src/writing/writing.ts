@@ -5,7 +5,7 @@ import { ExpandedDocument, RecordLink } from '@tome/data-api'
 import { loadExpandedDocument } from '../reading'
 import { diffListLinks, getAllDiffKeys, } from '../diffing'
 import { getDiffJobs } from './diffing-application'
-import { stringifyDocument, stringifyIndex } from '../documents'
+import { refineAndStringifyDocument, stringifyDocument, stringifyIndex } from '../documents'
 
 export interface WriteDocumentProps {
   nodePath: NodePath
@@ -23,7 +23,7 @@ async function getDocumentDiffs(config: DatabaseConfig, nodePath: AdvancedNodePa
 export const writeDocument = (config: DatabaseConfig) => async (props: WriteDocumentProps) => {
   const { nodePath, document } = props
   const filePath = getMarkdownDocumentFilePath(nodePath)
-  const content = await stringifyDocument(nodePath, document);
+  const content = await refineAndStringifyDocument(nodePath, document)
 
   const nodePathWithTitle = {
     ...nodePath,
