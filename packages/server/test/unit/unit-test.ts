@@ -33,7 +33,27 @@ describe('unit-test', function () {
     }
   }
 
-  const config: DatabaseConfig = loadDatabasesSync([path.resolve(__dirname, '../templates/story')])
+  const config: DatabaseConfig = loadDatabasesSync([
+    path.resolve(__dirname, '../templates/business'),
+    path.resolve(__dirname, '../templates/story'),
+  ])
+
+  describe('path resolution', function () {
+    it('supports simple paths', function () {
+      const nodePath = getNodePath(config, 'story/characters')
+      assert.isObject(nodePath)
+      assert.strictEqual(nodePath?.schema?.title, 'Story Test')
+      assert.strictEqual(nodePath?.structure?.title, 'Characters')
+    })
+
+    it('supports paths with multi-token source paths', function () {
+      const nodePath = getNodePath(config, 'tome/business/general/organizations/bob/1')
+      assert.isObject(nodePath)
+      assert.strictEqual(nodePath?.schema?.title, 'Business')
+      assert.strictEqual(nodePath?.structure?.title, 'Organizations')
+      assert.strictEqual(nodePath?.nodeName, 'bob/1')
+    })
+  })
 
   describe('file path resolution', function () {
     it('resolves structured child indexes', async function () {

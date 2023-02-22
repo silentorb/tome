@@ -1,5 +1,5 @@
 import { AdvancedNodePath, DatabaseConfig, DataSource, NodePath } from './types'
-import { DataSchema, Structure } from '@tome/data-api'
+import { DataSchema, RecordLink, Structure } from '@tome/data-api'
 import { joinPaths } from './file-operations'
 import path from 'path'
 
@@ -20,23 +20,46 @@ export function getStructureByPath(schema: DataSchema, name: string): Structure 
   return schema.structures[name]
 }
 
-function getStructure(tokens: string[], schema: DataSchema | undefined): Structure | undefined {
-  const structureName = tokens[1]
-  return schema && structureName ? getStructureByPath(schema, structureName) : undefined
+export const tokenPathsMatch = (first: string[], second: string[]): boolean => {
+  if (first.length != second.length)
+    return false
+
+  for (let i = 0; i < first.length; ++i) {
+    if (first[i] != second[i])
+      return false
+  }
+
+  return true
+}
+
+export function getMapValueByPathTokens<T>(map: {[key: string]: T}, tokens : string[]): [T | undefined, number] {
+  for (const [name, source] of Object.entries(map)) {
+    const nameTokens = name.split('/')
+    if (tokenPathsMatch(nameTokens, tokens.slice(0, nameTokens.length)))
+      return [source, nameTokens.length]
+  }
+  return [undefined, 0]
+}
+
+function getStructure(tokens: string[], schema: DataSchema): [Structure | undefined, number] {
+  return getMapValueByPathTokens(schema.structures, tokens)
 }
 
 const getTokens = (resourcePath: string) => resourcePath.split('/')
 
+export function getDataSourceFromPath(config: DatabaseConfig, tokens : string[]): [DataSource | undefined, number] {
+  return getMapValueByPathTokens(config.sources, tokens)
+}
+
 export function getNodePath(config: DatabaseConfig, resourcePath: string): NodePath {
   const tokens = getTokens(resourcePath)
-  const sourceName = tokens[0]
-
-  // TODO: Support structure paths with multiple tokens instead of just one
-  const schema = config.schemas[sourceName]
-  const source = config.sources[sourceName]
-  const structure = getStructure(tokens, schema)
-  const nodeName = tokens.length > 2
-    ? tokens[tokens.length - 1]
+  const [source, sourceLength] = getDataSourceFromPath(config, tokens)
+  const schema = source ? config.schemas[source.id] : undefined
+  const tokens2 = tokens.slice(sourceLength)
+  const [structure, structureLength] = schema ? getStructure(tokens2, schema) : [undefined, 0]
+  const tokens3 = tokens2.slice(structureLength)
+  const nodeName = tokens3.length > 1
+    ? tokens3.join('/')
     : structure
       ? 'index'
       : undefined
@@ -83,11 +106,11 @@ export const getIndexDirectoryPath = (nodePath: NodePath): string | undefined =>
 
 export const childNodePath = (config: DatabaseConfig, parent: NodePath) => (childName: string): NodePath => {
   const path = `${parent.path}/${childName}`
-  const source = parent.schema
+  const schema = parent.schema
   return {
     ...parent,
     path,
-    structure: parent.structure || getStructure(getTokens(path), source),
+    structure: parent.structure || (schema ? getStructure(getTokens(path), schema)[0] : undefined),
     nodeName: childName,
   }
 }

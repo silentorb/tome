@@ -1,0 +1,30 @@
+{
+  "title": "Business",
+  "id": "tome/business",
+  "structures": {
+    "general/organizations": {
+      "title": "Organizations",
+      "properties": {
+        "members": {
+          "title": "Members",
+          "type": {
+            "name": "list",
+            "types": ["members"]
+          }
+        }
+      }
+    },
+    "members": {
+      "title": "Members",
+      "properties": {
+        "organizations": {
+          "title": "Organizations",
+          "type": {
+            "name": "list",
+            "types": ["organizations"]
+          }
+        }
+      }
+    }
+  }
+}
