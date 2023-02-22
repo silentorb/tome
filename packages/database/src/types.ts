@@ -3,6 +3,7 @@ import { DataSchema, DataSchemaMap, TypeDefinition } from '@tome/data-api'
 export interface DataSource {
   id: string
   filePath: string
+  typeFilePaths: { [key: string]: string }
 }
 
 export type DataSourceMap = { [key: string]: DataSource }
@@ -15,7 +16,7 @@ export interface DatabaseConfig {
 export interface NodePath {
   path: string
   schema?: DataSchema
-  schemaFilePath?: string
+  filePath: string
   type?: TypeDefinition
   nodeName?: string
 }

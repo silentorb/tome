@@ -5,6 +5,8 @@ import {
   SerializedTypeReference
 } from './serialized-schema-types'
 import { DataSchema, Property, PropertyMap, TypeDefinition, TypeReference } from '@tome/data-api'
+import { DataSource } from '../types'
+import path from 'path'
 
 // These functions convert the more concise schema format into the more verbose and computation-friendly schema format.
 
@@ -12,7 +14,7 @@ export const expandSerializedTypeReference = (subType?: string) => (property: Se
   if (typeof property === 'string')
     return {
       name: property,
-      types: subType ? [subType] : [],
+      types: (property == 'list' && subType) ? [subType] : [],
     }
 
   return property
@@ -49,8 +51,12 @@ export function expandSerializedTypeDefinition(path: string, type: SerializedTyp
   }
 }
 
-export function expandSerializedSchema(schema: SerializedDataSchema): DataSchema {
-  const { id, title } = schema
+const getSchemaId = (filePath: string, schema: SerializedDataSchema) =>
+  schema.id || path.basename(filePath)
+
+export function expandSerializedSchema(filePath: string, schema: SerializedDataSchema): DataSchema {
+  const { title } = schema
+  const id = getSchemaId(filePath, schema)
 
   const types = Object.fromEntries(
     Object.entries(schema.types)
@@ -63,5 +69,19 @@ export function expandSerializedSchema(schema: SerializedDataSchema): DataSchema
     id,
     title,
     types
+  }
+}
+
+export function expandSerializedDataSources(filePath: string, schema: SerializedDataSchema): DataSource {
+  const id = getSchemaId(filePath, schema)
+  const typeFilePaths = Object.fromEntries(
+    Object.entries(schema.types)
+      .map(([name, type]) => [name, type.filePath || name])
+  )
+
+  return {
+    id,
+    filePath,
+    typeFilePaths,
   }
 }

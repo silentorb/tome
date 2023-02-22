@@ -2,7 +2,7 @@ import { assert } from 'chai'
 import * as fse from 'fs-extra'
 import {
   getMarkdownDocumentFilePath,
-  getNodePath,
+  getNodePath, getNodePathOrError, joinPaths,
   loadDatabasesSync,
   loadNode,
   readFile,
@@ -15,7 +15,8 @@ import { writeNodeFromRequest } from '../../src/writing'
 import { loadTestResource } from '../utility'
 
 const tempDirectory = path.resolve(__dirname, '../..', 'temp')
-const storyPath = `${tempDirectory}/story`
+const storyPath = joinPaths(tempDirectory, 'story')
+const businessPath = joinPaths(tempDirectory, 'business')
 
 // This is a dangerous function and care needs to be taken not to misdirect it.
 function deleteTemporaryDirectory() {
@@ -33,7 +34,7 @@ const loadExpectedContent = loadTestResource(__dirname, 'expected')
 describe('document-test', function () {
   this.timeout(15000)
   initializeTempDirectory()
-  let config = loadDatabasesSync([storyPath])
+  let config = loadDatabasesSync([storyPath, businessPath])
 
   describe('reading', function () {
     before(function () {
@@ -59,9 +60,13 @@ describe('document-test', function () {
         const node = (await loadNode(config)('story/scenes')) as IndexNode
         assert.strictEqual(node.type, 'index')
         assert.lengthOf(node.items, 2)
+      })
 
-        // No longer using custom order for story/scenes.
-        // assert.strictEqual(node.items[0]?.id, 'story/scenes/introduce-bob')
+      it('supports unions', async function () {
+        const node = (await loadNode(config)('tome/business/entities')) as IndexNode
+        assert.strictEqual(node.type, 'index')
+        assert.lengthOf(node.items, 2)
+        assert.strictEqual(node.items[0].title, 'Bob')
       })
     })
   })
@@ -74,7 +79,7 @@ describe('document-test', function () {
     describe('saving documents', function () {
       it('updates referenced documents when list links change', async function () {
         const resource = 'story/scenes/introduce-bob'
-        const nodePath = getNodePath(config, resource)
+        const nodePath = getNodePathOrError(config, resource)
         const node = await loadNode(config)(resource) as DocumentNode
         const { document } = node
         const list = document.lists.filter(list => list.name == 'Characters')[0]
@@ -88,7 +93,7 @@ describe('document-test', function () {
         })
 
         const content = await readFile(
-          getMarkdownDocumentFilePath(getNodePath(config, 'story/characters/alice'))
+          getMarkdownDocumentFilePath(getNodePathOrError(config, 'story/characters/alice'))
         )
         const expected = loadExpectedContent('alice01.md')
         assert.strictEqual(content, expected)
@@ -108,14 +113,14 @@ describe('document-test', function () {
         await writeNodeFromRequest(config)(node)
 
         const content = await readFile(
-          getMarkdownDocumentFilePath(getNodePath(config, resource))
+          getMarkdownDocumentFilePath(getNodePathOrError(config, resource))
         )
         const expected = loadExpectedContent('index01.md')
         assert.strictEqual(content, expected)
 
         // Check that the new child document is created.
         const childContent = await readFile(
-          getMarkdownDocumentFilePath(getNodePath(config, newDocumentPath))
+          getMarkdownDocumentFilePath(getNodePathOrError(config, newDocumentPath))
         )
         assert.strictEqual(childContent, loadExpectedContent('start01.md'))
       })
@@ -124,14 +129,14 @@ describe('document-test', function () {
     describe('syncing indexes', function () {
       it('appends missing file references', async function () {
         const resource = 'story/scenes'
-        const newFilePath = getMarkdownDocumentFilePath(getNodePath(config, 'story/scenes/something-happens'))
+        const newFilePath = getMarkdownDocumentFilePath(getNodePathOrError(config, 'story/scenes/something-happens'))
         await writeFile(newFilePath, '# Something happens\n')
         const node = await loadNode(config)(resource) as IndexNode
         const { items } = node
         assert.lengthOf(items, 3)
         assert.strictEqual(items[items.length - 1]?.title, 'Something happens')
 
-        const content = await readFile(getMarkdownDocumentFilePath(getNodePath(config, resource)))
+        const content = await readFile(getMarkdownDocumentFilePath(getNodePathOrError(config, resource)))
         const expected = loadExpectedContent('index02.md')
         assert.strictEqual(content, expected)
       })

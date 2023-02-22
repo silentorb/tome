@@ -1,7 +1,7 @@
-import { isExistingDirectory, joinPaths, listFiles } from '../file-operations'
+import { isExistingDirectory, listFiles } from '../file-operations'
 import { IndexNode, RecordLink } from '@tome/data-api'
 import { DatabaseConfig, NodePath } from '../types'
-import { childNodePath, getIndexDirectoryPath, getNodeFilePath, idFromPath } from '../pathing'
+import { childNodePath, getIndexDirectoryPath, getNodePath, idFromPath } from '../pathing'
 import { loadDocumentContent, loadDocumentTitle } from './get-document'
 import { expandIndexList, recordLinkListsHaveSameOrder, sortRecordLinks } from '../documents'
 import { writeIndexDocument } from '../writing'
@@ -12,7 +12,7 @@ const newChildLink = (config: DatabaseConfig) => async (nodePath: NodePath): Pro
   return {
     title,
     id: nodePath.path,
-    isDirectory: await isExistingDirectory(getNodeFilePath(nodePath)),
+    isDirectory: await isExistingDirectory(nodePath.filePath),
   }
 }
 
@@ -60,8 +60,7 @@ function syncIndexList(indexLinks: RecordLink[], directoryLinks: RecordLink[]): 
   // TODO: Add conditional sorting depending on the structure config
   return [intersection.concat(additions), true]
 }
-
-export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath): Promise<RecordLink[]> {
+export async function getPhysicalNodeLinks(config: DatabaseConfig, nodePath: NodePath): Promise<RecordLink[]> {
   const filePath = getIndexDirectoryPath(nodePath)
   if (!filePath)
     return []
@@ -88,6 +87,24 @@ export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath): 
     return sortedList
   } else {
     return sortRecordLinks(directoryLinks)
+  }
+}
+
+export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath): Promise<RecordLink[]> {
+  const type = nodePath.type
+  const union = type?.union || []
+  if (union.length > 0) {
+    let result: RecordLink[] = []
+    for (const childType of union) {
+      const childNodePath = getNodePath(config, `${nodePath.schema?.id}/${childType.name}`)
+      if (childNodePath) {
+        result = result.concat(await getPhysicalNodeLinks(config, childNodePath))
+      }
+    }
+    return result
+  }
+  else {
+    return getPhysicalNodeLinks(config, nodePath)
   }
 }
 

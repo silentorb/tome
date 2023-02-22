@@ -1,34 +1,20 @@
-import { DataSchema, TypeReference } from '@tome/data-api/dist/src'
+import { TypeReference } from '@tome/data-api/dist/src'
 import { joinPaths, readFileOrError, readFileOrErrorSync } from '../file-operations'
 import { DatabaseConfig } from '../types'
-import path from 'path'
 import { SerializedDataSchema } from './serialized-schema-types'
-import { expandSerializedSchema } from './schema-expansion'
+import { expandSerializedDataSources, expandSerializedSchema } from './schema-expansion'
 
 export const isListType = (type: TypeReference) =>
   type.name == 'list'
 
-function parseSchema(content: string): DataSchema {
-  const schema = JSON.parse(content) as SerializedDataSchema
-  return expandSerializedSchema(schema)
-}
-
-export async function loadSchema(dirPath: string): Promise<DataSchema> {
+export async function loadSchema(dirPath: string): Promise<SerializedDataSchema> {
   const content = await readFileOrError(joinPaths(dirPath, 'schema.json'))
-  return parseSchema(content)
+  return JSON.parse(content) as SerializedDataSchema
 }
 
-export function loadSchemaSync(dirPath: string): DataSchema {
+export function loadSchemaSync(dirPath: string): SerializedDataSchema {
   const content = readFileOrErrorSync(joinPaths(dirPath, 'schema.json'))
-  return parseSchema(content)
-}
-
-function newSchema(filePath: string, schema: DataSchema): DataSchema {
-  const id = schema.id || path.basename(filePath)
-  return {
-    ...schema,
-    id,
-  }
+  return JSON.parse(content) as SerializedDataSchema
 }
 
 function mapIdObject<T extends { id: string }>(items: T[]) {
@@ -39,15 +25,12 @@ function mapIdObject<T extends { id: string }>(items: T[]) {
 
 interface DataInput {
   filePath: string
-  schema: DataSchema
+  schema: SerializedDataSchema
 }
 
 function prepareDatabases(inputs: DataInput[]): DatabaseConfig {
-  const schemas = inputs.map(input => input.schema)
-  const sources = inputs.map(input => ({
-    id: input.schema.id,
-    filePath: input.filePath
-  }))
+  const schemas = inputs.map(input => expandSerializedSchema(input.filePath, input.schema))
+  const sources = inputs.map(input => expandSerializedDataSources(input.filePath, input.schema))
 
   return {
     schemas: mapIdObject(schemas),
@@ -59,7 +42,7 @@ export async function loadDatabases(filePaths: string[]): Promise<DatabaseConfig
   const inputs = await Promise.all(
     filePaths.map(async filePath => ({
         filePath,
-        schema: newSchema(filePath, await loadSchema(filePath))
+        schema: await loadSchema(filePath)
       })
     )
   )
@@ -69,7 +52,7 @@ export async function loadDatabases(filePaths: string[]): Promise<DatabaseConfig
 export function loadDatabasesSync(filePaths: string[]): DatabaseConfig {
   const inputs = filePaths.map(filePath => ({
       filePath,
-      schema: newSchema(filePath, loadSchemaSync(filePath))
+      schema: loadSchemaSync(filePath)
     })
   )
   return prepareDatabases(inputs)

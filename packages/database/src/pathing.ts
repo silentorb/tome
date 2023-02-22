@@ -1,7 +1,6 @@
 import { AdvancedNodePath, DatabaseConfig, DataSource, NodePath } from './types'
-import { DataSchema, RecordLink, Structure, TypeDefinition } from '@tome/data-api'
+import { DataSchema, TypeDefinition } from '@tome/data-api'
 import { joinPaths } from './file-operations'
-import path from 'path'
 
 export const idFromPath = (pathString: string) =>
   pathString
@@ -32,7 +31,7 @@ export const tokenPathsMatch = (first: string[], second: string[]): boolean => {
   return true
 }
 
-export function getMapValueByPathTokens<T>(map: {[key: string]: T}, tokens : string[]): [T | undefined, number] {
+export function getMapValueByPathTokens<T>(map: { [key: string]: T }, tokens: string[]): [T | undefined, number] {
   for (const [name, source] of Object.entries(map)) {
     const nameTokens = name.split('/')
     if (tokenPathsMatch(nameTokens, tokens.slice(0, nameTokens.length)))
@@ -47,61 +46,75 @@ function getStructure(tokens: string[], schema: DataSchema): [TypeDefinition | u
 
 const getTokens = (resourcePath: string) => resourcePath.split('/')
 
-export function getDataSourceFromPath(config: DatabaseConfig, tokens : string[]): [DataSource | undefined, number] {
+export function getDataSourceFromPath(config: DatabaseConfig, tokens: string[]): [DataSource | undefined, number] {
   return getMapValueByPathTokens(config.sources, tokens)
 }
 
-export function getNodePath(config: DatabaseConfig, resourcePath: string): NodePath {
+export const getNodeFilePath = (source: DataSource, path: string, nodeName?: string, type?: TypeDefinition) => {
+  const base = source.filePath || ''
+  return type
+    ? joinPaths(base, source.typeFilePaths[type.path], nodeName || '')
+    : joinPaths(base, dropFirstPathToken(path)) // This assumes the first token of the child path is already included in the base path
+}
+
+export function getNodePath(config: DatabaseConfig, resourcePath: string): NodePath | undefined {
   const tokens = getTokens(resourcePath)
   const [source, sourceLength] = getDataSourceFromPath(config, tokens)
-  const schema = source ? config.schemas[source.id] : undefined
+  if (!source)
+    return undefined
+
+  const schema = config.schemas[source.id]
   const tokens2 = tokens.slice(sourceLength)
   const [type, structureLength] = schema ? getStructure(tokens2, schema) : [undefined, 0]
   const tokens3 = tokens2.slice(structureLength)
-  const nodeName = tokens3.length > 0
+  const tokenNodeName = tokens3.length > 0
     ? tokens3.join('/')
-    : type
-      ? 'index'
-      : undefined
+    : undefined
+
+  const nodeName = tokenNodeName || type
+    ? 'index'
+    : undefined
 
   return {
     path: resourcePath,
     schema,
-    schemaFilePath: source?.filePath,
+    filePath: getNodeFilePath(source, resourcePath, tokenNodeName, type),
     type,
     nodeName,
   }
 }
 
-export async function getAdvancedNodePath(config: DatabaseConfig, resourcePath: string): Promise<AdvancedNodePath> {
+export function getNodePathOrError(config: DatabaseConfig, resourcePath: string): NodePath {
   const nodePath = getNodePath(config, resourcePath)
-  return {
-    ...nodePath,
-    title: nodePath.nodeName || 'Unknown',
-  }
+  if (!nodePath)
+    throw new Error(`invalid node path: ${resourcePath}`)
+
+  return nodePath
 }
 
-export const getNodeFilePath = (nodePath: NodePath) => {
-  const base = nodePath.schemaFilePath || ''
-  return nodePath.type
-    ? joinPaths(base, nodePath.type.path, nodePath.nodeName || '')
-    : joinPaths(base, dropFirstPathToken(nodePath.path)) // This assumes the first token of the child path is already included in the base path
+export async function getAdvancedNodePath(config: DatabaseConfig, resourcePath: string): Promise<AdvancedNodePath | undefined> {
+  const nodePath = getNodePath(config, resourcePath)
+  return nodePath
+    ? {
+      ...nodePath,
+      title: nodePath.nodeName || 'Unknown',
+    }
+    : undefined
 }
 
 export const getMarkdownDocumentFilePath = (nodePath: NodePath) => {
-  const baseFilePath = getNodeFilePath(nodePath)
-  return `${baseFilePath}.md`
+  return `${nodePath.filePath}.md`
 }
 
 export const getIndexDirectoryPath = (nodePath: NodePath): string | undefined => {
   if (isDataSource(nodePath))
-    return nodePath.schemaFilePath
+    return nodePath.filePath
 
   const newNodePath = nodePath.nodeName == 'index'
     ? { ...nodePath, nodeName: undefined }
     : nodePath
 
-  return getNodeFilePath(newNodePath)
+  return newNodePath.filePath
 }
 
 export const childNodePath = (config: DatabaseConfig, parent: NodePath) => (childName: string): NodePath => {
@@ -110,6 +123,7 @@ export const childNodePath = (config: DatabaseConfig, parent: NodePath) => (chil
   return {
     ...parent,
     path,
+    filePath: `${parent.filePath}/${childName}`,
     type: parent.type || (schema ? getStructure(getTokens(path), schema)[0] : undefined),
     nodeName: childName,
   }

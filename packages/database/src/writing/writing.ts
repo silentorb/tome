@@ -1,6 +1,6 @@
 import { AdvancedNodePath, DatabaseConfig, FileWriteJob, NodePath } from '../types'
 import { batchProcess, getFileInfo, writeFile } from '../file-operations'
-import { getMarkdownDocumentFilePath, getNodePath } from '../pathing'
+import { getMarkdownDocumentFilePath, getNodePath, getNodePathOrError } from '../pathing'
 import { ExpandedDocument, RecordLink } from '@tome/data-api'
 import { loadExpandedDocument } from '../reading'
 import { diffListLinks, getAllDiffKeys, } from '../diffing'
@@ -45,7 +45,7 @@ interface WriteFileJob {
 const getMissingIndexChildFiles = async (config: DatabaseConfig, nodePath: NodePath, items: RecordLink[]): Promise<WriteFileJob[]> => {
   const result: WriteFileJob[] = []
   for (const item of items) {
-    const childNodePath = getNodePath(config, item.id)
+    const childNodePath = getNodePathOrError(config, item.id)
     const filePath = getMarkdownDocumentFilePath(childNodePath)
     const info = await getFileInfo(filePath)
     if (!info) {

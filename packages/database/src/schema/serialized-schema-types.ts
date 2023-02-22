@@ -18,6 +18,7 @@ export type SerializedPropertyMap = { [key: string]: SerializedProperty }
 
 export interface SerializedTypeDefinition {
   title: string
+  filePath?: string
   properties?: SerializedPropertyMap
   union?: SerializedTypeReference[]
 }
@@ -25,7 +26,7 @@ export interface SerializedTypeDefinition {
 export type SerializedTypeMap = { [key: string]: SerializedTypeDefinition }
 
 export interface SerializedDataSchema {
-  id: string
+  id?: string
   title: string
   types: SerializedTypeMap
 }

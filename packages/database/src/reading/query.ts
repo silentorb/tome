@@ -15,6 +15,9 @@ export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): 
   const type = query.filters[0].value
 
   const nodePath = getNodePath(config, type)
+  if (!nodePath)
+    throw new BadRequest(`Invalid resource path: ${type}`)
+
   if (!nodePath.schema)
     throw new BadRequest('Invalid data source in filter type path')
 

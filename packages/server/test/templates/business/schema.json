@@ -4,20 +4,40 @@
   "types": {
     "entities": {
       "title": "Entities",
-      "union": ["members"]
-    },
-    "general/organizations": {
-      "title": "Organizations",
+      "union": ["individuals", "general/organizations"],
       "properties": {
-        "members": {
+        "groups": {
           "type": "list"
         }
       }
     },
-    "members": {
-      "title": "Members",
+    "general/organizations": {
+      "title": "Organizations",
+      "filePath": "organizations",
+      "properties": {
+        "members": {
+          "type": {
+            "name": "list",
+            "types": ["individuals"]
+          }
+        }
+      }
+    },
+    "individuals": {
+      "title": "Individuals",
       "properties": {
         "organizations": {
+          "type": {
+            "name": "list",
+            "types": ["general/organizations"]
+          }
+        }
+      }
+    },
+    "groups": {
+      "title": "Groups",
+      "properties": {
+        "entities": {
           "type": "list"
         }
       }

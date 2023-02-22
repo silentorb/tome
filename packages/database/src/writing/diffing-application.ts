@@ -72,6 +72,9 @@ export const applyOtherDocumentDiffs = async (
 
 export const getDiffJobs = (config: DatabaseConfig, otherNodePath: AdvancedNodePath, diffs: StringListDiffs) => async (key: string): Promise<FileWriteJob[]> => {
   const nodePath = await getNodePath(config, key)
+  if (!nodePath)
+    return []
+
   const document = await loadExpandedDocument(config, nodePath)
   if (!document)
     return []

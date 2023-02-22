@@ -1,9 +1,9 @@
-import { DocumentList, RecordLink, Structure } from '@tome/data-api'
+import { DocumentList, RecordLink } from '@tome/data-api'
 import { joinPaths } from './file-operations'
 import { idFromPath } from './pathing'
 import { NodePath } from './types'
 import path from 'path'
-import { isListType } from './schema/schema-loading'
+import { isListType } from './schema'
 
 // Should be imported from remark-parse but that would require an async import.
 // This can be replaced by an import later.
