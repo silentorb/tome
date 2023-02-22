@@ -90,7 +90,11 @@ export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] 
   const headingLists = gatherHeadingLists(data)
   const localId = path.dirname(nodePath.path)
   const lists: DocumentList[] = []
-  const properties = nodePath.structure!.properties
+  const type = nodePath.type
+  if (!type || !('properties' in type))
+    return []
+
+  const properties = type.properties
   const removedContent: number[][] = []
 
   for (const propertyId in properties) {

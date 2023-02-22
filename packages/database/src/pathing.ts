@@ -1,5 +1,5 @@
 import { AdvancedNodePath, DatabaseConfig, DataSource, NodePath } from './types'
-import { DataSchema, RecordLink, Structure } from '@tome/data-api'
+import { DataSchema, RecordLink, Structure, TypeDefinition } from '@tome/data-api'
 import { joinPaths } from './file-operations'
 import path from 'path'
 
@@ -12,12 +12,12 @@ export const idFromPath = (pathString: string) =>
 export const dropFirstPathToken = (filePath: string) =>
   filePath.split('/').splice(1).join('/')
 
-export function getStructureByTitle(schema: DataSchema, name: string): Structure | undefined {
-  return Object.values(schema.structures).filter(s => s.title == name)[0]
+export function getStructureByTitle(schema: DataSchema, name: string): TypeDefinition | undefined {
+  return Object.values(schema.types).filter(s => s.title == name)[0]
 }
 
-export function getStructureByPath(schema: DataSchema, name: string): Structure | undefined {
-  return schema.structures[name]
+export function getStructureByPath(schema: DataSchema, name: string): TypeDefinition | undefined {
+  return schema.types[name]
 }
 
 export const tokenPathsMatch = (first: string[], second: string[]): boolean => {
@@ -41,8 +41,8 @@ export function getMapValueByPathTokens<T>(map: {[key: string]: T}, tokens : str
   return [undefined, 0]
 }
 
-function getStructure(tokens: string[], schema: DataSchema): [Structure | undefined, number] {
-  return getMapValueByPathTokens(schema.structures, tokens)
+function getStructure(tokens: string[], schema: DataSchema): [TypeDefinition | undefined, number] {
+  return getMapValueByPathTokens(schema.types, tokens)
 }
 
 const getTokens = (resourcePath: string) => resourcePath.split('/')
@@ -56,11 +56,11 @@ export function getNodePath(config: DatabaseConfig, resourcePath: string): NodeP
   const [source, sourceLength] = getDataSourceFromPath(config, tokens)
   const schema = source ? config.schemas[source.id] : undefined
   const tokens2 = tokens.slice(sourceLength)
-  const [structure, structureLength] = schema ? getStructure(tokens2, schema) : [undefined, 0]
+  const [type, structureLength] = schema ? getStructure(tokens2, schema) : [undefined, 0]
   const tokens3 = tokens2.slice(structureLength)
-  const nodeName = tokens3.length > 1
+  const nodeName = tokens3.length > 0
     ? tokens3.join('/')
-    : structure
+    : type
       ? 'index'
       : undefined
 
@@ -68,7 +68,7 @@ export function getNodePath(config: DatabaseConfig, resourcePath: string): NodeP
     path: resourcePath,
     schema,
     schemaFilePath: source?.filePath,
-    structure,
+    type,
     nodeName,
   }
 }
@@ -83,8 +83,8 @@ export async function getAdvancedNodePath(config: DatabaseConfig, resourcePath: 
 
 export const getNodeFilePath = (nodePath: NodePath) => {
   const base = nodePath.schemaFilePath || ''
-  return nodePath.structure
-    ? joinPaths(base, nodePath.structure.path, nodePath.nodeName || '')
+  return nodePath.type
+    ? joinPaths(base, nodePath.type.path, nodePath.nodeName || '')
     : joinPaths(base, dropFirstPathToken(nodePath.path)) // This assumes the first token of the child path is already included in the base path
 }
 
@@ -110,7 +110,7 @@ export const childNodePath = (config: DatabaseConfig, parent: NodePath) => (chil
   return {
     ...parent,
     path,
-    structure: parent.structure || (schema ? getStructure(getTokens(path), schema)[0] : undefined),
+    type: parent.type || (schema ? getStructure(getTokens(path), schema)[0] : undefined),
     nodeName: childName,
   }
 }

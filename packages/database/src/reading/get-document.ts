@@ -11,9 +11,9 @@ export async function loadDocumentContent(config: DatabaseConfig, nodePath: Node
 }
 
 export async function loadDocumentTitle(config: DatabaseConfig, nodePath: NodePath): Promise<string> {
-  const { structure} = nodePath
-  if (structure && nodePath.path == `${nodePath.schema?.id}/${structure.path}` && structure.title)
-    return structure.title
+  const { type} = nodePath
+  if (type && nodePath.path == `${nodePath.schema?.id}/${type.path}` && type.title)
+    return type.title
 
   const content = await loadDocumentContent(config, nodePath)
   if (!content)
@@ -37,6 +37,6 @@ export async function loadDocumentNode(config: DatabaseConfig, nodePath: NodePat
     type: 'document',
     id: nodePath.path,
     document,
-    structure: nodePath.structure,
+    dataType: nodePath.type,
   } : undefined
 }

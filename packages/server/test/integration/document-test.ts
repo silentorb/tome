@@ -15,7 +15,7 @@ import * as path from 'path'
 import { writeNodeFromRequest } from '../../src/writing'
 import { loadTestResource } from '../utility'
 
-const tempDirectory = './temp'
+const tempDirectory = path.resolve(__dirname, '../..', 'temp')
 const storyPath = `${tempDirectory}/story`
 
 // This is a dangerous function and care needs to be taken not to misdirect it.
@@ -26,13 +26,14 @@ function deleteTemporaryDirectory() {
 function initializeTempDirectory() {
   deleteTemporaryDirectory()
   fse.ensureDirSync(tempDirectory)
-  fse.copySync('test/templates', tempDirectory)
+  fse.copySync(path.resolve(__dirname, '..', 'templates'), tempDirectory)
 }
 
 const loadExpectedContent = loadTestResource(__dirname, 'expected')
 
 describe('document-test', function () {
   this.timeout(15000)
+  initializeTempDirectory()
   let config = loadDatabasesSync([storyPath])
 
   describe('reading', function () {
@@ -49,6 +50,7 @@ describe('document-test', function () {
       it('loads linked lists', async function () {
         const node = (await loadNode(config)('story/characters/alice')) as DocumentNode
         assert.isObject(node)
+        assert.isObject(node.document)
         assert.isAtLeast(node.document.lists.length, 1)
       })
     })

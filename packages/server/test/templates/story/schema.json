@@ -1,6 +1,6 @@
 {
   "title": "Story Test",
-  "structures": {
+  "types": {
     "characters": {
       "title": "Characters",
       "properties": {

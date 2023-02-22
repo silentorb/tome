@@ -1,5 +1,5 @@
 # Scenes
 
-* [Start](./start.md)
-* [Introduce Bob](./introduce-bob.md)
 * [Ending](./ending.md)
+* [Introduce Bob](./introduce-bob.md)
+* [Start](./start.md)

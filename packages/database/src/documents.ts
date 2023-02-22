@@ -17,7 +17,7 @@ export function getDocumentTitle(data: any, nodePath: NodePath): string {
 export async function expandDocument(config: DatabaseConfig, nodePath: NodePath, content: string): Promise<ExpandedDocument> {
   const data = await parseMarkdownAST(content)
   const title = getDocumentTitle(data, nodePath)
-  if (!nodePath.structure) {
+  if (!nodePath.type) {
     return {
       title,
       content,
@@ -68,13 +68,13 @@ export async function refineAndStringifyDocument(nodePath: NodePath, document: E
 
 export async function stringifyIndex(nodePath: NodePath, items: RecordLink[]) {
   const additionalContent = await stringifyMarkdown(
-    generateIndexListAst(nodePath.path, items)
+    generateIndexListAst(nodePath.path, sortRecordLinks(items))
   )
 
-  const { structure } = nodePath
+  const { type } = nodePath
 
-  const titleClause = structure
-    ? `# ${structure?.title}\n\n`
+  const titleClause = type
+    ? `# ${type?.title}\n\n`
     : ''
 
   return `${titleClause}${additionalContent}`

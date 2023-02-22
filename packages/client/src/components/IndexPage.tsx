@@ -53,8 +53,8 @@ export const CreationForm = (props: CreationFormProps) => {
 }
 
 const getTitle = (node: IndexNode): string => {
-  const structureName = node.structure?.path
-  return node.structure?.title || (
+  const structureName = node.dataType?.path
+  return node.dataType?.title || (
     structureName
       ? capitalizeFirstLetter(structureName)
       : 'Items'

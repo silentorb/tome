@@ -40,10 +40,10 @@ export const applyOtherDocumentDiffs = async (
     title: otherNodePath.title,
     id: otherNodePath.path,
   }
-  const structure = nodePath.structure
-  const otherStructure = otherNodePath.structure!
+  const structure = nodePath.type
+  const otherStructure = otherNodePath.type!
   for (const [key, diff] of diffs) {
-    const property = structure
+    const property = structure && 'properties' in structure
       ? Object.values(structure.properties).filter(p => getPropertyReferenceType(p) == otherStructure.path)[0]
       : undefined
 

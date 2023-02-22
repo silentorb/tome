@@ -1,16 +1,18 @@
-import { DataSchema, DataType } from '@tome/data-api'
+import { DataSchema, TypeReference } from '@tome/data-api'
 import { joinPaths, readFile, readFileOrError, readFileOrErrorSync } from './file-operations'
 import { DatabaseConfig, DataSource } from './types'
 import path from 'path'
 
-export const isListType = (type: DataType) =>
+export const isListType = (type: TypeReference) =>
   type.name == 'list'
 
 export function expandSerializedSchema(schema: DataSchema) {
-  for (const [path, structure] of Object.entries(schema.structures)) {
+  for (const [path, structure] of Object.entries(schema.types)) {
     structure.path = path
-    for (const [name, property] of Object.entries(structure.properties)) {
-      property.name = name
+    if ('properties' in structure) {
+      for (const [name, property] of Object.entries(structure.properties)) {
+        property.name = name
+      }
     }
   }
 }
@@ -21,13 +23,13 @@ function parseSchema(content: string): DataSchema {
   return schema
 }
 
-export async function loadSchema(path: string): Promise<DataSchema> {
-  const content = await readFileOrError(joinPaths(path, 'schema.json'))
+export async function loadSchema(dirPath: string): Promise<DataSchema> {
+  const content = await readFileOrError(joinPaths(dirPath, 'schema.json'))
   return parseSchema(content)
 }
 
-export function loadSchemaSync(path: string): DataSchema {
-  const content = readFileOrErrorSync(joinPaths(path, 'schema.json'))
+export function loadSchemaSync(dirPath: string): DataSchema {
+  const content = readFileOrErrorSync(joinPaths(dirPath, 'schema.json'))
   return parseSchema(content)
 }
 

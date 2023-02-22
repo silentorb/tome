@@ -1,7 +1,7 @@
 {
   "title": "Business",
   "id": "tome/business",
-  "structures": {
+  "types": {
     "general/organizations": {
       "title": "Organizations",
       "properties": {

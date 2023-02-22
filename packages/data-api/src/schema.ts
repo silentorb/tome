@@ -1,6 +1,6 @@
 import { DataSource } from '@tome/database/dist/src'
 
-export interface DataType {
+export interface TypeReference {
   name: string
   types: string[]
 }
@@ -10,7 +10,7 @@ export type ListOrder = 'indexed' | [string, 'asc' | 'desc'][]
 export interface Property {
   name: string
   title: string
-  type: DataType
+  type: TypeReference
   order?: ListOrder
 }
 
@@ -22,12 +22,20 @@ export interface Structure {
   properties: PropertyMap
 }
 
-export type StructureMap = { [key: string]: Structure }
+export interface Union {
+  title: string // Usually singular
+  path: string // Usually plural
+  types: TypeReference[]
+}
+
+export type TypeDefinition = Structure | Union
+
+export type TypeMap = { [key: string]: TypeDefinition }
 
 export interface DataSchema {
   id: string
   title: string
-  structures: StructureMap
+  types: TypeMap
 }
 
 export type DataSchemaMap = { [key: string]: DataSchema }

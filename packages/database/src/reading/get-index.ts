@@ -98,7 +98,7 @@ export async function getIndex(config: DatabaseConfig, nodePath: NodePath): Prom
   return {
     type: 'index',
     id,
-    structure: nodePath.structure,
+    dataType: nodePath.type,
     items,
   }
 }

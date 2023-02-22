@@ -1,4 +1,4 @@
-import { ListOrder, Structure } from './schema'
+import { ListOrder, Structure, TypeDefinition } from './schema'
 
 export interface RecordLink {
   title: string
@@ -22,7 +22,7 @@ export interface ExpandedDocument {
 export interface IndexNode {
   type: 'index',
   id: string
-  structure?: Structure
+  dataType?: TypeDefinition
   items: RecordLink[]
 }
 
@@ -30,7 +30,7 @@ export interface DocumentNode {
   type: 'document'
   id: string
   document: ExpandedDocument
-  structure?: Structure
+  dataType?: TypeDefinition
 }
 
 export type Node = DocumentNode | IndexNode
