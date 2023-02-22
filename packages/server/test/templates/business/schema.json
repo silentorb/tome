@@ -2,15 +2,15 @@
   "title": "Business",
   "id": "tome/business",
   "types": {
+    "entities": {
+      "title": "Entities",
+      "union": ["members"]
+    },
     "general/organizations": {
       "title": "Organizations",
       "properties": {
         "members": {
-          "title": "Members",
-          "type": {
-            "name": "list",
-            "types": ["members"]
-          }
+          "type": "list"
         }
       }
     },
@@ -18,11 +18,7 @@
       "title": "Members",
       "properties": {
         "organizations": {
-          "title": "Organizations",
-          "type": {
-            "name": "list",
-            "types": ["organizations"]
-          }
+          "type": "list"
         }
       }
     }

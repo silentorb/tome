@@ -3,7 +3,7 @@ import { joinPaths } from './file-operations'
 import { idFromPath } from './pathing'
 import { NodePath } from './types'
 import path from 'path'
-import { isListType } from './schema'
+import { isListType } from './schema/schema-loading'
 
 // Should be imported from remark-parse but that would require an async import.
 // This can be replaced by an import later.

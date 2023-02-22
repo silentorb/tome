@@ -16,19 +16,12 @@ export interface Property {
 
 export type PropertyMap = { [key: string]: Property }
 
-export interface Structure {
+export interface TypeDefinition {
   title: string // Usually singular
   path: string // Usually plural
   properties: PropertyMap
+  union: TypeReference[]
 }
-
-export interface Union {
-  title: string // Usually singular
-  path: string // Usually plural
-  types: TypeReference[]
-}
-
-export type TypeDefinition = Structure | Union
 
 export type TypeMap = { [key: string]: TypeDefinition }
 

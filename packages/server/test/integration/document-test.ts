@@ -10,7 +10,6 @@ import {
   writeFile
 } from '@tome/database'
 import { DocumentNode, IndexNode } from '@tome/data-api'
-import * as fs from 'fs'
 import * as path from 'path'
 import { writeNodeFromRequest } from '../../src/writing'
 import { loadTestResource } from '../utility'

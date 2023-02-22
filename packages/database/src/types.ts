@@ -1,4 +1,4 @@
-import { DataSchema, DataSchemaMap, Structure, TypeDefinition } from '@tome/data-api'
+import { DataSchema, DataSchemaMap, TypeDefinition } from '@tome/data-api'
 
 export interface DataSource {
   id: string
