@@ -1,6 +1,6 @@
 import { AdvancedNodePath, DatabaseConfig, DataSource, NodePath } from './types'
 import { DataSchema, TypeDefinition } from '@tome/data-api'
-import { joinPaths } from './file-operations'
+import { fileExists, joinPaths } from './file-operations'
 
 export const idFromPath = (pathString: string) =>
   pathString
@@ -53,11 +53,26 @@ export function getDataSourceFromPath(config: DatabaseConfig, tokens: string[]):
 export const getNodeFilePath = (source: DataSource, path: string, nodeName?: string, type?: TypeDefinition) => {
   const base = source.filePath || ''
   return type
-    ? joinPaths(base, source.typeFilePaths[type.path], nodeName || '')
+    ? joinPaths(base, source.typeFilePaths[type.id], nodeName || '')
     : joinPaths(base, dropFirstPathToken(path)) // This assumes the first token of the child path is already included in the base path
 }
 
-export function getNodePath(config: DatabaseConfig, resourcePath: string): NodePath | undefined {
+export function getNodePath(source: DataSource, schema: DataSchema, path: string, tokenNodeName?: string, type?: TypeDefinition): NodePath | undefined {
+  const nodeName = tokenNodeName || (type
+      ? 'index'
+      : undefined
+  )
+
+  return {
+    path,
+    schema,
+    filePath: getNodeFilePath(source, path, tokenNodeName, type),
+    type,
+    nodeName,
+  }
+}
+
+export function getNodePathFromPath(config: DatabaseConfig, resourcePath: string): NodePath | undefined {
   const tokens = getTokens(resourcePath)
   const [source, sourceLength] = getDataSourceFromPath(config, tokens)
   if (!source)
@@ -71,10 +86,10 @@ export function getNodePath(config: DatabaseConfig, resourcePath: string): NodeP
     ? tokens3.join('/')
     : undefined
 
-  const nodeName = tokenNodeName || type
-    ? 'index'
-    : undefined
-
+  const nodeName = tokenNodeName || (type
+      ? 'index'
+      : undefined
+  )
   return {
     path: resourcePath,
     schema,
@@ -84,8 +99,35 @@ export function getNodePath(config: DatabaseConfig, resourcePath: string): NodeP
   }
 }
 
+// Used to resolve union type indirection.
+export async function resolveNodePath(config: DatabaseConfig, nodePath: NodePath): Promise<NodePath | undefined> {
+  const types = nodePath.type?.union
+  const { nodeName, schema } = nodePath
+  if (types && types.length > 0 && schema) {
+    for (const typeReference of types) {
+      const source = config.sources[schema.id]
+      const type = schema.types[typeReference.name]
+      const resolvedNodePath = getNodePath(source, schema, `${source.id}/${type.id}/${nodeName}`, nodeName, type)
+      if (!resolvedNodePath)
+        continue
+
+      if (await fileExists(getMarkdownDocumentFilePath(resolvedNodePath)))
+        return resolvedNodePath
+    }
+
+    return undefined
+  }
+
+  return nodePath
+}
+
+export async function getResolvedNodePath(config: DatabaseConfig, resourcePath: string): Promise<NodePath | undefined> {
+  const nodePath = getNodePathFromPath(config, resourcePath)
+  return nodePath ? resolveNodePath(config, nodePath) : undefined
+}
+
 export function getNodePathOrError(config: DatabaseConfig, resourcePath: string): NodePath {
-  const nodePath = getNodePath(config, resourcePath)
+  const nodePath = getNodePathFromPath(config, resourcePath)
   if (!nodePath)
     throw new Error(`invalid node path: ${resourcePath}`)
 
@@ -93,7 +135,7 @@ export function getNodePathOrError(config: DatabaseConfig, resourcePath: string)
 }
 
 export async function getAdvancedNodePath(config: DatabaseConfig, resourcePath: string): Promise<AdvancedNodePath | undefined> {
-  const nodePath = getNodePath(config, resourcePath)
+  const nodePath = getNodePathFromPath(config, resourcePath)
   return nodePath
     ? {
       ...nodePath,

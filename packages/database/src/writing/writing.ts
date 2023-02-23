@@ -1,6 +1,6 @@
 import { AdvancedNodePath, DatabaseConfig, FileWriteJob, NodePath } from '../types'
 import { batchProcess, getFileInfo, writeFile } from '../file-operations'
-import { getMarkdownDocumentFilePath, getNodePath, getNodePathOrError } from '../pathing'
+import { getMarkdownDocumentFilePath, getNodePathFromPath, getNodePathOrError } from '../pathing'
 import { ExpandedDocument, RecordLink } from '@tome/data-api'
 import { loadExpandedDocument } from '../reading'
 import { diffListLinks, getAllDiffKeys, } from '../diffing'

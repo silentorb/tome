@@ -7,6 +7,7 @@ import {
 } from '@tome/web-api'
 import { DatabaseConfig, loadNode, queryNodes } from '@tome/database'
 import { DatabaseSchema } from '@tome/data-api/dist/src'
+import { BadRequest } from '@vineyard/lawn/dist'
 
 export type NodeLoader = (config: DatabaseConfig) => (request: GetNodeRequest) => Promise<GetNodeResponse>
 
@@ -24,6 +25,9 @@ export const fetchNode: NodeLoader = config => async request => {
     throw new Error(`Invalid id: ${id}`)
 
   const node = await loadNode(config)(id)
+  if (!node)
+    throw new BadRequest(`Invalid node path: ${id}`)
+
   return { node }
 }
 

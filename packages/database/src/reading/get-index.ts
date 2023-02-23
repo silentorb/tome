@@ -1,7 +1,7 @@
 import { isExistingDirectory, listFiles } from '../file-operations'
 import { IndexNode, RecordLink } from '@tome/data-api'
 import { DatabaseConfig, NodePath } from '../types'
-import { childNodePath, getIndexDirectoryPath, getNodePath, idFromPath } from '../pathing'
+import { childNodePath, getIndexDirectoryPath, getNodePathFromPath, idFromPath } from '../pathing'
 import { loadDocumentContent, loadDocumentTitle } from './get-document'
 import { expandIndexList, recordLinkListsHaveSameOrder, sortRecordLinks } from '../documents'
 import { writeIndexDocument } from '../writing'
@@ -96,7 +96,7 @@ export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath): 
   if (union.length > 0) {
     let result: RecordLink[] = []
     for (const childType of union) {
-      const childNodePath = getNodePath(config, `${nodePath.schema?.id}/${childType.name}`)
+      const childNodePath = getNodePathFromPath(config, `${nodePath.schema?.id}/${childType.name}`)
       if (childNodePath) {
         result = result.concat(await getPhysicalNodeLinks(config, childNodePath))
       }

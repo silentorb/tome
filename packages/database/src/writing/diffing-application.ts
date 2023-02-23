@@ -1,7 +1,7 @@
 import { AdvancedNodePath, DatabaseConfig, FileWriteJob } from '../types'
 import { DocumentList, ExpandedDocument, Property, RecordLink } from '@tome/data-api'
 import { deepClonePlainData } from '../cloning'
-import { getMarkdownDocumentFilePath, getNodePath } from '../pathing'
+import { getMarkdownDocumentFilePath, getNodePathFromPath } from '../pathing'
 import { loadExpandedDocument } from '../reading'
 import { StringListDiffs } from '../diffing'
 import { stringifyDocument } from '../documents'
@@ -44,7 +44,7 @@ export const applyOtherDocumentDiffs = async (
   const otherStructure = otherNodePath.type!
   for (const [key, diff] of diffs) {
     const property = structure && 'properties' in structure
-      ? Object.values(structure.properties).filter(p => getPropertyReferenceType(p) == otherStructure.path)[0]
+      ? Object.values(structure.properties).filter(p => getPropertyReferenceType(p) == otherStructure.id)[0]
       : undefined
 
     if (!property)
@@ -71,7 +71,7 @@ export const applyOtherDocumentDiffs = async (
 }
 
 export const getDiffJobs = (config: DatabaseConfig, otherNodePath: AdvancedNodePath, diffs: StringListDiffs) => async (key: string): Promise<FileWriteJob[]> => {
-  const nodePath = await getNodePath(config, key)
+  const nodePath = await getNodePathFromPath(config, key)
   if (!nodePath)
     return []
 

@@ -18,7 +18,7 @@ export type PropertyMap = { [key: string]: Property }
 
 export interface TypeDefinition {
   title: string // Usually singular
-  path: string // Usually plural
+  id: string // Usually plural
   properties: PropertyMap
   union: TypeReference[]
 }

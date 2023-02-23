@@ -1,6 +1,6 @@
 import { DatabaseConfig } from '../types'
 import { DataQuery, RecordLink } from '@tome/data-api'
-import { getNodePath } from '../pathing'
+import { getNodePathFromPath } from '../pathing'
 import { BadRequest } from '@vineyard/lawn'
 import { getNodeLinks } from './get-index'
 
@@ -14,7 +14,7 @@ export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): 
 
   const type = query.filters[0].value
 
-  const nodePath = getNodePath(config, type)
+  const nodePath = getNodePathFromPath(config, type)
   if (!nodePath)
     throw new BadRequest(`Invalid resource path: ${type}`)
 

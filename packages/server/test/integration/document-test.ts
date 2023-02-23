@@ -2,7 +2,7 @@ import { assert } from 'chai'
 import * as fse from 'fs-extra'
 import {
   getMarkdownDocumentFilePath,
-  getNodePath, getNodePathOrError, joinPaths,
+  getNodePathFromPath, getNodePathOrError, joinPaths,
   loadDatabasesSync,
   loadNode,
   readFile,
@@ -53,6 +53,13 @@ describe('document-test', function () {
         assert.isObject(node.document)
         assert.isAtLeast(node.document.lists.length, 1)
       })
+
+      it('supports union types', async function () {
+        const node = await loadNode(config)('tome/business/entities/bob') as DocumentNode
+        assert.isObject(node)
+        assert.strictEqual(node.document.title, 'Bob')
+      })
+
     })
 
     describe('loading indexes', function () {
@@ -96,6 +103,29 @@ describe('document-test', function () {
           getMarkdownDocumentFilePath(getNodePathOrError(config, 'story/characters/alice'))
         )
         const expected = loadExpectedContent('alice01.md')
+        assert.strictEqual(content, expected)
+      })
+
+      it('updates referenced documents when union list links change', async function () {
+        const resource = 'tome/business/groups/new-group'
+        const nodePath = getNodePathOrError(config, resource)
+        const node = await loadNode(config)(resource) as DocumentNode
+        const { document } = node
+        const bob = 'tome/business/individuals/bob'
+        const list = document.lists.filter(list => list.name == 'Entities')[0]
+        list.items.push({
+          title: 'Bob',
+          id: bob,
+        })
+        await writeDocument(config)({
+          document,
+          nodePath
+        })
+
+        const content = await readFile(
+          getMarkdownDocumentFilePath(getNodePathOrError(config, bob))
+        )
+        const expected = loadExpectedContent('bob01.md')
         assert.strictEqual(content, expected)
       })
     })

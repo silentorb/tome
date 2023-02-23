@@ -1,7 +1,7 @@
 import {
   SerializedDataSchema,
   SerializedProperty,
-  SerializedTypeDefinition,
+  SerializedTypeDefinition, SerializedTypeMap,
   SerializedTypeReference
 } from './serialized-schema-types'
 import { DataSchema, Property, PropertyMap, TypeDefinition, TypeReference } from '@tome/data-api'
@@ -20,9 +20,10 @@ export const expandSerializedTypeReference = (subType?: string) => (property: Se
   return property
 }
 
-export function expandSerializedProperty(name: string, property: SerializedProperty): Property {
-  const { title, order } = property
+export function expandSerializedProperty(types: SerializedTypeMap, name: string, property: SerializedProperty): Property {
+  const { order } = property
   const type = expandSerializedTypeReference(name)(property.type)
+  const title = property.title || types[type.types[0]]?.title
   return {
     name,
     title,
@@ -31,23 +32,30 @@ export function expandSerializedProperty(name: string, property: SerializedPrope
   }
 }
 
-export function expandSerializedTypeDefinition(path: string, type: SerializedTypeDefinition): TypeDefinition {
+export function expandSerializedTypeDefinition(types: SerializedTypeMap, id: string, type: SerializedTypeDefinition): TypeDefinition {
   const { title } = type
+  const containingUnions = Object.values(types)
+    .filter(parentType => parentType.union?.includes(id))
+
   const properties: PropertyMap = Object.fromEntries(
     Object.entries(type.properties || {})
-      .map(([id, type]) =>
-        [id, expandSerializedProperty(id, type)]
+      .concat(
+        containingUnions.flatMap(parentType => Object.entries(parentType.properties || {}))
       )
+      .map(([id, type]) =>
+        [id, expandSerializedProperty(types, id, type)] as [string, Property]
+      )
+      .sort((a, b) => a[1].title.localeCompare(b[1].title))
   )
 
-  const unionTypes = (type.union || [])
+  const union = (type.union || [])
     .map(expandSerializedTypeReference())
 
   return {
-    path,
+    id,
     title,
     properties,
-    union: unionTypes,
+    union,
   }
 }
 
@@ -61,7 +69,7 @@ export function expandSerializedSchema(filePath: string, schema: SerializedDataS
   const types = Object.fromEntries(
     Object.entries(schema.types)
       .map(([id, type]) =>
-        [id, expandSerializedTypeDefinition(id, type)]
+        [id, expandSerializedTypeDefinition(schema.types, id, type)]
       )
   )
 

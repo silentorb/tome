@@ -49,6 +49,14 @@ export async function isExistingDirectory(filePath: string) {
   }
 }
 
+export async function fileExists(filePath: string) {
+  try {
+    return (await fs.promises.lstat(filePath)).isFile()
+  } catch {
+    return false
+  }
+}
+
 export async function getFileInfo(filePath: string): Promise<Stats | undefined> {
   try {
     return await fs.promises.lstat(filePath)
