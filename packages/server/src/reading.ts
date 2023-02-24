@@ -1,13 +1,7 @@
-import {
-  GetNodeLinksResponse,
-  GetNodeRequest,
-  GetNodeResponse,
-  GetNodesResponse,
-  QueryNodesRequest
-} from '@tome/web-api'
+import { GetNodeLinksResponse, GetNodeRequest, GetNodeResponse, QueryNodesRequest } from '@tome/web-api'
 import { DatabaseConfig, loadNode, queryNodes } from '@tome/database'
-import { DatabaseSchema } from '@tome/data-api/dist/src'
-import { BadRequest } from '@vineyard/lawn/dist'
+import { DatabaseSchema } from '@tome/data-api'
+import { BadRequest } from '@vineyard/lawn'
 
 export type NodeLoader = (config: DatabaseConfig) => (request: GetNodeRequest) => Promise<GetNodeResponse>
 

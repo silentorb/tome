@@ -7,10 +7,6 @@ export const idFromPath = (pathString: string) =>
     .replace(/^\//, '')
     .replace(/\.md$/, '')
 
-// This could be optimized but is good enough for now
-export const dropFirstPathToken = (filePath: string) =>
-  filePath.split('/').splice(1).join('/')
-
 export function getStructureByTitle(schema: DataSchema, name: string): TypeDefinition | undefined {
   return Object.values(schema.types).filter(s => s.title == name)[0]
 }
@@ -54,7 +50,7 @@ export const getNodeFilePath = (source: DataSource, path: string, nodeName?: str
   const base = source.filePath || ''
   return type
     ? joinPaths(base, source.typeFilePaths[type.id], nodeName || '')
-    : joinPaths(base, dropFirstPathToken(path)) // This assumes the first token of the child path is already included in the base path
+    : joinPaths(base, path.substring(source.id.length + 1)) // This assumes the first token of the child path is already included in the base path
 }
 
 export function getNodePath(source: DataSource, schema: DataSchema, path: string, tokenNodeName?: string, type?: TypeDefinition): NodePath | undefined {

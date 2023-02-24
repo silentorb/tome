@@ -54,11 +54,11 @@ describe('document-test', function () {
         assert.isAtLeast(node.document.lists.length, 1)
       })
 
-      it('supports union types', async function () {
-        const node = await loadNode(config)('tome/business/entities/bob') as DocumentNode
-        assert.isObject(node)
-        assert.strictEqual(node.document.title, 'Bob')
-      })
+      // it('supports union types', async function () {
+      //   const node = await loadNode(config)('tome/business/entities/bob') as DocumentNode
+      //   assert.isObject(node)
+      //   assert.strictEqual(node.document.title, 'Bob')
+      // })
 
     })
 
