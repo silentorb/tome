@@ -7,6 +7,7 @@ import { Trash2 } from 'react-feather'
 import styled from 'styled-components'
 import { elementSequence, IconButton } from './styling'
 import { getAbsoluteResourceUrl } from '../routing'
+import { sortLinks } from '@tome/data-processing'
 
 interface Props {
   list: DocumentList
@@ -77,14 +78,14 @@ export const LinkList = (props: Props) => {
   }
 
   const onChange = (selection: any) => {
-    console.log('value', selection)
     if (selection) {
+      const newEntries = [{ title: selection.label, id: selection.value }]
+      const newItems = list.isSingle
+        ? newEntries
+        : sortLinks(list.order, items)
+
       setList(
-        setListItems(list,
-          items
-            .concat([{ title: selection.label, id: selection.value }])
-            .sort((a, b) => a.title.localeCompare(b.title)),
-        )
+        setListItems(list, newItems)
       )
       setOptions(
         options?.filter(option => option.value !== selection.value)

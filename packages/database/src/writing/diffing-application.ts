@@ -1,18 +1,12 @@
 import { AdvancedNodePath, DatabaseConfig, FileWriteJob } from '../types'
-import { DocumentList, ExpandedDocument, Property, RecordLink } from '@tome/data-api'
+import { DocumentList, ExpandedDocument, Property, RecordLink, TypeReference } from '@tome/data-api'
 import { deepClonePlainData } from '../cloning'
-import { getMarkdownDocumentFilePath, getNodePathFromPath } from '../pathing'
+import { getMarkdownDocumentFilePath, getNodePath } from '../pathing'
 import { loadExpandedDocument } from '../reading'
 import { StringListDiffs } from '../diffing'
 import { stringifyDocument } from '../documents'
-
-export function getPropertyReferenceType(property: Property): string | undefined {
-  if (typeof property.type === 'object') {
-    const { types } = property.type
-    return types[types.length - 1]
-  }
-  return undefined
-}
+import { getReferencedTypeName } from '../type-processing'
+import { isListType } from '../schema'
 
 export function getOrCreateListItems(lists: DocumentList[], property: Property): RecordLink[] {
   const existing = lists.filter(list => list.name == property.title)[0]
@@ -21,7 +15,7 @@ export function getOrCreateListItems(lists: DocumentList[], property: Property):
 
   const newList: DocumentList = {
     name: property.title,
-    type: getPropertyReferenceType(property),
+    type: getReferencedTypeName(property.type),
     items: [],
   }
 
@@ -36,16 +30,18 @@ export const applyOtherDocumentDiffs = async (
   source: ExpandedDocument): Promise<ExpandedDocument> => {
   const document = deepClonePlainData(source)
   const lists = document.lists
-  const selfLink: RecordLink = {
+  const crossLink: RecordLink = {
     title: otherNodePath.title,
     id: otherNodePath.path,
   }
   const structure = nodePath.type
+  if (!structure)
+    return document
+
   const otherStructure = otherNodePath.type!
   for (const [key, diff] of diffs) {
-    const property = structure && 'properties' in structure
-      ? Object.values(structure.properties).filter(p => getPropertyReferenceType(p) == otherStructure.id)[0]
-      : undefined
+    const property = Object.values(structure.properties)
+      .filter(p => getReferencedTypeName(p.type) == otherStructure.id)[0]
 
     if (!property)
       continue
@@ -53,15 +49,21 @@ export const applyOtherDocumentDiffs = async (
     const items = getOrCreateListItems(lists, property)
 
     // Additions
-    for (const addition of diff.additions) {
-      if (!items.some(item => item.id == addition)) {
-        items.push(selfLink)
+    if (diff.additions.includes(nodePath.path)) {
+      if (isListType(property.type)) {
+        if (!items.some(item => item.id == crossLink.id)) {
+          items.push(crossLink)
+        }
+      }
+      else {
+        items.length = 0
+        items.push(crossLink)
       }
     }
 
     // Subtractions
-    for (const removal of diff.removals) {
-      const index = items.findIndex(item => item.id == removal)
+    if (diff.removals.includes(nodePath.path)) {
+      const index = items.findIndex(item => item.id == crossLink.id)
       if (index != -1) {
         items.splice(index, 1)
       }
@@ -71,7 +73,7 @@ export const applyOtherDocumentDiffs = async (
 }
 
 export const getDiffJobs = (config: DatabaseConfig, otherNodePath: AdvancedNodePath, diffs: StringListDiffs) => async (key: string): Promise<FileWriteJob[]> => {
-  const nodePath = await getNodePathFromPath(config, key)
+  const nodePath = await getNodePath(config, key)
   if (!nodePath)
     return []
 

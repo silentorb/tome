@@ -1,10 +1,11 @@
 import { isExistingDirectory, listFiles } from '../file-operations'
 import { IndexNode, RecordLink } from '@tome/data-api'
 import { DatabaseConfig, NodePath } from '../types'
-import { childNodePath, getIndexDirectoryPath, getNodePathFromPath, idFromPath } from '../pathing'
+import { childNodePath, getIndexDirectoryPath, getNodePath, idFromPath } from '../pathing'
 import { loadDocumentContent, loadDocumentTitle } from './get-document'
-import { expandIndexList, recordLinkListsHaveSameOrder, sortRecordLinks } from '../documents'
+import { expandIndexList, recordLinkListsHaveSameOrder } from '../documents'
 import { writeIndexDocument } from '../writing'
+import { sortLinks } from '@tome/data-processing/dist/src'
 
 const newChildLink = (config: DatabaseConfig) => async (nodePath: NodePath): Promise<RecordLink> => {
   const title = await loadDocumentTitle(config, nodePath)
@@ -32,13 +33,8 @@ export function getDataSourceIndex(config: DatabaseConfig): IndexNode {
 }
 
 async function loadIndexList(config: DatabaseConfig, nodePath: NodePath): Promise<RecordLink[]> {
-  const indexNodePath = {
-    ...nodePath,
-    path: `${nodePath.path}/index`,
-    nodeName: 'index',
-  }
-  const content = await loadDocumentContent(config, indexNodePath)
-  return content ? expandIndexList(config, indexNodePath, content) : []
+  const content = await loadDocumentContent(config, nodePath)
+  return content ? expandIndexList(config, nodePath, content) : []
 }
 
 // Returns a tuple with the new link list and a boolean for whether the list changed
@@ -80,13 +76,13 @@ export async function getPhysicalNodeLinks(config: DatabaseConfig, nodePath: Nod
   if (hasIndex) {
     const indexLinks = await loadIndexList(config, nodePath)
     const [newList, changed] = syncIndexList(indexLinks, directoryLinks)
-    const sortedList = sortRecordLinks(newList)
+    const sortedList = sortLinks(undefined, newList)
     if (changed || !recordLinkListsHaveSameOrder(newList, sortedList)) {
       await writeIndexDocument(config)(nodePath, sortedList)
     }
     return sortedList
   } else {
-    return sortRecordLinks(directoryLinks)
+    return sortLinks(undefined, directoryLinks)
   }
 }
 
@@ -96,7 +92,7 @@ export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath): 
   if (union.length > 0) {
     let result: RecordLink[] = []
     for (const childType of union) {
-      const childNodePath = getNodePathFromPath(config, `${nodePath.schema?.id}/${childType.name}`)
+      const childNodePath = getNodePath(config, `${nodePath.schema?.id}/${childType.name}`)
       if (childNodePath) {
         result = result.concat(await getPhysicalNodeLinks(config, childNodePath))
       }

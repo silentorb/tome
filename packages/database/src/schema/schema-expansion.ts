@@ -7,17 +7,18 @@ import {
 import { DataSchema, Property, PropertyMap, TypeDefinition, TypeReference } from '@tome/data-api'
 import { DataSource } from '../types'
 import path from 'path'
+import { sortLinks } from '@tome/data-processing/dist/src'
 
 // These functions convert the more concise schema format into the more verbose and computation-friendly schema format.
 
-export const expandSerializedTypeReference = (subType?: string) => (property: SerializedTypeReference): TypeReference => {
-  if (typeof property === 'string')
+export const expandSerializedTypeReference = (subType?: string) => (type: SerializedTypeReference): TypeReference => {
+  if (typeof type === 'string')
     return {
-      name: property,
-      types: (property == 'list' && subType) ? [subType] : [],
+      name: type,
+      types: (type == 'list' && subType) ? [subType] : [],
     }
 
-  return property
+  return type
 }
 
 export function expandSerializedProperty(types: SerializedTypeMap, name: string, property: SerializedProperty): Property {

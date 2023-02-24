@@ -18,6 +18,7 @@
     "@milkdown/prose": "^6.5.4",
     "@milkdown/react": "^6.5.4",
     "@milkdown/theme-nord": "^6.5.4",
+    "@tome/data-processing": "1.0.0",
     "@tome/web-api": "1.0.0",
     "@types/axios": "^0.14.0",
     "@types/styled-components": "^5.1.26",

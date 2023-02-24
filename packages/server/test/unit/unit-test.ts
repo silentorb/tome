@@ -2,7 +2,7 @@ import { assert } from 'chai'
 import {
   DatabaseConfig,
   getNodeFilePath,
-  getNodePathFromPath,
+  getNodePath,
   loadDatabasesSync,
   NodePath,
   expandDocument,
@@ -40,14 +40,14 @@ describe('unit-test', function () {
 
   describe('path resolution', function () {
     it('supports simple paths', function () {
-      const nodePath = getNodePathFromPath(config, 'story/characters')
+      const nodePath = getNodePath(config, 'story/characters')
       assert.isObject(nodePath)
       assert.strictEqual(nodePath?.schema?.title, 'Story Test')
       assert.strictEqual(nodePath?.type?.title, 'Characters')
     })
 
     it('supports paths with multi-token source paths', function () {
-      const nodePath = getNodePathFromPath(config, 'tome/business/general/organizations/bob/1')
+      const nodePath = getNodePath(config, 'tome/business/general/organizations/bob/1')
       assert.isObject(nodePath)
       assert.strictEqual(nodePath?.schema?.title, 'Business')
       assert.strictEqual(nodePath?.type?.title, 'Organizations')
@@ -71,7 +71,7 @@ describe('unit-test', function () {
 
   describe('document parsing', function () {
     it('consolidates redundant headings and links', async function () {
-      const bobNodePath = getNodePathFromPath(config, 'story/characters/bob')
+      const bobNodePath = getNodePath(config, 'story/characters/bob')
       const redundantBobInput = loadInputContent('bob-redundant.md')
       const rawDocument = await expandDocument(config, bobNodePath, redundantBobInput)
       const refinedDocument = refineDocument(rawDocument)

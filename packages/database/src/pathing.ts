@@ -53,22 +53,17 @@ export const getNodeFilePath = (source: DataSource, path: string, nodeName?: str
     : joinPaths(base, path.substring(source.id.length + 1)) // This assumes the first token of the child path is already included in the base path
 }
 
-export function getNodePath(source: DataSource, schema: DataSchema, path: string, tokenNodeName?: string, type?: TypeDefinition): NodePath | undefined {
-  const nodeName = tokenNodeName || (type
-      ? 'index'
-      : undefined
-  )
-
+export function newNodePath(source: DataSource, schema: DataSchema, path: string, nodeName?: string, type?: TypeDefinition): NodePath | undefined {
   return {
     path,
     schema,
-    filePath: getNodeFilePath(source, path, tokenNodeName, type),
+    filePath: getNodeFilePath(source, path, nodeName, type),
     type,
     nodeName,
   }
 }
 
-export function getNodePathFromPath(config: DatabaseConfig, resourcePath: string): NodePath | undefined {
+export function getNodePath(config: DatabaseConfig, resourcePath: string): NodePath | undefined {
   const tokens = getTokens(resourcePath)
   const [source, sourceLength] = getDataSourceFromPath(config, tokens)
   if (!source)
@@ -78,18 +73,14 @@ export function getNodePathFromPath(config: DatabaseConfig, resourcePath: string
   const tokens2 = tokens.slice(sourceLength)
   const [type, structureLength] = schema ? getStructure(tokens2, schema) : [undefined, 0]
   const tokens3 = tokens2.slice(structureLength)
-  const tokenNodeName = tokens3.length > 0
+  const nodeName = tokens3.length > 0
     ? tokens3.join('/')
     : undefined
 
-  const nodeName = tokenNodeName || (type
-      ? 'index'
-      : undefined
-  )
   return {
     path: resourcePath,
     schema,
-    filePath: getNodeFilePath(source, resourcePath, tokenNodeName, type),
+    filePath: getNodeFilePath(source, resourcePath, nodeName, type),
     type,
     nodeName,
   }
@@ -103,7 +94,7 @@ export async function resolveNodePath(config: DatabaseConfig, nodePath: NodePath
     for (const typeReference of types) {
       const source = config.sources[schema.id]
       const type = schema.types[typeReference.name]
-      const resolvedNodePath = getNodePath(source, schema, `${source.id}/${type.id}/${nodeName}`, nodeName, type)
+      const resolvedNodePath = newNodePath(source, schema, `${source.id}/${type.id}/${nodeName}`, nodeName, type)
       if (!resolvedNodePath)
         continue
 
@@ -118,12 +109,12 @@ export async function resolveNodePath(config: DatabaseConfig, nodePath: NodePath
 }
 
 export async function getResolvedNodePath(config: DatabaseConfig, resourcePath: string): Promise<NodePath | undefined> {
-  const nodePath = getNodePathFromPath(config, resourcePath)
+  const nodePath = getNodePath(config, resourcePath)
   return nodePath ? resolveNodePath(config, nodePath) : undefined
 }
 
 export function getNodePathOrError(config: DatabaseConfig, resourcePath: string): NodePath {
-  const nodePath = getNodePathFromPath(config, resourcePath)
+  const nodePath = getNodePath(config, resourcePath)
   if (!nodePath)
     throw new Error(`invalid node path: ${resourcePath}`)
 
@@ -131,7 +122,7 @@ export function getNodePathOrError(config: DatabaseConfig, resourcePath: string)
 }
 
 export async function getAdvancedNodePath(config: DatabaseConfig, resourcePath: string): Promise<AdvancedNodePath | undefined> {
-  const nodePath = getNodePathFromPath(config, resourcePath)
+  const nodePath = getNodePath(config, resourcePath)
   return nodePath
     ? {
       ...nodePath,
@@ -141,16 +132,20 @@ export async function getAdvancedNodePath(config: DatabaseConfig, resourcePath: 
 }
 
 export const getMarkdownDocumentFilePath = (nodePath: NodePath) => {
-  return `${nodePath.filePath}.md`
+  const indexClause = nodePath.nodeName
+    ? ''
+    : '/index'
+
+  return `${nodePath.filePath}${indexClause}.md`
 }
 
 export const getIndexDirectoryPath = (nodePath: NodePath): string | undefined => {
   if (isDataSource(nodePath))
     return nodePath.filePath
 
-  const newNodePath = nodePath.nodeName == 'index'
-    ? { ...nodePath, nodeName: undefined }
-    : nodePath
+  const newNodePath = nodePath.nodeName
+    ? nodePath
+    : { ...nodePath, nodeName: undefined }
 
   return newNodePath.filePath
 }

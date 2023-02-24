@@ -1,4 +1,4 @@
-import { ListOrder, Structure, TypeDefinition } from './schema'
+import { ListOrder, TypeDefinition } from './schema'
 
 export interface RecordLink {
   title: string
@@ -11,6 +11,7 @@ export interface DocumentList {
   type?: string
   items: RecordLink[]
   order?: ListOrder
+  isSingle?: boolean
 }
 
 export interface ExpandedDocument {

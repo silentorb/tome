@@ -2,7 +2,7 @@ import { assert } from 'chai'
 import * as fse from 'fs-extra'
 import {
   getMarkdownDocumentFilePath,
-  getNodePathFromPath, getNodePathOrError, joinPaths,
+  getNodePath, getNodePathOrError, joinPaths,
   loadDatabasesSync,
   loadNode,
   readFile,
@@ -12,7 +12,7 @@ import {
 import { DocumentNode, IndexNode } from '@tome/data-api'
 import * as path from 'path'
 import { writeNodeFromRequest } from '../../src/writing'
-import { loadTestResource } from '../utility'
+import { findDocumentList, loadTestResource } from '../utility'
 
 const tempDirectory = path.resolve(__dirname, '../..', 'temp')
 const storyPath = joinPaths(tempDirectory, 'story')
@@ -89,7 +89,7 @@ describe('document-test', function () {
         const nodePath = getNodePathOrError(config, resource)
         const node = await loadNode(config)(resource) as DocumentNode
         const { document } = node
-        const list = document.lists.filter(list => list.name == 'Characters')[0]
+        const list = findDocumentList(document, 'Characters')!
         list.items.push({
           title: 'alice',
           id: 'story/characters/alice',
@@ -112,7 +112,7 @@ describe('document-test', function () {
         const node = await loadNode(config)(resource) as DocumentNode
         const { document } = node
         const bob = 'tome/business/individuals/bob'
-        const list = document.lists.filter(list => list.name == 'Entities')[0]
+        const list = findDocumentList(document, 'Entities')!
         list.items.push({
           title: 'Bob',
           id: bob,
@@ -128,6 +128,30 @@ describe('document-test', function () {
         const expected = loadExpectedContent('bob01.md')
         assert.strictEqual(content, expected)
       })
+
+      it('replaces single references', async function () {
+        const introduceBob = 'story/scenes/introduce-bob'
+        const resource = 'story/books/other-book'
+        const nodePath = getNodePathOrError(config, resource)
+        const node = await loadNode(config)(resource) as DocumentNode
+        const { document } = node
+        const list = findDocumentList(document, 'Scenes')!
+        list.items.push({
+          title: 'Introduce Bob',
+          id: introduceBob,
+        })
+        await writeDocument(config)({
+          document,
+          nodePath
+        })
+
+        const content = await readFile(
+          getMarkdownDocumentFilePath(getNodePathOrError(config, introduceBob))
+        )
+        const expected = loadExpectedContent('introduce-bob01.md')
+        assert.strictEqual(content, expected)
+      })
+
     })
 
     describe('saving indexes', function () {

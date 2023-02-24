@@ -1,27 +1,31 @@
 {
   "title": "Story Test",
   "types": {
+    "books": {
+      "title": "Books",
+      "properties": {
+        "scenes": {
+          "type": "list"
+        }
+      }
+    },
     "characters": {
       "title": "Characters",
       "properties": {
         "scenes": {
-          "title": "Scenes",
-          "type": {
-            "name": "list",
-            "types": ["scenes"]
-          }
+          "type": "list"
         }
       }
     },
     "scenes": {
       "title": "Scenes",
       "properties": {
+        "book": {
+          "title": "Book",
+          "type": "books"
+        },
         "characters": {
-          "title": "Characters",
-          "type": {
-            "name": "list",
-            "types": ["characters"]
-          }
+          "type": "list"
         }
       }
     }

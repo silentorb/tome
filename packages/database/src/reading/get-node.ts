@@ -2,17 +2,17 @@ import { isExistingDirectory } from '../file-operations'
 import { getDataSourceIndex, getIndex } from './get-index'
 import { loadDocumentNode } from './get-document'
 import { DatabaseConfig } from '../types'
-import { getMarkdownDocumentFilePath, getNodePathFromPath, isDataSource } from '../pathing'
+import { getMarkdownDocumentFilePath, getNodePath, isDataSource } from '../pathing'
 
 export const loadNode = (config: DatabaseConfig) => async (resourcePath: string) => {
   if (resourcePath === '')
     return getDataSourceIndex(config)
 
-  const nodePath = await getNodePathFromPath(config, resourcePath)
+  const nodePath = await getNodePath(config, resourcePath)
   if (!nodePath)
     return undefined
 
-  if (nodePath.nodeName == 'index' || isDataSource(nodePath) || await isExistingDirectory(nodePath.filePath)) {
+  if (!nodePath.nodeName || isDataSource(nodePath) || await isExistingDirectory(nodePath.filePath)) {
     return getIndex(config, nodePath)
   } else {
     const result = await loadDocumentNode(config, nodePath)

@@ -12,6 +12,7 @@
   },
   "include": ["./src/**/*"],
   "references": [
+    {"path": "../data-processing"},
     {"path": "../web-api"}
   ],
 }

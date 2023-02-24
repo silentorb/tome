@@ -13,7 +13,6 @@
   },
   "include": ["./src/**/*"],
   "references": [
-    {"path": "../data-api"},
-    {"path": "../data-processing"}
+    {"path": "../data-api"}
   ]
 }

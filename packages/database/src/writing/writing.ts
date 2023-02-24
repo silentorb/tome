@@ -1,11 +1,11 @@
 import { AdvancedNodePath, DatabaseConfig, FileWriteJob, NodePath } from '../types'
 import { batchProcess, getFileInfo, writeFile } from '../file-operations'
-import { getMarkdownDocumentFilePath, getNodePathFromPath, getNodePathOrError } from '../pathing'
+import { getMarkdownDocumentFilePath, getNodePathOrError } from '../pathing'
 import { ExpandedDocument, RecordLink } from '@tome/data-api'
 import { loadExpandedDocument } from '../reading'
 import { diffListLinks, getAllDiffKeys, } from '../diffing'
 import { getDiffJobs } from './diffing-application'
-import { refineAndStringifyDocument, stringifyDocument, stringifyIndex } from '../documents'
+import { refineAndStringifyDocument, stringifyIndex } from '../documents'
 
 export interface WriteDocumentProps {
   nodePath: NodePath

@@ -5,6 +5,7 @@ import { getMarkdownTitle, parseMarkdownAST, processHeadings, processIndexList }
 import { generateDocumentAppendingAst, generateIndexListAst, stringifyMarkdown } from './markdown-generation'
 import { getMarkdownDocumentFilePath } from './pathing'
 import { loadDocumentContent } from './reading'
+import { sortLinks } from '@tome/data-processing/dist/src'
 
 export function titleOrFallback(nodePath: NodePath, title?: string) {
   return title || nodePath.nodeName || 'Unknown'
@@ -67,11 +68,11 @@ export async function refineAndStringifyDocument(nodePath: NodePath, document: E
 }
 
 export async function stringifyIndex(nodePath: NodePath, items: RecordLink[]) {
-  const additionalContent = await stringifyMarkdown(
-    generateIndexListAst(nodePath.path, sortRecordLinks(items))
-  )
-
   const { type } = nodePath
+
+  const additionalContent = await stringifyMarkdown(
+    generateIndexListAst(nodePath.path, sortLinks(undefined, items))
+  )
 
   const titleClause = type
     ? `# ${type?.title}\n\n`
@@ -79,9 +80,6 @@ export async function stringifyIndex(nodePath: NodePath, items: RecordLink[]) {
 
   return `${titleClause}${additionalContent}`
 }
-
-export const sortRecordLinks = (items: RecordLink[]): RecordLink[] =>
-  items.sort((a, b) => a.title.localeCompare(b.title))
 
 export const recordLinkListsHaveSameOrder = (first: RecordLink[], second: RecordLink[]): boolean => {
   if (first.length != second.length)
