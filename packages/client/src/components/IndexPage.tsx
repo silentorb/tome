@@ -10,6 +10,7 @@ import { capitalizeFirstLetter } from '../string-formatting'
 import { idFromTitle } from '../id-from-title'
 import styled from 'styled-components'
 import { sortLinks } from '@tome/data-processing'
+import { LinkList } from './LinkList'
 
 const TextInput = styled.input`
   width: 400px;
@@ -142,7 +143,7 @@ export const IndexPage = (props: Props) => {
       {parentNavigation}
       <div>
         {creationElement}
-        {links}
+        <LinkList items={items} setItems={setItems} />
       </div>
     </>
   )

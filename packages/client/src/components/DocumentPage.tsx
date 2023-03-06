@@ -9,7 +9,7 @@ import { ReactEditor } from '@milkdown/react'
 import { getMarkdown } from '@milkdown/utils'
 import { saveDocument } from '../services'
 import { DocumentList, ExpandedDocument } from '@tome/data-api'
-import { LinkList } from './LinkList'
+import { LinkListSection } from './LinkListSection'
 
 interface Props {
   id: string
@@ -25,7 +25,7 @@ export const DocumentPage = (props: Props) => {
   const markdownEditor = useRef<ReactEditor | undefined>(undefined)
   const listStates = document.lists.map(useListState)
   const linkLists = listStates.map(([list, setList]) =>
-    (<LinkList key={list.title} list={list} setList={setList}/>)
+    (<LinkListSection key={list.title} list={list} setList={setList}/>)
   )
 
   return (

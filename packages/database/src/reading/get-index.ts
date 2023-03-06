@@ -1,5 +1,5 @@
 import { isExistingDirectory, listFiles } from '../file-operations'
-import { IndexNode, RecordLink } from '@tome/data-api'
+import { IndexNode, ListOrder, RecordLink } from '@tome/data-api'
 import { DatabaseConfig, NodePath } from '../types'
 import { childNodePath, getIndexDirectoryPath, getNodePath, idFromPath } from '../pathing'
 import { loadDocumentContent, loadDocumentTitle } from './get-document'
@@ -56,6 +56,7 @@ function syncIndexList(indexLinks: RecordLink[], directoryLinks: RecordLink[]): 
   // TODO: Add conditional sorting depending on the structure config
   return [intersection.concat(additions), true]
 }
+
 export async function getPhysicalNodeLinks(config: DatabaseConfig, nodePath: NodePath): Promise<RecordLink[]> {
   const filePath = getIndexDirectoryPath(nodePath)
   if (!filePath)
@@ -86,7 +87,7 @@ export async function getPhysicalNodeLinks(config: DatabaseConfig, nodePath: Nod
   }
 }
 
-export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath): Promise<RecordLink[]> {
+export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath, order?: ListOrder): Promise<RecordLink[]> {
   const type = nodePath.type
   const union = type?.union || []
   if (union.length > 0) {
@@ -97,7 +98,7 @@ export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath): 
         result = result.concat(await getPhysicalNodeLinks(config, childNodePath))
       }
     }
-    return result
+    return sortLinks(order, result)
   }
   else {
     return getPhysicalNodeLinks(config, nodePath)
