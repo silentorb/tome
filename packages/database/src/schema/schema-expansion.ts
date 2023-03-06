@@ -53,11 +53,16 @@ export function expandSerializedTypeDefinition(types: SerializedTypeMap, id: str
   const union = (type.union || [])
     .map(expandSerializedTypeReference())
 
+  const unions = Object.entries(types)
+    .filter(([tid, t]) => (t.union || []).includes(id))
+    .map(([tid, t]) => expandSerializedTypeReference()(tid))
+
   return {
     id,
     title,
     properties,
     union,
+    unions,
   }
 }
 
@@ -78,7 +83,8 @@ export function expandSerializedSchema(filePath: string, schema: SerializedDataS
   return {
     id,
     title,
-    types
+    types,
+    documents: {},
   }
 }
 

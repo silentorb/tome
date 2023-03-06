@@ -9,6 +9,7 @@ import { getIdFromRequest, saveDocument } from '../services'
 import { capitalizeFirstLetter } from '../string-formatting'
 import { idFromTitle } from '../id-from-title'
 import styled from 'styled-components'
+import { sortLinks } from '@tome/data-processing'
 
 const TextInput = styled.input`
   width: 400px;
@@ -99,13 +100,14 @@ export const IndexPage = (props: Props) => {
     if (title) {
       const nodeName = nodeId || idFromTitle(title)
       const id = `${getIdFromRequest(window.location.href)}/${nodeName}`
-
-      setItems(items.concat([
+      const newItems = items.concat([
         {
           title,
           id,
         }
-      ]))
+      ])
+
+      setItems(sortLinks([], newItems))
     }
     setCreating(false)
   }

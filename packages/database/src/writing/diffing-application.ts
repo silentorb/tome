@@ -1,5 +1,5 @@
 import { AdvancedNodePath, DatabaseConfig, FileWriteJob } from '../types'
-import { DocumentList, ExpandedDocument, Property, RecordLink, TypeReference } from '@tome/data-api'
+import { DocumentList, ExpandedDocument, Property, RecordLink, TypeDefinition, TypeReference } from '@tome/data-api'
 import { deepClonePlainData } from '../cloning'
 import { getMarkdownDocumentFilePath, getNodePath } from '../pathing'
 import { loadExpandedDocument } from '../reading'
@@ -25,6 +25,11 @@ export function getOrCreateListItems(lists: DocumentList[], property: Property):
   return newList.items
 }
 
+const isOtherProperty = (otherStructure: TypeDefinition, key: string) => (p: Property): boolean => {
+  const reference = getReferencedTypeName(p.type)
+  return (reference == otherStructure.id || otherStructure.unions.some(u => u.name == reference)) && (!p.otherProperty || p.otherProperty === key)
+}
+
 export const applyOtherDocumentDiffs = async (
   config: DatabaseConfig, nodePath: AdvancedNodePath,
   otherNodePath: AdvancedNodePath, diffs: StringListDiffs,
@@ -42,7 +47,7 @@ export const applyOtherDocumentDiffs = async (
   const otherStructure = otherNodePath.type!
   for (const [key, diff] of diffs) {
     const property = Object.values(structure.properties)
-      .filter(p => getReferencedTypeName(p.type) == otherStructure.id && (!p.otherProperty || p.otherProperty === key))[0]
+      .filter(isOtherProperty(otherStructure, key))[0]
 
     if (!property)
       continue
@@ -55,8 +60,7 @@ export const applyOtherDocumentDiffs = async (
         if (!items.some(item => item.id == crossLink.id)) {
           items.push(crossLink)
         }
-      }
-      else {
+      } else {
         items.length = 0
         items.push(crossLink)
       }

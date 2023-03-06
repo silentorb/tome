@@ -22,6 +22,7 @@ export interface TypeDefinition {
   id: string // Usually plural
   properties: PropertyMap
   union: TypeReference[]
+  unions: TypeReference[]
 }
 
 export type TypeMap = { [key: string]: TypeDefinition }

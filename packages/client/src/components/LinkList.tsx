@@ -82,7 +82,7 @@ export const LinkList = (props: Props) => {
       const newEntries = [{ title: selection.label, id: selection.value }]
       const newItems = list.isSingle
         ? newEntries
-        : sortLinks(list.order, items)
+        : sortLinks(list.order, items.concat(newEntries))
 
       setList(
         setListItems(list, newItems)
