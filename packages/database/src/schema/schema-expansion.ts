@@ -22,14 +22,15 @@ export const expandSerializedTypeReference = (subType?: string) => (type: Serial
 }
 
 export function expandSerializedProperty(types: SerializedTypeMap, name: string, property: SerializedProperty): Property {
-  const { order } = property
+  const { order, otherProperty } = property
   const type = expandSerializedTypeReference(name)(property.type)
   const title = property.title || types[type.types[0]]?.title
   return {
-    name,
+    id: name,
     title,
     type,
     order,
+    otherProperty,
   }
 }
 

@@ -39,6 +39,22 @@
       "properties": {
         "entities": {
           "type": "list"
+        },
+        "children": {
+          "type": {
+            "name": "list",
+            "types": ["groups"]
+          },
+          "title": "Children",
+          "otherProperty": "parents"
+        },
+        "parents": {
+          "type": {
+            "name": "list",
+            "types": ["groups"]
+          },
+          "title": "Parents",
+          "otherProperty": "children"
         }
       }
     }

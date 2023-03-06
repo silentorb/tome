@@ -9,12 +9,13 @@ import { getReferencedTypeName } from '../type-processing'
 import { isListType } from '../schema'
 
 export function getOrCreateListItems(lists: DocumentList[], property: Property): RecordLink[] {
-  const existing = lists.filter(list => list.name == property.title)[0]
+  const existing = lists.filter(list => list.title == property.title)[0]
   if (existing)
     return existing.items
 
   const newList: DocumentList = {
-    name: property.title,
+    title: property.title,
+    id: property.id,
     type: getReferencedTypeName(property.type),
     items: [],
   }
@@ -41,7 +42,7 @@ export const applyOtherDocumentDiffs = async (
   const otherStructure = otherNodePath.type!
   for (const [key, diff] of diffs) {
     const property = Object.values(structure.properties)
-      .filter(p => getReferencedTypeName(p.type) == otherStructure.id)[0]
+      .filter(p => getReferencedTypeName(p.type) == otherStructure.id && (!p.otherProperty || p.otherProperty === key))[0]
 
     if (!property)
       continue

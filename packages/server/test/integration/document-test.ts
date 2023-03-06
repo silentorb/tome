@@ -129,6 +129,29 @@ describe('document-test', function () {
         assert.strictEqual(content, expected)
       })
 
+      it('updates referenced documents with loopback properties', async function () {
+        const resource = 'tome/business/groups/novel-entities'
+        const nodePath = getNodePathOrError(config, resource)
+        const node = await loadNode(config)(resource) as DocumentNode
+        const { document } = node
+        const list = findDocumentList(document, 'Children')!
+        const newGroup = 'tome/business/groups/new-group'
+        list.items.push({
+          title: 'New group',
+          id: newGroup,
+        })
+        await writeDocument(config)({
+          document,
+          nodePath
+        })
+
+        const content = await readFile(
+          getMarkdownDocumentFilePath(getNodePathOrError(config, newGroup))
+        )
+        const expected = loadExpectedContent('new-group01.md')
+        assert.strictEqual(content, expected)
+      })
+
       it('replaces single references', async function () {
         const introduceBob = 'story/scenes/introduce-bob'
         const resource = 'story/books/other-book'

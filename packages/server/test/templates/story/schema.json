@@ -29,5 +29,19 @@
         }
       }
     }
+  },
+  "documents": {
+    "scene-report": {
+      "sections": [
+        {
+          "title": "Scenes",
+          "type": "table",
+          "source": "scenes",
+          "query": {
+
+          }
+        }
+      ]
+    }
   }
 }

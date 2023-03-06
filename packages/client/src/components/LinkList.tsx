@@ -94,8 +94,8 @@ export const LinkList = (props: Props) => {
   }
 
   const heading = list.type
-    ? <h2><a href={getAbsoluteResourceUrl(list.type)}>{list.name}</a></h2>
-    : <h2>{list.name}</h2>
+    ? <h2><a href={getAbsoluteResourceUrl(list.type)}>{list.title}</a></h2>
+    : <h2>{list.title}</h2>
 
   return (
     <div>

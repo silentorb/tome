@@ -47,7 +47,7 @@ export function generateLinkListAstWithHeader(localPath: string, list: DocumentL
       depth: 2,
       ordered: list.order === 'indexed',
       children: [
-        { type: 'text', value: list.name },
+        { type: 'text', value: list.title },
       ]
     },
     generateIndexListAst(localPath, list.items),

@@ -114,7 +114,8 @@ export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] 
     const items = isListType(type) ? sortLinks(property.order, allItems) : allItems.slice(0, 1)
 
     lists.push({
-      name: property.title,
+      title: property.title,
+      id: propertyId,
       type: joinPaths(nodePath.schema!.id, subType),
       items,
       order: property.order || [['title', 'asc']],

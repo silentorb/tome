@@ -12,6 +12,7 @@ export interface SerializedProperty {
   title: string
   type: SerializedTypeReference
   order?: ListOrder
+  otherProperty?: string
 }
 
 export type SerializedPropertyMap = { [key: string]: SerializedProperty }

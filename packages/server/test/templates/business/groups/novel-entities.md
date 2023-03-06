@@ -1,4 +1,4 @@
-# Novels entities
+# Novel entities
 
 ## Entities
 

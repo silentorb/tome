@@ -23,12 +23,12 @@ export type StringListDiffs = [string, ListDiff<string>][]
 
 export const diffListLinks = (previous: DocumentList[], next: DocumentList[]): StringListDiffs => {
   const findListItems = (lists: DocumentList[], key: string) =>
-    lists.filter((list => list.name == key))[0]?.items?.map(i => i.id) || []
+    lists.filter((list => list.id == key))[0]?.items?.map(i => i.id) || []
 
   const groups = unique(
     previous
-      .map(list => list.name)
-      .concat(next.map(list => list.name))
+      .map(list => list.id)
+      .concat(next.map(list => list.id))
   )
     .map(key => ({
       key,

@@ -25,7 +25,7 @@ export const DocumentPage = (props: Props) => {
   const markdownEditor = useRef<ReactEditor | undefined>(undefined)
   const listStates = document.lists.map(useListState)
   const linkLists = listStates.map(([list, setList]) =>
-    (<LinkList key={list.name} list={list} setList={setList}/>)
+    (<LinkList key={list.title} list={list} setList={setList}/>)
   )
 
   return (

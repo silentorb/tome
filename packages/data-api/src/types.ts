@@ -7,7 +7,8 @@ export interface RecordLink {
 }
 
 export interface DocumentList {
-  name: string
+  title: string
+  id: string
   type?: string
   items: RecordLink[]
   order?: ListOrder
@@ -41,7 +42,10 @@ export interface QueryFilter {
   value: any
 }
 
+type FieldSelection = string
+
 export interface DataQuery {
   filters?: QueryFilter[]
   order?: string[]
+  select?: FieldSelection[]
 }
