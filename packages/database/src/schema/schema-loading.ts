@@ -3,6 +3,7 @@ import { joinPaths, readFileOrError, readFileOrErrorSync } from '../file-operati
 import { DatabaseConfig } from '../types'
 import { SerializedDataSchema } from './serialized-schema-types'
 import { expandSerializedDataSources, expandSerializedSchema } from './schema-expansion'
+import { newStandardQueryLibrary } from '../scripting/standard-query-library'
 
 export const isListType = (type: TypeReference) =>
   type.name == 'list'
@@ -35,6 +36,7 @@ function prepareDatabases(inputs: DataInput[]): DatabaseConfig {
   return {
     schemas: mapIdObject(schemas),
     sources: mapIdObject(sources),
+    library: newStandardQueryLibrary(),
   }
 }
 

@@ -26,8 +26,20 @@ export interface SerializedTypeDefinition {
 
 export type SerializedTypeMap = { [key: string]: SerializedTypeDefinition }
 
+export interface SerializedDocumentSection {
+  columns?: any[]
+}
+
+export interface SerializedDocumentDefinition {
+  index?: SerializedDocumentSection
+}
+
+export type SerializedDocumentMap = { [key: string]: SerializedDocumentDefinition }
+
+
 export interface SerializedDataSchema {
   id?: string
   title: string
   types: SerializedTypeMap
+  documents?: SerializedDocumentMap
 }

@@ -1,4 +1,4 @@
-import { ListOrder, TypeDefinition } from './schema'
+import { DataColumn, ListOrder, TypeDefinition } from './schema'
 
 export interface RecordLink {
   title: string
@@ -6,26 +6,30 @@ export interface RecordLink {
   isDirectory?: boolean
 }
 
-export interface DocumentList {
+export interface RecordList {
+  items: RecordLink[]
+  order?: ListOrder
+  columns?: DataColumn[]
+}
+
+export interface DocumentList extends RecordList {
   title: string
   id: string
   type?: string
-  items: RecordLink[]
-  order?: ListOrder
   isSingle?: boolean
 }
 
 export interface ExpandedDocument {
   title: string
   content: string
+  type?: string
   lists: DocumentList[]
 }
 
-export interface IndexNode {
+export interface IndexNode extends RecordList {
   type: 'index',
   id: string
   dataType?: TypeDefinition
-  items: RecordLink[]
 }
 
 export interface DocumentNode {

@@ -1,5 +1,5 @@
 import { GetNodeLinksResponse, GetNodeRequest, GetNodeResponse, QueryNodesRequest } from '@tome/web-api'
-import { DatabaseConfig, loadNode, queryNodes } from '@tome/database'
+import { DatabaseConfig, loadNode, newDocumentCache, queryNodes } from '@tome/database'
 import { DatabaseSchema } from '@tome/data-api'
 import { BadRequest } from '@vineyard/lawn'
 
@@ -18,7 +18,9 @@ export const fetchNode: NodeLoader = config => async request => {
   if (id.indexOf('.') !== -1 || id[0] === '/' || id[id.length - 1] == '/')
     throw new Error(`Invalid id: ${id}`)
 
-  const node = await loadNode(config)(id)
+  const cache = newDocumentCache(config)
+
+  const node = await loadNode(config, cache)(id)
   if (!node)
     throw new BadRequest(`Invalid node path: ${id}`)
 

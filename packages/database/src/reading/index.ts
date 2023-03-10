@@ -1,3 +1,5 @@
+export * from './document-cache'
 export * from './get-document'
 export * from './get-node'
 export * from './query'
+export * from './record-expansion'

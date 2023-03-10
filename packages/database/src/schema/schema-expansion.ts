@@ -1,10 +1,10 @@
 import {
-  SerializedDataSchema,
+  SerializedDataSchema, SerializedDocumentDefinition, SerializedDocumentMap,
   SerializedProperty,
   SerializedTypeDefinition, SerializedTypeMap,
   SerializedTypeReference
 } from './serialized-schema-types'
-import { DataSchema, Property, PropertyMap, TypeDefinition, TypeReference } from '@tome/data-api'
+import { CustomDocument, DataSchema, Property, PropertyMap, TypeDefinition, TypeReference } from '@tome/data-api'
 import { DataSource } from '../types'
 import path from 'path'
 import { sortLinks } from '@tome/data-processing/dist/src'
@@ -66,6 +66,15 @@ export function expandSerializedTypeDefinition(types: SerializedTypeMap, id: str
   }
 }
 
+export function expandSerializedDocumentDefinition(documents: SerializedDocumentMap, id: string, document: SerializedDocumentDefinition): CustomDocument {
+  const index = document.index
+
+  return {
+    id,
+    index,
+  }
+}
+
 const getSchemaId = (filePath: string, schema: SerializedDataSchema) =>
   schema.id || path.basename(filePath)
 
@@ -80,11 +89,20 @@ export function expandSerializedSchema(filePath: string, schema: SerializedDataS
       )
   )
 
+  const schemaDocuments = schema.documents || {}
+
+  const documents = Object.fromEntries(
+    Object.entries(schemaDocuments)
+      .map(([id, type]) =>
+        [id, expandSerializedDocumentDefinition(schemaDocuments, id, type)]
+      )
+  )
+
   return {
     id,
     title,
     types,
-    documents: {},
+    documents,
   }
 }
 

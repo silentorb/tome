@@ -1,4 +1,4 @@
-import { DataSource } from '@tome/database/dist/src'
+import { QueryGraph } from './scripting'
 
 export interface TypeReference {
   name: string
@@ -27,10 +27,19 @@ export interface TypeDefinition {
 
 export type TypeMap = { [key: string]: TypeDefinition }
 
+export interface DataColumn {
+  id: string
+  title: string
+  query: QueryGraph
+}
+
+export interface DocumentSection {
+  columns?: DataColumn[]
+}
+
 export interface CustomDocument {
-  title: string // Usually singular
-  id: string // Usually plural
-  query: any
+  id: string
+  index?: DocumentSection
 }
 
 export type CustomDocumentMap = { [key: string]: CustomDocument }

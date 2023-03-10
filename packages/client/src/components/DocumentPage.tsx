@@ -41,6 +41,7 @@ export const DocumentPage = (props: Props) => {
             type: "document",
             document: {
               title: document.title, // Not actually used right now--the server will extract the title from the content
+              type: document.type,
               content: markdown,
               lists: listStates.map(l => l[0])
             }

@@ -4,14 +4,14 @@ import { deepClonePlainData } from '../cloning'
 import { getMarkdownDocumentFilePath, getNodePath } from '../pathing'
 import { loadExpandedDocument } from '../reading'
 import { StringListDiffs } from '../diffing'
-import { stringifyDocument } from '../documents'
+import { getListItems, stringifyDocument } from '../documents'
 import { getReferencedTypeName } from '../type-processing'
 import { isListType } from '../schema'
 
 export function getOrCreateListItems(lists: DocumentList[], property: Property): RecordLink[] {
-  const existing = lists.filter(list => list.title == property.title)[0]
+  const existing = getListItems(lists, property)
   if (existing)
-    return existing.items
+    return existing
 
   const newList: DocumentList = {
     title: property.title,

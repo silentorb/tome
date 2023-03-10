@@ -69,10 +69,6 @@ export const IndexPage = (props: Props) => {
   const [items, setItems] = useState(node.items)
   const [initialized, setInitialized] = useState(false)
 
-  const links = items.map(item => (
-    <RecordNavigationLink key={item.id} item={item}/>
-  ))
-
   const parentNavigation = node.id !== ''
     ? <ParentNavigation/> : undefined
 
@@ -143,7 +139,7 @@ export const IndexPage = (props: Props) => {
       {parentNavigation}
       <div>
         {creationElement}
-        <LinkList items={items} setItems={setItems} />
+        <LinkList items={items} setItems={setItems} columns={node.columns} />
       </div>
     </>
   )

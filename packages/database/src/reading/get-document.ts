@@ -1,7 +1,7 @@
 import { readFile } from '../file-operations'
 import { DocumentNode, ExpandedDocument } from '@tome/data-api'
 import { expandDocument, getDocumentTitle, titleOrFallback } from '../documents'
-import { DatabaseConfig, NodePath } from '../types'
+import { DatabaseConfig, GetExpandedDocument, NodePath } from '../types'
 import { getMarkdownDocumentFilePath } from '../pathing'
 import { parseMarkdownAST } from '../markdown-parsing'
 
@@ -31,8 +31,8 @@ export async function loadExpandedDocument(config: DatabaseConfig, nodePath: Nod
   return expandDocument(config, nodePath, content)
 }
 
-export async function loadDocumentNode(config: DatabaseConfig, nodePath: NodePath): Promise<DocumentNode | undefined> {
-  const document = await loadExpandedDocument(config, nodePath)
+export async function loadDocumentNode(getDocument: GetExpandedDocument, nodePath: NodePath): Promise<DocumentNode | undefined> {
+  const document = await getDocument(nodePath.path)
   return document ? {
     type: 'document',
     id: nodePath.path,

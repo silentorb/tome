@@ -3,6 +3,7 @@ import { DataQuery, RecordLink } from '@tome/data-api'
 import { getNodePath } from '../pathing'
 import { BadRequest } from '@vineyard/lawn'
 import { getNodeLinks } from './get-index'
+import { newDocumentCache } from './document-cache'
 
 export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): Promise<RecordLink[]> => {
   if (!query?.filters?.length)
@@ -25,5 +26,5 @@ export const queryNodes = (config: DatabaseConfig) => async (query: DataQuery): 
     throw new BadRequest('Invalid type in filter')
 
   // const filePath = joinPaths(nodePath.source!.filePath, nodePath.nodeName)
-  return getNodeLinks(config, nodePath)
+  return getNodeLinks(config, newDocumentCache(config), nodePath)
 }

@@ -75,7 +75,7 @@ export const LinkListSection = (props: Props) => {
       />
       <LinkList items={items} setItems={i => {
         setList(setListItems(list, i))
-      }}/>
+      }} columns={list.columns}/>
     </div>
   )
 }

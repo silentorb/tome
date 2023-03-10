@@ -1,4 +1,4 @@
-import { ExpandedDocument, IndexNode, RecordLink } from '@tome/data-api'
+import { DocumentList, ExpandedDocument, IndexNode, Property, RecordLink } from '@tome/data-api'
 import { DatabaseConfig, NodePath } from './types'
 import path from 'path'
 import { getMarkdownTitle, parseMarkdownAST, processHeadings, processIndexList } from './markdown-parsing'
@@ -15,10 +15,15 @@ export function getDocumentTitle(data: any, nodePath: NodePath): string {
   return titleOrFallback(nodePath, getMarkdownTitle(data))
 }
 
+export function getListItems(lists: DocumentList[], property: Property): RecordLink[] | undefined {
+  return lists.filter(list => list.title == property.title)[0]?.items
+}
+
 export async function expandDocument(config: DatabaseConfig, nodePath: NodePath, content: string): Promise<ExpandedDocument> {
   const data = await parseMarkdownAST(content)
   const title = getDocumentTitle(data, nodePath)
-  if (!nodePath.type) {
+  const { type } = nodePath
+  if (!type) {
     return {
       title,
       content,
@@ -32,6 +37,7 @@ export async function expandDocument(config: DatabaseConfig, nodePath: NodePath,
   return {
     title,
     content: updatedContent,
+    type: type.id,
     lists,
   }
 }

@@ -1,11 +1,12 @@
 import { isExistingDirectory, listFiles } from '../file-operations'
-import { IndexNode, ListOrder, RecordLink } from '@tome/data-api'
-import { DatabaseConfig, NodePath } from '../types'
+import { DataColumn, IndexNode, ListOrder, RecordLink, TypeReference } from '@tome/data-api'
+import { DatabaseConfig, GetExpandedDocument, NodePath } from '../types'
 import { childNodePath, getIndexDirectoryPath, getNodePath, idFromPath } from '../pathing'
 import { loadDocumentContent, loadDocumentTitle } from './get-document'
 import { expandIndexList, recordLinkListsHaveSameOrder } from '../documents'
 import { writeIndexDocument } from '../writing'
-import { sortLinks } from '@tome/data-processing/dist/src'
+import { sortLinks } from '@tome/data-processing'
+import { expandFields } from './record-expansion'
 
 const newChildLink = (config: DatabaseConfig) => async (nodePath: NodePath): Promise<RecordLink> => {
   const title = await loadDocumentTitle(config, nodePath)
@@ -57,7 +58,7 @@ function syncIndexList(indexLinks: RecordLink[], directoryLinks: RecordLink[]): 
   return [intersection.concat(additions), true]
 }
 
-export async function getPhysicalNodeLinks(config: DatabaseConfig, nodePath: NodePath): Promise<RecordLink[]> {
+export async function getPhysicalNodeLinks(config: DatabaseConfig, nodePath: NodePath, order?: ListOrder): Promise<RecordLink[]> {
   const filePath = getIndexDirectoryPath(nodePath)
   if (!filePath)
     return []
@@ -77,42 +78,53 @@ export async function getPhysicalNodeLinks(config: DatabaseConfig, nodePath: Nod
   if (hasIndex) {
     const indexLinks = await loadIndexList(config, nodePath)
     const [newList, changed] = syncIndexList(indexLinks, directoryLinks)
-    const sortedList = sortLinks(undefined, newList)
+    const sortedList = sortLinks(order, newList)
     if (changed || !recordLinkListsHaveSameOrder(newList, sortedList)) {
       await writeIndexDocument(config)(nodePath, sortedList)
     }
     return sortedList
   } else {
-    return sortLinks(undefined, directoryLinks)
+    return directoryLinks
   }
 }
 
-export async function getNodeLinks(config: DatabaseConfig, nodePath: NodePath, order?: ListOrder): Promise<RecordLink[]> {
+async function getUnionNodeLinks(config: DatabaseConfig, union: TypeReference[], id: string, order?: ListOrder) {
+  let result: RecordLink[] = []
+  for (const childType of union) {
+    const childNodePath = getNodePath(config, `${id}/${childType.name}`)
+    if (childNodePath) {
+      result = result.concat(await getPhysicalNodeLinks(config, childNodePath, order))
+    }
+  }
+  return result
+}
+
+export async function getNodeLinks(config: DatabaseConfig, getDocument: GetExpandedDocument, nodePath: NodePath,
+                                   order?: ListOrder, columns?: DataColumn[]): Promise<RecordLink[]> {
   const type = nodePath.type
   const union = type?.union || []
-  if (union.length > 0) {
-    let result: RecordLink[] = []
-    for (const childType of union) {
-      const childNodePath = getNodePath(config, `${nodePath.schema?.id}/${childType.name}`)
-      if (childNodePath) {
-        result = result.concat(await getPhysicalNodeLinks(config, childNodePath))
-      }
-    }
-    return sortLinks(order, result)
-  }
-  else {
-    return getPhysicalNodeLinks(config, nodePath)
-  }
+  const id = nodePath.schema?.id
+  const items = union.length > 0 && id
+    ? await getUnionNodeLinks(config, union, id, order)
+    : await getPhysicalNodeLinks(config, nodePath, order)
+
+  const expandedItems = await expandFields({ config, getDocument, nodePath }, items, columns)
+  return sortLinks(order, expandedItems)
 }
 
-export async function getIndex(config: DatabaseConfig, nodePath: NodePath): Promise<IndexNode> {
+export async function getIndex(config: DatabaseConfig, getDocument: GetExpandedDocument, nodePath: NodePath): Promise<IndexNode> {
   const id = nodePath.path
-  const items = await getNodeLinks(config, nodePath)
+  const documents = nodePath.schema?.documents
+  const typeName = nodePath?.type?.id
+  const document = documents && typeName ? documents[typeName] : undefined
+  const columns = document?.index?.columns
+  const items = await getNodeLinks(config, getDocument, nodePath, undefined, columns)
 
   return {
     type: 'index',
     id,
     dataType: nodePath.type,
     items,
+    columns,
   }
 }

@@ -2,7 +2,8 @@ import { assert } from 'chai'
 import * as fse from 'fs-extra'
 import {
   getMarkdownDocumentFilePath,
-  getNodePath, getNodePathOrError, joinPaths,
+  getNodePathOrError,
+  joinPaths,
   loadDatabasesSync,
   loadNode,
   readFile,

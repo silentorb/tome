@@ -1,4 +1,4 @@
-import { DataSchema, DataSchemaMap, TypeDefinition } from '@tome/data-api'
+import { DataSchema, DataSchemaMap, ExpandedDocument, GraphLibrary, TypeDefinition } from '@tome/data-api'
 
 export interface DataSource {
   id: string
@@ -8,9 +8,16 @@ export interface DataSource {
 
 export type DataSourceMap = { [key: string]: DataSource }
 
+export interface QueryContext {
+  config: DatabaseConfig
+  getDocument: GetExpandedDocument
+  nodePath: NodePath
+}
+
 export interface DatabaseConfig {
   schemas: DataSchemaMap
   sources: DataSourceMap
+  library: GraphLibrary<QueryContext>
 }
 
 export interface NodePath {
@@ -34,3 +41,5 @@ export interface FileWriteJob {
   filePath: string
   content: string
 }
+
+export type GetExpandedDocument = (id: string) => Promise<ExpandedDocument | undefined>

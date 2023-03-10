@@ -1,19 +1,15 @@
 import React, { useState } from 'react'
-import { DocumentList, RecordLink } from '@tome/data-api'
+import { DataColumn, RecordLink } from '@tome/data-api'
 import { RecordNavigationLink } from './RecordNavigationLink'
 import { Trash2 } from 'react-feather'
 import styled from 'styled-components'
 import { elementSequence, IconButton } from './styling'
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  useReactTable,
-} from '@tanstack/react-table'
+import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, } from '@tanstack/react-table'
 
 interface Props {
   items: RecordLink[]
   setItems: (items: RecordLink[]) => void
+  columns?: DataColumn[]
 }
 
 interface LinkProps {
@@ -58,11 +54,6 @@ const linkToOption = (link: RecordLink) => (
   }
 )
 
-const setListItems = (list: DocumentList, items: RecordLink[]) => ({
-  ...list,
-  items,
-})
-
 export const LinkList = (props: Props) => {
   const { items, setItems } = props
   const [options, setOptions] = useState<any[] | undefined>(undefined)
@@ -76,30 +67,34 @@ export const LinkList = (props: Props) => {
     )
   }
 
-  // const rows = items.map(item => <LinkItem onDelete={onDelete} item={item} key={item.id}/>)
-
-  const columnHelper = createColumnHelper<RecordLink>()
+  const columnHelper = createColumnHelper<any>()
 
   const columns = [
     columnHelper.display({
       id: 'title',
       header: 'Name',
-      cell: props => <LinkItem item={props.row.original} />
+      cell: props => <LinkItem item={props.row.original}/>
     }),
-    columnHelper.display({
-      id: 'delete',
-      header: 'Delete',
-      meta: {
-        style: { textAlign: 'center' }
-      },
-      cell: props => <IconButton onClick={() => onDelete(props.row.original)}><Trash2/></IconButton>
-    }),
-
-    // columnHelper.accessor('title', {
-    //   cell: info => info.getValue(),
-    //   footer: info => info.column.id,
-    // }),
   ]
+    .concat(
+      (props.columns || []).map(c =>
+        columnHelper.display({
+          id: c.id,
+          header: c.title,
+          cell: props => props.row.original[c.id]
+        })
+      )
+    )
+    .concat([
+      columnHelper.display({
+        id: 'delete',
+        header: 'Delete',
+        meta: {
+          style: { textAlign: 'center' }
+        },
+        cell: props => <IconButton onClick={() => onDelete(props.row.original)}><Trash2/></IconButton>
+      }),
+    ])
 
   const table = useReactTable({
     data: items,
