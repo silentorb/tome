@@ -13,7 +13,9 @@ export namespace Shorthand {
     inputs?: QueryNodeInput[]
   }
 
+  export type ShorthandNode = QueryNode | string[]
+
   export interface QueryGraph {
-    nodes: QueryNode[]
+    nodes: ShorthandNode[]
   }
 }
