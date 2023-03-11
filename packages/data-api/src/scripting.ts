@@ -25,6 +25,4 @@ export interface QueryNode {
   inputs: NodeInput[]
 }
 
-export interface QueryGraph {
-  nodes: QueryNode[]
-}
+export type QueryGraph = QueryNode[]

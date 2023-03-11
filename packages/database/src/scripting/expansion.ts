@@ -49,12 +49,12 @@ export const expandNode = (node: Shorthand.ShorthandNode): Shorthand.QueryNode =
     : node
 
 export const expandGraph = (library: GraphLibrary, graph: Shorthand.QueryGraph): QueryGraph => {
-  const nodes: QueryNode[] = []
+  const result: QueryGraph = []
   let lastNodeId = ''
   let autoNodeId = 1
   const nextAutoNodeId = () => `__${autoNodeId++}__`
 
-  for (const rawNode of graph.nodes) {
+  for (const rawNode of graph) {
     const node = expandNode(rawNode)
     const functionDefinition = library.functions[node.function]
     if (!functionDefinition)
@@ -86,16 +86,14 @@ export const expandGraph = (library: GraphLibrary, graph: Shorthand.QueryGraph):
 
     lastNodeId = id
 
-    nodes.push({
+    result.push({
       ...node,
       id,
       function: functionDefinition,
       inputs,
     })
   }
-  return {
-    ...graph,
-    nodes,
-  }
+
+  return result
 }
 

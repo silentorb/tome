@@ -14,8 +14,5 @@ export namespace Shorthand {
   }
 
   export type ShorthandNode = QueryNode | string[]
-
-  export interface QueryGraph {
-    nodes: ShorthandNode[]
-  }
+  export type QueryGraph = ShorthandNode[]
 }

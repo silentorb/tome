@@ -15,7 +15,7 @@ const resolveInputValues = (state: Bag, inputs: NodeInput[]) =>
 export async function executeGraph<Context>(context: Context, graph: QueryGraph, initialState: Bag = {}): Promise<any> {
   const state: Bag = { ...initialState }
   let lastValue: any = undefined
-  for (const node of graph.nodes) {
+  for (const node of graph) {
     const args = resolveInputValues(state, node.inputs)
     const result = node.function.invoke.apply(undefined, [context].concat(args))
 
