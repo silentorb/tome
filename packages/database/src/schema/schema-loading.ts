@@ -1,4 +1,4 @@
-import { TypeReference } from '@tome/data-api/dist/src'
+import { GraphLibrary, TypeReference } from '@tome/data-api'
 import { joinPaths, readFileOrError, readFileOrErrorSync } from '../file-operations'
 import { DatabaseConfig } from '../types'
 import { SerializedDataSchema } from './serialized-schema-types'
@@ -29,18 +29,18 @@ interface DataInput {
   schema: SerializedDataSchema
 }
 
-function prepareDatabases(inputs: DataInput[]): DatabaseConfig {
-  const schemas = inputs.map(input => expandSerializedSchema(input.filePath, input.schema))
+function prepareDatabases(library: GraphLibrary, inputs: DataInput[]): DatabaseConfig {
+  const schemas = inputs.map(input => expandSerializedSchema(library, input.filePath, input.schema))
   const sources = inputs.map(input => expandSerializedDataSources(input.filePath, input.schema))
 
   return {
     schemas: mapIdObject(schemas),
     sources: mapIdObject(sources),
-    library: newStandardQueryLibrary(),
+    library,
   }
 }
 
-export async function loadDatabases(filePaths: string[]): Promise<DatabaseConfig> {
+export const loadDatabases = (library: GraphLibrary = newStandardQueryLibrary()) => async (filePaths: string[]): Promise<DatabaseConfig> => {
   const inputs = await Promise.all(
     filePaths.map(async filePath => ({
         filePath,
@@ -48,14 +48,14 @@ export async function loadDatabases(filePaths: string[]): Promise<DatabaseConfig
       })
     )
   )
-  return prepareDatabases(inputs)
+  return prepareDatabases(library, inputs)
 }
 
-export function loadDatabasesSync(filePaths: string[]): DatabaseConfig {
+export const loadDatabasesSync = (library: GraphLibrary = newStandardQueryLibrary()) => (filePaths: string[]): DatabaseConfig => {
   const inputs = filePaths.map(filePath => ({
       filePath,
       schema: loadSchemaSync(filePath)
     })
   )
-  return prepareDatabases(inputs)
+  return prepareDatabases(library, inputs)
 }

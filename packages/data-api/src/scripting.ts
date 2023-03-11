@@ -1,31 +1,30 @@
-export type NodeExpressionType = 'literal' | 'reference'
+export type Bag = { [key: string]: any }
 
-export interface NodeExpression {
-  type: string
-  value: NodeExpressionType
+export interface GraphFunctionDefinition {
+  parameters: string[]
+  invoke: Function
 }
 
-export interface QueryNodeInput {
+export type GraphFunctionMap = { [key: string]: GraphFunctionDefinition }
+
+export interface GraphLibrary {
+  functions: GraphFunctionMap
+}
+
+export type NodeExpressionType = 'literal' | 'reference'
+
+export interface NodeInput {
   id: string
-  expression: NodeExpression
+  type: NodeExpressionType
+  value: any
 }
 
 export interface QueryNode {
   id: string
-  function: string
-  inputs: QueryNodeInput[]
+  function: GraphFunctionDefinition
+  inputs: NodeInput[]
 }
 
 export interface QueryGraph {
   nodes: QueryNode[]
-}
-
-export type Bag = { [key: string]: any }
-
-export type GraphFunction<Context> = (context: Context, state: Bag, props: Bag) => any
-
-export type GraphFunctionMap<Context> = { [key: string]: GraphFunction<Context> }
-
-export interface GraphLibrary<Context> {
-  functions: GraphFunctionMap<Context>
 }

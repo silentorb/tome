@@ -17,7 +17,7 @@ export interface QueryContext {
 export interface DatabaseConfig {
   schemas: DataSchemaMap
   sources: DataSourceMap
-  library: GraphLibrary<QueryContext>
+  library: GraphLibrary
 }
 
 export interface NodePath {

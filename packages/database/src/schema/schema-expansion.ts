@@ -1,13 +1,22 @@
 import {
-  SerializedDataSchema, SerializedDocumentDefinition, SerializedDocumentMap,
+  SerializedDataSchema, SerializedDocumentDefinition, SerializedDocumentMap, SerializedDocumentSection,
   SerializedProperty,
   SerializedTypeDefinition, SerializedTypeMap,
   SerializedTypeReference
 } from './serialized-schema-types'
-import { CustomDocument, DataSchema, Property, PropertyMap, TypeDefinition, TypeReference } from '@tome/data-api'
+import {
+  CustomDocument,
+  DataSchema,
+  DocumentSection, GraphLibrary,
+  Property,
+  PropertyMap,
+  TypeDefinition,
+  TypeReference
+} from '@tome/data-api'
 import { DataSource } from '../types'
 import path from 'path'
 import { sortLinks } from '@tome/data-processing/dist/src'
+import { expandGraph } from '../scripting'
 
 // These functions convert the more concise schema format into the more verbose and computation-friendly schema format.
 
@@ -66,8 +75,20 @@ export function expandSerializedTypeDefinition(types: SerializedTypeMap, id: str
   }
 }
 
-export function expandSerializedDocumentDefinition(documents: SerializedDocumentMap, id: string, document: SerializedDocumentDefinition): CustomDocument {
-  const index = document.index
+export function expandSerializedDocumentSection(library: GraphLibrary, section: SerializedDocumentSection): DocumentSection {
+  const columns = (section.columns || [])
+    .map(column => ({
+      ...column,
+      query: expandGraph(library, column.query)
+    }))
+
+  return {
+    columns,
+  }
+}
+
+export function expandSerializedDocumentDefinition(library: GraphLibrary, documents: SerializedDocumentMap, id: string, document: SerializedDocumentDefinition): CustomDocument {
+  const index = document.index ? expandSerializedDocumentSection(library, document.index) : undefined
 
   return {
     id,
@@ -78,7 +99,7 @@ export function expandSerializedDocumentDefinition(documents: SerializedDocument
 const getSchemaId = (filePath: string, schema: SerializedDataSchema) =>
   schema.id || path.basename(filePath)
 
-export function expandSerializedSchema(filePath: string, schema: SerializedDataSchema): DataSchema {
+export function expandSerializedSchema(library: GraphLibrary, filePath: string, schema: SerializedDataSchema): DataSchema {
   const { title } = schema
   const id = getSchemaId(filePath, schema)
 
@@ -94,7 +115,7 @@ export function expandSerializedSchema(filePath: string, schema: SerializedDataS
   const documents = Object.fromEntries(
     Object.entries(schemaDocuments)
       .map(([id, type]) =>
-        [id, expandSerializedDocumentDefinition(schemaDocuments, id, type)]
+        [id, expandSerializedDocumentDefinition(library, schemaDocuments, id, type)]
       )
   )
 

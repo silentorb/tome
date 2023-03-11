@@ -17,23 +17,7 @@ const loadInputContent = loadTestResource(__dirname, 'input')
 describe('unit-test', function () {
   this.timeout(15000)
 
-  // const books = {
-  //   title: 'Books',
-  //   path: 'books',
-  //   properties: {},
-  // }
-  //
-  // const source = {
-  //   id: 'story',
-  //   filePath: '/story/data',
-  //   schema: {
-  //     id: 'story',
-  //     title: 'Story',
-  //     structures: {},
-  //   }
-  // }
-
-  const config: DatabaseConfig = loadDatabasesSync([
+  const config: DatabaseConfig = loadDatabasesSync()([
     path.resolve(__dirname, '../templates/business'),
     path.resolve(__dirname, '../templates/story'),
   ])
@@ -71,7 +55,7 @@ describe('unit-test', function () {
 
   describe('document parsing', function () {
     it('consolidates redundant headings and links', async function () {
-      const bobNodePath = getNodePath(config, 'story/characters/bob')
+      const bobNodePath = getNodePath(config, 'story/characters/bob')!
       const redundantBobInput = loadInputContent('bob-redundant.md')
       const rawDocument = await expandDocument(config, bobNodePath, redundantBobInput)
       const refinedDocument = refineDocument(rawDocument)

@@ -35,7 +35,7 @@ const loadExpectedContent = loadTestResource(__dirname, 'expected')
 describe('document-test', function () {
   this.timeout(15000)
   initializeTempDirectory()
-  let config = loadDatabasesSync([storyPath, businessPath])
+  let config = loadDatabasesSync()([storyPath, businessPath])
 
   describe('reading', function () {
     before(function () {

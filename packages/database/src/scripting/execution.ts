@@ -1,6 +1,6 @@
-import { Bag, GraphLibrary, NodeExpression, QueryGraph, QueryNodeInput } from '@tome/data-api'
+import { Bag, NodeInput, QueryGraph } from '@tome/data-api'
 
-function resolveInputValue(state: Bag, expression: NodeExpression) {
+const resolveInputValue = (state: Bag) => (expression: NodeInput) => {
   switch (expression.type) {
     case 'literal':
       return expression.value
@@ -9,25 +9,15 @@ function resolveInputValue(state: Bag, expression: NodeExpression) {
   }
 }
 
-function resolveInputValues(state: Bag, inputs: QueryNodeInput[]) {
-  const result: Bag = {}
-  for (const input of inputs) {
-    result[input.id] = resolveInputValue(state, input.expression)
-  }
+const resolveInputValues = (state: Bag, inputs: NodeInput[]) =>
+  inputs.map(resolveInputValue(state))
 
-  return result
-}
-
-export async function executeGraph<Context>(context: Context, library: GraphLibrary<Context>, graph: QueryGraph, initialState: Bag = {}): Promise<any> {
+export async function executeGraph<Context>(context: Context, graph: QueryGraph, initialState: Bag = {}): Promise<any> {
   const state: Bag = { ...initialState }
   let lastValue: any = undefined
   for (const node of graph.nodes) {
-    const f = library.functions[node.function]
-    if (!f)
-      continue
-
-    const props = resolveInputValues(state, node.inputs)
-    const result = f(context, state, props)
+    const args = resolveInputValues(state, node.inputs)
+    const result = node.function.invoke.apply(undefined, [context].concat(args))
 
     // Support heterogeneous mixing of sync and async functions.
     // The entire graph execution is still wrapped in at least one async call.
