@@ -9,7 +9,7 @@ import { getReferencedTypeName } from '../type-processing'
 import { isListType } from '../schema'
 
 export function getOrCreateListItems(lists: DocumentList[], property: Property): RecordLink[] {
-  const existing = getListItems(lists, property)
+  const existing = getListItems(lists, property.id)
   if (existing)
     return existing
 

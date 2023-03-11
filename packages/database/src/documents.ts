@@ -15,8 +15,8 @@ export function getDocumentTitle(data: any, nodePath: NodePath): string {
   return titleOrFallback(nodePath, getMarkdownTitle(data))
 }
 
-export function getListItems(lists: DocumentList[], property: Property): RecordLink[] | undefined {
-  return lists.filter(list => list.title == property.title)[0]?.items
+export function getListItems(lists: DocumentList[], id: string): RecordLink[] | undefined {
+  return lists.filter(list => list.id == id)[0]?.items
 }
 
 export async function expandDocument(config: DatabaseConfig, nodePath: NodePath, content: string): Promise<ExpandedDocument> {

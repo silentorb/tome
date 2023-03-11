@@ -1,11 +1,13 @@
 import { Bag, NodeInput, QueryGraph } from '@tome/data-api'
 
-const resolveInputValue = (state: Bag) => (expression: NodeInput) => {
-  switch (expression.type) {
+const resolveInputValue = (state: Bag) => (input: NodeInput): any => {
+  switch (input.type) {
     case 'literal':
-      return expression.value
+      return input.value
     case 'reference':
-      return state[expression.value]
+      return state[input.value]
+    case 'array':
+      return (input.value as NodeInput[]).map(resolveInputValue(state))
   }
 }
 

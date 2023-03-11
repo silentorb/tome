@@ -1,4 +1,4 @@
-import { GraphLibrary, NodeExpressionType, QueryGraph, QueryNode, Shorthand } from '@tome/data-api'
+import { GraphLibrary, NodeExpressionType, NodeInput, QueryGraph, Shorthand } from '@tome/data-api'
 
 const typeSymbolMap: { [key: string]: NodeExpressionType } = {
   '@': 'reference',
@@ -13,29 +13,40 @@ const mapSymbolToInputType = (name: string, symbol: string): NodeExpressionType 
   return type
 }
 
-export const expandInputs = (name: string, tokens: string[]): Shorthand.QueryNodeInput[] => {
-  const result: Shorthand.QueryNodeInput[] = []
-  let lastToken: string | undefined
+export const expandInputs = (name: string, tokens: Shorthand.NodeToken[]): Shorthand.Input[] => {
+  const result: Shorthand.Input[] = []
+  let lastToken: string | undefined = undefined
 
   for (const token of tokens) {
-    if (!lastToken) {
-      lastToken = token
-    } else {
+    if (Array.isArray(token)) {
+      if (lastToken !== undefined)
+        throw new Error(`Unexpected token before array in ${name}.`)
+
       result.push({
-        type: mapSymbolToInputType(name, lastToken),
-        value: token,
+        type: 'array',
+        value: expandInputs(name, token),
       })
-      lastToken = undefined
+    }
+    else {
+      if (lastToken === undefined) {
+        lastToken = token
+      } else {
+        result.push({
+          type: mapSymbolToInputType(name, lastToken),
+          value: token,
+        })
+        lastToken = undefined
+      }
     }
   }
 
-  if (lastToken != undefined)
+  if (lastToken !== undefined)
     throw new Error(`Uneven token count for ${name} arguments: ${tokens.length} tokens.`)
 
   return result
 }
 
-export const stringArrayToNode = (array: string[]): Shorthand.QueryNode => {
+export const stringArrayToNode = (array: any[]): Shorthand.Node => {
   const name = array[0]
   return {
     function: name,
@@ -43,7 +54,7 @@ export const stringArrayToNode = (array: string[]): Shorthand.QueryNode => {
   }
 }
 
-export const expandNode = (node: Shorthand.ShorthandNode): Shorthand.QueryNode =>
+export const expandNode = (node: Shorthand.ShorthandNode): Shorthand.Node =>
   Array.isArray(node)
     ? stringArrayToNode(node)
     : node
@@ -62,7 +73,7 @@ export const expandGraph = (library: GraphLibrary, graph: Shorthand.QueryGraph):
 
     const id = node.id || nextAutoNodeId()
     const { parameters } = functionDefinition
-    const initialInputs = (node.inputs || []).map((input, index) => ({
+    const initialInputs: NodeInput[] = (node.inputs || []).map((input, index) => ({
       ...input,
       id: input.id || parameters[index],
     }))

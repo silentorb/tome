@@ -1,9 +1,32 @@
-import { DocumentNode, ExpandedDocument, GraphLibrary, TypeDefinition } from '@tome/data-api'
-import { GetExpandedDocument, QueryContext } from '../types'
+import { GraphLibrary, Node, RecordLink } from '@tome/data-api'
+import { QueryContext } from '../types'
 import { getListItems } from '../documents'
 import { newLibraryFunctions } from './library-creation'
-import { getNodePath } from '../pathing'
-import { loadDocumentNode } from '../reading'
+import { loadNode } from '../reading'
+
+type Item = Node | RecordLink
+
+export const distinctLinks = (items: RecordLink[]): RecordLink[] =>
+  Object.values(
+    Object.fromEntries(
+      items.map(i => [i.id, i])
+    )
+  )
+
+const queryItem = (context: QueryContext, token: string) => async (item: Item) => {
+  const { config, getDocument } = context
+  const node: Node | undefined = 'type' in item
+    ? item
+    : await loadNode(config, getDocument)(item.id)
+
+  if (!node)
+    return []
+
+  if ('document' in node)
+    return getListItems(node.document.lists, token) || []
+
+  return node.items
+}
 
 export function newStandardQueryLibrary(): GraphLibrary {
   return {
@@ -13,18 +36,29 @@ export function newStandardQueryLibrary(): GraphLibrary {
         return list && Array.isArray(list) ? list.length : 0
       },
 
-      function getDocument(context: QueryContext, id: string) {
-        return loadDocumentNode(context.getDocument, getNodePath(context.config, id)!)
-      },
+      async function get(context: QueryContext, tokens: string[]) {
+        if (tokens.length == 0)
+          return undefined
 
-      function getValue(context: QueryContext, property: string, document: DocumentNode) {
-        const node = document
-        if (!node || !Array.isArray(node.document.lists))
-          return []
+        const { config, getDocument } = context
+        const startingNode = await loadNode(config, getDocument)(tokens[0])
+        if (tokens.length == 1 || !startingNode)
+          return startingNode
 
-        const type = node.dataType
-        const prop = type ? type.properties[property] : undefined
-        return prop ? (getListItems(node.document.lists, prop) || []) : []
+        const remaining = tokens.slice(1)
+        let items: Item[] = [startingNode]
+        for (const token of remaining) {
+          items = distinctLinks(
+            (
+              await Promise.all(
+                items.map(queryItem(context, token))
+              )
+            )
+              .flat()
+          )
+        }
+
+        return items
       },
 
     ])

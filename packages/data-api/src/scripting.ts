@@ -11,7 +11,7 @@ export interface GraphLibrary {
   functions: GraphFunctionMap
 }
 
-export type NodeExpressionType = 'literal' | 'reference'
+export type NodeExpressionType = 'literal' | 'reference' | 'array'
 
 export interface NodeInput {
   id: string

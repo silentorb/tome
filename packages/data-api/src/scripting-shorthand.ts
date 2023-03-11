@@ -1,18 +1,19 @@
 import { NodeExpressionType } from './scripting'
 
 export namespace Shorthand {
-  export interface QueryNodeInput {
+  export interface Input {
     id?: string
     type: NodeExpressionType
     value: any
   }
 
-  export interface QueryNode {
+  export interface Node {
     id?: string
     function: string
-    inputs?: QueryNodeInput[]
+    inputs?: Input[]
   }
 
-  export type ShorthandNode = QueryNode | string[]
+  export type NodeToken = string | NodeToken[]
+  export type ShorthandNode = Node | NodeToken[]
   export type QueryGraph = ShorthandNode[]
 }
