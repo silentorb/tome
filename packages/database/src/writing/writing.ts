@@ -1,37 +1,50 @@
 import { AdvancedNodePath, DatabaseConfig, FileWriteJob, NodePath } from '../types'
-import { batchProcess, getFileInfo, writeFile } from '../file-operations'
+import { batchProcess, deleteFile, getFileInfo, writeFile } from '../file-operations'
 import { getMarkdownDocumentFilePath, getNodePathOrError } from '../pathing'
 import { ExpandedDocument, RecordLink } from '@tome/data-api'
 import { loadExpandedDocument } from '../reading'
-import { diffListLinks, getAllDiffKeys, } from '../diffing'
+import { diffListLinks, getAllDiffKeys, getAllListLinkKeys, } from '../diffing'
 import { getDiffJobs } from './diffing-application'
 import { refineAndStringifyDocument, stringifyIndex } from '../documents'
+import { unique } from '../functional'
 
 export interface WriteDocumentProps {
   nodePath: NodePath
   document: ExpandedDocument
+  oldNodePath?: NodePath
 }
 
-async function getDocumentDiffs(config: DatabaseConfig, nodePath: AdvancedNodePath, document: ExpandedDocument): Promise<FileWriteJob[]> {
-  const previousDocument = await loadExpandedDocument(config, nodePath)
-  const diffs = diffListLinks(previousDocument?.lists || [], document.lists)
-  const nodes = getAllDiffKeys(diffs)
-  const results = await batchProcess(nodes, getDiffJobs(config, nodePath, diffs))
+async function getDocumentDiffs(config: DatabaseConfig, oldNodePath: NodePath | undefined,
+                                nodePath: AdvancedNodePath, document: ExpandedDocument): Promise<FileWriteJob[]> {
+  const inputNodePath = oldNodePath || nodePath
+  const oldId = oldNodePath?.path
+  const previousDocument = await loadExpandedDocument(config, inputNodePath)
+  const previousLists = previousDocument?.lists || []
+  const diffs = diffListLinks(previousLists, document.lists)
+  const renameDiffs = getAllListLinkKeys(previousLists)
+  const nodes = unique(getAllDiffKeys(diffs).concat(renameDiffs))
+  const results = await batchProcess(nodes, getDiffJobs(config, oldId, nodePath, diffs))
   return results.flat()
 }
 
 export const writeDocument = (config: DatabaseConfig) => async (props: WriteDocumentProps) => {
-  const { nodePath, document } = props
-  const filePath = getMarkdownDocumentFilePath(nodePath)
-  const content = await refineAndStringifyDocument(nodePath, document)
+  const { nodePath, document, oldNodePath } = props
+  const inputNodePath = oldNodePath || nodePath
+  const content = await refineAndStringifyDocument(inputNodePath, document)
 
   const nodePathWithTitle = {
     ...nodePath,
     title: document.title,
   }
 
-  const otherFiles = await getDocumentDiffs(config, nodePathWithTitle, document)
+  const filePath = getMarkdownDocumentFilePath(nodePath)
+  const otherFiles = await getDocumentDiffs(config, oldNodePath, nodePathWithTitle, document)
   const jobs = [{ filePath, content }].concat(otherFiles)
+
+  if (oldNodePath) {
+    await deleteFile(getMarkdownDocumentFilePath(oldNodePath))
+  }
+
   await batchProcess(jobs, ({ filePath, content }) =>
     writeFile(filePath, content)
   )

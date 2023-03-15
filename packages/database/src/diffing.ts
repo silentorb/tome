@@ -42,5 +42,12 @@ export const diffListLinks = (previous: DocumentList[], next: DocumentList[]): S
     })
 }
 
-export const getAllDiffKeys = (diffs: StringListDiffs) =>
-  diffs.reduce((a, [_, b]) => a.concat(b.additions, b.removals), [] as string[])
+export const getAllListLinkKeys = (lists: DocumentList[]): string[] =>
+  unique(
+    lists.flatMap(list => list.items.map(item => item.id))
+  )
+
+export const getAllDiffKeys = (diffs: StringListDiffs): string[] =>
+  unique(
+    diffs.reduce((a, [_, b]) => a.concat(b.additions, b.removals), [] as string[])
+  )

@@ -66,7 +66,7 @@ export async function getFileInfo(filePath: string): Promise<Stats | undefined> 
 }
 
 // Part of the purpose of this function is to centralize any unbound concurrent processing,
-// because currently this is a naive implementation that runs everything at once and probably should eventually should
+// because currently this is a naive implementation that runs everything at once and probably should eventually
 // be replaced with a more robust batching implementation, such as 20 concurrent processes at a time.
 export async function batchProcess<Input, Output>(items: Input[], functor: (item: Input) => Promise<Output>): Promise<Output[]> {
   return Promise.all(
@@ -74,3 +74,6 @@ export async function batchProcess<Input, Output>(items: Input[], functor: (item
   )
 }
 
+export function deleteFile(filePath: string) {
+  return fs.promises.rm(filePath)
+}

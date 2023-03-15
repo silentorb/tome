@@ -11,6 +11,6 @@ export interface GetNodeRequest {
   id: string
 }
 
-export type PutNodeRequest = Node
+export type PutNodeRequest = Node & { oldId?: string }
 
 export type QueryNodesRequest = DataQuery

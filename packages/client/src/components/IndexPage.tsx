@@ -58,7 +58,7 @@ export const CreationForm = (props: CreationFormProps) => {
 const getTitle = (node: IndexNode): string => {
   if (node.title)
     return node.title
-  
+
   const structureName = node.dataType?.id
   return node.dataType?.title || (
     structureName

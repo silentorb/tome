@@ -33,7 +33,7 @@ const isOtherProperty = (otherStructure: TypeDefinition, key: string) => (p: Pro
 export const applyOtherDocumentDiffs = async (
   config: DatabaseConfig, nodePath: AdvancedNodePath,
   otherNodePath: AdvancedNodePath, diffs: StringListDiffs,
-  source: ExpandedDocument): Promise<ExpandedDocument> => {
+  source: ExpandedDocument, oldOther?: string): Promise<ExpandedDocument> => {
   const document = deepClonePlainData(source)
   const lists = document.lists
   const crossLink: RecordLink = {
@@ -74,10 +74,22 @@ export const applyOtherDocumentDiffs = async (
       }
     }
   }
+
+  if (oldOther) {
+    for (const list of lists) {
+      for (const item of list.items) {
+        if (item.id == oldOther) {
+          item.id = otherNodePath.path
+          item.title = otherNodePath.title
+        }
+      }
+    }
+  }
+
   return document
 }
 
-export const getDiffJobs = (config: DatabaseConfig, otherNodePath: AdvancedNodePath, diffs: StringListDiffs) => async (key: string): Promise<FileWriteJob[]> => {
+export const getDiffJobs = (config: DatabaseConfig, oldOther: string | undefined, otherNodePath: AdvancedNodePath, diffs: StringListDiffs) => async (key: string): Promise<FileWriteJob[]> => {
   const nodePath = await getNodePath(config, key)
   if (!nodePath)
     return []
@@ -90,7 +102,7 @@ export const getDiffJobs = (config: DatabaseConfig, otherNodePath: AdvancedNodeP
     ...nodePath,
     title: document.title,
   }
-  const modifiedDocument = await applyOtherDocumentDiffs(config, advancedNodePath, otherNodePath, diffs, document)
+  const modifiedDocument = await applyOtherDocumentDiffs(config, advancedNodePath, otherNodePath, diffs, document, oldOther)
   const content = await stringifyDocument(nodePath, modifiedDocument)
   return [
     {

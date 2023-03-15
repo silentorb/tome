@@ -1,6 +1,7 @@
 import { assert } from 'chai'
 import * as fse from 'fs-extra'
 import {
+  fileExists,
   getMarkdownDocumentFilePath,
   getNodePathOrError,
   joinPaths,
@@ -36,6 +37,14 @@ describe('document-test', function () {
   this.timeout(15000)
   initializeTempDirectory()
   let config = loadDatabasesSync()([storyPath, businessPath])
+
+  async function compareFileContents(actualFile: string, expectedFile: string) {
+    const content = await readFile(
+      getMarkdownDocumentFilePath(getNodePathOrError(config, actualFile))
+    )
+    const expected = loadExpectedContent(expectedFile)
+    assert.strictEqual(content, expected)
+  }
 
   describe('reading', function () {
     before(function () {
@@ -174,6 +183,31 @@ describe('document-test', function () {
         )
         const expected = loadExpectedContent('introduce-bob01.md')
         assert.strictEqual(content, expected)
+      })
+
+    })
+
+    describe('renaming documents', function () {
+      it('works and updates linked documents', async function () {
+        const oldId = 'story/characters/bob'
+        const newId = 'story/characters/frank'
+        const oldNodePath = getNodePathOrError(config, oldId)
+        const node = await loadNode(config)(oldId) as DocumentNode
+        const { document } = node
+        document.title = 'Frank'
+        document.content = '# Frank\n'
+        const newNodePath = getNodePathOrError(config, newId)
+        await writeDocument(config)({
+          document,
+          nodePath: newNodePath,
+          oldNodePath,
+        })
+
+        // Assertions
+        const oldFileExists = await fileExists(getMarkdownDocumentFilePath(oldNodePath))
+        assert.isFalse(oldFileExists)
+        await compareFileContents(newId, 'frank01.md')
+        await compareFileContents('story/scenes/introduce-bob', 'introduce-bob02.md')
       })
 
     })

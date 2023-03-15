@@ -116,7 +116,7 @@ export async function getResolvedNodePath(config: DatabaseConfig, resourcePath: 
 export function getNodePathOrError(config: DatabaseConfig, resourcePath: string): NodePath {
   const nodePath = getNodePath(config, resourcePath)
   if (!nodePath)
-    throw new Error(`invalid node path: ${resourcePath}`)
+    throw new Error(`Invalid node path: ${resourcePath}`)
 
   return nodePath
 }
