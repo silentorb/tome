@@ -19,6 +19,6 @@ interface Props {
 
 export const ParentNavigation = (props: Props) => (
   props.breadcrumbs?.length
-    ? <span>{props.breadcrumbs.map(b => <span><RecordNavigationLink item={b} key={b.id}/> </span>)}</span>
+    ? <span>{props.breadcrumbs.map(b => <span key={b.id}><RecordNavigationLink item={b}/> </span>)}</span>
     : <Link to={getParentUrl()}>&#9194;</Link>
 )

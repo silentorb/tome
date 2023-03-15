@@ -174,12 +174,22 @@ export function getBreadcrumbs(nodePath: NodePath): RecordLink[] {
     },
   ]
 
-  if (nodePath.schema && nodePath.type) {
-    result.push({ id: nodePath.schema.id, title: nodePath.schema.title, isDirectory: true })
-  }
+  const { schema, type } = nodePath
 
-  if (nodePath.type && nodePath.nodeName) {
-    result.push({ id: nodePath.type.id, title: nodePath.type.title, isDirectory: true })
+  if (schema && type) {
+    result.push({
+      id: schema.id,
+      title: schema.title,
+      isDirectory: true,
+    })
+
+    if (nodePath.nodeName) {
+      result.push({
+        id: `${schema.id}/${type.id}`,
+        title: type.title,
+        isDirectory: true,
+      })
+    }
   }
 
   return result

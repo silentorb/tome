@@ -42,8 +42,11 @@ function getNodeText(node: any): string | undefined {
   return textNode ? textNode.value : undefined
 }
 
+export const  isTitleHeadingNode = (node: any): boolean =>
+  node.type == 'heading' && node.depth === 1
+
 export function getMarkdownTitle(node: any): string | undefined {
-  const child = node.children.filter((c: any) => c.type == 'heading' && c.depth === 1)[0]
+  const child = node.children.filter(isTitleHeadingNode)[0]
   return child ? getNodeText(child) : undefined
 }
 

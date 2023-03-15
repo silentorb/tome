@@ -12,48 +12,12 @@ import styled from 'styled-components'
 import { sortLinks } from '@tome/data-processing'
 import { LinkList } from './LinkList'
 import { setPageTitle } from '../browser-utility'
-
-const TextInput = styled.input`
-  width: 400px;
-`
+import { IdAndTitleForm } from './IdAndTitleForm'
 
 interface Props {
   node: IndexNode
 }
 
-interface CreationFormProps {
-  onSubmit: (id: string, name: string) => void
-}
-
-export const CreationForm = (props: CreationFormProps) => {
-  const [name, setName] = useState('')
-  const [id, setId] = useState('')
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault()
-    props.onSubmit(id, name)
-  }
-
-  const onTextChanged = (set: (value: string) => void) => (event: ChangeEvent<HTMLInputElement>) => {
-    set(event.target.value)
-  }
-
-  const idPlaceholder = id
-    ? ''
-    : idFromTitle(name)
-
-  return (
-    <form onSubmit={onSubmit}>
-      <div>
-        <label>Name</label><TextInput autoFocus type="text" value={name} onChange={onTextChanged(setName)} />
-      </div>
-      <div>
-        <label>Id</label><TextInput type="text" value={id} onChange={onTextChanged(setId)}
-                                    placeholder={idPlaceholder}/>
-      </div>
-      <input type="submit" value="Create"/>
-    </form>
-  )
-}
 
 const getTitle = (node: IndexNode): string => {
   if (node.title)
@@ -121,7 +85,7 @@ export const IndexPage = (props: Props) => {
 
   const creationElement =
     creating
-      ? <CreationForm onSubmit={onSetCreationName}/>
+      ? <IdAndTitleForm onSubmit={onSetCreationName} submitText="Create"/>
       : <IconButton onClick={() => startCreation()}><PlusCircle/></IconButton>
 
   const onKeydown = (e: KeyboardEvent) => {

@@ -195,7 +195,6 @@ describe('document-test', function () {
         const node = await loadNode(config)(oldId) as DocumentNode
         const { document } = node
         document.title = 'Frank'
-        document.content = '# Frank\n'
         const newNodePath = getNodePathOrError(config, newId)
         await writeDocument(config)({
           document,

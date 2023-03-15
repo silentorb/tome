@@ -1,7 +1,13 @@
 import { DocumentList, ExpandedDocument, IndexNode, Property, RecordLink } from '@tome/data-api'
 import { DatabaseConfig, NodePath } from './types'
 import path from 'path'
-import { getMarkdownTitle, parseMarkdownAST, processHeadings, processIndexList } from './markdown-parsing'
+import {
+  getMarkdownTitle,
+  isTitleHeadingNode,
+  parseMarkdownAST,
+  processHeadings,
+  processIndexList
+} from './markdown-parsing'
 import { generateDocumentAppendingAst, generateIndexListAst, stringifyMarkdown } from './markdown-generation'
 import { getMarkdownDocumentFilePath } from './pathing'
 import { loadDocumentContent } from './reading'
@@ -19,6 +25,13 @@ export function getListItems(lists: DocumentList[], id: string): RecordLink[] | 
   return lists.filter(list => list.id == id)[0]?.items
 }
 
+export function removeMarkdownTitleHeading(data: any) {
+  const index = data.children.findIndex(isTitleHeadingNode)
+  if (index > -1) {
+    data.children.splice(index, 1)
+  }
+}
+
 export async function expandDocument(config: DatabaseConfig, nodePath: NodePath, content: string): Promise<ExpandedDocument> {
   const data = await parseMarkdownAST(content)
   const title = getDocumentTitle(data, nodePath)
@@ -30,6 +43,8 @@ export async function expandDocument(config: DatabaseConfig, nodePath: NodePath,
       lists: [],
     }
   }
+
+  removeMarkdownTitleHeading(data)
 
   const lists = processHeadings(nodePath, data)
 
@@ -52,7 +67,9 @@ export async function stringifyDocument(nodePath: NodePath, document: ExpandedDo
     generateDocumentAppendingAst(path.dirname(nodePath.path), document)
   )
 
-  return `${document.content}\n${additionalContent}`
+  const trimmedContent = `${document.content}\n${additionalContent}`.replace(/^[\n|\r]+/, '')
+
+  return [`# ${document.title}`, trimmedContent].join('\n\n')
 }
 
 const consolidateListItems = (items: RecordLink[]): RecordLink[] =>
