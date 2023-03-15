@@ -1,7 +1,8 @@
 export const smallMargin = '10px';
 
 export const elementSequence = `
-  display: flex;
+  display: inline-flex;
   gap: ${smallMargin};
   align-items: center;
+  // display: inline;
 `

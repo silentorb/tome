@@ -16,7 +16,7 @@ export const NodePage = (props: Props) => {
       return <IndexPage key={node.id} node={node}/>
 
     case 'document':
-      return <DocumentPage key={node.id} id={node.id} document={node.document}/>
+      return <DocumentPage key={node.id} node={node} />
 
     default:
       throw Error(`Invalid node type`)

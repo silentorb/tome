@@ -2,7 +2,7 @@ import { readFile } from '../file-operations'
 import { DocumentNode, ExpandedDocument } from '@tome/data-api'
 import { expandDocument, getDocumentTitle, titleOrFallback } from '../documents'
 import { DatabaseConfig, GetExpandedDocument, NodePath } from '../types'
-import { getMarkdownDocumentFilePath } from '../pathing'
+import { getBreadcrumbs, getMarkdownDocumentFilePath } from '../pathing'
 import { parseMarkdownAST } from '../markdown-parsing'
 
 export async function loadDocumentContent(config: DatabaseConfig, nodePath: NodePath): Promise<string | undefined> {
@@ -38,5 +38,6 @@ export async function loadDocumentNode(getDocument: GetExpandedDocument, nodePat
     id: nodePath.path,
     document,
     dataType: nodePath.type,
+    breadcrumbs: getBreadcrumbs(nodePath),
   } : undefined
 }

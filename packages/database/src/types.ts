@@ -23,7 +23,7 @@ export interface DatabaseConfig {
 export interface NodePath {
   path: string
   schema?: DataSchema
-  filePath: string
+  filePath?: string
   type?: TypeDefinition
   nodeName?: string
 }

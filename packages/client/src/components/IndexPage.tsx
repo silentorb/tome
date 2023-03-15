@@ -11,6 +11,7 @@ import { idFromTitle } from '../id-from-title'
 import styled from 'styled-components'
 import { sortLinks } from '@tome/data-processing'
 import { LinkList } from './LinkList'
+import { setPageTitle } from '../browser-utility'
 
 const TextInput = styled.input`
   width: 400px;
@@ -55,6 +56,9 @@ export const CreationForm = (props: CreationFormProps) => {
 }
 
 const getTitle = (node: IndexNode): string => {
+  if (node.title)
+    return node.title
+  
   const structureName = node.dataType?.id
   return node.dataType?.title || (
     structureName
@@ -69,8 +73,14 @@ export const IndexPage = (props: Props) => {
   const [items, setItems] = useState(node.items)
   const [initialized, setInitialized] = useState(false)
 
-  const parentNavigation = node.id !== ''
-    ? <ParentNavigation/> : undefined
+  const title = getTitle(node)
+
+  useEffect(() => {
+    setPageTitle(title)
+  }, [])
+
+  const parentNavigation = node.id !== '' || (node.breadcrumbs?.length || 0 > 0)
+    ? <ParentNavigation breadcrumbs={node.breadcrumbs}/> : undefined
 
   const startCreation = () => {
     setCreating(true)
@@ -135,8 +145,8 @@ export const IndexPage = (props: Props) => {
 
   return (
     <>
-      <h1>{getTitle(node)}</h1>
-      {parentNavigation}
+      <div>{parentNavigation}</div>
+      <h1>{title}</h1>
       <div>
         {creationElement}
         <LinkList items={items} setItems={setItems} columns={node.columns} />

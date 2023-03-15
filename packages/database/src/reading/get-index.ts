@@ -1,7 +1,7 @@
 import { isExistingDirectory, listFiles } from '../file-operations'
 import { DataColumn, IndexNode, ListOrder, RecordLink, TypeReference } from '@tome/data-api'
 import { DatabaseConfig, GetExpandedDocument, NodePath } from '../types'
-import { childNodePath, getIndexDirectoryPath, getNodePath, idFromPath } from '../pathing'
+import { childNodePath, getBreadcrumbs, getIndexDirectoryPath, getNodePath, idFromPath } from '../pathing'
 import { loadDocumentContent, loadDocumentTitle } from './get-document'
 import { expandIndexList, recordLinkListsHaveSameOrder } from '../documents'
 import { writeIndexDocument } from '../writing'
@@ -14,7 +14,7 @@ const newChildLink = (config: DatabaseConfig) => async (nodePath: NodePath): Pro
   return {
     title,
     id: nodePath.path,
-    isDirectory: await isExistingDirectory(nodePath.filePath),
+    isDirectory: !!nodePath.filePath && await isExistingDirectory(nodePath.filePath),
   }
 }
 
@@ -123,8 +123,10 @@ export async function getIndex(config: DatabaseConfig, getDocument: GetExpandedD
   return {
     type: 'index',
     id,
+    title: nodePath.type?.title || nodePath.schema?.title,
     dataType: nodePath.type,
     items,
     columns,
+    breadcrumbs: getBreadcrumbs(nodePath),
   }
 }

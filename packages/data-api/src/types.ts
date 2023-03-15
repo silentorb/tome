@@ -29,7 +29,9 @@ export interface ExpandedDocument {
 export interface IndexNode extends RecordList {
   type: 'index',
   id: string
+  title?: string
   dataType?: TypeDefinition
+  breadcrumbs?: RecordLink[]
 }
 
 export interface DocumentNode {
@@ -37,6 +39,7 @@ export interface DocumentNode {
   id: string
   document: ExpandedDocument
   dataType?: TypeDefinition
+  breadcrumbs?: RecordLink[]
 }
 
 export type Node = DocumentNode | IndexNode

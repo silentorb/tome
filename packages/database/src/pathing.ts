@@ -1,5 +1,5 @@
 import { AdvancedNodePath, DatabaseConfig, DataSource, NodePath } from './types'
-import { DataSchema, TypeDefinition } from '@tome/data-api'
+import { DataSchema, RecordLink, TypeDefinition } from '@tome/data-api'
 import { fileExists, joinPaths } from './file-operations'
 
 export const idFromPath = (pathString: string) =>
@@ -164,3 +164,23 @@ export const childNodePath = (config: DatabaseConfig, parent: NodePath) => (chil
 
 export const isDataSource = (nodePath: NodePath): boolean =>
   nodePath.path == nodePath.schema?.id
+
+export function getBreadcrumbs(nodePath: NodePath): RecordLink[] {
+  const result: RecordLink[] = [
+    {
+      id: '',
+      title: 'Root',
+      isDirectory: true,
+    },
+  ]
+
+  if (nodePath.schema && nodePath.type) {
+    result.push({ id: nodePath.schema.id, title: nodePath.schema.title, isDirectory: true })
+  }
+
+  if (nodePath.type && nodePath.nodeName) {
+    result.push({ id: nodePath.type.id, title: nodePath.type.title, isDirectory: true })
+  }
+
+  return result
+}

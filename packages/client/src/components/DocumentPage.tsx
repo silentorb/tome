@@ -1,26 +1,26 @@
 import * as React from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ParentNavigation } from './ParentNavigation'
 import { MarkdownEditor } from './MarkdownEditor'
 import { Form, Formik } from 'formik'
-import { useRef, useState } from 'react'
 // @ts-ignore
 import { ReactEditor } from '@milkdown/react'
 // @ts-ignore
 import { getMarkdown } from '@milkdown/utils'
 import { saveDocument } from '../services'
-import { DocumentList, ExpandedDocument } from '@tome/data-api'
+import { DocumentList, DocumentNode } from '@tome/data-api'
 import { LinkListSection } from './LinkListSection'
+import { setPageTitle } from '../browser-utility'
 
 interface Props {
-  id: string
-  document: ExpandedDocument
+  node: DocumentNode
 }
 
 export const useListState = (list: DocumentList) =>
   useState(list)
 
 export const DocumentPage = (props: Props) => {
-  const { id, document } = props
+  const { id, document, breadcrumbs } = props.node
   const initialValues = {}
   const markdownEditor = useRef<ReactEditor | undefined>(undefined)
   const listStates = document.lists.map(useListState)
@@ -28,9 +28,13 @@ export const DocumentPage = (props: Props) => {
     (<LinkListSection key={list.title} list={list} setList={setList}/>)
   )
 
+  useEffect(() => {
+    setPageTitle(document.title)
+  }, [])
+
   return (
     <>
-      <ParentNavigation/>
+      <ParentNavigation breadcrumbs={breadcrumbs}/>
       <Formik
         initialValues={initialValues}
         onSubmit={(values, actions) => {
@@ -38,7 +42,7 @@ export const DocumentPage = (props: Props) => {
           const markdown = getMarkdown()(context)
           saveDocument({
             id,
-            type: "document",
+            type: 'document',
             document: {
               title: document.title, // Not actually used right now--the server will extract the title from the content
               type: document.type,

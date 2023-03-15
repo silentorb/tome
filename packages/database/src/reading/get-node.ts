@@ -14,7 +14,7 @@ export const loadNode = (config: DatabaseConfig, getDocument: GetExpandedDocumen
   if (!nodePath)
     return undefined
 
-  if (!nodePath.nodeName || isDataSource(nodePath) || await isExistingDirectory(nodePath.filePath)) {
+  if (!nodePath.nodeName || isDataSource(nodePath) || (nodePath.filePath && await isExistingDirectory(nodePath.filePath))) {
     return getIndex(config, getDocument, nodePath)
   } else {
     const result = await loadDocumentNode(getDocument, nodePath)
