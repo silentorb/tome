@@ -102,6 +102,9 @@ export const LinkList = (props: Props) => {
     getCoreRowModel: getCoreRowModel(),
   })
 
+  if (items.length == 0)
+    return <></>
+  
   return (
     <LinkTable>
       <thead>

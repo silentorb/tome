@@ -78,15 +78,21 @@ export const DocumentPage = (props: Props) => {
       })
   }
 
-  const renameElement =
+  const renameButton =
     renaming
-      ? <IdAndTitleForm id={getNodeName(id)} title={title} onSubmit={onSubmitRenaming} submitText="Rename"/>
+      ? undefined
       : <IconButton onClick={() => setRenaming(true)}><Settings/></IconButton>
+
+  const renameForm = renaming
+    ? <IdAndTitleForm id={getNodeName(id)} title={title} onSubmit={onSubmitRenaming} submitText="Rename"
+                      onCancel={() => setRenaming(false)}/>
+    : undefined
 
   return (
     <>
       <ParentNavigation breadcrumbs={breadcrumbs}/>
-      <h1>{title} {renameElement}</h1>
+      <h1>{title} {renameButton}</h1>
+      {renameForm}
       <Formik
         initialValues={initialValues}
         onSubmit={(values, actions) => {

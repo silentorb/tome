@@ -9,13 +9,14 @@ const TextInput = styled.input`
 
 interface Props {
   onSubmit: (id: string, title: string) => void
+  onCancel: () => void
   id?: string
   title?: string
   submitText?: string
 }
 
 export const IdAndTitleForm = (props: Props) => {
-  const { submitText } = props
+  const { submitText, onCancel } = props
   const [title, setTitle] = useState(props.title || '')
   const [id, setId] = useState(props.id || '')
   const onSubmit = (e: FormEvent) => {
@@ -41,6 +42,7 @@ export const IdAndTitleForm = (props: Props) => {
                                     placeholder={idPlaceholder}/>
       </div>
       <input type="submit" value={submitText || 'Submit'}/>
+      <input type="button" value="Cancel" onClick={onCancel}/>
     </form>
   )
 }

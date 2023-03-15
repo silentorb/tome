@@ -85,7 +85,7 @@ export const IndexPage = (props: Props) => {
 
   const creationElement =
     creating
-      ? <IdAndTitleForm onSubmit={onSetCreationName} submitText="Create"/>
+      ? <IdAndTitleForm onSubmit={onSetCreationName} submitText="Create" onCancel={() => setCreating(false)}/>
       : <IconButton onClick={() => startCreation()}><PlusCircle/></IconButton>
 
   const onKeydown = (e: KeyboardEvent) => {
