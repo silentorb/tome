@@ -5,6 +5,7 @@ export const EndpointPaths = {
   nodeGet: '/node/get',
   nodeSet: '/node/set',
   nodeQuery: '/node/query',
+  nodeReference: '/nodes',
 }
 
 export interface GetNodeRequest {
@@ -12,5 +13,9 @@ export interface GetNodeRequest {
 }
 
 export type PutNodeRequest = Node & { oldId?: string }
+
+export interface DeleteNodeRequest {
+  id: string
+}
 
 export type QueryNodesRequest = DataQuery

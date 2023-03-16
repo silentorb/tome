@@ -6,10 +6,16 @@ import styled from 'styled-components'
 import { elementSequence, IconButton } from './styling'
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, } from '@tanstack/react-table'
 
+export interface EditListProps {
+  setItems: (items: RecordLink[]) => void
+  options: any[]
+  setOptions: (options: any[]) => void
+}
+
 interface Props {
   items: RecordLink[]
-  setItems: (items: RecordLink[]) => void
   columns?: DataColumn[]
+  edit?: EditListProps
 }
 
 interface LinkProps {
@@ -54,20 +60,31 @@ const linkToOption = (link: RecordLink) => (
   }
 )
 
+const deleteItems = (items: any[], edit: EditListProps) => (link: RecordLink) => {
+  edit.setItems(
+    items.filter(item => item.id != link.id)
+  )
+  edit.setOptions(
+    edit.options?.concat(linkToOption(link))
+  )
+}
+
 export const LinkList = (props: Props) => {
-  const { items, setItems } = props
-  const [options, setOptions] = useState<any[] | undefined>(undefined)
-
-  const onDelete = (link: RecordLink) => {
-    setItems(
-      items.filter(item => item.id != link.id)
-    )
-    setOptions(
-      options?.concat(linkToOption(link))
-    )
-  }
-
+  const { items, edit } = props
   const columnHelper = createColumnHelper<any>()
+
+  const additionalColumns = edit
+    ? [
+      columnHelper.display({
+        id: 'delete',
+        header: 'Delete',
+        meta: {
+          style: { textAlign: 'center' }
+        },
+        cell: props => <IconButton onClick={() => deleteItems(items, edit)(props.row.original)}><Trash2/></IconButton>
+      }),
+    ]
+    : []
 
   const columns = [
     columnHelper.display({
@@ -85,16 +102,7 @@ export const LinkList = (props: Props) => {
         })
       )
     )
-    .concat([
-      columnHelper.display({
-        id: 'delete',
-        header: 'Delete',
-        meta: {
-          style: { textAlign: 'center' }
-        },
-        cell: props => <IconButton onClick={() => onDelete(props.row.original)}><Trash2/></IconButton>
-      }),
-    ])
+    .concat(additionalColumns)
 
   const table = useReactTable({
     data: items,
@@ -104,7 +112,7 @@ export const LinkList = (props: Props) => {
 
   if (items.length == 0)
     return <></>
-  
+
   return (
     <LinkTable>
       <thead>

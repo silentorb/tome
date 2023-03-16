@@ -37,7 +37,7 @@ export interface ListDiff<T> {
   removals: T[]
 }
 
-export interface FileWriteJob {
+export interface WriteFileJob {
   filePath: string
   content: string
 }

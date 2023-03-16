@@ -1,5 +1,5 @@
-import { PutNodeRequest } from '@tome/web-api'
-import { DatabaseConfig, writeDocument, writeIndexDocument } from '@tome/database'
+import { DeleteNodeRequest, PutNodeRequest } from '@tome/web-api'
+import { DatabaseConfig, deleteDocument, writeDocument, writeIndexDocument } from '@tome/database'
 import { BadRequest } from '@vineyard/lawn'
 import { getNodePathOrBadRequest } from './utility'
 
@@ -26,4 +26,12 @@ export const writeNodeFromRequest: DocumentWriter = config => async request => {
       break
     }
   }
+}
+
+export type DocumentDeleter = (config: DatabaseConfig) => (request: DeleteNodeRequest) => Promise<void>
+
+export const deleteNodeFromRequest: DocumentDeleter = config => async request => {
+  const { id } = request
+  const nodePath = getNodePathOrBadRequest(config, id)
+  await deleteDocument(config)(nodePath)
 }

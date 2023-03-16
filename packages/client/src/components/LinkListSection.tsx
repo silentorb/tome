@@ -4,7 +4,7 @@ import React, { useState } from 'react'
 import { loadNodesOfType } from '../services'
 import { sortLinks } from '@tome/data-processing'
 import { getAbsoluteResourceUrl } from '../routing'
-import { LinkList } from './LinkList'
+import { EditListProps, LinkList } from './LinkList'
 
 interface Props {
   list: DocumentList
@@ -64,6 +64,14 @@ export const LinkListSection = (props: Props) => {
     ? <h2><a href={getAbsoluteResourceUrl(list.type)}>{list.title}</a></h2>
     : <h2>{list.title}</h2>
 
+  const edit: EditListProps = {
+    options: options || [],
+    setOptions,
+    setItems: i => {
+      setList(setListItems(list, i))
+    }
+  }
+
   return (
     <div>
       {heading}
@@ -73,9 +81,7 @@ export const LinkListSection = (props: Props) => {
         onChange={onChange}
         value={[]}
       />
-      <LinkList items={items} setItems={i => {
-        setList(setListItems(list, i))
-      }} columns={list.columns}/>
+      <LinkList items={items} edit={edit} columns={list.columns}/>
     </div>
   )
 }

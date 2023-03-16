@@ -2,16 +2,7 @@ import { RecordLink } from '@tome/data-api'
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { RecordNavigationLink } from './RecordNavigationLink'
-
-const withTrailingSlash = (url: string) =>
-  url[url.length - 1] == '/'
-    ? url
-    : `${url}/`
-
-function getParentUrl(): string {
-  const current = withTrailingSlash(document.location.href)
-  return new URL('..', current).pathname
-}
+import { getParentUrl } from '../browser-utility'
 
 interface Props {
   breadcrumbs?: RecordLink[]

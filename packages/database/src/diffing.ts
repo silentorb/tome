@@ -1,4 +1,4 @@
-import { AdvancedNodePath, DatabaseConfig, FileWriteJob, ListDiff, NodePath } from './types'
+import { AdvancedNodePath, DatabaseConfig, WriteFileJob, ListDiff, NodePath } from './types'
 import { DocumentList, ExpandedDocument, Property, RecordLink } from '@tome/data-api'
 import { unique } from './functional'
 import { generateDocumentAppendingAst, stringifyMarkdown } from './markdown-generation'

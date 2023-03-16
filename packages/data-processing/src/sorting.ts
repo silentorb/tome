@@ -1,4 +1,4 @@
-import { ListOrder, RecordLink } from '@tome/data-api/dist/src'
+import { ListOrder, RecordLink } from '@tome/data-api'
 
 export const sortLinks = (order: ListOrder | undefined, items: RecordLink[]): RecordLink[] =>
   order === 'indexed'

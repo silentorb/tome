@@ -7,15 +7,16 @@ import { Form, Formik } from 'formik'
 import { ReactEditor } from '@milkdown/react'
 // @ts-ignore
 import { getMarkdown } from '@milkdown/utils'
-import { saveDocument } from '../services'
+import { deleteDocument, saveDocument } from '../services'
 import { DocumentList, DocumentNode } from '@tome/data-api'
 import { LinkListSection } from './LinkListSection'
-import { setPageTitle } from '../browser-utility'
+import { getParentUrl, setPageTitle } from '../browser-utility'
 import { IdAndTitleForm } from './IdAndTitleForm'
 import { IconButton } from './styling'
 import { Settings } from 'react-feather'
 import { useNavigate } from 'react-router-dom'
 import { getAbsoluteResourceUrl } from '../routing'
+import { Trash2 } from 'react-feather'
 
 interface Props {
   node: DocumentNode
@@ -78,6 +79,15 @@ export const DocumentPage = (props: Props) => {
       })
   }
 
+  const onDelete = () => {
+    if (confirm(`Are you sure you want to delete ${title}?`)) {
+      deleteDocument({ id })
+        .then(() => {
+          navigate(getParentUrl())
+        })
+    }
+  }
+
   const renameButton =
     renaming
       ? undefined
@@ -91,7 +101,7 @@ export const DocumentPage = (props: Props) => {
   return (
     <>
       <ParentNavigation breadcrumbs={breadcrumbs}/>
-      <h1>{title} {renameButton}</h1>
+      <h1>{title} {renameButton} <IconButton onClick={onDelete}><Trash2/></IconButton></h1>
       {renameForm}
       <Formik
         initialValues={initialValues}

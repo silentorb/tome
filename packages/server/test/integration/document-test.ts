@@ -13,7 +13,7 @@ import {
 } from '@tome/database'
 import { DocumentNode, IndexNode } from '@tome/data-api'
 import * as path from 'path'
-import { writeNodeFromRequest } from '../../src/writing'
+import { deleteNodeFromRequest, writeNodeFromRequest } from '../../src'
 import { findDocumentList, loadTestResource } from '../utility'
 
 const tempDirectory = path.resolve(__dirname, '../..', 'temp')
@@ -209,6 +209,19 @@ describe('document-test', function () {
         await compareFileContents('story/scenes/introduce-bob', 'introduce-bob02.md')
       })
 
+    })
+
+    describe('deleting documents', function () {
+      it('works and updates linked documents', async function () {
+        const id = 'story/characters/bob'
+        const nodePath = getNodePathOrError(config, id)
+        const filePath = getMarkdownDocumentFilePath(nodePath)
+        assert.isTrue(await fileExists(filePath))
+        await deleteNodeFromRequest(config)({ id })
+        assert.isFalse(await fileExists(filePath))
+        await compareFileContents('story/scenes/introduce-bob', 'introduce-bob03.md')
+        await compareFileContents('story/characters', 'characters/index01.md')
+      })
     })
 
     describe('saving indexes', function () {
