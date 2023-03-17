@@ -13,6 +13,7 @@ import { sortLinks } from '@tome/data-processing'
 import { LinkList } from './LinkList'
 import { setPageTitle } from '../browser-utility'
 import { IdAndTitleForm } from './IdAndTitleForm'
+import { NotificationType, useNotify } from '../notifications'
 
 interface Props {
   node: IndexNode
@@ -36,8 +37,8 @@ export const IndexPage = (props: Props) => {
   const [creating, setCreating] = useState<boolean>(false)
   const [items, setItems] = useState(node.items)
   const [initialized, setInitialized] = useState(false)
-
   const title = getTitle(node)
+  const notify = useNotify()
 
   useEffect(() => {
     setPageTitle(title)
@@ -64,6 +65,8 @@ export const IndexPage = (props: Props) => {
         type: 'index',
         items: items,
       })
+        .then(() => notify(NotificationType.info, `Saved changes`))
+        .catch(() => notify(NotificationType.error, `Error saving changes`))
     }
   }, [items])
 
@@ -113,7 +116,7 @@ export const IndexPage = (props: Props) => {
       <h1>{title}</h1>
       <div>
         {creationElement}
-        <LinkList items={items} setItems={setItems} columns={node.columns} />
+        <LinkList items={items} columns={node.columns} />
       </div>
     </>
   )

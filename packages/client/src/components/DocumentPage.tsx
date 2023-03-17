@@ -13,10 +13,10 @@ import { LinkListSection } from './LinkListSection'
 import { getParentUrl, setPageTitle } from '../browser-utility'
 import { IdAndTitleForm } from './IdAndTitleForm'
 import { IconButton } from './styling'
-import { Settings } from 'react-feather'
+import { Settings, Trash2 } from 'react-feather'
 import { useNavigate } from 'react-router-dom'
 import { getAbsoluteResourceUrl } from '../routing'
-import { Trash2 } from 'react-feather'
+import { NotificationType, useNotify } from '../notifications'
 
 interface Props {
   node: DocumentNode
@@ -42,6 +42,7 @@ export const DocumentPage = (props: Props) => {
   )
 
   const navigate = useNavigate()
+  const notify = useNotify()
 
   useEffect(() => {
     setPageTitle(document.title)
@@ -61,6 +62,8 @@ export const DocumentPage = (props: Props) => {
       },
       oldId,
     })
+      .then(() => notify(NotificationType.info, `Saved ${title}`))
+      .catch(() => notify(NotificationType.error, `Error saving ${title}`))
   }
 
   const onSubmitRenaming = (newNodeName: string, newTitle: string) => {
