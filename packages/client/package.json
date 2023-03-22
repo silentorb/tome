@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@babel/core": "^7.20.7",
+    "@dnd-kit/core": "^6.0.8",
+    "@dnd-kit/sortable": "^7.0.2",
     "@milkdown/core": "^6.5.4",
     "@milkdown/plugin-history": "^6.5.4",
     "@milkdown/plugin-listener": "^6.5.4",
@@ -32,6 +34,7 @@
     "react-router-dom": "^6.6.1",
     "react-select": "^5.7.0",
     "react-toastify": "^9.1.1",
+    "react-use-measure": "^2.1.1",
     "recoil": "^0.7.6",
     "styled-components": "^5.3.6",
     "vite": "^4.0.3"

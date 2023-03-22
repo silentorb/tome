@@ -94,6 +94,8 @@ export const LinkListSection = (props: Props) => {
     }
   }
 
+  const isDraggable = list.order == 'indexed'
+
   return (
     <div>
       {heading}
@@ -104,7 +106,7 @@ export const LinkListSection = (props: Props) => {
         onChange={onChange}
         value={[]}
       />
-      <LinkList items={items} edit={edit} columns={list.columns}/>
+      <LinkList items={items} edit={edit} columns={list.columns} isDraggable={isDraggable}/>
     </div>
   )
 }

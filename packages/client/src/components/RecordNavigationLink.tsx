@@ -19,7 +19,7 @@ export const RecordNavigationLink = (props: Props) => {
   const icon = item.isDirectory ? <Folder/> : <File/>
   const absolute = getAbsoluteResourceUrl(item.id)
   return (
-    <LinkStyle key={item.id}>
+    <LinkStyle key={item.id} className="tome-record-icon">
       {icon} <Link to={absolute}>{item.title}</Link>
     </LinkStyle>
   )
