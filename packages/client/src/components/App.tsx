@@ -3,7 +3,7 @@ import { newRouter } from '../routing'
 import { DatabaseConfig } from '@tome/database'
 import React, { createContext, useEffect, useState } from 'react'
 import { cssTransition, ToastContainer, Zoom } from 'react-toastify'
-import { NotificationContext, standardNotify } from '../notifications'
+import { NotificationContext, standardNotify } from '../utility/notifications'
 import 'react-toastify/dist/ReactToastify.css'
 import { GlobalStyle } from './styling'
 

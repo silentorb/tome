@@ -2,7 +2,7 @@ import { RecordLink } from '@tome/data-api'
 import * as React from 'react'
 import { Link } from 'react-router-dom'
 import { RecordNavigationLink } from './RecordNavigationLink'
-import { getParentUrl } from '../browser-utility'
+import { getParentUrl } from '../utility/browser-utility'
 
 interface Props {
   breadcrumbs?: RecordLink[]

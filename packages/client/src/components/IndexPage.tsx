@@ -1,24 +1,23 @@
 import * as React from 'react'
-import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ParentNavigation } from './ParentNavigation'
 import { IndexNode } from '@tome/data-api'
-import { RecordNavigationLink } from './RecordNavigationLink'
 import { PlusCircle } from 'react-feather'
 import { IconButton } from './styling'
 import { getIdFromRequest, saveDocument } from '../services'
-import { capitalizeFirstLetter } from '../string-formatting'
-import { idFromTitle } from '../id-from-title'
-import styled from 'styled-components'
+import { capitalizeFirstLetter } from '../utility/string-formatting'
+import { idFromTitle } from '../utility/id-from-title'
 import { sortLinks } from '@tome/data-processing'
 import { LinkList } from './LinkList'
-import { setPageTitle } from '../browser-utility'
-import { IdAndTitleForm } from './IdAndTitleForm'
-import { NotificationType, useNotify } from '../notifications'
+import { setPageTitle } from '../utility/browser-utility'
+import { IdAndTitleForm, OnSubmitIdAndTitle } from './IdAndTitleForm'
+import { NotificationType, useNotify } from '../utility/notifications'
+import { handleKeyboardInput } from '../utility/keyboard'
+import { documentCreation } from './DocumentCreation'
 
 interface Props {
   node: IndexNode
 }
-
 
 const getTitle = (node: IndexNode): string => {
   if (node.title)
@@ -34,7 +33,24 @@ const getTitle = (node: IndexNode): string => {
 
 export const IndexPage = (props: Props) => {
   const { node } = props
-  const [creating, setCreating] = useState<boolean>(false)
+
+  const onSetCreationName: OnSubmitIdAndTitle = submitProps => {
+    const { title } = submitProps
+    if (title) {
+      const nodeName = submitProps.id || idFromTitle(title)
+      const id = `${getIdFromRequest(window.location.href)}/${nodeName}`
+      const newItems = items.concat([
+        {
+          title,
+          id,
+        }
+      ])
+
+      setItems(sortLinks([], newItems))
+    }
+  }
+
+  const [creating, setCreating, creationButton, creationForm] = documentCreation({ onSubmit: onSetCreationName })
   const [items, setItems] = useState(node.items)
   const [initialized, setInitialized] = useState(false)
   const title = getTitle(node)
@@ -46,10 +62,6 @@ export const IndexPage = (props: Props) => {
 
   const parentNavigation = node.id !== '' || (node.breadcrumbs?.length || 0 > 0)
     ? <ParentNavigation breadcrumbs={node.breadcrumbs}/> : undefined
-
-  const startCreation = () => {
-    setCreating(true)
-  }
 
   useEffect(() => {
     if (!initialized) {
@@ -70,43 +82,12 @@ export const IndexPage = (props: Props) => {
     }
   }, [items])
 
-  const onSetCreationName = (nodeId: string | undefined, title: string) => {
-    if (title) {
-      const nodeName = nodeId || idFromTitle(title)
-      const id = `${getIdFromRequest(window.location.href)}/${nodeName}`
-      const newItems = items.concat([
-        {
-          title,
-          id,
-        }
-      ])
-
-      setItems(sortLinks([], newItems))
-    }
-    setCreating(false)
-  }
-
-  const creationElement =
-    creating
-      ? <IdAndTitleForm onSubmit={onSetCreationName} submitText="Create" onCancel={() => setCreating(false)}/>
-      : <IconButton onClick={() => startCreation()}><PlusCircle/></IconButton>
-
-  const onKeydown = (e: KeyboardEvent) => {
+  handleKeyboardInput(e => {
     if (e.key === 'n' && e.altKey) {
       e.preventDefault()
       if (!creating) {
-        startCreation()
+        setCreating(true)
       }
-    }
-    else if (e.key == 'Escape' && creating) {
-      setCreating(false)
-    }
-  }
-
-  useEffect(() => {
-    window.addEventListener('keydown', onKeydown)
-    return function cleanup() {
-      window.removeEventListener('keydown', onKeydown)
     }
   })
 
@@ -115,8 +96,8 @@ export const IndexPage = (props: Props) => {
       <div>{parentNavigation}</div>
       <h1>{title}</h1>
       <div>
-        {creationElement}
-        <LinkList items={items} columns={node.columns} />
+        {creationButton}{creationForm}
+        <LinkList items={items} columns={node.columns}/>
       </div>
     </>
   )

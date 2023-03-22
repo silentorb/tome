@@ -1,13 +1,14 @@
 import React, { MutableRefObject } from 'react'
-// import { documentState } from '../data'
-import styled from 'styled-components'
-// import { DataResourceSetter, useLoading } from '../utility'
+// @ts-ignore
 import { defaultValueCtx, Editor, rootCtx } from '@milkdown/core'
+// @ts-ignore
 import { nord } from '@milkdown/theme-nord'
+// @ts-ignore
 import { ReactEditor, useEditor } from '@milkdown/react'
+// @ts-ignore
 import { gfm } from '@milkdown/preset-gfm'
+// @ts-ignore
 import { listener, listenerCtx } from '@milkdown/plugin-listener'
-// import { linkPlugin } from './link-plugin'
 
 interface Props {
   id: string
@@ -17,13 +18,13 @@ interface Props {
 
 export const MarkdownEditor = (props: Props) => {
   const {id, content} = props
-  const editor = useEditor(root =>
+  const editor = useEditor((root: any) =>
       Editor.make()
-        .config(context => {
+        .config((context: any) => {
           context.set(rootCtx, root)
           context.set(defaultValueCtx, content)
           context.get(listenerCtx)
-            .markdownUpdated((context, markdown, prevMarkdown) => {
+            .markdownUpdated((context: any, markdown: any, prevMarkdown: any) => {
               // console.log('markdown', markdown)
               // output = markdown
               // onChange(markdown)

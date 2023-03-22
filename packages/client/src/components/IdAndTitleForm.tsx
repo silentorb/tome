@@ -1,14 +1,17 @@
-import { ChangeEvent, FormEvent, useState } from 'react'
-import { idFromTitle } from '../id-from-title'
 import * as React from 'react'
+import { ChangeEvent, FormEvent, useState } from 'react'
+import { idFromTitle } from '../utility/id-from-title'
 import styled from 'styled-components'
+import { handleKeyboardInput } from '../utility/keyboard'
 
 const TextInput = styled.input`
   width: 400px;
 `
 
+export type OnSubmitIdAndTitle = (props: {id: string, title: string}) => void
+
 interface Props {
-  onSubmit: (id: string, title: string) => void
+  onSubmit: OnSubmitIdAndTitle
   onCancel: () => void
   id?: string
   title?: string
@@ -21,7 +24,7 @@ export const IdAndTitleForm = (props: Props) => {
   const [id, setId] = useState(props.id || '')
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
-    props.onSubmit(id, title)
+    props.onSubmit({id, title})
   }
 
   const onTextChanged = (set: (value: string) => void) => (event: ChangeEvent<HTMLInputElement>) => {
@@ -31,6 +34,12 @@ export const IdAndTitleForm = (props: Props) => {
   const idPlaceholder = id
     ? ''
     : idFromTitle(title)
+
+  handleKeyboardInput(e => {
+    if (e.key == 'Escape') {
+      onCancel()
+    }
+  })
 
   return (
     <form onSubmit={onSubmit}>

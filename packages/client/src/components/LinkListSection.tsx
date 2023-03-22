@@ -5,6 +5,9 @@ import { loadNodesOfType } from '../services'
 import { sortLinks } from '@tome/data-processing'
 import { getAbsoluteResourceUrl } from '../routing'
 import { EditListProps, LinkList } from './LinkList'
+import { documentCreation } from './DocumentCreation'
+import { OnSubmitIdAndTitle } from './IdAndTitleForm'
+import { idFromTitle } from '../utility/id-from-title'
 
 interface Props {
   list: DocumentList
@@ -26,8 +29,27 @@ const setListItems = (list: DocumentList, items: RecordLink[]) => ({
 export const LinkListSection = (props: Props) => {
   const { list, setList } = props
   const [options, setOptions] = useState<any[] | undefined>(undefined)
-
   const { items } = list
+
+  const onSetCreationName: OnSubmitIdAndTitle = submitProps => {
+    const { title } = submitProps
+    if (title) {
+      const nodeName = submitProps.id || idFromTitle(title)
+      const id = `${list.type}/${nodeName}`
+      const newItems = items.concat([
+        {
+          title,
+          id,
+        }
+      ])
+
+      setList(
+        setListItems(list, (sortLinks([], newItems)))
+      )
+    }
+  }
+
+  const [creating, setCreating, creationButton, creationForm] = documentCreation({ onSubmit: onSetCreationName })
 
   const checkOptionsLoaded = () => {
     if (!options && list.type) {
@@ -61,7 +83,7 @@ export const LinkListSection = (props: Props) => {
   }
 
   const heading = list.type
-    ? <h2><a href={getAbsoluteResourceUrl(list.type)}>{list.title}</a></h2>
+    ? <h2><a href={getAbsoluteResourceUrl(list.type)}>{list.title}</a>{creationButton}</h2>
     : <h2>{list.title}</h2>
 
   const edit: EditListProps = {
@@ -75,6 +97,7 @@ export const LinkListSection = (props: Props) => {
   return (
     <div>
       {heading}
+      {creationForm}
       <Select
         options={options || []}
         onFocus={checkOptionsLoaded}

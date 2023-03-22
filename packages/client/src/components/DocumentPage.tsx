@@ -10,13 +10,13 @@ import { getMarkdown } from '@milkdown/utils'
 import { deleteDocument, saveDocument } from '../services'
 import { DocumentList, DocumentNode } from '@tome/data-api'
 import { LinkListSection } from './LinkListSection'
-import { getParentUrl, setPageTitle } from '../browser-utility'
-import { IdAndTitleForm } from './IdAndTitleForm'
+import { getParentUrl, setPageTitle } from '../utility/browser-utility'
+import { IdAndTitleForm, OnSubmitIdAndTitle } from './IdAndTitleForm'
 import { IconButton } from './styling'
 import { Settings, Trash2 } from 'react-feather'
 import { useNavigate } from 'react-router-dom'
 import { getAbsoluteResourceUrl } from '../routing'
-import { NotificationType, useNotify } from '../notifications'
+import { NotificationType, useNotify } from '../utility/notifications'
 
 interface Props {
   node: DocumentNode
@@ -66,7 +66,9 @@ export const DocumentPage = (props: Props) => {
       .catch(() => notify(NotificationType.error, `Error saving ${title}`))
   }
 
-  const onSubmitRenaming = (newNodeName: string, newTitle: string) => {
+  const onSubmitRenaming: OnSubmitIdAndTitle = renameProps => {
+    const newNodeName = renameProps.id
+    const newTitle = renameProps.title
     const tokens = id.split('/')
     const newId = tokens.slice(0, tokens.length - 1).concat([newNodeName]).join('/')
 
@@ -106,21 +108,9 @@ export const DocumentPage = (props: Props) => {
       <ParentNavigation breadcrumbs={breadcrumbs}/>
       <h1>{title} {renameButton} <IconButton onClick={onDelete}><Trash2/></IconButton></h1>
       {renameForm}
-      <Formik
-        initialValues={initialValues}
-        onSubmit={(values, actions) => {
-          save(id, title)
-            .then(() => {
-              actions.setSubmitting(false)
-            })
-        }}
-      >
-        <Form>
-          <MarkdownEditor editorContainer={markdownEditor} id={id} content={document.content}/>
-          {linkLists}
-          <button type="submit">Submit</button>
-        </Form>
-      </Formik>
+      <MarkdownEditor editorContainer={markdownEditor} id={id} content={document.content}/>
+      {linkLists}
+      <button onClick={() => save(id, title)}>Submit</button>
     </>
   )
 }

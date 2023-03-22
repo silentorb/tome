@@ -100,14 +100,26 @@ export const applyOtherDocumentDiffs = async (
 }
 
 export const getDiffJobs = (config: DatabaseConfig, getDocument: GetExpandedDocument, oldOther: string | undefined, otherNodePath: AdvancedNodePath | undefined,
-                            diffs: StringListDiffs) => async (key: string): Promise<WriteFileJob[]> => {
+                            diffs: StringListDiffs, titles: { [key: string]: string }) => async (key: string): Promise<WriteFileJob[]> => {
   const nodePath = await getNodePath(config, key)
   if (!nodePath)
     return []
 
-  const document = await getDocument(nodePath.path)
-  if (!document)
-    return []
+  let document: ExpandedDocument | undefined = await getDocument(nodePath.path)
+  if (!document) {
+    // Try creating a new document
+    const title = titles[key]
+
+    // Don't create the referenced document if the referencing document is getting deleted.
+    if (!otherNodePath || !title)
+      return []
+
+    document = {
+      title,
+      content: '',
+      lists: [],
+    }
+  }
 
   const advancedNodePath: AdvancedNodePath = {
     ...nodePath,
@@ -153,8 +165,7 @@ export async function getPropagatedIndexChanges(config: DatabaseConfig, getDocum
     } else if (oldId && !newNodePath) {
       // Remove index entry for deleted document.
       items = items.filter(item => item.id != oldId)
-    }
-    else if (newNodePath && titleChanged) {
+    } else if (newNodePath && titleChanged) {
       for (const item of items) {
         if (item.id == newNodePath?.path) {
           item.title = newNodePath.title
@@ -167,6 +178,16 @@ export async function getPropagatedIndexChanges(config: DatabaseConfig, getDocum
   } else {
     return []
   }
+}
+
+function getLinkTitles(lists: DocumentList[]): { [key: string]: string } {
+  const result: { [key: string]: string } = {}
+  for (const list of lists) {
+    for (const item of list.items) {
+      result[item.id] = item.title
+    }
+  }
+  return result
 }
 
 export async function getPropagatedDocumentChanges(config: DatabaseConfig, getDocument: GetExpandedDocument, oldNodePath: NodePath | undefined,
@@ -183,7 +204,8 @@ export async function getPropagatedDocumentChanges(config: DatabaseConfig, getDo
   const diffs = diffListLinks(previousLists, lists)
   const renameDiffs = getAllListLinkKeys(previousLists)
   const nodes = unique(getAllDiffKeys(diffs).concat(renameDiffs))
-  const results = await batchProcess(nodes, getDiffJobs(config, getDocument, oldId, newNodePath, diffs))
+  const titles = getLinkTitles(lists)
+  const results = await batchProcess(nodes, getDiffJobs(config, getDocument, oldId, newNodePath, diffs, titles))
   const indexChanges = await getPropagatedIndexChanges(config, getDocument, parentId, oldId, newNodePath, titleChanged)
   return results.flat().concat(indexChanges)
 }
