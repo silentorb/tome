@@ -16,11 +16,22 @@ const LinkStyle = styled.span`
 
 export const RecordNavigationLink = (props: Props) => {
   const { item } = props
-  const icon = item.isDirectory ? <Folder/> : <File/>
   const absolute = getAbsoluteResourceUrl(item.id)
   return (
+    <Link to={absolute}>{item.title}</Link>
+  )
+}
+
+export const RecordLinkIcon = (props: Props) => {
+  const { item } = props
+  return item.isDirectory ? <Folder/> : <File/>
+}
+
+export const RecordNavigationLinkWithIcon = (props: Props) => {
+  const { item } = props
+  return (
     <LinkStyle key={item.id} className="tome-record-icon">
-      {icon} <Link to={absolute}>{item.title}</Link>
+      <RecordLinkIcon item={item}/> <RecordNavigationLink item={item}/>
     </LinkStyle>
   )
 }

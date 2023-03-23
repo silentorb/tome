@@ -1,13 +1,10 @@
 import { DataColumn, RecordLink } from '@tome/data-api'
-import { RecordNavigationLink } from './RecordNavigationLink'
+import { RecordLinkIcon, RecordNavigationLink, RecordNavigationLinkWithIcon } from './RecordNavigationLink'
 import { Trash2 } from 'react-feather'
 import styled from 'styled-components'
 import { elementSequence, IconButton } from './styling'
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable, } from '@tanstack/react-table'
 import { Row } from '@tanstack/table-core'
-import Draggable, { ControlPosition, DraggableEventHandler } from 'react-draggable'
-import { useState } from 'react'
-import useMeasure from 'react-use-measure'
 import {
   DndContext,
   closestCenter,
@@ -25,7 +22,6 @@ import {
 import { DragEndEvent } from '@dnd-kit/core/dist/types'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Cell } from '@tanstack/table-core/src/types'
 
 export type RecordLinksSetter = (items: RecordLink[]) => void
 
@@ -69,10 +65,18 @@ const LinkTableCell = styled.td`
   padding: 5px;
 `
 
+const VerticalDraggable = styled.span`
+  cursor: ns-resize;
+`
+
+const DraggableRowStyle = styled.tr`
+  cursor: ns-resize;
+`
+
 const LinkItem = ({ item }: LinkProps) => {
   return (
     <LinkItemStyle>
-      <RecordNavigationLink item={item}/>
+      <RecordNavigationLinkWithIcon item={item}/>
     </LinkItemStyle>
   )
 }
@@ -93,8 +97,17 @@ const deleteItems = (items: any[], edit: EditListProps) => (link: RecordLink) =>
   )
 }
 
-function DraggableRow(props: { id: string, children: string | JSX.Element | JSX.Element[] }) {
-  const { id, children } = props
+const renderRowContent = (row: Row<any>, additionalContext: any = {}) => {
+  return row.getVisibleCells().map(cell => (
+    <LinkTableCell key={cell.id} style={(cell.column.columnDef.meta as any)?.style}>
+      {flexRender(cell.column.columnDef.cell, { ...cell.getContext(), ...additionalContext })}
+    </LinkTableCell>
+  ))
+}
+
+function DraggableRow(props: { row: Row<any> }) {
+  const { row } = props
+  const { id } = row
   const {
     attributes,
     listeners,
@@ -106,33 +119,20 @@ function DraggableRow(props: { id: string, children: string | JSX.Element | JSX.
     transform: CSS.Transform.toString(transform),
     transition,
   }
-
   return (
-    <tr key={id} ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      {children}
+    <tr key={id} ref={setNodeRef} style={style}>
+      {renderRowContent(row, { draggable: { attributes, listeners } })}
     </tr>
+  // return (
+  //   <DraggableRowStyle key={id} ref={setNodeRef} style={style} {...attributes} {...listeners}>
+  //     {renderRowContent(row)}
+  //   </DraggableRowStyle>
   )
 }
 
-const renderRowContent = (row: Row<any>) => {
-  return row.getVisibleCells().map(cell => (
-    <LinkTableCell key={cell.id} style={(cell.column.columnDef.meta as any)?.style}>
-      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-    </LinkTableCell>
-  ))
-}
-//
-// const renderRow = (isDraggable: boolean) => (row: Row<any>) => {
-//   const tableRow =
-//
-//
-//   return isDraggable
-//     ? withDragging(tableRow, row.id)
-//     : <tr key={row.id}>{tableRow}</tr>
-// }
-
 export const LinkList = (props: Props) => {
-  const { items, edit, isDraggable } = props
+  const { items, edit, } = props
+  const isDraggable = props.isDraggable && edit
   const columnHelper = createColumnHelper<any>()
 
   const additionalColumns = edit
@@ -150,9 +150,17 @@ export const LinkList = (props: Props) => {
 
   const columns = [
     columnHelper.display({
+      id: 'icon',
+      cell: (props: any) => isDraggable
+        ? <VerticalDraggable {...props.draggable?.attributes} {...props.draggable?.listeners}>
+          <RecordLinkIcon item={props.row.original}/>
+        </VerticalDraggable>
+        : <RecordLinkIcon item={props.row.original}/>
+    }),
+    columnHelper.display({
       id: 'title',
       header: 'Name',
-      cell: props => <LinkItem item={props.row.original}/>
+      cell: props => <RecordNavigationLink item={props.row.original}/>
     }),
   ]
     .concat(
@@ -184,10 +192,19 @@ export const LinkList = (props: Props) => {
     return <></>
 
   const onDragEnd = (event: DragEndEvent) => {
+    if (!edit)
+      return
 
-  }
-  const onDragStart = () => {
-    console.log('wow')
+    const active = event.active?.id
+    const over = event.over?.id
+    if (active && over && active != over) {
+      const activeIndex = items.findIndex(i => i.id == active)
+      const overIndex = items.findIndex(i => i.id == over)
+      if (activeIndex > -1 && overIndex > -1) {
+        edit.setItems(arrayMove(items, activeIndex, overIndex))
+      }
+    }
+    console.log(event)
   }
 
   const tableContent = isDraggable
@@ -195,7 +212,7 @@ export const LinkList = (props: Props) => {
       items={items.map(i => i.id)}
       strategy={verticalListSortingStrategy}
     >
-      {table.getRowModel().rows.map(row => <DraggableRow id={row.id}>{renderRowContent(row)}</DraggableRow>)}
+      {table.getRowModel().rows.map(row => <DraggableRow row={row}/>)}
     </SortableContext>
     : table.getRowModel().rows.map(row => <tr id={row.id}>{renderRowContent(row)}</tr>)
 
@@ -204,7 +221,6 @@ export const LinkList = (props: Props) => {
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={onDragEnd}
-      onDragStart={onDragStart}
     >
       <LinkTable>
         <thead>
