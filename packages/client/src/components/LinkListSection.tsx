@@ -44,7 +44,7 @@ export const LinkListSection = (props: Props) => {
       ])
 
       setList(
-        setListItems(list, (sortLinks([], newItems)))
+        setListItems(list, (sortLinks(list.order, newItems)))
       )
     }
   }

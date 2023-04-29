@@ -17,10 +17,15 @@ import { Settings, Trash2 } from 'react-feather'
 import { useNavigate } from 'react-router-dom'
 import { getAbsoluteResourceUrl } from '../routing'
 import { NotificationType, useNotify } from '../utility/notifications'
+import styled from 'styled-components'
 
 interface Props {
   node: DocumentNode
 }
+
+const SubmitButton = styled.button`
+  margin: 20px;
+`
 
 const getNodeName = (id: string): string => {
   const tokens = id.split('/')
@@ -110,7 +115,7 @@ export const DocumentPage = (props: Props) => {
       {renameForm}
       <MarkdownEditor editorContainer={markdownEditor} id={id} content={document.content}/>
       {linkLists}
-      <button onClick={() => save(id, title)}>Submit</button>
+      <SubmitButton onClick={() => save(id, title)}>Save Changes</SubmitButton>
     </>
   )
 }
