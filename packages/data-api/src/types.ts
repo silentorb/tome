@@ -19,12 +19,14 @@ export interface DocumentList extends RecordList {
   isSingle?: boolean
 }
 
+export type FieldMap = { [key: string]: any }
+
 export interface ExpandedDocument {
   title: string
   content: string
   type?: string
   lists: DocumentList[]
-  fields: { [key: string]: any }
+  fields: FieldMap
 }
 
 export interface IndexNode extends RecordList {
