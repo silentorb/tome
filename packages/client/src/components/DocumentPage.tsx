@@ -18,6 +18,7 @@ import { useNavigate } from 'react-router-dom'
 import { getAbsoluteResourceUrl } from '../routing'
 import { NotificationType, useNotify } from '../utility/notifications'
 import styled from 'styled-components'
+import { PropertiesSection } from './PropertiesSection'
 
 interface Props {
   node: DocumentNode
@@ -42,10 +43,6 @@ export const DocumentPage = (props: Props) => {
   const [renaming, setRenaming] = useState<boolean>(false)
   const markdownEditor = useRef<ReactEditor | undefined>(undefined)
   const listStates = document.lists.map(useListState)
-  const linkLists = listStates.map(([list, setList]) =>
-    (<LinkListSection key={list.title} list={list} setList={setList}/>)
-  )
-
   const navigate = useNavigate()
   const notify = useNotify()
 
@@ -63,7 +60,8 @@ export const DocumentPage = (props: Props) => {
         title, // Not actually used right now--the server will extract the title from the content
         type: document.type,
         content: markdown,
-        lists: listStates.map(l => l[0])
+        lists: listStates.map(l => l[0]),
+        fields: document.fields,
       },
       oldId,
     })
@@ -114,7 +112,7 @@ export const DocumentPage = (props: Props) => {
       <h1>{title} {renameButton} <IconButton onClick={onDelete}><Trash2/></IconButton></h1>
       {renameForm}
       <MarkdownEditor editorContainer={markdownEditor} id={id} content={document.content}/>
-      {linkLists}
+      <PropertiesSection document={document} listStates={listStates} />
       <SubmitButton onClick={() => save(id, title)}>Save Changes</SubmitButton>
     </>
   )

@@ -41,6 +41,7 @@ export async function expandDocument(config: DatabaseConfig, nodePath: NodePath,
       title,
       content,
       lists: [],
+      fields: {},
     }
   }
 
@@ -54,7 +55,8 @@ export async function expandDocument(config: DatabaseConfig, nodePath: NodePath,
     content: updatedContent,
     type: type.id,
     lists,
-  }
+    fields: {},
+ }
 }
 
 export async function expandIndexList(config: DatabaseConfig, nodePath: NodePath, content: string): Promise<RecordLink[]> {

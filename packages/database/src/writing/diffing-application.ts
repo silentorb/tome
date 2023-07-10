@@ -118,6 +118,7 @@ export const getDiffJobs = (config: DatabaseConfig, getDocument: GetExpandedDocu
       title,
       content: '',
       lists: [],
+      fields: {},
     }
   }
 

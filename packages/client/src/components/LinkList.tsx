@@ -35,7 +35,7 @@ interface Props {
   items: RecordLink[]
   columns?: DataColumn[]
   edit?: EditListProps
-  isDraggable: boolean
+  isDraggable?: boolean
 }
 
 interface LinkProps {
@@ -130,6 +130,13 @@ function DraggableRow(props: { row: Row<any> }) {
   )
 }
 
+function formatCellValue(value: any): any {
+  if (value && typeof value == 'object' && 'title' in value) {
+    return value.title
+  }
+  return value
+}
+
 export const LinkList = (props: Props) => {
   const { items, edit, } = props
   const isDraggable = props.isDraggable && edit
@@ -168,7 +175,7 @@ export const LinkList = (props: Props) => {
         columnHelper.display({
           id: c.id,
           header: c.title,
-          cell: props => props.row.original[c.id]
+          cell: props => formatCellValue(props.row.original[c.id])
         })
       )
     )

@@ -1,8 +1,9 @@
-import { GraphLibrary, Node, RecordLink } from '@tome/data-api'
+import { GraphLibrary, Node, RecordLink, TypeReference } from '@tome/data-api'
 import { QueryContext } from '../types'
 import { getListItems } from '../documents'
 import { newLibraryFunctions } from './library-creation'
 import { loadNode } from '../reading'
+import { getNodePath } from '../pathing'
 
 type Item = Node | RecordLink
 
@@ -16,14 +17,25 @@ export const distinctLinks = (items: RecordLink[]): RecordLink[] =>
 const queryItem = (context: QueryContext, token: string) => async (item: Item) => {
   const { config, getDocument } = context
   const node: Node | undefined = 'type' in item
-    ? item
+    ? item as Node
     : await loadNode(config, getDocument)(item.id)
 
   if (!node)
     return []
 
-  if ('document' in node)
-    return getListItems(node.document.lists, token) || []
+  const nodePath = await getNodePath(context.config, node.id)
+
+  if ('document' in node) {
+    const result = getListItems(node.document.lists, token) || []
+    const type = nodePath?.type
+    if (type) {
+      const property = type.properties[token]
+      if (property && property.type.name != 'list') {
+        return result[0]
+      }
+    }
+    return result
+  }
 
   return node.items
 }
@@ -46,19 +58,22 @@ export function newStandardQueryLibrary(): GraphLibrary {
           return startingNode
 
         const remaining = tokens.slice(1)
-        let items: Item[] = [startingNode]
+        let currentValue: any = startingNode
+
         for (const token of remaining) {
-          items = distinctLinks(
-            (
-              await Promise.all(
-                items.map(queryItem(context, token))
+          currentValue = Array.isArray(currentValue)
+            ? distinctLinks(
+              (
+                await Promise.all(
+                  currentValue.map(queryItem(context, token))
+                )
               )
+                .flat()
             )
-              .flat()
-          )
+            : await queryItem(context, token)(currentValue)
         }
 
-        return items
+        return currentValue
       },
 
     ])

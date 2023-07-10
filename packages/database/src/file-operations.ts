@@ -2,8 +2,12 @@ import fs from 'fs'
 import path from 'path'
 import { Stats } from 'node:fs'
 
-export function listFiles(directory: string) {
-  return fs.promises.readdir(directory)
+export async function listFiles(directory: string): Promise<string[]> {
+  try {
+    return await fs.promises.readdir(directory)
+  } catch (error) {
+    return []
+  }
 }
 
 export const sanitizeFilePath = (filePath: string): string =>

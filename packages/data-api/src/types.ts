@@ -24,6 +24,7 @@ export interface ExpandedDocument {
   content: string
   type?: string
   lists: DocumentList[]
+  fields: { [key: string]: any }
 }
 
 export interface IndexNode extends RecordList {
