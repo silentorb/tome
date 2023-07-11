@@ -1,10 +1,10 @@
-import { DocumentList, RecordLink } from '@tome/data-api'
+import { DocumentList, FieldMap, RecordLink } from '@tome/data-api'
 import { joinPaths } from './file-operations'
 import { idFromPath } from './pathing'
 import { NodePath } from './types'
 import path from 'path'
 import { isListType } from './schema'
-import { sortLinks } from '@tome/data-processing/dist/src'
+import { isPrimitiveType, sortLinks } from '@tome/data-processing/dist/src'
 import { getReferencedTypeName } from './type-processing'
 
 // Should be imported from remark-parse but that would require an async import.
@@ -42,7 +42,7 @@ function getNodeText(node: any): string | undefined {
   return textNode ? textNode.value : undefined
 }
 
-export const  isTitleHeadingNode = (node: any): boolean =>
+export const isTitleHeadingNode = (node: any): boolean =>
   node.type == 'heading' && node.depth === 1
 
 export function getMarkdownTitle(node: any): string | undefined {
@@ -50,7 +50,7 @@ export function getMarkdownTitle(node: any): string | undefined {
   return child ? getNodeText(child) : undefined
 }
 
-function gatherHeadingLists(data: Root): HeadingListInfo[] {
+export function gatherHeadingLists(data: Root): HeadingListInfo[] {
   let index = -1
   const result: HeadingListInfo[] = []
   const children = data.children
@@ -91,8 +91,7 @@ function gatherListLinks(localId: string, listNode: any): RecordLink[] {
   return result
 }
 
-export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] {
-  const headingLists = gatherHeadingLists(data)
+export function processLinkHeadings(nodePath: NodePath, data: Root, headingLists: HeadingListInfo[]): DocumentList[] {
   const localId = path.dirname(nodePath.path)
   const lists: DocumentList[] = []
   const type = nodePath.type
@@ -106,6 +105,9 @@ export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] 
     const property = properties[propertyId]
     const type = property.type
     if (!type)
+      continue
+
+    if (isPrimitiveType(type))
       continue
 
     const subType = getReferencedTypeName(property.type)
@@ -138,6 +140,41 @@ export function processHeadings(nodePath: NodePath, data: Root): DocumentList[] 
   }
 
   return lists
+}
+
+const keyPairPattern = /(\w+)\s*:\s*(.*)\s*/
+
+export function processMetadataHeading(nodePath: NodePath, data: Root, headingLists: HeadingListInfo[]): FieldMap {
+  const headingList = headingLists.find(h => h.name == 'Metadata')
+  const list = headingList?.list
+  if (!list)
+    return {}
+
+  const type = nodePath.type
+  if (!type || !('properties' in type))
+    return []
+
+  const properties = type.properties
+
+  let fields: FieldMap = {}
+
+  for (const entry of list.children) {
+    const text = getNodeText(entry)
+    if (text) {
+      const match = text.match(keyPairPattern)
+      if (match) {
+        const [_, key, rawValue] = match
+        const property = properties[key]
+        fields[key] = property?.type?.name == 'integer'
+          ? parseInt(rawValue)
+          : rawValue
+      }
+    }
+  }
+
+  data.children.splice(headingList.index, headingList.list ? 2 : 1)
+
+  return fields
 }
 
 export function processIndexList(nodePath: NodePath, data: Root): RecordLink[] {

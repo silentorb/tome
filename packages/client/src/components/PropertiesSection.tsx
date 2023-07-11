@@ -1,8 +1,9 @@
 import { LinkListSection } from './LinkListSection'
 import * as React from 'react'
-import { DocumentList, ExpandedDocument, Property, PropertyMap, TypeDefinition } from '@tome/data-api'
 import { Dispatch, SetStateAction } from 'react'
+import { DocumentList, ExpandedDocument, Property, PropertyMap, TypeDefinition } from '@tome/data-api'
 import { FieldSection } from './FieldSection'
+import { isPrimitiveType } from '@tome/data-processing'
 
 interface Props {
   document: ExpandedDocument
@@ -14,7 +15,7 @@ function getPrimitiveTypeFields(properties: PropertyMap): Property[] {
   let result: Property[] = []
   for (const key in properties) {
     const property = properties[key]
-    if (property.type.name == 'integer') {
+    if (isPrimitiveType(property.type)) {
       result.push(property)
     }
   }
@@ -29,6 +30,7 @@ export const PropertiesSection = (props: Props) => {
   )
 
   const fieldProperties = type ? getPrimitiveTypeFields(type.properties) : []
+  console.log(type?.properties)
   const fields = fieldProperties.length > 0
     ? <FieldSection values={document.fields} properties={fieldProperties}/>
     : undefined

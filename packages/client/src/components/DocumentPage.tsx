@@ -34,10 +34,11 @@ export const useListState = (list: DocumentList) =>
   useState(list)
 
 export const DocumentPage = (props: Props) => {
-  const { document, breadcrumbs } = props.node
+  const { node } = props
+  const { document, breadcrumbs } = node
   const initialValues = {}
   const [title, setTitle] = useState(document.title || '')
-  const [id, setId] = useState(props.node.id || '')
+  const [id, setId] = useState(node.id || '')
   const [renaming, setRenaming] = useState<boolean>(false)
   const markdownEditor = useRef<ReactEditor | undefined>(undefined)
   const listStates = document.lists.map(useListState)
@@ -110,7 +111,7 @@ export const DocumentPage = (props: Props) => {
       <h1>{title} {renameButton} <IconButton onClick={onDelete}><Trash2/></IconButton></h1>
       {renameForm}
       <MarkdownEditor editorContainer={markdownEditor} id={id} content={document.content}/>
-      <PropertiesSection document={document} listStates={listStates} />
+      <PropertiesSection document={document} listStates={listStates} type={node.dataType}/>
       <SubmitButton onClick={() => save(id, title)}>Save Changes</SubmitButton>
     </>
   )

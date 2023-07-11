@@ -2,11 +2,12 @@ import { DocumentList, ExpandedDocument, IndexNode, Property, RecordLink } from 
 import { DatabaseConfig, NodePath } from './types'
 import path from 'path'
 import {
+  gatherHeadingLists,
   getMarkdownTitle,
   isTitleHeadingNode,
   parseMarkdownAST,
-  processHeadings,
-  processIndexList
+  processLinkHeadings,
+  processIndexList, processMetadataHeading
 } from './markdown-parsing'
 import { generateDocumentAppendingAst, generateIndexListAst, stringifyMarkdown } from './markdown-generation'
 import { getMarkdownDocumentFilePath } from './pathing'
@@ -32,22 +33,24 @@ export function removeMarkdownTitleHeading(data: any) {
   }
 }
 
+const newTypelessDocument = (title: string, content: string) => ({
+  title,
+  content,
+  lists: [],
+  fields: {},
+})
+
 export async function expandDocument(config: DatabaseConfig, nodePath: NodePath, content: string): Promise<ExpandedDocument> {
   const data = await parseMarkdownAST(content)
   const title = getDocumentTitle(data, nodePath)
   const { type } = nodePath
-  if (!type) {
-    return {
-      title,
-      content,
-      lists: [],
-      fields: {},
-    }
-  }
+  if (!type)
+    return newTypelessDocument(title, content)
 
   removeMarkdownTitleHeading(data)
 
-  const lists = processHeadings(nodePath, data)
+  const fields = processMetadataHeading(nodePath, data, gatherHeadingLists(data))
+  const lists = processLinkHeadings(nodePath, data, gatherHeadingLists(data))
 
   const updatedContent = await stringifyMarkdown(data)
   return {
@@ -55,8 +58,8 @@ export async function expandDocument(config: DatabaseConfig, nodePath: NodePath,
     content: updatedContent,
     type: type.id,
     lists,
-    fields: {},
- }
+    fields,
+  }
 }
 
 export async function expandIndexList(config: DatabaseConfig, nodePath: NodePath, content: string): Promise<RecordLink[]> {

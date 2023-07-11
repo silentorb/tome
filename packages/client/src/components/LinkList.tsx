@@ -221,7 +221,7 @@ export const LinkList = (props: Props) => {
     >
       {table.getRowModel().rows.map(row => <DraggableRow row={row}/>)}
     </SortableContext>
-    : table.getRowModel().rows.map(row => <tr id={row.id}>{renderRowContent(row)}</tr>)
+    : table.getRowModel().rows.map(row => <tr key={row.id}>{renderRowContent(row)}</tr>)
 
   return (
     <DndContext

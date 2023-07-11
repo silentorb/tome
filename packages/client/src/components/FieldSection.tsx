@@ -13,6 +13,7 @@ export const FieldSection = (props: Props) => {
   ))
 
   return <>
+    <h2>Metadata</h2>
     {rows}
   </>
 }
