@@ -40,7 +40,7 @@ export function generateLinkListAst(localPath: string, items: RecordLink[]) {
   }
 }
 
-export function generateLinkListAstWithHeader(localPath: string, list: DocumentList) {
+export function generateLinkListAstWithHeader(localPath: string, list: DocumentList): any[] {
   return [
     {
       type: 'heading',
@@ -54,10 +54,44 @@ export function generateLinkListAstWithHeader(localPath: string, list: DocumentL
   ]
 }
 
+export function generateFieldsAstWithHeader(fields: Array<[string, any]>): any[] {
+  return [
+    {
+      type: 'heading',
+      depth: 2,
+      children: [
+        { type: 'text', value: 'Metadata' },
+      ]
+    },
+    {
+      type: 'list',
+      ordered: false,
+      children: fields.map(([key, value]) => {
+        return {
+          type: 'listItem',
+          spread: false,
+          children: [{
+            type: 'paragraph',
+            children: [{ type: 'text', value: `${key}: ${value}` }]
+          }]
+        }
+      })
+    },
+  ]
+}
+
 export function generateDocumentAppendingAst(localPath: string, document: ExpandedDocument) {
-  const children = document.lists.reduce((a, b) =>
-      a.concat(generateLinkListAstWithHeader(localPath, b))
-    , [] as any[])
+  const listNodes = document.lists
+    .reduce((a, b) =>
+        a.concat(generateLinkListAstWithHeader(localPath, b))
+      , [] as any[])
+
+  const fieldEntries = Object.entries(document.fields)
+  const fieldNodes = fieldEntries.length > 0
+    ? generateFieldsAstWithHeader(fieldEntries)
+    : []
+
+  const children = listNodes.concat(fieldNodes)
 
   return {
     type: 'root',

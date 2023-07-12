@@ -7,7 +7,7 @@ import { ReactEditor } from '@milkdown/react'
 // @ts-ignore
 import { getMarkdown } from '@milkdown/utils'
 import { deleteDocument, saveDocument } from '../services'
-import { DocumentList, DocumentNode } from '@tome/data-api'
+import { DocumentNode } from '@tome/data-api'
 import { getParentUrl, setPageTitle } from '../utility/browser-utility'
 import { IdAndTitleForm, OnSubmitIdAndTitle } from './IdAndTitleForm'
 import { IconButton } from './styling'
@@ -17,6 +17,9 @@ import { getAbsoluteResourceUrl } from '../routing'
 import { NotificationType, useNotify } from '../utility/notifications'
 import styled from 'styled-components'
 import { PropertiesSection } from './PropertiesSection'
+import { mapValues } from '@tome/data-processing'
+import { getPrimitiveFieldProperties } from '../utility'
+import { newFieldState } from './utility'
 
 interface Props {
   node: DocumentNode
@@ -30,8 +33,11 @@ const getNodeName = (id: string): string => {
   const tokens = id.split('/')
   return tokens[tokens.length - 1]
 }
-export const useListState = (list: DocumentList) =>
-  useState(list)
+
+// Used to capture the function memoization
+export function useStateWrapper<T>(list: T) {
+  return useState(list)
+}
 
 export const DocumentPage = (props: Props) => {
   const { node } = props
@@ -41,7 +47,10 @@ export const DocumentPage = (props: Props) => {
   const [id, setId] = useState(node.id || '')
   const [renaming, setRenaming] = useState<boolean>(false)
   const markdownEditor = useRef<ReactEditor | undefined>(undefined)
-  const listStates = document.lists.map(useListState)
+  const listStates = document.lists.map(useStateWrapper)
+  const type = node.dataType
+  const fieldProperties = type ? getPrimitiveFieldProperties(type.properties) : []
+  const fieldStates = fieldProperties.map(property => newFieldState(property, useStateWrapper(document.fields[property.id])))
   const navigate = useNavigate()
   const notify = useNotify()
 
@@ -60,7 +69,7 @@ export const DocumentPage = (props: Props) => {
         type: document.type,
         content: markdown,
         lists: listStates.map(l => l[0]),
-        fields: document.fields,
+        fields: Object.fromEntries(fieldStates.map(entry => [entry.property.id, entry.value])),
       },
       oldId,
     })
@@ -111,7 +120,7 @@ export const DocumentPage = (props: Props) => {
       <h1>{title} {renameButton} <IconButton onClick={onDelete}><Trash2/></IconButton></h1>
       {renameForm}
       <MarkdownEditor editorContainer={markdownEditor} id={id} content={document.content}/>
-      <PropertiesSection document={document} listStates={listStates} type={node.dataType}/>
+      <PropertiesSection listStates={listStates} fieldStates={fieldStates} type={node.dataType}/>
       <SubmitButton onClick={() => save(id, title)}>Save Changes</SubmitButton>
     </>
   )

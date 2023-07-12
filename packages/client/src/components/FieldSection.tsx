@@ -1,16 +1,31 @@
 import * as React from 'react'
-import { FieldMap, Property } from '@tome/data-api'
+import { Dispatch, SetStateAction } from 'react'
+import { Property, TypeReference } from '@tome/data-api'
+import styled from 'styled-components'
+import { StatePairMap } from '../utility'
+import { FieldStates } from './utility'
 
 interface Props {
-  values: FieldMap
-  properties: Property[]
+  fieldStates: FieldStates
+}
+
+export const TextInput = styled.input`
+
+`
+
+const onChange = (setValue: Dispatch<SetStateAction<any>>) => (event: any) => {
+  setValue(event.target.value)
 }
 
 export const FieldSection = (props: Props) => {
-  const { values, properties } = props
-  const rows = properties.map(property => (
-    <div key={property.id}>{property.title}: {values[property.id]}</div>
-  ))
+  const { fieldStates } = props
+
+  const rows = fieldStates.map(entry => {
+    const { property, value, set } = entry
+    return <div key={property.id}>
+      {property.title}: <TextInput type="number" value={value} onChange={onChange(set)}/>
+    </div>
+  })
 
   return <>
     <h2>Metadata</h2>
