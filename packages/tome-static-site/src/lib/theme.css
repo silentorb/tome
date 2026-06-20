@@ -1,0 +1,221 @@
+/* Dark-first: matches tome-editor tokens. */
+:root {
+  color-scheme: dark;
+  --tome-font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
+    sans-serif;
+  --tome-bg: #191919;
+  --tome-surface: #252525;
+  --tome-text: #ebebea;
+  --tome-muted: #9b9a97;
+  --tome-border: rgba(255, 255, 255, 0.09);
+  --tome-hover: rgba(255, 255, 255, 0.06);
+  --tome-callout-bg: #2f343c;
+  --tome-callout-border: rgba(255, 255, 255, 0.1);
+  --tome-callout-radius: 8px;
+  --tome-link: #6cb6ff;
+  font-family: var(--tome-font);
+  font-size: 16px;
+  line-height: 1.5;
+  background: var(--tome-bg);
+  color: var(--tome-text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--tome-bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--tome-bg);
+  color: var(--tome-text);
+}
+
+a {
+  color: var(--tome-link);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+.site-header {
+  border-bottom: 1px solid var(--tome-border);
+  background: var(--tome-surface);
+  padding: 0.75rem 1.5rem;
+}
+
+.site-header a {
+  color: var(--tome-text);
+  font-weight: 600;
+}
+
+.site-header a:hover {
+  color: var(--tome-link);
+}
+
+.page {
+  max-width: 52rem;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.page--node {
+  max-width: min(72rem, 100%);
+}
+
+.page-title {
+  margin: 0 0 1.5rem;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.node-path {
+  display: block;
+  font-size: 0.8125rem;
+  color: var(--tome-muted);
+  margin-bottom: 0.5rem;
+}
+
+.prose {
+  line-height: 1.65;
+}
+
+.prose :where(h1, h2, h3, h4, h5, h6) {
+  margin: 1.75em 0 0.5em;
+  line-height: 1.25;
+  font-weight: 600;
+}
+
+.prose :where(h1) {
+  font-size: 1.75rem;
+}
+
+.prose :where(h2) {
+  font-size: 1.375rem;
+}
+
+.prose :where(h3) {
+  font-size: 1.125rem;
+}
+
+.prose :where(p, ul, ol, blockquote, pre) {
+  margin: 0.75em 0;
+}
+
+.prose :where(ul, ol) {
+  padding-left: 1.5em;
+}
+
+.prose :where(blockquote) {
+  border-left: 3px solid var(--tome-border);
+  padding-left: 1em;
+  color: var(--tome-muted);
+}
+
+.prose :where(blockquote.tome-callout) {
+  border-left: none;
+  margin: 1em 0;
+  padding: 12px 14px;
+  background: var(--tome-callout-bg);
+  border: 1px solid var(--tome-callout-border);
+  border-radius: var(--tome-callout-radius);
+  color: var(--tome-text);
+  --tome-callout-gutter: 1.75em;
+}
+
+.prose :where(blockquote.tome-callout > p:first-child) {
+  margin-top: 0;
+  padding-left: var(--tome-callout-gutter);
+  text-indent: calc(-1 * var(--tome-callout-gutter));
+}
+
+.prose :where(blockquote.tome-callout > p:last-child) {
+  margin-bottom: 0;
+}
+
+.prose :where(blockquote.tome-callout > p ~ p),
+.prose :where(blockquote.tome-callout > blockquote),
+.prose :where(blockquote.tome-callout > ul),
+.prose :where(blockquote.tome-callout > ol) {
+  padding-left: var(--tome-callout-gutter);
+}
+
+.prose :where(blockquote.tome-callout blockquote.tome-callout) {
+  margin: 0.75em 0;
+}
+
+.prose :where(blockquote.tome-callout blockquote.tome-callout > p:first-child) {
+  margin-top: 0;
+  padding-left: var(--tome-callout-gutter);
+  text-indent: calc(-1 * var(--tome-callout-gutter));
+}
+
+.prose :where(blockquote.tome-callout blockquote.tome-callout > p:last-child) {
+  margin-bottom: 0;
+}
+
+.prose :where(code) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.875em;
+  background: var(--tome-surface);
+  padding: 0.15em 0.35em;
+  border-radius: 3px;
+}
+
+.prose :where(pre) {
+  background: var(--tome-surface);
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  padding: 1em;
+  overflow-x: auto;
+}
+
+.prose :where(pre code) {
+  background: none;
+  padding: 0;
+}
+
+.prose :where(hr) {
+  border: none;
+  border-top: 1px solid var(--tome-border);
+  margin: 2em 0;
+}
+
+.prose :where(img) {
+  max-width: 100%;
+  height: auto;
+}
+
+.prose :where(.tome-dynamic-node-link-wrap) {
+  display: inline;
+  white-space: normal;
+}
+
+.prose :where(.tome-node-link-icon) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.1em;
+  height: 1.1em;
+  margin-right: 0.15em;
+  vertical-align: text-bottom;
+  color: var(--tome-muted);
+}
+
+.prose :where(.tome-node-link-page-icon) {
+  width: 1em;
+  height: 1em;
+}
+
+.prose-empty {
+  color: var(--tome-muted);
+  font-style: italic;
+}

@@ -1,0 +1,30 @@
+{
+  "name": "tome-db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./archive-status": "./src/archive-status.ts",
+    "./content": "./src/content/index.ts",
+    "./content/test-helpers": "./src/content/test-helpers.ts",
+    "./enum-codec": "./src/enum-codec.ts",
+    "./markdown-links": "./src/markdown-links.ts",
+    "./dynamic-node-links": "./src/dynamic-node-links.ts",
+    "./callout": "./src/callout.ts",
+    "./schema-file": "./src/schema-rules/schema-file.ts",
+    "./relationship-type-label": "./src/relationship-type-label.ts",
+    "./row-sort-helpers": "./src/row-sort-helpers.ts",
+    "./search-relevance": "./src/search-relevance.ts"
+  },
+  "scripts": {
+    "test": "bun test tests"
+  },
+  "dependencies": {
+    "yaml": "2.8.0"
+  },
+  "devDependencies": {
+    "@types/bun": "1.2.23",
+    "typescript": "5.8.2"
+  }
+}

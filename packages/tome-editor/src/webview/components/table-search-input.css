@@ -1,0 +1,42 @@
+.tome-table-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 10rem;
+  max-width: 18rem;
+}
+
+.tome-table-search-icon {
+  position: absolute;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tome-muted);
+  pointer-events: none;
+}
+
+.tome-table-search-icon-svg {
+  display: block;
+}
+
+.tome-table-search-input {
+  width: 100%;
+  padding: 6px 10px 6px 32px;
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  background: var(--tome-bg);
+  color: var(--tome-text);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.tome-table-search-input:focus {
+  outline: none;
+  border-color: rgba(108, 182, 255, 0.45);
+}
+
+.tome-table-search-input::-webkit-search-cancel-button {
+  margin-right: 2px;
+}

@@ -1,0 +1,124 @@
+.tome-record-metadata-panel {
+  border-bottom: 1px solid var(--tome-border);
+  background: var(--tome-surface);
+}
+
+.tome-record-metadata-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 32px;
+  font-size: 0.85rem;
+  color: var(--tome-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tome-record-metadata-toggle:hover {
+  color: var(--tome-fg);
+}
+
+.tome-record-metadata-chevron {
+  display: inline-block;
+  width: 1em;
+  transition: transform 0.15s ease;
+}
+
+.tome-record-metadata-panel.is-expanded .tome-record-metadata-chevron {
+  transform: rotate(90deg);
+}
+
+.tome-record-metadata-summary {
+  color: var(--tome-muted);
+  font-size: 0.8rem;
+}
+
+.tome-record-metadata-body {
+  padding: 0 32px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.tome-record-metadata-row {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+
+.tome-record-metadata-label {
+  flex: 0 0 7rem;
+  color: var(--tome-muted);
+}
+
+.tome-record-metadata-value {
+  flex: 1;
+  min-width: 0;
+}
+
+.tome-record-metadata-backlinks {
+  position: relative;
+}
+
+.tome-record-metadata-backlinks-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  font: inherit;
+  color: var(--tome-link);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.tome-record-metadata-backlinks-trigger:hover {
+  text-decoration: underline;
+}
+
+.tome-record-metadata-backlinks-menu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 240px;
+  max-width: min(420px, 90vw);
+  max-height: 240px;
+  overflow: auto;
+  padding: 4px 0;
+  background: var(--tome-bg);
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+}
+
+.tome-record-metadata-backlink-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 12px;
+}
+
+.tome-record-metadata-backlink-item:hover {
+  background: var(--tome-surface);
+}
+
+.tome-record-metadata-backlink-label {
+  font-size: 0.75rem;
+  color: var(--tome-muted);
+}
+
+.tome-record-metadata-backlink-empty {
+  padding: 8px 12px;
+  color: var(--tome-muted);
+  font-size: 0.85rem;
+}
+
+.tome-record-metadata-properties {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tome-border);
+}

@@ -1,0 +1,88 @@
+---
+import type { SiteNode } from "../lib/site-types";
+import type { TabItemsPayload } from "../lib/site-types";
+import NodeMetadata from "./NodeMetadata.astro";
+import DatabaseSection from "./DatabaseSection.astro";
+import OrderedAssociationSection from "./OrderedAssociationSection.astro";
+import RelationSection from "./RelationSection.astro";
+import { buildSectionsForTab, resolveActiveTabId } from "../lib/node-page";
+import {
+  prepareNodeMarkdown,
+  renderMarkdownToHtml,
+  resolvePageTitleAndContent,
+} from "../lib/markdown";
+
+interface Props {
+  node: SiteNode;
+  base: string;
+  titleById: Record<string, string>;
+  activeTabId?: string;
+  tabPayload?: TabItemsPayload;
+}
+
+const { node, base, titleById, activeTabId: requestedTabId, tabPayload } = Astro.props;
+
+const activeTabId = resolveActiveTabId(node, requestedTabId);
+const sections = buildSectionsForTab(node, activeTabId, tabPayload);
+
+const { title } = resolvePageTitleAndContent(node.body, node.title);
+const prepared = prepareNodeMarkdown(node.body, node.title, base, (id) =>
+  titleById[id.toLowerCase()] ?? "Untitled",
+);
+const bodyHtml = prepared.markdown
+  ? await renderMarkdownToHtml(prepared.markdown, prepared.dynamicNodeIds)
+  : "";
+const emptyMarkdown = !prepared.markdown.trim();
+---
+
+<div class="tome-record-page">
+  <div class="tome-record-sections">
+    <section class="tome-record-section tome-page-title-section">
+      {node.archived ? <span class="tome-record-page-archived">Archived</span> : null}
+      <h1 class="page-title">{title}</h1>
+    </section>
+
+    <NodeMetadata metadata={node.metadata} base={base} properties={node.properties} />
+
+    <section class={`tome-record-section tome-markdown-section${emptyMarkdown ? " is-empty" : ""}`}>
+      {
+        bodyHtml ? (
+          <article class="prose" set:html={bodyHtml} />
+        ) : (
+          <p class="prose-empty">No content.</p>
+        )
+      }
+    </section>
+
+    {
+      sections.map((section) => {
+        if (section.type === "database") {
+          return (
+            <DatabaseSection
+              section={section}
+              nodeId={node.id}
+              activeTabId={activeTabId}
+              itemsTabs={node.itemsTabs}
+              base={base}
+            />
+          );
+        }
+        if (section.type === "ordered-association") {
+          return (
+            <OrderedAssociationSection
+              section={section}
+              nodeId={node.id}
+              activeTabId={activeTabId}
+              itemsTabs={node.itemsTabs}
+              base={base}
+            />
+          );
+        }
+        if (section.type === "relations") {
+          return <RelationSection section={section} nodeId={node.id} base={base} />;
+        }
+        return null;
+      })
+    }
+  </div>
+</div>

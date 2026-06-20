@@ -1,0 +1,288 @@
+.tome-editor-shell {
+  position: relative;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 48px 24px 120px;
+  min-height: 100%;
+}
+
+.tome-editor-header {
+  margin-bottom: 24px;
+}
+
+.tome-editor-title {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.tome-editor-body {
+  min-height: 60vh;
+}
+
+.tome-editor-body .milkdown {
+  --crepe-font-default: var(--tome-font);
+  --crepe-font-title: var(--tome-font);
+  outline: none;
+}
+
+/* Notion-like: page title is outside the editor; demote in-content headings one level. */
+.tome-editor-body .milkdown .ProseMirror h1 {
+  font-size: 32px;
+  line-height: 40px;
+  margin-top: 24px;
+}
+
+.tome-editor-body .milkdown .ProseMirror h2 {
+  font-size: 28px;
+  line-height: 36px;
+  margin-top: 20px;
+}
+
+.tome-editor-body .milkdown .ProseMirror h3 {
+  font-size: 24px;
+  line-height: 32px;
+  margin-top: 16px;
+}
+
+.tome-editor-body .milkdown .ProseMirror h4 {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 28px;
+  margin-top: 16px;
+}
+
+.tome-editor-body .milkdown .ProseMirror h5 {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  margin-top: 12px;
+}
+
+.tome-editor-body .milkdown .ProseMirror h6 {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 20px;
+  margin-top: 12px;
+}
+
+.tome-editor-body .milkdown .ProseMirror > :first-child {
+  margin-top: 0;
+}
+
+/*
+ * prosemirror-virtual-cursor mounts a widget decoration at doc position 0 and
+ * sizes it from the caret rect. Without zeroing the widget wrapper footprint,
+ * caret height changes (e.g. headings vs paragraphs) shift block layout.
+ */
+.tome-editor-body .milkdown .ProseMirror .ProseMirror-widget:has(> .prosemirror-virtual-cursor) {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.tome-editor-body a {
+  color: var(--tome-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.tome-editor-body .tome-node-link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  margin-right: 2px;
+  vertical-align: text-bottom;
+  color: var(--tome-muted);
+}
+
+.tome-editor-body .tome-node-link-page-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.tome-editor-body .tome-dynamic-node-link {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.tome-editor-error {
+  margin-top: 8px;
+  color: #f87171;
+  font-size: 0.9rem;
+}
+
+/*
+ * Callouts: Notion-style panels (background + rounded corners), not quote bars.
+ * `.tome-callout` is applied via ProseMirror node decorations (callout-decoration.ts).
+ */
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout {
+  --tome-callout-gutter: 1.75em;
+  position: relative;
+  box-sizing: border-box;
+  margin: 10px 0 !important;
+  padding: 12px 14px !important;
+  padding-left: 14px !important;
+  background: var(--tome-callout-bg) !important;
+  border: 1px solid var(--tome-callout-border);
+  border-radius: var(--tome-callout-radius) !important;
+  color: var(--tome-text) !important;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout::before {
+  content: none !important;
+  display: none !important;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout > p:first-child {
+  margin-top: 0;
+  padding-left: var(--tome-callout-gutter) !important;
+  text-indent: calc(-1 * var(--tome-callout-gutter));
+  overflow: visible;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout > p:last-child {
+  margin-bottom: 0;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout > p ~ p,
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout > blockquote,
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout > ul,
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout > ol {
+  padding-left: var(--tome-callout-gutter) !important;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout blockquote.tome-callout {
+  margin: 8px 0 !important;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout blockquote.tome-callout > p:first-child {
+  margin-top: 0;
+  padding-left: var(--tome-callout-gutter) !important;
+  text-indent: calc(-1 * var(--tome-callout-gutter));
+  overflow: visible;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout blockquote.tome-callout > p:last-child {
+  margin-bottom: 0;
+}
+
+/*
+ * Virtual cursor uses selection rects that break on callout hanging indents.
+ * callout-cursor.ts toggles .tome-callout-editing while the caret is inside a callout.
+ */
+.tome-editor-body .milkdown .ProseMirror.tome-callout-editing,
+.tome-editor-body .milkdown .ProseMirror.tome-callout-editing * {
+  caret-color: var(--tome-text) !important;
+}
+
+.tome-editor-body .milkdown .ProseMirror.tome-callout-editing .prosemirror-virtual-cursor,
+.tome-editor-body .milkdown .ProseMirror.tome-callout-editing .prosemirror-virtual-cursor-left,
+.tome-editor-body .milkdown .ProseMirror.tome-callout-editing .prosemirror-virtual-cursor-right {
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+.tome-mention-menu {
+  position: absolute;
+  z-index: 20;
+  min-width: 280px;
+  max-width: 420px;
+  max-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+  background: var(--tome-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.tome-mention-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 8px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tome-mention-item.is-active,
+.tome-mention-item:hover {
+  background: var(--tome-hover);
+}
+
+.tome-mention-title {
+  font-weight: 600;
+}
+
+.tome-mention-path {
+  font-size: 0.75rem;
+  color: var(--tome-muted);
+}
+
+.tome-mention-empty {
+  padding: 12px;
+  color: var(--tome-muted);
+  font-size: 0.85rem;
+}
+
+.tome-loading,
+.tome-error {
+  max-width: 1280px;
+  margin: 48px auto;
+  padding: 0 24px;
+}
+
+.tome-error {
+  color: #f87171;
+}
+
+.tome-app-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 24px;
+  border-bottom: 1px solid var(--tome-border);
+  background: color-mix(in srgb, var(--tome-bg) 92%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.tome-save-status {
+  margin-left: auto;
+  font-size: 0.8rem;
+  color: var(--tome-muted);
+}
+
+.tome-save-status.is-dirty {
+  color: #fbbf24;
+}
+
+.tome-save-status.is-saving {
+  color: #60a5fa;
+}
+
+.tome-save-status.is-saved {
+  color: #34d399;
+}
+
+.tome-save-status.is-error {
+  color: #f87171;
+}

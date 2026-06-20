@@ -1,0 +1,37 @@
+---
+import type { RelationTableSection } from "tome-db";
+import SectionTitle from "./SectionTitle.astro";
+import DataTable from "./DataTable.astro";
+
+interface Props {
+  section: RelationTableSection;
+  nodeId: string;
+  base: string;
+}
+
+const { section, nodeId, base } = Astro.props;
+const tableKey = `records/${nodeId}/relations/${section.label}`;
+
+const rows = section.rows.map((row) => ({
+  id: row.targetId,
+  name: row.name,
+  cells: row.cells,
+}));
+---
+
+<section class="tome-record-section tome-relation-section">
+  <SectionTitle title={section.title} typeNodeId={section.typeNodeId} base={base} />
+  {
+    rows.length === 0 ? (
+      <p class="tome-database-empty">No related items.</p>
+    ) : (
+      <DataTable
+        tableKey={tableKey}
+        columns={section.columns}
+        rows={rows}
+        columnDefs={section.columnDefs}
+        base={base}
+      />
+    )
+  }
+</section>

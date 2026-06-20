@@ -1,0 +1,19 @@
+{
+  "name": "tome-static-site",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun run src/build.ts",
+    "test": "bun test tests"
+  },
+  "dependencies": {
+    "astro": "5.7.10",
+    "tome-db": "workspace:*",
+    "marked": "15.0.12"
+  },
+  "devDependencies": {
+    "@types/bun": "1.2.23",
+    "typescript": "5.8.2"
+  }
+}

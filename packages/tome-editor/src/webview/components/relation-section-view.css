@@ -1,0 +1,34 @@
+.tome-record-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tome-record-section-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.tome-record-section-title-link {
+  border: 0;
+  background: transparent;
+  color: var(--tome-link);
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+.tome-record-section-title-link:hover {
+  text-decoration: underline;
+}
+
+.tome-relation-section {
+  padding-top: 8px;
+}

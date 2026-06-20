@@ -1,0 +1,23 @@
+---
+import { nodePagePath } from "../lib/markdown";
+
+interface Props {
+  title: string;
+  typeNodeId?: string | null;
+  base: string;
+}
+
+const { title, typeNodeId, base } = Astro.props;
+---
+
+<h2 class="tome-record-section-title">
+  {
+    typeNodeId ? (
+      <a class="tome-record-section-title-link" href={nodePagePath(typeNodeId, base)}>
+        {title}
+      </a>
+    ) : (
+      title
+    )
+  }
+</h2>

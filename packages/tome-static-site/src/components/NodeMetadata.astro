@@ -1,0 +1,84 @@
+---
+import type { NodePageMetadata, PropertiesSection } from "tome-db";
+import { nodePagePath } from "../lib/markdown";
+import PropertiesSection from "./PropertiesSection.astro";
+
+interface Props {
+  metadata: NodePageMetadata;
+  base: string;
+  properties?: PropertiesSection | null;
+}
+
+const { metadata, base, properties } = Astro.props;
+
+function formatTimestamp(iso: string | null): string {
+  if (!iso) return "—";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+const summary = `${metadata.relationshipCount} relationship${metadata.relationshipCount === 1 ? "" : "s"} · ${metadata.backlinks.length} backlink${metadata.backlinks.length === 1 ? "" : "s"}`;
+---
+
+<section class="tome-record-metadata-panel" aria-label="Node metadata" data-metadata-panel>
+  <button
+    type="button"
+    class="tome-record-metadata-toggle"
+    aria-expanded="false"
+    data-metadata-toggle
+  >
+    <span class="tome-record-metadata-chevron" aria-hidden="true">›</span>
+    <span>Metadata</span>
+    <span class="tome-record-metadata-summary">{summary}</span>
+  </button>
+
+  <div class="tome-record-metadata-body" data-metadata-body>
+    <div class="tome-record-metadata-row">
+      <span class="tome-record-metadata-label">Created</span>
+      <span class="tome-record-metadata-value">{formatTimestamp(metadata.createdAt)}</span>
+    </div>
+    <div class="tome-record-metadata-row">
+      <span class="tome-record-metadata-label">Modified</span>
+      <span class="tome-record-metadata-value">{formatTimestamp(metadata.modifiedAt)}</span>
+    </div>
+    <div class="tome-record-metadata-row">
+      <span class="tome-record-metadata-label">Relationships</span>
+      <span class="tome-record-metadata-value">{metadata.relationshipCount}</span>
+    </div>
+    <div class="tome-record-metadata-row tome-record-metadata-backlinks">
+      <span class="tome-record-metadata-label">Backlinks</span>
+      <span class="tome-record-metadata-value">
+        {
+          metadata.backlinks.length === 0 ? (
+            <span class="tome-record-metadata-backlink-empty">None</span>
+          ) : (
+            <ul class="tome-record-metadata-backlink-list">
+              {metadata.backlinks.map((backlink) => (
+                <li class="tome-record-metadata-backlink-item">
+                  <a href={nodePagePath(backlink.sourceId, base)}>{backlink.title}</a>
+                  {backlink.linkText ? (
+                    <span class="tome-record-metadata-backlink-label">{backlink.linkText}</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )
+        }
+      </span>
+    </div>
+    {
+      properties ? (
+        <div class="tome-record-metadata-properties">
+          <PropertiesSection section={properties} base={base} nested />
+        </div>
+      ) : null
+    }
+  </div>
+</section>

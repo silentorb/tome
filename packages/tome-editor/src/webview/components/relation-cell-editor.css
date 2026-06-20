@@ -1,0 +1,302 @@
+.tome-relation-cell {
+  --tome-relation-cell-edit-width: 22px;
+  --tome-relation-cell-cell-gap: 4px;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: var(--tome-relation-cell-cell-gap);
+  max-width: 14rem;
+}
+
+.tome-relation-cell.is-busy {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.tome-relation-cell-content {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: calc(1.5em + 4px);
+}
+
+.tome-relation-cell-hit-area {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tome-relation-cell-hit-area:disabled {
+  cursor: default;
+}
+
+.tome-relation-cell-links {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
+  /* Inline text flow so wrapped links share rows with following links. */
+  display: block;
+  /* line-height × 6 rows + row gaps between wrapped lines */
+  max-height: calc(1.5em * 6 + 2px * 5 + 8px);
+  padding: 1px 0 3px;
+  font: inherit;
+  line-height: 1.5;
+  text-align: left;
+  overflow: hidden;
+}
+
+.tome-relation-cell-links .tome-relation-cell-link {
+  display: inline;
+  position: relative;
+  z-index: 1;
+  pointer-events: auto;
+  border: 0;
+  border-radius: 4px;
+  margin-right: 6px;
+  padding: 0;
+  background: transparent;
+  color: var(--tome-relation-cell-link);
+  cursor: pointer;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+.tome-relation-cell-link-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  margin-right: 4px;
+  margin-bottom: -1px;
+  vertical-align: text-top;
+  color: var(--tome-muted);
+}
+
+.tome-relation-cell-page-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.tome-relation-cell-links button.tome-relation-cell-link {
+  font: inherit;
+  display: inline;
+}
+
+.tome-relation-cell-link:hover {
+  text-decoration: none;
+}
+
+.tome-relation-cell-link:hover .tome-relation-cell-link-title {
+  text-decoration: underline;
+}
+
+.tome-relation-cell-placeholder {
+  color: var(--tome-muted);
+}
+
+.tome-relation-cell-overflow {
+  display: inline;
+  color: var(--tome-muted);
+  font-weight: 500;
+}
+
+.tome-relation-cell-edit {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--tome-relation-cell-edit-width);
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tome-muted);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tome-relation-cell-edit-icon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.tome-relation-cell:hover .tome-relation-cell-edit,
+.tome-relation-cell:focus-within .tome-relation-cell-edit,
+.tome-relation-cell.is-popup-open .tome-relation-cell-edit {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tome-relation-cell-edit:hover,
+.tome-relation-cell-edit:focus-visible {
+  background: var(--tome-hover);
+  color: var(--tome-text);
+  outline: 1px solid var(--tome-border);
+  outline-offset: 1px;
+}
+
+.tome-relation-field-popup {
+  position: absolute;
+  z-index: 40;
+  top: 0;
+  left: 0;
+  min-width: 280px;
+  max-width: 360px;
+  max-height: min(70vh, 480px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+  background: var(--tome-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.tome-relation-field-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--tome-border);
+}
+
+.tome-relation-field-popup-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.tome-relation-field-popup-done {
+  border: 0;
+  background: transparent;
+  color: var(--tome-link);
+  cursor: pointer;
+  font: inherit;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.tome-relation-field-popup-done:hover {
+  background: var(--tome-hover);
+}
+
+.tome-relation-field-popup-links {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.tome-relation-field-popup-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+}
+
+.tome-relation-field-popup-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+}
+
+.tome-relation-field-popup-row:hover {
+  background: var(--tome-hover);
+}
+
+.tome-relation-field-popup-link {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tome-link);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  padding: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.tome-relation-field-popup-link:hover {
+  text-decoration: underline;
+}
+
+.tome-relation-field-popup-remove {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tome-muted);
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.tome-relation-field-popup-remove:hover {
+  background: var(--tome-hover);
+  color: var(--tome-text);
+}
+
+.tome-relation-field-popup-add {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--tome-border);
+  padding: 8px 0 0;
+}
+
+.tome-relation-field-popup-add.is-first-section {
+  border-top: 0;
+}
+
+.tome-relation-field-popup-add .tome-record-link-picker.is-embedded {
+  position: static;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  max-width: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.tome-relation-field-popup-add .tome-record-link-picker-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}

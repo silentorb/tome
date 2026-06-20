@@ -1,0 +1,154 @@
+.tome-table-utility-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.tome-table-utility-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.tome-table-utility-tabs {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tome-table-utility-actions {
+  flex: 0 0 auto;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tome-table-tab-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.tome-table-tab-wrap.is-dragging {
+  z-index: 1;
+  opacity: 0.85;
+}
+
+.tome-database-view-tab.is-reorderable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.tome-table-tab-wrap.is-dragging .tome-database-view-tab.is-reorderable {
+  cursor: grabbing;
+}
+
+.tome-table-tab-add {
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tome-muted);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.tome-table-tab-editor {
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+  background: var(--tome-surface);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tome-table-tab-editor-heading {
+  font-weight: 500;
+  margin-top: 4px;
+}
+
+.tome-table-tab-name-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.tome-table-tab-name-row label {
+  flex: 1;
+  min-width: 0;
+}
+
+.tome-table-tab-delete {
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 120, 120, 0.35);
+  border-radius: 6px;
+  background: transparent;
+  color: #ff9a9a;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.tome-table-tab-delete:hover:not(:disabled) {
+  background: rgba(255, 120, 120, 0.1);
+}
+
+.tome-table-tab-delete:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tome-table-tab-editor label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tome-table-tab-editor input,
+.tome-table-tab-sort-row select {
+  background: var(--tome-bg);
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  color: var(--tome-text);
+  padding: 6px 8px;
+}
+
+.tome-table-tab-sort-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.tome-table-tab-sort-row select {
+  min-width: 140px;
+}
+
+.tome-table-tab-sort-add,
+.tome-table-tab-editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.tome-table-tab-editor-actions {
+  justify-content: flex-end;
+}
+
+.tome-table-tab-editor-actions button,
+.tome-table-tab-sort-add {
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tome-text);
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+.tome-table-tab-editor-actions button[type="submit"],
+.tome-table-tab-editor-actions button:last-child {
+  background: rgba(108, 182, 255, 0.12);
+  border-color: rgba(108, 182, 255, 0.35);
+  color: var(--tome-link);
+}

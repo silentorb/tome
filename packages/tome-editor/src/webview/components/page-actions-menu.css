@@ -1,0 +1,92 @@
+.tome-page-actions {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.tome-page-actions-trigger {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tome-muted);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tome-page-actions-trigger:hover:not(:disabled),
+.tome-page-actions-trigger[aria-expanded="true"] {
+  background: var(--tome-hover);
+  color: var(--tome-text);
+}
+
+.tome-page-actions-trigger:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tome-page-actions[data-menu-align="left"] .tome-page-actions-menu {
+  left: 0;
+  right: auto;
+}
+
+.tome-page-actions[data-menu-align="right"] .tome-page-actions-menu {
+  left: auto;
+  right: 0;
+}
+
+.tome-page-actions-trigger.is-vertical-dots {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  font-size: 1rem;
+  letter-spacing: -0.05em;
+}
+
+.tome-page-actions-vertical-dots-icon {
+  line-height: 1;
+}
+
+.tome-page-actions-menu.is-portal {
+  z-index: 200;
+}
+
+.tome-page-actions-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  z-index: 20;
+  min-width: 140px;
+  padding: 4px;
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+  background: var(--tome-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.tome-page-actions-item {
+  display: block;
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--tome-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tome-page-actions-item:hover {
+  background: var(--tome-hover);
+}
+
+.tome-page-actions-item.is-danger {
+  color: #f08a8a;
+}
+
+.tome-app-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}

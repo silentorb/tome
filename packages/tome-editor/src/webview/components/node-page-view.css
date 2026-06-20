@@ -1,0 +1,94 @@
+.tome-record-page {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.tome-record-page-archived {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--tome-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tome-record-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding: 24px 32px 32px;
+}
+
+.tome-page-title-section {
+  padding-bottom: 0;
+}
+
+.tome-page-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tome-page-title-row .tome-page-title {
+  flex: 1;
+  min-width: 0;
+  width: auto;
+  margin-bottom: 0;
+}
+
+.tome-page-title-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding-top: 0.35rem;
+}
+
+.tome-page-title-actions .tome-save-status {
+  margin-left: 0;
+  white-space: nowrap;
+}
+
+.tome-record-page .tome-record-metadata-panel {
+  margin: -16px 0 0;
+}
+
+.tome-markdown-section {
+  flex: 0 0 auto;
+}
+
+.tome-record-page .tome-editor-shell {
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tome-record-page .tome-editor-body {
+  min-height: 0;
+}
+
+/* Crepe reset uses 60px vertical padding; node pages already inset via .tome-record-sections. */
+.tome-record-page .tome-editor-body .milkdown .ProseMirror {
+  padding: 14px 0 0;
+}
+
+.tome-record-page .tome-editor-body.is-empty .milkdown .ProseMirror p {
+  min-height: 1lh;
+}
+
+.tome-record-page .tome-database-view {
+  padding: 0;
+  gap: 12px;
+}
+
+.tome-record-page .tome-database-header {
+  margin: 0;
+}
+
+.tome-record-page .tome-database-title {
+  display: none;
+}

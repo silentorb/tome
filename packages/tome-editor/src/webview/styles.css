@@ -1,0 +1,80 @@
+/* Dark-first: the editor does not follow OS light mode. Tokens live on :root only. */
+:root {
+  color-scheme: dark;
+  --tome-font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --tome-bg: #191919;
+  --tome-surface: #252525;
+  --tome-text: #ebebea;
+  --tome-muted: #9b9a97;
+  --tome-border: rgba(255, 255, 255, 0.09);
+  --tome-hover: rgba(255, 255, 255, 0.06);
+  --tome-callout-bg: #2f343c;
+  --tome-callout-border: rgba(255, 255, 255, 0.1);
+  --tome-callout-radius: 8px;
+  --tome-link: #6cb6ff;
+  --tome-relation-cell-link: rgb(240, 239, 237);
+  --tome-graph-link: rgba(235, 235, 234, 0.28);
+  --tome-graph-link-strong: rgba(235, 235, 234, 0.42);
+  --tome-graph-cluster-node: #d4a24c;
+  --tome-graph-anchor-node: #7ee787;
+  --tome-graph-label-bg: rgba(37, 37, 37, 0.94);
+  --tome-graph-label-border: rgba(255, 255, 255, 0.12);
+  font-family: var(--tome-font);
+  font-size: 16px;
+  line-height: 1.5;
+  background: var(--tome-bg);
+  color: var(--tome-text);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+  background: var(--tome-bg);
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tome-layout {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tome-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.tome-main-graph {
+  overflow: hidden;
+}
+
+body {
+  background: var(--tome-bg);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}

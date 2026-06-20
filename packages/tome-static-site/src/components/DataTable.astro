@@ -1,0 +1,112 @@
+---
+import type { DatabaseColumnDef } from "../lib/site-types";
+import type { TableSortSpec } from "../lib/site-types";
+import { columnLabelFor } from "../lib/column-label";
+import { nodePagePath } from "../lib/markdown";
+import { renderRelationLinksHtml, renderTableCellHtml } from "../lib/table-cell";
+
+export interface DataTableRow {
+  id: string;
+  name: string;
+  cells: Record<string, string>;
+  relationCells?: Record<string, { targetId: string; title: string }[]>;
+}
+
+interface Props {
+  tableKey: string;
+  columns: string[];
+  rows: DataTableRow[];
+  columnDefs?: DatabaseColumnDef[];
+  defaultSort?: TableSortSpec;
+  base: string;
+  nameColumn?: boolean;
+}
+
+const {
+  tableKey,
+  columns,
+  rows,
+  columnDefs,
+  defaultSort,
+  base,
+  nameColumn = true,
+} = Astro.props;
+
+const displayColumns = nameColumn ? ["name", ...columns.filter((c) => c !== "name")] : columns;
+const primarySort = defaultSort?.orderBy[0];
+const enumOrder = Object.fromEntries(
+  (columnDefs ?? [])
+    .filter((def) => def.options?.length)
+    .map((def) => [def.key, def.options!]),
+);
+---
+
+<div
+  class="tome-database-table-wrap"
+  data-sortable-table
+  data-table-key={tableKey}
+  data-default-sort={defaultSort ? JSON.stringify(defaultSort) : undefined}
+  data-enum-order={Object.keys(enumOrder).length > 0 ? JSON.stringify(enumOrder) : undefined}
+>
+  <table class="tome-database-table">
+    <thead>
+      <tr>
+        {
+          displayColumns.map((column) => {
+            const label = columnLabelFor(column, columnDefs);
+            const isActive = primarySort?.column === column;
+            const indicator =
+              isActive && primarySort ? (primarySort.direction === "asc" ? "▲" : "▼") : "";
+            return (
+              <th scope="col" data-column={column}>
+                <button
+                  type="button"
+                  class={`tome-table-sort-button${isActive ? " is-active" : ""}`}
+                  data-sort-column={column}
+                >
+                  <span>{label}</span>
+                  {indicator ? <span class="tome-table-sort-indicator">{indicator}</span> : null}
+                </button>
+              </th>
+            );
+          })
+        }
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((row) => (
+          <tr
+            data-row-id={row.id}
+            data-row-name={row.name}
+            data-row-cells={JSON.stringify(row.cells)}
+          >
+            {displayColumns.map((column) => {
+              const def = columnDefs?.find((entry) => entry.key === column);
+              if (column === "name") {
+                return (
+                  <td>
+                    <a href={nodePagePath(row.id, base)} class="tome-database-name-link">
+                      {row.name}
+                    </a>
+                  </td>
+                );
+              }
+              const relationLinks = row.relationCells?.[column];
+              if (relationLinks?.length) {
+                return (
+                  <td
+                    class="tome-relation-cell"
+                    set:html={renderRelationLinksHtml(relationLinks, base)}
+                  />
+                );
+              }
+              const value = row.cells[column] ?? "";
+              return <td set:html={renderTableCellHtml(value, def)} />;
+            })}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>

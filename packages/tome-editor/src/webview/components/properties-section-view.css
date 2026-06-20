@@ -1,0 +1,40 @@
+.tome-properties-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tome-properties-form {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.tome-properties-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 12rem) minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  margin: 0;
+}
+
+.tome-properties-label {
+  margin: 0;
+  color: var(--tome-muted);
+  font-size: 0.85rem;
+}
+
+.tome-properties-value {
+  margin: 0;
+  min-width: 0;
+  font-size: 0.9rem;
+}
+
+.tome-properties-row.is-computed .tome-properties-value {
+  color: var(--tome-muted);
+}
+
+.tome-properties-computed-hint {
+  font-size: 0.75rem;
+  opacity: 0.85;
+}

@@ -1,0 +1,50 @@
+---
+import type { StaticDatabaseSection } from "../lib/site-types";
+import type { ItemsTabsMeta } from "../lib/site-types";
+import SectionTitle from "./SectionTitle.astro";
+import TableTabBar from "./TableTabBar.astro";
+import DataTable from "./DataTable.astro";
+
+interface Props {
+  section: StaticDatabaseSection;
+  nodeId: string;
+  activeTabId: string;
+  itemsTabs?: ItemsTabsMeta;
+  base: string;
+}
+
+const { section, nodeId, activeTabId, itemsTabs, base } = Astro.props;
+const { databaseView, defaultSort } = section;
+const tableKey = `records/${nodeId}/database/${databaseView.id}/${activeTabId}`;
+const typeNodeId = nodeId === databaseView.id ? null : databaseView.id;
+
+const rows = databaseView.rows.map((row) => ({
+  id: row.nodeId,
+  name: row.name,
+  cells: row.cells,
+  relationCells: row.relationCells,
+}));
+---
+
+<section class="tome-record-section tome-database-section">
+  <SectionTitle title="Items" typeNodeId={typeNodeId} base={base} />
+  <div class="tome-database-view">
+    {itemsTabs ? (
+      <TableTabBar itemsTabs={itemsTabs} nodeId={nodeId} activeTabId={activeTabId} base={base} />
+    ) : null}
+    {
+      rows.length === 0 ? (
+        <p class="tome-database-empty">No items in this view.</p>
+      ) : (
+        <DataTable
+          tableKey={tableKey}
+          columns={databaseView.columns}
+          rows={rows}
+          columnDefs={databaseView.columnDefs}
+          defaultSort={defaultSort}
+          base={base}
+        />
+      )
+    }
+  </div>
+</section>

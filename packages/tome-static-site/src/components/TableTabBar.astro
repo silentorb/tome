@@ -1,0 +1,34 @@
+---
+import type { ItemsTabsMeta } from "../lib/site-types";
+import { nodePagePath, nodeTabPath } from "../lib/markdown";
+
+interface Props {
+  itemsTabs: ItemsTabsMeta;
+  nodeId: string;
+  activeTabId: string;
+  base: string;
+}
+
+const { itemsTabs, nodeId, activeTabId, base } = Astro.props;
+---
+
+<nav class="tome-database-view-tabs" aria-label="Table tabs">
+  {
+    itemsTabs.items.map((tab) => {
+      const isActive = tab.id === activeTabId;
+      const href =
+        tab.id === itemsTabs.defaultTabId
+          ? nodePagePath(nodeId, base)
+          : nodeTabPath(nodeId, tab.id, base);
+      return (
+        <a
+          href={href}
+          class={`tome-database-view-tab${isActive ? " is-active" : ""}`}
+          aria-current={isActive ? "page" : undefined}
+        >
+          {tab.label}
+        </a>
+      );
+    })
+  }
+</nav>

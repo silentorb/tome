@@ -1,0 +1,54 @@
+---
+import type { StaticOrderedAssociationSection } from "../lib/site-types";
+import type { ItemsTabsMeta } from "../lib/site-types";
+import SectionTitle from "./SectionTitle.astro";
+import TableTabBar from "./TableTabBar.astro";
+import DataTable from "./DataTable.astro";
+
+interface Props {
+  section: StaticOrderedAssociationSection;
+  nodeId: string;
+  activeTabId: string;
+  itemsTabs?: ItemsTabsMeta;
+  base: string;
+}
+
+const { section, nodeId, activeTabId, itemsTabs, base } = Astro.props;
+const { view, defaultSort, configId } = section;
+const tableKey = `records/${nodeId}/ordered/${configId}/${activeTabId}`;
+const typeNodeId = view.typeDatabaseId;
+const hasRows = view.groups.some((group) => group.rows.length > 0);
+---
+
+<section class="tome-record-section tome-ordered-association-section">
+  <SectionTitle title="Items" typeNodeId={typeNodeId} base={base} />
+  <div class="tome-database-view">
+    {itemsTabs ? (
+      <TableTabBar itemsTabs={itemsTabs} nodeId={nodeId} activeTabId={activeTabId} base={base} />
+    ) : null}
+    {
+      !hasRows ? (
+        <p class="tome-database-empty">No items in this view.</p>
+      ) : (
+        view.groups.map((group) => (
+          <div class="tome-ordered-association-group">
+            <h3 class="tome-ordered-association-group-title">{group.title}</h3>
+            <DataTable
+              tableKey={`${tableKey}/${group.groupId}`}
+              columns={view.columns}
+              rows={group.rows.map((row) => ({
+                id: row.sceneId,
+                name: row.name,
+                cells: row.cells,
+                relationCells: row.relationCells,
+              }))}
+              columnDefs={view.columnDefs}
+              defaultSort={defaultSort}
+              base={base}
+            />
+          </div>
+        ))
+      )
+    }
+  </div>
+</section>

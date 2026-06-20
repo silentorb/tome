@@ -1,0 +1,3 @@
+# Hoist workspace dependencies to the repo root (no heavy node_modules under packages/).
+[install]
+linker = "hoisted"

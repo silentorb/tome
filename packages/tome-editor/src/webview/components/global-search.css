@@ -1,0 +1,128 @@
+.tome-global-search-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  padding: 12vh 16px 16px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.tome-global-search {
+  width: min(560px, 100%);
+  max-height: min(480px, 75vh);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--tome-border);
+  border-radius: 10px;
+  background: var(--tome-surface);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.tome-global-search-config {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--tome-border);
+}
+
+.tome-global-search-config-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--tome-muted);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tome-global-search-config-item input {
+  margin: 0;
+  accent-color: var(--tome-link);
+}
+
+.tome-global-search-input {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 16px;
+  border: 0;
+  border-bottom: 1px solid var(--tome-border);
+  background: transparent;
+  color: var(--tome-text);
+  font: inherit;
+  font-size: 1rem;
+  outline: none;
+}
+
+.tome-global-search-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.tome-global-search-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.tome-global-search-item:hover,
+.tome-global-search-item.is-active {
+  background: var(--tome-hover);
+}
+
+.tome-global-search-title {
+  font-weight: 600;
+}
+
+.tome-global-search-preview {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  width: 100%;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--tome-muted);
+  word-break: break-word;
+}
+
+.tome-global-search-preview strong {
+  font-weight: 600;
+  color: var(--tome-text);
+}
+
+.tome-global-search-path {
+  font-size: 0.75rem;
+  color: var(--tome-muted);
+}
+
+.tome-global-search-empty,
+.tome-global-search-error {
+  padding: 12px 16px;
+  color: var(--tome-muted);
+  font-size: 0.9rem;
+}
+
+.tome-global-search-error {
+  color: var(--tome-danger, #e57373);
+}
+
+.tome-global-search-footer {
+  flex-shrink: 0;
+  padding: 8px 16px;
+  border-top: 1px solid var(--tome-border);
+  color: var(--tome-muted);
+  font-size: 0.75rem;
+}

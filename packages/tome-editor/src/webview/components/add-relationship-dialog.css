@@ -1,0 +1,115 @@
+.tome-add-relationship-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.tome-add-relationship-dialog {
+  width: min(480px, 100%);
+  max-width: 100%;
+  max-height: min(85vh, 640px);
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+  background: var(--tome-surface);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  overflow: auto;
+  white-space: normal;
+}
+
+.tome-add-relationship-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.tome-add-relationship-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.tome-add-relationship-close {
+  border: 0;
+  border-radius: 6px;
+  padding: 2px 8px;
+  background: transparent;
+  color: var(--tome-muted);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tome-add-relationship-close:hover:not(:disabled) {
+  background: var(--tome-hover);
+  color: var(--tome-text);
+}
+
+.tome-add-relationship-close:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tome-add-relationship-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.85rem;
+  color: var(--tome-muted);
+}
+
+.tome-add-relationship-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tome-add-relationship-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tome-add-relationship-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--tome-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tome-add-relationship-target-placeholder {
+  padding: 8px 10px;
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+  color: var(--tome-muted);
+  font-size: 0.85rem;
+  background: var(--tome-surface);
+}
+
+.tome-add-relationship-status {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--tome-muted);
+}
+
+.tome-add-relationship-error {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--tome-danger, #e57373);
+}
+
+.tome-add-relationship-field .tome-record-link-picker.is-embedded {
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+}
+
+.tome-record-link-picker-item.is-selected {
+  background: var(--tome-hover);
+}

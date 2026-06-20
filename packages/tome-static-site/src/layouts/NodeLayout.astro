@@ -1,0 +1,32 @@
+---
+import "../lib/theme.css";
+import "../lib/node-sections.css";
+import { getStaticSiteHeader } from "../lib/content";
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+const pageTitle = title;
+const siteHeader = getStaticSiteHeader();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <title>{pageTitle}</title>
+  </head>
+  <body>
+    <header class="site-header">
+      <a href={import.meta.env.BASE_URL}>{siteHeader}</a>
+    </header>
+    <main class="page page--node">
+      <slot />
+    </main>
+    <script src="../lib/client/page-interactions.ts"></script>
+  </body>
+</html>

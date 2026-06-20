@@ -1,0 +1,16 @@
+{
+  "name": "tome",
+  "private": true,
+  "packageManager": "bun@1.3.13",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "editor:dev": "bun run --filter tome-editor dev",
+    "editor:api": "bun run --filter tome-editor dev:api",
+    "editor:build": "bun run --filter tome-editor build",
+    "web:build": "bun run --filter tome-static-site build",
+    "test": "bun run --filter tome-db test && bun run --filter tome-editor test && bun run --filter tome-static-site test"
+  },
+  "devDependencies": {}
+}

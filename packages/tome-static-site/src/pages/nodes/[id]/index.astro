@@ -1,0 +1,27 @@
+---
+import NodeLayout from "../../../layouts/NodeLayout.astro";
+import NodePage from "../../../components/NodePage.astro";
+import { getSiteBase, loadAllNodes, titleByIdRecord } from "../../../lib/content";
+import { resolvePageTitleAndContent } from "../../../lib/markdown";
+
+export function getStaticPaths() {
+  const titleById = titleByIdRecord();
+  return loadAllNodes().map((node) => ({
+    params: { id: node.id },
+    props: { node, titleById },
+  }));
+}
+
+interface Props {
+  node: import("../../../lib/site-types").SiteNode;
+  titleById: Record<string, string>;
+}
+
+const { node, titleById } = Astro.props;
+const base = getSiteBase();
+const { title } = resolvePageTitleAndContent(node.body, node.title);
+---
+
+<NodeLayout title={title}>
+  <NodePage node={node} base={base} titleById={titleById} />
+</NodeLayout>

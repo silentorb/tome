@@ -1,0 +1,43 @@
+---
+import type { PropertiesSection } from "tome-db";
+import SectionTitle from "./SectionTitle.astro";
+import { renderTableCellHtml } from "../lib/table-cell";
+
+interface Props {
+  section: PropertiesSection;
+  base: string;
+  nested?: boolean;
+}
+
+const { section, base, nested = false } = Astro.props;
+const Tag = nested ? "div" : "section";
+const className = nested
+  ? "tome-properties-section"
+  : "tome-record-section tome-properties-section";
+---
+
+<Tag class={className}>
+  <SectionTitle title="Properties" typeNodeId={section.databaseId} base={base} />
+  <dl class="tome-properties-form">
+    {
+      section.columns.map((columnKey) => {
+        const def = section.columnDefs?.find((col) => col.key === columnKey);
+        const label = def?.name ?? columnKey;
+        const value = section.cells[columnKey] ?? "";
+        const isDynamic = def?.source === "dynamic";
+        return (
+          <div class={`tome-properties-row${isDynamic ? " is-computed" : ""}`}>
+            <dt class="tome-properties-label">
+              {label}
+              {isDynamic ? <span class="tome-properties-computed-hint"> (computed)</span> : null}
+            </dt>
+            <dd
+              class="tome-properties-value"
+              set:html={renderTableCellHtml(value, def)}
+            />
+          </div>
+        );
+      })
+    }
+  </dl>
+</Tag>

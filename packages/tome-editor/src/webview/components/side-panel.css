@@ -1,0 +1,139 @@
+.tome-side-panel {
+  --tome-side-panel-width: 220px;
+  --tome-side-panel-collapsed-width: 48px;
+
+  flex-shrink: 0;
+  align-self: stretch;
+  height: 100%;
+  width: var(--tome-side-panel-width);
+  border-right: 1px solid var(--tome-border);
+  background: var(--tome-surface);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.2s ease;
+  overflow: hidden;
+}
+
+.tome-side-panel.is-collapsed {
+  width: var(--tome-side-panel-collapsed-width);
+}
+
+.tome-side-panel-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px;
+  border-bottom: 1px solid var(--tome-border);
+}
+
+.tome-side-panel.is-collapsed .tome-side-panel-header {
+  justify-content: center;
+}
+
+.tome-side-panel-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  background: var(--tome-bg);
+  color: inherit;
+  cursor: pointer;
+}
+
+.tome-side-panel-toggle:hover {
+  background: var(--tome-hover);
+}
+
+.tome-side-panel-toggle-icon {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.tome-side-panel-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.tome-side-panel-divider {
+  flex-shrink: 0;
+  height: 1px;
+  margin: 4px 2px;
+  background: var(--tome-border);
+}
+
+.tome-side-panel-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: none;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.tome-side-panel-item:hover {
+  background: var(--tome-hover);
+  border-color: var(--tome-border);
+}
+
+.tome-side-panel-item.is-active {
+  background: var(--tome-hover);
+  border-color: var(--tome-border);
+  color: var(--tome-link);
+}
+
+.tome-side-panel-item-icon {
+  flex-shrink: 0;
+  width: 20px;
+  text-align: center;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.tome-side-panel-item-label {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.tome-side-panel.is-collapsed .tome-side-panel-item {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.tome-side-panel.is-collapsed .tome-side-panel-item-label {
+  display: none;
+}
+
+.tome-side-panel-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.tome-side-panel-section-label {
+  padding: 4px 10px 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tome-muted);
+}
+
+.tome-side-panel-section.is-collapsed .tome-side-panel-section-label {
+  display: none;
+}

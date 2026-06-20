@@ -1,0 +1,76 @@
+.tome-enum-select {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.tome-enum-select-trigger {
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+
+.tome-enum-select-trigger.is-empty {
+  color: var(--tome-muted);
+}
+
+.tome-enum-select-trigger:hover:not(:disabled) {
+  background: var(--tome-hover);
+  border-color: var(--tome-muted);
+}
+
+.tome-enum-select-trigger:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tome-enum-select-menu {
+  position: fixed;
+  z-index: 1000;
+  max-width: min(280px, 90vw);
+  max-height: 240px;
+  overflow: auto;
+  padding: 4px 0;
+  background: var(--tome-bg);
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 35%);
+}
+
+.tome-enum-select-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 6px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--tome-text);
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tome-enum-select-option:hover,
+.tome-enum-select-option.is-active {
+  background: var(--tome-hover);
+}
+
+.tome-enum-select-option.is-selected {
+  color: var(--tome-link);
+}
+
+.tome-enum-select-option-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tome-enum-select-option-check {
+  flex-shrink: 0;
+  font-size: 0.85rem;
+  color: var(--tome-link);
+}

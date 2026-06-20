@@ -1,0 +1,22 @@
+---
+import NodeLayout from "../layouts/NodeLayout.astro";
+import NodePage from "../components/NodePage.astro";
+import {
+  getHomeNodeId,
+  getSiteBase,
+  loadNodeById,
+  titleByIdRecord,
+} from "../lib/content";
+import { resolvePageTitleAndContent } from "../lib/markdown";
+
+const homeId = getHomeNodeId();
+const home = loadNodeById(homeId);
+if (!home) throw new Error(`Home node not found: ${homeId}`);
+
+const base = getSiteBase();
+const { title } = resolvePageTitleAndContent(home.body, home.title);
+---
+
+<NodeLayout title={title}>
+  <NodePage node={home} base={base} titleById={titleByIdRecord()} />
+</NodeLayout>

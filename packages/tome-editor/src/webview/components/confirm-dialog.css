@@ -1,0 +1,76 @@
+.tome-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.tome-confirm-dialog {
+  width: min(420px, 100%);
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 20px;
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+  background: var(--tome-surface);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  /* Table cells use white-space: nowrap; reset so message text wraps inside the dialog. */
+  white-space: normal;
+}
+
+.tome-confirm-title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  overflow-wrap: break-word;
+}
+
+.tome-confirm-message {
+  margin: 0 0 20px;
+  color: var(--tome-muted);
+  font-size: 0.95rem;
+  overflow-wrap: break-word;
+}
+
+.tome-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.tome-confirm-button {
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  background: transparent;
+  color: var(--tome-text);
+  cursor: pointer;
+}
+
+.tome-confirm-button:hover:not(:disabled) {
+  background: var(--tome-hover);
+}
+
+.tome-confirm-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.tome-confirm-button.is-primary {
+  border-color: transparent;
+  background: var(--tome-link);
+  color: #111;
+}
+
+.tome-confirm-button.is-primary.is-danger {
+  background: #c44;
+  color: #fff;
+}
+
+.tome-confirm-button.is-primary.is-danger:hover:not(:disabled) {
+  background: #d65555;
+}

@@ -1,0 +1,25 @@
+.tome-page-title {
+  display: block;
+  width: 100%;
+  margin: 0 0 8px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font-family: var(--tome-font);
+  font-size: 2.5rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  resize: none;
+  overflow: hidden;
+  field-sizing: content;
+}
+
+.tome-page-title:focus {
+  outline: none;
+}
+
+.tome-page-title::placeholder {
+  color: var(--tome-muted);
+}

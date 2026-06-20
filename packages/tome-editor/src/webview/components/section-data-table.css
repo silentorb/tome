@@ -1,0 +1,100 @@
+.tome-table-row-actions-col {
+  width: 2rem;
+  padding: 10px 0 10px 4px;
+  vertical-align: top;
+  text-align: center;
+}
+
+/* Split gutter with the next column instead of stacking both cells' padding. */
+.tome-database-table .tome-table-row-actions-col + :is(th, td) {
+  padding-left: 4px;
+}
+
+/* Drag column already provides inner spacing; don't pad again on the actions column. */
+.tome-ordered-association-drag-cell + .tome-table-row-actions-col,
+.tome-ordered-association-drag-col + .tome-table-row-actions-col {
+  padding-left: 0;
+}
+
+.tome-database-table td.tome-table-row-actions-col {
+  max-width: none;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+.tome-database-table tbody .tome-table-row-actions-col .tome-page-actions-trigger {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tome-database-table tbody tr:hover .tome-table-row-actions-col .tome-page-actions-trigger,
+.tome-database-table tbody tr:focus-within .tome-table-row-actions-col .tome-page-actions-trigger,
+.tome-database-table tbody .tome-table-row-actions-col .tome-page-actions.is-menu-open .tome-page-actions-trigger {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tome-table-sort-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  font-weight: inherit;
+}
+
+.tome-table-sort-button.is-active {
+  color: var(--tome-text);
+}
+
+.tome-table-sort-indicator {
+  font-size: 0.7rem;
+  line-height: 1;
+  color: var(--tome-link);
+}
+
+.tome-column-header-inner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.tome-column-header-menu-wrap {
+  display: block;
+}
+
+.tome-database-table thead th > .tome-column-header-menu-wrap {
+  margin: -10px -14px;
+  padding: 10px 14px;
+}
+
+.tome-database-table thead th:hover:not(.tome-table-row-actions-col):not(
+    .tome-ordered-association-drag-col
+  ) {
+  color: var(--tome-text);
+}
+
+.tome-column-header.is-reorderable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.tome-column-header.is-reorderable.is-dragging {
+  cursor: grabbing;
+}
+
+.tome-column-drag-overlay {
+  border: 1px solid rgba(108, 182, 255, 0.35);
+  border-radius: 6px;
+  background: var(--tome-surface);
+  color: var(--tome-text);
+  padding: 6px 10px;
+  font: inherit;
+  font-weight: inherit;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+}
