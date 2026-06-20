@@ -338,3 +338,21 @@ export {
   SCHEMA_FILE_VERSION,
 } from "./schema-rules/schema-file";
 export type { RelationshipRuleEntry, SchemaFile, EnumDefinition } from "./schema-rules/schema-file";
+export {
+  EXTENSIONS_FILE_VERSION,
+  emptyExtensionsFile,
+  parseExtensionsFile,
+  serializeExtensionsFile,
+  invalidateExtensionsCache,
+  loadExtensionsFromContent,
+  resolveExtensionsManifest,
+  findComponentById,
+} from "./extensions";
+export type {
+  ExtensionComponentEntry,
+  ExtensionComponentKind,
+  ExtensionEntry,
+  ExtensionsFile,
+  ExtensionsManifest,
+  ResolvedExtensionComponent,
+} from "./extensions";

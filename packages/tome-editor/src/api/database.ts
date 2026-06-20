@@ -62,6 +62,12 @@ import {
   readNodeViews,
   updateSectionTab,
 } from "./views";
+import {
+  ExtensionServerRuntime,
+} from "./extensions/runtime";
+import type { PublicExtensionsManifest } from "../shared/extensions";
+
+export type { PublicExtensionsManifest };
 
 export type WorkspacePublic = WorkspaceFile & { archiveNodeTitle?: string };
 
@@ -165,6 +171,13 @@ export interface EditorDatabase {
   }): MoveRelationshipConnectionError | null;
   getGraphFull(): GraphSnapshot;
   getGraphExplorerLod(options?: { anchorId?: string; layerCount?: number }): GraphLodSnapshot;
+  getExtensionsManifest(): Promise<PublicExtensionsManifest>;
+  invokeExtension(
+    componentId: string,
+    input: unknown,
+    nodeId?: string,
+  ): Promise<{ ok: true; data: unknown } | { ok: false; error: string }>;
+  bundleEditorExtension(extensionId: string): Promise<string | null>;
   close(): void;
 }
 
@@ -173,6 +186,10 @@ export function openEditorDatabase(
   contentPath = resolveContentPath(),
 ): EditorDatabase {
   const writeCtx: TomeWriteContext = openTomeWriteContext(contentPath, dbPath);
+  const extensions = new ExtensionServerRuntime(contentPath);
+  void extensions.ensureLoaded().catch((err: unknown) => {
+    console.error("[tome-extensions] failed to load:", err);
+  });
   const watcher = new ContentWatcher(writeCtx.sync, (err) => {
     console.error("[tome-content] sync error:", err.message);
   });
@@ -385,6 +402,16 @@ export function openEditorDatabase(
     },
     getGraphExplorerLod(options?: { anchorId?: string; layerCount?: number }): GraphLodSnapshot {
       return exportExplorerLodGraph(writeCtx.db, options);
+    },
+    async getExtensionsManifest(): Promise<PublicExtensionsManifest> {
+      await extensions.ensureLoaded();
+      return extensions.getPublicManifest();
+    },
+    invokeExtension(componentId, input, nodeId) {
+      return extensions.invokeExtension(componentId, input, nodeId);
+    },
+    bundleEditorExtension(extensionId) {
+      return extensions.bundleEditorModule(extensionId);
     },
     close(): void {
       watcher.close();

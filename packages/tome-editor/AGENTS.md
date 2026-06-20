@@ -29,6 +29,15 @@ Pointer handlers **must** match the **full visual box** (header cell, tab, row),
 
 See [`docs/features/tome-editor.md`](../../../docs/features/tome-editor.md) § Interaction targets. `database-table-layout.test.tsx` guards the column-header fill CSS.
 
+## Extensions
+
+Editor hosts **editor** and **server** page-block subsystems. See [`docs/features/extensions.md`](../../../docs/features/extensions.md).
+
+| Path | Role |
+| --- | --- |
+| `src/api/extensions/` | Server runtime, manifest, bundle route |
+| `src/webview/extensions/` | Client loader, slash menu, fence decoration |
+
 ## Architecture
 
 | Layer | Path | Runtime |

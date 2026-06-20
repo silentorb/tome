@@ -13,6 +13,7 @@
 - **Page** — editor view of a node (`getNodePageDetail`, `node-page-sections.ts`).
 - **Type table** — node with incoming `is_a` and/or `notion_schema` metadata (`isTypeTableNode`).
 - **Schema** — relationship rules in `content/model/schema.json` ([`docs/features/schema.md`](../../../docs/features/schema.md)).
+- **Extensions config** — `content/model/extensions.json` ([`docs/features/extensions.md`](../../../docs/features/extensions.md)).
 
 Cache tables: `nodes`, `relationship_records`, `relationship_projections` (`SCHEMA_VERSION` 7).
 

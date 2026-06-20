@@ -1,0 +1,19 @@
+{
+  "name": "tome-extension-fixture",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./editor": "./src/editor.tsx",
+    "./html": "./src/html.ts",
+    "./server": "./src/server.ts"
+  },
+  "dependencies": {
+    "tome-interfaces": "workspace:*",
+    "react": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.12",
+    "typescript": "5.8.2"
+  }
+}

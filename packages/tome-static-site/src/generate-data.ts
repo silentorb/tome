@@ -5,10 +5,12 @@ import { loadSchemaFromContent, loadWorkspaceFromContent } from "tome-db";
 import type { ResolvedConfig } from "./config";
 import type { SiteData, SiteNode } from "./lib/site-types";
 import { buildExtraTabPayloadsAndRoutes, buildSiteNode } from "./lib/static-export";
+import { ExtensionHtmlRuntime } from "./extensions/loader";
+import { createPageBlockHtmlContext, renderNodeBodyHtml } from "./lib/page-block-html";
 
 export type { SiteData, SiteNode } from "./lib/site-types";
 
-export function loadNodesFromGraph(config: ResolvedConfig): SiteData {
+export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteData> {
   const { store, db } = openContentGraph(config.contentDir, config.dbPath);
   const schema = loadSchemaFromContent(config.contentDir);
   const workspace = loadWorkspaceFromContent(config.contentDir);
@@ -27,6 +29,31 @@ export function loadNodesFromGraph(config: ResolvedConfig): SiteData {
 
   db.close();
 
+  const titleById: Record<string, string> = {};
+  for (const node of nodes) {
+    titleById[node.id.toLowerCase()] = node.title;
+  }
+
+  const htmlRuntime = new ExtensionHtmlRuntime(config.contentDir);
+  await htmlRuntime.ensureLoaded();
+  if (htmlRuntime.components.length > 0) {
+    for (const node of nodes) {
+      const ctx = createPageBlockHtmlContext(
+        htmlRuntime.host,
+        htmlRuntime.components,
+        node.id,
+        config.contentDir,
+      );
+      node.bodyHtml = await renderNodeBodyHtml(
+        node.body,
+        node.title,
+        config.base,
+        (id) => titleById[id.toLowerCase()] ?? "Untitled",
+        ctx,
+      );
+    }
+  }
+
   return {
     homeNodeId: workspace.staticSite.homeNodeId,
     staticSiteHeader: workspace.branding?.staticSiteHeader ?? "Tome",
@@ -37,8 +64,8 @@ export function loadNodesFromGraph(config: ResolvedConfig): SiteData {
   };
 }
 
-export function writeSiteData(config: ResolvedConfig, outFile: string): SiteData {
-  const data = loadNodesFromGraph(config);
+export async function writeSiteData(config: ResolvedConfig, outFile: string): Promise<SiteData> {
+  const data = await loadNodesFromGraph(config);
   mkdirSync(dirname(outFile), { recursive: true });
   writeFileSync(outFile, JSON.stringify(data), "utf8");
   return data;

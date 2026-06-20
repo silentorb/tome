@@ -42,7 +42,7 @@ Astro produces plain static HTML suitable for copying into any host or parent bu
 | --- | --- |
 | Title + archived badge | From node detail |
 | Metadata | Collapsible; created/modified, relationship count, backlinks, and Properties on instance pages when expanded (`?meta=1` expands) |
-| Markdown body | Callouts, dynamic `[[id]]` links |
+| Markdown body | Callouts, dynamic `[[id]]` links, extension page blocks (`bodyHtml` when pre-rendered) |
 | Items table | Type-table hubs; row name links, relation-cell links, sortable columns |
 | Relation tables | Per outgoing relationship group; name links |
 
@@ -62,7 +62,7 @@ Editing, add-row/link-existing, row actions, drag-reorder, table search, tab/col
 | --- | --- |
 | Nodes | `content/data/{id}.md` |
 | Relationships | `content/data/relationships.json` via SQLite rebuild |
-| Workspace model | `content/model/` (`views.json`, `schema.json`, `table-schemas.json`, `dynamic-fields.json`) |
+| Workspace model | `content/model/` (`views.json`, `schema.json`, `table-schemas.json`, `dynamic-fields.json`, `extensions.json`) |
 
 | Output | Default path |
 | --- | --- |
@@ -127,6 +127,7 @@ bun run web:build
 
 ## See also
 
+- [extensions.md](./extensions.md) — page-block HTML rendering during generate
 - [`static-website-deploy.md`](./static-website-deploy.md) — GitHub Actions deploy to S3 / CloudFront
 - [`tome-db.md`](./tome-db.md) — content store and cache
 - [`tome-editor.md`](./tome-editor.md) — editor theme and link conventions

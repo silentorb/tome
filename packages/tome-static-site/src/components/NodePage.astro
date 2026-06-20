@@ -29,10 +29,12 @@ const { title } = resolvePageTitleAndContent(node.body, node.title);
 const prepared = prepareNodeMarkdown(node.body, node.title, base, (id) =>
   titleById[id.toLowerCase()] ?? "Untitled",
 );
-const bodyHtml = prepared.markdown
-  ? await renderMarkdownToHtml(prepared.markdown, prepared.dynamicNodeIds)
-  : "";
-const emptyMarkdown = !prepared.markdown.trim();
+const bodyHtml =
+  node.bodyHtml ??
+  (prepared.markdown
+    ? await renderMarkdownToHtml(prepared.markdown, prepared.dynamicNodeIds)
+    : "");
+const emptyMarkdown = !prepared.markdown.trim() && !bodyHtml.trim();
 ---
 
 <div class="tome-record-page">

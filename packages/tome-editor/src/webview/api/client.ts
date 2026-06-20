@@ -59,6 +59,7 @@ export function createEditorApi(): EditorApi {
     getUserSettings: rest.getUserSettings.bind(rest),
     patchUserSettings: rest.patchUserSettings.bind(rest),
     moveOrderedAssociation: rest.moveOrderedAssociation.bind(rest),
+    getExtensionsManifest: rest.getExtensionsManifest.bind(rest),
     navigate(nodeId: string, openInNewTab = false): void {
       if (openInNewTab) {
         openStandaloneNodeInNewTab(nodeId);

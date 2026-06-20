@@ -14,6 +14,7 @@ export const VIEWS_FILENAME = "views.json";
 export const TABLE_SCHEMAS_FILENAME = "table-schemas.json";
 export const WORKSPACE_FILENAME = "workspace.json";
 export const ORDERED_ASSOCIATIONS_FILENAME = "ordered-associations.json";
+export const EXTENSIONS_FILENAME = "extensions.json";
 export const NODE_ID_PATTERN = /^[0-9a-f]{32}$/;
 export const NODE_FILE_PATTERN = /^[0-9a-f]{32}\.md$/;
 
@@ -79,6 +80,10 @@ export function workspaceFilePath(contentRoot: string): string {
 
 export function orderedAssociationsFilePath(contentRoot: string): string {
   return resolve(contentModelDir(contentRoot), ORDERED_ASSOCIATIONS_FILENAME);
+}
+
+export function extensionsFilePath(contentRoot: string): string {
+  return resolve(contentModelDir(contentRoot), EXTENSIONS_FILENAME);
 }
 
 export const DEFAULT_DB_FILENAME = "tome.sqlite";

@@ -21,7 +21,8 @@
     "test": "bun test tests"
   },
   "dependencies": {
-    "yaml": "2.8.0"
+    "yaml": "2.8.0",
+    "tome-interfaces": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",

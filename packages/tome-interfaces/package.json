@@ -1,0 +1,20 @@
+{
+  "name": "tome-interfaces",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./page-block": "./src/page-block/index.ts",
+    "./page-block/editor": "./src/page-block/editor/index.ts",
+    "./page-block/html": "./src/page-block/html/index.ts",
+    "./page-block/server": "./src/page-block/server/index.ts"
+  },
+  "scripts": {
+    "test": "bun test tests"
+  },
+  "devDependencies": {
+    "@types/bun": "1.2.23",
+    "typescript": "5.8.2"
+  }
+}

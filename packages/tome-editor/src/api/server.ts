@@ -593,6 +593,43 @@ export function createApiHandler(
         return json({ view });
       }
 
+      if (path === "/api/extensions") {
+        const manifest = await db.getExtensionsManifest();
+        return json(manifest);
+      }
+
+      const editorBundleMatch = /^\/api\/extensions\/([^/]+)\/editor\.js$/.exec(path);
+      if (editorBundleMatch && req.method === "GET") {
+        const extensionId = decodeURIComponent(editorBundleMatch[1]!);
+        const bundle = await db.bundleEditorExtension(extensionId);
+        if (!bundle) return json({ error: "not found" }, 404);
+        return new Response(bundle, {
+          headers: {
+            "Content-Type": "application/javascript",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+      }
+
+      const invokeMatch = /^\/api\/extensions\/([^/]+)\/invoke$/.exec(path);
+      if (invokeMatch && req.method === "POST") {
+        const componentId = decodeURIComponent(invokeMatch[1]!);
+        let payload: Record<string, unknown> = {};
+        try {
+          const parsed = await req.json();
+          if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            payload = parsed as Record<string, unknown>;
+          }
+        } catch {
+          payload = {};
+        }
+        const nodeId = typeof payload.nodeId === "string" ? payload.nodeId : undefined;
+        const input = "input" in payload ? payload.input : payload;
+        const result = await db.invokeExtension(componentId, input, nodeId);
+        if (!result.ok) return json(result, 404);
+        return json(result);
+      }
+
       return json({ error: "not found" }, 404);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

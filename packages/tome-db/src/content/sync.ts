@@ -15,6 +15,7 @@ import { invalidateViewsCache } from "../views/load";
 import { invalidateTableSchemasCache } from "../table-schemas/load";
 import { invalidateWorkspaceCache, loadWorkspaceFromContent } from "../workspace/load";
 import { invalidateOrderedAssociationsCache } from "../ordered-associations-config/load";
+import { invalidateExtensionsCache } from "../extensions/load";
 import {
   RELATIONSHIPS_FILENAME,
   RELATIONSHIP_TYPES_FILENAME,
@@ -24,6 +25,7 @@ import {
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
   ORDERED_ASSOCIATIONS_FILENAME,
+  EXTENSIONS_FILENAME,
   dynamicFieldsFilePath,
   NODE_FILE_PATTERN,
   contentDataDir,
@@ -140,6 +142,7 @@ export class CacheSync {
     scanFile(modelDir, VIEWS_FILENAME);
     scanFile(modelDir, WORKSPACE_FILENAME);
     scanFile(modelDir, ORDERED_ASSOCIATIONS_FILENAME);
+    scanFile(modelDir, EXTENSIONS_FILENAME);
     try {
       for (const name of readdirSync(dataDir)) {
         if (NODE_FILE_PATTERN.test(name)) {
@@ -299,6 +302,12 @@ export class CacheSync {
 
     if (relativeName === ORDERED_ASSOCIATIONS_FILENAME) {
       invalidateOrderedAssociationsCache();
+      this.updateCacheMarkers();
+      return;
+    }
+
+    if (relativeName === EXTENSIONS_FILENAME) {
+      invalidateExtensionsCache();
       this.updateCacheMarkers();
       return;
     }

@@ -47,6 +47,7 @@ export interface SiteNode {
   metadata: NodePageMetadata;
   properties: PropertiesSection | null;
   body: string;
+  bodyHtml?: string;
   sections: StaticNodeSection[];
   itemsTabs?: ItemsTabsMeta;
 }

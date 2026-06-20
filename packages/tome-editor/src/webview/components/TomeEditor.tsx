@@ -7,6 +7,12 @@ import "@milkdown/crepe/theme/frame-dark.css";
 import type { EditorApi } from "../api/client";
 import type { NodeSummary } from "../../shared/types";
 import { buildCalloutSlashMenu } from "../callout-block";
+import {
+  buildPageBlockSlashMenu,
+  composeBlockEditMenus,
+} from "../extensions/page-block-menu";
+import { loadClientExtensions } from "../extensions/loader.client";
+import { installPageBlockDecoration } from "../extensions/page-block-decoration";
 import { installCalloutCursor } from "../callout-cursor";
 import { attachEditorLinkNavigation } from "../editor-link-navigation";
 import { installLinkCursor } from "../link-cursor";
@@ -115,10 +121,22 @@ export function TomeEditor({
 
     void (async () => {
       let editorDefault = "";
+      let blockMenuBuilder = buildCalloutSlashMenu;
       try {
         const titleMap = await resolveDynamicLinkTitles(api, initialBody);
         if (destroyed) return;
         editorDefault = prepareEditorMarkdown(initialBody, titleResolverFromMap(titleMap));
+
+        const manifest = await api.getExtensionsManifest();
+        if (destroyed) return;
+        if (manifest.components.length > 0) {
+          const loaded = await loadClientExtensions(manifest);
+          if (destroyed) return;
+          blockMenuBuilder = composeBlockEditMenus(
+            buildCalloutSlashMenu,
+            buildPageBlockSlashMenu(manifest.components, loaded.host),
+          );
+        }
       } catch (err: unknown) {
         if (!destroyed) {
           setInitError(err instanceof Error ? err.message : String(err));
@@ -148,7 +166,7 @@ export function TomeEditor({
           text: "Type '/' for blocks, '@' to link a record…",
         },
         [Crepe.Feature.BlockEdit]: {
-          buildMenu: buildCalloutSlashMenu,
+          buildMenu: blockMenuBuilder,
         },
       },
     });
@@ -179,6 +197,7 @@ export function TomeEditor({
         const view = ctx.get(editorViewCtx);
         const dom = view.dom;
         installCalloutDecoration(view);
+        installPageBlockDecoration(view);
         installCalloutPaste(view);
         installCalloutCursor(view);
         installLinkCursor(view);

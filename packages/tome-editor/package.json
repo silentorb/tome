@@ -19,6 +19,7 @@
     "@dnd-kit/utilities": "3.2.2",
     "@milkdown/crepe": "7.20.0",
     "tome-db": "workspace:*",
+    "tome-interfaces": "workspace:*",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-force-graph-2d": "^1.29.1"
@@ -28,6 +29,7 @@
     "@types/react": "19.0.12",
     "@types/react-dom": "19.0.4",
     "@vitejs/plugin-react": "4.3.4",
+    "tome-extension-fixture": "workspace:*",
     "typescript": "5.8.2",
     "vite": "6.2.2",
     "@happy-dom/global-registrator": "17.4.4",

@@ -93,6 +93,7 @@ export function makeMockEditorApi(): EditorApi {
     moveOrderedAssociation: async () => {
       throw new Error("not implemented in mock");
     },
+    getExtensionsManifest: async () => ({ components: [], editorBundles: [] }),
     navigate: () => {},
   };
 }

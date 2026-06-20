@@ -7,6 +7,8 @@ import {
   SCHEMA_FILENAME,
   VIEWS_FILENAME,
   WORKSPACE_FILENAME,
+  ORDERED_ASSOCIATIONS_FILENAME,
+  EXTENSIONS_FILENAME,
   NODE_FILE_PATTERN,
   contentDataDir,
   contentModelDir,
@@ -62,7 +64,9 @@ export class ContentWatcher {
       name === SCHEMA_FILENAME ||
       name === DYNAMIC_FIELDS_FILENAME ||
       name === VIEWS_FILENAME ||
-      name === WORKSPACE_FILENAME
+      name === WORKSPACE_FILENAME ||
+      name === ORDERED_ASSOCIATIONS_FILENAME ||
+      name === EXTENSIONS_FILENAME
     );
   }
 

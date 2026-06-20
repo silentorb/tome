@@ -7,6 +7,7 @@ import type {
   OrderedAssociationViewDetail,
 } from "./types";
 import type { UserSettings, UserSettingsPatch } from "./user-settings";
+import type { PublicExtensionsManifest } from "./extensions";
 import type { SchemaFile } from "tome-db/schema-file";
 import type { OrderedAssociationMoveParams, WorkspaceFile } from "tome-db";
 
@@ -164,6 +165,7 @@ export interface EditorApiClient {
   ): Promise<{ allowedTargetTypeIds: string[] | null }>;
   getUserSettings(): Promise<UserSettings>;
   patchUserSettings(patch: UserSettingsPatch): Promise<UserSettings>;
+  getExtensionsManifest(): Promise<PublicExtensionsManifest>;
 }
 
 function parseApiError(text: string, status: number): string {
@@ -549,6 +551,9 @@ export function createHttpEditorClient(baseUrl: string): EditorApiClient {
         body: JSON.stringify(patch),
       });
       return data.settings;
+    },
+    async getExtensionsManifest(): Promise<PublicExtensionsManifest> {
+      return fetchJson<PublicExtensionsManifest>("/api/extensions");
     },
   };
 }

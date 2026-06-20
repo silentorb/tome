@@ -25,7 +25,7 @@ describe("writeSiteData", () => {
     if (outDir) rmSync(outDir, { recursive: true, force: true });
   });
 
-  test("exports metadata, properties, relations, and multi-tab payloads", () => {
+  test("exports metadata, properties, relations, and multi-tab payloads", async () => {
     fixture = createTestContentFixture("tome-static-export-");
     outDir = mkdtempSync(join(tmpdir(), "tome-static-out-"));
 
@@ -79,7 +79,7 @@ describe("writeSiteData", () => {
     };
 
     const outFile = join(outDir, "site-data.json");
-    const data = writeSiteData(config, outFile);
+    const data = await writeSiteData(config, outFile);
 
     expect(data.homeNodeId).toBe(TEST_STATIC_SITE_HOME_NODE_ID);
     expect(data.staticSiteHeader).toBe("Tome");
