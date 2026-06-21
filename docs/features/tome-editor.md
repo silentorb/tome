@@ -65,6 +65,13 @@ Keyboard shortcuts in combobox-style pickers (global search, Relate, record link
 - Database relation column cell labels, edit-popup row links, section table name cells, and sidebar nav follow the **native link behavior (app chrome)** rule.
 - **Milkdown body** receives display hrefs in the markdown passed to Crepe (`prepareEditorMarkdown`); persisted bodies use `[[{nodeId}]]` or `./{nodeId}.md`. ProseMirror plugins handle dynamic-link icon decoration and demotion on text edit only — not storage parsing.
 
+### Page blocks (extensions)
+
+- Canonical storage uses ` ```tome-block ` JSON fences (see [page-blocks.md](../extensions/page-blocks.md)).
+- Before Milkdown loads, the client calls **`POST /api/nodes/:id/prepare-editor-body`** to expand fences into embedded HTML (inline SVG for spatial graph) plus an HTML comment carrying the block payload for round-trip.
+- On save, **`normalizeEditorBody`** collapses those embeds back to fences (alongside dynamic-link collapse).
+- Slash menu inserts new blocks as fences; default block data comes from the extensions manifest (`insertDefaultData` from server-loaded `editorModule` registration).
+
 ### Entry / navigation
 
 - Default home is configured in `content/model/workspace.json` (`homeNodeId`; Marloth corpus: `13458e628ba28073850dea0edb9acde1`) when that node exists in the graph; open via sidebar **Home** or `?node=` for the home id. Sidebar quick links (Features, Scenes, …) come from `workspace.sidebar.links` in the same file.

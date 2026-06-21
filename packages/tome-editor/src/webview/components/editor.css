@@ -194,19 +194,48 @@
   pointer-events: none !important;
 }
 
-.tome-editor-body .milkdown .ProseMirror pre.tome-page-block-fence {
-  border: 1px dashed var(--tome-border);
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--tome-surface) 90%, var(--tome-accent) 10%);
-  padding: 0.75rem 1rem;
+.tome-editor-body .milkdown .ProseMirror .tome-page-block-embed {
+  margin: 12px 0;
 }
 
-.tome-editor-body .milkdown .ProseMirror pre.tome-page-block-fence::before {
-  content: attr(data-component-id);
-  display: block;
+.tome-editor-body .milkdown .ProseMirror .tome-spatial-graph,
+.tome-editor-body .milkdown .ProseMirror .tome-page-block-unknown {
+  box-sizing: border-box;
+  margin: 12px 0;
+  padding: 0;
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+  background: var(--tome-surface);
+  overflow: hidden;
+}
+
+.tome-editor-body .milkdown .ProseMirror .tome-spatial-graph figcaption,
+.tome-editor-body .milkdown .ProseMirror .tome-page-block-unknown p {
+  margin: 0;
+  padding: 8px 12px;
   font-size: 0.75rem;
   color: var(--tome-muted);
-  margin-bottom: 0.35rem;
+  border-bottom: 1px solid var(--tome-border);
+}
+
+.tome-editor-body .milkdown .ProseMirror .tome-spatial-graph svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 480px;
+}
+
+.tome-editor-body .milkdown .ProseMirror .tome-spatial-graph-empty {
+  padding: 12px 14px;
+  color: var(--tome-muted);
+  font-size: 0.9rem;
+}
+
+.tome-editor-body .milkdown .ProseMirror .tome-page-block-fixture {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px dashed var(--tome-border);
+  border-radius: 8px;
 }
 
 .tome-mention-menu {

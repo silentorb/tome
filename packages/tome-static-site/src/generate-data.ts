@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { openContentGraph } from "tome-db/content";
-import { loadSchemaFromContent, loadWorkspaceFromContent } from "tome-db";
+import { createExtensionGraphQueryServices, loadSchemaFromContent, loadWorkspaceFromContent } from "tome-db";
 import type { ResolvedConfig } from "./config";
 import type { SiteData, SiteNode } from "./lib/site-types";
 import { buildExtraTabPayloadsAndRoutes, buildSiteNode } from "./lib/static-export";
@@ -27,8 +27,6 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
     config.contentDir,
   );
 
-  db.close();
-
   const titleById: Record<string, string> = {};
   for (const node of nodes) {
     titleById[node.id.toLowerCase()] = node.title;
@@ -36,6 +34,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
 
   const htmlRuntime = new ExtensionHtmlRuntime(config.contentDir);
   await htmlRuntime.ensureLoaded();
+  const graphQuery = createExtensionGraphQueryServices(db);
   if (htmlRuntime.components.length > 0) {
     for (const node of nodes) {
       const ctx = createPageBlockHtmlContext(
@@ -43,6 +42,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
         htmlRuntime.components,
         node.id,
         config.contentDir,
+        graphQuery,
       );
       node.bodyHtml = await renderNodeBodyHtml(
         node.body,
@@ -53,6 +53,8 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
       );
     }
   }
+
+  db.close();
 
   return {
     homeNodeId: workspace.staticSite.homeNodeId,

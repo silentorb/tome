@@ -9,5 +9,11 @@ export {
   parsePageBlockPayload,
   replacePageBlockFencesWithPlaceholders,
   serializePageBlock,
+  serializePageBlockInner,
   substitutePageBlockPlaceholders,
 } from "./parse";
+export {
+  collapsePageBlockEmbedsForStorage,
+  expandPageBlockFencesForEditor,
+  formatPageBlockEmbedComment,
+} from "./editor-markdown";

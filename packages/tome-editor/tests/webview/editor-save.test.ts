@@ -1,9 +1,30 @@
 import { describe, expect, test } from "bun:test";
+import {
+  expandPageBlockFencesForEditor,
+  formatPageBlockEmbedComment,
+  serializePageBlock,
+} from "tome-interfaces/page-block";
 import { bodyNeedsSave, normalizeEditorBody, titleNeedsSave } from "../../src/webview/editor-save";
 
 describe("normalizeEditorBody", () => {
   test("strips duplicate page title before compare", () => {
     expect(normalizeEditorBody("# Alpha\n\nNotes", "Alpha")).toBe("Notes");
+  });
+
+  test("collapses server-rendered page block embeds to fences", async () => {
+    const fence = serializePageBlock("demo.block", { x: 1 });
+    const expanded = await expandPageBlockFencesForEditor(fence, async () => {
+      return '<figure class="demo">block</figure>';
+    });
+    expect(normalizeEditorBody(expanded, "Page")).toBe(fence);
+  });
+
+  test("preserves page block metadata comment through collapse", () => {
+    const fence = serializePageBlock("demo.block", { x: 1 });
+    const embed =
+      `${formatPageBlockEmbedComment({ componentId: "demo.block", data: { x: 1 } })}\n` +
+      '<figure class="demo">block</figure>';
+    expect(normalizeEditorBody(embed, "Page")).toBe(fence);
   });
 
   test("canonicalizes node links to relative sibling paths", () => {

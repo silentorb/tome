@@ -1,3 +1,4 @@
+import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import {
   replacePageBlockFencesWithPlaceholders,
   substitutePageBlockPlaceholders,
@@ -17,6 +18,7 @@ export interface PageBlockHtmlContext {
   componentsById: Map<string, ResolvedExtensionComponent>;
   nodeId: string;
   contentDir: string;
+  graphQuery?: ExtensionGraphQueryServices;
 }
 
 export function createPageBlockHtmlContext(
@@ -24,20 +26,22 @@ export function createPageBlockHtmlContext(
   components: ResolvedExtensionComponent[],
   nodeId: string,
   contentDir: string,
+  graphQuery?: ExtensionGraphQueryServices,
 ): PageBlockHtmlContext {
   return {
     host,
     componentsById: new Map(components.map((component) => [component.id, component])),
     nodeId,
     contentDir,
+    graphQuery,
   };
 }
 
-function renderBlockHtml(
+async function renderBlockHtml(
   ctx: PageBlockHtmlContext,
   componentId: string,
   data: unknown,
-): string {
+): Promise<string> {
   const component = ctx.componentsById.get(componentId);
   if (!component) {
     return unknownPageBlockHtml(componentId);
@@ -46,11 +50,12 @@ function renderBlockHtml(
   if (!renderer) {
     return unknownPageBlockHtml(componentId, component.label);
   }
-  return renderer.renderHtml(
+  return await renderer.renderHtml(
     {
       component,
       nodeId: ctx.nodeId,
       contentDir: ctx.contentDir,
+      services: ctx.graphQuery ? { graphQuery: ctx.graphQuery } : undefined,
     },
     data,
   );
@@ -70,8 +75,8 @@ export async function renderNodeBodyHtml(
   const { markdown, blocks } = replacePageBlockFencesWithPlaceholders(prep.markdown);
   const { marked } = await import("marked");
   const proseHtml = (await marked.parse(markdown, { async: true })) as string;
-  const blockFragments = blocks.map((payload) =>
-    renderBlockHtml(ctx, payload.componentId, payload.data),
+  const blockFragments = await Promise.all(
+    blocks.map((payload) => renderBlockHtml(ctx, payload.componentId, payload.data)),
   );
   const withBlocks = substitutePageBlockPlaceholders(proseHtml, blockFragments);
   return decorateDynamicLinkHtml(decorateCalloutHtml(withBlocks), prep.dynamicNodeIds);

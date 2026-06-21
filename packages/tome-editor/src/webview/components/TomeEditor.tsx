@@ -11,8 +11,7 @@ import {
   buildPageBlockSlashMenu,
   composeBlockEditMenus,
 } from "../extensions/page-block-menu";
-import { loadClientExtensions } from "../extensions/loader.client";
-import { installPageBlockDecoration } from "../extensions/page-block-decoration";
+import { pageBlockEmbed } from "../extensions/page-block-embed";
 import { installCalloutCursor } from "../callout-cursor";
 import { attachEditorLinkNavigation } from "../editor-link-navigation";
 import { installLinkCursor } from "../link-cursor";
@@ -123,20 +122,19 @@ export function TomeEditor({
       let editorDefault = "";
       let blockMenuBuilder = buildCalloutSlashMenu;
       try {
-        const titleMap = await resolveDynamicLinkTitles(api, initialBody);
-        if (destroyed) return;
-        editorDefault = prepareEditorMarkdown(initialBody, titleResolverFromMap(titleMap));
-
+        let markdown = initialBody;
         const manifest = await api.getExtensionsManifest();
         if (destroyed) return;
         if (manifest.components.length > 0) {
-          const loaded = await loadClientExtensions(manifest);
-          if (destroyed) return;
+          markdown = await api.prepareEditorBody(nodeId, markdown);
           blockMenuBuilder = composeBlockEditMenus(
             buildCalloutSlashMenu,
-            buildPageBlockSlashMenu(manifest.components, loaded.host),
+            buildPageBlockSlashMenu(manifest.components),
           );
         }
+        const titleMap = await resolveDynamicLinkTitles(api, markdown);
+        if (destroyed) return;
+        editorDefault = prepareEditorMarkdown(markdown, titleResolverFromMap(titleMap));
       } catch (err: unknown) {
         if (!destroyed) {
           setInitError(err instanceof Error ? err.message : String(err));
@@ -170,6 +168,7 @@ export function TomeEditor({
         },
       },
     });
+    crepe.editor.use(pageBlockEmbed);
 
     detachEditorLinkNavigation = attachEditorLinkNavigation(root);
 
@@ -197,7 +196,6 @@ export function TomeEditor({
         const view = ctx.get(editorViewCtx);
         const dom = view.dom;
         installCalloutDecoration(view);
-        installPageBlockDecoration(view);
         installCalloutPaste(view);
         installCalloutCursor(view);
         installLinkCursor(view);

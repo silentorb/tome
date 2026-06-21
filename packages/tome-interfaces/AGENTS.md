@@ -18,6 +18,7 @@
 | `tome-interfaces/page-block/editor` | `EditorPageBlock`, `EditorPageBlockHost` |
 | `tome-interfaces/page-block/html` | `HtmlPageBlockRenderer`, `HtmlPageBlockHost` |
 | `tome-interfaces/page-block/server` | `ServerPageBlockHandler`, `ServerPageBlockHost` |
+| `tome-interfaces/extension-services/graph-query` | `ExtensionGraphQueryServices` for host-provided graph reads |
 
 ## Run / test
 

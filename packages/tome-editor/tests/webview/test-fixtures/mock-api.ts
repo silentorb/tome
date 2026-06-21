@@ -94,6 +94,7 @@ export function makeMockEditorApi(): EditorApi {
       throw new Error("not implemented in mock");
     },
     getExtensionsManifest: async () => ({ components: [], editorBundles: [] }),
+    prepareEditorBody: async (_nodeId, markdown) => markdown,
     navigate: () => {},
   };
 }

@@ -155,6 +155,18 @@ export function createApiHandler(
         return json(db.getRelationshipLinkOptions(sourceId, type));
       }
 
+      const prepareBodyMatch = /^\/api\/nodes\/([a-f0-9]{32})\/prepare-editor-body$/i.exec(path);
+      if (prepareBodyMatch && req.method === "POST") {
+        const id = prepareBodyMatch[1]!.toLowerCase();
+        const payload = (await req.json()) as { markdown?: string };
+        if (typeof payload.markdown !== "string") {
+          return json({ error: "markdown required" }, 400);
+        }
+        const markdown = await db.prepareEditorBody(id, payload.markdown);
+        if (markdown === null) return json({ error: "not found" }, 404);
+        return json({ markdown });
+      }
+
       const nodeMatch = /^\/api\/nodes\/([a-f0-9]{32})$/i.exec(path);
       if (nodeMatch) {
         const id = nodeMatch[1]!.toLowerCase();

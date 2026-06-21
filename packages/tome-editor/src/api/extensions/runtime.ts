@@ -1,6 +1,8 @@
 import { existsSync, statSync } from "node:fs";
 import { extensionsFilePath } from "tome-db/content";
+import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import type { EditorPageBlockModule } from "tome-interfaces/page-block/editor";
+import type { HtmlPageBlockModule } from "tome-interfaces/page-block/html";
 import type { ServerPageBlockModule } from "tome-interfaces/page-block/server";
 import {
   findComponentById,
@@ -10,6 +12,9 @@ import {
   type ResolvedExtensionComponent,
 } from "tome-db";
 import { EditorPageBlockHostImpl, ServerPageBlockHostImpl } from "./hosts";
+import { HtmlPageBlockHostImpl } from "./html-host";
+import { prepareEditorBodyWithPageBlocks } from "./page-block-markdown";
+import { resolveExtensionModulePath } from "./resolve-extension-module";
 import type { PublicExtensionsManifest } from "../../shared/extensions";
 
 export type { PublicExtensionsManifest };
@@ -19,6 +24,17 @@ export interface LoadedExtensionModules {
   editorModule?: string;
   htmlModule?: string;
   serverModule?: string;
+}
+
+async function importHtmlModule(modulePath: string, host: HtmlPageBlockHostImpl): Promise<void> {
+  const loaded = (await import(modulePath)) as HtmlPageBlockModule & {
+    default?: HtmlPageBlockModule;
+  };
+  const register = loaded.register ?? loaded.default?.register;
+  if (typeof register !== "function") {
+    throw new Error(`Extension module ${modulePath} must export register(host)`);
+  }
+  register(host);
 }
 
 async function importEditorModule(modulePath: string, host: EditorPageBlockHostImpl): Promise<void> {
@@ -45,18 +61,28 @@ async function importServerModule(modulePath: string, host: ServerPageBlockHostI
 
 export class ExtensionServerRuntime {
   readonly #contentPath: string;
+  readonly #getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined;
   readonly #editorHost = new EditorPageBlockHostImpl();
+  readonly #htmlHost = new HtmlPageBlockHostImpl();
   readonly #serverHost = new ServerPageBlockHostImpl();
   #manifest: ExtensionsManifest = { extensions: [], components: [] };
   #loadedModules: LoadedExtensionModules[] = [];
   #lastConfigMtime = -1;
 
-  constructor(contentPath: string) {
+  constructor(
+    contentPath: string,
+    getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined,
+  ) {
     this.#contentPath = contentPath;
+    this.#getGraphQueryServices = getGraphQueryServices;
   }
 
   get editorHost(): EditorPageBlockHostImpl {
     return this.#editorHost;
+  }
+
+  get htmlHost(): HtmlPageBlockHostImpl {
+    return this.#htmlHost;
   }
 
   get manifest(): ExtensionsManifest {
@@ -80,9 +106,11 @@ export class ExtensionServerRuntime {
     const file = loadExtensionsFromContent(this.#contentPath);
     this.#manifest = resolveExtensionsManifest(file);
     this.#editorHost.clear();
+    this.#htmlHost.clear();
     this.#serverHost.clear();
     this.#loadedModules = [];
 
+    const loadedHtmlExtensionIds = new Set<string>();
     for (const extension of this.#manifest.extensions) {
       const record: LoadedExtensionModules = {
         extensionId: extension.id,
@@ -95,6 +123,10 @@ export class ExtensionServerRuntime {
       if (extension.editorModule) {
         await importEditorModule(extension.editorModule, this.#editorHost);
       }
+      if (extension.htmlModule && !loadedHtmlExtensionIds.has(extension.id)) {
+        loadedHtmlExtensionIds.add(extension.id);
+        await importHtmlModule(extension.htmlModule, this.#htmlHost);
+      }
       if (extension.serverModule) {
         await importServerModule(extension.serverModule, this.#serverHost);
       }
@@ -103,13 +135,18 @@ export class ExtensionServerRuntime {
 
   getPublicManifest(apiBase = "/api"): PublicExtensionsManifest {
     return {
-      components: this.#manifest.components.map((component) => ({
-        id: component.id,
-        extensionId: component.extensionId,
-        implementationId: component.implementationId,
-        label: component.label,
-        slashMenu: component.slashMenu,
-      })),
+      components: this.#manifest.components.map((component) => {
+        const registration = this.#editorHost.get(component.implementationId);
+        const insertDefaultData = registration?.insertDefaultData?.();
+        return {
+          id: component.id,
+          extensionId: component.extensionId,
+          implementationId: component.implementationId,
+          label: component.label,
+          slashMenu: component.slashMenu,
+          ...(insertDefaultData !== undefined ? { insertDefaultData } : {}),
+        };
+      }),
       editorBundles: this.#manifest.extensions
         .filter((extension) => extension.editorModule)
         .map((extension) => ({
@@ -140,7 +177,9 @@ export class ExtensionServerRuntime {
       {
         component,
         nodeId,
-        services: {},
+        services: {
+          graphQuery: this.#getGraphQueryServices?.(),
+        },
       },
       input,
     );
@@ -151,10 +190,19 @@ export class ExtensionServerRuntime {
     const extension = this.#manifest.extensions.find((entry) => entry.id === extensionId);
     if (!extension?.editorModule) return null;
 
+    const entrypoint = resolveExtensionModulePath(extension.editorModule, this.#contentPath);
     const result = await Bun.build({
-      entrypoints: [extension.editorModule],
+      entrypoints: [entrypoint],
       target: "browser",
       format: "esm",
+      define: {
+        "process.env.NODE_ENV": '"production"',
+      },
+      jsx: {
+        runtime: "automatic",
+        importSource: "react",
+        development: false,
+      },
       external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
     });
     if (!result.success || result.outputs.length === 0) {
@@ -163,5 +211,17 @@ export class ExtensionServerRuntime {
       );
     }
     return await result.outputs[0]!.text();
+  }
+
+  async prepareEditorBody(nodeId: string, body: string): Promise<string> {
+    await this.ensureLoaded();
+    return prepareEditorBodyWithPageBlocks(
+      body,
+      nodeId,
+      this.#contentPath,
+      this.#htmlHost,
+      this.#manifest.components,
+      this.#getGraphQueryServices?.(),
+    );
   }
 }

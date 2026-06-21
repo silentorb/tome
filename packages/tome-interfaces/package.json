@@ -8,7 +8,9 @@
     "./page-block": "./src/page-block/index.ts",
     "./page-block/editor": "./src/page-block/editor/index.ts",
     "./page-block/html": "./src/page-block/html/index.ts",
-    "./page-block/server": "./src/page-block/server/index.ts"
+    "./page-block/server": "./src/page-block/server/index.ts",
+    "./extension-services": "./src/extension-services/index.ts",
+    "./extension-services/graph-query": "./src/extension-services/graph-query.ts"
   },
   "scripts": {
     "test": "bun test tests"

@@ -5,7 +5,7 @@ import {
   createNode as createNodeInDb,
   deleteNode as deleteNodeInDb,
   exportExplorerLodGraph,
-  exportFullGraph,
+  createExtensionGraphQueryServices,
   getDatabaseViewDetail,
   getNodePageDetail,
   loadSchemaFromContent,
@@ -172,6 +172,7 @@ export interface EditorDatabase {
   getGraphFull(): GraphSnapshot;
   getGraphExplorerLod(options?: { anchorId?: string; layerCount?: number }): GraphLodSnapshot;
   getExtensionsManifest(): Promise<PublicExtensionsManifest>;
+  prepareEditorBody(nodeId: string, markdown: string): Promise<string | null>;
   invokeExtension(
     componentId: string,
     input: unknown,
@@ -186,8 +187,10 @@ export function openEditorDatabase(
   contentPath = resolveContentPath(),
 ): EditorDatabase {
   const writeCtx: TomeWriteContext = openTomeWriteContext(contentPath, dbPath);
-  const extensions = new ExtensionServerRuntime(contentPath);
-  void extensions.ensureLoaded().catch((err: unknown) => {
+  const extensions = new ExtensionServerRuntime(contentPath, () =>
+    createExtensionGraphQueryServices(writeCtx.db),
+  );
+  const extensionsReady = extensions.ensureLoaded().catch((err: unknown) => {
     console.error("[tome-extensions] failed to load:", err);
   });
   const watcher = new ContentWatcher(writeCtx.sync, (err) => {
@@ -404,14 +407,23 @@ export function openEditorDatabase(
       return exportExplorerLodGraph(writeCtx.db, options);
     },
     async getExtensionsManifest(): Promise<PublicExtensionsManifest> {
+      await extensionsReady;
       await extensions.ensureLoaded();
       return extensions.getPublicManifest();
     },
+    async prepareEditorBody(nodeId: string, markdown: string): Promise<string | null> {
+      if (!writeCtx.db.getNode(nodeId)) return null;
+      await extensionsReady;
+      await extensions.ensureLoaded();
+      return extensions.prepareEditorBody(nodeId, markdown);
+    },
     invokeExtension(componentId, input, nodeId) {
-      return extensions.invokeExtension(componentId, input, nodeId);
+      return extensionsReady.then(() =>
+        extensions.invokeExtension(componentId, input, nodeId),
+      );
     },
     bundleEditorExtension(extensionId) {
-      return extensions.bundleEditorModule(extensionId);
+      return extensionsReady.then(() => extensions.bundleEditorModule(extensionId));
     },
     close(): void {
       watcher.close();

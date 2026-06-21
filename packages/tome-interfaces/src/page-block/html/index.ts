@@ -1,3 +1,4 @@
+import type { ExtensionGraphQueryServices } from "../../extension-services/graph-query";
 import type { PageBlockComponentRef } from "../types";
 
 /** General-purpose HTML rendering context (not tied to static site generation). */
@@ -5,11 +6,14 @@ export interface HtmlPageBlockContext {
   component: PageBlockComponentRef;
   nodeId: string;
   contentDir: string;
+  services?: {
+    graphQuery?: ExtensionGraphQueryServices;
+  };
 }
 
 export interface HtmlPageBlockRenderer {
   implementationId: string;
-  renderHtml(ctx: HtmlPageBlockContext, data: unknown): string;
+  renderHtml(ctx: HtmlPageBlockContext, data: unknown): string | Promise<string>;
 }
 
 export interface HtmlPageBlockHost {

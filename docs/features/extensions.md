@@ -62,8 +62,8 @@ No backwards-compatibility guarantees. Refactor hosts and contracts freely.
 ```
 extensions.json
   → tome-db loadExtensionsFromContent / resolveExtensionsManifest
-  → Editor API: import editorModule + serverModule → register hosts
-  → Webview: GET /api/extensions → import editor bundles → register client host
+  → Editor API: import editorModule + htmlModule + serverModule → register hosts
+  → Webview: GET /api/extensions (manifest) + POST prepare-editor-body (expand blocks) → Milkdown
   → Static generate: import htmlModule → render bodyHtml
 ```
 
@@ -74,9 +74,12 @@ extensions.json
 | `content/model/extensions.json` | Extension + component registration |
 | `packages/tome-interfaces/` | Integration contracts + fence parse |
 | `packages/tome-editor/src/api/extensions/` | Server runtime, manifest, bundle route |
-| `packages/tome-editor/src/webview/extensions/` | Client loader, slash menu, decoration |
+| `packages/tome-editor/src/webview/extensions/` | Slash menu for page blocks |
 | `packages/tome-static-site/src/extensions/` | HTML subsystem loader |
 | `packages/tome-extension-fixture/` | Test/reference extension |
+| `packages/tome-spatial-graph/` | Spatial graph page block (cytoscape SVG) |
+
+Hosts expose **`ExtensionGraphQueryServices`** (`tome-interfaces/extension-services/graph-query`) to server and HTML block renderers via `createExtensionGraphQueryServices()` in `tome-db`. HTML renderers may return async `renderHtml()` results.
 
 ## Configuration
 
@@ -125,6 +128,7 @@ bun test packages/tome-interfaces/tests
 bun test packages/tome-db/tests/extensions.test.ts
 bun test packages/tome-editor/tests/extensions
 bun test packages/tome-editor/tests/webview/page-block-menu.test.ts
+bun test packages/tome-editor/tests/api/prepare-editor-body-api.test.ts
 bun test packages/tome-static-site/tests/extensions
 ```
 
@@ -133,8 +137,8 @@ bun test packages/tome-static-site/tests/extensions
 | Module | Responsibility |
 | --- | --- |
 | `tome-db/src/extensions/` | Parse/load `extensions.json`, resolve manifest |
-| `tome-editor/src/api/extensions/runtime.ts` | Server-side dynamic import + manifest |
-| `tome-editor/src/webview/extensions/` | Client loader, slash menu, decoration |
+| `tome-editor/src/api/extensions/runtime.ts` | Server-side dynamic import + manifest + prepare-editor-body |
+| `tome-editor/src/webview/extensions/` | Slash menu for page blocks |
 | `tome-static-site/src/lib/page-block-html.ts` | HTML pipeline during generate |
 
 ## See also

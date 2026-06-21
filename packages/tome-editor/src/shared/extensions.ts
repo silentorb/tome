@@ -4,6 +4,7 @@ export interface PublicExtensionComponent {
   implementationId: string;
   label: string;
   slashMenu?: { group?: string; order?: number };
+  insertDefaultData?: unknown;
 }
 
 export interface PublicExtensionsManifest {

@@ -9,6 +9,7 @@ Each subdirectory is a **workspace package** in the Tome monorepo. Packages are 
 | [`tome-static-site`](./tome-static-site/) | Static HTML export |
 | [`tome-interfaces`](./tome-interfaces/) | Integration contracts for external modules |
 | [`tome-extension-fixture`](./tome-extension-fixture/) | Reference/test extension (not production) |
+| [`tome-spatial-graph`](./tome-spatial-graph/) | Compound spatial graph page block (cytoscape SVG) |
 
 ## Package documentation
 

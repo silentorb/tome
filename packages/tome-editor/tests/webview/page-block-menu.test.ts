@@ -1,19 +1,54 @@
 import { describe, expect, test } from "bun:test";
-import { ClientEditorPageBlockHost } from "../../src/webview/extensions/client-host";
 import {
   buildPageBlockSlashMenu,
   composeBlockEditMenus,
+  resolveBlockEditGroup,
 } from "../../src/webview/extensions/page-block-menu";
 
+function createCrepeLikeBuilder() {
+  const groups = new Map<
+    string,
+    { label: string; items: Map<string, { label: string }> }
+  >();
+
+  return {
+    addGroup: (name: string, label: string) => {
+      if (!groups.has(name)) {
+        groups.set(name, { label, items: new Map() });
+      }
+      const group = groups.get(name)!;
+      return {
+        addItem: (id: string, item: { label: string }) => {
+          group.items.set(id, { label: item.label });
+        },
+      };
+    },
+    getGroup: (name: string) => {
+      const group = groups.get(name);
+      if (!group) throw new Error(`Group with key ${name} not found`);
+      return {
+        addItem: (id: string, item: { label: string }) => {
+          group.items.set(id, { label: item.label });
+        },
+      };
+    },
+    groups,
+  };
+}
+
 describe("page-block slash menu", () => {
-  test("registers menu items for enabled components", () => {
-    const host = new ClientEditorPageBlockHost();
-    host.registerPageBlock({
-      implementationId: "demo",
-      insertDefaultData: () => ({ text: "hello" }),
-      Component: () => null,
+  test("resolveBlockEditGroup adds unknown groups", () => {
+    const builder = createCrepeLikeBuilder();
+    resolveBlockEditGroup(builder as never, "custom").addItem("demo", {
+      label: "Demo",
+      icon: "",
+      onRun: () => {},
     });
 
+    expect(builder.groups.get("custom")?.items.get("demo")?.label).toBe("Demo");
+  });
+
+  test("registers menu items for enabled components", () => {
     const components = [
       {
         id: "ext.demo",
@@ -21,6 +56,7 @@ describe("page-block slash menu", () => {
         implementationId: "demo",
         label: "Demo block",
         slashMenu: { group: "custom", order: 1 },
+        insertDefaultData: { text: "hello" },
       },
     ];
 
@@ -32,23 +68,16 @@ describe("page-block slash menu", () => {
           onRun: () => {},
         });
       },
-      buildPageBlockSlashMenu(components, host),
+      buildPageBlockSlashMenu(components),
     );
 
-    const groups = new Map<string, Map<string, { label: string }>>();
-    buildMenu({
-      getGroup: (name: string) => {
-        if (!groups.has(name)) groups.set(name, new Map());
-        const group = groups.get(name)!;
-        return {
-          addItem: (id: string, item: { label: string }) => {
-            group.set(id, { label: item.label });
-          },
-        };
-      },
-    } as never);
+    const builder = createCrepeLikeBuilder();
+    builder.addGroup("text", "Text");
+    buildMenu(builder as never);
 
-    expect(groups.get("text")?.has("callout")).toBe(true);
-    expect(groups.get("custom")?.get("page-block-ext.demo")?.label).toBe("Demo block");
+    expect(builder.groups.get("text")?.items.get("callout")?.label).toBe("Callout");
+    expect(builder.groups.get("custom")?.items.get("page-block-ext.demo")?.label).toBe(
+      "Demo block",
+    );
   });
 });

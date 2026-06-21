@@ -20,9 +20,14 @@ export function parsePageBlockPayload(raw: string): PageBlockPayload | null {
   }
 }
 
-export function serializePageBlock(componentId: string, data: unknown = {}): string {
+/** JSON body stored inside a ```tome-block fence (ProseMirror code_block text content). */
+export function serializePageBlockInner(componentId: string, data: unknown = {}): string {
   const payload: PageBlockPayload = { componentId, data };
-  return ["```tome-block", JSON.stringify(payload, null, 2), "```"].join("\n");
+  return JSON.stringify(payload, null, 2);
+}
+
+export function serializePageBlock(componentId: string, data: unknown = {}): string {
+  return ["```tome-block", serializePageBlockInner(componentId, data), "```"].join("\n");
 }
 
 export function parsePageBlockFences(markdown: string): ParsedPageBlockMarkdown {

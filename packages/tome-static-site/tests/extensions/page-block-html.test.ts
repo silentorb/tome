@@ -36,4 +36,32 @@ describe("page-block html rendering", () => {
     const html = await renderNodeBodyHtml(body, "Title", "/", () => "Untitled", ctx);
     expect(html).toContain("tome-page-block-unknown");
   });
+
+  test("async html renderer is awaited", async () => {
+    const host = new HtmlPageBlockHostImpl();
+    host.registerPageBlockRenderer({
+      implementationId: "async-demo",
+      async renderHtml() {
+        await Promise.resolve();
+        return "<div class=\"async-block\">done</div>";
+      },
+    });
+
+    const components: ResolvedExtensionComponent[] = [
+      {
+        id: "async.demo",
+        extensionId: "async",
+        implementationId: "async-demo",
+        label: "Async block",
+        kind: "page-block",
+        params: {},
+        extension: { id: "async" },
+      },
+    ];
+
+    const ctx = createPageBlockHtmlContext(host, components, "node123", "/content");
+    const body = serializePageBlock("async.demo", {});
+    const html = await renderNodeBodyHtml(body, "Title", "/", () => "Untitled", ctx);
+    expect(html).toContain("async-block");
+  });
 });

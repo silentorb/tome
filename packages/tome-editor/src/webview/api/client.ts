@@ -1,12 +1,12 @@
-import {
-  createHttpEditorClient,
-  DEFAULT_API_BASE_URL,
-  type EditorApiClient,
-} from "../../shared/http-client";
+import { createHttpEditorClient } from "../../shared/create-http-editor-client";
+import type { EditorApiClient } from "../../shared/http-client-types";
 import {
   navigateStandaloneNode,
   openStandaloneNodeInNewTab,
 } from "../node-links";
+
+/** Bun API origin when the webview is not served by Vite (tests, SSR). */
+const FALLBACK_API_BASE_URL = "http://127.0.0.1:3847";
 
 export interface EditorApi extends EditorApiClient {
   navigate(nodeId: string, openInNewTab?: boolean): void;
@@ -16,7 +16,7 @@ function resolveWebviewApiBaseUrl(): string {
   const fromEnv = import.meta.env.VITE_TOME_API_URL;
   if (typeof fromEnv === "string" && fromEnv.trim()) return fromEnv.trim();
   if (typeof window !== "undefined") return window.location.origin;
-  return DEFAULT_API_BASE_URL;
+  return FALLBACK_API_BASE_URL;
 }
 
 export function createEditorApi(): EditorApi {
@@ -60,6 +60,7 @@ export function createEditorApi(): EditorApi {
     patchUserSettings: rest.patchUserSettings.bind(rest),
     moveOrderedAssociation: rest.moveOrderedAssociation.bind(rest),
     getExtensionsManifest: rest.getExtensionsManifest.bind(rest),
+    prepareEditorBody: rest.prepareEditorBody.bind(rest),
     navigate(nodeId: string, openInNewTab = false): void {
       if (openInNewTab) {
         openStandaloneNodeInNewTab(nodeId);

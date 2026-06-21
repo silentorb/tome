@@ -348,6 +348,7 @@ export {
   resolveExtensionsManifest,
   findComponentById,
 } from "./extensions";
+export { createExtensionGraphQueryServices } from "./extension-graph-query";
 export type {
   ExtensionComponentEntry,
   ExtensionComponentKind,
