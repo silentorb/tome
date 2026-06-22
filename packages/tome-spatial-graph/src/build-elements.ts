@@ -14,9 +14,6 @@ export interface CytoscapeElementDefinition {
   classes?: string;
 }
 
-export const PARENT_LABEL_NODE_SUFFIX = "__label";
-export const PARENT_LABEL_NODE_CLASS = "parent-label";
-
 function buildParentMap(
   nodes: GraphQueryNode[],
   edges: GraphQueryEdge[],
@@ -134,33 +131,6 @@ function neighborPairs(
   return pairs;
 }
 
-/** Lay out parent titles as child nodes so fcose positions them with siblings, not centered on the compound box. */
-function appendParentLabelNodes(nodeElements: Map<string, CytoscapeElementDefinition>): void {
-  const parentIds = new Set<string>();
-  for (const element of nodeElements.values()) {
-    const parentId = element.data.parent;
-    if (parentId) parentIds.add(parentId);
-  }
-
-  for (const parentId of parentIds) {
-    const parent = nodeElements.get(parentId);
-    if (!parent) continue;
-
-    const label = parent.data.label ?? "";
-    parent.data.label = "";
-
-    nodeElements.set(`${parentId}${PARENT_LABEL_NODE_SUFFIX}`, {
-      group: "nodes",
-      data: {
-        id: `${parentId}${PARENT_LABEL_NODE_SUFFIX}`,
-        label,
-        parent: parentId,
-      },
-      classes: PARENT_LABEL_NODE_CLASS,
-    });
-  }
-}
-
 export function buildSpatialGraphElements(
   nodes: GraphQueryNode[],
   edges: GraphQueryEdge[],
@@ -188,8 +158,6 @@ export function buildSpatialGraphElements(
       },
     });
   }
-
-  appendParentLabelNodes(nodeElements);
 
   const neighborTypeSet = new Set(config.relationships.neighborTypes);
   const edgeElements: CytoscapeElementDefinition[] = [];

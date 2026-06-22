@@ -1,3 +1,5 @@
+import { DEFAULT_PARENT_HEADER_HEIGHT } from "./compound-header";
+
 export interface SpatialGraphBlockData {
   relationships?: {
     parentTypes?: string[];
@@ -19,6 +21,7 @@ export interface SpatialGraphConfig {
     neighborTypes: string[];
   };
   layout: Record<string, unknown>;
+  parentHeaderHeight: number;
   svg: {
     full: boolean;
     scale: number;
@@ -45,6 +48,12 @@ export function parseSpatialGraphConfig(data: unknown): SpatialGraphConfig {
   const root = record(data) ?? {};
   const relationships = record(root.relationships) ?? {};
   const svg = record(root.svg) ?? {};
+  const layoutRaw = record(root.layout) ?? {};
+  const parentHeaderHeight =
+    typeof layoutRaw.parentHeaderHeight === "number" && layoutRaw.parentHeaderHeight > 0
+      ? layoutRaw.parentHeaderHeight
+      : DEFAULT_PARENT_HEADER_HEIGHT;
+  const { parentHeaderHeight: _ignored, ...layout } = layoutRaw;
 
   return {
     relationships: {
@@ -52,7 +61,8 @@ export function parseSpatialGraphConfig(data: unknown): SpatialGraphConfig {
       childTypes: stringArray(relationships.childTypes) ?? DEFAULT_CHILD_TYPES,
       neighborTypes: stringArray(relationships.neighborTypes) ?? DEFAULT_NEIGHBOR_TYPES,
     },
-    layout: record(root.layout) ?? {},
+    layout,
+    parentHeaderHeight,
     svg: {
       full: typeof svg.full === "boolean" ? svg.full : true,
       scale: typeof svg.scale === "number" && svg.scale > 0 ? svg.scale : 1,

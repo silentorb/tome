@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  PARENT_LABEL_NODE_CLASS,
-  PARENT_LABEL_NODE_SUFFIX,
-  buildPlacements,
-  buildSpatialGraphElements,
-} from "../src/build-elements";
+import { buildPlacements, buildSpatialGraphElements } from "../src/build-elements";
 import { defaultSpatialGraphBlockData, parseSpatialGraphConfig } from "../src/config";
 
 describe("parseSpatialGraphConfig", () => {
@@ -12,6 +7,7 @@ describe("parseSpatialGraphConfig", () => {
     const config = parseSpatialGraphConfig({});
     expect(config.relationships.parentTypes).toEqual(["parents"]);
     expect(config.relationships.neighborTypes).toEqual(["neighbor"]);
+    expect(config.parentHeaderHeight).toBe(28);
   });
 
   test("reads local block data overrides", () => {
@@ -62,41 +58,6 @@ describe("buildSpatialGraphElements", () => {
     const elements = buildSpatialGraphElements(nodes, edges, config);
     const graphEdges = elements.filter((element) => element.group === "edges");
     expect(graphEdges.length).toBe(1);
-  });
-
-  test("compound parents get label child nodes instead of centered compound labels", () => {
-    const config = parseSpatialGraphConfig({});
-    const edges = [{ id: "p1", sourceId: "house", targetId: "city-a", type: "parents" }];
-    const elements = buildSpatialGraphElements(nodes, edges, config);
-
-    const cityA = elements.find(
-      (element) => element.group === "nodes" && element.data.id === "city-a",
-    );
-    const cityALabel = elements.find(
-      (element) =>
-        element.group === "nodes" && element.data.id === `city-a${PARENT_LABEL_NODE_SUFFIX}`,
-    );
-
-    expect(cityA?.data.label).toBe("");
-    expect(cityALabel).toMatchObject({
-      classes: PARENT_LABEL_NODE_CLASS,
-      data: {
-        id: `city-a${PARENT_LABEL_NODE_SUFFIX}`,
-        label: "City A",
-        parent: "city-a",
-      },
-    });
-  });
-
-  test("leaf nodes keep their labels", () => {
-    const config = parseSpatialGraphConfig({});
-    const edges = [{ id: "p1", sourceId: "house", targetId: "city-a", type: "parents" }];
-    const elements = buildSpatialGraphElements(nodes, edges, config);
-
-    const house = elements.find(
-      (element) => element.group === "nodes" && element.data.id === "house@city-a",
-    );
-    expect(house?.data.label).toBe("House");
   });
 });
 

@@ -1,6 +1,7 @@
 import { createCanvas } from "canvas";
 import { JSDOM } from "jsdom";
-import { PARENT_LABEL_NODE_CLASS, type CytoscapeElementDefinition } from "./build-elements";
+import type { CytoscapeElementDefinition } from "./build-elements";
+import { reserveCompoundHeaderSpace } from "./compound-header";
 import type { SpatialGraphConfig } from "./config";
 
 let extensionsRegistered = false;
@@ -99,25 +100,17 @@ export async function layoutSpatialGraphSvg(
             "background-opacity": 0.15,
             "border-color": "#718096",
             "border-width": 1,
-            label: "",
-            padding: 16,
-          },
-        },
-        {
-          selector: `node.${PARENT_LABEL_NODE_CLASS}`,
-          style: {
             label: "data(label)",
             "font-size": 11,
             color: "#e2e8f0",
-            "background-opacity": 0,
-            "border-width": 0,
-            width: 1,
-            height: 1,
-            padding: 0,
-            "text-valign": "center",
             "text-halign": "center",
+            "text-valign": "top",
+            "text-margin-y": 8,
             "text-wrap": "wrap",
             "text-max-width": 120,
+            width: 1,
+            height: 1,
+            padding: 16,
           },
         },
         {
@@ -144,10 +137,15 @@ export async function layoutSpatialGraphSvg(
     });
     layout.run();
 
-    return cy.svg({
+    reserveCompoundHeaderSpace(cy, config.parentHeaderHeight);
+
+    const svg = cy.svg({
       full: config.svg.full,
       scale: config.svg.scale,
       bg: config.svg.bg,
     }) as string;
+
+    cy.destroy();
+    return svg;
   });
 }
