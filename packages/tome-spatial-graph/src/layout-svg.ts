@@ -3,6 +3,7 @@ import { JSDOM } from "jsdom";
 import type { CytoscapeElementDefinition } from "./build-elements";
 import { reserveCompoundHeaderSpace } from "./compound-header";
 import type { SpatialGraphConfig } from "./config";
+import { SVG_EXPORT_PADDING, trimSpatialGraphSvg } from "./svg-export";
 
 let extensionsRegistered = false;
 /** cytoscape-svg reads `window` at import time; serialize headless renders so globals are not restored mid-export. */
@@ -87,8 +88,10 @@ export async function layoutSpatialGraphSvg(
             "font-size": 10,
             "background-color": "#4a5568",
             color: "#ffffff",
-            width: 40,
-            height: 40,
+            shape: "ellipse",
+            width: "label",
+            height: "label",
+            padding: 10,
             "text-wrap": "wrap",
             "text-max-width": 80,
           },
@@ -108,6 +111,10 @@ export async function layoutSpatialGraphSvg(
             "text-margin-y": 8,
             "text-wrap": "wrap",
             "text-max-width": 120,
+            "text-background-color": "#1a202c",
+            "text-background-opacity": 0.75,
+            "text-background-shape": "round-rectangle",
+            "text-background-padding": 6,
             width: 1,
             height: 1,
             padding: 16,
@@ -133,19 +140,23 @@ export async function layoutSpatialGraphSvg(
       animate: false,
       fit: true,
       padding: 30,
+      nodeDimensionsIncludeLabels: true,
       ...config.layout,
     });
     layout.run();
 
     reserveCompoundHeaderSpace(cy, config.parentHeaderHeight);
+    cy.nodes().dirtyCompoundBoundsCache();
+    cy.forceRender();
 
-    const svg = cy.svg({
-      full: config.svg.full,
-      scale: config.svg.scale,
+    const pxRatio = cy.renderer().getPixelRatio();
+    const rawSvg = cy.svg({
+      full: true,
+      scale: config.svg.scale / pxRatio,
       bg: config.svg.bg,
     }) as string;
 
     cy.destroy();
-    return svg;
+    return trimSpatialGraphSvg(rawSvg, SVG_EXPORT_PADDING);
   });
 }
