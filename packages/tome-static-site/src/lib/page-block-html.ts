@@ -11,7 +11,7 @@ import type { ResolvedExtensionComponent } from "tome-db";
 import { HtmlPageBlockHostImpl } from "../extensions/html-host";
 import { decorateCalloutHtml } from "./callout-html";
 import { decorateDynamicLinkHtml } from "./dynamic-link-html";
-import { prepareNodeMarkdown, type PreparedNodeMarkdown } from "./markdown";
+import { nodePagePath, prepareNodeMarkdown, type PreparedNodeMarkdown } from "./markdown";
 
 export interface PageBlockHtmlContext {
   host: HtmlPageBlockHostImpl;
@@ -41,6 +41,7 @@ async function renderBlockHtml(
   ctx: PageBlockHtmlContext,
   componentId: string,
   data: unknown,
+  base: string,
 ): Promise<string> {
   const component = ctx.componentsById.get(componentId);
   if (!component) {
@@ -55,7 +56,10 @@ async function renderBlockHtml(
       component,
       nodeId: ctx.nodeId,
       contentDir: ctx.contentDir,
-      services: ctx.graphQuery ? { graphQuery: ctx.graphQuery } : undefined,
+      services: {
+        graphQuery: ctx.graphQuery,
+        nodePageHref: (targetNodeId) => nodePagePath(targetNodeId, base),
+      },
     },
     data,
   );
@@ -76,7 +80,7 @@ export async function renderNodeBodyHtml(
   const { marked } = await import("marked");
   const proseHtml = (await marked.parse(markdown, { async: true })) as string;
   const blockFragments = await Promise.all(
-    blocks.map((payload) => renderBlockHtml(ctx, payload.componentId, payload.data)),
+    blocks.map((payload) => renderBlockHtml(ctx, payload.componentId, payload.data, base)),
   );
   const withBlocks = substitutePageBlockPlaceholders(proseHtml, blockFragments);
   return decorateDynamicLinkHtml(decorateCalloutHtml(withBlocks), prep.dynamicNodeIds);

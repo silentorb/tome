@@ -224,6 +224,10 @@
   height: auto;
 }
 
+.tome-editor-body .milkdown .ProseMirror .tome-spatial-graph .tome-spatial-graph-node-link {
+  cursor: pointer;
+}
+
 .tome-editor-body .milkdown .ProseMirror .tome-spatial-graph-empty {
   padding: 12px 14px;
   color: var(--tome-muted);

@@ -3,7 +3,12 @@ import { JSDOM } from "jsdom";
 import type { CytoscapeElementDefinition } from "./build-elements";
 import { reserveCompoundHeaderSpace } from "./compound-header";
 import type { SpatialGraphConfig } from "./config";
-import { SVG_EXPORT_PADDING, trimSpatialGraphSvg } from "./svg-export";
+import {
+  injectSpatialGraphNodeLinks,
+  SVG_EXPORT_PADDING,
+  trimSpatialGraphSvg,
+  type SpatialGraphNodeLinkOverlay,
+} from "./svg-export";
 
 let extensionsRegistered = false;
 /** cytoscape-svg reads `window` at import time; serialize headless renders so globals are not restored mid-export. */
@@ -59,6 +64,7 @@ async function withDom<T>(run: (container: HTMLElement) => Promise<T> | T): Prom
 export async function layoutSpatialGraphSvg(
   elements: CytoscapeElementDefinition[],
   config: SpatialGraphConfig,
+  nodePageHref: (nodeId: string) => string = (nodeId) => `./${nodeId.toLowerCase()}.md`,
 ): Promise<string> {
   if (elements.length === 0) {
     return "";
@@ -148,6 +154,20 @@ export async function layoutSpatialGraphSvg(
     reserveCompoundHeaderSpace(cy, config.parentHeaderHeight);
     cy.nodes().dirtyCompoundBoundsCache();
     cy.forceRender();
+    const linkOverlays: SpatialGraphNodeLinkOverlay[] = [];
+    for (const node of cy.nodes()) {
+      const nodeId = node.data("canonicalId");
+      if (typeof nodeId !== "string" || nodeId.length === 0) continue;
+      const box = node.renderedBoundingBox();
+      linkOverlays.push({
+        nodeId,
+        href: nodePageHref(nodeId),
+        x: box.x1,
+        y: box.y1,
+        width: box.w,
+        height: box.h,
+      });
+    }
 
     const pxRatio = cy.renderer().getPixelRatio();
     const rawSvg = cy.svg({
@@ -155,8 +175,9 @@ export async function layoutSpatialGraphSvg(
       scale: config.svg.scale / pxRatio,
       bg: config.svg.bg,
     }) as string;
+    const linkedSvg = injectSpatialGraphNodeLinks(rawSvg, linkOverlays);
 
     cy.destroy();
-    return trimSpatialGraphSvg(rawSvg, SVG_EXPORT_PADDING);
+    return trimSpatialGraphSvg(linkedSvg, SVG_EXPORT_PADDING);
   });
 }

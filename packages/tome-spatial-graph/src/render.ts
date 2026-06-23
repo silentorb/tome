@@ -11,6 +11,10 @@ export interface SpatialGraphRenderResult {
   edgeCount: number;
 }
 
+export interface SpatialGraphRenderOptions {
+  nodePageHref?: (nodeId: string) => string;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -23,6 +27,7 @@ export async function renderSpatialGraph(
   graphQuery: ExtensionGraphQueryServices | undefined,
   typeId: string,
   data: unknown,
+  options: SpatialGraphRenderOptions = {},
 ): Promise<SpatialGraphRenderResult> {
   const config = parseSpatialGraphConfig(data);
   const selection = await selectSpatialGraph(graphQuery, typeId, config);
@@ -39,7 +44,7 @@ export async function renderSpatialGraph(
   const elements = buildSpatialGraphElements(selection.nodes, selection.edges, config);
   const nodeCount = elements.filter((element) => element.group === "nodes").length;
   const edgeCount = elements.filter((element) => element.group === "edges").length;
-  const svgMarkup = await layoutSpatialGraphSvg(elements, config);
+  const svgMarkup = await layoutSpatialGraphSvg(elements, config, options.nodePageHref);
 
   const html =
     '<figure class="tome-spatial-graph">' +

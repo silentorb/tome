@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildPlacements, buildSpatialGraphElements } from "../src/build-elements";
+import { buildParentMap, buildPlacements, buildSpatialGraphElements } from "../src/build-elements";
 import { defaultSpatialGraphBlockData, parseSpatialGraphConfig } from "../src/config";
 
 describe("parseSpatialGraphConfig", () => {
@@ -58,6 +58,45 @@ describe("buildSpatialGraphElements", () => {
     const elements = buildSpatialGraphElements(nodes, edges, config);
     const graphEdges = elements.filter((element) => element.group === "edges");
     expect(graphEdges.length).toBe(1);
+  });
+
+  test("ignores children edges when node already has parents-type edges", () => {
+    const config = parseSpatialGraphConfig({});
+    const locationNodes = [
+      { id: "unmarket", title: "The Unmarket" },
+      { id: "book-shop", title: "Book shop" },
+      { id: "city", title: "The City of Orphans" },
+    ];
+    const edges = [
+      { id: "p1", sourceId: "book-shop", targetId: "city", type: "parents" },
+      { id: "c1", sourceId: "unmarket", targetId: "book-shop", type: "children" },
+    ];
+
+    const parentMap = buildParentMap(locationNodes, edges, config);
+    expect([...(parentMap.get("book-shop") ?? [])]).toEqual(["city"]);
+
+    const elements = buildSpatialGraphElements(locationNodes, edges, config);
+    const bookShopPlacements = elements.filter(
+      (element) => element.group === "nodes" && element.data.canonicalId === "book-shop",
+    );
+    expect(bookShopPlacements).toHaveLength(1);
+    expect(bookShopPlacements[0]?.data.parent).toBe("city");
+  });
+
+  test("still uses children edges when node has no parents-type edges", () => {
+    const config = parseSpatialGraphConfig({});
+    const nodes = [
+      { id: "region-a", title: "Region A" },
+      { id: "region-b", title: "Region B" },
+      { id: "site", title: "Site" },
+    ];
+    const edges = [
+      { id: "c1", sourceId: "region-a", targetId: "site", type: "children" },
+      { id: "c2", sourceId: "region-b", targetId: "site", type: "children" },
+    ];
+
+    const parentMap = buildParentMap(nodes, edges, config);
+    expect([...(parentMap.get("site") ?? [])].sort()).toEqual(["region-a", "region-b"]);
   });
 });
 

@@ -31,7 +31,10 @@ async function renderBlockHtml(
       component,
       nodeId,
       contentDir: contentPath,
-      services: graphQuery ? { graphQuery } : undefined,
+      services: {
+        graphQuery,
+        nodePageHref: (targetNodeId) => `?node=${targetNodeId.toLowerCase()}`,
+      },
     },
     payload.data,
   );

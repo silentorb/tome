@@ -23,6 +23,7 @@ function buildParentMap(
   const parentTypes = new Set(config.relationships.parentTypes);
   const childTypes = new Set(config.relationships.childTypes);
   const parentMap = new Map<string, Set<string>>();
+  const childrenWithParentsType = new Set<string>();
 
   const addParent = (childId: string, parentId: string) => {
     if (!nodeIds.has(childId) || !nodeIds.has(parentId)) return;
@@ -34,10 +35,16 @@ function buildParentMap(
   for (const edge of edges) {
     if (parentTypes.has(edge.type)) {
       addParent(edge.sourceId, edge.targetId);
+      childrenWithParentsType.add(edge.sourceId);
     }
-    if (childTypes.has(edge.type)) {
-      addParent(edge.targetId, edge.sourceId);
-    }
+  }
+
+  // children edges are the inverse perspective of parents_children; when a node already
+  // declares parents via parents-type edges, ignore stale children-type edges from other parents.
+  for (const edge of edges) {
+    if (!childTypes.has(edge.type)) continue;
+    if (childrenWithParentsType.has(edge.targetId)) continue;
+    addParent(edge.targetId, edge.sourceId);
   }
 
   return parentMap;

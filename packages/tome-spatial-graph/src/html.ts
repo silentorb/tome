@@ -11,7 +11,9 @@ export function register(host: HtmlPageBlockHost): void {
       if (!graphQuery) {
         return renderSpatialGraphEmptyState(ctx.component.label);
       }
-      const result = await renderSpatialGraph(graphQuery, ctx.nodeId, data);
+      const result = await renderSpatialGraph(graphQuery, ctx.nodeId, data, {
+        nodePageHref: ctx.services?.nodePageHref,
+      });
       return result.html;
     },
   });

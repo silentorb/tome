@@ -8,6 +8,7 @@ export interface HtmlPageBlockContext {
   contentDir: string;
   services?: {
     graphQuery?: ExtensionGraphQueryServices;
+    nodePageHref?: (nodeId: string) => string;
   };
 }
 

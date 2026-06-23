@@ -79,7 +79,7 @@ Output is gitignored (`**/dist/`).
 bun run web:build
 ```
 
-VS Code: **Tasks: Run Task** → **Marloth: build static website**, then **Marloth: serve static website** → http://127.0.0.1:8787/ (override port with `MARLOTH_WEB_PORT`).
+VS Code (silentorb-workbench): **Tasks: Run Task** → **Tome: build static website**, then **Tome: serve static website** → http://127.0.0.1:8787/ (override port with `TOME_WEB_PORT` or `MARLOTH_WEB_PORT`).
 
 ## Configuration
 
