@@ -226,6 +226,23 @@ export class CacheSync {
   ensureReady(): void {
     if (this.cacheNeedsRebuild()) {
       this.fullRebuild();
+      return;
+    }
+    this.reconcileNodeBodiesFromFiles();
+  }
+
+  /** Repair SQLite bodies that drifted from git-tracked node files (e.g. after external edits). */
+  private reconcileNodeBodiesFromFiles(): void {
+    for (const id of this.store.listNodeIds()) {
+      const fileNode = this.store.readNode(id);
+      if (!fileNode) continue;
+      const fileBody = bodyFromNode(fileNode);
+      const dbNode = this.db.getNode(id);
+      const dbBody =
+        typeof dbNode?.properties.body === "string" ? dbNode.properties.body : "";
+      if (fileBody !== dbBody) {
+        this.syncNode(id);
+      }
     }
   }
 

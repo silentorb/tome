@@ -90,6 +90,7 @@
         "tome-db": "workspace:*",
         "tome-extension-fixture": "workspace:*",
         "tome-interfaces": "workspace:*",
+        "tome-spatial-graph": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",

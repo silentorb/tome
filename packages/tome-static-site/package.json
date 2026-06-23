@@ -12,6 +12,7 @@
     "tome-db": "workspace:*",
     "tome-interfaces": "workspace:*",
     "tome-extension-fixture": "workspace:*",
+    "tome-spatial-graph": "workspace:*",
     "marked": "15.0.12"
   },
   "devDependencies": {
