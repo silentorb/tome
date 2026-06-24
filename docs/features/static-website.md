@@ -16,7 +16,7 @@ The `tome-static-site` package reads the git-tracked design corpus via `tome-db`
 
 - **Must** include every node returned by `ContentStore.listNodeIds()` (~all `content/data/*.md` files).
 - **Must** render title, markdown body, metadata (including backlinks), type properties, relation tables, and type-table Items tables per node.
-- **Must** rewrite internal graph links (`./{id}.md`, `marloth:{id}`, `[[id]]`, and legacy Notion `{32-hex}.md` paths) to static node URLs.
+- **Must** rewrite internal graph links (`./{id}.md`, `marloth:{id}`, `[[id]]`, legacy Notion `{32-hex}.md` paths, and optional `url_alias` paths) to static node URLs.
 - **Must** use a dark theme consistent with the Marloth editor palette.
 - **Must** write to `dist/web/` by default; output directory **must** be configurable for external tools.
 - **Must** support a configurable Astro `base` path for subdirectory embedding.
@@ -32,9 +32,30 @@ Astro produces plain static HTML suitable for copying into any host or parent bu
 2. **Generate (Bun):** `generate-data.ts` opens `openContentGraph`, calls `getNodePageDetail` per node, and writes `src/generated/site-data.json` (gitignored). Multi-tab type-table hubs also get per-tab Items payloads for non-default tabs.
 3. **Build (Astro/Node):** Astro loads the generated JSON.
 4. Each node page: metadata panel (with optional properties when expanded), markdown (links rewritten), Items table (default tab), relation sections.
-5. **Tab sibling pages** (multi-tab type-table hubs only): `/{id}/tabs/{tabId}/` — full page chrome with that tab’s Items table; tab bar links between URLs.
+5. **Tab sibling pages** (multi-tab type-table hubs only): `/{urlPath}/tabs/{tabId}/` — full page chrome with that tab’s Items table; tab bar links between URLs.
 6. **Landing page** (`index.html`): full render of the static-site home node (`STATIC_SITE_HOME_NODE_ID` in `generate-data.ts`; independent of the editor’s `DEFAULT_HOME_NODE_ID`).
-7. Astro writes `index.html`, `{id}/index.html`, optional `{id}/tabs/{tabId}/index.html`, and `_astro/` assets.
+7. Astro writes `index.html`, `{urlPath}/index.html`, optional `{urlPath}/tabs/{tabId}/index.html`, and `_astro/` assets.
+
+## URL aliases
+
+Nodes may set optional frontmatter `url_alias` (e.g. `design/twold`) to publish at a human-readable path instead of the 32-hex node id. This affects **static site output only** — the editor is unchanged.
+
+| Rule | Behavior |
+| --- | --- |
+| No `url_alias` | URL path is lowercase node id (unchanged) |
+| With `url_alias` | URL path is the normalized alias; no id-based page is emitted |
+| Multi-segment aliases | Supported (e.g. `design/twold/overview`) |
+| Cross-links | Markdown hrefs that reference node ids **or** alias paths resolve to the target and rewrite to the canonical alias/id URL |
+| Conflicts | Duplicate aliases fail the generate phase with an error |
+
+Example frontmatter:
+
+```yaml
+---
+title: TWOLD design
+url_alias: design/twold
+---
+```
 
 ## Page contents (read-only editor parity)
 
@@ -67,8 +88,8 @@ Editing, add-row/link-existing, row actions, drag-reorder, table search, tab/col
 | Output | Default path |
 | --- | --- |
 | Site root | `dist/web/index.html` (static-site home node) |
-| Node pages | `dist/web/{id}/index.html` |
-| Tab pages | `dist/web/{id}/tabs/{tabId}/index.html` |
+| Node pages | `dist/web/{urlPath}/index.html` (`{urlPath}` is `url_alias` or lowercase node id) |
+| Tab pages | `dist/web/{urlPath}/tabs/{tabId}/index.html` |
 | Assets | `dist/web/_astro/` |
 
 Output is gitignored (`**/dist/`).
@@ -118,7 +139,7 @@ bun run web:build
 | Generated input | `src/generated/site-data.json` (gitignored) |
 | Config | `src/config.ts` |
 | Astro data loader | `src/lib/content.ts` |
-| Markdown + links | `src/lib/markdown.ts` |
+| Markdown + links | `src/lib/markdown.ts`, `src/lib/node-urls.ts` |
 | Node page shell | `src/components/NodePage.astro` |
 | Client JS | `src/lib/client/page-interactions.ts` |
 | Section styles | `src/lib/node-sections.css` |

@@ -11,7 +11,8 @@ import type { ResolvedExtensionComponent } from "tome-db";
 import { HtmlPageBlockHostImpl } from "../extensions/html-host";
 import { decorateCalloutHtml } from "./callout-html";
 import { decorateDynamicLinkHtml } from "./dynamic-link-html";
-import { nodePagePath, prepareNodeMarkdown, type PreparedNodeMarkdown } from "./markdown";
+import { prepareNodeMarkdown, type PreparedNodeMarkdown } from "./markdown";
+import type { NodeUrlResolver } from "./node-urls";
 
 export interface PageBlockHtmlContext {
   host: HtmlPageBlockHostImpl;
@@ -41,7 +42,7 @@ async function renderBlockHtml(
   ctx: PageBlockHtmlContext,
   componentId: string,
   data: unknown,
-  base: string,
+  urls: NodeUrlResolver,
 ): Promise<string> {
   const component = ctx.componentsById.get(componentId);
   if (!component) {
@@ -58,7 +59,7 @@ async function renderBlockHtml(
       contentDir: ctx.contentDir,
       services: {
         graphQuery: ctx.graphQuery,
-        nodePageHref: (targetNodeId) => nodePagePath(targetNodeId, base),
+        nodePageHref: (targetNodeId) => urls.pagePath(targetNodeId),
       },
     },
     data,
@@ -68,20 +69,20 @@ async function renderBlockHtml(
 export async function renderNodeBodyHtml(
   body: string,
   title: string,
-  base: string,
+  urls: NodeUrlResolver,
   titleForId: (nodeId: string) => string,
   ctx: PageBlockHtmlContext,
   prepared?: PreparedNodeMarkdown,
 ): Promise<string> {
-  const prep = prepared ?? prepareNodeMarkdown(body, title, base, titleForId);
+  const prep = prepared ?? prepareNodeMarkdown(body, title, urls, titleForId);
   if (!prep.markdown.trim()) return "";
 
   const { markdown, blocks } = replacePageBlockFencesWithPlaceholders(prep.markdown);
   const { marked } = await import("marked");
   const proseHtml = (await marked.parse(markdown, { async: true })) as string;
   const blockFragments = await Promise.all(
-    blocks.map((payload) => renderBlockHtml(ctx, payload.componentId, payload.data, base)),
+    blocks.map((payload) => renderBlockHtml(ctx, payload.componentId, payload.data, urls)),
   );
   const withBlocks = substitutePageBlockPlaceholders(proseHtml, blockFragments);
-  return decorateDynamicLinkHtml(decorateCalloutHtml(withBlocks), prep.dynamicNodeIds);
+  return decorateDynamicLinkHtml(decorateCalloutHtml(withBlocks), prep.dynamicNodeIds, urls);
 }

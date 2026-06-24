@@ -1,13 +1,13 @@
 ---
 import NodeLayout from "../../layouts/NodeLayout.astro";
 import NodePage from "../../components/NodePage.astro";
-import { getSiteBase, loadAllNodes, titleByIdRecord } from "../../lib/content";
+import { createSiteUrlResolver, getSiteBase, loadAllNodes, titleByIdRecord } from "../../lib/content";
 import { resolvePageTitleAndContent } from "../../lib/markdown";
 
 export function getStaticPaths() {
   const titleById = titleByIdRecord();
   return loadAllNodes().map((node) => ({
-    params: { id: node.id },
+    params: { slug: node.urlPath ?? node.id.toLowerCase() },
     props: { node, titleById },
   }));
 }
@@ -19,9 +19,10 @@ interface Props {
 
 const { node, titleById } = Astro.props;
 const base = getSiteBase();
+const urls = createSiteUrlResolver();
 const { title } = resolvePageTitleAndContent(node.body, node.title);
 ---
 
 <NodeLayout title={title}>
-  <NodePage node={node} base={base} titleById={titleById} />
+  <NodePage node={node} base={base} titleById={titleById} urls={urls} />
 </NodeLayout>

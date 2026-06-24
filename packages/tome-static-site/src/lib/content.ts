@@ -1,8 +1,25 @@
 import siteData from "../generated/site-data.json";
 import type { SiteData, SiteNode, TabItemsPayload } from "./site-types";
+import { createNodeUrlResolver, normalizeHrefAsSitePath, type NodeUrlResolver } from "./node-urls";
 import { tabPayloadKey } from "./static-export";
 
 const data = siteData as SiteData;
+
+function derivePathById(): Record<string, string> {
+  if (data.pathById) return data.pathById;
+  return Object.fromEntries(
+    data.nodes.map((node) => [node.id.toLowerCase(), node.urlPath ?? node.id.toLowerCase()]),
+  );
+}
+
+function deriveAliasToId(): Record<string, string> {
+  if (data.aliasToId) return data.aliasToId;
+  const out: Record<string, string> = {};
+  for (const node of data.nodes) {
+    if (node.urlAlias) out[node.urlAlias] = node.id.toLowerCase();
+  }
+  return out;
+}
 
 export function loadSiteData(): SiteData {
   return data;
@@ -15,6 +32,11 @@ export function loadAllNodes(): SiteNode[] {
 export function loadNodeById(id: string): SiteNode | undefined {
   const normalized = id.toLowerCase();
   return data.nodes.find((node) => node.id.toLowerCase() === normalized);
+}
+
+export function loadNodeByUrlPath(slug: string): SiteNode | undefined {
+  const normalized = normalizeHrefAsSitePath(slug, "/") ?? slug.replace(/^\/+|\/+$/g, "").toLowerCase();
+  return data.nodes.find((node) => (node.urlPath ?? node.id.toLowerCase()) === normalized);
 }
 
 export function loadNodeSummaries(): Pick<SiteNode, "id" | "title">[] {
@@ -43,4 +65,20 @@ export function loadTabItemsPayload(nodeId: string, tabId: string): TabItemsPayl
 
 export function titleByIdRecord(): Record<string, string> {
   return Object.fromEntries(data.nodes.map((node) => [node.id.toLowerCase(), node.title]));
+}
+
+export function getPathById(): Record<string, string> {
+  return derivePathById();
+}
+
+export function getAliasToId(): Record<string, string> {
+  return deriveAliasToId();
+}
+
+export function createSiteUrlResolver(): NodeUrlResolver {
+  return createNodeUrlResolver({
+    pathById: derivePathById(),
+    aliasToId: deriveAliasToId(),
+    base: getSiteBase(),
+  });
 }

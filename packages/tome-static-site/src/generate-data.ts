@@ -5,6 +5,7 @@ import { createExtensionGraphQueryServices, loadSchemaFromContent, loadWorkspace
 import type { ResolvedConfig } from "./config";
 import type { SiteData, SiteNode } from "./lib/site-types";
 import { buildExtraTabPayloadsAndRoutes, buildSiteNode } from "./lib/static-export";
+import { buildNodeUrlIndex, createNodeUrlResolver } from "./lib/node-urls";
 import { ExtensionHtmlRuntime } from "./extensions/loader";
 import { createPageBlockHtmlContext, renderNodeBodyHtml } from "./lib/page-block-html";
 
@@ -27,6 +28,9 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
     config.contentDir,
   );
 
+  const { pathById, aliasToId } = buildNodeUrlIndex(nodes);
+  const urls = createNodeUrlResolver({ pathById, aliasToId, base: config.base });
+
   const titleById: Record<string, string> = {};
   for (const node of nodes) {
     titleById[node.id.toLowerCase()] = node.title;
@@ -47,7 +51,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
       node.bodyHtml = await renderNodeBodyHtml(
         node.body,
         node.title,
-        config.base,
+        urls,
         (id) => titleById[id.toLowerCase()] ?? "Untitled",
         ctx,
       );
@@ -61,6 +65,8 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
     staticSiteHeader: workspace.branding?.staticSiteHeader ?? "Tome",
     base: config.base,
     nodes,
+    pathById,
+    aliasToId,
     tabItemsPayloads,
     tabRoutes,
   };

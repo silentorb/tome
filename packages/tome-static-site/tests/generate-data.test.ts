@@ -78,11 +78,26 @@ describe("writeSiteData", () => {
       base: "/",
     };
 
+    process.env.TOME_CONTENT_PATH = config.contentDir;
+
     const outFile = join(outDir, "site-data.json");
     const data = await writeSiteData(config, outFile);
 
     expect(data.homeNodeId).toBe(TEST_STATIC_SITE_HOME_NODE_ID);
     expect(data.staticSiteHeader).toBe("Tome");
+    expect(data.pathById[instanceId.toLowerCase()]).toBe(instanceId.toLowerCase());
+    expect(data.aliasToId).toEqual({});
+
+    const aliasId = "13458e628ba28073850dea0edb9acde5";
+    seedTestNode(fixture, {
+      id: aliasId,
+      properties: { title: "Alias page", url_alias: "design/alias-test", body: "Alias body" },
+    });
+    const aliasData = await writeSiteData(config, join(outDir, "site-data-alias.json"));
+    expect(aliasData.pathById[aliasId.toLowerCase()]).toBe("design/alias-test");
+    expect(aliasData.aliasToId["design/alias-test"]).toBe(aliasId.toLowerCase());
+    const aliasNode = aliasData.nodes.find((node) => node.id === aliasId);
+    expect(aliasNode?.urlPath).toBe("design/alias-test");
 
     const instance = data.nodes.find((node) => node.id === instanceId);
     expect(instance).toBeDefined();

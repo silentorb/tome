@@ -2,6 +2,7 @@
 import NodeLayout from "../layouts/NodeLayout.astro";
 import NodePage from "../components/NodePage.astro";
 import {
+  createSiteUrlResolver,
   getHomeNodeId,
   getSiteBase,
   loadNodeById,
@@ -14,9 +15,10 @@ const home = loadNodeById(homeId);
 if (!home) throw new Error(`Home node not found: ${homeId}`);
 
 const base = getSiteBase();
+const urls = createSiteUrlResolver();
 const { title } = resolvePageTitleAndContent(home.body, home.title);
 ---
 
 <NodeLayout title={title}>
-  <NodePage node={home} base={base} titleById={titleByIdRecord()} />
+  <NodePage node={home} base={base} titleById={titleByIdRecord()} urls={urls} />
 </NodeLayout>

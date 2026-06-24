@@ -44,6 +44,10 @@ export interface SiteNode {
   title: string;
   archived: boolean;
   primaryTypeTitle?: string;
+  /** Normalized alias from frontmatter; omitted when unset. */
+  urlAlias?: string;
+  /** Canonical static path segment(s): alias or lowercase node id. */
+  urlPath: string;
   metadata: NodePageMetadata;
   properties: PropertiesSection | null;
   body: string;
@@ -77,6 +81,10 @@ export interface SiteData {
   staticSiteHeader: string;
   base: string;
   nodes: SiteNode[];
+  /** Lowercase node id → canonical url path segment(s). */
+  pathById: Record<string, string>;
+  /** Normalized alias → lowercase node id. */
+  aliasToId: Record<string, string>;
   tabItemsPayloads: Record<string, TabItemsPayload>;
   tabRoutes: TabRoute[];
 }

@@ -2,8 +2,15 @@ import { describe, expect, test } from "bun:test";
 import { register } from "tome-extension-fixture/html";
 import { HtmlPageBlockHostImpl } from "../../src/extensions/html-host";
 import { createPageBlockHtmlContext, renderNodeBodyHtml } from "../../src/lib/page-block-html";
+import { createNodeUrlResolver } from "../../src/lib/node-urls";
 import type { ResolvedExtensionComponent } from "tome-db";
 import { serializePageBlock } from "tome-interfaces/page-block";
+
+const NODE_ID = "aabbccdd112233445566778899aabbcc";
+const urls = createNodeUrlResolver({
+  pathById: { [NODE_ID]: NODE_ID },
+  base: "/",
+});
 
 describe("page-block html rendering", () => {
   test("renders fixture block html", async () => {
@@ -22,18 +29,18 @@ describe("page-block html rendering", () => {
       },
     ];
 
-    const ctx = createPageBlockHtmlContext(host, components, "node123", "/content");
+    const ctx = createPageBlockHtmlContext(host, components, NODE_ID, "/content");
     const body = `Intro\n\n${serializePageBlock("fixture.demo", { text: "Hello" })}\n\nOutro`;
-    const html = await renderNodeBodyHtml(body, "Title", "/", () => "Untitled", ctx);
+    const html = await renderNodeBodyHtml(body, "Title", urls, () => "Untitled", ctx);
     expect(html).toContain("tome-page-block-fixture");
     expect(html).toContain("Hello");
   });
 
   test("unknown block uses fallback html", async () => {
     const host = new HtmlPageBlockHostImpl();
-    const ctx = createPageBlockHtmlContext(host, [], "node123", "/content");
+    const ctx = createPageBlockHtmlContext(host, [], NODE_ID, "/content");
     const body = serializePageBlock("missing.block", {});
-    const html = await renderNodeBodyHtml(body, "Title", "/", () => "Untitled", ctx);
+    const html = await renderNodeBodyHtml(body, "Title", urls, () => "Untitled", ctx);
     expect(html).toContain("tome-page-block-unknown");
   });
 
@@ -59,9 +66,9 @@ describe("page-block html rendering", () => {
       },
     ];
 
-    const ctx = createPageBlockHtmlContext(host, components, "node123", "/content");
+    const ctx = createPageBlockHtmlContext(host, components, NODE_ID, "/content");
     const body = serializePageBlock("async.demo", {});
-    const html = await renderNodeBodyHtml(body, "Title", "/", () => "Untitled", ctx);
+    const html = await renderNodeBodyHtml(body, "Title", urls, () => "Untitled", ctx);
     expect(html).toContain("async-block");
   });
 });

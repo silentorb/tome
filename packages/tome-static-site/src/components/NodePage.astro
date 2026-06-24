@@ -1,6 +1,7 @@
 ---
 import type { SiteNode } from "../lib/site-types";
 import type { TabItemsPayload } from "../lib/site-types";
+import type { NodeUrlResolver } from "../lib/node-urls";
 import NodeMetadata from "./NodeMetadata.astro";
 import DatabaseSection from "./DatabaseSection.astro";
 import OrderedAssociationSection from "./OrderedAssociationSection.astro";
@@ -16,23 +17,24 @@ interface Props {
   node: SiteNode;
   base: string;
   titleById: Record<string, string>;
+  urls: NodeUrlResolver;
   activeTabId?: string;
   tabPayload?: TabItemsPayload;
 }
 
-const { node, base, titleById, activeTabId: requestedTabId, tabPayload } = Astro.props;
+const { node, base, titleById, urls, activeTabId: requestedTabId, tabPayload } = Astro.props;
 
 const activeTabId = resolveActiveTabId(node, requestedTabId);
 const sections = buildSectionsForTab(node, activeTabId, tabPayload);
 
 const { title } = resolvePageTitleAndContent(node.body, node.title);
-const prepared = prepareNodeMarkdown(node.body, node.title, base, (id) =>
+const prepared = prepareNodeMarkdown(node.body, node.title, urls, (id) =>
   titleById[id.toLowerCase()] ?? "Untitled",
 );
 const bodyHtml =
   node.bodyHtml ??
   (prepared.markdown
-    ? await renderMarkdownToHtml(prepared.markdown, prepared.dynamicNodeIds)
+    ? await renderMarkdownToHtml(prepared.markdown, prepared.dynamicNodeIds, urls)
     : "");
 const emptyMarkdown = !prepared.markdown.trim() && !bodyHtml.trim();
 ---
@@ -44,7 +46,7 @@ const emptyMarkdown = !prepared.markdown.trim() && !bodyHtml.trim();
       <h1 class="page-title">{title}</h1>
     </section>
 
-    <NodeMetadata metadata={node.metadata} base={base} properties={node.properties} />
+    <NodeMetadata metadata={node.metadata} pagePath={urls.pagePath} properties={node.properties} base={base} />
 
     <section class={`tome-record-section tome-markdown-section${emptyMarkdown ? " is-empty" : ""}`}>
       {
@@ -65,7 +67,8 @@ const emptyMarkdown = !prepared.markdown.trim() && !bodyHtml.trim();
               nodeId={node.id}
               activeTabId={activeTabId}
               itemsTabs={node.itemsTabs}
-              base={base}
+              pagePath={urls.pagePath}
+              tabPath={urls.tabPath}
             />
           );
         }
@@ -76,12 +79,13 @@ const emptyMarkdown = !prepared.markdown.trim() && !bodyHtml.trim();
               nodeId={node.id}
               activeTabId={activeTabId}
               itemsTabs={node.itemsTabs}
-              base={base}
+              pagePath={urls.pagePath}
+              tabPath={urls.tabPath}
             />
           );
         }
         if (section.type === "relations") {
-          return <RelationSection section={section} nodeId={node.id} base={base} />;
+          return <RelationSection section={section} nodeId={node.id} pagePath={urls.pagePath} />;
         }
         return null;
       })

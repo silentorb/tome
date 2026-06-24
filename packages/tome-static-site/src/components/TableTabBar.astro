@@ -1,15 +1,15 @@
 ---
 import type { ItemsTabsMeta } from "../lib/site-types";
-import { nodePagePath, nodeTabPath } from "../lib/markdown";
 
 interface Props {
   itemsTabs: ItemsTabsMeta;
   nodeId: string;
   activeTabId: string;
-  base: string;
+  pagePath: (id: string) => string;
+  tabPath: (id: string, tabId: string) => string;
 }
 
-const { itemsTabs, nodeId, activeTabId, base } = Astro.props;
+const { itemsTabs, nodeId, activeTabId, pagePath, tabPath } = Astro.props;
 ---
 
 <nav class="tome-database-view-tabs" aria-label="Table tabs">
@@ -18,8 +18,8 @@ const { itemsTabs, nodeId, activeTabId, base } = Astro.props;
       const isActive = tab.id === activeTabId;
       const href =
         tab.id === itemsTabs.defaultTabId
-          ? nodePagePath(nodeId, base)
-          : nodeTabPath(nodeId, tab.id, base);
+          ? pagePath(nodeId)
+          : tabPath(nodeId, tab.id);
       return (
         <a
           href={href}

@@ -7,7 +7,7 @@ import { findTypeNodeByTitle, isTypeTableNode } from "./node-capabilities";
 import { legacyExportPathPrefix } from "./workspace/resolve";
 
 /** Node properties that are not database row scalars. */
-export const NODE_META_KEYS = new Set(["title", "body", "alias"]);
+export const NODE_META_KEYS = new Set(["title", "body", "alias", "url_alias"]);
 
 export interface MissingTypeMembership {
   nodeId: string;

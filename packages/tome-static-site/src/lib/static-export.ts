@@ -15,6 +15,7 @@ import {
   type TabItemsPayload,
   type TabRoute,
 } from "./site-types";
+import { readUrlAlias } from "./node-urls";
 import { viewSortsToTableSort } from "./table-sort";
 
 export function tabPayloadKey(nodeId: string, tabId: string): string {
@@ -147,12 +148,15 @@ export function buildSiteNode(
         : undefined;
 
   const multiTab = itemsTabs !== undefined && itemsTabs.items.length > 1;
+  const urlAlias = readUrlAlias(db.getNode(id)?.properties ?? null) ?? undefined;
 
   return {
     id: detail.id,
     title: detail.title,
     archived: detail.archived,
     primaryTypeTitle: detail.primaryTypeTitle,
+    urlAlias,
+    urlPath: urlAlias ?? detail.id.toLowerCase(),
     metadata: detail.metadata,
     properties: detail.properties,
     body: detail.body,

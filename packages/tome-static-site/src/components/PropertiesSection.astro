@@ -5,11 +5,12 @@ import { renderTableCellHtml } from "../lib/table-cell";
 
 interface Props {
   section: PropertiesSection;
+  pagePath: (id: string) => string;
   base: string;
   nested?: boolean;
 }
 
-const { section, base, nested = false } = Astro.props;
+const { section, pagePath, base, nested = false } = Astro.props;
 const Tag = nested ? "div" : "section";
 const className = nested
   ? "tome-properties-section"
@@ -17,7 +18,7 @@ const className = nested
 ---
 
 <Tag class={className}>
-  <SectionTitle title="Properties" typeNodeId={section.databaseId} base={base} />
+  <SectionTitle title="Properties" typeNodeId={section.databaseId} pagePath={pagePath} />
   <dl class="tome-properties-form">
     {
       section.columns.map((columnKey) => {

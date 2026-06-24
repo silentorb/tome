@@ -2,7 +2,9 @@
 import NodeLayout from "../../../layouts/NodeLayout.astro";
 import NodePage from "../../../components/NodePage.astro";
 import {
+  createSiteUrlResolver,
   getSiteBase,
+  getPathById,
   loadAllNodes,
   loadTabItemsPayload,
   loadTabRoutes,
@@ -13,14 +15,16 @@ import { resolvePageTitleAndContent } from "../../../lib/markdown";
 export function getStaticPaths() {
   const titleById = titleByIdRecord();
   const nodesById = new Map(loadAllNodes().map((node) => [node.id.toLowerCase(), node]));
+  const pathById = getPathById();
 
   return loadTabRoutes().flatMap(({ nodeId, tabId }) => {
     const node = nodesById.get(nodeId.toLowerCase());
     const tabPayload = loadTabItemsPayload(nodeId, tabId);
     if (!node || !tabPayload) return [];
+    const slug = pathById[nodeId.toLowerCase()] ?? nodeId.toLowerCase();
     return [
       {
-        params: { id: nodeId, tabId },
+        params: { slug, tabId },
         props: { node, tabId, tabPayload, titleById },
       },
     ];
@@ -36,6 +40,7 @@ interface Props {
 
 const { node, tabId, tabPayload, titleById } = Astro.props;
 const base = getSiteBase();
+const urls = createSiteUrlResolver();
 const { title } = resolvePageTitleAndContent(node.body, node.title);
 ---
 
@@ -44,6 +49,7 @@ const { title } = resolvePageTitleAndContent(node.body, node.title);
     node={node}
     base={base}
     titleById={titleById}
+    urls={urls}
     activeTabId={tabId}
     tabPayload={tabPayload}
   />

@@ -1,5 +1,4 @@
 import type { DatabaseColumnDef } from "./site-types";
-import { nodePagePath } from "./markdown";
 
 function escapeHtml(value: string): string {
   return value
@@ -42,13 +41,13 @@ export interface RelationLinkLike {
 
 export function renderRelationLinksHtml(
   links: RelationLinkLike[],
-  base: string,
+  pagePath: (id: string) => string,
 ): string {
   if (links.length === 0) return "";
   return links
     .map(
       (link) =>
-        `<a href="${nodePagePath(link.targetId, base)}" class="tome-relation-cell-link">${escapeHtml(link.title)}</a>`,
+        `<a href="${pagePath(link.targetId)}" class="tome-relation-cell-link">${escapeHtml(link.title)}</a>`,
     )
     .join(" ");
 }

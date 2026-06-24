@@ -1,15 +1,15 @@
 ---
 import type { NodePageMetadata, PropertiesSection } from "tome-db";
-import { nodePagePath } from "../lib/markdown";
 import PropertiesSection from "./PropertiesSection.astro";
 
 interface Props {
   metadata: NodePageMetadata;
+  pagePath: (id: string) => string;
   base: string;
   properties?: PropertiesSection | null;
 }
 
-const { metadata, base, properties } = Astro.props;
+const { metadata, pagePath, base, properties } = Astro.props;
 
 function formatTimestamp(iso: string | null): string {
   if (!iso) return "—";
@@ -62,7 +62,7 @@ const summary = `${metadata.relationshipCount} relationship${metadata.relationsh
             <ul class="tome-record-metadata-backlink-list">
               {metadata.backlinks.map((backlink) => (
                 <li class="tome-record-metadata-backlink-item">
-                  <a href={nodePagePath(backlink.sourceId, base)}>{backlink.title}</a>
+                  <a href={pagePath(backlink.sourceId)}>{backlink.title}</a>
                   {backlink.linkText ? (
                     <span class="tome-record-metadata-backlink-label">{backlink.linkText}</span>
                   ) : null}
@@ -76,7 +76,7 @@ const summary = `${metadata.relationshipCount} relationship${metadata.relationsh
     {
       properties ? (
         <div class="tome-record-metadata-properties">
-          <PropertiesSection section={properties} base={base} nested />
+          <PropertiesSection section={properties} pagePath={pagePath} base={base} nested />
         </div>
       ) : null
     }

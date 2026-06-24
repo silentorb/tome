@@ -10,10 +10,11 @@ interface Props {
   nodeId: string;
   activeTabId: string;
   itemsTabs?: ItemsTabsMeta;
-  base: string;
+  pagePath: (id: string) => string;
+  tabPath: (id: string, tabId: string) => string;
 }
 
-const { section, nodeId, activeTabId, itemsTabs, base } = Astro.props;
+const { section, nodeId, activeTabId, itemsTabs, pagePath, tabPath } = Astro.props;
 const { databaseView, defaultSort } = section;
 const tableKey = `records/${nodeId}/database/${databaseView.id}/${activeTabId}`;
 const typeNodeId = nodeId === databaseView.id ? null : databaseView.id;
@@ -27,10 +28,16 @@ const rows = databaseView.rows.map((row) => ({
 ---
 
 <section class="tome-record-section tome-database-section">
-  <SectionTitle title="Items" typeNodeId={typeNodeId} base={base} />
+  <SectionTitle title="Items" typeNodeId={typeNodeId} pagePath={pagePath} />
   <div class="tome-database-view">
     {itemsTabs ? (
-      <TableTabBar itemsTabs={itemsTabs} nodeId={nodeId} activeTabId={activeTabId} base={base} />
+      <TableTabBar
+        itemsTabs={itemsTabs}
+        nodeId={nodeId}
+        activeTabId={activeTabId}
+        pagePath={pagePath}
+        tabPath={tabPath}
+      />
     ) : null}
     {
       rows.length === 0 ? (
@@ -42,7 +49,7 @@ const rows = databaseView.rows.map((row) => ({
           rows={rows}
           columnDefs={databaseView.columnDefs}
           defaultSort={defaultSort}
-          base={base}
+          pagePath={pagePath}
         />
       )
     }

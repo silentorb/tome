@@ -1,19 +1,17 @@
 ---
-import { nodePagePath } from "../lib/markdown";
-
 interface Props {
   title: string;
   typeNodeId?: string | null;
-  base: string;
+  pagePath: (id: string) => string;
 }
 
-const { title, typeNodeId, base } = Astro.props;
+const { title, typeNodeId, pagePath } = Astro.props;
 ---
 
 <h2 class="tome-record-section-title">
   {
     typeNodeId ? (
-      <a class="tome-record-section-title-link" href={nodePagePath(typeNodeId, base)}>
+      <a class="tome-record-section-title-link" href={pagePath(typeNodeId)}>
         {title}
       </a>
     ) : (

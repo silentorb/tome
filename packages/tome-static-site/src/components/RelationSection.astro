@@ -6,10 +6,10 @@ import DataTable from "./DataTable.astro";
 interface Props {
   section: RelationTableSection;
   nodeId: string;
-  base: string;
+  pagePath: (id: string) => string;
 }
 
-const { section, nodeId, base } = Astro.props;
+const { section, nodeId, pagePath } = Astro.props;
 const tableKey = `records/${nodeId}/relations/${section.label}`;
 
 const rows = section.rows.map((row) => ({
@@ -20,7 +20,7 @@ const rows = section.rows.map((row) => ({
 ---
 
 <section class="tome-record-section tome-relation-section">
-  <SectionTitle title={section.title} typeNodeId={section.typeNodeId} base={base} />
+  <SectionTitle title={section.title} typeNodeId={section.typeNodeId} pagePath={pagePath} />
   {
     rows.length === 0 ? (
       <p class="tome-database-empty">No related items.</p>
@@ -30,7 +30,7 @@ const rows = section.rows.map((row) => ({
         columns={section.columns}
         rows={rows}
         columnDefs={section.columnDefs}
-        base={base}
+        pagePath={pagePath}
       />
     )
   }
