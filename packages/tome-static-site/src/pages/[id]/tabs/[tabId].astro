@@ -1,14 +1,14 @@
 ---
-import NodeLayout from "../../../../layouts/NodeLayout.astro";
-import NodePage from "../../../../components/NodePage.astro";
+import NodeLayout from "../../../layouts/NodeLayout.astro";
+import NodePage from "../../../components/NodePage.astro";
 import {
   getSiteBase,
   loadAllNodes,
   loadTabItemsPayload,
   loadTabRoutes,
   titleByIdRecord,
-} from "../../../../lib/content";
-import { resolvePageTitleAndContent } from "../../../../lib/markdown";
+} from "../../../lib/content";
+import { resolvePageTitleAndContent } from "../../../lib/markdown";
 
 export function getStaticPaths() {
   const titleById = titleByIdRecord();
@@ -28,9 +28,9 @@ export function getStaticPaths() {
 }
 
 interface Props {
-  node: import("../../../../lib/site-types").SiteNode;
+  node: import("../../../lib/site-types").SiteNode;
   tabId: string;
-  tabPayload: import("../../../../lib/site-types").TabItemsPayload;
+  tabPayload: import("../../../lib/site-types").TabItemsPayload;
   titleById: Record<string, string>;
 }
 

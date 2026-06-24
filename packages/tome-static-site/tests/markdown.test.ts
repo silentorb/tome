@@ -34,25 +34,25 @@ describe("rewriteMarkdownLinks", () => {
   test("rewrites marloth links", () => {
     const input = `See [Target](marloth:${TARGET}) here.`;
     const output = rewriteMarkdownLinks(input, "/");
-    expect(output).toBe(`See [Target](/nodes/${TARGET}/) here.`);
+    expect(output).toBe(`See [Target](/${TARGET}/) here.`);
   });
 
   test("rewrites relative sibling md paths", () => {
     const input = `See [Target](./${TARGET}.md) here.`;
     const output = rewriteMarkdownLinks(input, "/");
-    expect(output).toBe(`See [Target](/nodes/${TARGET}/) here.`);
+    expect(output).toBe(`See [Target](/${TARGET}/) here.`);
   });
 
   test("rewrites legacy Notion export paths", () => {
     const input = `[Page](../foo/${TARGET}.md)`;
     const output = rewriteMarkdownLinks(input, "/");
-    expect(output).toBe(`[Page](/nodes/${TARGET}/)`);
+    expect(output).toBe(`[Page](/${TARGET}/)`);
   });
 
   test("applies base prefix for embedding", () => {
     const input = `[Target](marloth:${TARGET})`;
     const output = rewriteMarkdownLinks(input, "/design/");
-    expect(output).toBe(`[Target](/design/nodes/${TARGET}/)`);
+    expect(output).toBe(`[Target](/design/${TARGET}/)`);
   });
 
   test("leaves external links unchanged", () => {
@@ -63,22 +63,22 @@ describe("rewriteMarkdownLinks", () => {
 
 describe("nodePagePath", () => {
   test("root base", () => {
-    expect(nodePagePath(TARGET, "/")).toBe(`/nodes/${TARGET}/`);
+    expect(nodePagePath(TARGET, "/")).toBe(`/${TARGET}/`);
   });
 
   test("embedded base", () => {
-    expect(nodePagePath(TARGET, "/design/")).toBe(`/design/nodes/${TARGET}/`);
+    expect(nodePagePath(TARGET, "/design/")).toBe(`/design/${TARGET}/`);
   });
 });
 
 describe("nodeTabPath", () => {
   test("root base", () => {
-    expect(nodeTabPath(TARGET, "book-a", "/")).toBe(`/nodes/${TARGET}/tabs/book-a/`);
+    expect(nodeTabPath(TARGET, "book-a", "/")).toBe(`/${TARGET}/tabs/book-a/`);
   });
 
   test("embedded base", () => {
     expect(nodeTabPath(TARGET, "book-a", "/design/")).toBe(
-      `/design/nodes/${TARGET}/tabs/book-a/`,
+      `/design/${TARGET}/tabs/book-a/`,
     );
   });
 });
@@ -87,7 +87,7 @@ describe("prepareNodeMarkdown", () => {
   test("deduplicates title and rewrites links", () => {
     const body = `# Page\n\nLink [x](marloth:${TARGET}).`;
     const result = prepareNodeMarkdown(body, "Page", "/docs/");
-    expect(result.markdown).toBe(`Link [x](/docs/nodes/${TARGET}/).`);
+    expect(result.markdown).toBe(`Link [x](/docs/${TARGET}/).`);
     expect(result.dynamicNodeIds.size).toBe(0);
   });
 
@@ -96,7 +96,7 @@ describe("prepareNodeMarkdown", () => {
     const result = prepareNodeMarkdown(body, "Page", "/", (id) =>
       id === TARGET ? "Target Page" : "Untitled",
     );
-    expect(result.markdown).toBe(`See [Target Page](/nodes/${TARGET}/) here.`);
+    expect(result.markdown).toBe(`See [Target Page](/${TARGET}/) here.`);
     expect(result.dynamicNodeIds.has(TARGET)).toBe(true);
   });
 });

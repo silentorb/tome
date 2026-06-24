@@ -1,8 +1,8 @@
 ---
-import NodeLayout from "../../../layouts/NodeLayout.astro";
-import NodePage from "../../../components/NodePage.astro";
-import { getSiteBase, loadAllNodes, titleByIdRecord } from "../../../lib/content";
-import { resolvePageTitleAndContent } from "../../../lib/markdown";
+import NodeLayout from "../../layouts/NodeLayout.astro";
+import NodePage from "../../components/NodePage.astro";
+import { getSiteBase, loadAllNodes, titleByIdRecord } from "../../lib/content";
+import { resolvePageTitleAndContent } from "../../lib/markdown";
 
 export function getStaticPaths() {
   const titleById = titleByIdRecord();
@@ -13,7 +13,7 @@ export function getStaticPaths() {
 }
 
 interface Props {
-  node: import("../../../lib/site-types").SiteNode;
+  node: import("../../lib/site-types").SiteNode;
   titleById: Record<string, string>;
 }
 

@@ -7,7 +7,7 @@ const NODE_LINK_ICON =
   "</svg></span>";
 
 function nodeIdFromHref(href: string): string | null {
-  const match = /\/nodes\/([a-f0-9]{32})\/?(?:[#?].*)?$/i.exec(href);
+  const match = /\/([a-f0-9]{32})\/(?:tabs\/[^/?#]+\/)?\/?(?:[#?].*)?$/i.exec(href);
   return match?.[1]?.toLowerCase() ?? null;
 }
 

@@ -32,9 +32,9 @@ Astro produces plain static HTML suitable for copying into any host or parent bu
 2. **Generate (Bun):** `generate-data.ts` opens `openContentGraph`, calls `getNodePageDetail` per node, and writes `src/generated/site-data.json` (gitignored). Multi-tab type-table hubs also get per-tab Items payloads for non-default tabs.
 3. **Build (Astro/Node):** Astro loads the generated JSON.
 4. Each node page: metadata panel (with optional properties when expanded), markdown (links rewritten), Items table (default tab), relation sections.
-5. **Tab sibling pages** (multi-tab type-table hubs only): `/nodes/{id}/tabs/{tabId}/` — full page chrome with that tab’s Items table; tab bar links between URLs.
+5. **Tab sibling pages** (multi-tab type-table hubs only): `/{id}/tabs/{tabId}/` — full page chrome with that tab’s Items table; tab bar links between URLs.
 6. **Landing page** (`index.html`): full render of the static-site home node (`STATIC_SITE_HOME_NODE_ID` in `generate-data.ts`; independent of the editor’s `DEFAULT_HOME_NODE_ID`).
-7. Astro writes `index.html`, `nodes/{id}/index.html`, optional `nodes/{id}/tabs/{tabId}/index.html`, and `_astro/` assets.
+7. Astro writes `index.html`, `{id}/index.html`, optional `{id}/tabs/{tabId}/index.html`, and `_astro/` assets.
 
 ## Page contents (read-only editor parity)
 
@@ -67,8 +67,8 @@ Editing, add-row/link-existing, row actions, drag-reorder, table search, tab/col
 | Output | Default path |
 | --- | --- |
 | Site root | `dist/web/index.html` (static-site home node) |
-| Node pages | `dist/web/nodes/{id}/index.html` |
-| Tab pages | `dist/web/nodes/{id}/tabs/{tabId}/index.html` |
+| Node pages | `dist/web/{id}/index.html` |
+| Tab pages | `dist/web/{id}/tabs/{tabId}/index.html` |
 | Assets | `dist/web/_astro/` |
 
 Output is gitignored (`**/dist/`).
