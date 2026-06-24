@@ -121,6 +121,16 @@ bun run web:build -- --out-dir=/other-project/public/design --base=/design/
 
 Copy the output directory into the parent project's static assets; internal links include the base prefix.
 
+### Site chrome (`content/model/workspace.json` → `branding`)
+
+| Field | Purpose |
+| --- | --- |
+| `staticSiteHeader` | Header link label (default `Tome`) |
+| `staticSiteFooter` | Custom footer template, replacing the default copyright line when set |
+| `staticSiteFooterOrganization` | Organization name substituted for `:organization:` |
+
+The footer is shown when **either** `staticSiteFooter` or `staticSiteFooterOrganization` is set. When only organization is set, the default template is `© Copyright :year: :organization:`. Placeholders `:year:` (build year) and `:organization:` are resolved at generate time. When neither field is set, no footer is rendered.
+
 ## Verification
 
 ```bash
@@ -141,6 +151,8 @@ bun run web:build
 | Astro data loader | `src/lib/content.ts` |
 | Markdown + links | `src/lib/markdown.ts`, `src/lib/node-urls.ts` |
 | Node page shell | `src/components/NodePage.astro` |
+| Layout (header + footer) | `src/layouts/NodeLayout.astro` |
+| Footer resolution | `src/lib/static-site-footer.ts` |
 | Client JS | `src/lib/client/page-interactions.ts` |
 | Section styles | `src/lib/node-sections.css` |
 | Astro pages | `src/pages/` |

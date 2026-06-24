@@ -8,6 +8,7 @@ import { buildExtraTabPayloadsAndRoutes, buildSiteNode } from "./lib/static-expo
 import { buildNodeUrlIndex, createNodeUrlResolver } from "./lib/node-urls";
 import { ExtensionHtmlRuntime } from "./extensions/loader";
 import { createPageBlockHtmlContext, renderNodeBodyHtml } from "./lib/page-block-html";
+import { resolveStaticSiteFooter } from "./lib/static-site-footer";
 
 export type { SiteData, SiteNode } from "./lib/site-types";
 
@@ -60,9 +61,12 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
 
   db.close();
 
+  const staticSiteFooter = resolveStaticSiteFooter(workspace.branding);
+
   return {
     homeNodeId: workspace.staticSite.homeNodeId,
     staticSiteHeader: workspace.branding?.staticSiteHeader ?? "Tome",
+    ...(staticSiteFooter !== undefined ? { staticSiteFooter } : {}),
     base: config.base,
     nodes,
     pathById,

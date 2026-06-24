@@ -68,6 +68,36 @@ describe("parseWorkspaceFile", () => {
     const roundTrip = parseWorkspaceFile(serializeWorkspaceFile(file));
     expect(roundTrip).toEqual(file);
   });
+
+  test("parses static site footer branding fields", () => {
+    const file = parseWorkspaceFile(
+      JSON.stringify({
+        ...VALID,
+        branding: {
+          staticSiteFooter: "© :year: :organization:",
+          staticSiteFooterOrganization: "Silent Orb",
+        },
+      }),
+    );
+    expect(file.branding?.staticSiteFooter).toBe("© :year: :organization:");
+    expect(file.branding?.staticSiteFooterOrganization).toBe("Silent Orb");
+  });
+
+  test("treats whitespace-only footer fields as unset", () => {
+    const file = parseWorkspaceFile(
+      JSON.stringify({
+        ...VALID,
+        branding: {
+          appTitle: "Tome",
+          staticSiteFooter: "   ",
+          staticSiteFooterOrganization: "  ",
+        },
+      }),
+    );
+    expect(file.branding?.appTitle).toBe("Tome");
+    expect(file.branding?.staticSiteFooter).toBeUndefined();
+    expect(file.branding?.staticSiteFooterOrganization).toBeUndefined();
+  });
 });
 
 describe("emptyWorkspaceFile", () => {

@@ -1,7 +1,7 @@
 ---
 import "../lib/theme.css";
 import "../lib/node-sections.css";
-import { getStaticSiteHeader } from "../lib/content";
+import { getStaticSiteFooter, getStaticSiteHeader } from "../lib/content";
 
 interface Props {
   title: string;
@@ -10,6 +10,7 @@ interface Props {
 const { title } = Astro.props;
 const pageTitle = title;
 const siteHeader = getStaticSiteHeader();
+const siteFooter = getStaticSiteFooter();
 ---
 
 <!doctype html>
@@ -27,6 +28,7 @@ const siteHeader = getStaticSiteHeader();
     <main class="page page--node">
       <slot />
     </main>
+    {siteFooter && <footer class="site-footer">{siteFooter}</footer>}
     <script src="../lib/client/page-interactions.ts"></script>
   </body>
 </html>

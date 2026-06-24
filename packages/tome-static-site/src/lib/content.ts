@@ -55,6 +55,10 @@ export function getStaticSiteHeader(): string {
   return data.staticSiteHeader ?? "Tome";
 }
 
+export function getStaticSiteFooter(): string | undefined {
+  return data.staticSiteFooter;
+}
+
 export function loadTabRoutes() {
   return data.tabRoutes ?? [];
 }

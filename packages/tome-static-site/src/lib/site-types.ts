@@ -79,6 +79,8 @@ export interface TabRoute {
 export interface SiteData {
   homeNodeId: string;
   staticSiteHeader: string;
+  /** Resolved footer text; omitted when footer branding is not configured. */
+  staticSiteFooter?: string;
   base: string;
   nodes: SiteNode[];
   /** Lowercase node id → canonical url path segment(s). */

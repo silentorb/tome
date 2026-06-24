@@ -32,6 +32,8 @@ html {
 body {
   margin: 0;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   background: var(--tome-bg);
   color: var(--tome-text);
 }
@@ -60,6 +62,16 @@ a:hover {
   color: var(--tome-link);
 }
 
+.site-footer {
+  margin-top: auto;
+  border-top: 1px solid var(--tome-border);
+  background: var(--tome-surface);
+  padding: 0.75rem 1.5rem;
+  color: var(--tome-muted);
+  font-size: 0.875rem;
+  text-align: center;
+}
+
 .page {
   max-width: 52rem;
   margin: 0 auto;
@@ -68,6 +80,7 @@ a:hover {
 
 .page--node {
   max-width: min(72rem, 100%);
+  flex: 1;
 }
 
 .page-title {

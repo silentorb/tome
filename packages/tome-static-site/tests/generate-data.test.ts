@@ -9,6 +9,7 @@ import {
   seedTestNode,
   seedTestRelationships,
   seedTestViews,
+  seedTestWorkspace,
   TEST_STATIC_SITE_HOME_NODE_ID,
   type TestContentFixture,
 } from "tome-db/content";
@@ -85,6 +86,7 @@ describe("writeSiteData", () => {
 
     expect(data.homeNodeId).toBe(TEST_STATIC_SITE_HOME_NODE_ID);
     expect(data.staticSiteHeader).toBe("Tome");
+    expect(data.staticSiteFooter).toBeUndefined();
     expect(data.pathById[instanceId.toLowerCase()]).toBe(instanceId.toLowerCase());
     expect(data.aliasToId).toEqual({});
 
@@ -120,5 +122,41 @@ describe("writeSiteData", () => {
     expect(data.tabRoutes).toEqual([{ nodeId: typeId, tabId: "all" }]);
 
     expect(defaultSiteDataPath(join(outDir, "pkg"))).toMatch(/site-data\.json$/);
+  });
+
+  test("exports resolved static site footer from workspace branding", async () => {
+    const footerFixture = createTestContentFixture("tome-static-footer-");
+    const footerOutDir = mkdtempSync(join(tmpdir(), "tome-static-footer-out-"));
+
+    try {
+      seedTestWorkspace(footerFixture, {
+        branding: {
+          staticSiteFooterOrganization: "Silent Orb",
+        },
+      });
+
+      const config: ResolvedConfig = {
+        repoRoot: footerFixture.tempDir,
+        contentDir: join(footerFixture.tempDir, "content"),
+        dbPath: join(footerFixture.tempDir, "footer.sqlite"),
+        outDir: join(footerOutDir, "web"),
+        base: "/",
+      };
+
+      const orgOnly = await writeSiteData(config, join(footerOutDir, "org-only.json"));
+      const year = new Date().getFullYear();
+      expect(orgOnly.staticSiteFooter).toBe(`© Copyright ${year} Silent Orb`);
+
+      seedTestWorkspace(footerFixture, {
+        branding: {
+          staticSiteFooter: "Built in :year:",
+        },
+      });
+      const customOnly = await writeSiteData(config, join(footerOutDir, "custom-only.json"));
+      expect(customOnly.staticSiteFooter).toBe(`Built in ${year}`);
+    } finally {
+      destroyTestContentFixture(footerFixture);
+      rmSync(footerOutDir, { recursive: true, force: true });
+    }
   });
 });

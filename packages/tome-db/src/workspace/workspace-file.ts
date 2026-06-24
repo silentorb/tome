@@ -12,6 +12,10 @@ export interface WorkspaceBranding {
   appTitle?: string;
   defaultDocumentIcon?: string;
   staticSiteHeader?: string;
+  /** Custom static-site footer template; replaces the default copyright template when set. */
+  staticSiteFooter?: string;
+  /** Organization name substituted for :organization: in the footer template. */
+  staticSiteFooterOrganization?: string;
 }
 
 export interface WorkspaceLegacy {
@@ -97,6 +101,20 @@ function parseBranding(raw: unknown, path: string): WorkspaceBranding | undefine
       throw new Error(`${path}.staticSiteHeader: must be a string`);
     }
     branding.staticSiteHeader = obj.staticSiteHeader;
+  }
+  if (obj.staticSiteFooter !== undefined) {
+    if (typeof obj.staticSiteFooter !== "string") {
+      throw new Error(`${path}.staticSiteFooter: must be a string`);
+    }
+    const trimmed = obj.staticSiteFooter.trim();
+    if (trimmed) branding.staticSiteFooter = trimmed;
+  }
+  if (obj.staticSiteFooterOrganization !== undefined) {
+    if (typeof obj.staticSiteFooterOrganization !== "string") {
+      throw new Error(`${path}.staticSiteFooterOrganization: must be a string`);
+    }
+    const trimmed = obj.staticSiteFooterOrganization.trim();
+    if (trimmed) branding.staticSiteFooterOrganization = trimmed;
   }
   return Object.keys(branding).length > 0 ? branding : undefined;
 }
