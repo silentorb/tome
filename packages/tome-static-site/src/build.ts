@@ -22,6 +22,7 @@ async function main(): Promise<void> {
   console.log(`Building static site → ${config.outDir}`);
   console.log(`  content: ${config.contentDir}`);
   console.log(`  base:    ${config.base}`);
+  if (config.publicDir) console.log(`  public:  ${config.publicDir}`);
   console.log(`  nodes:   ${data.nodes.length}`);
   console.log(`  tab pages: ${data.tabRoutes.length}`);
 

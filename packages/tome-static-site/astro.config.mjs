@@ -19,11 +19,15 @@ function normalizeBase(value) {
 
 const outDir = resolveOutDir(process.env.TOME_WEB_OUT_DIR);
 const base = normalizeBase(process.env.TOME_WEB_BASE);
+const publicDir = process.env.TOME_WEB_PUBLIC_DIR
+  ? resolve(process.env.TOME_WEB_PUBLIC_DIR)
+  : undefined;
 
 export default defineConfig({
   srcDir: "src",
   outDir,
   base,
+  ...(publicDir ? { publicDir } : {}),
   build: {
     format: "directory",
   },

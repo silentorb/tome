@@ -8,6 +8,7 @@ export interface ResolvedConfig {
   dbPath: string;
   outDir: string;
   base: string;
+  publicDir?: string;
 }
 
 const PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
@@ -102,7 +103,14 @@ function buildResolvedConfig(
   const baseFromCli = typeof rawBase === "string" ? rawBase : undefined;
   const base = normalizeBase(baseFromCli ?? envString("TOME_WEB_BASE", env) ?? "/");
 
-  return { repoRoot, contentDir, dbPath, outDir, base };
+  const rawPublic = kv.get("public-dir");
+  const publicFromCli = typeof rawPublic === "string" ? rawPublic : undefined;
+  const publicDir = resolvePathArg(
+    publicFromCli ?? envString("TOME_WEB_PUBLIC_DIR", env),
+    repoRoot,
+  );
+
+  return { repoRoot, contentDir, dbPath, outDir, base, publicDir };
 }
 
 export function readConfig(
@@ -124,6 +132,13 @@ export function applyBuildEnv(config: ResolvedConfig, env: NodeJS.ProcessEnv = p
   env.MARLOTH_DB_PATH = config.dbPath;
   env.MARLOTH_WEB_OUT_DIR = config.outDir;
   env.MARLOTH_WEB_BASE = config.base;
+  if (config.publicDir) {
+    env.TOME_WEB_PUBLIC_DIR = config.publicDir;
+    env.MARLOTH_WEB_PUBLIC_DIR = config.publicDir;
+  } else {
+    delete env.TOME_WEB_PUBLIC_DIR;
+    delete env.MARLOTH_WEB_PUBLIC_DIR;
+  }
 }
 
 export function printHelp(): void {
@@ -138,6 +153,7 @@ export function printHelp(): void {
     "  --db-path <path>       SQLite cache path (default: data/tome.sqlite)",
     "  --out-dir <path>       Output directory (default: dist/web)",
     "  --base <path>          Site base path for embedding (default: /)",
+    "  --public-dir <path>    Static assets directory (Astro publicDir)",
     "  -h, --help",
     "",
     "Environment:",
@@ -145,6 +161,7 @@ export function printHelp(): void {
     "  TOME_DB_PATH           SQLite cache path when --db-path is omitted",
     "  TOME_WEB_OUT_DIR       Output directory when --out-dir is omitted",
     "  TOME_WEB_BASE          Site base path when --base is omitted",
+    "  TOME_WEB_PUBLIC_DIR    Static assets directory when --public-dir is omitted",
   ];
   console.log(lines.join("\n"));
 }

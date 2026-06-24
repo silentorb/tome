@@ -36,6 +36,18 @@ describe("readConfig", () => {
     expect(result.config.base).toBe("/docs/");
   });
 
+  test("CLI public-dir and env", () => {
+    const result = readConfig(["--public-dir=/tmp/public"], {});
+    expect(result.help).toBe(false);
+    if (result.help) return;
+    expect(result.config.publicDir).toBe("/tmp/public");
+
+    const fromEnv = readConfig([], { TOME_WEB_PUBLIC_DIR: "/env/public" });
+    expect(fromEnv.help).toBe(false);
+    if (fromEnv.help) return;
+    expect(fromEnv.config.publicDir).toBe("/env/public");
+  });
+
   test("applyBuildEnv sets process env for Astro", () => {
     const env: NodeJS.ProcessEnv = {};
     applyBuildEnv(
@@ -45,6 +57,7 @@ describe("readConfig", () => {
         dbPath: "/repo/data/tome.sqlite",
         outDir: "/repo/dist/web",
         base: "/design/",
+        publicDir: "/repo/public",
       },
       env,
     );
@@ -56,5 +69,7 @@ describe("readConfig", () => {
     expect(env.MARLOTH_WEB_OUT_DIR).toBe("/repo/dist/web");
     expect(env.TOME_WEB_BASE).toBe("/design/");
     expect(env.MARLOTH_WEB_BASE).toBe("/design/");
+    expect(env.TOME_WEB_PUBLIC_DIR).toBe("/repo/public");
+    expect(env.MARLOTH_WEB_PUBLIC_DIR).toBe("/repo/public");
   });
 });
