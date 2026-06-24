@@ -10,7 +10,7 @@
     "editor:api": "bun run --filter tome-editor dev:api",
     "editor:build": "bun run --filter tome-editor build",
     "web:build": "bun run --filter tome-static-site build",
-    "test": "bun run --filter tome-db test && bun run --filter tome-editor test && bun run --filter tome-static-site test"
+    "test": "bun run --filter tome-theme-midnight test && bun run --filter tome-db test && bun run --filter tome-editor test && bun run --filter tome-static-site test"
   },
   "devDependencies": {}
 }

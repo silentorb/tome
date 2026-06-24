@@ -7,19 +7,34 @@ import { UserSettingsProvider } from "../../../src/webview/hooks/useUserSettings
 import { makeMockEditorApi } from "../test-fixtures/mock-api";
 
 const COMPONENT_DIR = import.meta.dir;
+const THEME_SRC = join(COMPONENT_DIR, "../../../../tome-theme-midnight/src");
 
 function loadTableStyles(): HTMLStyleElement {
-  const css = readFileSync(join(COMPONENT_DIR, "../../../src/webview/components/database-table-view.css"), "utf8");
+  const contentPanelCss = readFileSync(join(THEME_SRC, "content-panel.css"), "utf8");
+  const databaseTableCss = readFileSync(join(THEME_SRC, "database-table.css"), "utf8");
+  const css = readFileSync(
+    join(COMPONENT_DIR, "../../../src/webview/components/database-table-view.css"),
+    "utf8",
+  );
   const style = document.createElement("style");
-  style.textContent = css;
+  style.textContent = `${contentPanelCss}\n${databaseTableCss}\n${css}`;
   style.dataset.testTableLayout = "true";
   document.head.append(style);
   return style;
 }
 
 describe("database table layout CSS", () => {
-  const css = readFileSync(join(COMPONENT_DIR, "../../../src/webview/components/database-table-view.css"), "utf8");
-  const sectionTableCss = readFileSync(join(COMPONENT_DIR, "../../../src/webview/components/section-data-table.css"), "utf8");
+  const contentPanelCss = readFileSync(join(THEME_SRC, "content-panel.css"), "utf8");
+  const sharedDatabaseCss = readFileSync(join(THEME_SRC, "database-table.css"), "utf8");
+  const css = readFileSync(
+    join(COMPONENT_DIR, "../../../src/webview/components/database-table-view.css"),
+    "utf8",
+  );
+  const panelCss = `${contentPanelCss}\n${sharedDatabaseCss}\n${css}`;
+  const sectionTableCss = readFileSync(
+    join(COMPONENT_DIR, "../../../src/webview/components/section-data-table.css"),
+    "utf8",
+  );
 
   test("caps column widths with simple max-width rules", () => {
     expect(css).toContain("max-width: 21rem");
@@ -31,9 +46,9 @@ describe("database table layout CSS", () => {
   });
 
   test("scrolls horizontally on the page shell, not inside the table wrap", () => {
-    expect(css).toMatch(/\.tome-database-table-wrap[\s\S]*width:\s*fit-content/);
-    expect(css).toMatch(/\.tome-database-table-wrap[\s\S]*overflow:\s*visible/);
-    expect(css).not.toMatch(/\.tome-database-table-wrap[\s\S]*overflow:\s*auto/);
+    expect(panelCss).toMatch(/\.tome-database-table-wrap[\s\S]*width:\s*fit-content/);
+    expect(panelCss).toMatch(/\.tome-database-table-wrap[\s\S]*overflow:\s*visible/);
+    expect(panelCss).not.toMatch(/\.tome-database-table-wrap[\s\S]*overflow:\s*auto/);
 
     const mainCss = readFileSync(join(COMPONENT_DIR, "../../../src/webview/styles.css"), "utf8");
     expect(mainCss).toMatch(/\.tome-main[\s\S]*overflow:\s*auto/);

@@ -1,25 +1,3 @@
-/* Dark-first: matches tome-editor tokens. */
-:root {
-  color-scheme: dark;
-  --tome-font: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial,
-    sans-serif;
-  --tome-bg: #191919;
-  --tome-surface: #252525;
-  --tome-text: #ebebea;
-  --tome-muted: #9b9a97;
-  --tome-border: rgba(255, 255, 255, 0.09);
-  --tome-hover: rgba(255, 255, 255, 0.06);
-  --tome-callout-bg: #2f343c;
-  --tome-callout-border: rgba(255, 255, 255, 0.1);
-  --tome-callout-radius: 8px;
-  --tome-link: #6cb6ff;
-  font-family: var(--tome-font);
-  font-size: 16px;
-  line-height: 1.5;
-  background: var(--tome-bg);
-  color: var(--tome-text);
-}
-
 * {
   box-sizing: border-box;
 }
@@ -127,52 +105,10 @@ a:hover {
   padding-left: 1.5em;
 }
 
-.prose :where(blockquote) {
+.prose :where(blockquote:not(.tome-callout)) {
   border-left: 3px solid var(--tome-border);
   padding-left: 1em;
   color: var(--tome-muted);
-}
-
-.prose :where(blockquote.tome-callout) {
-  border-left: none;
-  margin: 1em 0;
-  padding: 12px 14px;
-  background: var(--tome-callout-bg);
-  border: 1px solid var(--tome-callout-border);
-  border-radius: var(--tome-callout-radius);
-  color: var(--tome-text);
-  --tome-callout-gutter: 1.75em;
-}
-
-.prose :where(blockquote.tome-callout > p:first-child) {
-  margin-top: 0;
-  padding-left: var(--tome-callout-gutter);
-  text-indent: calc(-1 * var(--tome-callout-gutter));
-}
-
-.prose :where(blockquote.tome-callout > p:last-child) {
-  margin-bottom: 0;
-}
-
-.prose :where(blockquote.tome-callout > p ~ p),
-.prose :where(blockquote.tome-callout > blockquote),
-.prose :where(blockquote.tome-callout > ul),
-.prose :where(blockquote.tome-callout > ol) {
-  padding-left: var(--tome-callout-gutter);
-}
-
-.prose :where(blockquote.tome-callout blockquote.tome-callout) {
-  margin: 0.75em 0;
-}
-
-.prose :where(blockquote.tome-callout blockquote.tome-callout > p:first-child) {
-  margin-top: 0;
-  padding-left: var(--tome-callout-gutter);
-  text-indent: calc(-1 * var(--tome-callout-gutter));
-}
-
-.prose :where(blockquote.tome-callout blockquote.tome-callout > p:last-child) {
-  margin-bottom: 0;
 }
 
 .prose :where(code) {

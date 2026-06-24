@@ -1,0 +1,17 @@
+.tome-content-panel,
+.tome-database-table-wrap {
+  align-self: flex-start;
+  min-width: 100%;
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+  background: var(--tome-surface);
+}
+
+.tome-content-panel {
+  padding: 16px;
+  min-width: 0;
+}
+
+.tome-database-table-wrap {
+  padding: 0;
+}

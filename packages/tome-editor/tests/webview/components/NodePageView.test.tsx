@@ -38,6 +38,7 @@ describe("NodePageView", () => {
     expect(titleField.value).toBe("Example page");
     expect(screen.getByRole("button", { name: /Metadata/i })).toBeTruthy();
     expect(screen.getByTestId("tome-editor-stub")).toBeTruthy();
+    expect(document.querySelector(".tome-content-panel")).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Related items", level: 2 })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Linked record" })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Page actions" })).toHaveLength(2);

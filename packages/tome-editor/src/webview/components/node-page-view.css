@@ -1,29 +1,56 @@
+@import "tome-theme-midnight/content-panel";
+@import "tome-theme-midnight/node-page";
+
+.tome-content-panel,
+.tome-database-table-wrap {
+  width: fit-content;
+  overflow: visible;
+}
+
+.tome-content-panel .milkdown .ProseMirror code {
+  background: var(--tome-inset);
+}
+
+.tome-content-panel .milkdown .ProseMirror pre {
+  background: var(--tome-inset);
+}
+
+.tome-content-panel .milkdown .ProseMirror .tome-spatial-graph,
+.tome-content-panel .milkdown .ProseMirror .tome-page-block-unknown {
+  background: var(--tome-inset);
+}
+
 .tome-record-page {
-  display: flex;
-  flex-direction: column;
   flex: 1;
   min-height: 0;
+}
+
+.tome-record-sections {
+  gap: 32px;
+  padding: 24px 32px 32px;
+}
+
+.tome-record-section {
+  padding: 0;
+  border-bottom: none;
+}
+
+.tome-page-title-section {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .tome-record-page-archived {
   display: block;
   margin-bottom: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
   color: var(--tome-muted);
   font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-}
-
-.tome-record-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  padding: 24px 32px 32px;
-}
-
-.tome-page-title-section {
-  padding-bottom: 0;
 }
 
 .tome-page-title-row {
@@ -71,9 +98,8 @@
   min-height: 0;
 }
 
-/* Crepe reset uses 60px vertical padding; node pages already inset via .tome-record-sections. */
 .tome-record-page .tome-editor-body .milkdown .ProseMirror {
-  padding: 14px 0 0;
+  padding: 0;
 }
 
 .tome-record-page .tome-editor-body.is-empty .milkdown .ProseMirror p {

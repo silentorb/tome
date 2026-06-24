@@ -1,0 +1,41 @@
+blockquote.tome-callout {
+  --tome-callout-gutter: 1.75em;
+  border-left: none;
+  margin: 1em 0;
+  padding: 12px 14px;
+  background: var(--tome-callout-bg);
+  border: 1px solid var(--tome-callout-border);
+  border-radius: var(--tome-callout-radius);
+  color: var(--tome-text);
+}
+
+blockquote.tome-callout > p:first-child {
+  margin-top: 0;
+  padding-left: var(--tome-callout-gutter);
+  text-indent: calc(-1 * var(--tome-callout-gutter));
+}
+
+blockquote.tome-callout > p:last-child {
+  margin-bottom: 0;
+}
+
+blockquote.tome-callout > p ~ p,
+blockquote.tome-callout > blockquote,
+blockquote.tome-callout > ul,
+blockquote.tome-callout > ol {
+  padding-left: var(--tome-callout-gutter);
+}
+
+blockquote.tome-callout blockquote.tome-callout {
+  margin: 0.75em 0;
+}
+
+blockquote.tome-callout blockquote.tome-callout > p:first-child {
+  margin-top: 0;
+  padding-left: var(--tome-callout-gutter);
+  text-indent: calc(-1 * var(--tome-callout-gutter));
+}
+
+blockquote.tome-callout blockquote.tome-callout > p:last-child {
+  margin-bottom: 0;
+}

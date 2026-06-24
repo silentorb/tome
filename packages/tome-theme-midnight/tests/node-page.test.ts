@@ -2,10 +2,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 
-const themeSrc = join(import.meta.dir, "../../tome-theme-midnight/src");
-const css = readFileSync(join(themeSrc, "node-page.css"), "utf8");
+const css = readFileSync(join(import.meta.dir, "../src/node-page.css"), "utf8");
 
-describe("node-page metadata collapse CSS (theme package)", () => {
+describe("node-page metadata collapse CSS", () => {
   test("hides metadata body when panel is not expanded", () => {
     expect(css).toMatch(
       /\.tome-record-metadata-panel:not\(\.is-expanded\) \.tome-record-metadata-body[\s\S]*display:\s*none/,
@@ -16,5 +15,9 @@ describe("node-page metadata collapse CSS (theme package)", () => {
     expect(css).toMatch(
       /\.tome-record-metadata-panel\.is-expanded \.tome-record-metadata-body[\s\S]*display:\s*grid/,
     );
+  });
+
+  test("does not set unconditional display on metadata body", () => {
+    expect(css).not.toMatch(/^\.tome-record-metadata-body\s*\{/m);
   });
 });

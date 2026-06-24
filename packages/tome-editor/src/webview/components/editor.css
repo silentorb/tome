@@ -1,3 +1,5 @@
+@import "tome-theme-midnight/callouts";
+
 .tome-editor-shell {
   position: relative;
   max-width: 1280px;
@@ -124,18 +126,15 @@
 }
 
 /*
- * Callouts: Notion-style panels (background + rounded corners), not quote bars.
- * `.tome-callout` is applied via ProseMirror node decorations (callout-decoration.ts).
+ * Milkdown overrides on shared callout styles (callout-decoration.ts).
  */
 .tome-editor-body .milkdown .ProseMirror blockquote.tome-callout {
-  --tome-callout-gutter: 1.75em;
   position: relative;
   box-sizing: border-box;
   margin: 10px 0 !important;
   padding: 12px 14px !important;
   padding-left: 14px !important;
   background: var(--tome-callout-bg) !important;
-  border: 1px solid var(--tome-callout-border);
   border-radius: var(--tome-callout-radius) !important;
   color: var(--tome-text) !important;
 }
@@ -146,14 +145,8 @@
 }
 
 .tome-editor-body .milkdown .ProseMirror blockquote.tome-callout > p:first-child {
-  margin-top: 0;
   padding-left: var(--tome-callout-gutter) !important;
-  text-indent: calc(-1 * var(--tome-callout-gutter));
   overflow: visible;
-}
-
-.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout > p:last-child {
-  margin-bottom: 0;
 }
 
 .tome-editor-body .milkdown .ProseMirror blockquote.tome-callout > p ~ p,
@@ -168,14 +161,8 @@
 }
 
 .tome-editor-body .milkdown .ProseMirror blockquote.tome-callout blockquote.tome-callout > p:first-child {
-  margin-top: 0;
   padding-left: var(--tome-callout-gutter) !important;
-  text-indent: calc(-1 * var(--tome-callout-gutter));
   overflow: visible;
-}
-
-.tome-editor-body .milkdown .ProseMirror blockquote.tome-callout blockquote.tome-callout > p:last-child {
-  margin-bottom: 0;
 }
 
 /*

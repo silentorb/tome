@@ -1,0 +1,20 @@
+{
+  "name": "tome-theme-midnight",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.css",
+    "./tokens": "./src/tokens.css",
+    "./content-panel": "./src/content-panel.css",
+    "./node-page": "./src/node-page.css",
+    "./database-table": "./src/database-table.css",
+    "./callouts": "./src/callouts.css"
+  },
+  "scripts": {
+    "test": "bun test tests"
+  },
+  "devDependencies": {
+    "@types/bun": "1.2.23"
+  }
+}

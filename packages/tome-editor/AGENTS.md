@@ -13,7 +13,7 @@ Browser editor for design corpus nodes stored in `content/` with a SQLite query 
 
 ## Theme
 
-The editor is **dark-first**: it always uses the `:root` palette in `src/webview/styles.css`. Milkdown loads `frame-dark.css`; code blocks use Crepe’s One Dark CodeMirror theme. New UI should use `--tome-*` tokens (add tokens to `styles.css` rather than hardcoding colors).
+The editor is **dark-first** and uses the **Midnight** theme from `tome-theme-midnight` (`import "tome-theme-midnight/tokens"` in `main.tsx`). Milkdown loads `frame-dark.css`; code blocks use Crepe’s One Dark CodeMirror theme. New UI should use `--tome-*` tokens (add tokens to `tome-theme-midnight/src/tokens.css` rather than hardcoding colors). Editor shell and interactive overrides live in `src/webview/styles.css` and component CSS.
 
 ## Interaction targets
 

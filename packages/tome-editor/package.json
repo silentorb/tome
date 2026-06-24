@@ -20,6 +20,7 @@
     "@milkdown/crepe": "7.20.0",
     "tome-db": "workspace:*",
     "tome-interfaces": "workspace:*",
+    "tome-theme-midnight": "workspace:*",
     "react": "19.0.0",
     "react-dom": "19.0.0",
     "react-force-graph-2d": "^1.29.1"

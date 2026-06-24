@@ -1,0 +1,30 @@
+.tome-content-panel,
+.tome-database-table-wrap {
+  width: 100%;
+}
+
+.tome-database-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.tome-content-panel .prose > :first-child {
+  margin-top: 0;
+}
+
+.tome-content-panel .prose > :last-child {
+  margin-bottom: 0;
+}
+
+.tome-content-panel .prose :where(code) {
+  background: var(--tome-inset);
+}
+
+.tome-content-panel .prose :where(pre) {
+  background: var(--tome-inset);
+}
+
+.tome-content-panel .prose :where(.tome-spatial-graph),
+.tome-content-panel .prose :where(.tome-page-block-unknown) {
+  background: var(--tome-inset);
+}

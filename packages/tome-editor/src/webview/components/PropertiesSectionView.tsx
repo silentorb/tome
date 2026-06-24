@@ -3,7 +3,6 @@ import type { EditorApi } from "../api/client";
 import type { PropertiesSection } from "../../shared/types";
 import { SectionTitle } from "./NodeNameLink";
 import { renderTableCell } from "./table-cell-render";
-import "./properties-section-view.css";
 
 interface PropertiesSectionViewProps {
   api: EditorApi;

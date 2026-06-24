@@ -120,14 +120,16 @@ export function NodePageView({
         <section
           className={`tome-record-section tome-markdown-section${emptyMarkdown ? " is-empty" : ""}`}
         >
-          <TomeEditor
-            key={node.id}
-            api={api}
-            nodeId={node.id}
-            initialBody={editorBody}
-            onEditorBaseline={onEditorBaseline}
-            onBodyChange={onBodyChange}
-          />
+          <div className="tome-content-panel">
+            <TomeEditor
+              key={node.id}
+              api={api}
+              nodeId={node.id}
+              initialBody={editorBody}
+              onEditorBaseline={onEditorBaseline}
+              onBodyChange={onBodyChange}
+            />
+          </div>
         </section>
 
         {showPageActions ? (

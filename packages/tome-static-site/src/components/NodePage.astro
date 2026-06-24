@@ -49,13 +49,15 @@ const emptyMarkdown = !prepared.markdown.trim() && !bodyHtml.trim();
     <NodeMetadata metadata={node.metadata} pagePath={urls.pagePath} properties={node.properties} base={base} />
 
     <section class={`tome-record-section tome-markdown-section${emptyMarkdown ? " is-empty" : ""}`}>
-      {
-        bodyHtml ? (
-          <article class="prose" set:html={bodyHtml} />
-        ) : (
-          <p class="prose-empty">No content.</p>
-        )
-      }
+      <div class="tome-content-panel">
+        {
+          bodyHtml ? (
+            <article class="prose" set:html={bodyHtml} />
+          ) : (
+            <p class="prose-empty">No content.</p>
+          )
+        }
+      </div>
     </section>
 
     {

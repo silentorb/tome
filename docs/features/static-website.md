@@ -154,9 +154,10 @@ bun run web:build
 | Layout (header + footer) | `src/layouts/NodeLayout.astro` |
 | Footer resolution | `src/lib/static-site-footer.ts` |
 | Client JS | `src/lib/client/page-interactions.ts` |
-| Section styles | `src/lib/node-sections.css` |
+| Section styles | `tome-theme-midnight` (via `NodeLayout.astro`) + `src/lib/node-sections-overrides.css` |
+| Site chrome + prose | `src/lib/site-chrome.css` |
 | Astro pages | `src/pages/` |
-| Dark theme | `src/lib/theme.css` |
+| Dark theme | `tome-theme-midnight` (`packages/tome-theme-midnight/`) |
 
 ## See also
 
