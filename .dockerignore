@@ -1,11 +1,11 @@
 node_modules/
-.bun-install.lock
+**/node_modules/
 **/dist/
 **/dist-webview/
 data/
+.git/
 .DS_Store
 Thumbs.db
-
 .env
 .env.*
 !.env.example

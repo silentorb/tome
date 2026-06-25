@@ -30,6 +30,7 @@
         "react-force-graph-2d": "^1.29.1",
         "tome-db": "workspace:*",
         "tome-interfaces": "workspace:*",
+        "tome-theme-midnight": "workspace:*",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "17.4.4",
@@ -91,10 +92,18 @@
         "tome-extension-fixture": "workspace:*",
         "tome-interfaces": "workspace:*",
         "tome-spatial-graph": "workspace:*",
+        "tome-theme-midnight": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
         "typescript": "5.8.2",
+      },
+    },
+    "packages/tome-theme-midnight": {
+      "name": "tome-theme-midnight",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/bun": "1.2.23",
       },
     },
   },
@@ -1252,6 +1261,8 @@
     "tome-spatial-graph": ["tome-spatial-graph@workspace:packages/tome-spatial-graph"],
 
     "tome-static-site": ["tome-static-site@workspace:packages/tome-static-site"],
+
+    "tome-theme-midnight": ["tome-theme-midnight@workspace:packages/tome-theme-midnight"],
 
     "tough-cookie": ["tough-cookie@5.1.2", "", { "dependencies": { "tldts": "^6.1.32" } }, "sha512-FVDYdxtnj0G6Qm/DhNPSb8Ju59ULcup3tuJxkFb5K8Bv2pUXILbf0xZWU8PX8Ov19OXljbUyveOFwRMwkXzO+A=="],
 
