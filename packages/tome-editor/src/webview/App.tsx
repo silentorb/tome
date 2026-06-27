@@ -683,6 +683,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
             onTitleSelected={() => setSelectPageTitleOnMount(false)}
             protectedNodeIds={protectedNodeIds}
             archiveHubTitle={archiveHubTitle}
+            markdownBodyPanel={workspace.editor?.markdownBodyPanel === true}
           />
         )}
       </div>

@@ -35,6 +35,10 @@ export interface WorkspaceSidebar {
   links: SidebarLink[];
 }
 
+export interface WorkspaceEditor {
+  markdownBodyPanel?: boolean;
+}
+
 export interface WorkspaceFile {
   version: number;
   homeNodeId: string;
@@ -45,6 +49,11 @@ export interface WorkspaceFile {
   sidebar: WorkspaceSidebar;
   branding?: WorkspaceBranding;
   legacy?: WorkspaceLegacy;
+  editor?: WorkspaceEditor;
+}
+
+export function editorMarkdownBodyPanel(workspace: WorkspaceFile): boolean {
+  return workspace.editor?.markdownBodyPanel === true;
 }
 
 function parseNodeId(value: unknown, path: string): string {
@@ -141,6 +150,22 @@ function parseLegacy(raw: unknown, path: string): WorkspaceLegacy | undefined {
   return Object.keys(legacy).length > 0 ? legacy : undefined;
 }
 
+function parseEditor(raw: unknown, path: string): WorkspaceEditor | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${path}: must be an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  const editor: WorkspaceEditor = {};
+  if (obj.markdownBodyPanel !== undefined) {
+    if (typeof obj.markdownBodyPanel !== "boolean") {
+      throw new Error(`${path}.markdownBodyPanel: must be a boolean`);
+    }
+    editor.markdownBodyPanel = obj.markdownBodyPanel;
+  }
+  return Object.keys(editor).length > 0 ? editor : undefined;
+}
+
 export function emptyWorkspaceFile(): WorkspaceFile {
   return {
     version: WORKSPACE_FILE_VERSION,
@@ -208,6 +233,7 @@ export function parseWorkspaceFile(raw: string): WorkspaceFile {
 
   const branding = parseBranding(obj.branding, "workspace.json branding");
   const legacy = parseLegacy(obj.legacy, "workspace.json legacy");
+  const editor = parseEditor(obj.editor, "workspace.json editor");
 
   return {
     version: WORKSPACE_FILE_VERSION,
@@ -219,6 +245,7 @@ export function parseWorkspaceFile(raw: string): WorkspaceFile {
     sidebar,
     ...(branding ? { branding } : {}),
     ...(legacy ? { legacy } : {}),
+    ...(editor ? { editor } : {}),
   };
 }
 

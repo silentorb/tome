@@ -38,10 +38,37 @@ describe("NodePageView", () => {
     expect(titleField.value).toBe("Example page");
     expect(screen.getByRole("button", { name: /Metadata/i })).toBeTruthy();
     expect(screen.getByTestId("tome-editor-stub")).toBeTruthy();
-    expect(document.querySelector(".tome-content-panel")).toBeTruthy();
+    expect(document.querySelector(".tome-content-panel")).toBeNull();
     expect(screen.getByRole("heading", { name: "Related items", level: 2 })).toBeTruthy();
     expect(screen.getByRole("link", { name: "Linked record" })).toBeTruthy();
     expect(screen.getAllByRole("button", { name: "Page actions" })).toHaveLength(2);
+  });
+
+  test("wraps markdown body in content panel when markdownBodyPanel is enabled", () => {
+    const api = makeMockEditorApi();
+
+    render(
+      <UserSettingsProvider api={api}>
+        <NodePageView
+          api={api}
+          node={makeNodePageDetail()}
+          saveState="idle"
+          metadataExpanded={false}
+          onMetadataExpandedChange={() => {}}
+          onBodyChange={() => {}}
+          onTitleChange={() => {}}
+          onTabSelect={() => {}}
+          onOrderedAssociationViewChange={() => {}}
+          onArchiveNode={async () => {}}
+          onUnarchiveNode={async () => {}}
+          onDeleteNode={async () => {}}
+          markdownBodyPanel
+        />
+      </UserSettingsProvider>,
+    );
+
+    expect(document.querySelector(".tome-content-panel")).toBeTruthy();
+    expect(screen.getByTestId("tome-editor-stub")).toBeTruthy();
   });
 
   test("page actions menu includes Relate for linking existing records", () => {

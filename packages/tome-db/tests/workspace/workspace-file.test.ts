@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+  editorMarkdownBodyPanel,
   emptyWorkspaceFile,
   parseWorkspaceFile,
   serializeWorkspaceFile,
@@ -97,6 +98,30 @@ describe("parseWorkspaceFile", () => {
     expect(file.branding?.appTitle).toBe("Tome");
     expect(file.branding?.staticSiteFooter).toBeUndefined();
     expect(file.branding?.staticSiteFooterOrganization).toBeUndefined();
+  });
+
+  test("parses optional editor.markdownBodyPanel", () => {
+    const enabled = parseWorkspaceFile(
+      JSON.stringify({ ...VALID, editor: { markdownBodyPanel: true } }),
+    );
+    expect(enabled.editor?.markdownBodyPanel).toBe(true);
+    expect(editorMarkdownBodyPanel(enabled)).toBe(true);
+
+    const disabled = parseWorkspaceFile(
+      JSON.stringify({ ...VALID, editor: { markdownBodyPanel: false } }),
+    );
+    expect(disabled.editor?.markdownBodyPanel).toBe(false);
+    expect(editorMarkdownBodyPanel(disabled)).toBe(false);
+
+    const omitted = parseWorkspaceFile(JSON.stringify(VALID));
+    expect(omitted.editor).toBeUndefined();
+    expect(editorMarkdownBodyPanel(omitted)).toBe(false);
+  });
+
+  test("rejects invalid editor.markdownBodyPanel type", () => {
+    expect(() =>
+      parseWorkspaceFile(JSON.stringify({ ...VALID, editor: { markdownBodyPanel: "yes" } })),
+    ).toThrow(/markdownBodyPanel/);
   });
 });
 

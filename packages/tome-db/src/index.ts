@@ -265,12 +265,14 @@ export type {
   WorkspaceGraphExplorer,
   WorkspaceStaticSite,
   WorkspaceSidebar,
+  WorkspaceEditor,
   SidebarLink,
 } from "./workspace/workspace-file";
 export {
   parseWorkspaceFile,
   serializeWorkspaceFile,
   emptyWorkspaceFile,
+  editorMarkdownBodyPanel,
   WORKSPACE_FILE_VERSION,
 } from "./workspace/workspace-file";
 export {

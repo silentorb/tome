@@ -7,16 +7,16 @@
   overflow: visible;
 }
 
-.tome-content-panel .milkdown .ProseMirror code {
+.tome-markdown-section .milkdown .ProseMirror code {
   background: var(--tome-inset);
 }
 
-.tome-content-panel .milkdown .ProseMirror pre {
+.tome-markdown-section .milkdown .ProseMirror pre {
   background: var(--tome-inset);
 }
 
-.tome-content-panel .milkdown .ProseMirror .tome-spatial-graph,
-.tome-content-panel .milkdown .ProseMirror .tome-page-block-unknown {
+.tome-markdown-section .milkdown .ProseMirror .tome-spatial-graph,
+.tome-markdown-section .milkdown .ProseMirror .tome-page-block-unknown {
   background: var(--tome-inset);
 }
 
@@ -100,6 +100,10 @@
 
 .tome-record-page .tome-editor-body .milkdown .ProseMirror {
   padding: 0;
+}
+
+.tome-record-page .tome-markdown-section:not(:has(.tome-content-panel)) .milkdown .ProseMirror {
+  padding: 14px 0 0;
 }
 
 .tome-record-page .tome-editor-body.is-empty .milkdown .ProseMirror p {

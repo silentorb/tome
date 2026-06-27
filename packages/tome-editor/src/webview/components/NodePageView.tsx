@@ -34,6 +34,7 @@ interface NodePageViewProps {
   onTitleSelected?: () => void;
   protectedNodeIds?: readonly string[];
   archiveHubTitle?: string;
+  markdownBodyPanel?: boolean;
 }
 
 export function NodePageView({
@@ -55,6 +56,7 @@ export function NodePageView({
   onTitleSelected,
   protectedNodeIds = [],
   archiveHubTitle,
+  markdownBodyPanel = false,
 }: NodePageViewProps) {
   const { content } = resolvePageTitleAndContent(node.body, node.title);
   const emptyMarkdown = isEffectivelyEmptyMarkdown(node.body, node.title);
@@ -72,6 +74,17 @@ export function NodePageView({
           : saveState === "error"
             ? "Save failed"
             : "";
+
+  const editor = (
+    <TomeEditor
+      key={node.id}
+      api={api}
+      nodeId={node.id}
+      initialBody={editorBody}
+      onEditorBaseline={onEditorBaseline}
+      onBodyChange={onBodyChange}
+    />
+  );
 
   return (
     <div className="tome-record-page">
@@ -120,16 +133,7 @@ export function NodePageView({
         <section
           className={`tome-record-section tome-markdown-section${emptyMarkdown ? " is-empty" : ""}`}
         >
-          <div className="tome-content-panel">
-            <TomeEditor
-              key={node.id}
-              api={api}
-              nodeId={node.id}
-              initialBody={editorBody}
-              onEditorBaseline={onEditorBaseline}
-              onBodyChange={onBodyChange}
-            />
-          </div>
+          {markdownBodyPanel ? <div className="tome-content-panel">{editor}</div> : editor}
         </section>
 
         {showPageActions ? (
