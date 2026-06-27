@@ -9,6 +9,9 @@ export interface HtmlPageBlockContext {
   services?: {
     graphQuery?: ExtensionGraphQueryServices;
     nodePageHref?: (nodeId: string) => string;
+    spatialGraph?: {
+      nodeDimensionScale?: { x?: number; y?: number };
+    };
   };
 }
 

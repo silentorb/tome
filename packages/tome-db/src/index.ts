@@ -282,6 +282,7 @@ export type {
   WorkspaceStaticSite,
   WorkspaceSidebar,
   WorkspaceEditor,
+  WorkspaceSpatialGraph,
   SidebarLink,
 } from "./workspace/workspace-file";
 export {
@@ -289,6 +290,7 @@ export {
   serializeWorkspaceFile,
   emptyWorkspaceFile,
   editorMarkdownBodyPanel,
+  spatialGraphNodeDimensionScale,
   WORKSPACE_FILE_VERSION,
 } from "./workspace/workspace-file";
 export {

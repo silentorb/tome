@@ -14,12 +14,17 @@ import { decorateDynamicLinkHtml } from "./dynamic-link-html";
 import { prepareNodeMarkdown, type PreparedNodeMarkdown } from "./markdown";
 import type { NodeUrlResolver } from "./node-urls";
 
+export interface SpatialGraphPageBlockServices {
+  nodeDimensionScale?: { x?: number; y?: number };
+}
+
 export interface PageBlockHtmlContext {
   host: HtmlPageBlockHostImpl;
   componentsById: Map<string, ResolvedExtensionComponent>;
   nodeId: string;
   contentDir: string;
   graphQuery?: ExtensionGraphQueryServices;
+  spatialGraph?: SpatialGraphPageBlockServices;
 }
 
 export function createPageBlockHtmlContext(
@@ -28,6 +33,7 @@ export function createPageBlockHtmlContext(
   nodeId: string,
   contentDir: string,
   graphQuery?: ExtensionGraphQueryServices,
+  spatialGraph?: SpatialGraphPageBlockServices,
 ): PageBlockHtmlContext {
   return {
     host,
@@ -35,6 +41,7 @@ export function createPageBlockHtmlContext(
     nodeId,
     contentDir,
     graphQuery,
+    spatialGraph,
   };
 }
 
@@ -60,6 +67,7 @@ async function renderBlockHtml(
       services: {
         graphQuery: ctx.graphQuery,
         nodePageHref: (targetNodeId) => urls.pagePath(targetNodeId),
+        ...(ctx.spatialGraph ? { spatialGraph: ctx.spatialGraph } : {}),
       },
     },
     data,

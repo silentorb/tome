@@ -39,6 +39,15 @@ export interface WorkspaceEditor {
   markdownBodyPanel?: boolean;
 }
 
+export interface WorkspaceSpatialGraphNodeDimensionScale {
+  x?: number;
+  y?: number;
+}
+
+export interface WorkspaceSpatialGraph {
+  nodeDimensionScale?: WorkspaceSpatialGraphNodeDimensionScale;
+}
+
 export interface WorkspaceFile {
   version: number;
   homeNodeId: string;
@@ -50,10 +59,22 @@ export interface WorkspaceFile {
   branding?: WorkspaceBranding;
   legacy?: WorkspaceLegacy;
   editor?: WorkspaceEditor;
+  spatialGraph?: WorkspaceSpatialGraph;
 }
 
 export function editorMarkdownBodyPanel(workspace: WorkspaceFile): boolean {
   return workspace.editor?.markdownBodyPanel === true;
+}
+
+export function spatialGraphNodeDimensionScale(
+  workspace: WorkspaceFile,
+): WorkspaceSpatialGraphNodeDimensionScale | undefined {
+  const scale = workspace.spatialGraph?.nodeDimensionScale;
+  if (!scale) return undefined;
+  const result: WorkspaceSpatialGraphNodeDimensionScale = {};
+  if (typeof scale.x === "number") result.x = scale.x;
+  if (typeof scale.y === "number") result.y = scale.y;
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 function parseNodeId(value: unknown, path: string): string {
@@ -150,6 +171,38 @@ function parseLegacy(raw: unknown, path: string): WorkspaceLegacy | undefined {
   return Object.keys(legacy).length > 0 ? legacy : undefined;
 }
 
+function parsePositiveScaleAxis(value: unknown, path: string): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
+    throw new Error(`${path}: must be a finite number greater than 0`);
+  }
+  return value;
+}
+
+function parseSpatialGraph(raw: unknown, path: string): WorkspaceSpatialGraph | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${path}: must be an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  const spatialGraph: WorkspaceSpatialGraph = {};
+  if (obj.nodeDimensionScale !== undefined) {
+    if (!obj.nodeDimensionScale || typeof obj.nodeDimensionScale !== "object" || Array.isArray(obj.nodeDimensionScale)) {
+      throw new Error(`${path}.nodeDimensionScale: must be an object`);
+    }
+    const scaleObj = obj.nodeDimensionScale as Record<string, unknown>;
+    const nodeDimensionScale: WorkspaceSpatialGraphNodeDimensionScale = {};
+    const x = parsePositiveScaleAxis(scaleObj.x, `${path}.nodeDimensionScale.x`);
+    const y = parsePositiveScaleAxis(scaleObj.y, `${path}.nodeDimensionScale.y`);
+    if (x !== undefined) nodeDimensionScale.x = x;
+    if (y !== undefined) nodeDimensionScale.y = y;
+    if (Object.keys(nodeDimensionScale).length > 0) {
+      spatialGraph.nodeDimensionScale = nodeDimensionScale;
+    }
+  }
+  return Object.keys(spatialGraph).length > 0 ? spatialGraph : undefined;
+}
+
 function parseEditor(raw: unknown, path: string): WorkspaceEditor | undefined {
   if (raw === undefined) return undefined;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -234,6 +287,7 @@ export function parseWorkspaceFile(raw: string): WorkspaceFile {
   const branding = parseBranding(obj.branding, "workspace.json branding");
   const legacy = parseLegacy(obj.legacy, "workspace.json legacy");
   const editor = parseEditor(obj.editor, "workspace.json editor");
+  const spatialGraph = parseSpatialGraph(obj.spatialGraph, "workspace.json spatialGraph");
 
   return {
     version: WORKSPACE_FILE_VERSION,
@@ -246,6 +300,7 @@ export function parseWorkspaceFile(raw: string): WorkspaceFile {
     ...(branding ? { branding } : {}),
     ...(legacy ? { legacy } : {}),
     ...(editor ? { editor } : {}),
+    ...(spatialGraph ? { spatialGraph } : {}),
   };
 }
 

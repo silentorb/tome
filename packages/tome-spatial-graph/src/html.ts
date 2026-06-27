@@ -13,6 +13,7 @@ export function register(host: HtmlPageBlockHost): void {
       }
       const result = await renderSpatialGraph(graphQuery, ctx.nodeId, data, {
         nodePageHref: ctx.services?.nodePageHref,
+        workspace: ctx.services?.spatialGraph,
       });
       return result.html;
     },

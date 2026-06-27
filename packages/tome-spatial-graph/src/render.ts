@@ -1,6 +1,6 @@
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import { buildSpatialGraphElements } from "./build-elements";
-import { parseSpatialGraphConfig } from "./config";
+import { resolveSpatialGraphConfig, type SpatialGraphWorkspaceConfig } from "./config";
 import { layoutSpatialGraphSvg } from "./layout-svg";
 import { selectSpatialGraph } from "./select-nodes";
 
@@ -13,6 +13,7 @@ export interface SpatialGraphRenderResult {
 
 export interface SpatialGraphRenderOptions {
   nodePageHref?: (nodeId: string) => string;
+  workspace?: SpatialGraphWorkspaceConfig;
 }
 
 function escapeHtml(value: string): string {
@@ -29,7 +30,7 @@ export async function renderSpatialGraph(
   data: unknown,
   options: SpatialGraphRenderOptions = {},
 ): Promise<SpatialGraphRenderResult> {
-  const config = parseSpatialGraphConfig(data);
+  const config = resolveSpatialGraphConfig(data, options.workspace);
   const selection = await selectSpatialGraph(graphQuery, typeId, config);
 
   if (selection.nodes.length === 0) {

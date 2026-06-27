@@ -10,12 +10,17 @@ import {
 import type { ResolvedExtensionComponent } from "tome-db";
 import type { HtmlPageBlockHostImpl } from "./html-host";
 
+export interface SpatialGraphPageBlockServices {
+  nodeDimensionScale?: { x?: number; y?: number };
+}
+
 async function renderBlockHtml(
   host: HtmlPageBlockHost,
   componentsById: Map<string, ResolvedExtensionComponent>,
   nodeId: string,
   contentPath: string,
   graphQuery: ExtensionGraphQueryServices | undefined,
+  spatialGraph: SpatialGraphPageBlockServices | undefined,
   payload: PageBlockPayload,
 ): Promise<string> {
   const component = componentsById.get(payload.componentId);
@@ -34,6 +39,7 @@ async function renderBlockHtml(
       services: {
         graphQuery,
         nodePageHref: (targetNodeId) => `?node=${targetNodeId.toLowerCase()}`,
+        ...(spatialGraph ? { spatialGraph } : {}),
       },
     },
     payload.data,
@@ -47,9 +53,10 @@ export async function prepareEditorBodyWithPageBlocks(
   host: HtmlPageBlockHostImpl,
   components: ResolvedExtensionComponent[],
   graphQuery: ExtensionGraphQueryServices | undefined,
+  spatialGraph?: SpatialGraphPageBlockServices,
 ): Promise<string> {
   const componentsById = new Map(components.map((component) => [component.id, component]));
   return expandPageBlockFencesForEditor(body, (payload) =>
-    renderBlockHtml(host, componentsById, nodeId, contentPath, graphQuery, payload),
+    renderBlockHtml(host, componentsById, nodeId, contentPath, graphQuery, spatialGraph, payload),
   );
 }

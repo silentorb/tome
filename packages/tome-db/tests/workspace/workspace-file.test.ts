@@ -4,6 +4,7 @@ import {
   emptyWorkspaceFile,
   parseWorkspaceFile,
   serializeWorkspaceFile,
+  spatialGraphNodeDimensionScale,
   WORKSPACE_FILE_VERSION,
 } from "../../src/workspace/workspace-file";
 
@@ -122,6 +123,34 @@ describe("parseWorkspaceFile", () => {
     expect(() =>
       parseWorkspaceFile(JSON.stringify({ ...VALID, editor: { markdownBodyPanel: "yes" } })),
     ).toThrow(/markdownBodyPanel/);
+  });
+
+  test("parses optional spatialGraph.nodeDimensionScale", () => {
+    const file = parseWorkspaceFile(
+      JSON.stringify({
+        ...VALID,
+        spatialGraph: { nodeDimensionScale: { x: 1.75, y: 1.25 } },
+      }),
+    );
+    expect(file.spatialGraph?.nodeDimensionScale).toEqual({ x: 1.75, y: 1.25 });
+    expect(spatialGraphNodeDimensionScale(file)).toEqual({ x: 1.75, y: 1.25 });
+  });
+
+  test("omits spatialGraph when section is absent", () => {
+    const file = parseWorkspaceFile(JSON.stringify(VALID));
+    expect(file.spatialGraph).toBeUndefined();
+    expect(spatialGraphNodeDimensionScale(file)).toBeUndefined();
+  });
+
+  test("rejects invalid spatialGraph.nodeDimensionScale axis", () => {
+    expect(() =>
+      parseWorkspaceFile(
+        JSON.stringify({
+          ...VALID,
+          spatialGraph: { nodeDimensionScale: { x: 0 } },
+        }),
+      ),
+    ).toThrow(/nodeDimensionScale\.x/);
   });
 });
 

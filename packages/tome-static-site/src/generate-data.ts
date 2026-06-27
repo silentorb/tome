@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { openContentGraph } from "tome-db/content";
-import { createExtensionGraphQueryServices, loadSchemaFromContent, loadWorkspaceFromContent } from "tome-db";
+import { createExtensionGraphQueryServices, loadSchemaFromContent, loadWorkspaceFromContent, spatialGraphNodeDimensionScale } from "tome-db";
 import type { ResolvedConfig } from "./config";
 import type { SiteData, SiteNode } from "./lib/site-types";
 import { buildExtraTabPayloadsAndRoutes, buildSiteNode } from "./lib/static-export";
@@ -40,6 +40,10 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
   const htmlRuntime = new ExtensionHtmlRuntime(config.contentDir);
   await htmlRuntime.ensureLoaded();
   const graphQuery = createExtensionGraphQueryServices(db);
+  const spatialGraphScale = spatialGraphNodeDimensionScale(workspace);
+  const spatialGraphServices = spatialGraphScale
+    ? { nodeDimensionScale: spatialGraphScale }
+    : undefined;
   if (htmlRuntime.components.length > 0) {
     for (const node of nodes) {
       const ctx = createPageBlockHtmlContext(
@@ -48,6 +52,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
         node.id,
         config.contentDir,
         graphQuery,
+        spatialGraphServices,
       );
       node.bodyHtml = await renderNodeBodyHtml(
         node.body,

@@ -7,7 +7,9 @@ import type { ServerPageBlockModule } from "tome-interfaces/page-block/server";
 import {
   findComponentById,
   loadExtensionsFromContent,
+  loadWorkspaceFromContent,
   resolveExtensionsManifest,
+  spatialGraphNodeDimensionScale,
   type ExtensionsManifest,
   type ResolvedExtensionComponent,
 } from "tome-db";
@@ -215,6 +217,8 @@ export class ExtensionServerRuntime {
 
   async prepareEditorBody(nodeId: string, body: string): Promise<string> {
     await this.ensureLoaded();
+    const workspace = loadWorkspaceFromContent(this.#contentPath);
+    const scale = spatialGraphNodeDimensionScale(workspace);
     return prepareEditorBodyWithPageBlocks(
       body,
       nodeId,
@@ -222,6 +226,7 @@ export class ExtensionServerRuntime {
       this.#htmlHost,
       this.#manifest.components,
       this.#getGraphQueryServices?.(),
+      scale ? { nodeDimensionScale: scale } : undefined,
     );
   }
 }
