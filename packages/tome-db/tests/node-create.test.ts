@@ -7,6 +7,7 @@ import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestNode,
+  seedTestTableSchema,
   type TestContentFixture,
 } from "../src/content/test-helpers";
 
@@ -69,6 +70,7 @@ describe("createNode", () => {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),
     });
+    seedTestTableSchema(fixture, databaseId, []);
     seedTestNode(fixture, {
       id: "d1111111111111111111111111111111",
       properties: { title: "Old row" },

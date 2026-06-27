@@ -81,7 +81,12 @@ function collectActiveGraphData(db: GraphDatabase, contentDir?: string): {
   relationships: ActiveGraphRelationship[];
 } {
   const allNodes = db.listNodesForGraphExport();
-  const excludedIds = new Set<string>([archiveNodeId(contentDir)]);
+  const excludedIds = new Set<string>();
+  try {
+    excludedIds.add(archiveNodeId(contentDir));
+  } catch {
+    /* workspace optional */
+  }
   for (const node of allNodes) {
     if (db.isNodeArchived(node.id)) excludedIds.add(node.id);
   }
@@ -179,8 +184,14 @@ export function exportExplorerLodGraph(
   const contentDir = options?.contentDir;
   const layerCount = normalizeExplorerLayerCount(options?.layerCount);
   let { nodes, relationships } = collectActiveGraphData(db, contentDir);
-  const anchorId =
-    options?.anchorId ?? resolveWorkspace(contentDir).graphExplorer.defaultAnchorNodeId;
+  let anchorId = options?.anchorId;
+  if (!anchorId) {
+    try {
+      anchorId = resolveWorkspace(contentDir).graphExplorer.defaultAnchorNodeId;
+    } catch {
+      anchorId = undefined;
+    }
+  }
   if (anchorId) {
     ({ nodes, relationships } = filterActiveGraphByAnchor(nodes, relationships, anchorId));
   }

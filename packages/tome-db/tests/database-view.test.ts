@@ -15,6 +15,7 @@ import {
 import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "../src/content/dynamic-fields-file";
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
 import { serializeSchemaFile } from "../src/schema-rules/schema-file";
+import { invalidateSchemaCache } from "../src/schema-rules/load";
 import { invalidateTableSchemasCache } from "../src/table-schemas/load";
 
 describe("database-view", () => {
@@ -47,6 +48,7 @@ describe("database-view", () => {
         ),
       }),
     );
+    invalidateSchemaCache();
   }
 
   function writeTableSchema(

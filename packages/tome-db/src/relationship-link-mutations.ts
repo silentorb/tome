@@ -1,10 +1,12 @@
 import type { Properties } from "./graph";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { nodeMatchesTargetTypes } from "./node-capabilities";
+import { IS_A_TYPE } from "./labels";
+import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
 import { normalizeRelationshipType } from "./relation-type";
 import { relationshipRuleContextForType } from "./schema-rules/resolve";
 import type { SchemaFile } from "./schema-rules/schema-file";
+import { maxRowIndexForDatabase } from "./type-membership-audit";
 
 export type LinkOutgoingRelationshipError =
   | "source_not_found"
@@ -76,6 +78,18 @@ export function linkOutgoingRelationship(
   if (!("ordinal" in relProps)) {
     const nextOrdinal = nextOutgoingOrdinal(ctx, sourceId, normalizedType);
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
+  }
+
+  if (
+    normalizedType === IS_A_TYPE &&
+    isTypeTableNode(ctx.db, targetId, ctx.store.contentDir)
+  ) {
+    if (!("row_index" in relProps)) {
+      relProps.row_index = maxRowIndexForDatabase(ctx.db, targetId) + 1;
+    }
+    if (!("view" in relProps)) {
+      relProps.view = "default";
+    }
   }
 
   ctx.store.upsertRelationship(sourceId, targetId, normalizedType, relProps);

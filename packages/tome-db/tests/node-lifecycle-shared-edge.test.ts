@@ -1,4 +1,5 @@
 import { describe, expect, test, afterAll } from "bun:test";
+import { IS_A_TYPE } from "../src/labels";
 import { archiveNode, unarchiveNode } from "../src/node-lifecycle";
 import {
   createTestContentFixture,
@@ -38,7 +39,7 @@ describe("shared archived edge unarchive", () => {
     expect(fixture.ctx.db.listRelationshipsFromSource(NODE_A)).toHaveLength(0);
     const nodeBOutgoing = fixture.ctx.db.listRelationshipsFromSource(NODE_B);
     expect(nodeBOutgoing).toHaveLength(1);
-    expect(nodeBOutgoing[0]?.targetNodeId).toBe(HUB);
+    expect(nodeBOutgoing[0]?.type).toBe(IS_A_TYPE);
   });
 
   afterAll(() => {

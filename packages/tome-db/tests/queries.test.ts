@@ -6,10 +6,10 @@ import {
   searchNodes,
   updateNodeBody,
 } from "../src/queries";
+import { IS_A_TYPE } from "../src/labels";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
-  seedTestIncludes,
   seedTestNode,
   seedTestRelationships,
   TEST_ARCHIVE_NODE_ID,
@@ -281,7 +281,9 @@ describe("queries", () => {
         modified_at: "2024-08-01T00:00:00.000Z",
       },
     });
-    seedTestIncludes(fixture, [{ a: TEST_ARCHIVE_NODE_ID, b: archivedId }]);
+    seedTestRelationships(fixture, [
+      { source: archivedId, target: TEST_ARCHIVE_NODE_ID, type: IS_A_TYPE },
+    ]);
 
     const recent = listRecentNodesByModifiedAt(fixture.ctx.db, 100);
     expect(recent.some((row) => row.id === activeId)).toBe(true);

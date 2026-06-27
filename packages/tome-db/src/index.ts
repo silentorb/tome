@@ -241,11 +241,26 @@ export type { DynamicColumnSetRecord, DynamicFieldRecord } from "./dynamic-field
 export {
   IS_A_TYPE,
   IS_A_LABEL,
+  MEMBERS_TYPE,
   TYPE_MEMBERSHIP_TYPES,
   TYPE_MEMBERSHIP_LABELS,
   isTypeMembershipType,
   isTypeMembershipLabel,
 } from "./labels";
+export {
+  SET_MEMBERSHIP_TYPE,
+  MEMBERSHIP_PERSPECTIVES,
+  listSetMembership,
+  listSetMemberRowConnections,
+  memberSetIds,
+  setMemberIds,
+  setKindForNode,
+  isSetNode,
+  findSetMembershipRelationship,
+  isSetMembershipStorageType,
+  maxRowIndexForSet,
+} from "./set-membership";
+export { registerSetMembershipType } from "./content/relationship-types-file";
 export { loadSchemaFromContent, loadWorkspaceSchema, invalidateSchemaCache } from "./schema-rules/load";
 export { loadViewsFromContent, invalidateViewsCache } from "./views/load";
 export {

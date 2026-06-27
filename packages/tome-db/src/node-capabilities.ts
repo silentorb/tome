@@ -1,5 +1,6 @@
 import type { GraphDatabase, Node, Properties } from "./graph";
-import { IS_A_TYPE, TYPE_MEMBERSHIP_TYPES } from "./labels";
+import { IS_A_TYPE, MEMBERS_TYPE } from "./labels";
+import { memberSetIds } from "./set-membership";
 import { resolveContentPath } from "./content/paths";
 import { hasTableSchemaEntry, loadTableSchemasFromContent } from "./table-schemas/load";
 
@@ -12,9 +13,8 @@ function titleFromProperties(properties: Record<string, unknown>): string {
 }
 
 export function hasIncomingIsA(db: GraphDatabase, nodeId: string): boolean {
-  for (const type of TYPE_MEMBERSHIP_TYPES) {
-    if (db.listRelationshipsToTarget(nodeId, type).length > 0) return true;
-  }
+  if (db.listRelationshipsToTarget(nodeId, IS_A_TYPE).length > 0) return true;
+  if (db.listRelationshipsFromSource(nodeId, MEMBERS_TYPE).length > 0) return true;
   return false;
 }
 
@@ -29,13 +29,7 @@ export function isTypeTableNode(
 }
 
 export function typeIdsForInstance(db: GraphDatabase, nodeId: string): string[] {
-  const ids = new Set<string>();
-  for (const type of TYPE_MEMBERSHIP_TYPES) {
-    for (const connection of db.listRelationshipsFromSource(nodeId, type)) {
-      ids.add(connection.targetNodeId);
-    }
-  }
-  return [...ids];
+  return memberSetIds(db, nodeId);
 }
 
 /** Lexicographically first IS_A type title for an instance page, when any. */

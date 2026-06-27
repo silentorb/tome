@@ -42,6 +42,27 @@ describe("database-view-relations", () => {
   const sceneId = "11111111111111111111111111111112";
   const partId = "33333333333333333333333333333334";
 
+  writeFileSync(
+    tableSchemasFilePath(contentDir),
+    serializeTableSchemasFile({
+      version: 1,
+      tables: {
+        [inspirationsDb]: {
+          columns: [
+            {
+              key: "type",
+              name: "Type",
+              type: "relation",
+              targetTypeId: inspirationTypesDb,
+              perspective: "prop_type",
+            },
+          ],
+        },
+      },
+    }),
+  );
+  invalidateTableSchemasCache();
+
   test("listRelationConnectionsForRow resolves prop_type via row is_a membership", () => {
     db.upsertNode(inspirationsDb, {
       ...typeTableMarkerProperties("Inspirations"),
@@ -82,7 +103,7 @@ describe("database-view-relations", () => {
   });
 
   test("hydrates Type column from row is_a membership without via_database", () => {
-    const detail = getDatabaseViewDetail(db, inspirationsDb);
+    const detail = getDatabaseViewDetail(db, inspirationsDb, undefined, contentDir);
     const row = detail?.rows.find((r) => r.nodeId === inspirationId);
     expect(row?.cells.type).toBe("TV series");
     expect(row?.relationCells?.type).toEqual([

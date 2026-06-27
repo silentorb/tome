@@ -4,7 +4,8 @@ import type {
   GraphQueryNode,
 } from "tome-interfaces/extension-services/graph-query";
 import type { GraphDatabase, Node } from "./graph";
-import { IS_A_TYPE, TYPE_MEMBERSHIP_TYPES } from "./labels";
+import { IS_A_TYPE, MEMBERS_TYPE } from "./labels";
+import { setMemberIds } from "./set-membership";
 
 function titleFromNode(node: Node | null): string {
   if (!node) return "Untitled";
@@ -16,18 +17,7 @@ function titleFromNode(node: Node | null): string {
 }
 
 function databaseMemberIds(db: GraphDatabase, databaseId: string): Set<string> {
-  const members = new Set<string>();
-  for (const type of TYPE_MEMBERSHIP_TYPES) {
-    for (const connection of db.listRelationshipsToTarget(databaseId, type)) {
-      members.add(connection.sourceNodeId);
-    }
-  }
-  if (members.size === 0) {
-    for (const connection of db.listRelationshipsToTarget(databaseId, IS_A_TYPE)) {
-      members.add(connection.sourceNodeId);
-    }
-  }
-  return members;
+  return new Set(setMemberIds(db, databaseId));
 }
 
 function listIncidentEdges(

@@ -8,7 +8,7 @@ export interface RelationshipEntry {
   a: string;
   b: string;
   type: string;
-  /** Required for directed (non-bidirectional) types — the node id that is the source. */
+  /** @deprecated Legacy directed types only; set membership and includes omit directedFrom. */
   directedFrom?: string;
   /** When true, entry is kept in content but excluded from SQLite cache sync. */
   archived?: boolean;

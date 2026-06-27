@@ -1,5 +1,6 @@
 import type { GraphDatabase } from "./graph";
-import { TYPE_MEMBERSHIP_TYPES } from "./labels";
+import { IS_A_TYPE, MEMBERS_TYPE } from "./labels";
+import { listSetMemberRowConnections } from "./set-membership";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
 import { applyDynamicFields } from "./dynamic-fields";
@@ -327,9 +328,7 @@ export function getDatabaseViewDetail(
   const dir = contentDir ?? resolveContentPath();
   if (!database || !isTypeTableNode(db, databaseId, dir)) return null;
 
-  const incoming = TYPE_MEMBERSHIP_TYPES.flatMap((type) =>
-    db.listRelationshipsToTarget(databaseId, type),
-  );
+  const incoming = listSetMemberRowConnections(db, databaseId);
 
   const title = titleFromProperties(database.properties);
   const views = loadViewsFromContent(dir);

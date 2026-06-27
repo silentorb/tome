@@ -1,15 +1,14 @@
 import type { GraphDatabase, Properties, Relationship } from "./graph";
 import { INCLUDES_TYPE } from "./includes-relationship";
-import { IS_A_TYPE, TYPE_MEMBERSHIP_TYPES } from "./labels";
+import { findSetMembershipRelationship, setMemberIds } from "./set-membership";
 import { normalizeRelationshipType } from "./relation-type";
-import { findTypeMembershipRelationship } from "./type-membership-audit";
 
 export function rowBelongsToDatabase(
   db: GraphDatabase,
   rowId: string,
   databaseId: string,
 ): boolean {
-  return findTypeMembershipRelationship(db, rowId, databaseId) !== null;
+  return findSetMembershipRelationship(db, rowId, databaseId) !== null;
 }
 
 /** Keep incident edges when row is a member of the viewing database. */
@@ -149,18 +148,7 @@ export function firstRelatedNodeId(
 }
 
 function databaseMemberIds(db: GraphDatabase, databaseId: string): Set<string> {
-  const members = new Set<string>();
-  for (const type of TYPE_MEMBERSHIP_TYPES) {
-    for (const connection of db.listRelationshipsToTarget(databaseId, type)) {
-      members.add(connection.sourceNodeId);
-    }
-  }
-  if (members.size === 0) {
-    for (const connection of db.listRelationshipsToTarget(databaseId, IS_A_TYPE)) {
-      members.add(connection.sourceNodeId);
-    }
-  }
-  return members;
+  return new Set(setMemberIds(db, databaseId));
 }
 
 /** Incident relationships whose opposite endpoint belongs to targetDatabaseId. */

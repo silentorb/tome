@@ -1,13 +1,13 @@
 import type { ContentStore } from "./content/store";
 import type { RelationshipEntry } from "./content/relationships-file";
-import { INCLUDES_TYPE } from "./includes-relationship";
+import { SET_MEMBERSHIP_TYPE, isSetMembershipStorageType } from "./set-membership";
 import { archiveNodeId } from "./workspace/resolve";
 
 export function isArchiveMembershipEntry(
   entry: RelationshipEntry,
   archiveHubId: string,
 ): boolean {
-  if (entry.type !== INCLUDES_TYPE) return false;
+  if (!isSetMembershipStorageType(entry.type)) return false;
   return entry.a === archiveHubId || entry.b === archiveHubId;
 }
 

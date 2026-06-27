@@ -26,7 +26,12 @@ const EXPORT_PREFIX =
   "exports/e1871eda-1585-4e95-9781-1add0033d51f_ExportBlock-7929816c-16af-4229-9d56-b036ede8360e.zip/";
 
 describe("type-membership-audit path matching", () => {
-  const db = new GraphDatabase(":memory:");
+  const fixture = createTestContentFixture("tome-type-audit-path-");
+  const db = fixture.ctx.db;
+
+  seedTestTableSchema(fixture, "2eea538996934ce8abafc27132e576c1", []);
+  seedTestTableSchema(fixture, "ec2d335a7cd84ada8911b7585cc05ab1", []);
+  seedTestTableSchema(fixture, "dd0de9867cc345b898929306bdf9fc83", []);
 
   test("typeDatabaseTitleFromPath prefers deepest matching database segment", () => {
     db.upsertNode("2eea538996934ce8abafc27132e576c1", {
@@ -39,25 +44,40 @@ describe("type-membership-audit path matching", () => {
       ...typeTableMarkerProperties("Features"),
     });
 
-    expect(typeDatabaseTitleFromPath(db, "Marloth/Inspirations")).toBe("Inspirations");
-    expect(typeDatabaseTitleFromPath(db, "Marloth/Inspirations/Traversal reasons")).toBe(
-      "Traversal reasons",
+    const contentDir = fixture.ctx.store.contentDir;
+    expect(typeDatabaseTitleFromPath(db, "Marloth/Inspirations", "Marloth", contentDir)).toBe(
+      "Inspirations",
     );
-    expect(typeDatabaseTitleFromPath(db, "Marloth/Features/Community")).toBe("Features");
-    expect(typeDatabaseTitleFromPath(db, "Marloth/Archive/Lab")).toBeNull();
+    expect(
+      typeDatabaseTitleFromPath(db, "Marloth/Inspirations/Traversal reasons", "Marloth", contentDir),
+    ).toBe("Traversal reasons");
+    expect(typeDatabaseTitleFromPath(db, "Marloth/Features/Community", "Marloth", contentDir)).toBe(
+      "Features",
+    );
+    expect(typeDatabaseTitleFromPath(db, "Marloth/Archive/Lab", "Marloth", contentDir)).toBeNull();
   });
 
   test("typeDatabaseTitleFromPath accepts custom export path prefix", () => {
     db.upsertNode("2eea538996934ce8abafc27132e576c1", {
       ...typeTableMarkerProperties("Inspirations"),
     });
-    expect(typeDatabaseTitleFromPath(db, "Acme/Inspirations", "Acme")).toBe("Inspirations");
-    expect(typeDatabaseTitleFromPath(db, "Marloth/Inspirations", "Acme")).toBeNull();
+    const contentDir = fixture.ctx.store.contentDir;
+    expect(typeDatabaseTitleFromPath(db, "Acme/Inspirations", "Acme", contentDir)).toBe(
+      "Inspirations",
+    );
+    expect(typeDatabaseTitleFromPath(db, "Marloth/Inspirations", "Acme", contentDir)).toBeNull();
     expect(typeFolderFromPath("Acme/Features/Community", "Acme")).toBe("Features");
     expect(typeFolderFromPath("Marloth/Features/Community", "Acme")).toBeNull();
   });
 
+  afterAll(() => {
+    destroyTestContentFixture(fixture);
+  });
+});
+
+describe("expectedTypeDatabaseForPage legacy paths", () => {
   test("expectedTypeDatabaseForPage no longer infers from legacy paths", () => {
+    const db = new GraphDatabase(":memory:");
     db.upsertNode("missions", { title: "Missions" });
     expect(expectedTypeDatabaseForPage(db, "missions")).toBeNull();
   });

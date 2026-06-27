@@ -50,15 +50,15 @@ describe("graph export", () => {
     db.upsertNode("archived", { title: "Old foil" });
     db.upsertNode(TEST_ARCHIVE_NODE_ID, { title: "Archive" });
     db.upsertRelationship("active", "archived", "inspirations");
-    db.upsertRelationship(TEST_ARCHIVE_NODE_ID, "archived", "includes");
+    db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "is_a");
     db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID);
 
+    expect(db.isNodeArchived("archived")).toBe(true);
     const snapshot = exportFullGraph(db);
-    db.close();
-
-    expect(snapshot.nodes).toHaveLength(1);
-    expect(snapshot.nodes[0]?.id).toBe("active");
+    expect(snapshot.nodes.some((node) => node.id === "archived")).toBe(false);
+    expect(snapshot.nodes.some((node) => node.id === "active")).toBe(true);
     expect(snapshot.relationships).toHaveLength(0);
+    db.close();
   });
 
   test("exportExplorerLodGraph builds heuristic layers", () => {

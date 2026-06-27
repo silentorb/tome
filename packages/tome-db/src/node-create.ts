@@ -6,6 +6,7 @@ import { normalizeRelationshipType } from "./relation-type";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
+import { maxRowIndexForDatabase } from "./type-membership-audit";
 
 export type CreateNodeError = "invalid_title" | "source_not_found" | "database_not_found";
 
@@ -69,19 +70,7 @@ function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: stri
   return Math.max(...ordinals) + 1;
 }
 
-function nextDatabaseRowIndex(ctx: TomeWriteContext, databaseId: string): number {
-  const incoming = ctx.db.listRelationshipsToTarget(databaseId).filter((c) => c.type === IS_A_TYPE);
-  let max = -1;
-  for (const connection of incoming) {
-    const raw = connection.properties.row_index;
-    const index =
-      typeof raw === "number" && Number.isFinite(raw)
-        ? raw
-        : Number.parseInt(String(raw ?? ""), 10);
-    if (Number.isFinite(index) && index > max) max = index;
-  }
-  return max + 1;
-}
+import { maxRowIndexForDatabase } from "./type-membership-audit";
 
 export function createNode(
   ctx: TomeWriteContext,
@@ -136,7 +125,7 @@ export function createNode(
     const { databaseId, view, properties = {} } = input.link;
     const relProps: Properties = {
       ...properties,
-      row_index: nextDatabaseRowIndex(ctx, databaseId),
+      row_index: maxRowIndexForDatabase(ctx.db, databaseId) + 1,
       view: view ?? properties.view ?? "default",
     };
     ctx.store.upsertRelationship(id, databaseId, IS_A_TYPE, relProps);

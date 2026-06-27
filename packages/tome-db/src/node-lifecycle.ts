@@ -1,7 +1,7 @@
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isArchivedNode } from "./archive-status";
-import { INCLUDES_TYPE } from "./includes-relationship";
+import { IS_A_TYPE } from "./labels";
 import {
   listArchiveMemberIdsFromStore,
   markIncidentRelationshipsArchived,
@@ -35,7 +35,7 @@ export function archiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleErr
   if (isArchivedNode(ctx.db, id, contentDir)) return "already_archived";
 
   markIncidentRelationshipsArchived(ctx.store, id, hubId);
-  ctx.store.upsertRelationship(hubId, id, INCLUDES_TYPE);
+  ctx.store.upsertRelationship(id, hubId, IS_A_TYPE);
   syncAfterRelationshipsWrite(ctx);
   return null;
 }
@@ -47,7 +47,7 @@ export function unarchiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleE
   if (!ctx.store.readNode(id)) return "not_found";
   if (!isArchivedNode(ctx.db, id, contentDir)) return "not_archived";
 
-  ctx.store.deleteRelationship(hubId, id, INCLUDES_TYPE);
+  ctx.store.deleteRelationship(id, hubId, IS_A_TYPE);
   const stillArchivedIds = new Set(listArchiveMemberIdsFromStore(ctx.store, hubId));
   unmarkIncidentRelationshipsArchived(ctx.store, id, stillArchivedIds, hubId);
   syncAfterRelationshipsWrite(ctx);

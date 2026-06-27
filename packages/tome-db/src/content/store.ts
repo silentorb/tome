@@ -10,6 +10,7 @@ import { dirname } from "node:path";
 import type { Node, Properties } from "../graph";
 import { relationshipId } from "../graph";
 import { INCLUDES_TYPE, isIncludesPerspectiveSlug, isIncludesStorageType } from "../includes-relationship";
+import { isSetMembershipStorageType } from "../set-membership";
 import { normalizeRelationshipType } from "../relation-type";
 import {
   type RelationshipEntry,
@@ -29,6 +30,7 @@ import {
   parseRelationshipTypesFile,
   registerBidirectionalType,
   registerIncludesType,
+  registerSetMembershipType,
   registerUnidirectionalType,
   resolveCompositeType,
   serializeRelationshipTypesFile,
@@ -240,11 +242,12 @@ export class ContentStore {
 
     const index = file.relationships.findIndex((e) => e.a === a && e.b === b && e.type === composite);
     const useIncludes = isIncludesStorageType(composite);
+    const omitDirectedFrom = useIncludes || isSetMembershipStorageType(composite);
     const entry: RelationshipEntry = {
       a,
       b,
       type: composite,
-      ...(useIncludes ? {} : { directedFrom: source }),
+      ...(omitDirectedFrom ? {} : { directedFrom: source }),
       properties,
     };
 
@@ -254,7 +257,7 @@ export class ContentStore {
       file.relationships[index] = {
         ...prevRest,
         ...entry,
-        ...(useIncludes
+        ...(omitDirectedFrom
           ? {}
           : { directedFrom: prev.directedFrom ?? entry.directedFrom }),
         properties: { ...(prev.properties ?? {}), ...properties },
@@ -263,6 +266,8 @@ export class ContentStore {
       if (!registry.types[composite]) {
         if (useIncludes) {
           registerIncludesType(registry);
+        } else if (isSetMembershipStorageType(composite)) {
+          registerSetMembershipType(registry);
         } else {
           registerUnidirectionalType(registry, composite);
         }
@@ -322,9 +327,10 @@ export class ContentStore {
 
     const prev = file.relationships[index]!;
     const useIncludes = isIncludesStorageType(composite);
+    const omitDirectedFrom = useIncludes || isSetMembershipStorageType(composite);
     file.relationships[index] = {
       ...prev,
-      ...(useIncludes ? {} : { directedFrom: source }),
+      ...(omitDirectedFrom ? {} : { directedFrom: source }),
       properties,
     };
     this.writeRelationshipsFile(file);

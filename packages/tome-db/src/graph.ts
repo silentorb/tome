@@ -287,13 +287,13 @@ export class GraphDatabase {
     return row?.is_archived === 1;
   }
 
-  listIncludesArchiveMemberIds(archiveId: string): string[] {
+  listArchiveMemberIds(archiveId: string): string[] {
     const rows = this.db
       .prepare(
         `SELECT DISTINCT
            CASE WHEN source_node_id = ?1 THEN target_node_id ELSE source_node_id END AS member_id
          FROM relationship_projections
-         WHERE type = 'includes'
+         WHERE type IN ('members', 'is_a')
            AND (source_node_id = ?1 OR target_node_id = ?1)
            AND source_node_id != target_node_id`,
       )
@@ -301,9 +301,14 @@ export class GraphDatabase {
     return rows.map((row) => row.member_id);
   }
 
+  /** @deprecated Use listArchiveMemberIds */
+  listIncludesArchiveMemberIds(archiveId: string): string[] {
+    return this.listArchiveMemberIds(archiveId);
+  }
+
   recomputeArchivedFlags(archiveId: string): void {
     this.db.exec("UPDATE nodes SET is_archived = 0");
-    const memberIds = this.listIncludesArchiveMemberIds(archiveId);
+    const memberIds = this.listArchiveMemberIds(archiveId);
     if (memberIds.length === 0) return;
     const placeholders = memberIds.map(() => "?").join(", ");
     this.db

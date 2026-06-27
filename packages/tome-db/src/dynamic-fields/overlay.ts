@@ -62,48 +62,52 @@ export function loadDynamicFields(
     return loadDynamicFieldsFromContent(fromContent, databaseId);
   }
 
-  const fields = db.queryAll<{
-    id: string;
-    database_id: string;
-    column_key: string;
-    column_name: string;
-    column_type: string;
-    resolver_id: string;
-    docs_path: string;
-    enabled: number;
-  }>(
-    `SELECT id, database_id, column_key, column_name, column_type, resolver_id, docs_path, enabled
+  try {
+    const fields = db.queryAll<{
+      id: string;
+      database_id: string;
+      column_key: string;
+      column_name: string;
+      column_type: string;
+      resolver_id: string;
+      docs_path: string;
+      enabled: number;
+    }>(
+      `SELECT id, database_id, column_key, column_name, column_type, resolver_id, docs_path, enabled
      FROM dynamic_fields
      WHERE database_id = ? AND enabled = 1`,
-    databaseId,
-  );
-
-  return fields.map((field) => {
-    const params = parseParams(
-      db.queryAll<{ param_key: string; param_value: string }>(
-        "SELECT param_key, param_value FROM dynamic_field_params WHERE field_id = ?",
-        field.id,
-      ),
+      databaseId,
     );
-    const viewNames = db
-      .queryAll<{ view_name: string }>(
-        "SELECT view_name FROM dynamic_field_view_bindings WHERE field_id = ?",
-        field.id,
-      )
-      .map((r) => r.view_name);
-    return {
-      id: field.id,
-      databaseId: field.database_id,
-      columnKey: field.column_key,
-      columnName: field.column_name,
-      columnType: field.column_type,
-      resolverId: field.resolver_id,
-      docsPath: field.docs_path,
-      enabled: field.enabled === 1,
-      params,
-      viewNames,
-    };
-  });
+
+    return fields.map((field) => {
+      const params = parseParams(
+        db.queryAll<{ param_key: string; param_value: string }>(
+          "SELECT param_key, param_value FROM dynamic_field_params WHERE field_id = ?",
+          field.id,
+        ),
+      );
+      const viewNames = db
+        .queryAll<{ view_name: string }>(
+          "SELECT view_name FROM dynamic_field_view_bindings WHERE field_id = ?",
+          field.id,
+        )
+        .map((r) => r.view_name);
+      return {
+        id: field.id,
+        databaseId: field.database_id,
+        columnKey: field.column_key,
+        columnName: field.column_name,
+        columnType: field.column_type,
+        resolverId: field.resolver_id,
+        docsPath: field.docs_path,
+        enabled: field.enabled === 1,
+        params,
+        viewNames,
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 export function loadDynamicColumnSets(
@@ -116,52 +120,56 @@ export function loadDynamicColumnSets(
     return loadDynamicColumnSetsFromContent(fromContent, databaseId);
   }
 
-  const sets = db.queryAll<{
-    id: string;
-    database_id: string;
-    column_key_pattern: string;
-    column_name_pattern: string;
-    column_type: string;
-    resolver_id: string;
-    docs_path: string;
-    enabled: number;
-  }>(
-    `SELECT id, database_id, column_key_pattern, column_name_pattern, column_type, resolver_id, docs_path, enabled
+  try {
+    const sets = db.queryAll<{
+      id: string;
+      database_id: string;
+      column_key_pattern: string;
+      column_name_pattern: string;
+      column_type: string;
+      resolver_id: string;
+      docs_path: string;
+      enabled: number;
+    }>(
+      `SELECT id, database_id, column_key_pattern, column_name_pattern, column_type, resolver_id, docs_path, enabled
      FROM dynamic_column_sets
      WHERE database_id = ? AND enabled = 1`,
-    databaseId,
-  );
-
-  return sets.map((set) => {
-    const params = parseParams(
-      db.queryAll<{ param_key: string; param_value: string }>(
-        "SELECT param_key, param_value FROM dynamic_column_set_params WHERE set_id = ?",
-        set.id,
-      ),
+      databaseId,
     );
-    const viewNames = db
-      .queryAll<{ view_name: string }>(
-        "SELECT view_name FROM dynamic_column_set_view_bindings WHERE set_id = ?",
-        set.id,
-      )
-      .map((r) => r.view_name);
-    const hideLegacyKeys = Array.isArray(params.hide_legacy_keys)
-      ? (params.hide_legacy_keys as string[])
-      : [];
-    return {
-      id: set.id,
-      databaseId: set.database_id,
-      columnKeyPattern: set.column_key_pattern,
-      columnNamePattern: set.column_name_pattern,
-      columnType: set.column_type,
-      resolverId: set.resolver_id,
-      docsPath: set.docs_path,
-      enabled: set.enabled === 1,
-      params,
-      viewNames,
-      hideLegacyKeys,
-    };
-  });
+
+    return sets.map((set) => {
+      const params = parseParams(
+        db.queryAll<{ param_key: string; param_value: string }>(
+          "SELECT param_key, param_value FROM dynamic_column_set_params WHERE set_id = ?",
+          set.id,
+        ),
+      );
+      const viewNames = db
+        .queryAll<{ view_name: string }>(
+          "SELECT view_name FROM dynamic_column_set_view_bindings WHERE set_id = ?",
+          set.id,
+        )
+        .map((r) => r.view_name);
+      const hideLegacyKeys = Array.isArray(params.hide_legacy_keys)
+        ? (params.hide_legacy_keys as string[])
+        : [];
+      return {
+        id: set.id,
+        databaseId: set.database_id,
+        columnKeyPattern: set.column_key_pattern,
+        columnNamePattern: set.column_name_pattern,
+        columnType: set.column_type,
+        resolverId: set.resolver_id,
+        docsPath: set.docs_path,
+        enabled: set.enabled === 1,
+        params,
+        viewNames,
+        hideLegacyKeys,
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 export interface SeedDynamicFieldInput {

@@ -85,11 +85,12 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 **Content (canonical, compact):** one record per logical link:
 
 ```json
-{ "a": "<32-hex>", "b": "<32-hex>", "type": "includes", "properties": { } }
+{ "a": "<32-hex>", "b": "<32-hex>", "type": "is_a", "properties": { } }
 ```
 
 - Endpoints `a` / `b` are sorted lexicographically (`a` < `b`).
-- **Directed** types (e.g. `is_a`) include `directedFrom` (source node id). **`includes` does not** — association is symmetric in storage; UI resolves direction via the relation column’s target database.
+- **Set membership** (`is_a`) expands to dual projections (`is_a`, `members`); content omits `directedFrom`. See [set-membership.md](./set-membership.md).
+- **`includes` does not** use `directedFrom` — association is symmetric in storage; UI resolves direction via the relation column's target database.
 - **Associative** links use `includes` (migrated from legacy composites such as `inspirations_features`, `scenes_characters`).
 - **Structural** and **taxonomy↔inspiration** pairs still use named composite types (e.g. `scenes_part`, `monsters_inspirations`).
 - Record id: `{a}:{b}:{type}`.
@@ -103,7 +104,7 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 | `nodes` | Entity property bags; `is_archived` denormalized flag (recomputed on sync) |
 | `meta` | Schema version, content mtime, enum config fingerprint |
 
-**Archive membership:** a page is archived when it has an `includes` relationship to the Archive hub node (`0f558a609a56485185beed4d1fd1cd9f`). Archiving (`POST /api/nodes/:id/archive`) marks every other incident relationship in `relationships.json` with top-level `"archived": true`, then adds the hub `includes` edge (without `archived`). Unarchiving (`POST /api/nodes/:id/unarchive`) removes the hub `includes` edge and clears `archived` on incident relationships whose other endpoint is not still archived.
+**Archive membership:** a page is archived when it has set membership (`is_a`) on the Archive hub node (`0f558a609a56485185beed4d1fd1cd9f`). Archiving (`POST /api/nodes/:id/archive`) marks every other incident relationship in `relationships.json` with top-level `"archived": true`, then adds the hub membership edge (without `archived`). Unarchiving (`POST /api/nodes/:id/unarchive`) removes the hub membership edge and clears `archived` on incident relationships whose other endpoint is not still archived.
 
 **Archived relationships in content:** entries with `"archived": true` are kept in git-tracked `relationships.json` but **skipped** when syncing to SQLite. The hub membership `includes` edge is always synced so `nodes.is_archived` can be recomputed. Search and `nodes.is_archived` exclude archived pages; graph export also excludes archived nodes.
 
@@ -133,7 +134,7 @@ Helpers: `expandDynamicNodeLinks`, `collapseDynamicEditorLinks`, `findMarkdownLi
 | Concept | Graph representation |
 | --- | --- |
 | Type table | Node id in `table-schemas.json` (column defs) + optional `is_a` incoming edges |
-| Row / type instance | Relationship `(page)-[:is_a {view, row_index, …}]->(type)` with scalar props on the edge |
+| Row / type instance | Relationship `(member)-[:is_a {view, row_index, …}]->(set)` with scalar props on the edge; `(set)-[:members]->(member)` is the inverse projection |
 | Relation column | Outgoing relationships from the row page; scoped by row `is_a` membership |
 | Stored scalars | Keys from `table-schemas.json` columns, values on `is_a` edge properties |
 
@@ -224,6 +225,7 @@ See [notion-import.md](./notion-import.md) for archival export layout (mining on
 
 ## See also
 
+- [set-membership.md](./set-membership.md) — set membership family (`is_a` / `members`), archive as set
 - [schema.md](./schema.md) — workspace model config in `content/model/schema.json`
 - [graph-explorer.md](./graph-explorer.md) — anchor-scoped LOD graph visualization
 - [ordered-associations.md](./ordered-associations.md) — automatic sequence for associations (scenes-first)

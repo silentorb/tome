@@ -33,6 +33,7 @@ import {
 } from "./paths";
 import { ContentStore } from "./store";
 import { expandAllRelationships } from "./relationship-sync-expand";
+import { collectSetNodeIds } from "../set-membership";
 import { filterEntriesForCacheSync } from "../relationship-archive";
 
 let cachedDynamicConfig: {
@@ -175,7 +176,8 @@ export class CacheSync {
     const allEntries = this.store.readRelationshipsFile().relationships;
     const entries = filterEntriesForCacheSync(allEntries);
     const registry = this.store.readRelationshipTypesFile();
-    const { records, projections } = expandAllRelationships(entries, registry);
+    const setNodeIds = collectSetNodeIds(this.contentDir);
+    const { records, projections } = expandAllRelationships(entries, registry, { setNodeIds });
 
     this.db.runExec("BEGIN");
     try {

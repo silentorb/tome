@@ -47,7 +47,7 @@ describe("archive relationship flags", () => {
 
     const file = fixture.ctx.store.readRelationshipsFile();
     const membership = file.relationships.find(
-      (e) => e.type === "includes" && (e.a === HUB || e.b === HUB) && (e.a === PAGE || e.b === PAGE),
+      (e) => e.type === IS_A_TYPE && (e.a === HUB || e.b === HUB) && (e.a === PAGE || e.b === PAGE),
     );
     expect(membership?.archived).toBeUndefined();
 
@@ -64,9 +64,9 @@ describe("archive relationship flags", () => {
     const outgoing = fixture.ctx.db.listRelationshipsFromSource(PAGE);
     expect(outgoing).toHaveLength(1);
     expect(outgoing[0]?.targetNodeId).toBe(HUB);
-    expect(outgoing[0]?.type).toBe("includes");
-    expect(fixture.ctx.db.listRelationshipsFromSource(PAGE, IS_A_TYPE)).toHaveLength(0);
-    expect(fixture.ctx.db.listRelationshipsFromSource(HUB, "includes").length).toBeGreaterThan(0);
+    expect(outgoing[0]?.type).toBe(IS_A_TYPE);
+    expect(fixture.ctx.db.listRelationshipsFromSource(PAGE, IS_A_TYPE)).toHaveLength(1);
+    expect(fixture.ctx.db.listRelationshipsFromSource(HUB, "members").length).toBeGreaterThan(0);
   });
 
   test("archived member is absent from database table rows", () => {

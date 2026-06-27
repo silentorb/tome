@@ -2,7 +2,8 @@
  * Validation/migration tooling for Notion export layout — not used by editor runtime.
  */
 import type { GraphDatabase, Relationship, Properties } from "./graph";
-import { IS_A_TYPE, TYPE_MEMBERSHIP_TYPES } from "./labels";
+import { IS_A_TYPE, MEMBERS_TYPE, TYPE_MEMBERSHIP_TYPES } from "./labels";
+import { findSetMembershipRelationship, listSetMemberRowConnections } from "./set-membership";
 import { findTypeNodeByTitle, isTypeTableNode } from "./node-capabilities";
 import { legacyExportPathPrefix } from "./workspace/resolve";
 
@@ -81,6 +82,7 @@ export function typeDatabaseTitleFromPath(
   db: GraphDatabase,
   path: string | null | undefined,
   exportPathPrefix: string = legacyExportPathPrefix(),
+  contentDir?: string,
 ): string | null {
   if (!path || typeof path !== "string") return null;
   const segments = path.split("/").filter(Boolean);
@@ -89,7 +91,7 @@ export function typeDatabaseTitleFromPath(
   let match: string | null = null;
   for (let i = 1; i < segments.length; i++) {
     const segment = segments[i]!;
-    if (findTypeNodeByTitle(db, segment)) match = segment;
+    if (findTypeNodeByTitle(db, segment, contentDir)) match = segment;
   }
   return match;
 }
@@ -227,13 +229,7 @@ export function findTypeMembershipRelationship(
   nodeId: string,
   databaseId: string,
 ): Relationship | null {
-  for (const label of TYPE_MEMBERSHIP_TYPES) {
-    const connection = db
-      .listRelationshipsFromSource(nodeId, label)
-      .find((c) => c.targetNodeId === databaseId);
-    if (connection) return connection;
-  }
-  return null;
+  return findSetMembershipRelationship(db, nodeId, databaseId);
 }
 
 export function nodeScalarKeys(properties: Record<string, unknown>): string[] {
@@ -345,13 +341,11 @@ export function findNodeScalarsOnTypedNodes(db: GraphDatabase): NodeScalarOnType
 
 export function maxRowIndexForDatabase(db: GraphDatabase, databaseId: string): number {
   let max = -1;
-  for (const label of TYPE_MEMBERSHIP_TYPES) {
-    for (const connection of db.listRelationshipsToTarget(databaseId, label)) {
-      const raw = connection.properties.row_index;
-      const index =
-        typeof raw === "number" ? raw : Number.parseInt(String(raw ?? ""), 10);
-      if (Number.isFinite(index) && index > max) max = index;
-    }
+  for (const connection of listSetMemberRowConnections(db, databaseId)) {
+    const raw = connection.properties.row_index;
+    const index =
+      typeof raw === "number" ? raw : Number.parseInt(String(raw ?? ""), 10);
+    if (Number.isFinite(index) && index > max) max = index;
   }
   return max;
 }

@@ -3,8 +3,9 @@ import { normalizeRelationshipType } from "../relation-type";
 export const RELATIONSHIP_TYPES_FILE_VERSION = 1;
 
 export interface RelationshipTypeDefinition {
-  bidirectional: boolean;
-  /** For bidirectional: [type from a→b, type from b→a] with a < b. For directed: [type]. */
+  /** @deprecated Ignored for expansion; use perspectives.length instead. */
+  bidirectional?: boolean;
+  /** Length ≥2: dual projection (a→b, b→a). Length 1: single projection (legacy directedFrom optional). */
   perspectives: string[];
 }
 
@@ -36,17 +37,18 @@ export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
       throw new Error(`relationship-types.json: type ${key} must be an object`);
     }
     const row = value as Record<string, unknown>;
-    if (typeof row.bidirectional !== "boolean") {
-      throw new Error(`relationship-types.json: type ${key} bidirectional is required`);
-    }
     if (!Array.isArray(row.perspectives)) {
       throw new Error(`relationship-types.json: type ${key} perspectives must be an array`);
     }
     const perspectives = row.perspectives
       .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
       .map((p) => normalizeRelationshipType(p));
+    const bidirectional =
+      typeof row.bidirectional === "boolean"
+        ? row.bidirectional
+        : perspectives.length >= 2;
     types[normalizeRelationshipType(key)] = {
-      bidirectional: row.bidirectional,
+      bidirectional,
       perspectives,
     };
   }
@@ -77,11 +79,24 @@ export function localTypesForComposite(
   return registry.types[normalizeRelationshipType(compositeType)]?.perspectives ?? [];
 }
 
+export function perspectiveCountForExpansion(
+  typeDef: RelationshipTypeDefinition | undefined,
+  compositeType: string,
+): number {
+  if (!typeDef) return 1;
+  return typeDef.perspectives.length >= 2 ? typeDef.perspectives.length : 1;
+}
+
+export function isDualPerspectiveType(typeDef: RelationshipTypeDefinition | undefined): boolean {
+  return (typeDef?.perspectives.length ?? 0) >= 2;
+}
+
 export function isBidirectionalComposite(
   registry: RelationshipTypesFile,
   compositeType: string,
 ): boolean {
-  return registry.types[normalizeRelationshipType(compositeType)]?.bidirectional ?? false;
+  const def = registry.types[normalizeRelationshipType(compositeType)];
+  return isDualPerspectiveType(def);
 }
 
 /** Find composite storage type for a local perspective between two endpoints. */
@@ -95,10 +110,10 @@ export function resolveCompositeType(
     return compositeTypeForPerspectives(normalized, otherLocalType);
   }
   for (const [composite, def] of Object.entries(registry.types)) {
-    if (!def.bidirectional && def.perspectives.includes(normalized)) {
+    if (!isDualPerspectiveType(def) && def.perspectives.includes(normalized)) {
       return composite;
     }
-    if (def.bidirectional && def.perspectives.includes(normalized)) {
+    if (isDualPerspectiveType(def) && def.perspectives.includes(normalized)) {
       return composite;
     }
   }
@@ -143,6 +158,14 @@ export function registerBidirectionalType(
     ],
   });
   return composite;
+}
+
+/** Set membership: member→set as is_a, set→member as members. */
+export function registerSetMembershipType(file: RelationshipTypesFile): void {
+  registerTypeDefinition(file, "is_a", {
+    bidirectional: true,
+    perspectives: ["is_a", "members"],
+  });
 }
 
 /** Symmetric association type (both perspectives are `includes`). */

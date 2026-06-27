@@ -7,9 +7,11 @@ import {
   destroyTestContentFixture,
   seedTestIncludes,
   seedTestNode,
+  seedTestRelationships,
   TEST_ARCHIVE_NODE_ID,
   TEST_HOME_NODE_ID,
 } from "../src/content/test-helpers";
+import { IS_A_TYPE } from "../src/labels";
 
 const PAGE_ACTIVE = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const PAGE_ARCHIVED = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -36,9 +38,11 @@ describe("record lifecycle", () => {
     properties: { title: "Old Scene" },
   });
 
-  seedTestIncludes(fixture, [{ a: TEST_ARCHIVE_NODE_ID, b: PAGE_ARCHIVED }]);
+  seedTestRelationships(fixture, [
+    { source: PAGE_ARCHIVED, target: TEST_ARCHIVE_NODE_ID, type: IS_A_TYPE },
+  ]);
 
-  test("archiveNode links page to Archive via includes", () => {
+  test("archiveNode links page to Archive via set membership", () => {
     expect(archiveNode(fixture.ctx, PAGE_ACTIVE)).toBeNull();
     const detail = getNodeDetail(fixture.ctx.db, PAGE_ACTIVE);
     expect(detail?.archived).toBe(true);

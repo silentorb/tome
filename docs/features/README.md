@@ -26,6 +26,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Table view tabs (`views.json`) | [views.md](./views.md) |
 | Static website generation (Astro) | [static-website.md](./static-website.md) |
 | Static website deploy (GitHub Actions → S3/CloudFront) | [static-website-deploy.md](./static-website-deploy.md) |
+| Set membership (`is_a` / `members`) | [set-membership.md](./set-membership.md) |
 | Relationship schema rules | [schema.md](./schema.md) |
 | Extension system (runtime-loaded packages) | [extensions.md](./extensions.md) |
 

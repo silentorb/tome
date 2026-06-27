@@ -3,6 +3,7 @@ import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestNode,
+  seedTestTableSchema,
 } from "../src/content/test-helpers";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { IS_A_TYPE } from "../src/labels";
@@ -32,14 +33,18 @@ describe("relationship-traverse", () => {
   seedTestNode(fixture, { id: product, properties: { title: "Product" } });
   seedTestNode(fixture, { id: part, properties: { title: "Part" } });
   seedTestNode(fixture, { id: location, properties: { title: "Location" } });
-  fixture.ctx.store.writeRelationshipTypesFile({
-    version: 1,
+  seedTestTableSchema(fixture, scenesDb, []);
+  seedTestTableSchema(fixture, locationsDb, []);
+  const typesFile = {
+    version: 1 as const,
     types: {
       scenes_product: { bidirectional: true, perspectives: ["scenes", "product"] },
       scenes_part: { bidirectional: true, perspectives: ["scenes", "part"] },
       scenes_location: { bidirectional: true, perspectives: ["location", "scenes"] },
+      is_a: { bidirectional: true, perspectives: ["is_a", "members"] },
     },
-  });
+  };
+  fixture.ctx.store.writeRelationshipTypesFile(typesFile);
 
   const relationships: RelationshipEntry[] = [
     { a: scene, b: product, type: "scenes_product", properties: { ordinal: 0 } },

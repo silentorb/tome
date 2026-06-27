@@ -34,6 +34,7 @@ import { relationshipId } from "../graph";
 import {
   registerBidirectionalType,
   registerIncludesType,
+  registerSetMembershipType,
   registerUnidirectionalType,
 } from "./relationship-types-file";
 import { INCLUDES_TYPE } from "../includes-relationship";
@@ -311,7 +312,11 @@ export function seedTestRelationships(
     : fixture.ctx.store.readRelationshipsFile();
 
   for (const connection of connections) {
-    registerUnidirectionalType(registry, connection.type);
+    if (connection.type === "is_a") {
+      registerSetMembershipType(registry);
+    } else {
+      registerUnidirectionalType(registry, connection.type);
+    }
     const entry = entryFromSeedConnection(connection);
     const index = file.relationships.findIndex(
       (existing) =>

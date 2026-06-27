@@ -4,17 +4,24 @@ import { GraphDatabase } from "../src/graph";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { TEST_ARCHIVE_NODE_ID } from "../src/content/test-helpers";
+import {
+  createTestContentFixture,
+  destroyTestContentFixture,
+  TEST_ARCHIVE_NODE_ID,
+} from "../src/content/test-helpers";
 
 describe("archive-status", () => {
+  const fixture = createTestContentFixture("tome-archive-status-fixture-");
+
   test("isLegacyArchivedNotionPath matches archive root and nested pages", () => {
-    expect(isLegacyArchivedNotionPath("Marloth/Archive")).toBe(true);
-    expect(isLegacyArchivedNotionPath("Marloth/Archive/Foils/old")).toBe(true);
-    expect(isLegacyArchivedNotionPath("Marloth/Scenes/active")).toBe(false);
-    expect(isLegacyArchivedNotionPath(null)).toBe(false);
+    const contentDir = fixture.ctx.store.contentDir;
+    expect(isLegacyArchivedNotionPath("Marloth/Archive", contentDir)).toBe(true);
+    expect(isLegacyArchivedNotionPath("Marloth/Archive/Foils/old", contentDir)).toBe(true);
+    expect(isLegacyArchivedNotionPath("Marloth/Scenes/active", contentDir)).toBe(false);
+    expect(isLegacyArchivedNotionPath(null, contentDir)).toBe(false);
   });
 
-  test("isArchivedNode uses includes edge to Archive hub", () => {
+  test("isArchivedNode uses is_a membership on Archive hub", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "tome-archive-status-"));
     const dbPath = join(tempDir, "test.sqlite");
     const db = new GraphDatabase(dbPath);
@@ -22,7 +29,7 @@ describe("archive-status", () => {
     db.upsertNode("active", { title: "Active" });
     db.upsertNode("archived", { title: "Archived member" });
     db.upsertNode(TEST_ARCHIVE_NODE_ID, { title: "Archive" });
-    db.upsertRelationship(TEST_ARCHIVE_NODE_ID, "archived", "includes");
+    db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "is_a");
     db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID);
 
     expect(isArchivedNode(db, "archived")).toBe(true);
@@ -31,5 +38,9 @@ describe("archive-status", () => {
 
     db.close();
     rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  test("cleanup fixture", () => {
+    destroyTestContentFixture(fixture);
   });
 });
