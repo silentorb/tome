@@ -14,7 +14,7 @@ describe("views-file", () => {
       nodes: {
         dddddddddddddddddddddddddddddddd: {
           sections: {
-            items: {
+            members: {
               columnOrder: ["status", "priority"],
               tabs: {
                 kind: "custom" as const,
@@ -31,7 +31,7 @@ describe("views-file", () => {
         },
         eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: {
           sections: {
-            items: {
+            members: {
               tabs: { kind: "generated" as const, provider: "scenes-by-book" },
             },
           },

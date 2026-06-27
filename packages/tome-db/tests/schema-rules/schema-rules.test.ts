@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { GraphDatabase } from "../../src/graph";
-import { IS_A_TYPE } from "../../src/labels";
+import { MEMBER_OF_TYPE } from "../../src/labels";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { schemaFilePath } from "../../src/content/paths";
 import { loadSchemaFromContent, invalidateSchemaCache } from "../../src/schema-rules/load";
@@ -55,7 +55,7 @@ describe("schema rules", () => {
     db.upsertNode(scenesType, typeTableMarkerProperties("Scenes"));
     db.upsertNode(featuresType, typeTableMarkerProperties("Features"));
     db.upsertNode(scene, { title: "Test scene" });
-    db.upsertRelationship(scene, scenesType, IS_A_TYPE, {});
+    db.upsertRelationship(scene, scenesType, MEMBER_OF_TYPE, {});
 
     const schema = parseSchemaFile(
       JSON.stringify({

@@ -1,6 +1,6 @@
 import type { GraphDatabase } from "./graph";
 import { resolveContentPath } from "./content/paths";
-import { SET_MEMBERSHIP_TYPE, listSetMembership } from "./set-membership";
+import { SET_MEMBERSHIP_TYPE, listSetMembership, setMemberIds } from "./set-membership";
 import { archiveNodeId, legacyArchivePathPrefix } from "./workspace/resolve";
 
 export function isLegacyArchivedNotionPath(path: string | null, contentDir?: string): boolean {

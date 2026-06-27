@@ -6,7 +6,7 @@ import {
   searchNodes,
   updateNodeBody,
 } from "../src/queries";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -152,9 +152,9 @@ describe("queries", () => {
     seedTestNode(fixture, { id: zetaId, properties: { title: "Zeta Feature" } });
     seedTestNode(fixture, { id: outsiderId, properties: { title: "AAA Other" } });
     seedTestRelationships(fixture, [
-      { source: alphaId, target: featuresDbId, type: "is_a" },
-      { source: betaId, target: featuresDbId, type: "is_a" },
-      { source: zetaId, target: featuresDbId, type: "is_a" },
+      { source: alphaId, target: featuresDbId, type: "member_of" },
+      { source: betaId, target: featuresDbId, type: "member_of" },
+      { source: zetaId, target: featuresDbId, type: "member_of" },
     ]);
 
     const hits = searchNodes(fixture.ctx.db, "", 2, [featuresDbId]);
@@ -282,7 +282,7 @@ describe("queries", () => {
       },
     });
     seedTestRelationships(fixture, [
-      { source: archivedId, target: TEST_ARCHIVE_NODE_ID, type: IS_A_TYPE },
+      { source: archivedId, target: TEST_ARCHIVE_NODE_ID, type: MEMBER_OF_TYPE },
     ]);
 
     const recent = listRecentNodesByModifiedAt(fixture.ctx.db, 100);

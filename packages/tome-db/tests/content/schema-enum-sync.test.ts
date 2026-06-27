@@ -1,7 +1,7 @@
 import { describe, expect, test, afterAll, beforeAll } from "bun:test";
 import { Database } from "bun:sqlite";
 import { writeFileSync } from "node:fs";
-import { IS_A_TYPE } from "../../src/labels";
+import { MEMBER_OF_TYPE } from "../../src/labels";
 import { serializeSchemaFile } from "../../src/schema-rules/schema-file";
 import {
   createTestContentFixture,
@@ -51,14 +51,14 @@ describe("CacheSync schema enum causality", () => {
     seedTestNode(fixture, { id: databaseId, properties: { title: "Features", notion_schema: {} } });
     seedTestNode(fixture, { id: pageId, properties: { title: "Feature A" } });
     seedTestRelationships(fixture, [
-      { source: pageId, target: databaseId, type: IS_A_TYPE, properties: { priority: "High" } },
+      { source: pageId, target: databaseId, type: MEMBER_OF_TYPE, properties: { priority: "High" } },
     ]);
-    const edge = fixture.ctx.db.listRelationshipsFromSource(pageId, IS_A_TYPE)[0];
+    const edge = fixture.ctx.db.listRelationshipsFromSource(pageId, MEMBER_OF_TYPE)[0];
     recordId = edge!.recordId!;
   });
 
   test("stores priority index for initial schema option order", () => {
-    expect(fixture.ctx.db.listRelationshipsFromSource(pageId, IS_A_TYPE)[0]?.properties.priority).toBe(
+    expect(fixture.ctx.db.listRelationshipsFromSource(pageId, MEMBER_OF_TYPE)[0]?.properties.priority).toBe(
       "High",
     );
 
@@ -78,7 +78,7 @@ describe("CacheSync schema enum causality", () => {
     );
     fixture.ctx.sync.syncFile(SCHEMA_FILENAME);
 
-    expect(fixture.ctx.db.listRelationshipsFromSource(pageId, IS_A_TYPE)[0]?.properties.priority).toBe(
+    expect(fixture.ctx.db.listRelationshipsFromSource(pageId, MEMBER_OF_TYPE)[0]?.properties.priority).toBe(
       "High",
     );
 

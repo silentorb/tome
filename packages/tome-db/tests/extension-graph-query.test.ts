@@ -22,9 +22,9 @@ describe("createExtensionGraphQueryServices", () => {
     seedTestNode(fixture, { id: cityB, properties: { title: "City B" } });
     seedTestNode(fixture, { id: house, properties: { title: "House" } });
     seedTestRelationships(fixture, [
-      { source: house, target: typeId, type: "is_a" },
-      { source: cityA, target: typeId, type: "is_a" },
-      { source: cityB, target: typeId, type: "is_a" },
+      { source: house, target: typeId, type: "member_of" },
+      { source: cityA, target: typeId, type: "member_of" },
+      { source: cityB, target: typeId, type: "member_of" },
       { source: house, target: cityA, type: "parents" },
       { source: house, target: cityB, type: "parents" },
       { source: cityA, target: cityB, type: "neighbor" },

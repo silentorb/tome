@@ -1,7 +1,7 @@
 import type { Properties } from "./graph";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { IS_A_TYPE } from "./labels";
+import { MEMBER_OF_TYPE } from "./labels";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
 import { normalizeRelationshipType } from "./relation-type";
 import { relationshipRuleContextForType } from "./schema-rules/resolve";
@@ -81,7 +81,7 @@ export function linkOutgoingRelationship(
   }
 
   if (
-    normalizedType === IS_A_TYPE &&
+    normalizedType === MEMBER_OF_TYPE &&
     isTypeTableNode(ctx.db, targetId, ctx.store.contentDir)
   ) {
     if (!("row_index" in relProps)) {

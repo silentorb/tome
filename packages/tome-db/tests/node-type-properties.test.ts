@@ -11,7 +11,7 @@ import { serializeWorkspaceFile } from "../src/workspace/workspace-file";
 import { invalidateWorkspaceCache } from "../src/workspace/load";
 import { writeFileSync } from "node:fs";
 import { GraphDatabase } from "../src/graph";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { buildPropertiesSection } from "../src/node-type-properties";
 import { getNodePageDetail } from "../src/node-page-sections";
@@ -65,7 +65,7 @@ describe("node-type-properties", () => {
       }),
     });
     db.upsertNode(character, { title: "James" });
-    db.upsertRelationship(character, CHAR_DB, IS_A_TYPE, { row_index: 0, priority: "High" });
+    db.upsertRelationship(character, CHAR_DB, MEMBER_OF_TYPE, { row_index: 0, priority: "High" });
 
     db.upsertNode(scene1, { title: "Scene A" });
     db.upsertNode(scene2, { title: "Scene B" });
@@ -87,7 +87,7 @@ describe("node-type-properties", () => {
     ).toBe("dynamic");
   });
 
-  test("getNodePageDetail exposes properties and IS_A relation section", () => {
+  test("getNodePageDetail exposes properties without membership relation section", () => {
     new ContentStore(contentDir).writeDynamicFieldsFile(
       fileFromSeedInputs([
         {
@@ -107,13 +107,9 @@ describe("node-type-properties", () => {
     const detail = getNodePageDetail(db, character);
     expect(detail?.properties?.cells.all_scene_count).toBe("2");
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === IS_A_TYPE,
+      (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
     );
-    expect(membership).toMatchObject({
-      label: IS_A_TYPE,
-      addMode: "link-existing",
-      columns: [],
-    });
+    expect(membership).toBeUndefined();
   });
 
   afterAll(() => {

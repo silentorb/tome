@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GraphDatabase } from "../src/graph";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodePageDetail } from "../src/node-page-sections";
 
@@ -75,7 +75,7 @@ describe("node-sections", () => {
     const databaseId = "db42345678901234567890123456789012";
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features DB"), body: "# About" });
     db.upsertNode("page4", { title: "Guest consultant" });
-    db.upsertRelationship("page4", databaseId, IS_A_TYPE, {
+    db.upsertRelationship("page4", databaseId, MEMBER_OF_TYPE, {
       view: "default",
       row_index: 0,
       status: "Partial",
@@ -99,7 +99,7 @@ describe("node-sections", () => {
     expect(detail?.properties).toBeNull();
   });
 
-  test("shows Properties and IS_A relation section with scalars split between them", () => {
+  test("shows Properties without membership relation section", () => {
     const databaseId = "db52345678901234567890123456789012";
     db.upsertNode("page5", { title: "Scene A", body: "Prose" });
     db.upsertNode(databaseId, {
@@ -112,7 +112,7 @@ describe("node-sections", () => {
         },
       }),
     });
-    db.upsertRelationship("page5", databaseId, IS_A_TYPE, {
+    db.upsertRelationship("page5", databaseId, MEMBER_OF_TYPE, {
       view: "default",
       row_index: 3,
       priority: "High",
@@ -120,18 +120,10 @@ describe("node-sections", () => {
 
     const detail = getNodePageDetail(db, "page5");
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === IS_A_TYPE,
+      (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
     );
 
-    expect(membership).toMatchObject({
-      type: "relations",
-      label: IS_A_TYPE,
-      title: "Scene Archive",
-      typeNodeId: databaseId,
-      addMode: "link-existing",
-      columns: [],
-      rows: [{ targetId: databaseId, name: "Scene Archive", cells: {} }],
-    });
+    expect(membership).toBeUndefined();
     expect(detail?.properties).toMatchObject({
       type: "properties",
       databaseId,
@@ -149,7 +141,7 @@ describe("node-sections", () => {
     });
   });
 
-  test("normalizes legacy IN_DATABASE edges into Properties section", () => {
+  test("normalizes legacy IN_DATABASE edges into Properties section only", () => {
     const databaseId = "db62345678901234567890123456789012";
     db.upsertNode("page6", { title: "Legacy row" });
     db.upsertNode(databaseId, {
@@ -162,19 +154,14 @@ describe("node-sections", () => {
         },
       }),
     });
-    db.upsertRelationship("page6", databaseId, IS_A_TYPE, { status: "Unresolved" });
+    db.upsertRelationship("page6", databaseId, MEMBER_OF_TYPE, { status: "Unresolved" });
 
     const detail = getNodePageDetail(db, "page6");
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === IS_A_TYPE,
+      (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
     );
 
-    expect(membership).toMatchObject({
-      label: IS_A_TYPE,
-      addMode: "link-existing",
-      columns: [],
-      rows: [{ targetId: databaseId, name: "Legacy Features" }],
-    });
+    expect(membership).toBeUndefined();
     expect(detail?.properties).toMatchObject({
       databaseId,
       typeTitle: "Legacy Features",
@@ -186,7 +173,7 @@ describe("node-sections", () => {
     const featuresTypeId = "f72345678901234567890123456789012";
     db.upsertNode("scene2", { title: "Chase" });
     db.upsertNode(featuresTypeId, { ...typeTableMarkerProperties("Features") });
-    db.upsertRelationship("scene2", featuresTypeId, IS_A_TYPE, { row_index: 0 });
+    db.upsertRelationship("scene2", featuresTypeId, MEMBER_OF_TYPE, { row_index: 0 });
     db.upsertNode("feat2", { title: "Desperation" });
     db.upsertRelationship("scene2", "feat2", "features", { ordinal: 0 });
 
@@ -205,7 +192,7 @@ describe("node-sections", () => {
     const inspTypeId = "f82345678901234567890123456789012";
     db.upsertNode("scene3", { title: "Ball" });
     db.upsertNode(inspTypeId, { ...typeTableMarkerProperties("Inspirations") });
-    db.upsertRelationship("scene3", inspTypeId, IS_A_TYPE, { row_index: 0 });
+    db.upsertRelationship("scene3", inspTypeId, MEMBER_OF_TYPE, { row_index: 0 });
     db.upsertNode("insp2", { title: "Emma" });
     db.upsertRelationship("scene3", "insp2", "inspirations", { ordinal: 0 });
 

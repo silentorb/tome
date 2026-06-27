@@ -9,7 +9,7 @@ import { applyDynamicFields } from "./dynamic-fields";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import type { EvalRow } from "./row-sort";
-import { resolveGeneratedTabsFromScopes, ITEMS_SECTION_KEY } from "./views/resolve-tabs";
+import { resolveGeneratedTabsFromScopes, MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { resolveContentPath } from "./content/paths";
 import { applySectionColumnOrder } from "./views/column-order";
@@ -435,7 +435,7 @@ export function getOrderedAssociationView(
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     config.typeDatabaseId,
-    ITEMS_SECTION_KEY,
+    MEMBERS_SECTION_KEY,
   );
 
   return {

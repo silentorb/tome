@@ -1,6 +1,6 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import { archiveNode, unarchiveNode } from "../src/node-lifecycle";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import { isArchiveMembershipEntry } from "../src/relationship-archive";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { getNodeDetail } from "../src/queries";
@@ -36,7 +36,7 @@ describe("archive relationship flags", () => {
     {
       source: PAGE,
       target: TYPE_DB,
-      type: IS_A_TYPE,
+      type: MEMBER_OF_TYPE,
       properties: { view: "all", row_index: 0 },
     },
   ]);
@@ -47,7 +47,7 @@ describe("archive relationship flags", () => {
 
     const file = fixture.ctx.store.readRelationshipsFile();
     const membership = file.relationships.find(
-      (e) => e.type === IS_A_TYPE && (e.a === HUB || e.b === HUB) && (e.a === PAGE || e.b === PAGE),
+      (e) => e.type === MEMBER_OF_TYPE && (e.a === HUB || e.b === HUB) && (e.a === PAGE || e.b === PAGE),
     );
     expect(membership?.archived).toBeUndefined();
 
@@ -64,8 +64,8 @@ describe("archive relationship flags", () => {
     const outgoing = fixture.ctx.db.listRelationshipsFromSource(PAGE);
     expect(outgoing).toHaveLength(1);
     expect(outgoing[0]?.targetNodeId).toBe(HUB);
-    expect(outgoing[0]?.type).toBe(IS_A_TYPE);
-    expect(fixture.ctx.db.listRelationshipsFromSource(PAGE, IS_A_TYPE)).toHaveLength(1);
+    expect(outgoing[0]?.type).toBe(MEMBER_OF_TYPE);
+    expect(fixture.ctx.db.listRelationshipsFromSource(PAGE, MEMBER_OF_TYPE)).toHaveLength(1);
     expect(fixture.ctx.db.listRelationshipsFromSource(HUB, "members").length).toBeGreaterThan(0);
   });
 
@@ -86,7 +86,7 @@ describe("archive relationship flags", () => {
       }
     }
 
-    expect(fixture.ctx.db.listRelationshipsFromSource(PAGE, IS_A_TYPE)).toHaveLength(1);
+    expect(fixture.ctx.db.listRelationshipsFromSource(PAGE, MEMBER_OF_TYPE)).toHaveLength(1);
     expect(fixture.ctx.db.listRelationshipsFromSource(PAGE, "includes")).toHaveLength(1);
     const detail = getDatabaseViewDetail(fixture.ctx.db, TYPE_DB, "all", fixture.ctx.store.contentDir);
     expect(detail?.rows.some((row) => row.nodeId === PAGE)).toBe(true);

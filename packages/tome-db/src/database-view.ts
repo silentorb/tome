@@ -1,5 +1,5 @@
 import type { GraphDatabase } from "./graph";
-import { IS_A_TYPE, MEMBERS_TYPE } from "./labels";
+import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "./labels";
 import { listSetMemberRowConnections } from "./set-membership";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
@@ -12,7 +12,7 @@ import {
   resolveCustomTabsForNode,
   activeTabName,
   getSectionTabsConfig,
-  ITEMS_SECTION_KEY,
+  MEMBERS_SECTION_KEY,
 } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
@@ -181,7 +181,7 @@ function buildCustomViewDetail(
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     databaseId,
-    ITEMS_SECTION_KEY,
+    MEMBERS_SECTION_KEY,
   );
 
   const rows: DatabaseRow[] = sorted.map((row, index) => ({
@@ -332,7 +332,7 @@ export function getDatabaseViewDetail(
 
   const title = titleFromProperties(database.properties);
   const views = loadViewsFromContent(dir);
-  const sectionConfig = getSectionTabsConfig(views, databaseId, ITEMS_SECTION_KEY);
+  const sectionConfig = getSectionTabsConfig(views, databaseId, MEMBERS_SECTION_KEY);
 
   if (sectionConfig?.kind === "generated") {
     return null;

@@ -6,7 +6,7 @@ import {
   seedTestTableSchema,
 } from "../src/content/test-helpers";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import {
   filterRelationshipsByRowDatabaseContext,
   firstRelatedNodeId,
@@ -41,7 +41,7 @@ describe("relationship-traverse", () => {
       scenes_product: { bidirectional: true, perspectives: ["scenes", "product"] },
       scenes_part: { bidirectional: true, perspectives: ["scenes", "part"] },
       scenes_location: { bidirectional: true, perspectives: ["location", "scenes"] },
-      is_a: { bidirectional: true, perspectives: ["is_a", "members"] },
+      member_of: { bidirectional: true, perspectives: ["member_of", "members"] },
     },
   };
   fixture.ctx.store.writeRelationshipTypesFile(typesFile);
@@ -55,14 +55,14 @@ describe("relationship-traverse", () => {
       type: "scenes_location",
       properties: { ordinal: 0 },
     },
-    { a: scene, b: scenesDb, type: IS_A_TYPE, properties: { row_index: 0 } },
-    { a: location, b: locationsDb, type: IS_A_TYPE, properties: { row_index: 0 } },
+    { a: scene, b: scenesDb, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
+    { a: location, b: locationsDb, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
   ];
   for (const entry of relationships) {
     const sorted = sortEndpoints(entry.a, entry.b);
     entry.a = sorted.a;
     entry.b = sorted.b;
-    if (entry.type === IS_A_TYPE) {
+    if (entry.type === MEMBER_OF_TYPE) {
       entry.directedFrom = entry.a === scene ? scene : location;
     }
   }

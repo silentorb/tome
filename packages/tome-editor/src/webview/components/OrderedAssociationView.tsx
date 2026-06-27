@@ -31,7 +31,7 @@ import { SortableDataColumnHeaders, columnLabelFor, moveColumnOrderItem } from "
 import "./ordered-association-view.css";
 import "./section-data-table.css";
 
-const ITEMS_SECTION_KEY = "items";
+const MEMBERS_SECTION_KEY = "items";
 
 interface OrderedAssociationViewProps {
   api: EditorApi;
@@ -288,7 +288,7 @@ export function OrderedAssociationView({
   const handleColumnsReorder = useCallback(
     async (columnOrder: string[]) => {
       setDisplayColumns(columnOrder);
-      await api.updateSectionColumnOrder(view.typeDatabaseId, ITEMS_SECTION_KEY, columnOrder);
+      await api.updateSectionColumnOrder(view.typeDatabaseId, MEMBERS_SECTION_KEY, columnOrder);
       onCellUpdated?.();
     },
     [api, onCellUpdated, view.typeDatabaseId],
@@ -337,7 +337,7 @@ export function OrderedAssociationView({
         ? {
             onArchiveNode,
             onRemoveNode: async (rowId: string) => {
-              await api.unlinkOutgoingRelationship(rowId, "is_a", view.typeDatabaseId);
+              await api.unlinkOutgoingRelationship(rowId, "member_of", view.typeDatabaseId);
               onCellUpdated?.();
             },
             onDeleteNode,
@@ -346,7 +346,7 @@ export function OrderedAssociationView({
               excludedIds: [nodeId, rowNodeId],
               onMove: async (selectedId: string) => {
                 await api.moveRelationshipConnection({
-                  type: "is_a",
+                  type: "member_of",
                   oldSourceId: rowNodeId,
                   oldTargetId: view.typeDatabaseId,
                   newSourceId: rowNodeId,

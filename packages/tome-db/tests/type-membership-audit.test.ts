@@ -8,7 +8,7 @@ import {
   seedTestTableSchema,
 } from "../src/content/test-helpers";
 import { openTomeWriteContext } from "../src/content/write-context";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import {
   expectedTypeDatabaseForPage,
   findMissingTypeMembershipRelationships,
@@ -175,14 +175,14 @@ describe("nested page type membership", () => {
       source_export: `${EXPORT_PREFIX}Marloth/Data/Characters/The Tea Shop Owner/Tea shop owner scoping ${nestedCharId}.md`,
     });
 
-    db.upsertRelationship(appliedId, FEATURES_DB, IS_A_TYPE, { view: "all", row_index: 113 });
-    db.upsertRelationship(surrealId, FEATURES_DB, IS_A_TYPE, {
+    db.upsertRelationship(appliedId, FEATURES_DB, MEMBER_OF_TYPE, { view: "all", row_index: 113 });
+    db.upsertRelationship(surrealId, FEATURES_DB, MEMBER_OF_TYPE, {
       view: "all",
       row_index: 112,
       priority: "Primary",
     });
-    db.upsertRelationship(questId, TRAVERSAL_DB, IS_A_TYPE, { view: "all", row_index: 3 });
-    db.upsertRelationship(nestedCharId, CHARACTERS_DB, IS_A_TYPE, { view: "all", row_index: 35 });
+    db.upsertRelationship(questId, TRAVERSAL_DB, MEMBER_OF_TYPE, { view: "all", row_index: 3 });
+    db.upsertRelationship(nestedCharId, CHARACTERS_DB, MEMBER_OF_TYPE, { view: "all", row_index: 35 });
 
     const spurious = findNestedPageSpuriousTypeMembership(db, contentDir);
     const ids = spurious.map((row) => row.nodeId);

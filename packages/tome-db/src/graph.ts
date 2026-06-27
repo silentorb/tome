@@ -293,7 +293,7 @@ export class GraphDatabase {
         `SELECT DISTINCT
            CASE WHEN source_node_id = ?1 THEN target_node_id ELSE source_node_id END AS member_id
          FROM relationship_projections
-         WHERE type IN ('members', 'is_a')
+         WHERE type IN ('members', 'member_of')
            AND (source_node_id = ?1 OR target_node_id = ?1)
            AND source_node_id != target_node_id`,
       )
@@ -471,7 +471,7 @@ export class GraphDatabase {
   }
 
   private nodeMatchesAnyAllowedType(nodeId: string, allowedTypeIds: readonly string[]): boolean {
-    for (const type of ["is_a"] as const) {
+    for (const type of ["member_of"] as const) {
       for (const connection of this.listRelationshipsFromSource(nodeId, type)) {
         if (allowedTypeIds.includes(connection.targetNodeId)) return true;
       }

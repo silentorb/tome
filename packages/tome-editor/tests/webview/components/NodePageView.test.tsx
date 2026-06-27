@@ -326,7 +326,7 @@ describe("NodePageView IS_A relation section", () => {
             sections: [
               { type: "markdown", body: "# Example\n" },
               makeRelationSection({
-                label: "is_a",
+                label: "member_of",
                 title: "Features",
                 typeNodeId: typeId,
                 addMode: "link-existing",

@@ -8,7 +8,10 @@ import {
 import { loadViewsFromContent } from "./load";
 import type { ResolvedTab, TableTabsDetail } from "./tabs";
 
-export const ITEMS_SECTION_KEY = "items";
+export const MEMBERS_SECTION_KEY = "members";
+
+/** @deprecated Use MEMBERS_SECTION_KEY */
+export const ITEMS_SECTION_KEY = MEMBERS_SECTION_KEY;
 
 export interface ResolvedCustomTabs {
   kind: "custom";
@@ -81,7 +84,7 @@ export function resolveGeneratedTabsFromScopes(
 export function isGeneratedSection(
   views: ViewsFile,
   nodeId: string,
-  sectionKey: string = ITEMS_SECTION_KEY,
+  sectionKey: string = MEMBERS_SECTION_KEY,
 ): boolean {
   const config = getSectionTabsConfig(views, nodeId, sectionKey);
   return config?.kind === "generated";
@@ -90,7 +93,7 @@ export function isGeneratedSection(
 export function generatedProviderId(
   views: ViewsFile,
   nodeId: string,
-  sectionKey: string = ITEMS_SECTION_KEY,
+  sectionKey: string = MEMBERS_SECTION_KEY,
 ): string | null {
   const config = getSectionTabsConfig(views, nodeId, sectionKey);
   return config?.kind === "generated" ? config.provider : null;
@@ -99,7 +102,7 @@ export function generatedProviderId(
 export function loadSectionTabsConfig(
   contentDir: string,
   nodeId: string,
-  sectionKey: string = ITEMS_SECTION_KEY,
+  sectionKey: string = MEMBERS_SECTION_KEY,
 ): SectionTabsConfig | null {
   const views = loadViewsFromContent(contentDir);
   return getSectionTabsConfig(views, nodeId, sectionKey);
@@ -109,7 +112,7 @@ export function resolveCustomTabsForNode(
   contentDir: string,
   nodeId: string,
   requestedTabId?: string,
-  sectionKey: string = ITEMS_SECTION_KEY,
+  sectionKey: string = MEMBERS_SECTION_KEY,
 ): ResolvedCustomTabs {
   const views = loadViewsFromContent(contentDir);
   return resolveCustomTabs(views, nodeId, sectionKey, requestedTabId);
@@ -144,7 +147,7 @@ export function sectionUsesGeneratedTabs(
   db: GraphDatabase,
   contentDir: string,
   nodeId: string,
-  sectionKey: string = ITEMS_SECTION_KEY,
+  sectionKey: string = MEMBERS_SECTION_KEY,
 ): { provider: string } | null {
   const views = loadViewsFromContent(contentDir);
   const config = getSectionTabsConfig(views, nodeId, sectionKey);

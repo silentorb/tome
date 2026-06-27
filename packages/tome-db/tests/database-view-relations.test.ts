@@ -7,7 +7,7 @@ import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "../src/conte
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
 import { invalidateTableSchemasCache } from "../src/table-schemas/load";
 import { GraphDatabase } from "../src/graph";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { listRelationConnectionsForRow } from "../src/database-view-relations";
@@ -82,8 +82,8 @@ describe("database-view-relations", () => {
     db.upsertNode(inspirationTypesDb, { ...typeTableMarkerProperties("Inspiration types") });
     db.upsertNode(inspirationId, { title: "Ash vs. the Evil Dead" });
     db.upsertNode(tvSeriesTypeId, { title: "TV series" });
-    db.upsertRelationship(inspirationId, inspirationsDb, IS_A_TYPE, { row_index: 0 });
-    db.upsertRelationship(tvSeriesTypeId, inspirationTypesDb, IS_A_TYPE, { row_index: 0 });
+    db.upsertRelationship(inspirationId, inspirationsDb, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship(tvSeriesTypeId, inspirationTypesDb, MEMBER_OF_TYPE, { row_index: 0 });
     db.upsertRelationship(inspirationId, tvSeriesTypeId, "prop_type_inspirations", {
       ordinal: 0,
       via_view: "default",
@@ -146,8 +146,8 @@ describe("database-view-relations", () => {
     db.upsertNode(locationsDb, { ...typeTableMarkerProperties("Locations") });
     db.upsertNode(parentLocationId, { title: "Marloth" });
     db.upsertNode(childLocationId, { title: "Dark forest" });
-    db.upsertRelationship(parentLocationId, locationsDb, IS_A_TYPE, { row_index: 0 });
-    db.upsertRelationship(childLocationId, locationsDb, IS_A_TYPE, { row_index: 1 });
+    db.upsertRelationship(parentLocationId, locationsDb, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship(childLocationId, locationsDb, MEMBER_OF_TYPE, { row_index: 1 });
     db.upsertRelationship(parentLocationId, childLocationId, "children", { ordinal: 0 });
     db.upsertRelationship(childLocationId, parentLocationId, "parents", { ordinal: 0 });
 
@@ -217,14 +217,14 @@ describe("database-view-relations", () => {
         {
           a: locationA,
           b: locationsDb,
-          type: IS_A_TYPE,
+          type: MEMBER_OF_TYPE,
           directedFrom: locationA,
           properties: { row_index: 0 },
         },
         {
           a: locationB,
           b: locationsDb,
-          type: IS_A_TYPE,
+          type: MEMBER_OF_TYPE,
           directedFrom: locationB,
           properties: { row_index: 1 },
         },
@@ -287,8 +287,8 @@ describe("database-view-relations", () => {
     db.upsertNode(partsDb, { ...typeTableMarkerProperties("Parts") });
     db.upsertNode(sceneId, { title: "Intro scene" });
     db.upsertNode(partId, { title: "Part 1" });
-    db.upsertRelationship(sceneId, scenesDb, IS_A_TYPE, { row_index: 0, order: "1005" });
-    db.upsertRelationship(partId, partsDb, IS_A_TYPE, { row_index: 0 });
+    db.upsertRelationship(sceneId, scenesDb, MEMBER_OF_TYPE, { row_index: 0, order: "1005" });
+    db.upsertRelationship(partId, partsDb, MEMBER_OF_TYPE, { row_index: 0 });
     db.upsertRelationship(sceneId, partId, "scenes_part", { ordinal: 0 });
 
     const detail = getDatabaseViewDetail(db, scenesDb, undefined, contentDir);
@@ -311,11 +311,11 @@ describe("database-view-relations", () => {
     db.upsertNode(chaoticWorldId, { title: "Chaotic world" });
     db.upsertNode(adventureId, { title: "Adventure" });
     db.upsertNode(darkForestId, { title: "Dark forest" });
-    db.upsertRelationship(inspirationWithMixedFeatures, inspirationsDb, IS_A_TYPE, {
+    db.upsertRelationship(inspirationWithMixedFeatures, inspirationsDb, MEMBER_OF_TYPE, {
       row_index: 0,
     });
     for (const featureId of [cozyHorrorId, chaoticWorldId, adventureId, darkForestId]) {
-      db.upsertRelationship(featureId, featuresDb, IS_A_TYPE, { row_index: 0 });
+      db.upsertRelationship(featureId, featuresDb, MEMBER_OF_TYPE, { row_index: 0 });
     }
     db.upsertRelationship(inspirationWithMixedFeatures, cozyHorrorId, "includes");
     db.upsertRelationship(chaoticWorldId, inspirationWithMixedFeatures, "includes");

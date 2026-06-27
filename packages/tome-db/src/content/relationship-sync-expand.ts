@@ -5,12 +5,12 @@ import { relationshipRecordId } from "./relationships-file";
 import type { RelationshipTypeDefinition, RelationshipTypesFile } from "./relationship-types-file";
 import { perspectiveCountForExpansion } from "./relationship-types-file";
 
-export const SET_MEMBERSHIP_STORAGE_TYPE = "is_a";
-export const SET_MEMBER_PERSPECTIVE = "is_a";
+export const SET_MEMBERSHIP_STORAGE_TYPE = "member_of";
+export const SET_MEMBER_PERSPECTIVE = "member_of";
 export const SET_MEMBERS_PERSPECTIVE = "members";
 
 export interface RelationshipExpansionContext {
-  /** Type-table and archive hub node ids — used to orient is_a / members projections. */
+  /** Type-table and archive hub node ids — used to orient member_of / members projections. */
   setNodeIds?: ReadonlySet<string>;
 }
 

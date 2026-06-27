@@ -2,7 +2,7 @@
  * Validation/migration tooling for Notion export layout — not used by editor runtime.
  */
 import type { GraphDatabase, Relationship, Properties } from "./graph";
-import { IS_A_TYPE, MEMBERS_TYPE, TYPE_MEMBERSHIP_TYPES } from "./labels";
+import { MEMBER_OF_TYPE, MEMBERS_TYPE, TYPE_MEMBERSHIP_TYPES } from "./labels";
 import { findSetMembershipRelationship, listSetMemberRowConnections } from "./set-membership";
 import { findTypeNodeByTitle, isTypeTableNode } from "./node-capabilities";
 import { legacyExportPathPrefix } from "./workspace/resolve";
@@ -373,4 +373,4 @@ export function setNodeProperties(db: GraphDatabase, nodeId: string, properties:
   db.runExec("UPDATE nodes SET properties = ? WHERE id = ?", JSON.stringify(properties), nodeId);
 }
 
-export { IS_A_TYPE };
+export { MEMBER_OF_TYPE };

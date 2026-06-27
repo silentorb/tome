@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GraphDatabase } from "../src/graph";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { sortEvalRows, type EvalRow } from "../src/row-sort";
@@ -108,7 +108,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
         nodes: {
           [databaseId]: {
             sections: {
-              items: {
+              members: {
                 tabs: {
                   kind: "custom",
                   definitions: [
@@ -144,8 +144,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Zebra" });
     db.upsertNode("page2", { title: "Alpha" });
-    db.upsertRelationship("page1", databaseId, IS_A_TYPE, { status: "Done", row_index: 0 });
-    db.upsertRelationship("page2", databaseId, IS_A_TYPE, { status: "Todo", row_index: 1 });
+    db.upsertRelationship("page1", databaseId, MEMBER_OF_TYPE, { status: "Done", row_index: 0 });
+    db.upsertRelationship("page2", databaseId, MEMBER_OF_TYPE, { status: "Todo", row_index: 1 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.tabs.items.map((tab) => tab.label)).toEqual(["Done only"]);
@@ -171,7 +171,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
         nodes: {
           [databaseId]: {
             sections: {
-              items: {
+              members: {
                 columnOrder: ["status"],
                 tabs: {
                   kind: "custom",
@@ -210,7 +210,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     );
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Row" });
-    db.upsertRelationship("page1", databaseId, IS_A_TYPE, { row_index: 0 });
+    db.upsertRelationship("page1", databaseId, MEMBER_OF_TYPE, { row_index: 0 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.columns).toEqual(["status", "priority"]);
@@ -234,7 +234,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
         nodes: {
           [featuresDb]: {
             sections: {
-              items: {
+              members: {
                 tabs: {
                   kind: "custom",
                   definitions: [
@@ -284,12 +284,12 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertNode("insp-b", { title: "Insp B" });
     db.upsertNode("insp-c", { title: "Insp C" });
 
-    db.upsertRelationship("feature-few", featuresDb, IS_A_TYPE, { row_index: 0 });
-    db.upsertRelationship("feature-many", featuresDb, IS_A_TYPE, { row_index: 1 });
-    db.upsertRelationship("feature-none", featuresDb, IS_A_TYPE, { row_index: 2 });
-    db.upsertRelationship("insp-a", inspirationsDb, IS_A_TYPE, { row_index: 0 });
-    db.upsertRelationship("insp-b", inspirationsDb, IS_A_TYPE, { row_index: 1 });
-    db.upsertRelationship("insp-c", inspirationsDb, IS_A_TYPE, { row_index: 2 });
+    db.upsertRelationship("feature-few", featuresDb, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship("feature-many", featuresDb, MEMBER_OF_TYPE, { row_index: 1 });
+    db.upsertRelationship("feature-none", featuresDb, MEMBER_OF_TYPE, { row_index: 2 });
+    db.upsertRelationship("insp-a", inspirationsDb, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship("insp-b", inspirationsDb, MEMBER_OF_TYPE, { row_index: 1 });
+    db.upsertRelationship("insp-c", inspirationsDb, MEMBER_OF_TYPE, { row_index: 2 });
     db.upsertRelationship("feature-few", "insp-a", "includes");
     db.upsertRelationship("feature-few", "insp-b", "includes");
     db.upsertRelationship("feature-many", "insp-a", "includes");

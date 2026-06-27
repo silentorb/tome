@@ -8,7 +8,7 @@ import {
   type ViewSortSpec,
   type ViewsFile,
 } from "../content/views-file";
-import { ITEMS_SECTION_KEY } from "./resolve-tabs";
+import { MEMBERS_SECTION_KEY } from "./resolve-tabs";
 
 export type ViewsMutationError =
   | "node_not_found"
@@ -187,7 +187,7 @@ export function ensureCustomItemsSection(
   const file = store.readViewsFile();
   file.nodes[nodeId] = {
     sections: {
-      [ITEMS_SECTION_KEY]: {
+      [MEMBERS_SECTION_KEY]: {
         tabs: { kind: "custom", definitions },
       },
     },
@@ -203,7 +203,7 @@ export function ensureGeneratedItemsSection(
   const file = store.readViewsFile();
   file.nodes[nodeId] = {
     sections: {
-      [ITEMS_SECTION_KEY]: {
+      [MEMBERS_SECTION_KEY]: {
         tabs: { kind: "generated", provider },
       },
     },

@@ -1,5 +1,5 @@
 import type { GraphDatabase, Node, Properties } from "./graph";
-import { IS_A_TYPE, MEMBERS_TYPE } from "./labels";
+import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "./labels";
 import { memberSetIds } from "./set-membership";
 import { resolveContentPath } from "./content/paths";
 import { hasTableSchemaEntry, loadTableSchemasFromContent } from "./table-schemas/load";
@@ -13,7 +13,7 @@ function titleFromProperties(properties: Record<string, unknown>): string {
 }
 
 export function hasIncomingIsA(db: GraphDatabase, nodeId: string): boolean {
-  if (db.listRelationshipsToTarget(nodeId, IS_A_TYPE).length > 0) return true;
+  if (db.listRelationshipsToTarget(nodeId, MEMBER_OF_TYPE).length > 0) return true;
   if (db.listRelationshipsFromSource(nodeId, MEMBERS_TYPE).length > 0) return true;
   return false;
 }

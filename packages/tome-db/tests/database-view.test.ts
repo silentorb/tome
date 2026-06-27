@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GraphDatabase } from "../src/graph";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import {
@@ -77,7 +77,7 @@ describe("database-view", () => {
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page1", { title: "Desperation" });
-    db.upsertRelationship("page1", databaseId, IS_A_TYPE, {
+    db.upsertRelationship("page1", databaseId, MEMBER_OF_TYPE, {
       view: "all",
       row_index: 0,
       priority: "High",
@@ -115,7 +115,7 @@ describe("database-view", () => {
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page2", { title: "Peace in the eye of the storm" });
-    db.upsertRelationship("page2", databaseId, IS_A_TYPE, {
+    db.upsertRelationship("page2", databaseId, MEMBER_OF_TYPE, {
       view: "default",
       row_index: 0,
       row_name: "Stale CSV label",
@@ -140,7 +140,7 @@ describe("database-view", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page3", { title: "Child feature" });
     db.upsertNode(parentId, { title: "Parent feature" });
-    db.upsertRelationship("page3", databaseId, IS_A_TYPE, { row_index: 0 });
+    db.upsertRelationship("page3", databaseId, MEMBER_OF_TYPE, { row_index: 0 });
     db.upsertRelationship("page3", parentId, "parents", { ordinal: 0 });
 
     const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
@@ -169,7 +169,7 @@ describe("database-view", () => {
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Inspirations") });
     db.upsertNode("insp1", { title: "Example inspiration" });
-    db.upsertRelationship("insp1", databaseId, IS_A_TYPE, {
+    db.upsertRelationship("insp1", databaseId, MEMBER_OF_TYPE, {
       row_index: 0,
       plot_is_driven_by_mc_desire: "True",
     });

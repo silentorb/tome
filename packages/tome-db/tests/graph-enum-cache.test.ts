@@ -25,7 +25,7 @@ describe("GraphDatabase enum cache encoding", () => {
         id: recordId,
         nodeA: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         nodeB: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        compositeType: "is_a",
+        compositeType: "member_of",
         properties: { priority: "High", row_index: 4 },
       },
       "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

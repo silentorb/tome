@@ -6,7 +6,7 @@ import {
   updateDatabaseColumn,
 } from "../src/database-column-mutations";
 import { getDatabaseViewDetail } from "../src/database-view";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { invalidateSchemaCache } from "../src/schema-rules/load";
 import {
@@ -114,7 +114,7 @@ describe("database column mutations", () => {
       {
         source: pageId,
         target: databaseId,
-        type: IS_A_TYPE,
+        type: MEMBER_OF_TYPE,
         properties: { notes: "Alpha" },
       },
     ]);
@@ -123,7 +123,7 @@ describe("database column mutations", () => {
       nodes: {
         [databaseId]: {
           sections: {
-            items: {
+            members: {
               tabs: {
                 kind: "custom",
                 definitions: [
@@ -151,12 +151,12 @@ describe("database column mutations", () => {
       rowsMigrated: 1,
     });
 
-    const edge = fixture.ctx.db.listRelationshipsFromSource(pageId, IS_A_TYPE)[0];
+    const edge = fixture.ctx.db.listRelationshipsFromSource(pageId, MEMBER_OF_TYPE)[0];
     expect(edge?.properties.description).toBe("Alpha");
     expect(edge?.properties.notes).toBeUndefined();
 
     const views = fixture.ctx.store.readViewsFile();
-    expect(views.nodes[databaseId]?.sections.items?.columnOrder).toEqual(["description"]);
+    expect(views.nodes[databaseId]?.sections.members?.columnOrder).toEqual(["description"]);
   });
 
   test("updateDatabaseColumn scalar to relation clears scalars", () => {
@@ -169,7 +169,7 @@ describe("database column mutations", () => {
     seedTestTableSchema(fixture, databaseId, [{ key: "label", name: "Label", type: "text" }]);
     seedTestNode(fixture, { id: rowId, properties: { title: "Task" } });
     seedTestRelationships(fixture, [
-      { source: rowId, target: databaseId, type: IS_A_TYPE, properties: { label: "Important" } },
+      { source: rowId, target: databaseId, type: MEMBER_OF_TYPE, properties: { label: "Important" } },
     ]);
 
     const result = updateDatabaseColumn(fixture.ctx, databaseId, "label", {
@@ -179,7 +179,7 @@ describe("database column mutations", () => {
     });
     expect(result).toMatchObject({ valuesCleared: 1, relationsUnlinked: 0 });
 
-    const edge = fixture.ctx.db.listRelationshipsFromSource(rowId, IS_A_TYPE)[0];
+    const edge = fixture.ctx.db.listRelationshipsFromSource(rowId, MEMBER_OF_TYPE)[0];
     expect(edge?.properties.label).toBeUndefined();
   });
 
@@ -203,7 +203,7 @@ describe("database column mutations", () => {
     seedTestNode(fixture, { id: rowId, properties: { title: "Child" } });
     seedTestNode(fixture, { id: parentId, properties: { title: "Parent" } });
     seedTestRelationships(fixture, [
-      { source: rowId, target: databaseId, type: IS_A_TYPE, properties: {} },
+      { source: rowId, target: databaseId, type: MEMBER_OF_TYPE, properties: {} },
       { source: rowId, target: parentId, type: "parents", properties: {} },
     ]);
 
@@ -239,7 +239,7 @@ describe("database column mutations", () => {
     seedTestNode(fixture, { id: rowId, properties: { title: "Item" } });
     seedTestNode(fixture, { id: parentId, properties: { title: "Parent" } });
     seedTestRelationships(fixture, [
-      { source: rowId, target: databaseId, type: IS_A_TYPE, properties: {} },
+      { source: rowId, target: databaseId, type: MEMBER_OF_TYPE, properties: {} },
       { source: rowId, target: parentId, type: "parents", properties: {} },
     ]);
 

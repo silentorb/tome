@@ -22,7 +22,7 @@ import type {
 } from "./content/table-schemas-file";
 import { findColumnByKey, slugifyPropertyKey } from "./table-schema";
 import { invalidateTableSchemasCache } from "./table-schemas/load";
-import { ITEMS_SECTION_KEY } from "./views/resolve-tabs";
+import { MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import {
   appendColumnToViewsOrder,
   renameColumnInViews,
@@ -196,7 +196,7 @@ export function createDatabaseColumn(
   tableSchema.columns.push(columnDef);
   ctx.store.writeTableSchemasFile(schemasFile);
   invalidateTableSchemasCache();
-  appendColumnToViewsOrder(ctx.store, databaseId, ITEMS_SECTION_KEY, key);
+  appendColumnToViewsOrder(ctx.store, databaseId, MEMBERS_SECTION_KEY, key);
 
   ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
   ctx.sync.syncAfterWrite("views.json");
@@ -350,7 +350,7 @@ export function updateDatabaseColumn(
   invalidateTableSchemasCache();
 
   if (finalKey !== normalizedKey) {
-    renameColumnInViews(ctx.store, databaseId, ITEMS_SECTION_KEY, normalizedKey, finalKey);
+    renameColumnInViews(ctx.store, databaseId, MEMBERS_SECTION_KEY, normalizedKey, finalKey);
   }
 
   syncAfterRelationshipsWrite(ctx);

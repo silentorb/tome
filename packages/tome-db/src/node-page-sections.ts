@@ -1,7 +1,7 @@
 import type { GraphDatabase, Relationship } from "./graph";
 import { getDatabaseViewDetail, type DatabaseColumnDef, type DatabaseViewDetail } from "./database-view";
 import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./property-enums";
-import { IS_A_TYPE, isTypeMembershipType } from "./labels";
+import { MEMBER_OF_TYPE, isTypeMembershipType } from "./labels";
 import {
   getConfigByProvider,
   getOrderedAssociationView,
@@ -17,7 +17,7 @@ import { relationshipRuleContextForType } from "./schema-rules/resolve";
 import type { SchemaFile } from "./schema-rules/schema-file";
 import { resolveContentPath } from "./content/paths";
 import { formatRelationshipTypeLabel } from "./relationship-type-label";
-import { generatedProviderId, ITEMS_SECTION_KEY } from "./views/resolve-tabs";
+import { generatedProviderId, MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
 
@@ -59,7 +59,7 @@ export interface RelationTableSection {
   title: string;
   /** When set, the section title links to this type node. */
   typeNodeId: string | null;
-  /** UI hint: allowed IS_A target type ids for link-existing picker (from schema.json). */
+  /** UI hint: allowed member_of target type ids for link-existing picker (from schema.json). */
   allowedTargetTypeIds?: string[];
   /** Inline table add control: link existing record vs none (structural one-to-many). */
   addMode: RelationTableAddMode;
@@ -105,7 +105,7 @@ function cellsFromConnectionProperties(properties: Record<string, unknown>): Rec
 }
 
 function relationTypeSortKey(type: string): string {
-  if (isTypeMembershipType(type)) return "z:is_a";
+  if (isTypeMembershipType(type)) return "z:member_of";
   return `a:${type}`;
 }
 
@@ -138,7 +138,7 @@ function resolveTypeNodeId(
   relationshipType: string,
   connections: Relationship[],
 ): string | null {
-  if (relationshipType === IS_A_TYPE) {
+  if (relationshipType === MEMBER_OF_TYPE) {
     const targetIds = [...new Set(connections.map((connection) => connection.targetNodeId))];
     if (targetIds.length === 1) return targetIds[0]!;
   }
@@ -185,6 +185,9 @@ function buildRelationSections(
   for (const label of [...byType.keys()].sort((a, b) =>
     relationTypeSortKey(a).localeCompare(relationTypeSortKey(b)),
   )) {
+    const { perspective: groupPerspective } = parseIncludesGroupKey(label);
+    if (isTypeMembershipType(groupPerspective)) continue;
+
     const connections = byType.get(label)!;
     const columnSet = new Set<string>();
     const rows: RelationRow[] = [];
@@ -292,7 +295,7 @@ export function getNodePageDetail(
   const sections: NodeSection[] = [{ type: "markdown", body: node.body }];
 
   if (node.isTypeTable) {
-    const provider = generatedProviderId(views, id, ITEMS_SECTION_KEY);
+    const provider = generatedProviderId(views, id, MEMBERS_SECTION_KEY);
     if (provider) {
       const config = getConfigByProvider(provider, contentDir);
       if (config) {

@@ -9,7 +9,7 @@ import type { RelationshipTypesFile } from "../src/content/relationship-types-fi
 const registry: RelationshipTypesFile = {
   version: 1,
   types: {
-    is_a: { bidirectional: true, perspectives: ["is_a", "members"] },
+    member_of: { bidirectional: true, perspectives: ["member_of", "members"] },
     includes: { bidirectional: true, perspectives: ["includes", "includes"] },
     scenes_product: { bidirectional: true, perspectives: ["scenes", "product"] },
     children: { bidirectional: false, perspectives: ["children"] },
@@ -17,13 +17,13 @@ const registry: RelationshipTypesFile = {
 };
 
 describe("expandRelationshipEntry", () => {
-  test("is_a emits dual projections when set node is known", () => {
+  test("member_of emits dual projections when set node is known", () => {
     const member = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     const set = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     const entry: RelationshipEntry = {
       a: member,
       b: set,
-      type: "is_a",
+      type: "member_of",
       properties: { view: "All" },
     };
     const { projections } = expandRelationshipEntry(entry, registry, {
@@ -33,7 +33,7 @@ describe("expandRelationshipEntry", () => {
     expect(projections[0]).toMatchObject({
       sourceNodeId: member,
       targetNodeId: set,
-      type: "is_a",
+      type: "member_of",
     });
     expect(projections[1]).toMatchObject({
       sourceNodeId: set,
@@ -86,14 +86,14 @@ describe("expandRelationshipEntry", () => {
     const entry: RelationshipEntry = {
       a: member < set ? member : set,
       b: member < set ? set : member,
-      type: "is_a",
+      type: "member_of",
       directedFrom: member,
       properties: {},
     };
     const { projections } = expandRelationshipEntry(entry, registry, {
       setNodeIds: new Set([set]),
     });
-    expect(projections.some((p) => p.type === "is_a" && p.targetNodeId === set)).toBe(true);
+    expect(projections.some((p) => p.type === "member_of" && p.targetNodeId === set)).toBe(true);
     expect(projections.some((p) => p.type === "members" && p.sourceNodeId === set)).toBe(true);
   });
 });
@@ -101,7 +101,7 @@ describe("expandRelationshipEntry", () => {
 describe("expandAllRelationships", () => {
   test("batch expansion preserves record count", () => {
     const entries: RelationshipEntry[] = [
-      { a: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", b: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", type: "is_a" },
+      { a: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", b: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", type: "member_of" },
     ];
     const { records, projections } = expandAllRelationships(entries, registry);
     expect(records).toHaveLength(1);

@@ -16,7 +16,7 @@ describe("views mutations", () => {
     nodes: {
       [nodeId]: {
         sections: {
-          items: {
+          members: {
             tabs: {
               kind: "custom",
               definitions: [
@@ -30,26 +30,26 @@ describe("views mutations", () => {
   });
 
   test("creates and updates tabs", () => {
-    const created = createTab(fixture.ctx.store, nodeId, "items", {
+    const created = createTab(fixture.ctx.store, nodeId, "members", {
       name: "Sorted",
       sorts: [{ column: "priority", direction: "desc" }],
     });
     expect(created.name).toBe("Sorted");
 
-    const updated = updateTab(fixture.ctx.store, nodeId, "items", created.id, {
+    const updated = updateTab(fixture.ctx.store, nodeId, "members", created.id, {
       name: "Renamed",
     });
     expect(updated.name).toBe("Renamed");
   });
 
   test("updates section column order", () => {
-    const order = updateSectionColumnOrder(fixture.ctx.store, nodeId, "items", [
+    const order = updateSectionColumnOrder(fixture.ctx.store, nodeId, "members", [
       "status",
       "priority",
     ]);
     expect(order).toEqual(["status", "priority"]);
     const file = fixture.ctx.store.readViewsFile();
-    expect(file.nodes[nodeId]?.sections.items?.columnOrder).toEqual(["status", "priority"]);
+    expect(file.nodes[nodeId]?.sections.members?.columnOrder).toEqual(["status", "priority"]);
   });
 
   test("reorders custom tabs", () => {
@@ -59,7 +59,7 @@ describe("views mutations", () => {
       nodes: {
         [nodeId]: {
           sections: {
-            items: {
+            members: {
               tabs: {
                 kind: "custom",
                 definitions: [
@@ -74,7 +74,7 @@ describe("views mutations", () => {
       },
     });
     try {
-      const reordered = reorderSectionTabs(reorderFixture.ctx.store, nodeId, "items", [
+      const reordered = reorderSectionTabs(reorderFixture.ctx.store, nodeId, "members", [
         "third",
         "first",
         "second",
@@ -92,7 +92,7 @@ describe("views mutations", () => {
       nodes: {
         [nodeId]: {
           sections: {
-            items: {
+            members: {
               tabs: {
                 kind: "custom",
                 definitions: [
@@ -105,7 +105,7 @@ describe("views mutations", () => {
       },
     });
     try {
-      expect(() => deleteTab(soloFixture.ctx.store, nodeId, "items", "all")).toThrow("last_tab");
+      expect(() => deleteTab(soloFixture.ctx.store, nodeId, "members", "all")).toThrow("last_tab");
     } finally {
       destroyTestContentFixture(soloFixture);
     }

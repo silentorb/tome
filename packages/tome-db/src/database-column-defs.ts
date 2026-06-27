@@ -11,13 +11,15 @@ import {
   enrichColumnDefs,
   isPriorityColumnKey,
 } from "./property-enums";
+import { loadSchemaFromContent } from "./schema-rules/load";
+import type { SchemaFile } from "./schema-rules/schema-file";
 
 export interface BuildDatabaseColumnDefsOptions {
   excludeKeys?: Set<string>;
   contentDir?: string;
 }
 
-function databaseColumnFromTableColumn(col: TableColumnDef): DatabaseColumnDef {
+function databaseColumnFromTableColumn(col: TableColumnDef, schema: SchemaFile): DatabaseColumnDef {
   if (col.type === "relation") {
     return {
       key: col.key,
@@ -35,7 +37,7 @@ function databaseColumnFromTableColumn(col: TableColumnDef): DatabaseColumnDef {
   if (col.enumId) {
     base.enumId = col.enumId;
   }
-  return enrichColumnDef(base);
+  return enrichColumnDef(base, schema);
 }
 
 export function mergeDynamicColumnDefs(
@@ -75,18 +77,19 @@ export function buildDatabaseColumnDefs(
   const contentDir = options?.contentDir ?? resolveContentPath();
   const tableSchemas = loadTableSchemasFromContent(contentDir);
   const schema = getTableSchema(tableSchemas, databaseId);
+  const schemaFile = loadSchemaFromContent(contentDir);
   const excludeKeys = options?.excludeKeys ?? new Set<string>();
 
   const columnDefs: DatabaseColumnDef[] = [];
   if (schema) {
     for (const col of schema.columns) {
       if (excludeKeys.has(col.key)) continue;
-      columnDefs.push(databaseColumnFromTableColumn(col));
+      columnDefs.push(databaseColumnFromTableColumn(col, schemaFile));
     }
   }
 
   const merged = mergeDynamicColumnDefs(columnDefs, dynamicColumnDefs, hiddenColumnKeys);
-  return enrichColumnDefs(merged.filter((col) => !excludeKeys.has(col.key)));
+  return enrichColumnDefs(merged.filter((col) => !excludeKeys.has(col.key)), schemaFile);
 }
 
 export function normalizeRowCells(

@@ -9,7 +9,7 @@ import {
 const VALID_CONFIG = {
   id: "scenes-by-book",
   typeDatabaseId: "204dba198db74611b0b49a98dd53e8f5",
-  membershipEdgeType: "is_a",
+  membershipEdgeType: "member_of",
   orderProperty: "order",
   scopeCompositeType: "scenes_product",
   groupCompositeType: "scenes_part",

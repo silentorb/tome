@@ -30,14 +30,14 @@ function entry(
 
 describe("relationship-archive helpers", () => {
   test("isArchiveMembershipEntry detects hub is_a membership", () => {
-    expect(isArchiveMembershipEntry(entry(HUB, NODE_A, "is_a"), HUB)).toBe(true);
+    expect(isArchiveMembershipEntry(entry(HUB, NODE_A, "member_of"), HUB)).toBe(true);
     expect(isArchiveMembershipEntry(entry(NODE_A, NODE_B, "includes"), HUB)).toBe(false);
-    expect(isArchiveMembershipEntry(entry(NODE_A, NODE_B, "is_a"), HUB)).toBe(false);
+    expect(isArchiveMembershipEntry(entry(NODE_A, NODE_B, "member_of"), HUB)).toBe(false);
   });
 
   test("listArchiveMemberIds returns non-hub endpoints", () => {
     const ids = listArchiveMemberIds(
-      [entry(HUB, NODE_A, "is_a"), entry(HUB, NODE_B, "is_a"), entry(NODE_A, NODE_C, "includes")],
+      [entry(HUB, NODE_A, "member_of"), entry(HUB, NODE_B, "member_of"), entry(NODE_A, NODE_C, "includes")],
       HUB,
     );
     expect(ids.sort()).toEqual([NODE_A, NODE_B].sort());
@@ -46,7 +46,7 @@ describe("relationship-archive helpers", () => {
   test("filterEntriesForCacheSync drops archived entries", () => {
     const filtered = filterEntriesForCacheSync([
       entry(NODE_A, NODE_B, "includes"),
-      entry(NODE_A, NODE_C, "is_a", { archived: true, directedFrom: NODE_A }),
+      entry(NODE_A, NODE_C, "member_of", { archived: true, directedFrom: NODE_A }),
     ]);
     expect(filtered).toHaveLength(1);
     expect(filtered[0]?.b).toBe(NODE_B);
@@ -62,8 +62,8 @@ describe("relationship-archive store mutations", () => {
       version: 2,
       relationships: [
         entry(NODE_A, NODE_B, "includes"),
-        entry(HUB, NODE_A, "is_a"),
-        entry(NODE_A, NODE_C, "is_a"),
+        entry(HUB, NODE_A, "member_of"),
+        entry(NODE_A, NODE_C, "member_of"),
       ],
     });
 
@@ -73,8 +73,8 @@ describe("relationship-archive store mutations", () => {
     const file = store.readRelationshipsFile();
     const byPair = new Map(file.relationships.map((e) => [`${e.a}:${e.b}:${e.type}`, e]));
     expect(byPair.get(`${NODE_A < NODE_B ? NODE_A : NODE_B}:${NODE_A < NODE_B ? NODE_B : NODE_A}:includes`)?.archived).toBe(true);
-    expect(byPair.get(`${HUB}:${NODE_A}:is_a`)?.archived).toBeUndefined();
-    expect(byPair.get(`${NODE_A}:${NODE_C}:is_a`)?.archived).toBe(true);
+    expect(byPair.get(`${HUB}:${NODE_A}:member_of`)?.archived).toBeUndefined();
+    expect(byPair.get(`${NODE_A}:${NODE_C}:member_of`)?.archived).toBe(true);
   });
 
   test("unmarkIncidentRelationshipsArchived keeps shared edge when other endpoint still archived", () => {
@@ -82,7 +82,7 @@ describe("relationship-archive store mutations", () => {
       version: 2,
       relationships: [
         entry(NODE_A, NODE_B, "includes", { archived: true }),
-        entry(HUB, NODE_B, "is_a"),
+        entry(HUB, NODE_B, "member_of"),
       ],
     });
 
@@ -97,7 +97,7 @@ describe("relationship-archive store mutations", () => {
       version: 2,
       relationships: [
         entry(NODE_A, NODE_B, "includes", { archived: true }),
-        entry(NODE_A, NODE_C, "is_a", { archived: true }),
+        entry(NODE_A, NODE_C, "member_of", { archived: true }),
       ],
     });
 

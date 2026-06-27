@@ -2,7 +2,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { IS_A_TYPE, typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
+import { MEMBER_OF_TYPE, typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -48,7 +48,7 @@ describe("writeSiteData", () => {
     });
 
     seedTestRelationships(fixture, [
-      { source: instanceId, target: typeId, type: IS_A_TYPE, properties: { view: "default", row_index: 0, status: "Done" } },
+      { source: instanceId, target: typeId, type: MEMBER_OF_TYPE, properties: { view: "default", row_index: 0, status: "Done" } },
       { source: instanceId, target: relatedId, type: "features", properties: { weight: "high" } },
     ]);
 

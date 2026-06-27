@@ -15,7 +15,7 @@ import { TableUtilityBar } from "./TableUtilityBar";
 import { ColumnEditorDialog, type ColumnEditorState } from "./ColumnEditorDialog";
 import "./database-table-view.css";
 
-const ITEMS_SECTION_KEY = "items";
+const MEMBERS_SECTION_KEY = "items";
 
 interface DatabaseTableViewProps {
   api: EditorApi;
@@ -180,7 +180,7 @@ export function DatabaseTableView({
         ? {
             onArchiveNode,
             onRemoveNode: async (rowNodeId: string) => {
-              await api.unlinkOutgoingRelationship(rowNodeId, "is_a", databaseView.id);
+              await api.unlinkOutgoingRelationship(rowNodeId, "member_of", databaseView.id);
               onCellUpdated?.();
             },
             onDeleteNode,
@@ -189,7 +189,7 @@ export function DatabaseTableView({
               excludedIds: [nodeId, rowNodeId],
               onMove: async (selectedId: string) => {
                 await api.moveRelationshipConnection({
-                  type: "is_a",
+                  type: "member_of",
                   oldSourceId: rowNodeId,
                   oldTargetId: databaseView.id,
                   newSourceId: rowNodeId,
@@ -237,20 +237,20 @@ export function DatabaseTableView({
             addRow={<TableAddRowTrigger />}
             onTabSelect={onTabSelect}
             onCreateTab={async (input) => {
-              const tab = await api.createSectionTab(nodeId, ITEMS_SECTION_KEY, input);
+              const tab = await api.createSectionTab(nodeId, MEMBERS_SECTION_KEY, input);
               onTabSelect(tab.id);
               onTabsUpdated?.();
             }}
             onUpdateTab={async (tabId, input) => {
-              await api.updateSectionTab(nodeId, ITEMS_SECTION_KEY, tabId, input);
+              await api.updateSectionTab(nodeId, MEMBERS_SECTION_KEY, tabId, input);
               onTabsUpdated?.();
             }}
             onDeleteTab={async (tabId) => {
-              await api.deleteSectionTab(nodeId, ITEMS_SECTION_KEY, tabId);
+              await api.deleteSectionTab(nodeId, MEMBERS_SECTION_KEY, tabId);
               onTabsUpdated?.();
             }}
             onTabsReorder={async (tabOrder) => {
-              await api.updateSectionTabOrder(nodeId, ITEMS_SECTION_KEY, tabOrder);
+              await api.updateSectionTabOrder(nodeId, MEMBERS_SECTION_KEY, tabOrder);
               onTabsUpdated?.();
             }}
           />
@@ -271,7 +271,7 @@ export function DatabaseTableView({
             renderCell={renderCell}
             rowPageActions={rowPageActions}
             onColumnsReorder={async (columnOrder) => {
-              await api.updateSectionColumnOrder(nodeId, ITEMS_SECTION_KEY, columnOrder);
+              await api.updateSectionColumnOrder(nodeId, MEMBERS_SECTION_KEY, columnOrder);
               onTabsUpdated?.();
             }}
             canManageColumn={canManageColumn}

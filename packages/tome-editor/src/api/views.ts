@@ -9,7 +9,7 @@ import {
   type ViewSortSpec,
 } from "tome-db";
 import { invalidateViewsCache } from "tome-db";
-import { ITEMS_SECTION_KEY } from "tome-db";
+import { MEMBERS_SECTION_KEY } from "tome-db";
 
 export interface TabMutationInput {
   name?: string;
@@ -77,4 +77,4 @@ export function patchSectionTabOrder(
   return reorderSectionTabs(ctx.store, nodeId, sectionKey, tabOrder);
 }
 
-export { ITEMS_SECTION_KEY };
+export { MEMBERS_SECTION_KEY };

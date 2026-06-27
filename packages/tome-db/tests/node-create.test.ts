@@ -1,5 +1,5 @@
 import { describe, expect, test, afterEach } from "bun:test";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodeDetail } from "../src/queries";
 import { createNode } from "../src/node-create";
@@ -75,7 +75,7 @@ describe("createNode", () => {
       id: "d1111111111111111111111111111111",
       properties: { title: "Old row" },
     });
-    fixture.ctx.store.upsertRelationship("d1111111111111111111111111111111", databaseId, IS_A_TYPE, {
+    fixture.ctx.store.upsertRelationship("d1111111111111111111111111111111", databaseId, MEMBER_OF_TYPE, {
       row_index: 4,
       view: "default",
     });
@@ -87,7 +87,7 @@ describe("createNode", () => {
     });
     if (typeof result === "string") throw new Error(result);
 
-    const rel = fixture.ctx.store.findRelationship(result.id, databaseId, IS_A_TYPE);
+    const rel = fixture.ctx.store.findRelationship(result.id, databaseId, MEMBER_OF_TYPE);
     expect(rel?.properties.row_index).toBe(5);
     expect(rel?.properties.view).toBe("default");
   });

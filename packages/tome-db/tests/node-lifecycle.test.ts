@@ -11,7 +11,7 @@ import {
   TEST_ARCHIVE_NODE_ID,
   TEST_HOME_NODE_ID,
 } from "../src/content/test-helpers";
-import { IS_A_TYPE } from "../src/labels";
+import { MEMBER_OF_TYPE } from "../src/labels";
 
 const PAGE_ACTIVE = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const PAGE_ARCHIVED = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
@@ -39,7 +39,7 @@ describe("record lifecycle", () => {
   });
 
   seedTestRelationships(fixture, [
-    { source: PAGE_ARCHIVED, target: TEST_ARCHIVE_NODE_ID, type: IS_A_TYPE },
+    { source: PAGE_ARCHIVED, target: TEST_ARCHIVE_NODE_ID, type: MEMBER_OF_TYPE },
   ]);
 
   test("archiveNode links page to Archive via set membership", () => {

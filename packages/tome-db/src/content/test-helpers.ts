@@ -89,7 +89,7 @@ export function defaultTestOrderedAssociationsFile(): OrderedAssociationsFile {
       {
         id: "scenes-by-book",
         typeDatabaseId: "204dba198db74611b0b49a98dd53e8f5",
-        membershipEdgeType: "is_a",
+        membershipEdgeType: "member_of",
         orderProperty: "order",
         scopeCompositeType: "scenes_product",
         groupCompositeType: "scenes_part",
@@ -312,7 +312,7 @@ export function seedTestRelationships(
     : fixture.ctx.store.readRelationshipsFile();
 
   for (const connection of connections) {
-    if (connection.type === "is_a") {
+    if (connection.type === "member_of") {
       registerSetMembershipType(registry);
     } else {
       registerUnidirectionalType(registry, connection.type);

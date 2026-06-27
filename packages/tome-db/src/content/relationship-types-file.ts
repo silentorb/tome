@@ -160,11 +160,11 @@ export function registerBidirectionalType(
   return composite;
 }
 
-/** Set membership: member→set as is_a, set→member as members. */
+/** Set membership: member→set as member_of, set→member as members. */
 export function registerSetMembershipType(file: RelationshipTypesFile): void {
-  registerTypeDefinition(file, "is_a", {
+  registerTypeDefinition(file, "member_of", {
     bidirectional: true,
-    perspectives: ["is_a", "members"],
+    perspectives: ["member_of", "members"],
   });
 }
 

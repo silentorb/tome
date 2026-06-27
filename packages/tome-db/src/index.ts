@@ -239,6 +239,7 @@ export {
 } from "./dynamic-fields";
 export type { DynamicColumnSetRecord, DynamicFieldRecord } from "./dynamic-fields";
 export {
+  MEMBER_OF_TYPE,
   IS_A_TYPE,
   IS_A_LABEL,
   MEMBERS_TYPE,
@@ -298,7 +299,7 @@ export {
 } from "./ordered-associations-config/ordered-associations-file";
 export type { OrderedAssociationsFile } from "./ordered-associations-config/ordered-associations-file";
 export {
-  ITEMS_SECTION_KEY,
+  MEMBERS_SECTION_KEY,
   resolveCustomTabs,
   resolveCustomTabsForNode,
   resolveGeneratedTabsFromScopes,

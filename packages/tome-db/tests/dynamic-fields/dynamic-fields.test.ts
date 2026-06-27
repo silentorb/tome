@@ -8,7 +8,7 @@ import { invalidateDynamicFieldsCache } from "../../src/content/sync";
 import { invalidateSchemaCache } from "../../src/schema-rules/load";
 import { GraphDatabase } from "../../src/graph";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
-import { IS_A_TYPE } from "../../src/labels";
+import { MEMBER_OF_TYPE } from "../../src/labels";
 import { getDatabaseViewDetail } from "../../src/database-view";
 import {
   createTestContentFixture,
@@ -128,7 +128,7 @@ describe("dynamic-fields resolvers", () => {
     db.upsertNode(WONDERLAND, { title: "Wonderland" });
 
     db.upsertNode(character, { title: "James" });
-    db.upsertRelationship(character, CHAR_DB, IS_A_TYPE, { row_index: 0 });
+    db.upsertRelationship(character, CHAR_DB, MEMBER_OF_TYPE, { row_index: 0 });
 
     db.upsertNode(scene1, { title: "Scene A" });
     db.upsertNode(scene2, { title: "Scene B" });
@@ -141,12 +141,12 @@ describe("dynamic-fields resolvers", () => {
     db.upsertRelationship(scene3, OTHER_PRODUCT, "product", {});
 
     db.upsertNode(inspiration, { title: "Test Inspiration" });
-    db.upsertRelationship(inspiration, INSP_DB, IS_A_TYPE, { row_index: 0 });
+    db.upsertRelationship(inspiration, INSP_DB, MEMBER_OF_TYPE, { row_index: 0 });
 
     db.upsertNode(featureWonder, { title: "Adventure" });
     db.upsertNode(featurePlain, { title: "Plain" });
-    db.upsertRelationship(featureWonder, FEAT_DB, IS_A_TYPE, { priority: "Medium" });
-    db.upsertRelationship(featurePlain, FEAT_DB, IS_A_TYPE, { priority: "High" });
+    db.upsertRelationship(featureWonder, FEAT_DB, MEMBER_OF_TYPE, { priority: "Medium" });
+    db.upsertRelationship(featurePlain, FEAT_DB, MEMBER_OF_TYPE, { priority: "High" });
     db.upsertRelationship(inspiration, featureWonder, "features", {});
     db.upsertRelationship(inspiration, featurePlain, "features", {});
     db.upsertRelationship(featureWonder, WONDERLAND, "THEME", {});
@@ -285,9 +285,9 @@ describe("dynamic-fields with composite relationships", () => {
     seedTestNode(fixture, { id: featureWonder, properties: { title: "Adventure" } });
     seedTestNode(fixture, { id: featurePlain, properties: { title: "Plain" } });
     seedTestRelationships(fixture, [
-      { source: inspiration, target: INSP_DB, type: IS_A_TYPE, properties: { row_index: 0 } },
-      { source: featureWonder, target: FEAT_DB, type: IS_A_TYPE, properties: { priority: "Medium" } },
-      { source: featurePlain, target: FEAT_DB, type: IS_A_TYPE, properties: { priority: "High" } },
+      { source: inspiration, target: INSP_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
+      { source: featureWonder, target: FEAT_DB, type: MEMBER_OF_TYPE, properties: { priority: "Medium" } },
+      { source: featurePlain, target: FEAT_DB, type: MEMBER_OF_TYPE, properties: { priority: "High" } },
     ]);
     seedTestCompositeRelationships(fixture, [
       { a: inspiration, b: featureWonder, typeFromA: "inspirations", typeFromB: "features", properties: {} },
@@ -395,7 +395,7 @@ describe("dynamic-fields character composite relationships", () => {
     seedTestNode(fixture, { id: scene2, properties: { title: "Scene B" } });
     seedTestNode(fixture, { id: scene3, properties: { title: "Scene C" } });
     seedTestRelationships(fixture, [
-      { source: character, target: CHAR_DB, type: IS_A_TYPE, properties: { row_index: 0 } },
+      { source: character, target: CHAR_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
     ]);
     seedTestCompositeRelationships(fixture, [
       { a: character, b: scene1, typeFromA: "characters", typeFromB: "scenes", properties: {} },

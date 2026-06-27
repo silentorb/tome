@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { join } from "node:path";
-import { IS_A_TYPE, typeTableMarkerProperties } from "tome-db";
+import { MEMBER_OF_TYPE, typeTableMarkerProperties } from "tome-db";
 import { openContentGraph } from "tome-db/content";
 import {
   createTestContentFixture,
@@ -19,7 +19,7 @@ describe("database view API", () => {
   seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Features") });
   seedTestNode(fixture, { id: nodeId, properties: { title: "Feature row" } });
   seedTestRelationships(fixture, [
-    { source: nodeId, target: databaseId, type: IS_A_TYPE, properties: { priority: "High" } },
+    { source: nodeId, target: databaseId, type: MEMBER_OF_TYPE, properties: { priority: "High" } },
   ]);
 
   const api = createTestApiFromContent(fixture);
@@ -111,7 +111,7 @@ describe("database view API", () => {
     });
     seedTestNode(fixture, { id: rowId, properties: { title: "Task row" } });
     seedTestRelationships(fixture, [
-      { source: rowId, target: dbWithSchema, type: IS_A_TYPE, properties: { status: "Open" } },
+      { source: rowId, target: dbWithSchema, type: MEMBER_OF_TYPE, properties: { status: "Open" } },
     ]);
     const apiCtx = openContentGraph(
       fixture.ctx.store.contentDir,

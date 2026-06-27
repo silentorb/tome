@@ -1,12 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { Properties } from "./graph";
 import { INCLUDES_TYPE, isIncludesPerspectiveSlug } from "./includes-relationship";
-import { IS_A_TYPE } from "./labels";
+import { MEMBER_OF_TYPE } from "./labels";
 import { normalizeRelationshipType } from "./relation-type";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
-import { maxRowIndexForDatabase } from "./type-membership-audit";
+import { maxRowIndexForSet } from "./set-membership";
 
 export type CreateNodeError = "invalid_title" | "source_not_found" | "database_not_found";
 
@@ -16,7 +16,7 @@ export type CreateNodeLink =
       sourceId: string;
       type: string;
       properties?: Properties;
-      /** When set, also create IS_A membership on the new node to this type. */
+      /** When set, also create member_of membership on the new node to this type. */
       membershipTypeId?: string;
     }
   | { kind: "database-row"; databaseId: string; view?: string; properties?: Properties };
@@ -70,7 +70,8 @@ function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: stri
   return Math.max(...ordinals) + 1;
 }
 
-import { maxRowIndexForDatabase } from "./type-membership-audit";
+import { MEMBER_OF_TYPE } from "./labels";
+import { maxRowIndexForSet } from "./set-membership";
 
 export function createNode(
   ctx: TomeWriteContext,
@@ -116,7 +117,7 @@ export function createNode(
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
     ctx.store.upsertRelationship(sourceId, id, type, relProps);
     if (membershipTypeId) {
-      ctx.store.upsertRelationship(id, membershipTypeId, IS_A_TYPE, {});
+      ctx.store.upsertRelationship(id, membershipTypeId, MEMBER_OF_TYPE, {});
     }
     syncAfterRelationshipsWrite(ctx);
   }
@@ -125,10 +126,10 @@ export function createNode(
     const { databaseId, view, properties = {} } = input.link;
     const relProps: Properties = {
       ...properties,
-      row_index: maxRowIndexForDatabase(ctx.db, databaseId) + 1,
+      row_index: maxRowIndexForSet(ctx.db, databaseId) + 1,
       view: view ?? properties.view ?? "default",
     };
-    ctx.store.upsertRelationship(id, databaseId, IS_A_TYPE, relProps);
+    ctx.store.upsertRelationship(id, databaseId, MEMBER_OF_TYPE, relProps);
     syncAfterRelationshipsWrite(ctx);
   }
 

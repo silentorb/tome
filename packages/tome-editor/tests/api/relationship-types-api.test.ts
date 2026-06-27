@@ -19,8 +19,8 @@ describe("relationship types API", () => {
   seedTestNode(fixture, { id: sourceId, properties: { title: "Scene page" } });
   seedTestNode(fixture, { id: targetId, properties: { title: "Feature page" } });
   seedTestRelationships(fixture, [
-    { source: sourceId, target: sceneTypeId, type: "is_a" },
-    { source: targetId, target: featureTypeId, type: "is_a" },
+    { source: sourceId, target: sceneTypeId, type: "member_of" },
+    { source: targetId, target: featureTypeId, type: "member_of" },
     { source: sourceId, target: targetId, type: "features" },
   ]);
 
@@ -48,7 +48,7 @@ describe("relationship types API", () => {
     expect(res.status).toBe(200);
     const payload = (await res.json()) as { types: string[] };
     expect(payload.types).toContain("features");
-    expect(payload.types).toContain("is_a");
+    expect(payload.types).toContain("member_of");
   });
 
   test("GET relationship-link-options returns schema allowed targets", async () => {

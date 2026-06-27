@@ -74,7 +74,7 @@ describe("node create API", () => {
     );
     expect(res.status).toBe(200);
     const payload = (await res.json()) as { node: { id: string } };
-    const rel = fixture.ctx.store.findRelationship(payload.node.id, databaseId, "is_a");
+    const rel = fixture.ctx.store.findRelationship(payload.node.id, databaseId, "member_of");
     expect(rel).not.toBeNull();
   });
 

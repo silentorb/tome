@@ -50,7 +50,7 @@ describe("graph export", () => {
     db.upsertNode("archived", { title: "Old foil" });
     db.upsertNode(TEST_ARCHIVE_NODE_ID, { title: "Archive" });
     db.upsertRelationship("active", "archived", "inspirations");
-    db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "is_a");
+    db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "member_of");
     db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID);
 
     expect(db.isNodeArchived("archived")).toBe(true);

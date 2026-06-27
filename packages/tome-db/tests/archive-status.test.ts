@@ -29,7 +29,7 @@ describe("archive-status", () => {
     db.upsertNode("active", { title: "Active" });
     db.upsertNode("archived", { title: "Archived member" });
     db.upsertNode(TEST_ARCHIVE_NODE_ID, { title: "Archive" });
-    db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "is_a");
+    db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "member_of");
     db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID);
 
     expect(isArchivedNode(db, "archived")).toBe(true);

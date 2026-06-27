@@ -21,14 +21,14 @@ Both kinds render through the shared `TableTabsBar` component.
   "nodes": {
     "204dba198db74611b0b49a98dd53e8f5": {
       "sections": {
-        "items": {
+        "members": {
           "tabs": { "kind": "generated", "provider": "scenes-by-book" }
         }
       }
     },
     "dd0de9867cc345b898929306bdf9fc83": {
       "sections": {
-        "items": {
+        "members": {
           "tabs": {
             "kind": "custom",
             "definitions": [
@@ -46,7 +46,7 @@ Both kinds render through the shared `TableTabsBar` component.
 }
 ```
 
-- **`sections.items`**: the type-table Items section (only section with tabs in v1).
+- **`sections.members`**: the type-table **Members** section (only section with tabs in v1).
 - **Sort spec**: `{ column: "name" | columnKey, direction: "asc" | "desc" }`.
 - **`columnOrder`** (optional): section-level override for data column order (column keys). When absent, columns use default schema order. Editable in the UI by dragging column headers.
 - **Custom tab order**: implicit array order of `tabs.definitions[]`. Editable in the UI by dragging custom tab buttons (generated tabs are not reorderable).

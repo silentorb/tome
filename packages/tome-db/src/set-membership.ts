@@ -1,12 +1,12 @@
 import type { GraphDatabase, Relationship } from "./graph";
-import { IS_A_TYPE, MEMBERS_TYPE } from "./labels";
+import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "./labels";
 import { resolveContentPath } from "./content/paths";
 import { archiveNodeId } from "./workspace/resolve";
 import { hasTableSchemaEntry, loadTableSchemasFromContent } from "./table-schemas/load";
 
-export const SET_MEMBERSHIP_TYPE = IS_A_TYPE;
+export const SET_MEMBERSHIP_TYPE = MEMBER_OF_TYPE;
 
-export const MEMBERSHIP_PERSPECTIVES = [IS_A_TYPE, MEMBERS_TYPE] as const;
+export const MEMBERSHIP_PERSPECTIVES = [MEMBER_OF_TYPE, MEMBERS_TYPE] as const;
 
 export type MembershipPerspective = (typeof MEMBERSHIP_PERSPECTIVES)[number];
 
@@ -30,13 +30,13 @@ export function listSetMembership(
 }
 
 export function memberSetIds(db: GraphDatabase, memberId: string): string[] {
-  return listSetMembership(db, memberId, IS_A_TYPE).map((r) => r.targetNodeId);
+  return listSetMembership(db, memberId, MEMBER_OF_TYPE).map((r) => r.targetNodeId);
 }
 
 export function setMemberIds(db: GraphDatabase, setId: string): string[] {
   const viaMembers = listSetMembership(db, setId, MEMBERS_TYPE).map((r) => r.targetNodeId);
   if (viaMembers.length > 0) return viaMembers;
-  return db.listRelationshipsToTarget(setId, IS_A_TYPE).map((r) => r.sourceNodeId);
+  return db.listRelationshipsToTarget(setId, MEMBER_OF_TYPE).map((r) => r.sourceNodeId);
 }
 
 export function collectSetNodeIds(contentDir?: string): Set<string> {
@@ -77,7 +77,7 @@ export function findSetMembershipRelationship(
   setId: string,
 ): Relationship | null {
   return (
-    listSetMembership(db, memberId, IS_A_TYPE).find((r) => r.targetNodeId === setId) ?? null
+    listSetMembership(db, memberId, MEMBER_OF_TYPE).find((r) => r.targetNodeId === setId) ?? null
   );
 }
 
@@ -94,7 +94,7 @@ export function listSetMemberRowConnections(
       targetNodeId: setId,
     }));
   }
-  return db.listRelationshipsToTarget(setId, IS_A_TYPE);
+  return db.listRelationshipsToTarget(setId, MEMBER_OF_TYPE);
 }
 
 export function maxRowIndexForSet(db: GraphDatabase, setId: string): number {
@@ -106,7 +106,7 @@ export function maxRowIndexForSet(db: GraphDatabase, setId: string): number {
     if (Number.isFinite(index) && index > max) max = index;
   }
   if (max >= 0) return max;
-  for (const connection of db.listRelationshipsToTarget(setId, IS_A_TYPE)) {
+  for (const connection of db.listRelationshipsToTarget(setId, MEMBER_OF_TYPE)) {
     const raw = connection.properties.row_index;
     const index =
       typeof raw === "number" ? raw : Number.parseInt(String(raw ?? ""), 10);

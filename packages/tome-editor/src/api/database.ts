@@ -56,7 +56,7 @@ import { resolveContentPath, resolveDbPath } from "./paths";
 import {
   createSectionTab,
   deleteSectionTab,
-  ITEMS_SECTION_KEY,
+  MEMBERS_SECTION_KEY,
   patchSectionColumnOrder,
   patchSectionTabOrder,
   readNodeViews,

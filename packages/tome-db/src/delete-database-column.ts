@@ -11,7 +11,7 @@ import { TABLE_SCHEMAS_FILENAME } from "./content/paths";
 import type { TableSchemasFile } from "./content/table-schemas-file";
 import { findColumnByKey } from "./table-schema";
 import { invalidateTableSchemasCache } from "./table-schemas/load";
-import { ITEMS_SECTION_KEY } from "./views/resolve-tabs";
+import { MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import { purgeColumnFromViews } from "./views/mutations";
 
 export type DeleteDatabaseColumnError =
@@ -82,7 +82,7 @@ export function deleteDatabaseColumn(
 
   ctx.store.writeTableSchemasFile(schemasFile);
   invalidateTableSchemasCache();
-  purgeColumnFromViews(ctx.store, databaseId, ITEMS_SECTION_KEY, normalizedKey);
+  purgeColumnFromViews(ctx.store, databaseId, MEMBERS_SECTION_KEY, normalizedKey);
 
   syncAfterRelationshipsWrite(ctx);
   ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
