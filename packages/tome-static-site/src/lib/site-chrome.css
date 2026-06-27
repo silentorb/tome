@@ -1,3 +1,7 @@
+:root {
+  --tome-static-markdown-min: 45rem; /* 720px — common single-column blog floor */
+}
+
 * {
   box-sizing: border-box;
 }

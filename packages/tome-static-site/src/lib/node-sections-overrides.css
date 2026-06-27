@@ -1,4 +1,15 @@
-.tome-content-panel,
+.tome-markdown-section .tome-content-panel {
+  width: 100%;
+  min-width: 100%;
+  align-self: stretch;
+}
+
+@media (min-width: 48rem) {
+  .tome-markdown-section .tome-content-panel {
+    min-width: var(--tome-static-markdown-min);
+  }
+}
+
 .tome-database-table-wrap {
   width: 100%;
 }

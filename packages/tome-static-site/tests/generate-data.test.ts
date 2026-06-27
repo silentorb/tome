@@ -57,7 +57,7 @@ describe("writeSiteData", () => {
       nodes: {
         [typeId]: {
           sections: {
-            items: {
+            members: {
               tabs: {
                 kind: "custom",
                 definitions: [
