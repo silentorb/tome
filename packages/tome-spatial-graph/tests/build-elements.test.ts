@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { buildParentMap, buildPlacements, buildSpatialGraphElements } from "../src/build-elements";
+import {
+  buildParentMap,
+  buildPlacements,
+  buildSpatialGraphElements,
+  shouldConnectNeighborPlacements,
+} from "../src/build-elements";
 import { defaultSpatialGraphBlockData, parseSpatialGraphConfig } from "../src/config";
 
 describe("parseSpatialGraphConfig", () => {
@@ -97,6 +102,78 @@ describe("buildSpatialGraphElements", () => {
 
     const parentMap = buildParentMap(nodes, edges, config);
     expect([...(parentMap.get("site") ?? [])].sort()).toEqual(["region-a", "region-b"]);
+  });
+
+  test("nested sibling neighbors produce one edge under shared parent", () => {
+    const config = parseSpatialGraphConfig({});
+    const locationNodes = [
+      { id: "empire", title: "Empire" },
+      { id: "city", title: "City" },
+      { id: "shop-a", title: "Shop A" },
+      { id: "shop-b", title: "Shop B" },
+    ];
+    const edges = [
+      { id: "p1", sourceId: "city", targetId: "empire", type: "parents" },
+      { id: "p2", sourceId: "shop-a", targetId: "city", type: "parents" },
+      { id: "p3", sourceId: "shop-b", targetId: "city", type: "parents" },
+      { id: "n1", sourceId: "shop-a", targetId: "shop-b", type: "neighbor" },
+    ];
+
+    const elements = buildSpatialGraphElements(locationNodes, edges, config);
+    const graphEdges = elements.filter((element) => element.group === "edges");
+    expect(graphEdges).toHaveLength(1);
+    expect(graphEdges[0]?.data.source).toBe("shop-a@city@empire");
+    expect(graphEdges[0]?.data.target).toBe("shop-b@city@empire");
+  });
+
+  test("multi-parent neighbor does not create cross-path edges", () => {
+    const config = parseSpatialGraphConfig({});
+    const locationNodes = [
+      { id: "city-a", title: "City A" },
+      { id: "city-b", title: "City B" },
+      { id: "asylum", title: "The Asylum" },
+      { id: "neighbor", title: "Neighbor Spot" },
+    ];
+    const edges = [
+      { id: "p1", sourceId: "asylum", targetId: "city-a", type: "parents" },
+      { id: "p2", sourceId: "asylum", targetId: "city-b", type: "parents" },
+      { id: "n1", sourceId: "asylum", targetId: "neighbor", type: "neighbor" },
+    ];
+
+    const elements = buildSpatialGraphElements(locationNodes, edges, config);
+    const graphEdges = elements.filter((element) => element.group === "edges");
+    expect(graphEdges).toHaveLength(2);
+    const pairs = graphEdges.map((edge) => `${edge.data.source}|${edge.data.target}`).sort();
+    expect(pairs).toEqual(["asylum@city-a|neighbor", "asylum@city-b|neighbor"].sort());
+  });
+});
+
+describe("shouldConnectNeighborPlacements", () => {
+  test("connects siblings under the same parent", () => {
+    expect(
+      shouldConnectNeighborPlacements(
+        { elementId: "a@city", canonicalId: "a", title: "A", parentElementId: "city" },
+        { elementId: "b@city", canonicalId: "b", title: "B", parentElementId: "city" },
+      ),
+    ).toBe(true);
+  });
+
+  test("connects when at least one placement is root-level", () => {
+    expect(
+      shouldConnectNeighborPlacements(
+        { elementId: "city-a", canonicalId: "city-a", title: "City A" },
+        { elementId: "city-b", canonicalId: "city-b", title: "City B" },
+      ),
+    ).toBe(true);
+  });
+
+  test("skips placements under different parents", () => {
+    expect(
+      shouldConnectNeighborPlacements(
+        { elementId: "asylum@city-a", canonicalId: "asylum", title: "Asylum", parentElementId: "city-a" },
+        { elementId: "neighbor@city-b", canonicalId: "neighbor", title: "Neighbor", parentElementId: "city-b" },
+      ),
+    ).toBe(false);
   });
 });
 

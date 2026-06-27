@@ -1,4 +1,4 @@
-import { DEFAULT_PARENT_HEADER_HEIGHT } from "./compound-header";
+export const DEFAULT_PARENT_HEADER_HEIGHT = 28;
 
 export interface SpatialGraphBlockData {
   relationships?: {

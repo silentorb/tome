@@ -29,6 +29,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Set membership (`is_a` / `members`) | [set-membership.md](./set-membership.md) |
 | Relationship schema rules | [schema.md](./schema.md) |
 | Extension system (runtime-loaded packages) | [extensions.md](./extensions.md) |
+| Spatial graph (Cytoscape location diagrams) | [spatial-graph.md](./spatial-graph.md) |
 
 ## Split of concerns
 

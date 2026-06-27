@@ -28,3 +28,9 @@
 .tome-content-panel .prose :where(.tome-page-block-unknown) {
   background: var(--tome-inset);
 }
+
+.tome-content-panel .prose :where(.tome-spatial-graph) svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}

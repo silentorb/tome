@@ -1,13 +1,10 @@
 import { createCanvas } from "canvas";
 import { JSDOM } from "jsdom";
 import type { CytoscapeElementDefinition } from "./build-elements";
-import { reserveCompoundHeaderSpace } from "./compound-header";
 import type { SpatialGraphConfig } from "./config";
 import {
+  collectSpatialGraphNodeLinkOverlays,
   injectSpatialGraphNodeLinks,
-  SVG_EXPORT_PADDING,
-  trimSpatialGraphSvg,
-  type SpatialGraphNodeLinkOverlay,
 } from "./svg-export";
 
 let extensionsRegistered = false;
@@ -70,6 +67,8 @@ export async function layoutSpatialGraphSvg(
     return "";
   }
 
+  const compoundPaddingTop = config.parentHeaderHeight + 16;
+
   return withDom(async (container) => {
     const cytoscapeModule = await import("cytoscape");
     const cytoscape = cytoscapeModule.default;
@@ -123,7 +122,10 @@ export async function layoutSpatialGraphSvg(
             "text-background-padding": 6,
             width: 1,
             height: 1,
-            padding: 16,
+            "padding-top": compoundPaddingTop,
+            "padding-bottom": 16,
+            "padding-left": 16,
+            "padding-right": 16,
           },
         },
         {
@@ -151,33 +153,15 @@ export async function layoutSpatialGraphSvg(
     });
     layout.run();
 
-    reserveCompoundHeaderSpace(cy, config.parentHeaderHeight);
-    cy.nodes().dirtyCompoundBoundsCache();
-    cy.forceRender();
-    const linkOverlays: SpatialGraphNodeLinkOverlay[] = [];
-    for (const node of cy.nodes()) {
-      const nodeId = node.data("canonicalId");
-      if (typeof nodeId !== "string" || nodeId.length === 0) continue;
-      const box = node.renderedBoundingBox();
-      linkOverlays.push({
-        nodeId,
-        href: nodePageHref(nodeId),
-        x: box.x1,
-        y: box.y1,
-        width: box.w,
-        height: box.h,
-      });
-    }
-
+    const linkOverlays = collectSpatialGraphNodeLinkOverlays(cy, nodePageHref);
     const pxRatio = cy.renderer().getPixelRatio();
     const rawSvg = cy.svg({
-      full: true,
+      full: config.svg.full,
       scale: config.svg.scale / pxRatio,
       bg: config.svg.bg,
     }) as string;
-    const linkedSvg = injectSpatialGraphNodeLinks(rawSvg, linkOverlays);
 
     cy.destroy();
-    return trimSpatialGraphSvg(linkedSvg, SVG_EXPORT_PADDING);
+    return injectSpatialGraphNodeLinks(rawSvg, linkOverlays);
   });
 }

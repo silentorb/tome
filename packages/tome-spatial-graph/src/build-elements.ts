@@ -138,6 +138,16 @@ function neighborPairs(
   return pairs;
 }
 
+/** Whether two placements should receive a neighbor edge (same compound context or root cross-level). */
+export function shouldConnectNeighborPlacements(
+  source: SpatialPlacement,
+  target: SpatialPlacement,
+): boolean {
+  if (source.parentElementId === target.parentElementId) return true;
+  if (!source.parentElementId || !target.parentElementId) return true;
+  return false;
+}
+
 export function buildSpatialGraphElements(
   nodes: GraphQueryNode[],
   edges: GraphQueryEdge[],
@@ -175,6 +185,7 @@ export function buildSpatialGraphElements(
     const targetPlacements = placementByCanonical.get(targetCanonical) ?? [];
     for (const source of sourcePlacements) {
       for (const target of targetPlacements) {
+        if (!shouldConnectNeighborPlacements(source, target)) continue;
         edgeElements.push({
           group: "edges",
           data: {
