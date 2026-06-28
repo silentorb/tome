@@ -18,9 +18,7 @@ const VALID = {
   ],
   graphExplorer: { defaultAnchorNodeId: "e028aa0786f5449984a4f497c1d746fa" },
   staticSite: { homeNodeId: "5bfc10918fa24207879d68a030927dd3" },
-  sidebar: {
-    links: [{ nodeId: "dd0de9867cc345b898929306bdf9fc83", label: "Features", icon: "★" }],
-  },
+  quickLinks: [{ nodeId: "dd0de9867cc345b898929306bdf9fc83", label: "Features", icon: "★" }],
   branding: { appTitle: "Tome" },
   legacy: { exportPathPrefix: "Marloth", archivePathPrefix: "Marloth/Archive" },
 };
@@ -34,16 +32,16 @@ describe("parseWorkspaceFile", () => {
     expect(file.protectedNodeIds).toEqual(VALID.protectedNodeIds);
     expect(file.graphExplorer.defaultAnchorNodeId).toBe(VALID.graphExplorer.defaultAnchorNodeId);
     expect(file.staticSite.homeNodeId).toBe(VALID.staticSite.homeNodeId);
-    expect(file.sidebar.links).toHaveLength(1);
+    expect(file.quickLinks).toHaveLength(1);
     expect(file.branding?.appTitle).toBe("Tome");
     expect(file.legacy?.archivePathPrefix).toBe("Marloth/Archive");
   });
 
-  test("allows empty sidebar links", () => {
+  test("allows empty quick links", () => {
     const file = parseWorkspaceFile(
-      JSON.stringify({ ...VALID, sidebar: { links: [] }, branding: undefined, legacy: undefined }),
+      JSON.stringify({ ...VALID, quickLinks: [], branding: undefined, legacy: undefined }),
     );
-    expect(file.sidebar.links).toEqual([]);
+    expect(file.quickLinks).toEqual([]);
     expect(file.branding).toBeUndefined();
     expect(file.legacy).toBeUndefined();
   });
@@ -63,6 +61,27 @@ describe("parseWorkspaceFile", () => {
   test("rejects missing required fields", () => {
     const { graphExplorer: _g, ...missingGraph } = VALID;
     expect(() => parseWorkspaceFile(JSON.stringify(missingGraph))).toThrow(/graphExplorer/);
+  });
+
+  test("parses legacy sidebar.links into quickLinks", () => {
+    const { quickLinks: _q, ...legacyShape } = VALID;
+    const file = parseWorkspaceFile(
+      JSON.stringify({
+        ...legacyShape,
+        sidebar: {
+          links: [{ nodeId: "dd0de9867cc345b898929306bdf9fc83", label: "Features", icon: "★" }],
+        },
+      }),
+    );
+    expect(file.quickLinks).toHaveLength(1);
+    expect(file.quickLinks[0]?.label).toBe("Features");
+  });
+
+  test("serialize writes quickLinks not sidebar", () => {
+    const file = parseWorkspaceFile(JSON.stringify(VALID));
+    const serialized = serializeWorkspaceFile(file);
+    expect(serialized).toContain('"quickLinks"');
+    expect(serialized).not.toContain('"sidebar"');
   });
 
   test("serialize round-trips", () => {

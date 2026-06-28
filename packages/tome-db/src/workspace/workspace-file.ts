@@ -2,11 +2,14 @@ import { isNodeId } from "../content/paths";
 
 export const WORKSPACE_FILE_VERSION = 1;
 
-export interface SidebarLink {
+export interface WorkspaceQuickLink {
   nodeId: string;
   label: string;
   icon: string;
 }
+
+/** @deprecated Use WorkspaceQuickLink */
+export type SidebarLink = WorkspaceQuickLink;
 
 export interface WorkspaceBranding {
   appTitle?: string;
@@ -31,10 +34,6 @@ export interface WorkspaceStaticSite {
   homeNodeId: string;
 }
 
-export interface WorkspaceSidebar {
-  links: SidebarLink[];
-}
-
 export interface WorkspaceEditor {
   markdownBodyPanel?: boolean;
 }
@@ -55,7 +54,7 @@ export interface WorkspaceFile {
   protectedNodeIds: string[];
   graphExplorer: WorkspaceGraphExplorer;
   staticSite: WorkspaceStaticSite;
-  sidebar: WorkspaceSidebar;
+  quickLinks: WorkspaceQuickLink[];
   branding?: WorkspaceBranding;
   legacy?: WorkspaceLegacy;
   editor?: WorkspaceEditor;
@@ -91,7 +90,7 @@ function parseNodeIdArray(value: unknown, path: string): string[] {
   return value.map((entry, index) => parseNodeId(entry, `${path}[${index}]`));
 }
 
-function parseSidebarLink(raw: unknown, path: string): SidebarLink {
+function parseWorkspaceQuickLink(raw: unknown, path: string): WorkspaceQuickLink {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`${path}: must be an object`);
   }
@@ -230,8 +229,29 @@ export function emptyWorkspaceFile(): WorkspaceFile {
     ],
     graphExplorer: { defaultAnchorNodeId: "00000000000000000000000000000003" },
     staticSite: { homeNodeId: "00000000000000000000000000000001" },
-    sidebar: { links: [] },
+    quickLinks: [],
   };
+}
+
+function parseQuickLinksArray(raw: unknown, path: string): WorkspaceQuickLink[] {
+  if (!Array.isArray(raw)) {
+    throw new Error(`${path}: must be an array`);
+  }
+  return raw.map((link, index) => parseWorkspaceQuickLink(link, `${path}[${index}]`));
+}
+
+function parseQuickLinks(obj: Record<string, unknown>): WorkspaceQuickLink[] {
+  if (obj.quickLinks !== undefined) {
+    return parseQuickLinksArray(obj.quickLinks, "workspace.json quickLinks");
+  }
+  const sidebar = obj.sidebar;
+  if (sidebar && typeof sidebar === "object" && !Array.isArray(sidebar)) {
+    const sidebarObj = sidebar as Record<string, unknown>;
+    if (sidebarObj.links !== undefined) {
+      return parseQuickLinksArray(sidebarObj.links, "workspace.json sidebar.links");
+    }
+  }
+  throw new Error("workspace.json quickLinks: must be an array");
 }
 
 export function parseWorkspaceFile(raw: string): WorkspaceFile {
@@ -271,18 +291,7 @@ export function parseWorkspaceFile(raw: string): WorkspaceFile {
     homeNodeId: parseNodeId(staticSiteObj.homeNodeId, "workspace.json staticSite.homeNodeId"),
   };
 
-  if (!obj.sidebar || typeof obj.sidebar !== "object" || Array.isArray(obj.sidebar)) {
-    throw new Error("workspace.json sidebar: must be an object");
-  }
-  const sidebarObj = obj.sidebar as Record<string, unknown>;
-  if (!Array.isArray(sidebarObj.links)) {
-    throw new Error("workspace.json sidebar.links: must be an array");
-  }
-  const sidebar: WorkspaceSidebar = {
-    links: sidebarObj.links.map((link, index) =>
-      parseSidebarLink(link, `workspace.json sidebar.links[${index}]`),
-    ),
-  };
+  const quickLinks = parseQuickLinks(obj);
 
   const branding = parseBranding(obj.branding, "workspace.json branding");
   const legacy = parseLegacy(obj.legacy, "workspace.json legacy");
@@ -296,7 +305,7 @@ export function parseWorkspaceFile(raw: string): WorkspaceFile {
     protectedNodeIds,
     graphExplorer,
     staticSite,
-    sidebar,
+    quickLinks,
     ...(branding ? { branding } : {}),
     ...(legacy ? { legacy } : {}),
     ...(editor ? { editor } : {}),

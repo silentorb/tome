@@ -1,9 +1,10 @@
 import { useState } from "react";
-import type { SidebarLink } from "tome-db";
+import type { WorkspaceQuickLink } from "tome-db";
 import type { AppView } from "../../shared/types";
 import type { EditorApi } from "../api/client";
 import { nodePageHref } from "../node-links";
-import { HOME_ICON, VIEW_ICONS } from "../sidebar-nav";
+import { HOME_ICON, VIEW_ICONS } from "../quick-links-nav";
+import { QuickLinksPanel } from "./QuickLinksPanel";
 import { RecentNodesPanel } from "./RecentNodesPanel";
 import "./side-panel.css";
 
@@ -33,7 +34,15 @@ interface SidePanelProps {
   onOpenSearch: () => void;
   standaloneUrls?: SidePanelStandaloneUrls;
   recentNodesRefreshKey?: number;
-  sidebarLinks?: readonly SidebarLink[];
+  quickLinks?: readonly WorkspaceQuickLink[];
+  protectedNodeIds?: readonly string[];
+  archiveHubTitle?: string;
+  activeNodeArchived?: boolean;
+  onRemoveQuickLink?: (nodeId: string) => void | Promise<void>;
+  onQuickLinksReorder?: (nodeIds: string[]) => void | Promise<void>;
+  onArchiveNode?: (nodeId: string) => Promise<void>;
+  onUnarchiveNode?: (nodeId: string) => Promise<void>;
+  onDeleteNode?: (nodeId: string) => Promise<void>;
 }
 
 function NavItem({
@@ -82,7 +91,15 @@ export function SidePanel({
   onOpenSearch,
   standaloneUrls,
   recentNodesRefreshKey = 0,
-  sidebarLinks = [],
+  quickLinks = [],
+  protectedNodeIds = [],
+  archiveHubTitle,
+  activeNodeArchived = false,
+  onRemoveQuickLink,
+  onQuickLinksReorder,
+  onArchiveNode,
+  onUnarchiveNode,
+  onDeleteNode,
 }: SidePanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pageBase = typeof window !== "undefined" ? window.location.href : undefined;
@@ -141,17 +158,23 @@ export function SidePanel({
           href={standaloneUrls?.create}
           onClick={standaloneUrls ? undefined : onNewPage}
         />
-        <div className="tome-side-panel-divider" role="presentation" />
-        {sidebarLinks.map(({ nodeId, label, icon }) => (
-          <NavItem
-            key={nodeId}
-            active={activeView === "node-page" && activeNodeId === nodeId}
-            title={label}
-            icon={icon}
-            label={label}
-            href={standaloneUrls?.nodes[nodeId] ?? nodePageHref(nodeId, pageBase)}
-          />
-        ))}
+        <QuickLinksPanel
+          api={api}
+          quickLinks={quickLinks}
+          activeView={activeView}
+          activeNodeId={activeNodeId}
+          activeNodeArchived={activeNodeArchived}
+          collapsed={collapsed}
+          standaloneUrls={standaloneUrls}
+          pageBase={pageBase}
+          protectedNodeIds={protectedNodeIds}
+          archiveHubTitle={archiveHubTitle}
+          onRemoveQuickLink={onRemoveQuickLink}
+          onQuickLinksReorder={onQuickLinksReorder}
+          onArchiveNode={onArchiveNode}
+          onUnarchiveNode={onUnarchiveNode}
+          onDeleteNode={onDeleteNode}
+        />
         <RecentNodesPanel
           api={api}
           activeView={activeView}

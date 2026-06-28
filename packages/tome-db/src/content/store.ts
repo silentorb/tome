@@ -76,6 +76,12 @@ import {
   parseTableSchemasFile,
   serializeTableSchemasFile,
 } from "./table-schemas-file";
+import {
+  emptyWorkspaceFile,
+  parseWorkspaceFile,
+  serializeWorkspaceFile,
+  type WorkspaceFile,
+} from "../workspace/workspace-file";
 import { bodyFromNode, nodeFromFile, serializeNodeFile } from "./node-file";
 import {
   contentDataDir,
@@ -85,6 +91,7 @@ import {
   dynamicFieldsFilePath,
   viewsFilePath,
   tableSchemasFilePath,
+  workspaceFilePath,
   isNodeId,
   nodeFilePath,
   NODE_FILE_PATTERN,
@@ -416,6 +423,22 @@ export class ContentStore {
 
   writeTableSchemasFile(file: TableSchemasFile): void {
     atomicWrite(tableSchemasFilePath(this.contentDir), serializeTableSchemasFile(file));
+  }
+
+  readWorkspaceFile(): WorkspaceFile {
+    const path = workspaceFilePath(this.contentDir);
+    try {
+      return parseWorkspaceFile(readFileSync(path, "utf-8"));
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+        return emptyWorkspaceFile();
+      }
+      throw err;
+    }
+  }
+
+  writeWorkspaceFile(file: WorkspaceFile): void {
+    atomicWrite(workspaceFilePath(this.contentDir), serializeWorkspaceFile(file));
   }
 
   mergeNodeProperties(id: string, patch: Properties): boolean {

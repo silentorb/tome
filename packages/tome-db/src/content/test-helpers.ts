@@ -63,7 +63,7 @@ export function defaultTestWorkspaceFile(): WorkspaceFile {
     protectedNodeIds: [TEST_HOME_NODE_ID, TEST_ARCHIVE_NODE_ID],
     graphExplorer: { defaultAnchorNodeId: TEST_GRAPH_ANCHOR_NODE_ID },
     staticSite: { homeNodeId: TEST_STATIC_SITE_HOME_NODE_ID },
-    sidebar: { links: [] },
+    quickLinks: [],
     legacy: { exportPathPrefix: "Marloth", archivePathPrefix: "Marloth/Archive" },
   };
 }

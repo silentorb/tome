@@ -91,6 +91,41 @@ describe("PageActionsMenu", () => {
     expect(screen.getByRole("menuitem", { name: "Unarchive" })).toBeTruthy();
   });
 
+  test("shows Add quick link when handler is provided and node is not a quick link", async () => {
+    const onAddQuickLink = mock(async () => {});
+
+    render(
+      <PageActionsMenu
+        recordTitle="Draft page"
+        onAddQuickLink={onAddQuickLink}
+        onArchive={async () => {}}
+        onDelete={async () => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Page actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Add quick link" }));
+    expect(onAddQuickLink).toHaveBeenCalledTimes(1);
+  });
+
+  test("shows Remove quick link when node is already a quick link", async () => {
+    const onRemoveQuickLink = mock(async () => {});
+
+    render(
+      <PageActionsMenu
+        recordTitle="Features"
+        isQuickLink
+        onRemoveQuickLink={onRemoveQuickLink}
+        onArchive={async () => {}}
+        onDelete={async () => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Page actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Remove quick link" }));
+    expect(onRemoveQuickLink).toHaveBeenCalledTimes(1);
+  });
+
   test("archive confirm uses archive hub title", async () => {
     render(
       <PageActionsMenu

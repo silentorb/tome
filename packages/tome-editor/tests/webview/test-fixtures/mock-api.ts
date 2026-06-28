@@ -83,6 +83,25 @@ export function makeMockEditorApi(): EditorApi {
     deleteNode: async () => {},
     archiveNode: async () => {},
     unarchiveNode: async () => {},
+    addQuickLink: async (id, options) => {
+      workspace.quickLinks = [
+        ...workspace.quickLinks,
+        {
+          nodeId: id,
+          label: options?.label ?? "Quick link",
+          icon: options?.icon ?? "M",
+        },
+      ];
+    },
+    removeQuickLink: async (id) => {
+      workspace.quickLinks = workspace.quickLinks.filter((link) => link.nodeId !== id);
+    },
+    reorderQuickLinks: async (nodeIds) => {
+      const byId = new Map(workspace.quickLinks.map((link) => [link.nodeId, link]));
+      workspace.quickLinks = nodeIds
+        .map((id) => byId.get(id))
+        .filter((link): link is (typeof workspace.quickLinks)[number] => link !== undefined);
+    },
     getGraphFull: async () => ({ nodes: [], relationships: [] }),
     getGraphExplorerLod: async () => makeGraphLodSnapshot(),
     getSchema: async () => emptySchemaFile(),

@@ -1,5 +1,5 @@
 import { extractPageIconFromMarkdown } from "./callout-decoration";
-import { HOME_ICON, VIEW_ICONS } from "./sidebar-nav";
+import { HOME_ICON, VIEW_ICONS } from "./quick-links-nav";
 import type { AppView } from "../shared/types";
 
 const DATABASE_ICON = "▦";
@@ -15,7 +15,11 @@ export interface DocumentIconContext {
   isTypeTable?: boolean | null;
   homeId?: string | null;
   defaultDocumentIcon?: string | null;
+  quickLinkIconByNodeId?: Readonly<Record<string, string>>;
+  quickLinkIconByLabel?: Readonly<Record<string, string>>;
+  /** @deprecated Use quickLinkIconByNodeId */
   sidebarIconByNodeId?: Readonly<Record<string, string>>;
+  /** @deprecated Use quickLinkIconByLabel */
   sidebarIconByLabel?: Readonly<Record<string, string>>;
 }
 
@@ -28,11 +32,14 @@ export function resolveDocumentIcon(ctx: DocumentIconContext): string {
   const bodyIcon = ctx.recordBody ? extractPageIconFromMarkdown(ctx.recordBody) : null;
   if (bodyIcon) return bodyIcon;
 
-  if (nodeId && ctx.sidebarIconByNodeId?.[nodeId]) {
-    return ctx.sidebarIconByNodeId[nodeId]!;
+  const quickLinkIconByNodeId = ctx.quickLinkIconByNodeId ?? ctx.sidebarIconByNodeId;
+  const quickLinkIconByLabel = ctx.quickLinkIconByLabel ?? ctx.sidebarIconByLabel;
+
+  if (nodeId && quickLinkIconByNodeId?.[nodeId]) {
+    return quickLinkIconByNodeId[nodeId]!;
   }
 
-  const typeIcon = iconFromTypeTitle(ctx.primaryTypeTitle, ctx.sidebarIconByLabel);
+  const typeIcon = iconFromTypeTitle(ctx.primaryTypeTitle, quickLinkIconByLabel);
   if (typeIcon) return typeIcon;
 
   if (ctx.isTypeTable) return DATABASE_ICON;
@@ -42,10 +49,10 @@ export function resolveDocumentIcon(ctx: DocumentIconContext): string {
 
 function iconFromTypeTitle(
   title: string | null | undefined,
-  sidebarIconByLabel?: Readonly<Record<string, string>>,
+  quickLinkIconByLabel?: Readonly<Record<string, string>>,
 ): string | null {
   if (!title) return null;
-  return sidebarIconByLabel?.[title] ?? null;
+  return quickLinkIconByLabel?.[title] ?? null;
 }
 
 function escapeXml(value: string): string {

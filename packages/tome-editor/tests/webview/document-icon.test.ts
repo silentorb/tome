@@ -1,9 +1,9 @@
 import { describe, expect, test } from "bun:test";
 import { TEST_HOME_NODE_ID } from "tome-db/content/test-helpers";
-import { buildSidebarIconMaps } from "../../src/webview/sidebar-nav";
+import { buildQuickLinkIconMaps } from "../../src/webview/quick-links-nav";
 import { iconToFaviconHref, resolveDocumentIcon } from "../../src/webview/document-icon";
 
-const sidebarIconMaps = buildSidebarIconMaps([
+const quickLinkIconMaps = buildQuickLinkIconMaps([
   { nodeId: "204dba198db74611b0b49a98dd53e8f5", label: "Scenes", icon: "▶" },
   { nodeId: "dd0de9867cc345b898929306bdf9fc83", label: "Features", icon: "★" },
 ]);
@@ -29,7 +29,7 @@ describe("resolveDocumentIcon", () => {
         view: "node-page",
         primaryTypeTitle: "Scenes",
         recordBody: "💡\n\n# Opening scene",
-        sidebarIconByLabel: sidebarIconMaps.byLabel,
+        quickLinkIconByLabel: quickLinkIconMaps.byLabel,
       }),
     ).toBe("💡");
   });
@@ -39,17 +39,17 @@ describe("resolveDocumentIcon", () => {
       resolveDocumentIcon({
         view: "node-page",
         primaryTypeTitle: "Features",
-        sidebarIconByLabel: sidebarIconMaps.byLabel,
+        quickLinkIconByLabel: quickLinkIconMaps.byLabel,
       }),
     ).toBe("★");
   });
 
-  test("uses sidebar icon for database hub nodes", () => {
+  test("uses quick-link icon for database hub nodes", () => {
     expect(
       resolveDocumentIcon({
         view: "node-page",
         nodeId: "204dba198db74611b0b49a98dd53e8f5",
-        sidebarIconByNodeId: sidebarIconMaps.byNodeId,
+        quickLinkIconByNodeId: quickLinkIconMaps.byNodeId,
       }),
     ).toBe("▶");
   });

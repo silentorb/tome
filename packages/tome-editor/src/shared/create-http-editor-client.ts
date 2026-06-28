@@ -361,6 +361,26 @@ export function createHttpEditorClient(baseUrl: string): EditorApiClient {
     async unarchiveNode(id: string): Promise<void> {
       await fetchJson(`/api/nodes/${id}/unarchive`, { method: "POST" });
     },
+    async addQuickLink(
+      id: string,
+      options?: { label?: string; icon?: string },
+    ): Promise<void> {
+      await fetchJson(`/api/nodes/${id}/quick-link`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(options ?? {}),
+      });
+    },
+    async removeQuickLink(id: string): Promise<void> {
+      await fetchJson(`/api/nodes/${id}/quick-link`, { method: "DELETE" });
+    },
+    async reorderQuickLinks(nodeIds: readonly string[]): Promise<void> {
+      await fetchJson("/api/workspace/quick-links/order", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nodeIds }),
+      });
+    },
     async getGraphFull(): Promise<GraphSnapshot> {
       const data = await fetchJson<{ graph: GraphSnapshot }>("/api/graph/full");
       return data.graph;

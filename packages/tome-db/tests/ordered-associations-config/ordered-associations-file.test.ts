@@ -65,4 +65,12 @@ describe("parseOrderedAssociationsFile", () => {
     const raw = JSON.stringify({ version: 1, configs: [incomplete] });
     expect(() => parseOrderedAssociationsFile(raw)).toThrow(/\.id/);
   });
+
+  test("rejects legacy is_a membershipEdgeType", () => {
+    const raw = JSON.stringify({
+      version: 1,
+      configs: [{ ...VALID_CONFIG, membershipEdgeType: "is_a" }],
+    });
+    expect(() => parseOrderedAssociationsFile(raw)).toThrow(/must be "member_of"/);
+  });
 });

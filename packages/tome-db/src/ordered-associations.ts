@@ -21,6 +21,7 @@ import {
 } from "./relationship-traverse";
 import type { OrderedAssociationConfig } from "./ordered-associations-config/ordered-associations-file";
 import { loadOrderedAssociationsFromContent } from "./ordered-associations-config/load";
+import { listSetMemberRowConnections } from "./set-membership";
 
 export type { OrderedAssociationConfig } from "./ordered-associations-config/ordered-associations-file";
 
@@ -153,7 +154,7 @@ function groupConnectionTarget(
 }
 
 function membershipRelationships(db: GraphDatabase, config: OrderedAssociationConfig): Relationship[] {
-  return db.listRelationshipsToTarget(config.typeDatabaseId, config.membershipEdgeType);
+  return listSetMemberRowConnections(db, config.typeDatabaseId);
 }
 
 function scopeMembershipSortKey(db: GraphDatabase, scopeNodeId: string): number {

@@ -280,9 +280,9 @@ export type {
   WorkspaceLegacy,
   WorkspaceGraphExplorer,
   WorkspaceStaticSite,
-  WorkspaceSidebar,
   WorkspaceEditor,
   WorkspaceSpatialGraph,
+  WorkspaceQuickLink,
   SidebarLink,
 } from "./workspace/workspace-file";
 export {
@@ -293,6 +293,13 @@ export {
   spatialGraphNodeDimensionScale,
   WORKSPACE_FILE_VERSION,
 } from "./workspace/workspace-file";
+export {
+  addWorkspaceQuickLink,
+  removeWorkspaceQuickLink,
+  reorderWorkspaceQuickLinks,
+  isWorkspaceQuickLink,
+  type QuickLinkError,
+} from "./workspace/quick-links";
 export {
   parseOrderedAssociationsFile,
   serializeOrderedAssociationsFile,

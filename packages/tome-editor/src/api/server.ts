@@ -2,7 +2,7 @@ import { openEditorDatabase } from "./database";
 import { UserSettingsStore } from "./user-settings-store";
 import { resolveApiPort, resolveContentPath, resolveDbPath } from "./paths";
 import type { UserSettingsPatch } from "../shared/user-settings";
-import type { NodeLifecycleError, ViewSortSpec } from "tome-db";
+import type { NodeLifecycleError, QuickLinkError, ViewSortSpec } from "tome-db";
 
 export { pickExistingDbPath, resolveApiPort, resolveContentPath, resolveDbPath } from "./paths";
 
@@ -42,6 +42,19 @@ function lifecycleMessage(error: NodeLifecycleError): string {
   return "already archived";
 }
 
+function quickLinkStatus(error: QuickLinkError): number {
+  if (error === "not_found") return 404;
+  if (error === "invalid_order") return 400;
+  return 409;
+}
+
+function quickLinkMessage(error: QuickLinkError): string {
+  if (error === "not_found") return "not found";
+  if (error === "already_exists") return "already a quick link";
+  if (error === "invalid_order") return "invalid quick link order";
+  return "not a quick link";
+}
+
 export function createApiHandler(
   dbPath = resolveDbPath(),
   userSettingsStore?: UserSettingsStore,
@@ -67,6 +80,20 @@ export function createApiHandler(
 
       if (path === "/api/workspace") {
         return json(db.getWorkspace());
+      }
+
+      if (path === "/api/workspace/quick-links/order" && req.method === "PUT") {
+        const payload = (await req.json()) as { nodeIds?: unknown };
+        if (!Array.isArray(payload.nodeIds)) {
+          return json({ error: "nodeIds array required" }, 400);
+        }
+        const nodeIds = payload.nodeIds.filter((id): id is string => typeof id === "string");
+        if (nodeIds.length !== payload.nodeIds.length) {
+          return json({ error: "invalid quick link order" }, 400);
+        }
+        const error = db.reorderQuickLinks(nodeIds);
+        if (error) return json({ error: quickLinkMessage(error) }, quickLinkStatus(error));
+        return json({ ok: true });
       }
 
       if (path === "/api/graph/full") {
@@ -239,6 +266,32 @@ export function createApiHandler(
         const id = unarchiveMatch[1]!.toLowerCase();
         const error = db.unarchiveNode(id);
         if (error) return json({ error: lifecycleMessage(error) }, lifecycleStatus(error));
+        return json({ ok: true });
+      }
+
+      const quickLinkMatch = /^\/api\/nodes\/([a-f0-9]{32})\/quick-link$/i.exec(path);
+      if (quickLinkMatch && req.method === "POST") {
+        const id = quickLinkMatch[1]!.toLowerCase();
+        let options: { label?: string; icon?: string } | undefined;
+        try {
+          const payload = (await req.json()) as { label?: string; icon?: string };
+          if (payload && typeof payload === "object") {
+            options = {
+              ...(typeof payload.label === "string" ? { label: payload.label } : {}),
+              ...(typeof payload.icon === "string" ? { icon: payload.icon } : {}),
+            };
+          }
+        } catch {
+          options = undefined;
+        }
+        const error = db.addQuickLink(id, options);
+        if (error) return json({ error: quickLinkMessage(error) }, quickLinkStatus(error));
+        return json({ ok: true });
+      }
+      if (quickLinkMatch && req.method === "DELETE") {
+        const id = quickLinkMatch[1]!.toLowerCase();
+        const error = db.removeQuickLink(id);
+        if (error) return json({ error: quickLinkMessage(error) }, quickLinkStatus(error));
         return json({ ok: true });
       }
 

@@ -35,6 +35,9 @@ interface NodePageViewProps {
   protectedNodeIds?: readonly string[];
   archiveHubTitle?: string;
   markdownBodyPanel?: boolean;
+  isQuickLink?: boolean;
+  onAddQuickLink?: () => Promise<void>;
+  onRemoveQuickLink?: () => Promise<void>;
 }
 
 export function NodePageView({
@@ -57,6 +60,9 @@ export function NodePageView({
   protectedNodeIds = [],
   archiveHubTitle,
   markdownBodyPanel = false,
+  isQuickLink = false,
+  onAddQuickLink,
+  onRemoveQuickLink,
 }: NodePageViewProps) {
   const { content } = resolvePageTitleAndContent(node.body, node.title);
   const emptyMarkdown = isEffectivelyEmptyMarkdown(node.body, node.title);
@@ -108,6 +114,9 @@ export function NodePageView({
                   disabled={saveState === "saving"}
                   archiveHubTitle={archiveHubTitle}
                   onRelate={() => setRelateOpen(true)}
+                  isQuickLink={isQuickLink}
+                  onAddQuickLink={onAddQuickLink}
+                  onRemoveQuickLink={onRemoveQuickLink}
                   onArchive={() => onArchiveNode(node.id)}
                   onUnarchive={() => onUnarchiveNode(node.id)}
                   onDelete={() => onDeleteNode(node.id)}

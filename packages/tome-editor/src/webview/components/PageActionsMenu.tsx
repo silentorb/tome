@@ -24,6 +24,9 @@ interface PageActionsMenuProps {
   onUnarchive?: () => Promise<void>;
   /** Open relate dialog; page app bar only. */
   onRelate?: () => void;
+  isQuickLink?: boolean;
+  onAddQuickLink?: () => Promise<void>;
+  onRemoveQuickLink?: () => Promise<void>;
   /** Unlink from the current table only; shown when provided (table rows, not page app bar). */
   onRemove?: () => Promise<void>;
   /** Retarget row relationship; table rows only. */
@@ -42,6 +45,9 @@ export function PageActionsMenu({
   onArchive,
   onUnarchive,
   onRelate,
+  isQuickLink = false,
+  onAddQuickLink,
+  onRemoveQuickLink,
   onRemove,
   onMove,
   onDelete,
@@ -124,6 +130,17 @@ export function PageActionsMenu({
 
   const displayTitle = recordTitle.trim() || "Untitled";
 
+  const runQuickLinkToggle = async (action: "add" | "remove") => {
+    setMenuOpen(false);
+    setBusy(true);
+    try {
+      if (action === "add") await onAddQuickLink?.();
+      else await onRemoveQuickLink?.();
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const menuItems = (
     <>
       {onRelate ? (
@@ -137,6 +154,31 @@ export function PageActionsMenu({
           }}
         >
           Relate
+        </button>
+      ) : null}
+      {isQuickLink && onRemoveQuickLink ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="tome-page-actions-item"
+          disabled={busy}
+          onClick={() => {
+            void runQuickLinkToggle("remove");
+          }}
+        >
+          Remove quick link
+        </button>
+      ) : onAddQuickLink ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="tome-page-actions-item"
+          disabled={busy}
+          onClick={() => {
+            void runQuickLinkToggle("add");
+          }}
+        >
+          Add quick link
         </button>
       ) : null}
       {!isArchived ? (

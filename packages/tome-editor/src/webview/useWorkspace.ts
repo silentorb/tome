@@ -1,10 +1,17 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { WorkspacePublic } from "../shared/http-client";
 import type { EditorApi } from "./api/client";
 
 export function useWorkspace(api: EditorApi) {
   const [workspace, setWorkspace] = useState<WorkspacePublic | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const refreshWorkspace = useCallback(async () => {
+    const ws = await api.getWorkspace();
+    setWorkspace(ws);
+    setError(null);
+    return ws;
+  }, [api]);
 
   useEffect(() => {
     let cancelled = false;
@@ -23,5 +30,5 @@ export function useWorkspace(api: EditorApi) {
     };
   }, [api]);
 
-  return { workspace, error };
+  return { workspace, error, refreshWorkspace };
 }

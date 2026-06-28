@@ -10,7 +10,7 @@ Read this doc when your task involves:
 
 - Scene ordering within a book
 - Drag-and-drop reordering of graph associations
-- The `order` relationship property on `IS_A` membership relationships
+- The `order` relationship property on `member_of` set membership edges
 - Extending ordered-association configuration to new node types
 
 For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, read [tome-editor.md](./tome-editor.md). For domain semantics (Scene, Part, Product), read [`../ontology.md`](../ontology.md).
@@ -19,7 +19,7 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, re
 
 ### Core model
 
-- Ordered associations **must** store sequence in a designated relationship property (`order` by default) on the membership relationship (e.g. `(scene)-[:IS_A {order}]->(Scenes database)`).
+- Ordered associations **must** store sequence in a designated relationship property (`order` by default) on the membership relationship (e.g. `(scene)-[:member_of {order}]->(Scenes database)`).
 - The `order` property **must** be treated as import/metadata: hidden from all table columns and never exposed as an editable field in the UI.
 - Order **must** be scoped: for scenes, order applies within a **book** (Product), not globally across all scenes in the database.
 - **Grouping** (Part) is a display dimension only; all scenes in a book share one global sequence. Part subsections sort scenes by that book-wide order.
@@ -32,20 +32,20 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, re
 | Setting | Value |
 | --- | --- |
 | Type database | Scenes NotionDatabase (`204dba198db74611b0b49a98dd53e8f5`) |
-| Membership relationship | `is_a` with `order` property |
+| Membership relationship | `member_of` with `order` property |
 | Scope (book tabs) | `product` relationship from scene → Product |
 | Group (part subsections) | `part` relationship from scene → Part |
-| Part subsection order | Parts database `number` property on each Part's `is_a` membership (Unassigned always last) |
+| Part subsection order | Parts database `number` property on each Part's `member_of` membership (Unassigned always last) |
 | Unassigned | Scenes with a Product but no Part appear in an **Unassigned** group at the end |
 
-### Editor UI (Scenes Items section)
+### Editor UI (Scenes Members section)
 
-- The Scenes database **Items** section **must** replace the flat database table with an ordered-association view.
+- The Scenes database **Members** section **must** replace the flat database table with an ordered-association view.
 - Book tabs **must** appear at the start of the section; each tab filters to one Product that has scenes.
 - Each Part **must** have its own subsection with a table of scenes in that part.
 - Tables **must** be sorted only by `order` (server-provided); column header sorting **must not** be available.
 - Table columns **must** come from the Scenes database `notion_schema`, using the configured reference view (`TWOLD Active`) for visibility. Product, Part, Order, and Status **must** be excluded from columns because scope tabs, part groups, or drag-and-drop ordering replace them.
-- Relation columns **must** be hydrated from outgoing graph relationships (same pipeline as standard database table views), not inferred only from `IS_A` edge properties.
+- Relation columns **must** be hydrated from outgoing graph relationships (same pipeline as standard database table views), not inferred only from `member_of` edge properties.
 - Users **must** be able to drag scenes within a part to reorder (book-wide sequence).
 - Users **must** be able to drag scenes to a different part to change the `PART` association.
 - Name cells **must** remain navigable links to scene node pages.
@@ -81,7 +81,7 @@ Scenes are the only known use case. Config lives in git-tracked JSON; the engine
 User drag-drop (webview)
   → PATCH /api/ordered-associations/scenes-by-book/move
   → applyOrderedAssociationMove (tome-db)
-  → upsert is_a {order} + part relationship
+  → upsert member_of {order} + part relationship
   → SQLite data/marloth.sqlite
 ```
 

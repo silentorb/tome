@@ -153,6 +153,9 @@ export interface EditorApiClient {
   deleteNode(id: string): Promise<void>;
   archiveNode(id: string): Promise<void>;
   unarchiveNode(id: string): Promise<void>;
+  addQuickLink(id: string, options?: { label?: string; icon?: string }): Promise<void>;
+  removeQuickLink(id: string): Promise<void>;
+  reorderQuickLinks(nodeIds: readonly string[]): Promise<void>;
   getGraphFull(): Promise<GraphSnapshot>;
   getGraphExplorerLod(options?: GraphExplorerLodOptions): Promise<GraphLodSnapshot>;
   getSchema(): Promise<SchemaFile>;

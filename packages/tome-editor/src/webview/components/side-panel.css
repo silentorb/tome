@@ -137,3 +137,54 @@
 .tome-side-panel-section.is-collapsed .tome-side-panel-section-label {
   display: none;
 }
+
+.tome-side-panel-quick-link-item {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+}
+
+.tome-side-panel-quick-link-item.is-active .tome-side-panel-item {
+  background: var(--tome-hover);
+  border-color: var(--tome-border);
+  color: var(--tome-link);
+}
+
+.tome-side-panel-quick-link-item .tome-side-panel-item {
+  flex: 1;
+  min-width: 0;
+}
+
+.tome-side-panel-quick-link-item .tome-side-panel-item.is-reorderable {
+  cursor: grab;
+  touch-action: none;
+}
+
+.tome-side-panel-quick-link-item.is-dragging {
+  opacity: 0.85;
+  z-index: 1;
+}
+
+.tome-side-panel-quick-link-item.is-dragging .tome-side-panel-item.is-reorderable {
+  cursor: grabbing;
+}
+
+.tome-side-panel-quick-link-actions {
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: 2px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.tome-side-panel-quick-link-item:hover .tome-side-panel-quick-link-actions,
+.tome-side-panel-quick-link-item:focus-within .tome-side-panel-quick-link-actions,
+.tome-side-panel-quick-link-actions:has(.tome-page-actions.is-menu-open) {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tome-side-panel-quick-link-actions .tome-page-actions-trigger {
+  width: 24px;
+  height: 24px;
+}

@@ -33,7 +33,8 @@ import {
   normalizeEditorBody,
   titleNeedsSave,
 } from "./editor-save";
-import { buildSidebarIconMaps } from "./sidebar-nav";
+import { buildQuickLinkIconMaps } from "./quick-links-nav";
+import { resolveDocumentIcon } from "./document-icon";
 import { useWorkspace } from "./useWorkspace";
 import {
   readGraphExplorerLayerDepth,
@@ -100,7 +101,7 @@ export function App() {
 
 function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const { ready: userSettingsReady, getTableTab, setTableTab } = useUserSettings();
-  const { workspace, error: workspaceError } = useWorkspace(api);
+  const { workspace, error: workspaceError, refreshWorkspace } = useWorkspace(api);
   const [view, setView] = useState<AppView>(() => viewFromLocation());
   const [node, setNode] = useState<NodePageDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -142,9 +143,9 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const defaultGraphAnchorId = workspace?.graphExplorer.defaultAnchorNodeId ?? "";
   const protectedNodeIds = workspace?.protectedNodeIds ?? [];
   const archiveHubTitle = workspace?.archiveNodeTitle ?? "Archive";
-  const sidebarIconMaps = useMemo(
-    () => buildSidebarIconMaps(workspace?.sidebar.links ?? []),
-    [workspace?.sidebar.links],
+  const quickLinkIconMaps = useMemo(
+    () => buildQuickLinkIconMaps(workspace?.quickLinks ?? []),
+    [workspace?.quickLinks],
   );
 
   const changeExplorerAnchor = useCallback(
@@ -200,7 +201,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const standaloneUrls = useMemo(() => {
     if (!homeId || !workspace) return undefined;
     const nodes = Object.fromEntries(
-      workspace.sidebar.links.map(({ nodeId }) => [nodeId, standaloneNodeUrl(nodeId)]),
+      workspace.quickLinks.map(({ nodeId }) => [nodeId, standaloneNodeUrl(nodeId)]),
     );
     return {
       home: standaloneNodeUrl(homeId),
@@ -364,8 +365,8 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       isTypeTable: node?.isTypeTable,
       homeId,
       defaultDocumentIcon: workspace?.branding?.defaultDocumentIcon,
-      sidebarIconByNodeId: sidebarIconMaps.byNodeId,
-      sidebarIconByLabel: sidebarIconMaps.byLabel,
+      quickLinkIconByNodeId: quickLinkIconMaps.byNodeId,
+      quickLinkIconByLabel: quickLinkIconMaps.byLabel,
     });
   }, [
     view,
@@ -377,8 +378,8 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     homeId,
     workspace?.branding?.appTitle,
     workspace?.branding?.defaultDocumentIcon,
-    sidebarIconMaps.byLabel,
-    sidebarIconMaps.byNodeId,
+    quickLinkIconMaps.byLabel,
+    quickLinkIconMaps.byNodeId,
   ]);
 
   const syncEditorBaseline = useCallback(
@@ -615,6 +616,50 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     [api, bumpRecentNodes, goHome, loadNode, node],
   );
 
+  const addQuickLinkForNode = useCallback(
+    async (nodeId: string, label: string, icon: string) => {
+      try {
+        await api.addQuickLink(nodeId, { label, icon });
+        await refreshWorkspace();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [api, refreshWorkspace],
+  );
+
+  const removeQuickLinkForNode = useCallback(
+    async (nodeId: string) => {
+      try {
+        await api.removeQuickLink(nodeId);
+        await refreshWorkspace();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [api, refreshWorkspace],
+  );
+
+  const reorderQuickLinks = useCallback(
+    async (nodeIds: string[]) => {
+      try {
+        await api.reorderQuickLinks(nodeIds);
+        await refreshWorkspace();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [api, refreshWorkspace],
+  );
+
+  const isNodeQuickLink = useCallback(
+    (nodeId: string) =>
+      (workspace?.quickLinks ?? []).some(
+        (link) => link.nodeId.toLowerCase() === nodeId.toLowerCase(),
+      ),
+    [workspace?.quickLinks],
+  );
+
   return (
     <>
       <div className="tome-layout">
@@ -628,7 +673,15 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         onOpenSearch={() => setGlobalSearchOpen(true)}
         standaloneUrls={standaloneUrls}
         recentNodesRefreshKey={recentNodesRefreshKey}
-        sidebarLinks={workspace?.sidebar.links ?? []}
+        quickLinks={workspace?.quickLinks ?? []}
+        protectedNodeIds={protectedNodeIds}
+        archiveHubTitle={archiveHubTitle}
+        activeNodeArchived={node?.archived === true}
+        onRemoveQuickLink={removeQuickLinkForNode}
+        onQuickLinksReorder={reorderQuickLinks}
+        onArchiveNode={archiveCurrentNode}
+        onUnarchiveNode={unarchiveCurrentNode}
+        onDeleteNode={deleteCurrentNode}
       />
       <div className={`tome-main${view === "graph-explorer" ? " tome-main-graph" : ""}`}>
         {creatingPage ? (
@@ -684,6 +737,25 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
             protectedNodeIds={protectedNodeIds}
             archiveHubTitle={archiveHubTitle}
             markdownBodyPanel={workspace.editor?.markdownBodyPanel === true}
+            isQuickLink={isNodeQuickLink(node.id)}
+            onAddQuickLink={() =>
+              addQuickLinkForNode(
+                node.id,
+                node.title,
+                resolveDocumentIcon({
+                  view: "node-page",
+                  nodeId: node.id,
+                  primaryTypeTitle: node.primaryTypeTitle,
+                  recordBody: node.body,
+                  isTypeTable: node.isTypeTable,
+                  homeId,
+                  defaultDocumentIcon: workspace.branding?.defaultDocumentIcon,
+                  quickLinkIconByNodeId: quickLinkIconMaps.byNodeId,
+                  quickLinkIconByLabel: quickLinkIconMaps.byLabel,
+                }),
+              )
+            }
+            onRemoveQuickLink={() => removeQuickLinkForNode(node.id)}
           />
         )}
       </div>

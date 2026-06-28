@@ -1,4 +1,5 @@
 import { isNodeId } from "../content/paths";
+import { MEMBER_OF_TYPE } from "../labels";
 
 export const ORDERED_ASSOCIATIONS_FILE_VERSION = 1;
 
@@ -56,10 +57,20 @@ function parseConfig(raw: unknown, path: string): OrderedAssociationConfig {
   }
   const obj = raw as Record<string, unknown>;
 
+  const membershipEdgeType = parseRequiredString(
+    obj.membershipEdgeType,
+    `${path}.membershipEdgeType`,
+  );
+  if (membershipEdgeType !== MEMBER_OF_TYPE) {
+    throw new Error(
+      `${path}.membershipEdgeType: must be "${MEMBER_OF_TYPE}" (legacy "is_a" was renamed; run migrate-is-a-to-member-of.ts)`,
+    );
+  }
+
   const config: OrderedAssociationConfig = {
     id: parseRequiredString(obj.id, `${path}.id`),
     typeDatabaseId: parseNodeId(obj.typeDatabaseId, `${path}.typeDatabaseId`),
-    membershipEdgeType: parseRequiredString(obj.membershipEdgeType, `${path}.membershipEdgeType`),
+    membershipEdgeType,
     orderProperty: parseRequiredString(obj.orderProperty, `${path}.orderProperty`),
     scopeCompositeType: parseRequiredString(obj.scopeCompositeType, `${path}.scopeCompositeType`),
     groupCompositeType: parseRequiredString(obj.groupCompositeType, `${path}.groupCompositeType`),

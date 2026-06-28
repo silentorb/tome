@@ -2,6 +2,10 @@ import {
   applyOrderedAssociationMove,
   archiveNode as archiveNodeInDb,
   unarchiveNode as unarchiveNodeInDb,
+  addWorkspaceQuickLink,
+  removeWorkspaceQuickLink,
+  reorderWorkspaceQuickLinks,
+  type QuickLinkError,
   createNode as createNodeInDb,
   deleteNode as deleteNodeInDb,
   exportExplorerLodGraph,
@@ -148,6 +152,12 @@ export interface EditorDatabase {
   deleteNode(id: string): NodeLifecycleError | null;
   archiveNode(id: string): NodeLifecycleError | null;
   unarchiveNode(id: string): NodeLifecycleError | null;
+  addQuickLink(
+    id: string,
+    options?: { label?: string; icon?: string },
+  ): QuickLinkError | null;
+  removeQuickLink(id: string): QuickLinkError | null;
+  reorderQuickLinks(nodeIds: readonly string[]): QuickLinkError | null;
   createNode(input: CreateNodeInput): CreateNodeResult | CreateNodeError;
   createRelationRow(
     sourceId: string,
@@ -346,6 +356,18 @@ export function openEditorDatabase(
     },
     unarchiveNode(id: string): NodeLifecycleError | null {
       return unarchiveNodeInDb(writeCtx, id);
+    },
+    addQuickLink(
+      id: string,
+      options?: { label?: string; icon?: string },
+    ): QuickLinkError | null {
+      return addWorkspaceQuickLink(writeCtx, id, options);
+    },
+    removeQuickLink(id: string): QuickLinkError | null {
+      return removeWorkspaceQuickLink(writeCtx, id);
+    },
+    reorderQuickLinks(nodeIds: readonly string[]): QuickLinkError | null {
+      return reorderWorkspaceQuickLinks(writeCtx, nodeIds);
     },
     createNode(input: CreateNodeInput): CreateNodeResult | CreateNodeError {
       return createNodeInDb(writeCtx, input);
