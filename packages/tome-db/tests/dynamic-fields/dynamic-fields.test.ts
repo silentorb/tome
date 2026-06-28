@@ -15,6 +15,7 @@ import {
   destroyTestContentFixture,
   seedTestCompositeRelationships,
   seedTestDynamicFields,
+  seedTestIncludes,
   seedTestNode,
   seedTestRelationships,
 } from "../../src/content/test-helpers";
@@ -330,6 +331,136 @@ describe("dynamic-fields with composite relationships", () => {
         buildWeightedUsePrefetch(ctx, { features_database_id: FEAT_DB }),
       ),
     ).toBe("0");
+  });
+
+  afterAll(() => {
+    delete process.env.TOME_CONTENT_PATH;
+    invalidateDynamicFieldsCache();
+    destroyTestContentFixture(fixture);
+  });
+});
+
+describe("dynamic-fields character includes with product edges (Marloth regression)", () => {
+  const fixture = createTestContentFixture("tome-df-char-includes-");
+  const CHAR_DB = "f984a934ad644f8480b0f8f51449569f";
+  const SCENES_DB = "204dba198db74611b0b49a98dd53e8f5";
+  const PRODUCTS_DB = "4e973268d3474f71bd7992094fb39663";
+  const TWOLD = "e028aa0786f5449984a4f497c1d746fa";
+  const OTHER_PRODUCT = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const character = "cccccccccccccccccccccccccccccccc";
+  const scene1 = "11111111111111111111111111111111";
+  const scene2 = "22222222222222222222222222222222";
+
+  const productionParams = {
+    characters_scene_composite: "scenes_characters",
+    scene_product_composite: "scenes_product",
+    scenes_edge_label: "SCENES",
+    product_edge_label: "PRODUCT",
+    scenes_database_id: SCENES_DB,
+    products_database_id: PRODUCTS_DB,
+  };
+
+  beforeAll(() => {
+    process.env.TOME_CONTENT_PATH = fixture.ctx.store.contentDir;
+    seedTestDynamicFields(
+      fixture,
+      [
+        {
+          id: "characters-all-scene-count",
+          databaseId: CHAR_DB,
+          columnKey: "all_scene_count",
+          columnName: "All Scene count",
+          resolverId: "characters.allSceneCount",
+          docsPath: "docs/dynamic-fields/characters.all-scene-count.md",
+          params: {
+            characters_scene_composite: "scenes_characters",
+            scenes_edge_label: "SCENES",
+            scenes_database_id: SCENES_DB,
+          },
+        },
+      ],
+      [
+        {
+          id: "characters-scene-count-by-product",
+          databaseId: CHAR_DB,
+          columnKeyPattern: "scene_count__{productId}",
+          columnNamePattern: "{productTitle} Scene count",
+          columnType: "number",
+          resolverId: "characters.sceneCountByProduct",
+          docsPath: "docs/dynamic-fields/characters.scene-count-by-product.md",
+          params: productionParams,
+        },
+      ],
+    );
+    seedTestNode(fixture, { id: CHAR_DB, properties: typeTableMarkerProperties("Characters") });
+    seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
+    seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
+    seedTestNode(fixture, { id: TWOLD, properties: { title: "TWOLD" } });
+    seedTestNode(fixture, { id: OTHER_PRODUCT, properties: { title: "Other Book" } });
+    seedTestNode(fixture, { id: character, properties: { title: "James" } });
+    seedTestNode(fixture, { id: scene1, properties: { title: "Scene A" } });
+    seedTestNode(fixture, { id: scene2, properties: { title: "Scene B" } });
+    seedTestRelationships(fixture, [
+      { source: character, target: CHAR_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
+      { source: scene1, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
+      { source: scene2, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { row_index: 1 } },
+      { source: TWOLD, target: PRODUCTS_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
+      {
+        source: OTHER_PRODUCT,
+        target: PRODUCTS_DB,
+        type: MEMBER_OF_TYPE,
+        properties: { row_index: 1 },
+      },
+    ]);
+    seedTestIncludes(fixture, [
+      { a: character, b: scene1 },
+      { a: character, b: scene2 },
+      { a: character, b: TWOLD },
+    ]);
+    seedTestCompositeRelationships(fixture, [
+      { a: scene1, b: TWOLD, typeFromA: "scenes", typeFromB: "product", properties: {} },
+      { a: scene2, b: TWOLD, typeFromA: "scenes", typeFromB: "product", properties: {} },
+      { a: scene2, b: OTHER_PRODUCT, typeFromA: "scenes", typeFromB: "product", properties: {} },
+    ]);
+  });
+
+  test("scopes includes to scenes only and emits product dimensions only", () => {
+    const ctx = { db: fixture.ctx.db, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const allScenePrefetch = buildAllSceneCountPrefetch(ctx, {
+      characters_scene_composite: "scenes_characters",
+      scenes_edge_label: "SCENES",
+      scenes_database_id: SCENES_DB,
+    });
+    expect(resolveAllSceneCount(ctx, {}, character, allScenePrefetch)).toBe("2");
+
+    const productPrefetch = buildSceneCountByProductPrefetch(ctx, productionParams);
+    expect(productPrefetch.dimensions.map((dimension) => dimension.id).sort()).toEqual(
+      [OTHER_PRODUCT, TWOLD].sort(),
+    );
+    expect(productPrefetch.dimensions.some((dimension) => dimension.id === scene1)).toBe(false);
+    expect(productPrefetch.dimensions.some((dimension) => dimension.id === scene2)).toBe(false);
+    expect(resolveSceneCountByProduct(ctx, {}, character, TWOLD, productPrefetch)).toBe("2");
+    expect(resolveSceneCountByProduct(ctx, {}, character, OTHER_PRODUCT, productPrefetch)).toBe("1");
+  });
+
+  test("database view has per-product columns only, not per-scene columns", () => {
+    const detail = getDatabaseViewDetail(
+      fixture.ctx.db,
+      CHAR_DB,
+      undefined,
+      fixture.ctx.store.contentDir,
+    );
+    const productColumnKeys =
+      detail?.columnDefs
+        ?.filter((column) => column.key.startsWith("scene_count__"))
+        .map((column) => column.key) ?? [];
+    expect(productColumnKeys.sort()).toEqual(
+      [`scene_count__${OTHER_PRODUCT}`, `scene_count__${TWOLD}`].sort(),
+    );
+    const james = detail?.rows.find((row) => row.nodeId === character);
+    expect(james?.cells.all_scene_count).toBe("2");
+    expect(james?.cells[`scene_count__${TWOLD}`]).toBe("2");
+    expect(james?.cells[`scene_count__${OTHER_PRODUCT}`]).toBe("1");
   });
 
   afterAll(() => {

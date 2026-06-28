@@ -1,5 +1,6 @@
 import type { WorkspaceQuickLink } from "tome-db";
 import type { AppView } from "../shared/types";
+import { navigateStandaloneNode, openStandaloneNodeInNewTab } from "./node-links";
 
 export const HOME_ICON = "⌂";
 
@@ -22,3 +23,41 @@ export function buildQuickLinkIconMaps(quickLinks: readonly WorkspaceQuickLink[]
 
 /** @deprecated Use buildQuickLinkIconMaps */
 export const buildSidebarIconMaps = buildQuickLinkIconMaps;
+
+export interface QuickLinkDragState {
+  didDrag: boolean;
+}
+
+/** Navigate on pointerup when the gesture did not activate drag reorder. */
+export function navigateQuickLinkPointerUp(
+  event: PointerEvent | MouseEvent,
+  nodeId: string,
+  pageBase: string | undefined,
+  dragState: QuickLinkDragState,
+): boolean {
+  if (event.button === 2) return false;
+
+  if (dragState.didDrag) {
+    dragState.didDrag = false;
+    return false;
+  }
+
+  const openInNewTab = event.metaKey || event.ctrlKey || event.button === 1;
+  if (openInNewTab) {
+    openStandaloneNodeInNewTab(nodeId, pageBase);
+  } else {
+    navigateStandaloneNode(nodeId, pageBase);
+  }
+  return true;
+}
+
+export function navigateQuickLinkKeyboard(
+  event: { key: string; preventDefault(): void },
+  nodeId: string,
+  pageBase: string | undefined,
+): boolean {
+  if (event.key !== "Enter" && event.key !== " ") return false;
+  event.preventDefault();
+  navigateStandaloneNode(nodeId, pageBase);
+  return true;
+}

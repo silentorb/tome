@@ -36,8 +36,8 @@ Resolver **algorithms** live in TypeScript; `params` in `dynamic-fields.json` su
 
 | `resolver_id` | Param keys | Purpose |
 | --- | --- | --- |
-| `characters.allSceneCount` | `characters_scene_composite`, `scenes_edge_label` | Composite character↔scene links; legacy SCENES edges |
-| `characters.sceneCountByProduct` | `characters_scene_composite`, `scene_product_composite`, `scenes_edge_label`, `product_edge_label`, `hide_legacy_keys` | Scene/product traversals; hide stale stored columns |
+| `characters.allSceneCount` | `characters_scene_composite`, `scenes_edge_label`, `scenes_database_id` | Composite character↔scene links; scoped includes to Scenes DB; legacy SCENES edges |
+| `characters.sceneCountByProduct` | `characters_scene_composite`, `scene_product_composite`, `scenes_edge_label`, `product_edge_label`, `scenes_database_id`, `products_database_id`, `hide_legacy_keys` | Scene/product traversals scoped to Scenes/Products DB members; hide stale stored columns |
 | `inspirations.weightedUse` | `inspiration_feature_composite`, `features_edge_label`, `features_database_id` | Feature links; Features DB for priority weights |
 | `inspirations.wonder` | `inspiration_feature_composite`, `features_edge_label`, `theme_edge_label`, `theme_target_id` | Feature links; theme anchor for wonder count |
 

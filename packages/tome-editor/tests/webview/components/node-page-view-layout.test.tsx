@@ -32,4 +32,10 @@ describe("node page markdown editor layout CSS", () => {
       /\.tome-editor-body \.milkdown \.ProseMirror \.ProseMirror-widget:has\(> \.prosemirror-virtual-cursor\)[\s\S]*height:\s*0/,
     );
   });
+
+  test("shows empty markdown section in the editor (overrides theme hide)", () => {
+    expect(nodePageCss).toMatch(
+      /\.tome-record-page \.tome-markdown-section\.is-empty[\s\S]*display:\s*flex/,
+    );
+  });
 });

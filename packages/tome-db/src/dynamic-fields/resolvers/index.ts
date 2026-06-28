@@ -5,9 +5,11 @@ import { priorityWeight } from "../../property-enums";
 import { normalizeRelationshipType } from "../../relation-type";
 import type { DynamicResolverContext } from "../registry";
 import {
+  listIncludesIncident,
   listRelationshipsForComposite,
   otherEndpoint,
 } from "../../relationship-traverse";
+import { setMemberIds } from "../../set-membership";
 
 function stringParam(params: Record<string, unknown>, key: string): string {
   return String(params[key] ?? "").trim();
@@ -22,6 +24,62 @@ function listAssociationsFromComposite(
   const includes = listRelationshipsForComposite(db, nodeId, INCLUDES_TYPE);
   if (includes.length > 0) return includes;
   return listRelationshipsForComposite(db, nodeId, compositeType);
+}
+
+/** Character→scene links via scoped includes, composite, or legacy SCENES edges. */
+function listCharacterSceneConnections(
+  db: GraphDatabase,
+  nodeId: string,
+  params: Record<string, unknown>,
+): Relationship[] {
+  const composite = stringParam(params, "characters_scene_composite");
+  const scenesDatabaseId = stringParam(params, "scenes_database_id");
+
+  if (scenesDatabaseId) {
+    const includes = listIncludesIncident(db, nodeId, scenesDatabaseId);
+    if (includes.length > 0) return includes;
+  } else {
+    const includes = listRelationshipsForComposite(db, nodeId, INCLUDES_TYPE);
+    if (includes.length > 0) return includes;
+  }
+
+  if (composite) {
+    return listRelationshipsForComposite(db, nodeId, composite);
+  }
+  return [];
+}
+
+function relatedProductIdsFromScene(
+  db: GraphDatabase,
+  sceneId: string,
+  params: Record<string, unknown>,
+): string[] {
+  const sceneProductComposite = stringParam(params, "scene_product_composite");
+  const productsDatabaseId = stringParam(params, "products_database_id");
+  const productLabel = stringParam(params, "product_edge_label");
+
+  if (sceneProductComposite) {
+    const candidates = listRelationshipsForComposite(db, sceneId, sceneProductComposite).map(
+      (relationship) => otherEndpoint(relationship, sceneId),
+    );
+    if (productsDatabaseId) {
+      const productMembers = new Set(setMemberIds(db, productsDatabaseId));
+      return candidates.filter((id) => productMembers.has(id));
+    }
+    return candidates;
+  }
+
+  if (productLabel) {
+    const normalizedProductLabel = normalizeRelationshipType(productLabel);
+    return db
+      .listRelationshipsFromSource(sceneId)
+      .filter(
+        (relationship) => normalizeRelationshipType(relationship.type) === normalizedProductLabel,
+      )
+      .map((relationship) => relationship.targetNodeId);
+  }
+
+  return [];
 }
 
 export { priorityWeight, PRIORITY_WEIGHT } from "../../property-enums";
@@ -50,8 +108,9 @@ function countCharacterSceneRelationships(
   params: Record<string, unknown>,
 ): number {
   const composite = stringParam(params, "characters_scene_composite");
-  if (composite) {
-    const compositeCount = listAssociationsFromComposite(db, nodeId, composite).length;
+  const scenesDatabaseId = stringParam(params, "scenes_database_id");
+  if (composite || scenesDatabaseId) {
+    const compositeCount = listCharacterSceneConnections(db, nodeId, params).length;
     if (compositeCount > 0) return compositeCount;
   }
   const scenesLabel = stringParam(params, "scenes_edge_label");
@@ -85,9 +144,6 @@ export function buildSceneCountByProductPrefetch(
   const scenesLabel = stringParam(params, "scenes_edge_label");
   const normalizedScenesLabel = scenesLabel ? normalizeRelationshipType(scenesLabel) : "";
   const charactersSceneComposite = stringParam(params, "characters_scene_composite");
-  const sceneProductComposite = stringParam(params, "scene_product_composite");
-  const productLabel = stringParam(params, "product_edge_label");
-  const normalizedProductLabel = productLabel ? normalizeRelationshipType(productLabel) : "";
 
   const characterSceneProducts = new Map<string, Map<string, string[]>>();
   const productIds = new Set<string>();
@@ -95,16 +151,10 @@ export function buildSceneCountByProductPrefetch(
   for (const nodeId of ctx.rowNodeIds) {
     const sceneMap = new Map<string, string[]>();
 
-    if (charactersSceneComposite) {
-      for (const sceneConnection of listAssociationsFromComposite(
-        ctx.db,
-        nodeId,
-        charactersSceneComposite,
-      )) {
+    if (charactersSceneComposite || stringParam(params, "scenes_database_id")) {
+      for (const sceneConnection of listCharacterSceneConnections(ctx.db, nodeId, params)) {
         const sceneId = otherEndpoint(sceneConnection, nodeId);
-        const products = sceneProductComposite
-          ? relatedNodeIdsFromComposite(ctx.db, sceneId, sceneProductComposite)
-          : [];
+        const products = relatedProductIdsFromScene(ctx.db, sceneId, params);
         if (products.length > 0) {
           sceneMap.set(sceneId, products);
           for (const pid of products) productIds.add(pid);
@@ -116,23 +166,7 @@ export function buildSceneCountByProductPrefetch(
       for (const sceneConnection of ctx.db.listRelationshipsFromSource(nodeId)) {
         if (normalizeRelationshipType(sceneConnection.type) !== normalizedScenesLabel) continue;
         const sceneId = sceneConnection.targetNodeId;
-        const products = sceneProductComposite
-          ? relatedNodeIdsFromComposite(ctx.db, sceneId, sceneProductComposite)
-          : [];
-        if (products.length === 0 && normalizedProductLabel) {
-          const legacyProducts = ctx.db
-            .listRelationshipsFromSource(sceneId)
-            .filter(
-              (relationship) =>
-                normalizeRelationshipType(relationship.type) === normalizedProductLabel,
-            )
-            .map((relationship) => relationship.targetNodeId);
-          if (legacyProducts.length > 0) {
-            sceneMap.set(sceneId, legacyProducts);
-            for (const pid of legacyProducts) productIds.add(pid);
-          }
-          continue;
-        }
+        const products = relatedProductIdsFromScene(ctx.db, sceneId, params);
         if (products.length > 0) {
           sceneMap.set(sceneId, products);
           for (const pid of products) productIds.add(pid);
@@ -283,13 +317,3 @@ export function resolveWonder(
   return String(data.counts.get(nodeId) ?? 0);
 }
 
-function relatedNodeIdsFromComposite(
-  db: GraphDatabase,
-  nodeId: string,
-  compositeType: string,
-): string[] {
-  if (!compositeType) return [];
-  return listRelationshipsForComposite(db, nodeId, compositeType).map((relationship) =>
-    otherEndpoint(relationship, nodeId),
-  );
-}

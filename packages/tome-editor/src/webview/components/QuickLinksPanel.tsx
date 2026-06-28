@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -19,6 +19,11 @@ import { isProtectedEditorNode } from "../../shared/types";
 import type { EditorApi } from "../api/client";
 import type { SidePanelStandaloneUrls } from "./SidePanel";
 import { nodePageHref } from "../node-links";
+import {
+  navigateQuickLinkKeyboard,
+  navigateQuickLinkPointerUp,
+  type QuickLinkDragState,
+} from "../quick-links-nav";
 import { moveColumnOrderItem } from "./SortableDataColumnHeaders";
 import { AddRelationshipDialog } from "./AddRelationshipDialog";
 import { PageActionsMenu } from "./PageActionsMenu";
@@ -49,6 +54,8 @@ interface SortableQuickLinkItemProps {
   collapsed: boolean;
   href: string;
   reorderable: boolean;
+  pageBase?: string;
+  dragState?: QuickLinkDragState;
   showActions: boolean;
   archiveHubTitle?: string;
   onRelate: () => void;
@@ -73,6 +80,10 @@ function quickLinksReorderOnDragEnd(
   void onQuickLinksReorder(moveColumnOrderItem(nodeIds, oldIndex, newIndex));
 }
 
+function swallowSyntheticClick(event: MouseEvent<HTMLElement>): void {
+  event.preventDefault();
+}
+
 function SortableQuickLinkItem({
   link,
   active,
@@ -80,6 +91,8 @@ function SortableQuickLinkItem({
   collapsed,
   href,
   reorderable,
+  pageBase,
+  dragState,
   showActions,
   archiveHubTitle,
   onRelate,
@@ -101,23 +114,55 @@ function SortableQuickLinkItem({
       }
     : undefined;
 
+  const itemClassName = `tome-side-panel-item${reorderable ? " is-reorderable" : ""}`;
+  const itemContent = (
+    <>
+      <span className="tome-side-panel-item-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <span className="tome-side-panel-item-label">{label}</span>
+    </>
+  );
+
+  const handlePointerUp = (event: PointerEvent<HTMLElement>) => {
+    if (!reorderable || !dragState) return;
+    const wasDrag = dragState.didDrag;
+    navigateQuickLinkPointerUp(event.nativeEvent, nodeId, pageBase, dragState);
+    if (wasDrag) {
+      event.currentTarget.blur();
+    }
+  };
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLElement>) => {
+    if (!reorderable) return;
+    navigateQuickLinkKeyboard(event, nodeId, pageBase);
+  };
+
   return (
     <div
       ref={reorderable ? setNodeRef : undefined}
       style={style}
       className={`tome-side-panel-quick-link-item${active ? " is-active" : ""}${isDragging ? " is-dragging" : ""}`}
     >
-      <a
-        className={`tome-side-panel-item${reorderable ? " is-reorderable" : ""}`}
-        href={href}
-        title={label}
-        {...(reorderable ? { ...attributes, ...listeners } : {})}
-      >
-        <span className="tome-side-panel-item-icon" aria-hidden="true">
-          {icon}
-        </span>
-        <span className="tome-side-panel-item-label">{label}</span>
-      </a>
+      {reorderable ? (
+        <button
+          type="button"
+          className={itemClassName}
+          title={label}
+          {...attributes}
+          {...listeners}
+          onPointerUp={handlePointerUp}
+          onClick={swallowSyntheticClick}
+          onAuxClick={swallowSyntheticClick}
+          onKeyDown={handleKeyDown}
+        >
+          {itemContent}
+        </button>
+      ) : (
+        <a className={itemClassName} href={href} title={label}>
+          {itemContent}
+        </a>
+      )}
       {!collapsed && showActions && onArchiveNode && onDeleteNode && onRemoveQuickLink ? (
         <div className="tome-side-panel-quick-link-actions">
           <PageActionsMenu
@@ -159,6 +204,7 @@ export function QuickLinksPanel({
 }: QuickLinksPanelProps) {
   const [displayLinks, setDisplayLinks] = useState<readonly WorkspaceQuickLink[]>(quickLinks);
   const [relateNodeId, setRelateNodeId] = useState<string | null>(null);
+  const didDragRef = useRef<QuickLinkDragState>({ didDrag: false });
   const reorderable = !collapsed && Boolean(onQuickLinksReorder) && quickLinks.length > 1;
   const showNodeActions = Boolean(
     onRemoveQuickLink && onArchiveNode && onDeleteNode,
@@ -205,6 +251,8 @@ export function QuickLinksPanel({
         collapsed={collapsed}
         href={href}
         reorderable={reorderable}
+        pageBase={pageBase}
+        dragState={reorderable ? didDragRef.current : undefined}
         showActions={showNodeActions && !isProtectedEditorNode(link.nodeId, protectedNodeIds)}
         archiveHubTitle={archiveHubTitle}
         onRelate={() => setRelateNodeId(link.nodeId)}
@@ -227,9 +275,15 @@ export function QuickLinksPanel({
           <DndContext
             sensors={dragSensors}
             collisionDetection={closestCenter}
-            onDragEnd={(event) =>
-              quickLinksReorderOnDragEnd(event, sortableIds, handleQuickLinksReorder)
-            }
+            onDragStart={() => {
+              didDragRef.current.didDrag = true;
+            }}
+            onDragCancel={() => {
+              didDragRef.current.didDrag = false;
+            }}
+            onDragEnd={(event) => {
+              quickLinksReorderOnDragEnd(event, sortableIds, handleQuickLinksReorder);
+            }}
           >
             <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
               {linkItems}

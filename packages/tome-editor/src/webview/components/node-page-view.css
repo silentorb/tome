@@ -87,6 +87,11 @@
   flex: 0 0 auto;
 }
 
+/* Theme hides empty markdown on read-only pages; keep the editor visible to start writing. */
+.tome-record-page .tome-markdown-section.is-empty {
+  display: flex;
+}
+
 .tome-record-page .tome-editor-shell {
   min-height: 0;
   max-width: none;
