@@ -54,21 +54,22 @@ describe("writeSiteData", () => {
 
     seedTestViews(fixture, {
       version: VIEWS_FILE_VERSION,
-      nodes: {
-        [typeId]: {
-          sections: {
-            members: {
-              tabs: {
-                kind: "custom",
-                definitions: [
-                  { id: "default", name: "Default", sorts: [{ column: "name", direction: "asc" }] },
-                  { id: "all", name: "All", sorts: [{ column: "name", direction: "desc" }] },
-                ],
-              },
-            },
-          },
+      views: [
+        {
+          id: "default",
+          nodeId: typeId,
+          relationshipType: "members",
+          name: "Default",
+          sorts: [{ column: "name", direction: "asc" }],
         },
-      },
+        {
+          id: "all",
+          nodeId: typeId,
+          relationshipType: "members",
+          name: "All",
+          sorts: [{ column: "name", direction: "desc" }],
+        },
+      ],
     });
 
     const config: ResolvedConfig = {
