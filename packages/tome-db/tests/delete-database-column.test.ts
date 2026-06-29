@@ -12,8 +12,6 @@ import {
   seedTestTableSchema,
   seedTestViews,
 } from "../src/content/test-helpers";
-import { DEFAULT_CUSTOM_TAB } from "../src/content/views-file";
-
 describe("deleteDatabaseColumn", () => {
   const fixture = createTestContentFixture("tome-db-delete-col-");
 
@@ -117,38 +115,29 @@ describe("deleteDatabaseColumn", () => {
       { source: pageId, target: databaseId, type: MEMBER_OF_TYPE, properties: { task_state: "Open" } },
     ]);
     seedTestViews(fixture, {
-      version: 1,
-      nodes: {
-        [databaseId]: {
-          sections: {
-            members: {
-              tabs: {
-                kind: "custom",
-                definitions: [
-                  {
-                    ...DEFAULT_CUSTOM_TAB,
-                    id: "by-task-state",
-                    name: "By task state",
-                    sorts: [{ column: "task_state", direction: "asc" }],
-                  },
-                ],
-              },
-              columnOrder: ["task_state"],
-            },
-          },
+      version: 2,
+      views: [
+        {
+          id: "by-task-state",
+          nodeId: databaseId,
+          relationshipType: "members",
+          name: "By task state",
+          sorts: [{ column: "task_state", direction: "asc" }],
+          properties: { columnOrder: ["task_state"] },
         },
-      },
+      ],
     });
 
     deleteDatabaseColumn(fixture.ctx, databaseId, "task_state");
 
     const views = fixture.ctx.store.readViewsFile();
-    const section = views.nodes[databaseId]?.sections.members;
-    expect(section?.columnOrder).toBeUndefined();
-    expect(section?.tabs).toMatchObject({
-      kind: "custom",
-      definitions: [{ sorts: [{ column: "name", direction: "asc" }] }],
-    });
+    const view = views.views.find(
+      (entry) => entry.nodeId === databaseId && "id" in entry && entry.id === "by-task-state",
+    );
+    expect(view && "properties" in view ? view.properties?.columnOrder : undefined).toBeUndefined();
+    expect(view && "sorts" in view ? view.sorts : undefined).toEqual([
+      { column: "name", direction: "asc" },
+    ]);
   });
 
   test("rejects dynamic columns", () => {

@@ -5,45 +5,35 @@ import {
   serializeViewsFile,
   slugifyTabId,
   uniqueTabId,
+  VIEWS_FILE_VERSION,
 } from "../../src/content/views-file";
 
 describe("views-file", () => {
-  test("round-trips custom and generated section tabs", () => {
+  test("round-trips custom and generated views", () => {
     const file = {
-      version: 1,
-      nodes: {
-        dddddddddddddddddddddddddddddddd: {
-          sections: {
-            members: {
-              columnOrder: ["status", "priority"],
-              tabs: {
-                kind: "custom" as const,
-                definitions: [
-                  {
-                    id: "all",
-                    name: "All",
-                    sorts: [{ column: "name", direction: "asc" as const }],
-                  },
-                ],
-              },
-            },
-          },
+      version: VIEWS_FILE_VERSION,
+      views: [
+        {
+          id: "all",
+          nodeId: "dddddddddddddddddddddddddddddddd",
+          relationshipType: "members",
+          name: "All",
+          sorts: [{ column: "name", direction: "asc" as const }],
+          properties: { columnOrder: ["status", "priority"] },
         },
-        eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee: {
-          sections: {
-            members: {
-              tabs: { kind: "generated" as const, provider: "scenes-by-book" },
-            },
-          },
+        {
+          nodeId: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          relationshipType: "members",
+          generator: "scenes-by-book",
         },
-      },
+      ],
     };
     const parsed = parseViewsFile(serializeViewsFile(file));
     expect(parsed).toEqual(file);
   });
 
-  test("emptyViewsFile returns versioned empty nodes", () => {
-    expect(emptyViewsFile()).toEqual({ version: 1, nodes: {} });
+  test("emptyViewsFile returns versioned empty views array", () => {
+    expect(emptyViewsFile()).toEqual({ version: VIEWS_FILE_VERSION, views: [] });
   });
 
   test("slugifyTabId and uniqueTabId", () => {

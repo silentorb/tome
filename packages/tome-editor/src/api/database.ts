@@ -47,7 +47,8 @@ import {
   type TomeWriteContext,
   type SchemaFile,
   type ViewSortSpec,
-  type NodeViewConfig,
+  type ViewDefinition,
+  type ViewProperties,
   type WorkspaceFile,
   loadWorkspaceFromContent,
 } from "tome-db";
@@ -58,13 +59,11 @@ import {
 import type { NodeSummary } from "../shared/types";
 import { resolveContentPath, resolveDbPath } from "./paths";
 import {
-  createSectionTab,
-  deleteSectionTab,
-  MEMBERS_SECTION_KEY,
-  patchSectionColumnOrder,
-  patchSectionTabOrder,
+  createRelationshipView,
+  deleteRelationshipView,
+  patchRelationshipViews,
   readNodeViews,
-  updateSectionTab,
+  updateRelationshipView,
 } from "./views";
 import {
   ExtensionServerRuntime,
@@ -80,29 +79,24 @@ export interface EditorDatabase {
   getHomeId(): string;
   getNode(id: string, options?: { tabId?: string; databaseView?: string; scopeId?: string }): NodePageDetail | null;
   getDatabaseView(id: string, tabId?: string): DatabaseViewDetail | null;
-  getNodeViews(nodeId: string): NodeViewConfig | null;
-  createSectionTab(
+  getNodeViews(nodeId: string): ViewDefinition[];
+  createRelationshipView(
     nodeId: string,
-    sectionKey: string,
-    input: { name: string; sorts?: ViewSortSpec[] },
-  ): ReturnType<typeof createSectionTab>;
-  updateSectionTab(
+    relationshipType: string,
+    input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
+  ): ReturnType<typeof createRelationshipView>;
+  updateRelationshipView(
     nodeId: string,
-    sectionKey: string,
-    tabId: string,
-    input: { name?: string; sorts?: ViewSortSpec[] },
-  ): ReturnType<typeof updateSectionTab>;
-  deleteSectionTab(nodeId: string, sectionKey: string, tabId: string): void;
-  updateSectionColumnOrder(
+    relationshipType: string,
+    viewId: string,
+    input: { name?: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
+  ): ReturnType<typeof updateRelationshipView>;
+  deleteRelationshipView(nodeId: string, relationshipType: string, viewId: string): void;
+  patchRelationshipViews(
     nodeId: string,
-    sectionKey: string,
-    columnOrder: string[],
-  ): string[];
-  updateSectionTabOrder(
-    nodeId: string,
-    sectionKey: string,
-    tabOrder: string[],
-  ): import("tome-db").CustomTabDefinition[];
+    relationshipType: string,
+    input: { viewOrder?: string[]; properties?: ViewProperties },
+  ): ReturnType<typeof patchRelationshipViews>;
   deleteDatabaseColumn(
     databaseId: string,
     columnKey: string,
@@ -240,25 +234,30 @@ export function openEditorDatabase(
     getNodeViews(nodeId: string) {
       return readNodeViews(writeCtx, nodeId);
     },
-    createSectionTab(nodeId: string, sectionKey: string, input: { name: string; sorts?: ViewSortSpec[] }) {
-      return createSectionTab(writeCtx, nodeId, sectionKey, input);
-    },
-    updateSectionTab(
+    createRelationshipView(
       nodeId: string,
-      sectionKey: string,
-      tabId: string,
-      input: { name?: string; sorts?: ViewSortSpec[] },
+      relationshipType: string,
+      input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
     ) {
-      return updateSectionTab(writeCtx, nodeId, sectionKey, tabId, input);
+      return createRelationshipView(writeCtx, nodeId, relationshipType, input);
     },
-    deleteSectionTab(nodeId: string, sectionKey: string, tabId: string) {
-      deleteSectionTab(writeCtx, nodeId, sectionKey, tabId);
+    updateRelationshipView(
+      nodeId: string,
+      relationshipType: string,
+      viewId: string,
+      input: { name?: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
+    ) {
+      return updateRelationshipView(writeCtx, nodeId, relationshipType, viewId, input);
     },
-    updateSectionColumnOrder(nodeId: string, sectionKey: string, columnOrder: string[]) {
-      return patchSectionColumnOrder(writeCtx, nodeId, sectionKey, columnOrder);
+    deleteRelationshipView(nodeId: string, relationshipType: string, viewId: string) {
+      deleteRelationshipView(writeCtx, nodeId, relationshipType, viewId);
     },
-    updateSectionTabOrder(nodeId: string, sectionKey: string, tabOrder: string[]) {
-      return patchSectionTabOrder(writeCtx, nodeId, sectionKey, tabOrder);
+    patchRelationshipViews(
+      nodeId: string,
+      relationshipType: string,
+      input: { viewOrder?: string[]; properties?: ViewProperties },
+    ) {
+      return patchRelationshipViews(writeCtx, nodeId, relationshipType, input);
     },
     deleteDatabaseColumn(databaseId: string, columnKey: string) {
       return deleteDatabaseColumnInDb(writeCtx, databaseId, columnKey);

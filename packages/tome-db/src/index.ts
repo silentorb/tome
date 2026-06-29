@@ -308,6 +308,7 @@ export {
 } from "./ordered-associations-config/ordered-associations-file";
 export type { OrderedAssociationsFile } from "./ordered-associations-config/ordered-associations-file";
 export {
+  MEMBERS_RELATIONSHIP_TYPE,
   MEMBERS_SECTION_KEY,
   resolveCustomTabs,
   resolveCustomTabsForNode,
@@ -315,11 +316,16 @@ export {
   generatedProviderId,
 } from "./views/resolve-tabs";
 export {
+  createView,
+  updateView,
+  deleteView,
+  getNodeViews,
+  replaceViewsFile,
+  updateRelationshipViewProperties,
+  reorderViews,
   createTab,
   updateTab,
   deleteTab,
-  getNodeViews,
-  replaceViewsFile,
   updateSectionColumnOrder,
   reorderSectionTabs,
 } from "./views/mutations";
@@ -331,16 +337,17 @@ export {
   slugifyTabId,
   uniqueTabId,
   VIEWS_FILE_VERSION,
+  isGeneratedViewRecord,
+  isViewDefinition,
 } from "./content/views-file";
 export type {
   CustomTabDefinition,
-  CustomSectionTabs,
-  GeneratedSectionTabs,
-  NodeSectionViewConfig,
-  NodeViewConfig,
-  SectionTabsConfig,
+  GeneratedViewRecord,
+  ViewDefinition,
+  ViewProperties,
   ViewSortDirection,
   ViewSortSpec,
+  ViewRecord,
   ViewsFile,
 } from "./content/views-file";
 export type { ResolvedTab, TableTabsDetail, TabKind } from "./views/tabs";

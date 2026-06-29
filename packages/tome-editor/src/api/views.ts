@@ -1,19 +1,21 @@
 import type { TomeWriteContext } from "tome-db";
 import {
-  createTab,
-  deleteTab,
+  createView,
+  deleteView,
   getNodeViews,
-  updateTab,
-  updateSectionColumnOrder,
-  reorderSectionTabs,
+  updateView,
+  updateRelationshipViewProperties,
+  reorderViews,
+  type ViewProperties,
   type ViewSortSpec,
 } from "tome-db";
 import { invalidateViewsCache } from "tome-db";
-import { MEMBERS_SECTION_KEY } from "tome-db";
+import { MEMBERS_RELATIONSHIP_TYPE } from "tome-db";
 
-export interface TabMutationInput {
+export interface ViewMutationInput {
   name?: string;
   sorts?: ViewSortSpec[];
+  properties?: ViewProperties;
 }
 
 export function readNodeViews(ctx: TomeWriteContext, nodeId: string) {
@@ -21,60 +23,64 @@ export function readNodeViews(ctx: TomeWriteContext, nodeId: string) {
   return getNodeViews(ctx.store, nodeId);
 }
 
-export function createSectionTab(
+export function createRelationshipView(
   ctx: TomeWriteContext,
   nodeId: string,
-  sectionKey: string,
-  input: { name: string; sorts?: ViewSortSpec[] },
+  relationshipType: string,
+  input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
-  return createTab(ctx.store, nodeId, sectionKey, input);
+  return createView(ctx.store, nodeId, relationshipType, input);
 }
 
-export function updateSectionTab(
+export function updateRelationshipView(
   ctx: TomeWriteContext,
   nodeId: string,
-  sectionKey: string,
-  tabId: string,
-  input: TabMutationInput,
+  relationshipType: string,
+  viewId: string,
+  input: ViewMutationInput,
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
-  return updateTab(ctx.store, nodeId, sectionKey, tabId, input);
+  return updateView(ctx.store, nodeId, relationshipType, viewId, input);
 }
 
-export function deleteSectionTab(
+export function deleteRelationshipView(
   ctx: TomeWriteContext,
   nodeId: string,
-  sectionKey: string,
-  tabId: string,
+  relationshipType: string,
+  viewId: string,
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
-  deleteTab(ctx.store, nodeId, sectionKey, tabId);
+  deleteView(ctx.store, nodeId, relationshipType, viewId);
 }
 
-export function patchSectionColumnOrder(
+export function patchRelationshipViews(
   ctx: TomeWriteContext,
   nodeId: string,
-  sectionKey: string,
-  columnOrder: string[],
+  relationshipType: string,
+  input: { viewOrder?: string[]; properties?: ViewProperties },
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
-  return updateSectionColumnOrder(ctx.store, nodeId, sectionKey, columnOrder);
+  const response: {
+    views?: ReturnType<typeof reorderViews>;
+    properties?: ViewProperties;
+  } = {};
+  if (input.viewOrder) {
+    response.views = reorderViews(ctx.store, nodeId, relationshipType, input.viewOrder);
+  }
+  if (input.properties) {
+    response.properties = updateRelationshipViewProperties(
+      ctx.store,
+      nodeId,
+      relationshipType,
+      input.properties,
+    );
+  }
+  return response;
 }
 
-export function patchSectionTabOrder(
-  ctx: TomeWriteContext,
-  nodeId: string,
-  sectionKey: string,
-  tabOrder: string[],
-) {
-  invalidateViewsCache();
-  ctx.sync.syncFile("views.json");
-  return reorderSectionTabs(ctx.store, nodeId, sectionKey, tabOrder);
-}
-
-export { MEMBERS_SECTION_KEY };
+export { MEMBERS_RELATIONSHIP_TYPE };

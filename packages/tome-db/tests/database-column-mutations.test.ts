@@ -17,8 +17,6 @@ import {
   seedTestTableSchema,
   seedTestViews,
 } from "../src/content/test-helpers";
-import { DEFAULT_CUSTOM_TAB } from "../src/content/views-file";
-
 function seedSchema(fixture: ReturnType<typeof createTestContentFixture>): void {
   writeFileSync(
     join(fixture.ctx.store.contentDir, "model", "schema.json"),
@@ -119,27 +117,17 @@ describe("database column mutations", () => {
       },
     ]);
     seedTestViews(fixture, {
-      version: 1,
-      nodes: {
-        [databaseId]: {
-          sections: {
-            members: {
-              tabs: {
-                kind: "custom",
-                definitions: [
-                  {
-                    ...DEFAULT_CUSTOM_TAB,
-                    id: "by-notes",
-                    name: "By notes",
-                    sorts: [{ column: "notes", direction: "asc" }],
-                  },
-                ],
-              },
-              columnOrder: ["notes"],
-            },
-          },
+      version: 2,
+      views: [
+        {
+          id: "by-notes",
+          nodeId: databaseId,
+          relationshipType: "members",
+          name: "By notes",
+          sorts: [{ column: "notes", direction: "asc" }],
+          properties: { columnOrder: ["notes"] },
         },
-      },
+      ],
     });
 
     const result = updateDatabaseColumn(fixture.ctx, databaseId, "notes", {
@@ -156,7 +144,12 @@ describe("database column mutations", () => {
     expect(edge?.properties.notes).toBeUndefined();
 
     const views = fixture.ctx.store.readViewsFile();
-    expect(views.nodes[databaseId]?.sections.members?.columnOrder).toEqual(["description"]);
+    const view = views.views.find(
+      (entry) => entry.nodeId === databaseId && "id" in entry && entry.id === "by-notes",
+    );
+    expect(view && "properties" in view ? view.properties?.columnOrder : undefined).toEqual([
+      "description",
+    ]);
   });
 
   test("updateDatabaseColumn scalar to relation clears scalars", () => {

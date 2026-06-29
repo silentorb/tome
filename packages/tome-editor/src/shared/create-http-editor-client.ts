@@ -108,72 +108,74 @@ export function createHttpEditorClient(baseUrl: string): EditorApiClient {
       );
       return data.databaseView;
     },
-    async createSectionTab(
+    async createRelationshipView(
       nodeId: string,
-      sectionKey: string,
-      input: { name: string; sorts?: import("tome-db").ViewSortSpec[] },
+      relationshipType: string,
+      input: {
+        name: string;
+        sorts?: import("tome-db").ViewSortSpec[];
+        properties?: import("tome-db").ViewProperties;
+      },
     ) {
-      const data = await fetchJson<{ tab: import("tome-db").CustomTabDefinition }>(
-        `/api/views/nodes/${nodeId}/sections/${encodeURIComponent(sectionKey)}/tabs`,
+      const data = await fetchJson<{ view: import("tome-db").ViewDefinition }>(
+        `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}/views`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
         },
       );
-      return data.tab;
+      return data.view;
     },
-    async updateSectionTab(
+    async updateRelationshipView(
       nodeId: string,
-      sectionKey: string,
-      tabId: string,
-      input: { name?: string; sorts?: import("tome-db").ViewSortSpec[] },
+      relationshipType: string,
+      viewId: string,
+      input: {
+        name?: string;
+        sorts?: import("tome-db").ViewSortSpec[];
+        properties?: import("tome-db").ViewProperties;
+      },
     ) {
-      const data = await fetchJson<{ tab: import("tome-db").CustomTabDefinition }>(
-        `/api/views/nodes/${nodeId}/sections/${encodeURIComponent(sectionKey)}/tabs/${encodeURIComponent(tabId)}`,
+      const data = await fetchJson<{ view: import("tome-db").ViewDefinition }>(
+        `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}/views/${encodeURIComponent(viewId)}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(input),
         },
       );
-      return data.tab;
+      return data.view;
     },
-    async deleteSectionTab(nodeId: string, sectionKey: string, tabId: string): Promise<void> {
+    async deleteRelationshipView(
+      nodeId: string,
+      relationshipType: string,
+      viewId: string,
+    ): Promise<void> {
       await fetchJson(
-        `/api/views/nodes/${nodeId}/sections/${encodeURIComponent(sectionKey)}/tabs/${encodeURIComponent(tabId)}`,
+        `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}/views/${encodeURIComponent(viewId)}`,
         { method: "DELETE" },
       );
     },
-    async updateSectionColumnOrder(
+    async patchRelationshipViews(
       nodeId: string,
-      sectionKey: string,
-      columnOrder: string[],
-    ): Promise<string[]> {
-      const data = await fetchJson<{ columnOrder: string[] }>(
-        `/api/views/nodes/${nodeId}/sections/${encodeURIComponent(sectionKey)}`,
+      relationshipType: string,
+      input: {
+        viewOrder?: string[];
+        properties?: import("tome-db").ViewProperties;
+      },
+    ) {
+      return fetchJson<{
+        views?: import("tome-db").ViewDefinition[];
+        properties?: import("tome-db").ViewProperties;
+      }>(
+        `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ columnOrder }),
+          body: JSON.stringify(input),
         },
       );
-      return data.columnOrder;
-    },
-    async updateSectionTabOrder(
-      nodeId: string,
-      sectionKey: string,
-      tabOrder: string[],
-    ): Promise<import("tome-db").CustomTabDefinition[]> {
-      const data = await fetchJson<{ tabOrder: import("tome-db").CustomTabDefinition[] }>(
-        `/api/views/nodes/${nodeId}/sections/${encodeURIComponent(sectionKey)}`,
-        {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tabOrder }),
-        },
-      );
-      return data.tabOrder;
     },
     async deleteDatabaseColumn(
       databaseId: string,

@@ -31,24 +31,35 @@ export function makeMockEditorApi(): EditorApi {
       void tabId;
       return makeDatabaseViewDetail();
     },
-    createSectionTab: async (_nodeId, _sectionKey, input) => ({
-      id: "new-tab",
+    createRelationshipView: async (nodeId, relationshipType, input) => ({
+      id: "new-view",
+      nodeId,
+      relationshipType,
       name: input.name,
       sorts: input.sorts ?? [{ column: "name", direction: "asc" as const }],
     }),
-    updateSectionTab: async (_nodeId, _sectionKey, tabId, input) => ({
-      id: tabId,
-      name: input.name ?? tabId,
+    updateRelationshipView: async (nodeId, relationshipType, viewId, input) => ({
+      id: viewId,
+      nodeId,
+      relationshipType,
+      name: input.name ?? viewId,
       sorts: input.sorts ?? [{ column: "name", direction: "asc" as const }],
     }),
-    deleteSectionTab: async () => {},
-    updateSectionColumnOrder: async (_nodeId, _sectionKey, columnOrder) => columnOrder,
-    updateSectionTabOrder: async (_nodeId, _sectionKey, tabOrder) =>
-      tabOrder.map((id) => ({
-        id,
-        name: id,
-        sorts: [{ column: "name", direction: "asc" as const }],
-      })),
+    deleteRelationshipView: async () => {},
+    patchRelationshipViews: async (nodeId, relationshipType, input) => {
+      if (input.viewOrder) {
+        return {
+          views: input.viewOrder.map((id) => ({
+            id,
+            nodeId,
+            relationshipType,
+            name: id,
+            sorts: [{ column: "name", direction: "asc" as const }],
+          })),
+        };
+      }
+      return { properties: input.properties };
+    },
     deleteDatabaseColumn: async () => ({ rowsAffected: 0, relationsUnlinked: 0 }),
     createDatabaseColumn: async (_databaseId, input) => ({
       column: {

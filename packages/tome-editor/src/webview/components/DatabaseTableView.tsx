@@ -15,7 +15,7 @@ import { TableUtilityBar } from "./TableUtilityBar";
 import { ColumnEditorDialog, type ColumnEditorState } from "./ColumnEditorDialog";
 import "./database-table-view.css";
 
-const MEMBERS_SECTION_KEY = "items";
+const MEMBERS_RELATIONSHIP_TYPE = "members";
 
 interface DatabaseTableViewProps {
   api: EditorApi;
@@ -237,20 +237,22 @@ export function DatabaseTableView({
             addRow={<TableAddRowTrigger />}
             onTabSelect={onTabSelect}
             onCreateTab={async (input) => {
-              const tab = await api.createSectionTab(nodeId, MEMBERS_SECTION_KEY, input);
-              onTabSelect(tab.id);
+              const view = await api.createRelationshipView(nodeId, MEMBERS_RELATIONSHIP_TYPE, input);
+              onTabSelect(view.id);
               onTabsUpdated?.();
             }}
             onUpdateTab={async (tabId, input) => {
-              await api.updateSectionTab(nodeId, MEMBERS_SECTION_KEY, tabId, input);
+              await api.updateRelationshipView(nodeId, MEMBERS_RELATIONSHIP_TYPE, tabId, input);
               onTabsUpdated?.();
             }}
             onDeleteTab={async (tabId) => {
-              await api.deleteSectionTab(nodeId, MEMBERS_SECTION_KEY, tabId);
+              await api.deleteRelationshipView(nodeId, MEMBERS_RELATIONSHIP_TYPE, tabId);
               onTabsUpdated?.();
             }}
             onTabsReorder={async (tabOrder) => {
-              await api.updateSectionTabOrder(nodeId, MEMBERS_SECTION_KEY, tabOrder);
+              await api.patchRelationshipViews(nodeId, MEMBERS_RELATIONSHIP_TYPE, {
+                viewOrder: tabOrder,
+              });
               onTabsUpdated?.();
             }}
           />
@@ -271,7 +273,9 @@ export function DatabaseTableView({
             renderCell={renderCell}
             rowPageActions={rowPageActions}
             onColumnsReorder={async (columnOrder) => {
-              await api.updateSectionColumnOrder(nodeId, MEMBERS_SECTION_KEY, columnOrder);
+              await api.patchRelationshipViews(nodeId, MEMBERS_RELATIONSHIP_TYPE, {
+                properties: { columnOrder },
+              });
               onTabsUpdated?.();
             }}
             canManageColumn={canManageColumn}

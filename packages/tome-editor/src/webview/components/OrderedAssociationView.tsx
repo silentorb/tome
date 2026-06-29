@@ -31,7 +31,7 @@ import { SortableDataColumnHeaders, columnLabelFor, moveColumnOrderItem } from "
 import "./ordered-association-view.css";
 import "./section-data-table.css";
 
-const MEMBERS_SECTION_KEY = "items";
+const MEMBERS_RELATIONSHIP_TYPE = "members";
 
 interface OrderedAssociationViewProps {
   api: EditorApi;
@@ -288,7 +288,9 @@ export function OrderedAssociationView({
   const handleColumnsReorder = useCallback(
     async (columnOrder: string[]) => {
       setDisplayColumns(columnOrder);
-      await api.updateSectionColumnOrder(view.typeDatabaseId, MEMBERS_SECTION_KEY, columnOrder);
+      await api.patchRelationshipViews(view.typeDatabaseId, MEMBERS_RELATIONSHIP_TYPE, {
+        properties: { columnOrder },
+      });
       onCellUpdated?.();
     },
     [api, onCellUpdated, view.typeDatabaseId],

@@ -5,7 +5,13 @@ import {
   seedTestViews,
 } from "../../src/content/test-helpers";
 import { VIEWS_FILE_VERSION } from "../../src/content/views-file";
-import { createTab, deleteTab, reorderSectionTabs, updateTab, updateSectionColumnOrder } from "../../src/views/mutations";
+import {
+  createView,
+  deleteView,
+  reorderViews,
+  updateView,
+  updateRelationshipViewProperties,
+} from "../../src/views/mutations";
 
 describe("views mutations", () => {
   const fixture = createTestContentFixture("tome-views-mut-");
@@ -13,99 +19,101 @@ describe("views mutations", () => {
 
   seedTestViews(fixture, {
     version: VIEWS_FILE_VERSION,
-    nodes: {
-      [nodeId]: {
-        sections: {
-          members: {
-            tabs: {
-              kind: "custom",
-              definitions: [
-                { id: "all", name: "All", sorts: [{ column: "name", direction: "asc" }] },
-              ],
-            },
-          },
-        },
+    views: [
+      {
+        id: "all",
+        nodeId,
+        relationshipType: "members",
+        name: "All",
+        sorts: [{ column: "name", direction: "asc" }],
       },
-    },
+    ],
   });
 
-  test("creates and updates tabs", () => {
-    const created = createTab(fixture.ctx.store, nodeId, "members", {
+  test("creates and updates views", () => {
+    const created = createView(fixture.ctx.store, nodeId, "members", {
       name: "Sorted",
       sorts: [{ column: "priority", direction: "desc" }],
     });
     expect(created.name).toBe("Sorted");
 
-    const updated = updateTab(fixture.ctx.store, nodeId, "members", created.id, {
+    const updated = updateView(fixture.ctx.store, nodeId, "members", created.id, {
       name: "Renamed",
     });
     expect(updated.name).toBe("Renamed");
   });
 
-  test("updates section column order", () => {
-    const order = updateSectionColumnOrder(fixture.ctx.store, nodeId, "members", [
-      "status",
-      "priority",
-    ]);
-    expect(order).toEqual(["status", "priority"]);
+  test("updates relationship view properties column order on all sibling views", () => {
+    const properties = updateRelationshipViewProperties(fixture.ctx.store, nodeId, "members", {
+      columnOrder: ["status", "priority"],
+    });
+    expect(properties.columnOrder).toEqual(["status", "priority"]);
     const file = fixture.ctx.store.readViewsFile();
-    expect(file.nodes[nodeId]?.sections.members?.columnOrder).toEqual(["status", "priority"]);
+    for (const view of file.views) {
+      if (view.nodeId === nodeId && "id" in view) {
+        expect(view.properties?.columnOrder).toEqual(["status", "priority"]);
+      }
+    }
   });
 
-  test("reorders custom tabs", () => {
+  test("reorders custom views", () => {
     const reorderFixture = createTestContentFixture("tome-views-reorder-");
     seedTestViews(reorderFixture, {
       version: VIEWS_FILE_VERSION,
-      nodes: {
-        [nodeId]: {
-          sections: {
-            members: {
-              tabs: {
-                kind: "custom",
-                definitions: [
-                  { id: "first", name: "First", sorts: [{ column: "name", direction: "asc" }] },
-                  { id: "second", name: "Second", sorts: [{ column: "name", direction: "asc" }] },
-                  { id: "third", name: "Third", sorts: [{ column: "name", direction: "asc" }] },
-                ],
-              },
-            },
-          },
+      views: [
+        {
+          id: "first",
+          nodeId,
+          relationshipType: "members",
+          name: "First",
+          sorts: [{ column: "name", direction: "asc" }],
         },
-      },
+        {
+          id: "second",
+          nodeId,
+          relationshipType: "members",
+          name: "Second",
+          sorts: [{ column: "name", direction: "asc" }],
+        },
+        {
+          id: "third",
+          nodeId,
+          relationshipType: "members",
+          name: "Third",
+          sorts: [{ column: "name", direction: "asc" }],
+        },
+      ],
     });
     try {
-      const reordered = reorderSectionTabs(reorderFixture.ctx.store, nodeId, "members", [
+      const reordered = reorderViews(reorderFixture.ctx.store, nodeId, "members", [
         "third",
         "first",
         "second",
       ]);
-      expect(reordered.map((tab) => tab.id)).toEqual(["third", "first", "second"]);
+      expect(reordered.map((view) => view.id)).toEqual(["third", "first", "second"]);
     } finally {
       destroyTestContentFixture(reorderFixture);
     }
   });
 
-  test("refuses to delete the last tab", () => {
-    const soloFixture = createTestContentFixture("tome-views-last-tab-");
+  test("refuses to delete the last view", () => {
+    const soloFixture = createTestContentFixture("tome-views-last-view-");
     seedTestViews(soloFixture, {
       version: VIEWS_FILE_VERSION,
-      nodes: {
-        [nodeId]: {
-          sections: {
-            members: {
-              tabs: {
-                kind: "custom",
-                definitions: [
-                  { id: "all", name: "All", sorts: [{ column: "name", direction: "asc" }] },
-                ],
-              },
-            },
-          },
+      views: [
+        {
+          id: "all",
+          nodeId,
+          relationshipType: "members",
+          name: "All",
+          sorts: [{ column: "name", direction: "asc" }],
         },
-      },
+      ],
     });
     try {
-      expect(() => deleteTab(soloFixture.ctx.store, nodeId, "members", "all")).toThrow("last_tab");
+      expect(() => deleteView(soloFixture.ctx.store, nodeId, "members", "all")).toThrow(
+        "last_view",
+      );
     } finally {
       destroyTestContentFixture(soloFixture);
     }

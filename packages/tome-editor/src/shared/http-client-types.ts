@@ -48,28 +48,37 @@ export interface EditorApiClient {
   ): Promise<CreateNodeResponse>;
   getNode(id: string, options?: GetNodeOptions | string): Promise<NodePageDetail>;
   getDatabaseView(id: string, tabId?: string): Promise<DatabaseViewDetail>;
-  createSectionTab(
+  createRelationshipView(
     nodeId: string,
-    sectionKey: string,
-    input: { name: string; sorts?: import("tome-db").ViewSortSpec[] },
-  ): Promise<import("tome-db").CustomTabDefinition>;
-  updateSectionTab(
+    relationshipType: string,
+    input: { name: string; sorts?: import("tome-db").ViewSortSpec[]; properties?: import("tome-db").ViewProperties },
+  ): Promise<import("tome-db").ViewDefinition>;
+  updateRelationshipView(
     nodeId: string,
-    sectionKey: string,
-    tabId: string,
-    input: { name?: string; sorts?: import("tome-db").ViewSortSpec[] },
-  ): Promise<import("tome-db").CustomTabDefinition>;
-  deleteSectionTab(nodeId: string, sectionKey: string, tabId: string): Promise<void>;
-  updateSectionColumnOrder(
+    relationshipType: string,
+    viewId: string,
+    input: {
+      name?: string;
+      sorts?: import("tome-db").ViewSortSpec[];
+      properties?: import("tome-db").ViewProperties;
+    },
+  ): Promise<import("tome-db").ViewDefinition>;
+  deleteRelationshipView(
     nodeId: string,
-    sectionKey: string,
-    columnOrder: string[],
-  ): Promise<string[]>;
-  updateSectionTabOrder(
+    relationshipType: string,
+    viewId: string,
+  ): Promise<void>;
+  patchRelationshipViews(
     nodeId: string,
-    sectionKey: string,
-    tabOrder: string[],
-  ): Promise<import("tome-db").CustomTabDefinition[]>;
+    relationshipType: string,
+    input: {
+      viewOrder?: string[];
+      properties?: import("tome-db").ViewProperties;
+    },
+  ): Promise<{
+    views?: import("tome-db").ViewDefinition[];
+    properties?: import("tome-db").ViewProperties;
+  }>;
   deleteDatabaseColumn(
     databaseId: string,
     columnKey: string,

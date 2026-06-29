@@ -1,6 +1,6 @@
 import { isNodeId } from "./paths";
 
-export const VIEWS_FILE_VERSION = 1;
+export const VIEWS_FILE_VERSION = 2;
 
 export type ViewSortDirection = "asc" | "desc";
 
@@ -9,41 +9,47 @@ export interface ViewSortSpec {
   direction: ViewSortDirection;
 }
 
-export interface CustomTabDefinition {
-  id: string;
-  name: string;
-  sorts: ViewSortSpec[];
-}
-
-export interface CustomSectionTabs {
-  kind: "custom";
-  definitions: CustomTabDefinition[];
-}
-
-export interface GeneratedSectionTabs {
-  kind: "generated";
-  provider: string;
-}
-
-export type SectionTabsConfig = CustomSectionTabs | GeneratedSectionTabs;
-
-export interface NodeSectionViewConfig {
-  tabs: SectionTabsConfig;
-  /** Optional override for data column order (column keys, not display names). */
+export interface ViewProperties {
   columnOrder?: string[];
 }
 
-export interface NodeViewConfig {
-  sections: Record<string, NodeSectionViewConfig>;
+/** A static view definition for a node + relationship type pair. */
+export interface ViewDefinition {
+  id: string;
+  nodeId: string;
+  relationshipType: string;
+  name: string;
+  sorts: ViewSortSpec[];
+  properties?: ViewProperties;
 }
+
+/** Generated views computed at runtime from a provider (e.g. scenes-by-book). */
+export interface GeneratedViewRecord {
+  nodeId: string;
+  relationshipType: string;
+  generator: string;
+}
+
+export type ViewRecord = ViewDefinition | GeneratedViewRecord;
+
+/** @deprecated Use ViewDefinition */
+export type CustomTabDefinition = Pick<ViewDefinition, "id" | "name" | "sorts">;
 
 export interface ViewsFile {
   version: number;
-  nodes: Record<string, NodeViewConfig>;
+  views: ViewRecord[];
+}
+
+export function isGeneratedViewRecord(record: ViewRecord): record is GeneratedViewRecord {
+  return "generator" in record && typeof (record as GeneratedViewRecord).generator === "string";
+}
+
+export function isViewDefinition(record: ViewRecord): record is ViewDefinition {
+  return "id" in record && "name" in record && "sorts" in record;
 }
 
 export function emptyViewsFile(): ViewsFile {
-  return { version: VIEWS_FILE_VERSION, nodes: {} };
+  return { version: VIEWS_FILE_VERSION, views: [] };
 }
 
 function parseSortSpec(raw: unknown, path: string): ViewSortSpec {
@@ -58,60 +64,6 @@ function parseSortSpec(raw: unknown, path: string): ViewSortSpec {
     throw new Error(`${path}: sort.direction must be "asc" or "desc"`);
   }
   return { column: obj.column.trim(), direction: obj.direction };
-}
-
-function parseCustomTab(raw: unknown, path: string): CustomTabDefinition {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error(`${path}: tab definition must be an object`);
-  }
-  const obj = raw as Record<string, unknown>;
-  if (typeof obj.id !== "string" || !obj.id.trim()) {
-    throw new Error(`${path}: tab id is required`);
-  }
-  if (typeof obj.name !== "string" || !obj.name.trim()) {
-    throw new Error(`${path}: tab name is required`);
-  }
-  if (!Array.isArray(obj.sorts)) {
-    throw new Error(`${path}: tab sorts must be an array`);
-  }
-  return {
-    id: obj.id.trim(),
-    name: obj.name.trim(),
-    sorts: obj.sorts.map((sort, index) => parseSortSpec(sort, `${path}.sorts[${index}]`)),
-  };
-}
-
-function parseSectionTabs(raw: unknown, path: string): SectionTabsConfig {
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error(`${path}: tabs must be an object`);
-  }
-  const obj = raw as Record<string, unknown>;
-  if (obj.kind === "generated") {
-    if (typeof obj.provider !== "string" || !obj.provider.trim()) {
-      throw new Error(`${path}: generated tabs require provider`);
-    }
-    return { kind: "generated", provider: obj.provider.trim() };
-  }
-  if (obj.kind === "custom") {
-    if (!Array.isArray(obj.definitions)) {
-      throw new Error(`${path}: custom tabs require definitions array`);
-    }
-    const definitions = obj.definitions.map((def, index) =>
-      parseCustomTab(def, `${path}.definitions[${index}]`),
-    );
-    if (definitions.length === 0) {
-      throw new Error(`${path}: custom tabs require at least one definition`);
-    }
-    const ids = new Set<string>();
-    for (const def of definitions) {
-      if (ids.has(def.id)) {
-        throw new Error(`${path}: duplicate tab id "${def.id}"`);
-      }
-      ids.add(def.id);
-    }
-    return { kind: "custom", definitions };
-  }
-  throw new Error(`${path}: tabs.kind must be "custom" or "generated"`);
 }
 
 function parseColumnOrder(raw: unknown, path: string): string[] | undefined {
@@ -130,28 +82,88 @@ function parseColumnOrder(raw: unknown, path: string): string[] | undefined {
   return order.length > 0 ? order : undefined;
 }
 
-function parseNodeViewConfig(raw: unknown, nodeId: string): NodeViewConfig {
+function parseViewProperties(raw: unknown, path: string): ViewProperties | undefined {
+  if (raw === undefined) return undefined;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error(`views.json nodes.${nodeId}: must be an object`);
+    throw new Error(`${path}: properties must be an object`);
   }
   const obj = raw as Record<string, unknown>;
-  if (!obj.sections || typeof obj.sections !== "object" || Array.isArray(obj.sections)) {
-    throw new Error(`views.json nodes.${nodeId}: sections must be an object`);
+  const columnOrder = parseColumnOrder(obj.columnOrder, `${path}.columnOrder`);
+  if (!columnOrder) return undefined;
+  return { columnOrder };
+}
+
+function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
+  const path = `views.json views[${index}]`;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${path}: must be an object`);
   }
-  const sections: Record<string, NodeSectionViewConfig> = {};
-  for (const [sectionKey, sectionRaw] of Object.entries(obj.sections)) {
-    if (!sectionRaw || typeof sectionRaw !== "object" || Array.isArray(sectionRaw)) {
-      throw new Error(`views.json nodes.${nodeId}.sections.${sectionKey}: must be an object`);
-    }
-    const sectionObj = sectionRaw as Record<string, unknown>;
-    const sectionPath = `views.json nodes.${nodeId}.sections.${sectionKey}`;
-    const columnOrder = parseColumnOrder(sectionObj.columnOrder, sectionPath);
-    sections[sectionKey] = {
-      tabs: parseSectionTabs(sectionObj.tabs, `${sectionPath}.tabs`),
-      ...(columnOrder ? { columnOrder } : {}),
-    };
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.generator === "string") {
+    throw new Error(`${path}: custom views must not include generator`);
   }
-  return { sections };
+  if (typeof obj.id !== "string" || !obj.id.trim()) {
+    throw new Error(`${path}: id is required`);
+  }
+  if (typeof obj.nodeId !== "string" || !isNodeId(obj.nodeId)) {
+    throw new Error(`${path}: nodeId must be a 32-character hex node id`);
+  }
+  if (typeof obj.relationshipType !== "string" || !obj.relationshipType.trim()) {
+    throw new Error(`${path}: relationshipType is required`);
+  }
+  if (typeof obj.name !== "string" || !obj.name.trim()) {
+    throw new Error(`${path}: name is required`);
+  }
+  if (!Array.isArray(obj.sorts)) {
+    throw new Error(`${path}: sorts must be an array`);
+  }
+  const properties = parseViewProperties(obj.properties, `${path}.properties`);
+  return {
+    id: obj.id.trim(),
+    nodeId: obj.nodeId.trim().toLowerCase(),
+    relationshipType: obj.relationshipType.trim(),
+    name: obj.name.trim(),
+    sorts: obj.sorts.map((sort, sortIndex) =>
+      parseSortSpec(sort, `${path}.sorts[${sortIndex}]`),
+    ),
+    ...(properties ? { properties } : {}),
+  };
+}
+
+function parseGeneratedViewRecord(raw: unknown, index: number): GeneratedViewRecord {
+  const path = `views.json views[${index}]`;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${path}: must be an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.nodeId !== "string" || !isNodeId(obj.nodeId)) {
+    throw new Error(`${path}: nodeId must be a 32-character hex node id`);
+  }
+  if (typeof obj.relationshipType !== "string" || !obj.relationshipType.trim()) {
+    throw new Error(`${path}: relationshipType is required`);
+  }
+  if (typeof obj.generator !== "string" || !obj.generator.trim()) {
+    throw new Error(`${path}: generator is required`);
+  }
+  if ("id" in obj || "name" in obj || "sorts" in obj) {
+    throw new Error(`${path}: generated views must not include id, name, or sorts`);
+  }
+  return {
+    nodeId: obj.nodeId.trim().toLowerCase(),
+    relationshipType: obj.relationshipType.trim(),
+    generator: obj.generator.trim(),
+  };
+}
+
+function parseViewRecord(raw: unknown, index: number): ViewRecord {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`views.json views[${index}]: must be an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.generator === "string" && obj.generator.trim()) {
+    return parseGeneratedViewRecord(raw, index);
+  }
+  return parseViewDefinition(raw, index);
 }
 
 export function parseViewsFile(raw: string): ViewsFile {
@@ -163,24 +175,59 @@ export function parseViewsFile(raw: string): ViewsFile {
   if (typeof obj.version !== "number") {
     throw new Error("views.json: version is required");
   }
-  if (!obj.nodes || typeof obj.nodes !== "object" || Array.isArray(obj.nodes)) {
-    throw new Error("views.json: nodes must be an object");
+  if (obj.version !== VIEWS_FILE_VERSION) {
+    throw new Error(`views.json: unsupported version ${obj.version} (expected ${VIEWS_FILE_VERSION})`);
   }
-  const nodes: Record<string, NodeViewConfig> = {};
-  for (const [nodeId, nodeRaw] of Object.entries(obj.nodes)) {
-    if (!isNodeId(nodeId)) {
-      throw new Error(`views.json nodes: invalid node id "${nodeId}"`);
+  if (!Array.isArray(obj.views)) {
+    throw new Error("views.json: views must be an array");
+  }
+
+  const views: ViewRecord[] = [];
+  const customViewIds = new Set<string>();
+  const generatedPairs = new Set<string>();
+  const customPairs = new Set<string>();
+
+  for (let index = 0; index < obj.views.length; index += 1) {
+    const record = parseViewRecord(obj.views[index], index);
+    views.push(record);
+
+    const pairKey = `${record.nodeId}:${record.relationshipType}`;
+    if (isGeneratedViewRecord(record)) {
+      if (customPairs.has(pairKey)) {
+        throw new Error(
+          `views.json views[${index}]: cannot mix generated and custom views for ${record.nodeId}/${record.relationshipType}`,
+        );
+      }
+      if (generatedPairs.has(pairKey)) {
+        throw new Error(
+          `views.json views[${index}]: duplicate generated view for ${record.nodeId}/${record.relationshipType}`,
+        );
+      }
+      generatedPairs.add(pairKey);
+      continue;
     }
-    nodes[nodeId] = parseNodeViewConfig(nodeRaw, nodeId);
+
+    if (generatedPairs.has(pairKey)) {
+      throw new Error(
+        `views.json views[${index}]: cannot mix generated and custom views for ${record.nodeId}/${record.relationshipType}`,
+      );
+    }
+    const viewKey = `${pairKey}:${record.id}`;
+    if (customViewIds.has(viewKey)) {
+      throw new Error(`views.json views[${index}]: duplicate view id "${record.id}"`);
+    }
+    customViewIds.add(viewKey);
+    customPairs.add(pairKey);
   }
-  return { version: obj.version, nodes };
+
+  return { version: obj.version, views };
 }
 
 export function serializeViewsFile(file: ViewsFile): string {
   return `${JSON.stringify(file, null, 2)}\n`;
 }
 
-/** Stable slug for a new tab id from a display name. */
+/** Stable slug for a new view id from a display name. */
 export function slugifyTabId(name: string): string {
   let s = name.trim().toLowerCase();
   s = s.replace(/[^a-z0-9]+/g, "-");
@@ -196,8 +243,17 @@ export function uniqueTabId(base: string, existingIds: Set<string>): string {
   return `${base}-${index}`;
 }
 
-export const DEFAULT_CUSTOM_TAB: CustomTabDefinition = {
+export const DEFAULT_VIEW: ViewDefinition = {
   id: "all",
+  nodeId: "",
+  relationshipType: "members",
   name: "All",
   sorts: [{ column: "name", direction: "asc" }],
+};
+
+/** @deprecated Use DEFAULT_VIEW */
+export const DEFAULT_CUSTOM_TAB: CustomTabDefinition = {
+  id: DEFAULT_VIEW.id,
+  name: DEFAULT_VIEW.name,
+  sorts: DEFAULT_VIEW.sorts,
 };

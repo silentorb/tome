@@ -96,6 +96,11 @@ export function PageActionsMenu({
   }, [menuOpen]);
 
   useEffect(() => {
+    if (menuOpen) return;
+    triggerRef.current?.blur();
+  }, [menuOpen]);
+
+  useEffect(() => {
     if (!menuOpen) setMenuPosition(null);
   }, [menuOpen]);
 

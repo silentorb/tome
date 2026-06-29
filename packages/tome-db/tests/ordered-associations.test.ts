@@ -135,15 +135,13 @@ describe("ordered-associations", () => {
 
   seedTestViews(fixture, {
     version: VIEWS_FILE_VERSION,
-    nodes: {
-      [SCENES_DB]: {
-        sections: {
-          members: {
-            tabs: { kind: "generated", provider: CONFIG_ID },
-          },
-        },
+    views: [
+      {
+        nodeId: SCENES_DB,
+        relationshipType: "members",
+        generator: CONFIG_ID,
       },
-    },
+    ],
   });
   seedTestDynamicFields(fixture, []);
 

@@ -28,7 +28,7 @@
 }
 
 .tome-database-table tbody tr:hover .tome-table-row-actions-col .tome-page-actions-trigger,
-.tome-database-table tbody tr:focus-within .tome-table-row-actions-col .tome-page-actions-trigger,
+.tome-database-table tbody .tome-table-row-actions-col .tome-page-actions-trigger:focus-visible,
 .tome-database-table tbody .tome-table-row-actions-col .tome-page-actions.is-menu-open .tome-page-actions-trigger {
   opacity: 1;
   pointer-events: auto;

@@ -299,83 +299,83 @@ export function createApiHandler(
       if (viewsNodeMatch && req.method === "GET") {
         const nodeId = viewsNodeMatch[1]!.toLowerCase();
         const views = db.getNodeViews(nodeId);
-        return json({ views: views ?? null });
+        return json({ views });
       }
 
-      const viewsSectionMatch =
-        /^\/api\/views\/nodes\/([a-f0-9]{32})\/sections\/([a-z0-9_-]+)$/i.exec(path);
-      if (viewsSectionMatch && req.method === "PATCH") {
-        const nodeId = viewsSectionMatch[1]!.toLowerCase();
-        const sectionKey = viewsSectionMatch[2]!;
-        const payload = (await req.json()) as { columnOrder?: string[]; tabOrder?: string[] };
-        const hasColumnOrder = Array.isArray(payload.columnOrder);
-        const hasTabOrder = Array.isArray(payload.tabOrder);
-        if (!hasColumnOrder && !hasTabOrder) {
-          return json({ error: "columnOrder or tabOrder required" }, 400);
+      const viewsRelationshipMatch =
+        /^\/api\/views\/nodes\/([a-f0-9]{32})\/relationships\/([a-z0-9_-]+)$/i.exec(path);
+      if (viewsRelationshipMatch && req.method === "PATCH") {
+        const nodeId = viewsRelationshipMatch[1]!.toLowerCase();
+        const relationshipType = viewsRelationshipMatch[2]!;
+        const payload = (await req.json()) as {
+          viewOrder?: string[];
+          properties?: import("tome-db").ViewProperties;
+        };
+        const hasViewOrder = Array.isArray(payload.viewOrder);
+        const hasProperties = payload.properties !== undefined;
+        if (!hasViewOrder && !hasProperties) {
+          return json({ error: "viewOrder or properties required" }, 400);
         }
         try {
-          const response: { columnOrder?: string[]; tabOrder?: import("tome-db").CustomTabDefinition[] } =
-            {};
-          if (hasColumnOrder) {
-            response.columnOrder = db.updateSectionColumnOrder(
-              nodeId,
-              sectionKey,
-              payload.columnOrder!,
-            );
-          }
-          if (hasTabOrder) {
-            response.tabOrder = db.updateSectionTabOrder(
-              nodeId,
-              sectionKey,
-              payload.tabOrder!,
-            );
-          }
+          const response = db.patchRelationshipViews(nodeId, relationshipType, {
+            ...(hasViewOrder ? { viewOrder: payload.viewOrder } : {}),
+            ...(hasProperties ? { properties: payload.properties } : {}),
+          });
           return json(response);
         } catch (err) {
           return json({ error: String(err) }, 400);
         }
       }
 
-      const viewsTabCollectionMatch =
-        /^\/api\/views\/nodes\/([a-f0-9]{32})\/sections\/([a-z0-9_-]+)\/tabs$/i.exec(path);
-      if (viewsTabCollectionMatch && req.method === "POST") {
-        const nodeId = viewsTabCollectionMatch[1]!.toLowerCase();
-        const sectionKey = viewsTabCollectionMatch[2]!;
-        const payload = (await req.json()) as { name?: string; sorts?: ViewSortSpec[] };
+      const viewsCollectionMatch =
+        /^\/api\/views\/nodes\/([a-f0-9]{32})\/relationships\/([a-z0-9_-]+)\/views$/i.exec(path);
+      if (viewsCollectionMatch && req.method === "POST") {
+        const nodeId = viewsCollectionMatch[1]!.toLowerCase();
+        const relationshipType = viewsCollectionMatch[2]!;
+        const payload = (await req.json()) as {
+          name?: string;
+          sorts?: ViewSortSpec[];
+          properties?: import("tome-db").ViewProperties;
+        };
         if (typeof payload.name !== "string" || !payload.name.trim()) {
           return json({ error: "name required" }, 400);
         }
         try {
-          const tab = db.createSectionTab(nodeId, sectionKey, {
+          const view = db.createRelationshipView(nodeId, relationshipType, {
             name: payload.name,
             sorts: payload.sorts,
+            properties: payload.properties,
           });
-          return json({ tab });
+          return json({ view });
         } catch (err) {
           return json({ error: String(err) }, 400);
         }
       }
 
-      const viewsTabMatch =
-        /^\/api\/views\/nodes\/([a-f0-9]{32})\/sections\/([a-z0-9_-]+)\/tabs\/([a-z0-9-]+)$/i.exec(
+      const viewsItemMatch =
+        /^\/api\/views\/nodes\/([a-f0-9]{32})\/relationships\/([a-z0-9_-]+)\/views\/([a-z0-9-]+)$/i.exec(
           path,
         );
-      if (viewsTabMatch) {
-        const nodeId = viewsTabMatch[1]!.toLowerCase();
-        const sectionKey = viewsTabMatch[2]!;
-        const tabId = viewsTabMatch[3]!;
+      if (viewsItemMatch) {
+        const nodeId = viewsItemMatch[1]!.toLowerCase();
+        const relationshipType = viewsItemMatch[2]!;
+        const viewId = viewsItemMatch[3]!;
         if (req.method === "PATCH") {
-          const payload = (await req.json()) as { name?: string; sorts?: ViewSortSpec[] };
+          const payload = (await req.json()) as {
+            name?: string;
+            sorts?: ViewSortSpec[];
+            properties?: import("tome-db").ViewProperties;
+          };
           try {
-            const tab = db.updateSectionTab(nodeId, sectionKey, tabId, payload);
-            return json({ tab });
+            const view = db.updateRelationshipView(nodeId, relationshipType, viewId, payload);
+            return json({ view });
           } catch (err) {
             return json({ error: String(err) }, 400);
           }
         }
         if (req.method === "DELETE") {
           try {
-            db.deleteSectionTab(nodeId, sectionKey, tabId);
+            db.deleteRelationshipView(nodeId, relationshipType, viewId);
             return json({ ok: true });
           } catch (err) {
             return json({ error: String(err) }, 400);

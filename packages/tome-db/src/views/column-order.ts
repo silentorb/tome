@@ -1,5 +1,6 @@
 import type { DatabaseColumnDef } from "../database-view";
 import type { ViewsFile } from "../content/views-file";
+import { columnOrderFromViews } from "./index";
 
 /** Apply optional section columnOrder override to default column keys. */
 export function applyColumnOrder(defaultOrder: string[], columnOrder?: string[]): string[] {
@@ -54,9 +55,9 @@ export function reorderColumnDefs<T extends { key: string }>(
 export function getSectionColumnOrder(
   views: ViewsFile,
   nodeId: string,
-  sectionKey: string,
+  relationshipType: string,
 ): string[] | undefined {
-  return views.nodes[nodeId]?.sections[sectionKey]?.columnOrder;
+  return columnOrderFromViews(views, nodeId, relationshipType);
 }
 
 export function applySectionColumnOrder(
@@ -64,9 +65,9 @@ export function applySectionColumnOrder(
   columnDefs: DatabaseColumnDef[] | undefined,
   views: ViewsFile,
   nodeId: string,
-  sectionKey: string,
+  relationshipType: string,
 ): { columns: string[]; columnDefs: DatabaseColumnDef[] | undefined } {
-  const columnOrder = getSectionColumnOrder(views, nodeId, sectionKey);
+  const columnOrder = getSectionColumnOrder(views, nodeId, relationshipType);
   const columns = applyColumnOrder(defaultOrder, columnOrder);
   if (!columnDefs?.length) {
     return { columns, columnDefs };

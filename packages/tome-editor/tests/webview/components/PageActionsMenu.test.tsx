@@ -126,6 +126,29 @@ describe("PageActionsMenu", () => {
     expect(onRemoveQuickLink).toHaveBeenCalledTimes(1);
   });
 
+  test("blurs trigger after menu is dismissed", () => {
+    const { getByRole } = render(
+      <PageActionsMenu
+        recordTitle="Row page"
+        trigger="vertical-dots"
+        menuPlacement="inline"
+        onArchive={async () => {}}
+        onDelete={async () => {}}
+      />,
+    );
+
+    const trigger = getByRole("button", { name: "Page actions" });
+    trigger.focus();
+    expect(document.activeElement).toBe(trigger);
+
+    fireEvent.click(trigger);
+    expect(trigger.getAttribute("aria-expanded")).toBe("true");
+
+    fireEvent.mouseDown(document.body);
+    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    expect(document.activeElement).not.toBe(trigger);
+  });
+
   test("archive confirm uses archive hub title", async () => {
     render(
       <PageActionsMenu

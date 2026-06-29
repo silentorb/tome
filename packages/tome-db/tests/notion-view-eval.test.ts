@@ -105,24 +105,15 @@ describe("getDatabaseViewDetail with custom tabs", () => {
       viewsFilePath(contentDir),
       serializeViewsFile({
         version: VIEWS_FILE_VERSION,
-        nodes: {
-          [databaseId]: {
-            sections: {
-              members: {
-                tabs: {
-                  kind: "custom",
-                  definitions: [
-                    {
-                      id: "done-only",
-                      name: "Done only",
-                      sorts: [{ column: "name", direction: "asc" }],
-                    },
-                  ],
-                },
-              },
-            },
+        views: [
+          {
+            id: "done-only",
+            nodeId: databaseId,
+            relationshipType: "members",
+            name: "Done only",
+            sorts: [{ column: "name", direction: "asc" }],
           },
-        },
+        ],
       }),
     );
     writeFileSync(
@@ -168,25 +159,16 @@ describe("getDatabaseViewDetail with custom tabs", () => {
       viewsFilePath(contentDir),
       serializeViewsFile({
         version: VIEWS_FILE_VERSION,
-        nodes: {
-          [databaseId]: {
-            sections: {
-              members: {
-                columnOrder: ["status"],
-                tabs: {
-                  kind: "custom",
-                  definitions: [
-                    {
-                      id: "all",
-                      name: "All",
-                      sorts: [{ column: "name", direction: "asc" }],
-                    },
-                  ],
-                },
-              },
-            },
+        views: [
+          {
+            id: "all",
+            nodeId: databaseId,
+            relationshipType: "members",
+            name: "All",
+            sorts: [{ column: "name", direction: "asc" }],
+            properties: { columnOrder: ["status"] },
           },
-        },
+        ],
       }),
     );
     writeFileSync(
@@ -231,24 +213,15 @@ describe("getDatabaseViewDetail with custom tabs", () => {
       viewsFilePath(contentDir),
       serializeViewsFile({
         version: VIEWS_FILE_VERSION,
-        nodes: {
-          [featuresDb]: {
-            sections: {
-              members: {
-                tabs: {
-                  kind: "custom",
-                  definitions: [
-                    {
-                      id: "by-inspirations",
-                      name: "By inspirations",
-                      sorts: [{ column: "inspirations", direction: "desc" }],
-                    },
-                  ],
-                },
-              },
-            },
+        views: [
+          {
+            id: "by-inspirations",
+            nodeId: featuresDb,
+            relationshipType: "members",
+            name: "By inspirations",
+            sorts: [{ column: "inspirations", direction: "desc" }],
           },
-        },
+        ],
       }),
     );
     writeFileSync(
