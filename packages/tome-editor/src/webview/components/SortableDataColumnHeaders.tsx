@@ -20,16 +20,18 @@ interface ColumnHeaderManageProps {
   label: string;
   canManage?: boolean;
   isRelation?: boolean;
+  onColumnHide?: (column: string) => void;
   onColumnEdit?: (column: string) => void;
   onColumnDelete?: (column: string) => void | Promise<void>;
 }
 
-function wrapManageableColumnHeader(
+function wrapColumnHeaderMenu(
   {
     column,
     label,
     canManage,
     isRelation,
+    onColumnHide,
     onColumnEdit,
     onColumnDelete,
   }: ColumnHeaderManageProps,
@@ -37,8 +39,11 @@ function wrapManageableColumnHeader(
   innerClassName?: string,
 ) {
   const inner = innerClassName ? <div className={innerClassName}>{content}</div> : content;
+  const canEdit = Boolean(canManage && onColumnEdit);
+  const canDelete = Boolean(canManage && onColumnDelete);
+  const canHide = Boolean(onColumnHide);
 
-  if (!canManage || (!onColumnEdit && !onColumnDelete)) {
+  if (!canEdit && !canDelete && !canHide) {
     return inner;
   }
 
@@ -46,8 +51,9 @@ function wrapManageableColumnHeader(
     <ColumnHeaderMenu
       columnLabel={label}
       isRelation={isRelation}
-      onEdit={onColumnEdit ? () => onColumnEdit(column) : undefined}
-      onDelete={() => onColumnDelete?.(column)}
+      onHide={canHide ? () => onColumnHide!(column) : undefined}
+      onEdit={canEdit ? () => onColumnEdit!(column) : undefined}
+      onDelete={canDelete ? () => onColumnDelete?.(column) : undefined}
     >
       {inner}
     </ColumnHeaderMenu>
@@ -66,11 +72,12 @@ function ColumnHeaderCellContent({
   innerClassName,
   canManage,
   isRelation,
+  onColumnHide,
   onColumnEdit,
   onColumnDelete,
 }: ColumnHeaderCellContentProps) {
-  return wrapManageableColumnHeader(
-    { column, label, canManage, isRelation, onColumnEdit, onColumnDelete },
+  return wrapColumnHeaderMenu(
+    { column, label, canManage, isRelation, onColumnHide, onColumnEdit, onColumnDelete },
     renderHeader(column, label),
     innerClassName,
   );
@@ -82,6 +89,7 @@ interface SortableColumnHeaderCellProps {
   renderHeader: (column: string, label: string) => ReactNode;
   canManage?: boolean;
   isRelation?: boolean;
+  onColumnHide?: (column: string) => void;
   onColumnEdit?: (column: string) => void;
   onColumnDelete?: (column: string) => void | Promise<void>;
   useDragOverlay?: boolean;
@@ -94,6 +102,7 @@ function SortableColumnHeaderCell({
   renderHeader,
   canManage,
   isRelation,
+  onColumnHide,
   onColumnEdit,
   onColumnDelete,
   useDragOverlay = false,
@@ -127,6 +136,7 @@ function SortableColumnHeaderCell({
         innerClassName="tome-column-header-inner"
         canManage={canManage}
         isRelation={isRelation}
+        onColumnHide={onColumnHide}
         onColumnEdit={onColumnEdit}
         onColumnDelete={onColumnDelete}
       />
@@ -145,6 +155,7 @@ export interface SortableDataColumnHeadersProps {
   sortableIdPrefix?: string;
   canManageColumn?: (column: string) => boolean;
   isRelationColumn?: (column: string) => boolean;
+  onColumnHide?: (column: string) => void;
   onColumnEdit?: (column: string) => void;
   onColumnDelete?: (column: string) => void | Promise<void>;
 }
@@ -159,6 +170,7 @@ export function SortableDataColumnHeaders({
   sortableIdPrefix,
   canManageColumn,
   isRelationColumn,
+  onColumnHide,
   onColumnEdit,
   onColumnDelete,
 }: SortableDataColumnHeadersProps) {
@@ -178,6 +190,7 @@ export function SortableDataColumnHeaders({
               renderHeader={renderHeader}
               canManage={canManageColumn?.(column)}
               isRelation={isRelationColumn?.(column)}
+              onColumnHide={onColumnHide}
               onColumnEdit={onColumnEdit}
               onColumnDelete={onColumnDelete}
             />
@@ -197,6 +210,7 @@ export function SortableDataColumnHeaders({
           renderHeader={renderHeader}
           canManage={canManageColumn?.(column)}
           isRelation={isRelationColumn?.(column)}
+          onColumnHide={onColumnHide}
           onColumnEdit={onColumnEdit}
           onColumnDelete={onColumnDelete}
           useDragOverlay={useDragOverlay}

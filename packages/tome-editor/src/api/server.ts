@@ -365,6 +365,7 @@ export function createApiHandler(
             name?: string;
             sorts?: ViewSortSpec[];
             properties?: import("tome-db").ViewProperties;
+            hiddenColumns?: string[];
           };
           try {
             const view = db.updateRelationshipView(nodeId, relationshipType, viewId, payload);

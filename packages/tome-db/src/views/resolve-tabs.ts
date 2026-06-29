@@ -20,16 +20,18 @@ export const MEMBERS_SECTION_KEY = MEMBERS_RELATIONSHIP_TYPE;
 /** @deprecated Use MEMBERS_RELATIONSHIP_TYPE */
 export const ITEMS_SECTION_KEY = MEMBERS_RELATIONSHIP_TYPE;
 
+type TabDefinitionSummary = Pick<ViewDefinition, "id" | "name" | "sorts" | "hiddenColumns">;
+
 export interface ResolvedCustomTabs {
   kind: "custom";
   items: ResolvedTab[];
   activeTabId: string;
-  activeDefinition: Pick<ViewDefinition, "id" | "name" | "sorts">;
-  definitions: Pick<ViewDefinition, "id" | "name" | "sorts">[];
+  activeDefinition: TabDefinitionSummary;
+  definitions: TabDefinitionSummary[];
 }
 
 function resolveActiveTabId(
-  tabs: Pick<ViewDefinition, "id" | "name" | "sorts">[],
+  tabs: TabDefinitionSummary[],
   requestedTabId?: string,
 ): string {
   if (requestedTabId && tabs.some((tab) => tab.id === requestedTabId)) {
@@ -43,7 +45,7 @@ export function getSectionTabsConfig(
   views: ViewsFile,
   nodeId: string,
   relationshipType: string,
-): { kind: "generated"; provider: string } | { kind: "custom"; definitions: Pick<ViewDefinition, "id" | "name" | "sorts">[] } | null {
+): { kind: "generated"; provider: string } | { kind: "custom"; definitions: TabDefinitionSummary[] } | null {
   const generated = generatedViewForRelationship(views, nodeId, relationshipType);
   if (generated) {
     return { kind: "generated", provider: generated.generator };
@@ -132,7 +134,7 @@ export function resolveCustomTabsForNode(
 
 /** @deprecated Use resolveCustomTabs with views file. Kept for tests without content dir. */
 export function buildCustomTabsDetail(
-  definitions: Pick<ViewDefinition, "id" | "name" | "sorts">[],
+  definitions: TabDefinitionSummary[],
   requestedTabId?: string,
 ): ResolvedCustomTabs {
   const activeTabId = resolveActiveTabId(definitions, requestedTabId);

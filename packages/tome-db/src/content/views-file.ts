@@ -21,6 +21,8 @@ export interface ViewDefinition {
   name: string;
   sorts: ViewSortSpec[];
   properties?: ViewProperties;
+  /** Column keys hidden in this view only (not synced across sibling views). */
+  hiddenColumns?: string[];
 }
 
 /** Generated views computed at runtime from a provider (e.g. scenes-by-book). */
@@ -33,7 +35,7 @@ export interface GeneratedViewRecord {
 export type ViewRecord = ViewDefinition | GeneratedViewRecord;
 
 /** @deprecated Use ViewDefinition */
-export type CustomTabDefinition = Pick<ViewDefinition, "id" | "name" | "sorts">;
+export type CustomTabDefinition = Pick<ViewDefinition, "id" | "name" | "sorts" | "hiddenColumns">;
 
 export interface ViewsFile {
   version: number;
@@ -82,6 +84,22 @@ function parseColumnOrder(raw: unknown, path: string): string[] | undefined {
   return order.length > 0 ? order : undefined;
 }
 
+function parseHiddenColumns(raw: unknown, path: string): string[] | undefined {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw)) {
+    throw new Error(`${path}: hiddenColumns must be an array`);
+  }
+  const hidden: string[] = [];
+  for (let index = 0; index < raw.length; index += 1) {
+    const entry = raw[index];
+    if (typeof entry !== "string" || !entry.trim()) {
+      throw new Error(`${path}.hiddenColumns[${index}]: must be a non-empty string`);
+    }
+    hidden.push(entry.trim());
+  }
+  return hidden.length > 0 ? hidden : undefined;
+}
+
 function parseViewProperties(raw: unknown, path: string): ViewProperties | undefined {
   if (raw === undefined) return undefined;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -118,6 +136,7 @@ function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
     throw new Error(`${path}: sorts must be an array`);
   }
   const properties = parseViewProperties(obj.properties, `${path}.properties`);
+  const hiddenColumns = parseHiddenColumns(obj.hiddenColumns, `${path}.hiddenColumns`);
   return {
     id: obj.id.trim(),
     nodeId: obj.nodeId.trim().toLowerCase(),
@@ -127,6 +146,7 @@ function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
       parseSortSpec(sort, `${path}.sorts[${sortIndex}]`),
     ),
     ...(properties ? { properties } : {}),
+    ...(hiddenColumns ? { hiddenColumns } : {}),
   };
 }
 

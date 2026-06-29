@@ -12,6 +12,7 @@ import { RelationCellEditor } from "./RelationCellEditor";
 import { renderTableCell } from "./table-cell-render";
 import { TableSearchInput } from "./TableSearchInput";
 import { TableUtilityBar } from "./TableUtilityBar";
+import { ColumnVisibilityMenu } from "./ColumnVisibilityMenu";
 import { ColumnEditorDialog, type ColumnEditorState } from "./ColumnEditorDialog";
 import "./database-table-view.css";
 
@@ -48,17 +49,48 @@ export function DatabaseTableView({
   const [columnEditorState, setColumnEditorState] = useState<ColumnEditorState | null>(null);
   const tableKey = databaseTableSortKey(nodeId, databaseView.id, databaseView.tabs.activeTabId);
 
+  const activeTabDefinition = useMemo(
+    () =>
+      databaseView.tabs.customDefinitions?.find(
+        (definition) => definition.id === databaseView.tabs.activeTabId,
+      ),
+    [databaseView.tabs.activeTabId, databaseView.tabs.customDefinitions],
+  );
+
+  const hiddenColumns = activeTabDefinition?.hiddenColumns ?? [];
+  const allColumns = databaseView.allColumns ?? databaseView.columns;
+
   const tabDefaultSort = useMemo(() => {
-    const tab = databaseView.tabs.customDefinitions?.find(
-      (definition) => definition.id === databaseView.tabs.activeTabId,
-    );
-    return tab?.sorts?.length ? viewSortsToTableSort(tab.sorts) : undefined;
-  }, [databaseView.tabs.activeTabId, databaseView.tabs.customDefinitions]);
+    return activeTabDefinition?.sorts?.length
+      ? viewSortsToTableSort(activeTabDefinition.sorts)
+      : undefined;
+  }, [activeTabDefinition]);
 
   const columnLabels = useMemo(() => {
-    if (!databaseView.columnDefs?.length) return undefined;
-    return Object.fromEntries(databaseView.columnDefs.map((col) => [col.key, col.name]));
-  }, [databaseView.columnDefs]);
+    const defs = databaseView.allColumnDefs ?? databaseView.columnDefs;
+    if (!defs?.length) return undefined;
+    return Object.fromEntries(defs.map((col) => [col.key, col.name]));
+  }, [databaseView.allColumnDefs, databaseView.columnDefs]);
+
+  const toggleColumnVisibility = useCallback(
+    async (columnKey: string) => {
+      const activeTabId = databaseView.tabs.activeTabId;
+      if (!activeTabId) return;
+
+      const hidden = new Set(hiddenColumns);
+      if (hidden.has(columnKey)) {
+        hidden.delete(columnKey);
+      } else {
+        hidden.add(columnKey);
+      }
+
+      await api.updateRelationshipView(nodeId, MEMBERS_RELATIONSHIP_TYPE, activeTabId, {
+        hiddenColumns: [...hidden],
+      });
+      onTabsUpdated?.();
+    },
+    [api, databaseView.tabs.activeTabId, hiddenColumns, nodeId, onTabsUpdated],
+  );
 
   const canManageColumn = useCallback(
     (key: string) => {
@@ -234,6 +266,16 @@ export function DatabaseTableView({
                 + Column
               </button>
             }
+            columnVisibility={
+              <ColumnVisibilityMenu
+                columns={allColumns}
+                columnLabels={columnLabels}
+                hiddenColumns={hiddenColumns}
+                onToggle={(columnKey) => {
+                  void toggleColumnVisibility(columnKey);
+                }}
+              />
+            }
             addRow={<TableAddRowTrigger />}
             onTabSelect={onTabSelect}
             onCreateTab={async (input) => {
@@ -280,6 +322,9 @@ export function DatabaseTableView({
             }}
             canManageColumn={canManageColumn}
             isRelationColumn={isRelationColumn}
+            onColumnHide={(columnKey) => {
+              void toggleColumnVisibility(columnKey);
+            }}
             onColumnEdit={handleColumnEdit}
             onColumnDelete={handleColumnDelete}
             protectedNodeIds={protectedNodeIds}

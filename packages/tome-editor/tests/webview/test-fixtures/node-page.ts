@@ -31,8 +31,19 @@ export function makeDatabaseViewDetail(
     views,
     view,
     tabs,
+    allColumns: ["priority"],
     columns: ["priority"],
     columnDefs: [
+      {
+        key: "priority",
+        name: "Priority",
+        type: "enum",
+        enumId: "priority",
+        options: ["Low", "Medium", "High", "Consideration"],
+        defaultValue: "Low",
+      },
+    ],
+    allColumnDefs: [
       {
         key: "priority",
         name: "Priority",

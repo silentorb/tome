@@ -83,6 +83,32 @@ describe("views API", () => {
     };
     expect(viewOrderBody.views.map((view) => view.id)).toEqual([createdBody.view.id, "all"]);
 
+    const hiddenPatch = await handler(
+      new Request(`http://127.0.0.1${base}/views/all`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hiddenColumns: ["priority"] }),
+      }),
+    );
+    expect(hiddenPatch.status).toBe(200);
+    const hiddenBody = (await hiddenPatch.json()) as {
+      view: { hiddenColumns?: string[] };
+    };
+    expect(hiddenBody.view.hiddenColumns).toEqual(["priority"]);
+
+    const extraHiddenPatch = await handler(
+      new Request(`http://127.0.0.1${base}/views/${createdBody.view.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hiddenColumns: ["status"] }),
+      }),
+    );
+    expect(extraHiddenPatch.status).toBe(200);
+    const extraHiddenBody = (await extraHiddenPatch.json()) as {
+      view: { hiddenColumns?: string[] };
+    };
+    expect(extraHiddenBody.view.hiddenColumns).toEqual(["status"]);
+
     rmSync(dir, { recursive: true, force: true });
   });
 });

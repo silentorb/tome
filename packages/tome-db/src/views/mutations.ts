@@ -125,7 +125,12 @@ export function updateView(
   nodeId: string,
   relationshipType: string,
   viewId: string,
-  input: { name?: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
+  input: {
+    name?: string;
+    sorts?: ViewSortSpec[];
+    properties?: ViewProperties;
+    hiddenColumns?: string[];
+  },
 ): ViewDefinition {
   const file = store.readViewsFile();
   const index = findViewIndex(file, nodeId, relationshipType, viewId);
@@ -142,6 +147,14 @@ export function updateView(
   }
   if (input.properties !== undefined) {
     syncPropertiesOnSiblings(file, nodeId, relationshipType, input.properties);
+  }
+  if (input.hiddenColumns !== undefined) {
+    const normalized = input.hiddenColumns.map((key) => key.trim()).filter(Boolean);
+    if (normalized.length > 0) {
+      view.hiddenColumns = normalized;
+    } else {
+      delete view.hiddenColumns;
+    }
   }
 
   writeViews(store, file);
@@ -340,6 +353,15 @@ export function purgeColumnFromViews(
       }
       changed = true;
     }
+    if (view.hiddenColumns?.includes(columnKey)) {
+      const next = view.hiddenColumns.filter((key) => key !== columnKey);
+      if (next.length > 0) {
+        view.hiddenColumns = next;
+      } else {
+        delete view.hiddenColumns;
+      }
+      changed = true;
+    }
     if (view.sorts.some((sort) => sort.column === columnKey)) {
       view.sorts = [{ column: "name", direction: "asc" }];
       changed = true;
@@ -372,6 +394,10 @@ export function renameColumnInViews(
       view.properties = {
         columnOrder: order.map((key) => (key === oldKey ? newKey : key)),
       };
+      changed = true;
+    }
+    if (view.hiddenColumns?.includes(oldKey)) {
+      view.hiddenColumns = view.hiddenColumns.map((key) => (key === oldKey ? newKey : key));
       changed = true;
     }
     for (const sort of view.sorts) {

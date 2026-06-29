@@ -44,6 +44,7 @@ export function makeMockEditorApi(): EditorApi {
       relationshipType,
       name: input.name ?? viewId,
       sorts: input.sorts ?? [{ column: "name", direction: "asc" as const }],
+      ...(input.hiddenColumns ? { hiddenColumns: input.hiddenColumns } : {}),
     }),
     deleteRelationshipView: async () => {},
     patchRelationshipViews: async (nodeId, relationshipType, input) => {

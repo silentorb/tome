@@ -96,6 +96,48 @@ describe("views mutations", () => {
     }
   });
 
+  test("updates hiddenColumns on a single view without syncing siblings", () => {
+    const hiddenFixture = createTestContentFixture("tome-views-hidden-");
+    seedTestViews(hiddenFixture, {
+      version: VIEWS_FILE_VERSION,
+      views: [
+        {
+          id: "all",
+          nodeId,
+          relationshipType: "members",
+          name: "All",
+          sorts: [{ column: "name", direction: "asc" }],
+        },
+        {
+          id: "extra",
+          nodeId,
+          relationshipType: "members",
+          name: "Extra",
+          sorts: [{ column: "name", direction: "asc" }],
+        },
+      ],
+    });
+    try {
+      updateView(hiddenFixture.ctx.store, nodeId, "members", "all", {
+        hiddenColumns: ["status"],
+      });
+      updateView(hiddenFixture.ctx.store, nodeId, "members", "extra", {
+        hiddenColumns: ["priority"],
+      });
+      const file = hiddenFixture.ctx.store.readViewsFile();
+      const allView = file.views.find((view) => "id" in view && view.id === "all");
+      const extraView = file.views.find((view) => "id" in view && view.id === "extra");
+      expect(allView && "hiddenColumns" in allView ? allView.hiddenColumns : undefined).toEqual([
+        "status",
+      ]);
+      expect(
+        extraView && "hiddenColumns" in extraView ? extraView.hiddenColumns : undefined,
+      ).toEqual(["priority"]);
+    } finally {
+      destroyTestContentFixture(hiddenFixture);
+    }
+  });
+
   test("refuses to delete the last view", () => {
     const soloFixture = createTestContentFixture("tome-views-last-view-");
     seedTestViews(soloFixture, {

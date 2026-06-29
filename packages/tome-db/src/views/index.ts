@@ -68,8 +68,13 @@ export function columnOrderFromViews(
 
 export function viewDefinitionsForTabs(
   views: ViewDefinition[],
-): Pick<ViewDefinition, "id" | "name" | "sorts">[] {
-  return views.map(({ id, name, sorts }) => ({ id, name, sorts }));
+): Pick<ViewDefinition, "id" | "name" | "sorts" | "hiddenColumns">[] {
+  return views.map(({ id, name, sorts, hiddenColumns }) => ({
+    id,
+    name,
+    sorts,
+    ...(hiddenColumns ? { hiddenColumns } : {}),
+  }));
 }
 
 export function siblingViewProperties(

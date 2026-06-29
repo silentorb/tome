@@ -49,6 +49,7 @@ interface SectionDataTableProps {
   onColumnsReorder?: (nextColumns: string[]) => void | Promise<void>;
   canManageColumn?: (column: string) => boolean;
   isRelationColumn?: (column: string) => boolean;
+  onColumnHide?: (column: string) => void;
   onColumnEdit?: (column: string) => void;
   onColumnDelete?: (column: string) => void | Promise<void>;
   protectedNodeIds?: readonly string[];
@@ -86,6 +87,7 @@ export function SectionDataTable({
   onColumnsReorder,
   canManageColumn,
   isRelationColumn,
+  onColumnHide,
   onColumnEdit,
   onColumnDelete,
   protectedNodeIds = [],
@@ -174,6 +176,7 @@ export function SectionDataTable({
             useDragOverlay={Boolean(onColumnsReorder)}
             canManageColumn={canManageColumn}
             isRelationColumn={isRelationColumn}
+            onColumnHide={onColumnHide}
             onColumnEdit={onColumnEdit}
             onColumnDelete={onColumnDelete}
           />

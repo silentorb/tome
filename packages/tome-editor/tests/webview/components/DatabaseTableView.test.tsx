@@ -215,4 +215,73 @@ describe("DatabaseTableView", () => {
     expect(screen.getByRole("link", { name: "Linked record" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Other record" })).toBeNull();
   });
+
+  test("omits hidden columns from the table and toggles visibility via toolbar", async () => {
+    const api = makeMockEditorApi();
+    let updateInput: { hiddenColumns?: string[] } | undefined;
+    api.updateRelationshipView = async (nodeId, relationshipType, viewId, input) => {
+      void nodeId;
+      void relationshipType;
+      void viewId;
+      updateInput = input;
+      return {
+        id: "all",
+        nodeId: FIXTURE_DATABASE_ID,
+        relationshipType: "members",
+        name: "All",
+        sorts: [{ column: "name", direction: "asc" }],
+        hiddenColumns: input.hiddenColumns,
+      };
+    };
+
+    const databaseView = makeDatabaseViewDetail({
+      allColumns: ["status", "priority"],
+      columns: ["status"],
+      columnDefs: [{ key: "status", name: "Status", type: "text" }],
+      allColumnDefs: [
+        { key: "status", name: "Status", type: "text" },
+        { key: "priority", name: "Priority", type: "enum", enumId: "priority" },
+      ],
+      tabs: {
+        kind: "custom",
+        items: [{ id: "all", label: "All", kind: "custom" }],
+        activeTabId: "all",
+        customDefinitions: [
+          {
+            id: "all",
+            name: "All",
+            sorts: [{ column: "name", direction: "asc" }],
+            hiddenColumns: ["priority"],
+          },
+        ],
+      },
+    });
+
+    render(
+      <UserSettingsProvider api={api}>
+        <DatabaseTableView
+          api={api}
+          nodeId={FIXTURE_DATABASE_ID}
+          databaseView={databaseView}
+          onTabSelect={() => {}}
+          onTabsUpdated={() => {}}
+        />
+      </UserSettingsProvider>,
+    );
+
+    expect(
+      screen
+        .getAllByRole("button", { name: "Status" })
+        .some((el) => el.classList.contains("tome-table-sort-button")),
+    ).toBe(true);
+    expect(
+      screen
+        .queryAllByRole("button", { name: "Priority" })
+        .some((el) => el.classList.contains("tome-table-sort-button")),
+    ).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Column visibility" }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Show Priority" }));
+    expect(updateInput?.hiddenColumns).toEqual([]);
+  });
 });

@@ -16,6 +16,7 @@ export interface ViewMutationInput {
   name?: string;
   sorts?: ViewSortSpec[];
   properties?: ViewProperties;
+  hiddenColumns?: string[];
 }
 
 export function readNodeViews(ctx: TomeWriteContext, nodeId: string) {

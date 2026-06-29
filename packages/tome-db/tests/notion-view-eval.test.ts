@@ -201,6 +201,61 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
+  test("filters columns by per-view hiddenColumns", () => {
+    const dir = mkdtempSync(join(tmpdir(), "tome-db-view-hidden-"));
+    const contentDir = join(dir, "content");
+    mkdirSync(contentModelDir(contentDir), { recursive: true });
+    const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
+    const databaseId = "dddddddddddddddddddddddddddddddd";
+
+    writeFileSync(
+      viewsFilePath(contentDir),
+      serializeViewsFile({
+        version: VIEWS_FILE_VERSION,
+        views: [
+          {
+            id: "all",
+            nodeId: databaseId,
+            relationshipType: "members",
+            name: "All",
+            sorts: [{ column: "name", direction: "asc" }],
+            hiddenColumns: ["priority"],
+          },
+        ],
+      }),
+    );
+    writeFileSync(
+      dynamicFieldsFilePath(contentDir),
+      serializeDynamicFieldsFile(emptyDynamicFieldsFile()),
+    );
+
+    writeFileSync(
+      tableSchemasFilePath(contentDir),
+      serializeTableSchemasFile({
+        version: 1,
+        tables: {
+          [databaseId]: {
+            columns: [
+              { key: "status", name: "Status", type: "select" },
+              { key: "priority", name: "Priority", type: "select", enumId: "priority" },
+            ],
+          },
+        },
+      }),
+    );
+    db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
+    db.upsertNode("page1", { title: "Row" });
+    db.upsertRelationship("page1", databaseId, MEMBER_OF_TYPE, { row_index: 0 });
+
+    const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
+    expect(view?.allColumns).toEqual(["status", "priority"]);
+    expect(view?.columns).toEqual(["status"]);
+    expect(view?.columnDefs?.map((col) => col.key)).toEqual(["status"]);
+
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
   test("sorts relation columns by link count using tab sorts", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-rel-sort-"));
     const contentDir = join(dir, "content");

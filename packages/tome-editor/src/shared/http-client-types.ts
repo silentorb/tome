@@ -61,6 +61,7 @@ export interface EditorApiClient {
       name?: string;
       sorts?: import("tome-db").ViewSortSpec[];
       properties?: import("tome-db").ViewProperties;
+      hiddenColumns?: string[];
     },
   ): Promise<import("tome-db").ViewDefinition>;
   deleteRelationshipView(

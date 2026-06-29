@@ -7,6 +7,7 @@ interface ColumnHeaderMenuProps {
   columnLabel: string;
   isRelation?: boolean;
   children: ReactNode;
+  onHide?: () => void;
   onEdit?: () => void;
   onDelete?: () => void | Promise<void>;
 }
@@ -20,6 +21,7 @@ export function ColumnHeaderMenu({
   columnLabel,
   isRelation = false,
   children,
+  onHide,
   onEdit,
   onDelete,
 }: ColumnHeaderMenuProps) {
@@ -84,6 +86,19 @@ export function ColumnHeaderMenu({
           left: menuPosition.left,
         }}
       >
+        {onHide ? (
+          <button
+            type="button"
+            role="menuitem"
+            className="tome-page-actions-item"
+            onClick={() => {
+              setMenuOpen(false);
+              onHide();
+            }}
+          >
+            Hide
+          </button>
+        ) : null}
         {onEdit ? (
           <button
             type="button"

@@ -135,6 +135,7 @@ export function createHttpEditorClient(baseUrl: string): EditorApiClient {
         name?: string;
         sorts?: import("tome-db").ViewSortSpec[];
         properties?: import("tome-db").ViewProperties;
+        hiddenColumns?: string[];
       },
     ) {
       const data = await fetchJson<{ view: import("tome-db").ViewDefinition }>(

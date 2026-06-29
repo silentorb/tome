@@ -3,6 +3,25 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { ColumnHeaderMenu } from "../../../src/webview/components/ColumnHeaderMenu";
 
 describe("ColumnHeaderMenu", () => {
+  test("shows Hide menu item and invokes onHide", () => {
+    let hidden = false;
+
+    render(
+      <ColumnHeaderMenu
+        columnLabel="Priority"
+        onHide={() => {
+          hidden = true;
+        }}
+      >
+        <span>Priority</span>
+      </ColumnHeaderMenu>,
+    );
+
+    fireEvent.contextMenu(screen.getByText("Priority"));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Hide" }));
+    expect(hidden).toBe(true);
+  });
+
   test("opens delete menu on context menu and confirms deletion", () => {
     let deleted = false;
 

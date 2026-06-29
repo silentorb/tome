@@ -20,6 +20,7 @@ describe("views-file", () => {
           name: "All",
           sorts: [{ column: "name", direction: "asc" as const }],
           properties: { columnOrder: ["status", "priority"] },
+          hiddenColumns: ["priority"],
         },
         {
           nodeId: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",

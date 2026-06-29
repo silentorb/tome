@@ -36,6 +36,7 @@ interface TableUtilityBarProps {
   search?: ReactNode;
   addRow?: ReactNode;
   addColumn?: ReactNode;
+  columnVisibility?: ReactNode;
   columnDefs?: DatabaseColumnDef[];
   onTabSelect?: (tabId: string) => void;
   onCreateTab?: (input: { name: string; sorts?: ViewSortSpec[] }) => Promise<void>;
@@ -120,6 +121,7 @@ export function TableUtilityBar({
   search,
   addRow,
   addColumn,
+  columnVisibility,
   columnDefs,
   onTabSelect,
   onCreateTab,
@@ -187,7 +189,7 @@ export function TableUtilityBar({
     (displayTabItems.length > 1 || editable || draftTab != null) &&
     (displayTabItems.length > 0 || draftTab != null);
 
-  if (!showTabs && !search && !addRow && !addColumn) return null;
+  if (!showTabs && !search && !addRow && !addColumn && !columnVisibility) return null;
 
   const definitionFor = (tabId: string) =>
     tabs?.customDefinitions?.find((definition) => definition.id === tabId);
@@ -331,10 +333,11 @@ export function TableUtilityBar({
     <div className="tome-table-utility-bar" ref={rootRef}>
       <div className="tome-table-utility-row">
         {tabsContent ? <div className="tome-table-utility-tabs">{tabsContent}</div> : null}
-        {search || addRow || addColumn ? (
+        {search || addRow || addColumn || columnVisibility ? (
           <div className="tome-table-utility-actions">
             {search}
             {addColumn}
+            {columnVisibility}
             {addRow}
           </div>
         ) : null}

@@ -17,6 +17,7 @@ import {
 import { loadViewsFromContent } from "./views/load";
 import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
 import { applySectionColumnOrder } from "./views/column-order";
+import { applyHiddenColumns } from "./views/column-visibility";
 import type { TableTabsDetail } from "./views/tabs";
 
 const ROW_META_KEYS = new Set(["view", "row_index", "row_name", "order"]);
@@ -59,9 +60,14 @@ export interface DatabaseViewDetail {
   /** @deprecated Use tabs.items */
   views: string[];
   tabs: TableTabsDetail;
+  /** Ordered data column keys before per-view visibility filtering. */
+  allColumns: string[];
   columns: string[];
   rows: DatabaseRow[];
+  /** Column defs for visible columns only. */
   columnDefs?: DatabaseColumnDef[];
+  /** Ordered column defs before per-view visibility filtering. */
+  allColumnDefs?: DatabaseColumnDef[];
 }
 
 function titleFromProperties(properties: Record<string, unknown>): string {
@@ -176,13 +182,20 @@ function buildCustomViewDetail(
         );
 
   const views = loadViewsFromContent(contentDir);
-  const { columns, columnDefs: orderedColumnDefs } = applySectionColumnOrder(
+  const { columns: allColumns, columnDefs: orderedColumnDefs } = applySectionColumnOrder(
     defaultColumns,
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     databaseId,
     MEMBERS_SECTION_KEY,
   );
+
+  const { visibleColumns } = applyHiddenColumns(
+    allColumns,
+    resolved.activeDefinition.hiddenColumns,
+  );
+  const visibleSet = new Set(visibleColumns);
+  const visibleColumnDefs = orderedColumnDefs?.filter((def) => visibleSet.has(def.key));
 
   const rows: DatabaseRow[] = sorted.map((row, index) => ({
     rowIndex: index,
@@ -205,9 +218,11 @@ function buildCustomViewDetail(
     views: resolved.items.map((tab) => tab.label),
     view: tabName,
     tabs,
-    columns,
+    allColumns,
+    columns: visibleColumns,
     rows,
-    columnDefs: orderedColumnDefs,
+    columnDefs: visibleColumnDefs,
+    allColumnDefs: orderedColumnDefs,
   };
 }
 
@@ -311,9 +326,11 @@ function buildLegacyViewDetail(
     views,
     view,
     tabs: { kind: "custom", items: tabItems, activeTabId },
+    allColumns: columns,
     columns,
     rows,
     columnDefs: legacyColumnDefs.length > 0 ? legacyColumnDefs : undefined,
+    allColumnDefs: legacyColumnDefs.length > 0 ? legacyColumnDefs : undefined,
   };
 }
 
