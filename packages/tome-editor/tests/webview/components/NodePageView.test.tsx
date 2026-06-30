@@ -327,8 +327,9 @@ describe("NodePageView IS_A relation section", () => {
               { type: "markdown", body: "# Example\n" },
               makeRelationSection({
                 label: "member_of",
-                title: "Features",
-                typeNodeId: typeId,
+                title: "Membership",
+                typeNodeId: null,
+                linkAddLabel: "Link type table",
                 addMode: "link-existing",
                 columns: [],
                 columnDefs: [],
@@ -351,7 +352,7 @@ describe("NodePageView IS_A relation section", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Properties", level: 2 })).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "Features", level: 2 })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Membership", level: 2 })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Priority" })).toBeTruthy();
   });
 });

@@ -13,6 +13,7 @@ import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum
 import { invalidateSchemaCache, loadSchemaFromContent } from "../schema-rules/load";
 import { invalidateViewsCache } from "../views/load";
 import { invalidateTableSchemasCache } from "../table-schemas/load";
+import { invalidateRelationshipTypesCache } from "../relationship-types/load";
 import { invalidateWorkspaceCache, loadWorkspaceFromContent } from "../workspace/load";
 import { invalidateOrderedAssociationsCache } from "../ordered-associations-config/load";
 import { invalidateExtensionsCache } from "../extensions/load";
@@ -281,6 +282,9 @@ export class CacheSync {
       relativeName === RELATIONSHIPS_FILENAME ||
       relativeName === RELATIONSHIP_TYPES_FILENAME
     ) {
+      if (relativeName === RELATIONSHIP_TYPES_FILENAME) {
+        invalidateRelationshipTypesCache();
+      }
       this.syncRelationships();
       this.updateCacheMarkers();
       return;

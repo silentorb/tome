@@ -1,7 +1,7 @@
 import type { GraphDatabase, Relationship } from "./graph";
 import { getDatabaseViewDetail, type DatabaseColumnDef, type DatabaseViewDetail } from "./database-view";
 import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./property-enums";
-import { MEMBER_OF_TYPE, isTypeMembershipType } from "./labels";
+import { MEMBER_OF_TYPE, MEMBERS_TYPE, isTypeMembershipType } from "./labels";
 import {
   getConfigByProvider,
   getOrderedAssociationView,
@@ -16,7 +16,12 @@ import { normalizeRelationshipType } from "./relation-type";
 import { relationshipRuleContextForType } from "./schema-rules/resolve";
 import type { SchemaFile } from "./schema-rules/schema-file";
 import { resolveContentPath } from "./content/paths";
-import { formatRelationshipTypeLabel } from "./relationship-type-label";
+import {
+  formatRelationshipTypeLabel,
+  perspectiveDisplayLabel,
+  perspectiveLinkAddLabel,
+} from "./relationship-type-label";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { generatedProviderId, MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
@@ -63,6 +68,8 @@ export interface RelationTableSection {
   allowedTargetTypeIds?: string[];
   /** Inline table add control: link existing record vs none (structural one-to-many). */
   addMode: RelationTableAddMode;
+  /** Optional link-existing button label from relationship-types perspectiveLabels. */
+  linkAddLabel?: string;
   columns: string[];
   columnDefs?: DatabaseColumnDef[];
   rows: RelationRow[];
@@ -170,6 +177,7 @@ function buildRelationSections(
   const schema = options?.schema;
   const contentDir = options?.contentDir ?? resolveContentPath();
   const typeTableIds = typeTableIdsFromContent(contentDir);
+  const relationshipTypes = loadRelationshipTypesFromContent(contentDir);
   const outgoing = db.listRelationshipsFromSource(nodeId);
   const byType = new Map<string, typeof outgoing>();
 
@@ -186,7 +194,7 @@ function buildRelationSections(
     relationTypeSortKey(a).localeCompare(relationTypeSortKey(b)),
   )) {
     const { perspective: groupPerspective } = parseIncludesGroupKey(label);
-    if (isTypeMembershipType(groupPerspective)) continue;
+    if (groupPerspective === MEMBERS_TYPE) continue;
 
     const connections = byType.get(label)!;
     const columnSet = new Set<string>();
@@ -214,13 +222,14 @@ function buildRelationSections(
     });
 
     const { typeNodeId: includesTypeId, perspective } = parseIncludesGroupKey(label);
-    const typeNodeId =
-      includesTypeId ?? resolveTypeNodeId(db, perspective, connections);
+    const isTypeMembership = isTypeMembershipType(perspective);
+    const typeNodeId = isTypeMembership
+      ? null
+      : (includesTypeId ?? resolveTypeNodeId(db, perspective, connections));
     const ruleContext =
-      schema && !isTypeMembershipType(perspective)
+      schema && !isTypeMembership
         ? relationshipRuleContextForType(schema, db, nodeId, perspective)
         : null;
-    const isTypeMembership = isTypeMembershipType(perspective);
     let columns = [...columnSet].sort((a, b) => a.localeCompare(b));
     if (isTypeMembership) {
       for (const row of rows) {
@@ -248,10 +257,18 @@ function buildRelationSections(
           })),
         );
 
+    const sectionTitle = isTypeMembership
+      ? perspectiveDisplayLabel(relationshipTypes, perspective)
+      : sectionTitleForType(db, perspective, typeNodeId);
+    const linkAddLabel =
+      isTypeMembership && perspective === MEMBER_OF_TYPE
+        ? perspectiveLinkAddLabel(relationshipTypes, perspective, sectionTitle)
+        : undefined;
+
     sections.push({
       type: "relations",
       label: perspective,
-      title: sectionTitleForType(db, perspective, typeNodeId),
+      title: sectionTitle,
       typeNodeId,
       allowedTargetTypeIds: isTypeMembership
         ? typeTableIds
@@ -261,6 +278,7 @@ function buildRelationSections(
         : relationSectionSupportsLinkExisting(perspective)
           ? "link-existing"
           : "none",
+      ...(linkAddLabel ? { linkAddLabel } : {}),
       columns,
       columnDefs,
       rows,

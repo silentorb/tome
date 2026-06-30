@@ -51,7 +51,7 @@ API names: `ContentStore`, `openTomeWriteContext`, `getNodeDetail`, `getNodePage
 | --- | --- |
 | `content/data/{nodeId}.md` | Canonical node (YAML frontmatter + markdown body) |
 | `content/data/relationships.json` | Canonical bidirectional relationship records (v2) |
-| `content/model/relationship-types.json` | Composite type → perspective mapping |
+| `content/model/relationship-types.json` | Composite type → perspective mapping; optional `perspectiveLabels` per perspective for relation-section titles and link-add copy |
 | `content/model/views.json` | UI table tab definitions (custom + generated providers) |
 | `content/model/dynamic-fields.json` | Dynamic table field bindings |
 | `content/model/schema.json` | Relationship rules and property enums |
@@ -213,7 +213,9 @@ See [notion-import.md](./notion-import.md) for archival export layout (mining on
 | `packages/tome-db/src/schema.ts` | DDL and version |
 | `packages/tome-db/src/graph.ts` | GraphDatabase API (reads projections) |
 | `packages/tome-db/src/content/relationships-file.ts` | v2 `relationships.json` parse/serialize |
-| `packages/tome-db/src/content/relationship-types-file.ts` | `relationship-types.json` + composite helpers |
+| `packages/tome-db/src/content/relationship-types-file.ts` | `relationship-types.json` parse/serialize + composite helpers |
+| `packages/tome-db/src/relationship-types/load.ts` | Cached `relationship-types.json` loader |
+| `packages/tome-db/src/relationship-type-label.ts` | `perspectiveDisplayLabel`, `perspectiveLinkAddLabel` |
 | `packages/tome-db/src/content/relationship-sync-expand.ts` | Content → SQLite projection expansion |
 | `packages/tome-db/src/content/sync.ts` | Cache rebuild; `content/data` + `content/model` file watchers |
 | `packages/tome-db/src/graph-export.ts` | Full graph and Graph Explorer LOD export |

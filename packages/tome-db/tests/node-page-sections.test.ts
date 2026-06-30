@@ -1,14 +1,44 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GraphDatabase } from "../src/graph";
 import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodePageDetail } from "../src/node-page-sections";
+import { contentModelDir, relationshipTypesFilePath, tableSchemasFilePath } from "../src/content/paths";
+import {
+  serializeRelationshipTypesFile,
+} from "../src/content/relationship-types-file";
+import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
+import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
+import { invalidateTableSchemasCache } from "../src/table-schemas/load";
+
+function writeMembershipRelationshipTypes(contentDir: string): void {
+  writeFileSync(
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        member_of: {
+          bidirectional: true,
+          perspectives: ["member_of", "members"],
+          perspectiveLabels: {
+            member_of: { title: "Membership", linkAdd: "Link type table" },
+          },
+        },
+      },
+    }),
+  );
+  invalidateRelationshipTypesCache();
+}
 
 describe("node-sections", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-sections-"));
+  const contentDir = join(dir, "content");
+  mkdirSync(contentModelDir(contentDir), { recursive: true });
+  writeMembershipRelationshipTypes(contentDir);
+  process.env.TOME_CONTENT_PATH = contentDir;
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
 
@@ -99,7 +129,7 @@ describe("node-sections", () => {
     expect(detail?.properties).toBeNull();
   });
 
-  test("shows Properties without membership relation section", () => {
+  test("shows Properties and member_of relation section on instance pages", () => {
     const databaseId = "db52345678901234567890123456789012";
     db.upsertNode("page5", { title: "Scene A", body: "Prose" });
     db.upsertNode(databaseId, {
@@ -118,12 +148,21 @@ describe("node-sections", () => {
       priority: "High",
     });
 
-    const detail = getNodePageDetail(db, "page5");
+    const detail = getNodePageDetail(db, "page5", { contentDir });
     const membership = detail?.sections.find(
       (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
     );
 
-    expect(membership).toBeUndefined();
+    expect(membership).toMatchObject({
+      type: "relations",
+      label: MEMBER_OF_TYPE,
+      title: "Membership",
+      typeNodeId: null,
+      linkAddLabel: "Link type table",
+      addMode: "link-existing",
+      columns: [],
+      rows: [{ targetId: databaseId, name: "Scene Archive", cells: {} }],
+    });
     expect(detail?.properties).toMatchObject({
       type: "properties",
       databaseId,
@@ -141,7 +180,7 @@ describe("node-sections", () => {
     });
   });
 
-  test("normalizes legacy IN_DATABASE edges into Properties section only", () => {
+  test("shows member_of relation section alongside Properties for legacy membership edges", () => {
     const databaseId = "db62345678901234567890123456789012";
     db.upsertNode("page6", { title: "Legacy row" });
     db.upsertNode(databaseId, {
@@ -156,12 +195,20 @@ describe("node-sections", () => {
     });
     db.upsertRelationship("page6", databaseId, MEMBER_OF_TYPE, { status: "Unresolved" });
 
-    const detail = getNodePageDetail(db, "page6");
+    const detail = getNodePageDetail(db, "page6", { contentDir });
     const membership = detail?.sections.find(
       (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
     );
 
-    expect(membership).toBeUndefined();
+    expect(membership).toMatchObject({
+      type: "relations",
+      label: MEMBER_OF_TYPE,
+      title: "Membership",
+      typeNodeId: null,
+      linkAddLabel: "Link type table",
+      addMode: "link-existing",
+      rows: [{ targetId: databaseId, name: "Legacy Features" }],
+    });
     expect(detail?.properties).toMatchObject({
       databaseId,
       typeTitle: "Legacy Features",
@@ -203,6 +250,105 @@ describe("node-sections", () => {
 
     expect(inspirations?.typeNodeId).toBe(inspTypeId);
     expect(inspirations?.title).toBe("Inspirations");
+  });
+
+  test("groups multiple member_of parents in one Membership section", () => {
+    const typeA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const typeB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    db.upsertNode("multi-member", { title: "Shared row", body: "" });
+    db.upsertNode(typeA, { ...typeTableMarkerProperties("Type A") });
+    db.upsertNode(typeB, { ...typeTableMarkerProperties("Type B") });
+    db.upsertRelationship("multi-member", typeA, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship("multi-member", typeB, MEMBER_OF_TYPE, { row_index: 1 });
+
+    const detail = getNodePageDetail(db, "multi-member", { contentDir });
+    const membership = detail?.sections.filter(
+      (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
+    );
+
+    expect(membership).toHaveLength(1);
+    expect(membership?.[0]).toMatchObject({
+      title: "Membership",
+      typeNodeId: null,
+      rows: [
+        { targetId: typeA, name: "Type A" },
+        { targetId: typeB, name: "Type B" },
+      ],
+    });
+  });
+
+  afterAll(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("node-sections bible passages regression", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tome-db-sections-bible-"));
+  const contentDir = join(dir, "content");
+  mkdirSync(contentModelDir(contentDir), { recursive: true });
+  const dbPath = join(dir, "test.sqlite");
+  const db = new GraphDatabase(dbPath);
+
+  const biblePassagesId = "28358e628ba280889942da28069b6dbc";
+  const memberId = "7bbfdc05d5474f3d948274b485060fdc";
+  const featuresTypeId = "dd0de9867cc345b898929306bdf9fc83";
+
+  writeFileSync(
+    tableSchemasFilePath(contentDir),
+    serializeTableSchemasFile({
+      version: 1,
+      tables: {
+        [biblePassagesId]: {
+          columns: [
+            {
+              key: "features",
+              name: "Features",
+              type: "relation",
+              targetTypeId: featuresTypeId,
+              perspective: "features",
+            },
+            { key: "verses", name: "Verses", type: "rich_text" },
+          ],
+        },
+      },
+    }),
+  );
+  invalidateTableSchemasCache();
+  writeMembershipRelationshipTypes(contentDir);
+  process.env.TOME_CONTENT_PATH = contentDir;
+
+  test("member row shows Verses in Properties and Bible passages in member_of section", () => {
+    db.upsertNode(biblePassagesId, { ...typeTableMarkerProperties("Bible passages") });
+    db.upsertNode(memberId, { title: "Men gather to David", body: "> 1 Samuel 22:2" });
+    db.upsertRelationship(memberId, biblePassagesId, MEMBER_OF_TYPE, {
+      view: "Untitled",
+      row_index: 20,
+    });
+
+    const detail = getNodePageDetail(db, memberId, { contentDir });
+
+    expect(detail?.properties).toMatchObject({
+      type: "properties",
+      databaseId: biblePassagesId,
+      typeTitle: "Bible passages",
+      columns: ["verses"],
+      cells: {},
+    });
+
+    const membership = detail?.sections.find(
+      (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
+    );
+    expect(membership).toMatchObject({
+      type: "relations",
+      label: MEMBER_OF_TYPE,
+      title: "Membership",
+      typeNodeId: null,
+      linkAddLabel: "Link type table",
+      addMode: "link-existing",
+      columns: [],
+      rows: [{ targetId: biblePassagesId, name: "Bible passages", cells: {} }],
+    });
   });
 
   afterAll(() => {

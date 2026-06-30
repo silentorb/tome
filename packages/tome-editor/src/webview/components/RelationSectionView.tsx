@@ -106,7 +106,9 @@ export function RelationSectionView({
     [],
   );
 
-  const linkLabel = `Link ${section.title.replace(/s$/i, "") || "record"}`;
+  const linkLabel =
+    section.linkAddLabel ??
+    `Link ${section.title.replace(/s$/i, "") || "record"}`;
   const allowedTypeIds =
     section.allowedTargetTypeIds ??
     (section.typeNodeId ? [section.typeNodeId] : undefined);

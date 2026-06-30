@@ -97,9 +97,9 @@ Linking an existing node to a type table via `linkOutgoingRelationship` **must**
 | Page kind | Membership UI |
 | --- | --- |
 | **Set / type-table node** | Single **Members** table section (`database` or `ordered-association`) — full columns, tabs, editing via `getDatabaseViewDetail` |
-| **Member instance node** | **Properties** panel only (edge scalars from `member_of`); no membership relation table section |
+| **Member instance node** | **Properties** panel in metadata (edge scalars from `member_of`) **and** one **Membership** relation section below the markdown body (title from `perspectiveLabels.member_of` in `relationship-types.json`; parent type-table nodes as rows; link/unlink there) |
 
-The simple auto-generated `members` relation section is **not** emitted — set membership listing uses the rich Members table on set pages only.
+The auto-generated inverse **`members`** relation section is **not** emitted on set pages — membership listing there uses the rich Members table only. The Membership section header does **not** link to a single parent set (rows link to each parent).
 
 ## Design rationale
 
@@ -130,7 +130,7 @@ flowchart LR
 | Path | Role |
 | --- | --- |
 | `content/data/relationships.json` | Canonical membership records |
-| `content/model/relationship-types.json` | `member_of` perspectives `["member_of", "members"]` |
+| `content/model/relationship-types.json` | `member_of` perspectives; optional `perspectiveLabels.member_of` (Marloth: **Membership**) |
 | `content/model/table-schemas.json` | Type-table set detection + column defs |
 | `content/model/views.json` | `sections.members` tab config for Members table |
 | `content/model/workspace.json` | `archiveNodeId` for archive set detection |

@@ -2,11 +2,18 @@ import { normalizeRelationshipType } from "../relation-type";
 
 export const RELATIONSHIP_TYPES_FILE_VERSION = 1;
 
+/** Shorthand title string, or title + optional link-add copy for relation sections. */
+export type PerspectiveLabelConfig =
+  | string
+  | { title: string; linkAdd?: string };
+
 export interface RelationshipTypeDefinition {
   /** @deprecated Ignored for expansion; use perspectives.length instead. */
   bidirectional?: boolean;
   /** Length ≥2: dual projection (a→b, b→a). Length 1: single projection (legacy directedFrom optional). */
   perspectives: string[];
+  /** UI labels keyed by perspective slug (e.g. member_of → "Membership"). */
+  perspectiveLabels?: Record<string, PerspectiveLabelConfig>;
 }
 
 export interface RelationshipTypesFile {
@@ -16,6 +23,44 @@ export interface RelationshipTypesFile {
 
 export function emptyRelationshipTypesFile(): RelationshipTypesFile {
   return { version: RELATIONSHIP_TYPES_FILE_VERSION, types: {} };
+}
+
+function parsePerspectiveLabelConfig(
+  value: unknown,
+  context: string,
+): PerspectiveLabelConfig {
+  if (typeof value === "string" && value.trim()) return value.trim();
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`relationship-types.json: ${context} must be a string or object`);
+  }
+  const row = value as Record<string, unknown>;
+  if (typeof row.title !== "string" || !row.title.trim()) {
+    throw new Error(`relationship-types.json: ${context}.title must be a non-empty string`);
+  }
+  const out: { title: string; linkAdd?: string } = { title: row.title.trim() };
+  if (row.linkAdd !== undefined) {
+    if (typeof row.linkAdd !== "string" || !row.linkAdd.trim()) {
+      throw new Error(`relationship-types.json: ${context}.linkAdd must be a non-empty string`);
+    }
+    out.linkAdd = row.linkAdd.trim();
+  }
+  return out;
+}
+
+function parsePerspectiveLabels(
+  raw: unknown,
+  typeKey: string,
+): Record<string, PerspectiveLabelConfig> | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`relationship-types.json: type ${typeKey} perspectiveLabels must be an object`);
+  }
+  const labels: Record<string, PerspectiveLabelConfig> = {};
+  for (const [perspective, value] of Object.entries(raw as Record<string, unknown>)) {
+    const key = normalizeRelationshipType(perspective);
+    labels[key] = parsePerspectiveLabelConfig(value, `type ${typeKey} perspectiveLabels.${key}`);
+  }
+  return Object.keys(labels).length > 0 ? labels : undefined;
 }
 
 export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
@@ -47,9 +92,11 @@ export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
       typeof row.bidirectional === "boolean"
         ? row.bidirectional
         : perspectives.length >= 2;
+    const perspectiveLabels = parsePerspectiveLabels(row.perspectiveLabels, key);
     types[normalizeRelationshipType(key)] = {
       bidirectional,
       perspectives,
+      ...(perspectiveLabels ? { perspectiveLabels } : {}),
     };
   }
 
@@ -128,6 +175,7 @@ export function registerTypeDefinition(
   file.types[normalizeRelationshipType(compositeType)] = {
     bidirectional: def.bidirectional,
     perspectives: def.perspectives.map((p) => normalizeRelationshipType(p)),
+    ...(def.perspectiveLabels ? { perspectiveLabels: { ...def.perspectiveLabels } } : {}),
   };
 }
 
