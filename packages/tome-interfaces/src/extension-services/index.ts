@@ -5,6 +5,7 @@ export type {
 } from "./graph-query";
 export type {
   ExtensionSchemaQueryServices,
+  SchemaQueryRelationColumnEdge,
   SchemaQueryRelationshipRule,
   SchemaQueryTypeTable,
 } from "./schema-query";

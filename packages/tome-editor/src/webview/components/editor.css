@@ -397,6 +397,15 @@
   height: 100%;
 }
 
+.tome-schema-diagram .edgeLabel .label foreignObject {
+  overflow: visible;
+}
+
+.tome-schema-diagram .edgeLabel .label .edgeLabel,
+.tome-schema-diagram .edgeLabel .label .labelBkg {
+  white-space: nowrap;
+}
+
 .tome-schema-diagram .mermaid-render-error {
   margin: 0.5rem 0 0;
   font-size: 0.85rem;

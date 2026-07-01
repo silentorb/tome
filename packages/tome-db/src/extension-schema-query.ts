@@ -1,5 +1,6 @@
 import type {
   ExtensionSchemaQueryServices,
+  SchemaQueryRelationColumnEdge,
   SchemaQueryRelationshipRule,
   SchemaQueryTypeTable,
 } from "tome-interfaces/extension-services/schema-query";
@@ -44,6 +45,47 @@ export function createExtensionSchemaQueryServices(
         type: rule.type,
         allowedTargetTypeIds: [...rule.allowedTargetTypeIds],
       }));
+    },
+
+    listRelationColumnEdges(): SchemaQueryRelationColumnEdge[] {
+      const schemas = loadTableSchemasFromContent(contentDir);
+      const titleByTypeId = new Map<string, string>();
+      for (const id of Object.keys(schemas.tables)) {
+        titleByTypeId.set(id, titleFromNode(db.getNode(id)));
+      }
+
+      const edges: SchemaQueryRelationColumnEdge[] = [];
+      for (const [sourceTypeId, table] of Object.entries(schemas.tables)) {
+        for (const column of table.columns) {
+          if (column.type !== "relation") continue;
+          if (!column.targetTypeId) continue;
+          const perspective = column.perspective?.trim();
+          edges.push({
+            id: `${sourceTypeId}:${column.key}`,
+            sourceTypeId,
+            targetTypeId: column.targetTypeId,
+            label: perspective || column.key,
+          });
+        }
+      }
+
+      edges.sort((a, b) => {
+        const sourceCompare = (titleByTypeId.get(a.sourceTypeId) ?? a.sourceTypeId).localeCompare(
+          titleByTypeId.get(b.sourceTypeId) ?? b.sourceTypeId,
+          undefined,
+          { sensitivity: "base" },
+        );
+        if (sourceCompare !== 0) return sourceCompare;
+        const labelCompare = a.label.localeCompare(b.label, undefined, { sensitivity: "base" });
+        if (labelCompare !== 0) return labelCompare;
+        return (titleByTypeId.get(a.targetTypeId) ?? a.targetTypeId).localeCompare(
+          titleByTypeId.get(b.targetTypeId) ?? b.targetTypeId,
+          undefined,
+          { sensitivity: "base" },
+        );
+      });
+
+      return edges;
     },
   };
 }

@@ -18,6 +18,7 @@ describe("createExtensionSchemaQueryServices", () => {
   let fixture: TestContentFixture;
   const sceneTypeId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
   const featureTypeId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const inspirationTypeId = "cccccccccccccccccccccccccccccccc";
 
   fixture = createTestContentFixture("tome-schema-query-");
   const modelDir = contentModelDir(fixture.ctx.store.contentDir);
@@ -31,14 +32,46 @@ describe("createExtensionSchemaQueryServices", () => {
     id: featureTypeId,
     properties: { title: "Feature" },
   });
+  seedTestNode(fixture, {
+    id: inspirationTypeId,
+    properties: { title: "Inspiration" },
+  });
 
   writeFileSync(
     tableSchemasFilePath(fixture.ctx.store.contentDir),
     serializeTableSchemasFile({
       version: 1,
       tables: {
-        [sceneTypeId]: { columns: [] },
-        [featureTypeId]: { columns: [] },
+        [sceneTypeId]: {
+          columns: [
+            {
+              key: "features",
+              name: "Features",
+              type: "relation",
+              targetTypeId: featureTypeId,
+              perspective: "features",
+            },
+            {
+              key: "inspirations",
+              name: "Inspirations",
+              type: "relation",
+              targetTypeId: inspirationTypeId,
+              perspective: "inspirations",
+            },
+          ],
+        },
+        [featureTypeId]: {
+          columns: [
+            {
+              key: "inspirations",
+              name: "Inspirations",
+              type: "relation",
+              targetTypeId: inspirationTypeId,
+              perspective: "inspirations",
+            },
+          ],
+        },
+        [inspirationTypeId]: { columns: [] },
       },
     }),
     "utf-8",
@@ -74,6 +107,7 @@ describe("createExtensionSchemaQueryServices", () => {
     const tables = services.listTypeTables();
     expect(tables).toEqual([
       { id: featureTypeId, title: "Feature" },
+      { id: inspirationTypeId, title: "Inspiration" },
       { id: sceneTypeId, title: "Scene" },
     ]);
   });
@@ -87,6 +121,31 @@ describe("createExtensionSchemaQueryServices", () => {
       type: "includes",
       allowedTargetTypeIds: [featureTypeId],
     });
+  });
+
+  test("listRelationColumnEdges returns relation columns from table-schemas", () => {
+    const edges = services.listRelationColumnEdges();
+    expect(edges).toHaveLength(3);
+    expect(edges).toEqual([
+      {
+        id: `${featureTypeId}:inspirations`,
+        sourceTypeId: featureTypeId,
+        targetTypeId: inspirationTypeId,
+        label: "inspirations",
+      },
+      {
+        id: `${sceneTypeId}:features`,
+        sourceTypeId: sceneTypeId,
+        targetTypeId: featureTypeId,
+        label: "features",
+      },
+      {
+        id: `${sceneTypeId}:inspirations`,
+        sourceTypeId: sceneTypeId,
+        targetTypeId: inspirationTypeId,
+        label: "inspirations",
+      },
+    ]);
   });
 
   afterAll(() => {

@@ -20,6 +20,7 @@ import { createTestApiFromContent } from "./test-api-setup";
 
 const nodeId = "d4444444444444444444444444444444";
 const sceneTypeId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const featureTypeId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 describe("prepare-editor-body API — schema diagram", () => {
   const fixture = createTestContentFixture("tome-prepare-schema-diagram-");
@@ -32,6 +33,10 @@ describe("prepare-editor-body API — schema diagram", () => {
   seedTestNode(fixture, {
     id: sceneTypeId,
     properties: { title: "Scene" },
+  });
+  seedTestNode(fixture, {
+    id: featureTypeId,
+    properties: { title: "Feature" },
   });
   seedTestNode(fixture, {
     id: nodeId,
@@ -71,7 +76,27 @@ describe("prepare-editor-body API — schema diagram", () => {
 
   writeFileSync(
     join(modelDir, "table-schemas.json"),
-    JSON.stringify({ version: 1, tables: { [sceneTypeId]: { columns: [] } } }, null, 2),
+    JSON.stringify(
+      {
+        version: 1,
+        tables: {
+          [sceneTypeId]: {
+            columns: [
+              {
+                key: "features",
+                name: "Features",
+                type: "relation",
+                targetTypeId: featureTypeId,
+                perspective: "features",
+              },
+            ],
+          },
+          [featureTypeId]: { columns: [] },
+        },
+      },
+      null,
+      2,
+    ),
     "utf-8",
   );
   invalidateTableSchemasCache();
@@ -105,6 +130,7 @@ describe("prepare-editor-body API — schema diagram", () => {
     expect(payload.markdown).toContain('class="tome-schema-diagram"');
     expect(payload.markdown).toContain('<pre class="mermaid">');
     expect(payload.markdown).toContain("erDiagram");
+    expect(payload.markdown).toContain('Scene ||--o{ Feature : "features"');
     expect(payload.markdown).not.toContain("```tome-block");
   });
 

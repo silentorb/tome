@@ -8,18 +8,18 @@ const SNAPSHOT = {
     { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Feature" },
     { id: "cccccccccccccccccccccccccccccccc", title: "Inspiration" },
   ],
-  relationshipRules: [
+  relationColumnEdges: [
     {
-      id: "scene-features",
+      id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:features",
       sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      type: "includes",
-      allowedTargetTypeIds: ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
+      targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      label: "features",
     },
     {
-      id: "feature-inspirations",
+      id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:inspirations",
       sourceTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      type: "includes",
-      allowedTargetTypeIds: ["cccccccccccccccccccccccccccccccc"],
+      targetTypeId: "cccccccccccccccccccccccccccccccc",
+      label: "inspirations",
     },
   ],
 };
@@ -31,15 +31,15 @@ describe("buildErDiagramMermaid", () => {
     expect(result.entityCount).toBe(3);
     expect(result.edgeCount).toBe(2);
     expect(result.source).toContain("erDiagram");
-    expect(result.source).toContain('Scene ||--o{ Feature : "includes"');
-    expect(result.source).toContain('Feature ||--o{ Inspiration : "includes"');
+    expect(result.source).toContain('Scene ||--o{ Feature : "features"');
+    expect(result.source).toContain('Feature ||--o{ Inspiration : "inspirations"');
     expect(result.source).toContain("string type");
   });
 
   test("filters by typeIds and relationshipTypes", () => {
     const config = parseSchemaDiagramConfig({
       typeIds: ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
-      relationshipTypes: ["includes"],
+      relationshipTypes: ["features"],
     });
     const result = buildErDiagramMermaid(SNAPSHOT, config);
     expect(result.entityCount).toBe(2);
@@ -52,5 +52,28 @@ describe("buildErDiagramMermaid", () => {
     const config = parseSchemaDiagramConfig({ direction: "LR" });
     const result = buildErDiagramMermaid(SNAPSHOT, config);
     expect(result.source).toContain("direction LR");
+  });
+
+  test("renders edges from relation columns without schema.json rules", () => {
+    const config = parseSchemaDiagramConfig({});
+    const result = buildErDiagramMermaid(
+      {
+        typeTables: [
+          { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene" },
+          { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Feature" },
+        ],
+        relationColumnEdges: [
+          {
+            id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:features",
+            sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            label: "features",
+          },
+        ],
+      },
+      config,
+    );
+    expect(result.edgeCount).toBe(1);
+    expect(result.source).toContain('Scene ||--o{ Feature : "features"');
   });
 });

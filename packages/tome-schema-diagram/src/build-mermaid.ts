@@ -1,12 +1,12 @@
 import type {
-  SchemaQueryRelationshipRule,
+  SchemaQueryRelationColumnEdge,
   SchemaQueryTypeTable,
 } from "tome-interfaces/extension-services/schema-query";
 import type { SchemaDiagramConfig } from "./config";
 
 export interface SchemaDiagramSnapshot {
   typeTables: SchemaQueryTypeTable[];
-  relationshipRules: SchemaQueryRelationshipRule[];
+  relationColumnEdges: SchemaQueryRelationColumnEdge[];
 }
 
 export interface BuildErDiagramMermaidResult {
@@ -51,13 +51,13 @@ function filterSnapshot(
     ? new Set(config.relationshipTypes)
     : null;
 
-  const relationshipRules = snapshot.relationshipRules.filter((rule) => {
-    if (relationshipTypeSet && !relationshipTypeSet.has(rule.type)) return false;
-    if (!allowedTypeIds.has(rule.sourceTypeId)) return false;
-    return rule.allowedTargetTypeIds.some((targetId) => allowedTypeIds.has(targetId));
+  const relationColumnEdges = snapshot.relationColumnEdges.filter((edge) => {
+    if (relationshipTypeSet && !relationshipTypeSet.has(edge.label)) return false;
+    if (!allowedTypeIds.has(edge.sourceTypeId)) return false;
+    return allowedTypeIds.has(edge.targetTypeId);
   });
 
-  return { typeTables, relationshipRules };
+  return { typeTables, relationColumnEdges };
 }
 
 export function buildErDiagramMermaid(
@@ -86,16 +86,14 @@ export function buildErDiagramMermaid(
   }
 
   let edgeCount = 0;
-  for (const rule of filtered.relationshipRules) {
-    const sourceAlias = aliasByTypeId.get(rule.sourceTypeId);
+  for (const edge of filtered.relationColumnEdges) {
+    const sourceAlias = aliasByTypeId.get(edge.sourceTypeId);
     if (!sourceAlias) continue;
-    const label = escapeMermaidLabel(rule.type);
-    for (const targetId of rule.allowedTargetTypeIds) {
-      const targetAlias = aliasByTypeId.get(targetId);
-      if (!targetAlias) continue;
-      lines.push(`    ${sourceAlias} ||--o{ ${targetAlias} : "${label}"`);
-      edgeCount += 1;
-    }
+    const targetAlias = aliasByTypeId.get(edge.targetTypeId);
+    if (!targetAlias) continue;
+    const label = escapeMermaidLabel(edge.label);
+    lines.push(`    ${sourceAlias} ||--o{ ${targetAlias} : "${label}"`);
+    edgeCount += 1;
   }
 
   return {

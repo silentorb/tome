@@ -40,6 +40,7 @@ mock.module("svg-pan-zoom", () => ({
 
 const {
   destroySchemaDiagramPanZoom,
+  relaxMermaidEdgeLabelBounds,
   renderSchemaDiagramMermaidIn,
 } = await import("../../src/webview/extensions/schema-diagram-mermaid");
 
@@ -87,6 +88,71 @@ describe("renderSchemaDiagramMermaidIn", () => {
     expect(svgPanZoom).not.toHaveBeenCalled();
 
     root.remove();
+  });
+});
+
+describe("relaxMermaidEdgeLabelBounds", () => {
+  test("expands html edge label foreignObject to fit long text", () => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.innerHTML = `
+      <g class="edgeLabel">
+        <g class="label" transform="translate(-40, -8)">
+          <foreignObject width="40" height="16" overflow="hidden">
+            <div xmlns="http://www.w3.org/1999/xhtml" class="labelBkg" style="max-width: 40px">
+              <span class="edgeLabel">character_attributes</span>
+            </div>
+          </foreignObject>
+        </g>
+      </g>
+    `;
+    document.body.appendChild(svg);
+
+    const label = svg.querySelector(".label") as SVGGElement;
+    const foreignObject = svg.querySelector("foreignObject") as SVGForeignObjectElement;
+    const content = foreignObject.querySelector("div") as HTMLElement;
+    Object.defineProperty(content, "scrollWidth", { configurable: true, value: 148 });
+    Object.defineProperty(content, "scrollHeight", { configurable: true, value: 18 });
+
+    relaxMermaidEdgeLabelBounds(svg);
+
+    expect(foreignObject.getAttribute("overflow")).toBe("visible");
+    expect(Number(foreignObject.getAttribute("width"))).toBeGreaterThan(40);
+    expect(label.getAttribute("transform")).toMatch(/^translate\(-/);
+
+    svg.remove();
+  });
+
+  test("expands svg edge label rect to fit text bbox", () => {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    label.setAttribute("class", "label");
+    label.setAttribute("transform", "translate(-20, -8)");
+
+    const edgeLabel = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    edgeLabel.setAttribute("class", "edgeLabel");
+
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("x", "0");
+    rect.setAttribute("y", "0");
+    rect.setAttribute("width", "20");
+    rect.setAttribute("height", "12");
+
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.textContent = "traversal_reasons";
+
+    label.append(rect, text);
+    edgeLabel.append(label);
+    svg.append(edgeLabel);
+    document.body.appendChild(svg);
+
+    text.getBBox = () => ({ x: 0, y: -12, width: 120, height: 14, top: -12, left: 0, right: 120, bottom: 2 } as DOMRect);
+
+    relaxMermaidEdgeLabelBounds(svg);
+
+    expect(Number(rect.getAttribute("width"))).toBeGreaterThan(20);
+    expect(label.getAttribute("transform")).toMatch(/^translate\(-/);
+
+    svg.remove();
   });
 });
 

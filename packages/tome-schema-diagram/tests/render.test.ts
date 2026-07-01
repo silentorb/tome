@@ -17,6 +17,7 @@ describe("schema diagram render", () => {
       {
         listTypeTables: () => [{ id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene" }],
         listRelationshipRules: () => [],
+        listRelationColumnEdges: () => [],
       },
       {},
       "Schema diagram",

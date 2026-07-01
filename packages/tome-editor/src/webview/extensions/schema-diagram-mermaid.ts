@@ -50,6 +50,51 @@ function nextRenderId(): string {
   return `tome-schema-diagram-${idCounter}-${Date.now().toString(36)}`;
 }
 
+const EDGE_LABEL_PADDING_PX = 4;
+
+/** Expand Mermaid edge-label backgrounds so long perspective names are not clipped. */
+export function relaxMermaidEdgeLabelBounds(svg: SVGSVGElement): void {
+  for (const labelGroup of svg.querySelectorAll<SVGGElement>(".edgeLabel .label")) {
+    const foreignObject = labelGroup.querySelector<SVGForeignObjectElement>("foreignObject");
+    if (foreignObject) {
+      foreignObject.setAttribute("overflow", "visible");
+
+      const content = foreignObject.querySelector<HTMLElement>("div");
+      if (!content) continue;
+
+      content.style.maxWidth = "none";
+      content.style.whiteSpace = "nowrap";
+
+      const width = Math.ceil(content.scrollWidth + EDGE_LABEL_PADDING_PX * 2);
+      const height = Math.ceil(content.scrollHeight + EDGE_LABEL_PADDING_PX * 2);
+      if (width <= 0 || height <= 0) continue;
+
+      foreignObject.setAttribute("width", String(width));
+      foreignObject.setAttribute("height", String(height));
+      labelGroup.setAttribute("transform", `translate(${-width / 2}, ${-height / 2})`);
+      continue;
+    }
+
+    const text = labelGroup.querySelector<SVGTextElement>("text");
+    const rect = labelGroup.querySelector<SVGRectElement>("rect");
+    if (!text || !rect) continue;
+
+    const bbox = text.getBBox();
+    if (bbox.width <= 0 || bbox.height <= 0) continue;
+
+    const x = bbox.x - EDGE_LABEL_PADDING_PX;
+    const y = bbox.y - EDGE_LABEL_PADDING_PX;
+    const width = Math.ceil(bbox.width + EDGE_LABEL_PADDING_PX * 2);
+    const height = Math.ceil(bbox.height + EDGE_LABEL_PADDING_PX * 2);
+
+    rect.setAttribute("x", String(x));
+    rect.setAttribute("y", String(y));
+    rect.setAttribute("width", String(width));
+    rect.setAttribute("height", String(height));
+    labelGroup.setAttribute("transform", `translate(${-(x + width / 2)}, ${-(y + height / 2)})`);
+  }
+}
+
 function buildToolbar(): HTMLElement {
   const toolbar = document.createElement("div");
   toolbar.className = "tome-schema-diagram-toolbar";
@@ -192,6 +237,7 @@ async function renderSourceIntoHost(
 
     const svgElement = host.querySelector("svg");
     if (svgElement) {
+      relaxMermaidEdgeLabelBounds(svgElement);
       initPanZoom(figure, viewport, svgElement);
       attachToolbarHandlers(toolbar, () => panZoomByFigure.get(figure));
     }

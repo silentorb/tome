@@ -2,7 +2,7 @@
 
 ## Summary
 
-The **schema diagram** page block (`schema-diagram.block`, package `tome-schema-diagram`) renders an ER-style diagram of the project's **meta-model**: type tables and `schema.json` relationship rules. v1 targets **maintainers in the editor** — diagrams render client-side via Mermaid in the editor webview. Static site export shows a deferred placeholder.
+The **schema diagram** page block (`schema-diagram.block`, package `tome-schema-diagram`) renders an ER-style diagram of the project's **meta-model**: type tables and their relation columns from `table-schemas.json`. v1 targets **maintainers in the editor** — diagrams render client-side via Mermaid in the editor webview. Static site export shows a deferred placeholder.
 
 ## When to read this
 
@@ -17,9 +17,11 @@ For page-block contracts: [page-blocks.md](../extensions/page-blocks.md). For ex
 ### Diagram content (v1)
 
 - **Entities:** type tables from `table-schemas.json` (titles from graph nodes)
-- **Edges:** `schema.json` `relationshipRules` — labeled by perspective `type`
-- **Default scope:** full project (all types and rules)
-- **Optional filters:** block `data` may restrict `typeIds` and `relationshipTypes`
+- **Edges:** `table-schemas.json` relation columns — one directed edge per column (`sourceTypeId` → `targetTypeId`), labeled by `perspective` (fallback `key`)
+- **Default scope:** full project (all types and relation columns)
+- **Optional filters:** block `data` may restrict `typeIds` and `relationshipTypes` (matches column `perspective` / `key` labels)
+
+`schema.json` `relationshipRules` are used for editor enforcement (allowed targets, link picker) — not for diagram edges.
 
 ### Editor rendering
 
@@ -37,7 +39,7 @@ For page-block contracts: [page-blocks.md](../extensions/page-blocks.md). For ex
 ## Pipeline
 
 ```
-extensions.json + schema.json + table-schemas.json
+extensions.json + table-schemas.json
   → createExtensionSchemaQueryServices (host)
   → prepare-editor-body → buildErDiagramMermaid → <pre class="mermaid">
   → Milkdown page block embed → mermaid.render() + svg-pan-zoom viewport
@@ -48,7 +50,7 @@ extensions.json + schema.json + table-schemas.json
 | Key | Default | Purpose |
 | --- | --- | --- |
 | `typeIds` | (all) | Restrict diagram entities |
-| `relationshipTypes` | (all) | Filter edge labels |
+| `relationshipTypes` | (all) | Filter edge labels (`perspective` / column `key`) |
 | `theme` | `default` | Mermaid theme (`data-mermaid-theme` on figure) |
 | `direction` | `TB` | `TB` or `LR` in erDiagram source |
 
@@ -67,7 +69,7 @@ bun test packages/tome-editor/tests/webview/schema-diagram-mermaid.test.ts
 | --- | --- |
 | `tome-schema-diagram/src/build-mermaid.ts` | Schema snapshot → Mermaid source |
 | `tome-schema-diagram/src/html.ts` | Editor shell / static placeholder |
-| `tome-db/src/extension-schema-query.ts` | Host service for type tables + rules |
+| `tome-db/src/extension-schema-query.ts` | Host service for type tables + relation column edges |
 | `tome-editor/.../schema-diagram-mermaid.ts` | Client Mermaid render + pan/zoom viewport |
 | `tome-editor/.../page-block-embed.ts` | Calls Mermaid hook on embed mount; destroys pan/zoom on teardown |
 

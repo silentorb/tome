@@ -14,11 +14,11 @@ export async function loadSchemaDiagramSnapshot(
   schemaQuery: ExtensionSchemaQueryServices | undefined,
 ): Promise<SchemaDiagramSnapshot | null> {
   if (!schemaQuery) return null;
-  const [typeTables, relationshipRules] = await Promise.all([
+  const [typeTables, relationColumnEdges] = await Promise.all([
     schemaQuery.listTypeTables(),
-    schemaQuery.listRelationshipRules(),
+    schemaQuery.listRelationColumnEdges(),
   ]);
-  return { typeTables, relationshipRules };
+  return { typeTables, relationColumnEdges };
 }
 
 export function renderSchemaDiagramDeferred(label: string): string {
