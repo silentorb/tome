@@ -1,6 +1,6 @@
 import type { ServerPageBlockHost } from "tome-interfaces/page-block/server";
-import { buildErDiagramMermaid } from "./build-mermaid";
 import { parseSchemaDiagramConfig } from "./config";
+import { renderSchemaDiagramSvg } from "./render-svg";
 import { loadSchemaDiagramSnapshot } from "./render";
 
 const IMPLEMENTATION_ID = "schema-diagram";
@@ -13,7 +13,7 @@ export function register(host: ServerPageBlockHost): void {
         input && typeof input === "object" && !Array.isArray(input)
           ? (input as Record<string, unknown>)
           : {};
-      const action = typeof record.action === "string" ? record.action : "mermaid";
+      const action = typeof record.action === "string" ? record.action : "svg";
       const blockData = record.data ?? {};
 
       const snapshot = await loadSchemaDiagramSnapshot(ctx.services.schemaQuery);
@@ -25,8 +25,18 @@ export function register(host: ServerPageBlockHost): void {
         return { ok: true, snapshot };
       }
 
+      if (action === "mermaid") {
+        return {
+          ok: false,
+          error: "mermaid action removed; use action svg or graph",
+        };
+      }
+
       const config = parseSchemaDiagramConfig(blockData);
-      const diagram = buildErDiagramMermaid(snapshot, config);
+      const diagram = await renderSchemaDiagramSvg(snapshot, config);
+      if (!diagram) {
+        return { ok: false, error: "no diagram entities" };
+      }
       return { ok: true, ...diagram };
     },
   });

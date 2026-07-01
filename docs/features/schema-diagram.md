@@ -1,14 +1,14 @@
-# Schema diagram (Mermaid ER diagrams)
+# Schema diagram (ELK + inline SVG)
 
 ## Summary
 
-The **schema diagram** page block (`schema-diagram.block`, package `tome-schema-diagram`) renders an ER-style diagram of the project's **meta-model**: type tables and their relation columns from `table-schemas.json`. v1 targets **maintainers in the editor** — diagrams render client-side via Mermaid in the editor webview. Static site export shows a deferred placeholder.
+The **schema diagram** page block (`schema-diagram.block`, package `tome-schema-diagram`) renders a node-link diagram of the project's **meta-model**: type tables and their relation columns from `table-schemas.json`. Diagrams are laid out with **ELK.js** and emitted as **inline SVG** server-side for both the editor and static site.
 
 ## When to read this
 
 - Editing `packages/tome-schema-diagram/`
-- Schema diagram block config or Mermaid source generation
-- Editor-only page blocks with `renderMode`
+- Schema diagram block config or ELK/SVG generation
+- Page blocks with `renderMode`
 
 For page-block contracts: [page-blocks.md](../extensions/page-blocks.md). For extensions: [extensions.md](./extensions.md).
 
@@ -23,26 +23,28 @@ For page-block contracts: [page-blocks.md](../extensions/page-blocks.md). For ex
 
 `schema.json` `relationshipRules` are used for editor enforcement (allowed targets, link picker) — not for diagram edges.
 
-### Editor rendering
+### Rendering
 
-- `prepare-editor-body` expands blocks to `<pre class="mermaid">` shells (Mermaid source only — no server SVG)
-- Editor webview runs `mermaid.render()` on embed mount, then wraps the SVG in a fixed-height viewport with **pan/zoom** via [`svg-pan-zoom`](https://github.com/bumbu/svg-pan-zoom) (Mermaid core does not provide host-level pan/zoom)
+- `prepare-editor-body` and static site build expand blocks to inline `<svg>` inside `.tome-schema-diagram-viewport`
+- Layout runs server-side via **elkjs** (`layered` algorithm); no client-side diagram rendering
+- Editor webview attaches **pan/zoom** via [`svg-pan-zoom`](https://github.com/bumbu/svg-pan-zoom) to the pre-rendered SVG
 - **Pan:** drag inside the viewport
 - **Zoom:** mouse wheel over the viewport; toolbar buttons for zoom in, zoom out, and reset (fit + center)
 - Block storage remains `tome-block` fenced JSON
 
-### Static site (deferred)
+### Static site
 
-- `renderMode: "static"` → placeholder HTML ("open in the editor to view")
-- No `tome-static-site` package dependency in v1
+- `renderMode: "static"` uses the same SVG render path when `schemaQuery` is provided by the host
+- `tome-static-site` wires `createExtensionSchemaQueryServices` in `generate-data.ts`
 
 ## Pipeline
 
 ```
 extensions.json + table-schemas.json
   → createExtensionSchemaQueryServices (host)
-  → prepare-editor-body → buildErDiagramMermaid → <pre class="mermaid">
-  → Milkdown page block embed → mermaid.render() + svg-pan-zoom viewport
+  → buildElkGraph → layoutElkGraph → renderSchemaDiagramSvg
+  → <figure class="tome-schema-diagram"><div class="viewport"><svg>…</svg></div></figure>
+  → editor webview: svg-pan-zoom viewport (optional interactivity)
 ```
 
 ## Block configuration
@@ -51,8 +53,8 @@ extensions.json + table-schemas.json
 | --- | --- | --- |
 | `typeIds` | (all) | Restrict diagram entities |
 | `relationshipTypes` | (all) | Filter edge labels (`perspective` / column `key`) |
-| `theme` | `default` | Mermaid theme (`data-mermaid-theme` on figure) |
-| `direction` | `TB` | `TB` or `LR` in erDiagram source |
+| `theme` | `default` | Diagram palette (`data-theme` on figure) |
+| `direction` | `TB` | `TB` or `LR` (ELK `DOWN` / `RIGHT`) |
 
 ## Verification
 
@@ -60,18 +62,22 @@ extensions.json + table-schemas.json
 bun test packages/tome-schema-diagram/tests
 bun test packages/tome-db/tests/extension-schema-query.test.ts
 bun test packages/tome-editor/tests/api/prepare-editor-body-schema-diagram.test.ts
-bun test packages/tome-editor/tests/webview/schema-diagram-mermaid.test.ts
+bun test packages/tome-editor/tests/webview/schema-diagram-viewport.test.ts
+bun test packages/tome-static-site/tests/extensions/schema-diagram-html.test.ts
 ```
 
 ## Implementation pointers
 
 | Module | Responsibility |
 | --- | --- |
-| `tome-schema-diagram/src/build-mermaid.ts` | Schema snapshot → Mermaid source |
-| `tome-schema-diagram/src/html.ts` | Editor shell / static placeholder |
+| `tome-schema-diagram/src/build-elk-graph.ts` | Schema snapshot → ELK graph JSON |
+| `tome-schema-diagram/src/layout-elk.ts` | ELK layout |
+| `tome-schema-diagram/src/render-svg.ts` | Laid-out graph → SVG string |
+| `tome-schema-diagram/src/render.ts` | HTML figure shell (editor + static) |
+| `tome-schema-diagram/src/html.ts` | Page-block registration |
 | `tome-db/src/extension-schema-query.ts` | Host service for type tables + relation column edges |
-| `tome-editor/.../schema-diagram-mermaid.ts` | Client Mermaid render + pan/zoom viewport |
-| `tome-editor/.../page-block-embed.ts` | Calls Mermaid hook on embed mount; destroys pan/zoom on teardown |
+| `tome-editor/.../schema-diagram-viewport.ts` | Client pan/zoom on pre-rendered SVG |
+| `tome-static-site/src/generate-data.ts` | Supplies `schemaQuery` at build time |
 
 ## See also
 

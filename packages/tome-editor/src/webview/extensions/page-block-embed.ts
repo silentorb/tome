@@ -1,7 +1,7 @@
 import type { MilkdownPlugin } from "@milkdown/kit/ctx";
 import { $nodeSchema, $remark, $view } from "@milkdown/kit/utils";
 import type { Node as MdastNode, Root } from "mdast";
-import { destroySchemaDiagramPanZoom, scheduleSchemaDiagramMermaidRender } from "./schema-diagram-mermaid";
+import { destroySchemaDiagramPanZoom, scheduleSchemaDiagramViewportInit } from "./schema-diagram-viewport";
 
 const PAGE_BLOCK_COMMENT_RE = /^<!-- tome-page-block /;
 
@@ -123,7 +123,7 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node) 
   htmlHost.innerHTML = node.attrs.html;
   dom.appendChild(htmlHost);
 
-  scheduleSchemaDiagramMermaidRender(htmlHost);
+  scheduleSchemaDiagramViewportInit(htmlHost);
 
   return {
     dom,

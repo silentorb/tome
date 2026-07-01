@@ -128,9 +128,11 @@ describe("prepare-editor-body API — schema diagram", () => {
     const payload = (await res.json()) as { markdown: string };
     expect(payload.markdown).toContain("<!-- tome-page-block ");
     expect(payload.markdown).toContain('class="tome-schema-diagram"');
-    expect(payload.markdown).toContain('<pre class="mermaid">');
-    expect(payload.markdown).toContain("erDiagram");
-    expect(payload.markdown).toContain('Scene ||--o{ Feature : "features"');
+    expect(payload.markdown).toContain('class="tome-schema-diagram-viewport"');
+    expect(payload.markdown).toContain("<svg");
+    expect(payload.markdown).toContain("Scene");
+    expect(payload.markdown).toContain("Feature");
+    expect(payload.markdown).toContain("features");
     expect(payload.markdown).not.toContain("```tome-block");
   });
 

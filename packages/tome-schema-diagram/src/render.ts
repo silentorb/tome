@@ -1,6 +1,7 @@
 import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
-import { buildErDiagramMermaid, type SchemaDiagramSnapshot } from "./build-mermaid";
 import { parseSchemaDiagramConfig } from "./config";
+import { renderSchemaDiagramSvg } from "./render-svg";
+import type { SchemaDiagramSnapshot } from "./snapshot";
 
 function escapeHtml(value: string): string {
   return value
@@ -21,16 +22,6 @@ export async function loadSchemaDiagramSnapshot(
   return { typeTables, relationColumnEdges };
 }
 
-export function renderSchemaDiagramDeferred(label: string): string {
-  const title = escapeHtml(label);
-  return (
-    '<figure class="tome-schema-diagram tome-schema-diagram-deferred">' +
-    `<figcaption>${title}</figcaption>` +
-    "<p><em>Schema diagram</em> — open in the editor to view.</p>" +
-    "</figure>"
-  );
-}
-
 export function renderSchemaDiagramEmptyState(label: string): string {
   const title = escapeHtml(label);
   return (
@@ -41,7 +32,7 @@ export function renderSchemaDiagramEmptyState(label: string): string {
   );
 }
 
-export async function renderSchemaDiagramEditorShell(
+export async function renderSchemaDiagramHtml(
   schemaQuery: ExtensionSchemaQueryServices | undefined,
   data: unknown,
   label: string,
@@ -52,21 +43,26 @@ export async function renderSchemaDiagramEditorShell(
   }
 
   const config = parseSchemaDiagramConfig(data);
-  const diagram = buildErDiagramMermaid(snapshot, config);
-  if (diagram.entityCount === 0) {
+  const diagram = await renderSchemaDiagramSvg(snapshot, config);
+  if (!diagram) {
     return renderSchemaDiagramEmptyState(label);
   }
 
   const title = escapeHtml(label);
   const themeAttr =
-    config.theme !== "default" ? ` data-mermaid-theme="${escapeHtml(config.theme)}"` : "";
+    config.theme !== "default" ? ` data-theme="${escapeHtml(config.theme)}"` : "";
 
   return (
     '<figure class="tome-schema-diagram"' +
     themeAttr +
     ">" +
     `<figcaption>${title}</figcaption>` +
-    `<pre class="mermaid">${diagram.source}</pre>` +
+    '<div class="tome-schema-diagram-viewport">' +
+    diagram.svg +
+    "</div>" +
     "</figure>"
   );
 }
+
+/** @deprecated Use renderSchemaDiagramHtml — kept for callers during transition */
+export const renderSchemaDiagramEditorShell = renderSchemaDiagramHtml;

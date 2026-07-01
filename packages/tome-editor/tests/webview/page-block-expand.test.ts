@@ -13,7 +13,6 @@ try {
   // already registered by another test file
 }
 
-const render = mock(async () => ({ svg: "<svg></svg>" }));
 const svgPanZoom = mock(() => ({
   destroy: () => {},
   fit: () => {},
@@ -21,13 +20,6 @@ const svgPanZoom = mock(() => ({
   resize: () => {},
   zoomIn: () => {},
   zoomOut: () => {},
-}));
-
-mock.module("mermaid", () => ({
-  default: {
-    initialize: () => {},
-    render,
-  },
 }));
 
 mock.module("svg-pan-zoom", () => ({
@@ -66,7 +58,10 @@ describe("expandInsertedPageBlock", () => {
     const fence = serializePageBlock(component.id, {});
     const embed =
       `${formatPageBlockEmbedComment({ componentId: component.id, data: {} })}\n` +
-      '<figure class="tome-schema-diagram"><pre class="mermaid">erDiagram</pre></figure>';
+      '<figure class="tome-schema-diagram">' +
+      '<div class="tome-schema-diagram-viewport">' +
+      '<svg class="schema-diagram-svg" viewBox="0 0 100 60"></svg>' +
+      "</div></figure>";
 
     const { editor, root } = await createEditor();
 
@@ -89,9 +84,10 @@ describe("expandInsertedPageBlock", () => {
 
     await new Promise((resolve) => window.setTimeout(resolve, 150));
 
-    expect(root.querySelector(".tome-schema-diagram-viewport .mermaid-svg-host svg")).toBeTruthy();
+    expect(root.querySelector(".tome-schema-diagram-viewport .schema-diagram-svg")).toBeTruthy();
+    expect(root.querySelector(".tome-schema-diagram-toolbar")).toBeTruthy();
     expect(root.textContent).not.toContain("/sch");
-    expect(render).toHaveBeenCalled();
+    expect(svgPanZoom).toHaveBeenCalled();
 
     await editor.destroy();
   });

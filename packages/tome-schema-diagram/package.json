@@ -5,14 +5,17 @@
   "type": "module",
   "exports": {
     "./config": "./src/config.ts",
-    "./build-mermaid": "./src/build-mermaid.ts",
+    "./build-elk-graph": "./src/build-elk-graph.ts",
+    "./render-svg": "./src/render-svg.ts",
     "./editor": "./src/editor.tsx",
     "./html": "./src/html.ts",
     "./server": "./src/server.ts"
   },
   "dependencies": {
+    "elkjs": "^0.11.1",
+    "react": "19.0.0",
     "tome-interfaces": "workspace:*",
-    "react": "19.0.0"
+    "web-worker": "^1.5.0"
   },
   "devDependencies": {
     "@types/react": "19.0.12",

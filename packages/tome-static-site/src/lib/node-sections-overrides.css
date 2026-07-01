@@ -36,11 +36,13 @@
 }
 
 .tome-content-panel .prose :where(.tome-spatial-graph),
+.tome-content-panel .prose :where(.tome-schema-diagram),
 .tome-content-panel .prose :where(.tome-page-block-unknown) {
   background: var(--tome-inset);
 }
 
-.tome-content-panel .prose :where(.tome-spatial-graph) svg {
+.tome-content-panel .prose :where(.tome-spatial-graph) svg,
+.tome-content-panel .prose :where(.tome-schema-diagram) svg {
   display: block;
   max-width: 100%;
   height: auto;

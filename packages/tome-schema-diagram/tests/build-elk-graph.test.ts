@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildErDiagramMermaid } from "../src/build-mermaid";
+import { buildElkGraph, measureEdgeLabelSize } from "../src/build-elk-graph";
 import { parseSchemaDiagramConfig } from "../src/config";
 
 const SNAPSHOT = {
@@ -24,16 +24,22 @@ const SNAPSHOT = {
   ],
 };
 
-describe("buildErDiagramMermaid", () => {
-  test("builds erDiagram with entities and labeled edges", () => {
+describe("buildElkGraph", () => {
+  test("builds graph with type-table nodes and relation edges", () => {
     const config = parseSchemaDiagramConfig({});
-    const result = buildErDiagramMermaid(SNAPSHOT, config);
+    const result = buildElkGraph(SNAPSHOT, config);
     expect(result.entityCount).toBe(3);
     expect(result.edgeCount).toBe(2);
-    expect(result.source).toContain("erDiagram");
-    expect(result.source).toContain('Scene ||--o{ Feature : "features"');
-    expect(result.source).toContain('Feature ||--o{ Inspiration : "inspirations"');
-    expect(result.source).toContain("string type");
+    expect(result.graph.children.map((node) => node.labels?.[0]?.text)).toEqual([
+      "Scene",
+      "Feature",
+      "Inspiration",
+    ]);
+    expect(result.graph.edges.map((edge) => edge.labels?.[0]?.text)).toEqual([
+      "features",
+      "inspirations",
+    ]);
+    expect(result.graph.layoutOptions["elk.direction"]).toBe("DOWN");
   });
 
   test("filters by typeIds and relationshipTypes", () => {
@@ -41,22 +47,31 @@ describe("buildErDiagramMermaid", () => {
       typeIds: ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
       relationshipTypes: ["features"],
     });
-    const result = buildErDiagramMermaid(SNAPSHOT, config);
+    const result = buildElkGraph(SNAPSHOT, config);
     expect(result.entityCount).toBe(2);
     expect(result.edgeCount).toBe(1);
-    expect(result.source).toContain("Scene");
-    expect(result.source).not.toContain("Inspiration");
+    expect(result.graph.children.map((node) => node.labels?.[0]?.text)).toEqual(["Scene", "Feature"]);
+    expect(result.graph.edges[0]?.labels?.[0]?.text).toBe("features");
   });
 
-  test("includes direction when configured", () => {
+  test("uses RIGHT direction when configured LR", () => {
     const config = parseSchemaDiagramConfig({ direction: "LR" });
-    const result = buildErDiagramMermaid(SNAPSHOT, config);
-    expect(result.source).toContain("direction LR");
+    const result = buildElkGraph(SNAPSHOT, config);
+    expect(result.graph.layoutOptions["elk.direction"]).toBe("RIGHT");
   });
 
-  test("renders edges from relation columns without schema.json rules", () => {
+  test("includes edge label dimensions for layout", () => {
     const config = parseSchemaDiagramConfig({});
-    const result = buildErDiagramMermaid(
+    const result = buildElkGraph(SNAPSHOT, config);
+    const label = result.graph.edges[0]?.labels?.[0];
+    expect(label?.width).toBeGreaterThan(0);
+    expect(label?.height).toBeGreaterThan(0);
+    expect(measureEdgeLabelSize("character_attributes").width).toBeGreaterThan(150);
+  });
+
+  test("builds edges from relation columns without schema.json rules", () => {
+    const config = parseSchemaDiagramConfig({});
+    const result = buildElkGraph(
       {
         typeTables: [
           { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene" },
@@ -74,6 +89,6 @@ describe("buildErDiagramMermaid", () => {
       config,
     );
     expect(result.edgeCount).toBe(1);
-    expect(result.source).toContain('Scene ||--o{ Feature : "features"');
+    expect(result.graph.edges[0]?.labels?.[0]?.text).toBe("features");
   });
 });

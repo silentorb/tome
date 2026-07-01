@@ -9,7 +9,7 @@ import type { BlockEditFeatureConfig } from "@milkdown/crepe/feature/block-edit"
 import { serializePageBlock, serializePageBlockInner } from "tome-interfaces/page-block";
 import type { PublicExtensionComponent } from "../../shared/extensions";
 import { pageBlockEmbedSchema } from "./page-block-embed";
-import { scheduleSchemaDiagramMermaidRender } from "./schema-diagram-mermaid";
+import { scheduleSchemaDiagramViewportInit } from "./schema-diagram-viewport";
 
 const pageBlockIcon = `
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -106,7 +106,7 @@ export async function expandInsertedPageBlock(
   const node = nodeType.create(parsed);
   view.dispatch(view.state.tr.replaceWith(range.from, range.to, node).scrollIntoView());
 
-  scheduleSchemaDiagramMermaidRender(view.dom);
+  scheduleSchemaDiagramViewportInit(view.dom);
 }
 
 export async function insertPageBlockAndExpand(

@@ -331,15 +331,6 @@
   margin-bottom: 0.5rem;
 }
 
-.tome-schema-diagram pre.mermaid,
-.tome-schema-diagram div.mermaid {
-  margin: 0;
-  white-space: pre-wrap;
-  background: transparent;
-  border: none;
-  font-family: inherit;
-}
-
 .tome-schema-diagram-viewport {
   position: relative;
   box-sizing: border-box;
@@ -384,35 +375,17 @@
   background: rgba(255, 255, 255, 0.12);
 }
 
-.tome-schema-diagram .mermaid-svg-host {
+.tome-schema-diagram-viewport .schema-diagram-svg-host {
   position: absolute;
   inset: 0;
   z-index: 1;
 }
 
-.tome-schema-diagram-viewport .mermaid-svg-host svg {
+.tome-schema-diagram-viewport .schema-diagram-svg-host svg {
   display: block;
   max-width: none;
-  width: 100%;
-  height: 100%;
 }
 
-.tome-schema-diagram .edgeLabel .label foreignObject {
-  overflow: visible;
-}
-
-.tome-schema-diagram .edgeLabel .label .edgeLabel,
-.tome-schema-diagram .edgeLabel .label .labelBkg {
-  white-space: nowrap;
-}
-
-.tome-schema-diagram .mermaid-render-error {
-  margin: 0.5rem 0 0;
-  font-size: 0.85rem;
-  color: #f87171;
-}
-
-.tome-schema-diagram-deferred,
 .tome-schema-diagram-empty {
   padding: 0.75rem 1rem;
   border: 1px dashed var(--tome-border, #444);

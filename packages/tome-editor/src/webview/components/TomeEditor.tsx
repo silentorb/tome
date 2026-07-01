@@ -12,7 +12,7 @@ import {
   composeBlockEditMenus,
 } from "../extensions/page-block-menu";
 import { pageBlockEmbed } from "../extensions/page-block-embed";
-import { scheduleSchemaDiagramMermaidRender } from "../extensions/schema-diagram-mermaid";
+import { scheduleSchemaDiagramViewportInit } from "../extensions/schema-diagram-viewport";
 import { installCalloutCursor } from "../callout-cursor";
 import { attachEditorLinkNavigation } from "../editor-link-navigation";
 import { installLinkCursor } from "../link-cursor";
@@ -288,7 +288,7 @@ export function TomeEditor({
 
         editorDom = dom;
         dom.addEventListener("keydown", onKeyDown, true);
-        scheduleSchemaDiagramMermaidRender(dom);
+        scheduleSchemaDiagramViewportInit(dom);
       });
     }).catch((err: unknown) => {
       console.error("Tome editor failed to initialize:", err);
