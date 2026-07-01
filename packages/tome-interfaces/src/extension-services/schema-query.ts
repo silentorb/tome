@@ -1,0 +1,16 @@
+export interface SchemaQueryTypeTable {
+  id: string;
+  title: string;
+}
+
+export interface SchemaQueryRelationshipRule {
+  id: string;
+  sourceTypeId: string;
+  type: string;
+  allowedTargetTypeIds: string[];
+}
+
+export interface ExtensionSchemaQueryServices {
+  listTypeTables(): SchemaQueryTypeTable[] | Promise<SchemaQueryTypeTable[]>;
+  listRelationshipRules(): SchemaQueryRelationshipRule[] | Promise<SchemaQueryRelationshipRule[]>;
+}

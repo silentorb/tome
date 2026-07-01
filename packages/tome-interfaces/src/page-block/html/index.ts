@@ -1,13 +1,18 @@
 import type { ExtensionGraphQueryServices } from "../../extension-services/graph-query";
+import type { ExtensionSchemaQueryServices } from "../../extension-services/schema-query";
 import type { PageBlockComponentRef } from "../types";
+
+export type HtmlPageBlockRenderMode = "editor" | "static";
 
 /** General-purpose HTML rendering context (not tied to static site generation). */
 export interface HtmlPageBlockContext {
   component: PageBlockComponentRef;
   nodeId: string;
   contentDir: string;
+  renderMode?: HtmlPageBlockRenderMode;
   services?: {
     graphQuery?: ExtensionGraphQueryServices;
+    schemaQuery?: ExtensionSchemaQueryServices;
     nodePageHref?: (nodeId: string) => string;
     spatialGraph?: {
       nodeDimensionScale?: { x?: number; y?: number };

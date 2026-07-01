@@ -12,6 +12,7 @@ import {
   composeBlockEditMenus,
 } from "../extensions/page-block-menu";
 import { pageBlockEmbed } from "../extensions/page-block-embed";
+import { scheduleSchemaDiagramMermaidRender } from "../extensions/schema-diagram-mermaid";
 import { installCalloutCursor } from "../callout-cursor";
 import { attachEditorLinkNavigation } from "../editor-link-navigation";
 import { installLinkCursor } from "../link-cursor";
@@ -129,7 +130,9 @@ export function TomeEditor({
           markdown = await api.prepareEditorBody(nodeId, markdown);
           blockMenuBuilder = composeBlockEditMenus(
             buildCalloutSlashMenu,
-            buildPageBlockSlashMenu(manifest.components),
+            buildPageBlockSlashMenu(manifest.components, {
+              prepareEditorBody: (markdown) => api.prepareEditorBody(nodeId, markdown),
+            }),
           );
         }
         const titleMap = await resolveDynamicLinkTitles(api, markdown);
@@ -285,6 +288,7 @@ export function TomeEditor({
 
         editorDom = dom;
         dom.addEventListener("keydown", onKeyDown, true);
+        scheduleSchemaDiagramMermaidRender(dom);
       });
     }).catch((err: unknown) => {
       console.error("Tome editor failed to initialize:", err);

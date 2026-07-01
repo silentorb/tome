@@ -10,6 +10,7 @@ import {
   deleteNode as deleteNodeInDb,
   exportExplorerLodGraph,
   createExtensionGraphQueryServices,
+  createExtensionSchemaQueryServices,
   getDatabaseViewDetail,
   getNodePageDetail,
   loadSchemaFromContent,
@@ -191,8 +192,10 @@ export function openEditorDatabase(
   contentPath = resolveContentPath(),
 ): EditorDatabase {
   const writeCtx: TomeWriteContext = openTomeWriteContext(contentPath, dbPath);
-  const extensions = new ExtensionServerRuntime(contentPath, () =>
-    createExtensionGraphQueryServices(writeCtx.db),
+  const extensions = new ExtensionServerRuntime(
+    contentPath,
+    () => createExtensionGraphQueryServices(writeCtx.db),
+    () => createExtensionSchemaQueryServices(writeCtx.db, contentPath),
   );
   const extensionsReady = extensions.ensureLoaded().catch((err: unknown) => {
     console.error("[tome-extensions] failed to load:", err);

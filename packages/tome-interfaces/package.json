@@ -10,7 +10,8 @@
     "./page-block/html": "./src/page-block/html/index.ts",
     "./page-block/server": "./src/page-block/server/index.ts",
     "./extension-services": "./src/extension-services/index.ts",
-    "./extension-services/graph-query": "./src/extension-services/graph-query.ts"
+    "./extension-services/graph-query": "./src/extension-services/graph-query.ts",
+    "./extension-services/schema-query": "./src/extension-services/schema-query.ts"
   },
   "scripts": {
     "test": "bun test tests"

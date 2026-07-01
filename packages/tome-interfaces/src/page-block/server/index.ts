@@ -1,9 +1,11 @@
 import type { ExtensionGraphQueryServices } from "../../extension-services/graph-query";
+import type { ExtensionSchemaQueryServices } from "../../extension-services/schema-query";
 import type { PageBlockComponentRef } from "../types";
 
 /** Opaque host services (graph access, etc.) — implemented by the editor API host. */
 export interface ServerHostServices {
   graphQuery?: ExtensionGraphQueryServices;
+  schemaQuery?: ExtensionSchemaQueryServices;
   invokeExtensionRoute?(componentId: string, input: unknown): Promise<unknown>;
 }
 

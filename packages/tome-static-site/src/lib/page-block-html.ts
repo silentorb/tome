@@ -64,6 +64,7 @@ async function renderBlockHtml(
       component,
       nodeId: ctx.nodeId,
       contentDir: ctx.contentDir,
+      renderMode: "static",
       services: {
         graphQuery: ctx.graphQuery,
         nodePageHref: (targetNodeId) => urls.pagePath(targetNodeId),

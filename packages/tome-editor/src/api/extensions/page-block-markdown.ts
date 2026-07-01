@@ -1,4 +1,5 @@
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
+import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
 import {
   expandPageBlockFencesForEditor,
   type PageBlockPayload,
@@ -20,6 +21,7 @@ async function renderBlockHtml(
   nodeId: string,
   contentPath: string,
   graphQuery: ExtensionGraphQueryServices | undefined,
+  schemaQuery: ExtensionSchemaQueryServices | undefined,
   spatialGraph: SpatialGraphPageBlockServices | undefined,
   payload: PageBlockPayload,
 ): Promise<string> {
@@ -36,8 +38,10 @@ async function renderBlockHtml(
       component,
       nodeId,
       contentDir: contentPath,
+      renderMode: "editor",
       services: {
         graphQuery,
+        schemaQuery,
         nodePageHref: (targetNodeId) => `?node=${targetNodeId.toLowerCase()}`,
         ...(spatialGraph ? { spatialGraph } : {}),
       },
@@ -53,10 +57,20 @@ export async function prepareEditorBodyWithPageBlocks(
   host: HtmlPageBlockHostImpl,
   components: ResolvedExtensionComponent[],
   graphQuery: ExtensionGraphQueryServices | undefined,
+  schemaQuery: ExtensionSchemaQueryServices | undefined,
   spatialGraph?: SpatialGraphPageBlockServices,
 ): Promise<string> {
   const componentsById = new Map(components.map((component) => [component.id, component]));
   return expandPageBlockFencesForEditor(body, (payload) =>
-    renderBlockHtml(host, componentsById, nodeId, contentPath, graphQuery, spatialGraph, payload),
+    renderBlockHtml(
+      host,
+      componentsById,
+      nodeId,
+      contentPath,
+      graphQuery,
+      schemaQuery,
+      spatialGraph,
+      payload,
+    ),
   );
 }

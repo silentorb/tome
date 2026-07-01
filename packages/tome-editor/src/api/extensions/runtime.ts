@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { extensionsFilePath } from "tome-db/content";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
+import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
 import type { EditorPageBlockModule } from "tome-interfaces/page-block/editor";
 import type { HtmlPageBlockModule } from "tome-interfaces/page-block/html";
 import type { ServerPageBlockModule } from "tome-interfaces/page-block/server";
@@ -64,6 +65,7 @@ async function importServerModule(modulePath: string, host: ServerPageBlockHostI
 export class ExtensionServerRuntime {
   readonly #contentPath: string;
   readonly #getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined;
+  readonly #getSchemaQueryServices?: () => ExtensionSchemaQueryServices | undefined;
   readonly #editorHost = new EditorPageBlockHostImpl();
   readonly #htmlHost = new HtmlPageBlockHostImpl();
   readonly #serverHost = new ServerPageBlockHostImpl();
@@ -74,9 +76,11 @@ export class ExtensionServerRuntime {
   constructor(
     contentPath: string,
     getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined,
+    getSchemaQueryServices?: () => ExtensionSchemaQueryServices | undefined,
   ) {
     this.#contentPath = contentPath;
     this.#getGraphQueryServices = getGraphQueryServices;
+    this.#getSchemaQueryServices = getSchemaQueryServices;
   }
 
   get editorHost(): EditorPageBlockHostImpl {
@@ -181,6 +185,7 @@ export class ExtensionServerRuntime {
         nodeId,
         services: {
           graphQuery: this.#getGraphQueryServices?.(),
+          schemaQuery: this.#getSchemaQueryServices?.(),
         },
       },
       input,
@@ -226,6 +231,7 @@ export class ExtensionServerRuntime {
       this.#htmlHost,
       this.#manifest.components,
       this.#getGraphQueryServices?.(),
+      this.#getSchemaQueryServices?.(),
       scale ? { nodeDimensionScale: scale } : undefined,
     );
   }

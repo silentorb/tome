@@ -30,6 +30,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Relationship schema rules | [schema.md](./schema.md) |
 | Extension system (runtime-loaded packages) | [extensions.md](./extensions.md) |
 | Spatial graph (Cytoscape location diagrams) | [spatial-graph.md](./spatial-graph.md) |
+| Schema diagram (Mermaid ER meta-model) | [schema-diagram.md](./schema-diagram.md) |
 
 ## Split of concerns
 

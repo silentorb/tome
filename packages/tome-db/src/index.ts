@@ -383,6 +383,7 @@ export {
   findComponentById,
 } from "./extensions";
 export { createExtensionGraphQueryServices } from "./extension-graph-query";
+export { createExtensionSchemaQueryServices } from "./extension-schema-query";
 export type {
   ExtensionComponentEntry,
   ExtensionComponentKind,

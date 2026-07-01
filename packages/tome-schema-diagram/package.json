@@ -1,0 +1,24 @@
+{
+  "name": "tome-schema-diagram",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./config": "./src/config.ts",
+    "./build-mermaid": "./src/build-mermaid.ts",
+    "./editor": "./src/editor.tsx",
+    "./html": "./src/html.ts",
+    "./server": "./src/server.ts"
+  },
+  "dependencies": {
+    "tome-interfaces": "workspace:*",
+    "react": "19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.12",
+    "typescript": "5.8.2"
+  },
+  "scripts": {
+    "test": "bun test tests"
+  }
+}
