@@ -17,6 +17,7 @@ For page-block contracts: [page-blocks.md](../extensions/page-blocks.md). For ex
 ### Diagram content (v1)
 
 - **Entities:** type tables from `table-schemas.json` (titles from graph nodes)
+- **Member badges:** each type table shows a notification-style pill with `member_of` set size (`setMemberIds`); hidden when count is 0; corner placement is project-configurable (see below)
 - **Edges:** `table-schemas.json` relation columns — one directed edge per column (`sourceTypeId` → `targetTypeId`), labeled by `perspective` (fallback `key`)
 - **Default scope:** full project (all types and relation columns)
 - **Optional filters:** block `data` may restrict `typeIds` and `relationshipTypes` (matches column `perspective` / `key` labels)
@@ -41,7 +42,7 @@ For page-block contracts: [page-blocks.md](../extensions/page-blocks.md). For ex
 
 ```
 extensions.json + table-schemas.json
-  → createExtensionSchemaQueryServices (host)
+  → createExtensionSchemaQueryServices (host) — includes memberCount per type table
   → buildElkGraph → layoutElkGraph → renderSchemaDiagramSvg
   → <figure class="tome-schema-diagram"><div class="viewport"><svg>…</svg></div></figure>
   → editor webview: svg-pan-zoom viewport (optional interactivity)
@@ -56,11 +57,30 @@ extensions.json + table-schemas.json
 | `theme` | `default` | Diagram palette (`data-theme` on figure) |
 | `direction` | `TB` | `TB` or `LR` (ELK `DOWN` / `RIGHT`) |
 
+## Workspace configuration
+
+Project-wide diagram options live in `content/model/workspace.json` under `schemaDiagram` (same file as `spatialGraph` settings). Applies to all schema diagram blocks in the editor and static site.
+
+| Key | Default | Purpose |
+| --- | --- | --- |
+| `memberBadgePosition` | `bottom-right` | Corner for member-count pills: `top-left`, `top-right`, `bottom-left`, or `bottom-right` |
+
+Example:
+
+```json
+"schemaDiagram": {
+  "memberBadgePosition": "top-right"
+}
+```
+
+Reload the editor or rebuild the static site after changing `workspace.json`.
+
 ## Verification
 
 ```bash
 bun test packages/tome-schema-diagram/tests
 bun test packages/tome-db/tests/extension-schema-query.test.ts
+bun test packages/tome-db/tests/workspace-schema-diagram.test.ts
 bun test packages/tome-editor/tests/api/prepare-editor-body-schema-diagram.test.ts
 bun test packages/tome-editor/tests/webview/schema-diagram-viewport.test.ts
 bun test packages/tome-static-site/tests/extensions/schema-diagram-html.test.ts
@@ -77,7 +97,7 @@ bun test packages/tome-static-site/tests/extensions/schema-diagram-html.test.ts
 | `tome-schema-diagram/src/html.ts` | Page-block registration |
 | `tome-db/src/extension-schema-query.ts` | Host service for type tables + relation column edges |
 | `tome-editor/.../schema-diagram-viewport.ts` | Client pan/zoom on pre-rendered SVG |
-| `tome-static-site/src/generate-data.ts` | Supplies `schemaQuery` at build time |
+| `tome-static-site/src/generate-data.ts` | Supplies `schemaQuery` and `schemaDiagram` workspace options at build time |
 
 ## See also
 

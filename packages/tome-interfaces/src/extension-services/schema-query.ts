@@ -1,6 +1,7 @@
 export interface SchemaQueryTypeTable {
   id: string;
   title: string;
+  memberCount?: number;
 }
 
 export interface SchemaQueryRelationshipRule {

@@ -282,6 +282,8 @@ export type {
   WorkspaceStaticSite,
   WorkspaceEditor,
   WorkspaceSpatialGraph,
+  WorkspaceSchemaDiagram,
+  WorkspaceSchemaDiagramMemberBadgePosition,
   WorkspaceQuickLink,
   SidebarLink,
 } from "./workspace/workspace-file";
@@ -291,6 +293,8 @@ export {
   emptyWorkspaceFile,
   editorMarkdownBodyPanel,
   spatialGraphNodeDimensionScale,
+  schemaDiagramMemberBadgePosition,
+  schemaDiagramPageBlockServices,
   WORKSPACE_FILE_VERSION,
 } from "./workspace/workspace-file";
 export {

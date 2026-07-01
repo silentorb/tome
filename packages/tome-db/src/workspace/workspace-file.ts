@@ -47,6 +47,16 @@ export interface WorkspaceSpatialGraph {
   nodeDimensionScale?: WorkspaceSpatialGraphNodeDimensionScale;
 }
 
+export type WorkspaceSchemaDiagramMemberBadgePosition =
+  | "top-left"
+  | "top-right"
+  | "bottom-left"
+  | "bottom-right";
+
+export interface WorkspaceSchemaDiagram {
+  memberBadgePosition?: WorkspaceSchemaDiagramMemberBadgePosition;
+}
+
 export interface WorkspaceFile {
   version: number;
   homeNodeId: string;
@@ -59,6 +69,7 @@ export interface WorkspaceFile {
   legacy?: WorkspaceLegacy;
   editor?: WorkspaceEditor;
   spatialGraph?: WorkspaceSpatialGraph;
+  schemaDiagram?: WorkspaceSchemaDiagram;
 }
 
 export function editorMarkdownBodyPanel(workspace: WorkspaceFile): boolean {
@@ -74,6 +85,29 @@ export function spatialGraphNodeDimensionScale(
   if (typeof scale.x === "number") result.x = scale.x;
   if (typeof scale.y === "number") result.y = scale.y;
   return Object.keys(result).length > 0 ? result : undefined;
+}
+
+const SCHEMA_DIAGRAM_BADGE_POSITIONS = new Set<WorkspaceSchemaDiagramMemberBadgePosition>([
+  "top-left",
+  "top-right",
+  "bottom-left",
+  "bottom-right",
+]);
+
+export function schemaDiagramMemberBadgePosition(
+  workspace: WorkspaceFile,
+): WorkspaceSchemaDiagramMemberBadgePosition {
+  const position = workspace.schemaDiagram?.memberBadgePosition;
+  if (position && SCHEMA_DIAGRAM_BADGE_POSITIONS.has(position)) {
+    return position;
+  }
+  return "bottom-right";
+}
+
+export function schemaDiagramPageBlockServices(
+  workspace: WorkspaceFile,
+): { memberBadgePosition: WorkspaceSchemaDiagramMemberBadgePosition } {
+  return { memberBadgePosition: schemaDiagramMemberBadgePosition(workspace) };
 }
 
 function parseNodeId(value: unknown, path: string): string {
@@ -202,6 +236,28 @@ function parseSpatialGraph(raw: unknown, path: string): WorkspaceSpatialGraph | 
   return Object.keys(spatialGraph).length > 0 ? spatialGraph : undefined;
 }
 
+function parseSchemaDiagram(raw: unknown, path: string): WorkspaceSchemaDiagram | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${path}: must be an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  const schemaDiagram: WorkspaceSchemaDiagram = {};
+  if (obj.memberBadgePosition !== undefined) {
+    if (typeof obj.memberBadgePosition !== "string") {
+      throw new Error(`${path}.memberBadgePosition: must be a string`);
+    }
+    const position = obj.memberBadgePosition as WorkspaceSchemaDiagramMemberBadgePosition;
+    if (!SCHEMA_DIAGRAM_BADGE_POSITIONS.has(position)) {
+      throw new Error(
+        `${path}.memberBadgePosition: must be one of top-left, top-right, bottom-left, bottom-right`,
+      );
+    }
+    schemaDiagram.memberBadgePosition = position;
+  }
+  return Object.keys(schemaDiagram).length > 0 ? schemaDiagram : undefined;
+}
+
 function parseEditor(raw: unknown, path: string): WorkspaceEditor | undefined {
   if (raw === undefined) return undefined;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -297,6 +353,7 @@ export function parseWorkspaceFile(raw: string): WorkspaceFile {
   const legacy = parseLegacy(obj.legacy, "workspace.json legacy");
   const editor = parseEditor(obj.editor, "workspace.json editor");
   const spatialGraph = parseSpatialGraph(obj.spatialGraph, "workspace.json spatialGraph");
+  const schemaDiagram = parseSchemaDiagram(obj.schemaDiagram, "workspace.json schemaDiagram");
 
   return {
     version: WORKSPACE_FILE_VERSION,
@@ -310,6 +367,7 @@ export function parseWorkspaceFile(raw: string): WorkspaceFile {
     ...(legacy ? { legacy } : {}),
     ...(editor ? { editor } : {}),
     ...(spatialGraph ? { spatialGraph } : {}),
+    ...(schemaDiagram ? { schemaDiagram } : {}),
   };
 }
 

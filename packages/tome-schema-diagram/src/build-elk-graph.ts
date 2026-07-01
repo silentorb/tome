@@ -47,6 +47,7 @@ export interface BuildElkGraphResult {
   graph: ElkGraph;
   entityCount: number;
   edgeCount: number;
+  memberCounts: Map<string, number>;
 }
 
 const CHAR_WIDTH_PX = 8;
@@ -81,7 +82,9 @@ export function buildElkGraph(
 ): BuildElkGraphResult {
   const filtered = filterSnapshot(snapshot, config);
 
+  const memberCounts = new Map<string, number>();
   const children: ElkNode[] = filtered.typeTables.map((table) => {
+    memberCounts.set(table.id, table.memberCount ?? 0);
     const size = measureNodeSize(table.title);
     return {
       id: table.id,
@@ -121,5 +124,6 @@ export function buildElkGraph(
     graph,
     entityCount: children.length,
     edgeCount: edges.length,
+    memberCounts,
   };
 }

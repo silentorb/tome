@@ -106,10 +106,24 @@ describe("createExtensionSchemaQueryServices", () => {
   test("listTypeTables returns titles from graph", () => {
     const tables = services.listTypeTables();
     expect(tables).toEqual([
-      { id: featureTypeId, title: "Feature" },
-      { id: inspirationTypeId, title: "Inspiration" },
-      { id: sceneTypeId, title: "Scene" },
+      { id: featureTypeId, title: "Feature", memberCount: 0 },
+      { id: inspirationTypeId, title: "Inspiration", memberCount: 0 },
+      { id: sceneTypeId, title: "Scene", memberCount: 0 },
     ]);
+  });
+
+  test("listTypeTables includes memberCount from set membership", () => {
+    const member1 = "dddddddddddddddddddddddddddddddd";
+    const member2 = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    seedTestNode(fixture, { id: member1, properties: { title: "Scene A" } });
+    seedTestNode(fixture, { id: member2, properties: { title: "Scene B" } });
+    fixture.ctx.db.upsertRelationship(member1, sceneTypeId, "member_of", { row_index: 0 });
+    fixture.ctx.db.upsertRelationship(member2, sceneTypeId, "member_of", { row_index: 1 });
+
+    const tables = services.listTypeTables();
+    const scene = tables.find((table) => table.id === sceneTypeId);
+    expect(scene?.memberCount).toBe(2);
+    expect(tables.find((table) => table.id === featureTypeId)?.memberCount).toBe(0);
   });
 
   test("listRelationshipRules returns schema rules", () => {

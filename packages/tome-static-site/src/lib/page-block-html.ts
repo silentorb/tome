@@ -19,6 +19,10 @@ export interface SpatialGraphPageBlockServices {
   nodeDimensionScale?: { x?: number; y?: number };
 }
 
+export interface SchemaDiagramPageBlockServices {
+  memberBadgePosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
+}
+
 export interface PageBlockHtmlContext {
   host: HtmlPageBlockHostImpl;
   componentsById: Map<string, ResolvedExtensionComponent>;
@@ -27,6 +31,7 @@ export interface PageBlockHtmlContext {
   graphQuery?: ExtensionGraphQueryServices;
   schemaQuery?: ExtensionSchemaQueryServices;
   spatialGraph?: SpatialGraphPageBlockServices;
+  schemaDiagram?: SchemaDiagramPageBlockServices;
 }
 
 export function createPageBlockHtmlContext(
@@ -37,6 +42,7 @@ export function createPageBlockHtmlContext(
   graphQuery?: ExtensionGraphQueryServices,
   spatialGraph?: SpatialGraphPageBlockServices,
   schemaQuery?: ExtensionSchemaQueryServices,
+  schemaDiagram?: SchemaDiagramPageBlockServices,
 ): PageBlockHtmlContext {
   return {
     host,
@@ -46,6 +52,7 @@ export function createPageBlockHtmlContext(
     graphQuery,
     spatialGraph,
     schemaQuery,
+    schemaDiagram,
   };
 }
 
@@ -74,6 +81,7 @@ async function renderBlockHtml(
         schemaQuery: ctx.schemaQuery,
         nodePageHref: (targetNodeId) => urls.pagePath(targetNodeId),
         ...(ctx.spatialGraph ? { spatialGraph: ctx.spatialGraph } : {}),
+        ...(ctx.schemaDiagram ? { schemaDiagram: ctx.schemaDiagram } : {}),
       },
     },
     data,

@@ -69,6 +69,22 @@ describe("buildElkGraph", () => {
     expect(measureEdgeLabelSize("character_attributes").width).toBeGreaterThan(150);
   });
 
+  test("carries member counts from snapshot", () => {
+    const config = parseSchemaDiagramConfig({});
+    const result = buildElkGraph(
+      {
+        ...SNAPSHOT,
+        typeTables: SNAPSHOT.typeTables.map((table, index) => ({
+          ...table,
+          memberCount: index === 0 ? 5 : 0,
+        })),
+      },
+      config,
+    );
+    expect(result.memberCounts.get(SNAPSHOT.typeTables[0]!.id)).toBe(5);
+    expect(result.memberCounts.get(SNAPSHOT.typeTables[1]!.id)).toBe(0);
+  });
+
   test("builds edges from relation columns without schema.json rules", () => {
     const config = parseSchemaDiagramConfig({});
     const result = buildElkGraph(

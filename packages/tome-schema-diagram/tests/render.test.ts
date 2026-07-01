@@ -72,6 +72,35 @@ describe("schema diagram render", () => {
     expect(result!.svg).toContain('class="schema-diagram-edge"');
   });
 
+  test("renders member count badge when type table has members", async () => {
+    const result = await renderSchemaDiagramSvg(
+      {
+        typeTables: [
+          { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene", memberCount: 3 },
+          { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Feature", memberCount: 0 },
+        ],
+        relationColumnEdges: [],
+      },
+      parseSchemaDiagramConfig({}),
+    );
+    expect(result).not.toBeNull();
+    expect(result!.svg).toContain('class="schema-diagram-member-badge"');
+    expect(result!.svg).toContain(">3</text>");
+    expect(result!.svg.match(/schema-diagram-member-badge/g)?.length).toBe(1);
+  });
+
+  test("hides member badge when count is zero", async () => {
+    const result = await renderSchemaDiagramSvg(
+      {
+        typeTables: [{ id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene", memberCount: 0 }],
+        relationColumnEdges: [],
+      },
+      parseSchemaDiagramConfig({}),
+    );
+    expect(result).not.toBeNull();
+    expect(result!.svg).not.toContain("schema-diagram-member-badge");
+  });
+
   test("edge label background fits long perspective names", async () => {
     const result = await renderSchemaDiagramSvg(
       {
@@ -102,5 +131,11 @@ describe("schema diagram render", () => {
     expect(config.relationshipTypes).toBeNull();
     expect(config.theme).toBe("default");
     expect(config.direction).toBe("TB");
+    expect(config.memberBadgePosition).toBe("bottom-right");
+  });
+
+  test("parseSchemaDiagramConfig uses workspace member badge position", () => {
+    const config = parseSchemaDiagramConfig({}, { memberBadgePosition: "top-left" });
+    expect(config.memberBadgePosition).toBe("top-left");
   });
 });

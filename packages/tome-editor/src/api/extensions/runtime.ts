@@ -11,6 +11,7 @@ import {
   loadWorkspaceFromContent,
   resolveExtensionsManifest,
   spatialGraphNodeDimensionScale,
+  schemaDiagramPageBlockServices,
   type ExtensionsManifest,
   type ResolvedExtensionComponent,
 } from "tome-db";
@@ -224,6 +225,7 @@ export class ExtensionServerRuntime {
     await this.ensureLoaded();
     const workspace = loadWorkspaceFromContent(this.#contentPath);
     const scale = spatialGraphNodeDimensionScale(workspace);
+    const schemaDiagram = schemaDiagramPageBlockServices(workspace);
     return prepareEditorBodyWithPageBlocks(
       body,
       nodeId,
@@ -233,6 +235,7 @@ export class ExtensionServerRuntime {
       this.#getGraphQueryServices?.(),
       this.#getSchemaQueryServices?.(),
       scale ? { nodeDimensionScale: scale } : undefined,
+      schemaDiagram,
     );
   }
 }

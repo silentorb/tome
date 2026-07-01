@@ -6,6 +6,7 @@ import type {
 } from "tome-interfaces/extension-services/schema-query";
 import type { GraphDatabase, Node } from "./graph";
 import { loadSchemaFromContent } from "./schema-rules/load";
+import { setMemberIds } from "./set-membership";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
 
 function titleFromNode(node: Node | null): string {
@@ -29,6 +30,7 @@ export function createExtensionSchemaQueryServices(
         entries.push({
           id,
           title: titleFromNode(db.getNode(id)),
+          memberCount: setMemberIds(db, id).length,
         });
       }
       entries.sort((a, b) =>

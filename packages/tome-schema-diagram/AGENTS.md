@@ -29,3 +29,4 @@ bun test   # from this package
 - Do not import `tome-db`; consume `ExtensionSchemaQueryServices` from the host.
 - Layout and SVG rendering are server-side; editor only adds pan/zoom to pre-rendered SVG.
 - Static site requires `schemaQuery` in page-block render context.
+- Member badge corner comes from `workspace.json` `schemaDiagram.memberBadgePosition` (not block `data`).

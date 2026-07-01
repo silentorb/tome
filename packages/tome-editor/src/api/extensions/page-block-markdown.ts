@@ -15,6 +15,10 @@ export interface SpatialGraphPageBlockServices {
   nodeDimensionScale?: { x?: number; y?: number };
 }
 
+export interface SchemaDiagramPageBlockServices {
+  memberBadgePosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
+}
+
 async function renderBlockHtml(
   host: HtmlPageBlockHost,
   componentsById: Map<string, ResolvedExtensionComponent>,
@@ -23,6 +27,7 @@ async function renderBlockHtml(
   graphQuery: ExtensionGraphQueryServices | undefined,
   schemaQuery: ExtensionSchemaQueryServices | undefined,
   spatialGraph: SpatialGraphPageBlockServices | undefined,
+  schemaDiagram: SchemaDiagramPageBlockServices | undefined,
   payload: PageBlockPayload,
 ): Promise<string> {
   const component = componentsById.get(payload.componentId);
@@ -44,6 +49,7 @@ async function renderBlockHtml(
         schemaQuery,
         nodePageHref: (targetNodeId) => `?node=${targetNodeId.toLowerCase()}`,
         ...(spatialGraph ? { spatialGraph } : {}),
+        ...(schemaDiagram ? { schemaDiagram } : {}),
       },
     },
     payload.data,
@@ -59,6 +65,7 @@ export async function prepareEditorBodyWithPageBlocks(
   graphQuery: ExtensionGraphQueryServices | undefined,
   schemaQuery: ExtensionSchemaQueryServices | undefined,
   spatialGraph?: SpatialGraphPageBlockServices,
+  schemaDiagram?: SchemaDiagramPageBlockServices,
 ): Promise<string> {
   const componentsById = new Map(components.map((component) => [component.id, component]));
   return expandPageBlockFencesForEditor(body, (payload) =>
@@ -70,6 +77,7 @@ export async function prepareEditorBodyWithPageBlocks(
       graphQuery,
       schemaQuery,
       spatialGraph,
+      schemaDiagram,
       payload,
     ),
   );

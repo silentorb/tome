@@ -17,6 +17,9 @@ export interface HtmlPageBlockContext {
     spatialGraph?: {
       nodeDimensionScale?: { x?: number; y?: number };
     };
+    schemaDiagram?: {
+      memberBadgePosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
+    };
   };
 }
 

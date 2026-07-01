@@ -7,7 +7,12 @@ export function register(host: HtmlPageBlockHost): void {
   host.registerPageBlockRenderer({
     implementationId: IMPLEMENTATION_ID,
     async renderHtml(ctx, data) {
-      return renderSchemaDiagramHtml(ctx.services?.schemaQuery, data, ctx.component.label);
+      return renderSchemaDiagramHtml(
+        ctx.services?.schemaQuery,
+        data,
+        ctx.component.label,
+        ctx.services?.schemaDiagram,
+      );
     },
   });
 }

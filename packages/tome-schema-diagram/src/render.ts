@@ -1,4 +1,5 @@
 import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
+import type { SchemaDiagramWorkspaceOptions } from "./config";
 import { parseSchemaDiagramConfig } from "./config";
 import { renderSchemaDiagramSvg } from "./render-svg";
 import type { SchemaDiagramSnapshot } from "./snapshot";
@@ -36,13 +37,14 @@ export async function renderSchemaDiagramHtml(
   schemaQuery: ExtensionSchemaQueryServices | undefined,
   data: unknown,
   label: string,
+  workspace?: SchemaDiagramWorkspaceOptions,
 ): Promise<string> {
   const snapshot = await loadSchemaDiagramSnapshot(schemaQuery);
   if (!snapshot || snapshot.typeTables.length === 0) {
     return renderSchemaDiagramEmptyState(label);
   }
 
-  const config = parseSchemaDiagramConfig(data);
+  const config = parseSchemaDiagramConfig(data, workspace);
   const diagram = await renderSchemaDiagramSvg(snapshot, config);
   if (!diagram) {
     return renderSchemaDiagramEmptyState(label);
