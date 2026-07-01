@@ -229,6 +229,7 @@ export function openEditorDatabase(
         tabId,
         schema: schema(),
         contentDir: contentPath,
+        includeSchemaEmptySections: true,
       });
     },
     getDatabaseView(id: string, tabId?: string) {

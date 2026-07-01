@@ -66,6 +66,11 @@ A node is a **type table** when:
 
 Row data for instances is stored on `is_a` relationship properties, not on the instance node vertex.
 
+## Instance node pages (editor)
+
+- For each `type: relation` column on the instance's type table (`member_of` target), the editor shows a relation table section even when no outgoing edges exist yet (static site export still omits empty sections).
+- Section titles and link-existing pickers use the column's `targetTypeId` and `perspective` (same grouping as populated `includes` edges).
+
 ## Editing
 
 - **Editor UI:** type-table Items sections support **add**, **edit**, **delete**, and **reorder** for stored columns (`table-schemas.json`). Use **+ Column** in the table utility bar or right-click anywhere in a column header cell → **Edit** / **Delete**. Dynamic/computed columns (`dynamic-fields.json`) remain read-only in the UI.

@@ -92,4 +92,22 @@ describe("RelationSectionView", () => {
     expect(screen.getByText('No rows match “nope”.')).toBeTruthy();
     expect(window.location.search).toContain("search_RELATED=nope");
   });
+
+  test("renders empty state and link control when section has no rows", () => {
+    const api = makeMockEditorApi();
+    render(
+      <UserSettingsProvider api={api}>
+        <RelationSectionView
+          api={api}
+          nodeId={FIXTURE_PAGE_ID}
+          section={makeRelationSection({ rows: [], columns: [], columnDefs: [] })}
+        />
+      </UserSettingsProvider>,
+    );
+
+    expect(screen.getByText("No rows in this view.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Link" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "+ Link Related item" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Linked record" })).toBeNull();
+  });
 });

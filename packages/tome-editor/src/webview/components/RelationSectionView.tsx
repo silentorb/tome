@@ -89,6 +89,7 @@ export function RelationSectionView({
   );
 
   const hasActiveSearch = searchQuery.trim().length > 0;
+  const hasRows = section.rows.length > 0;
   const hasMatchingRows = filteredRows.length > 0;
 
   const renderNameCell = useCallback(
@@ -117,8 +118,6 @@ export function RelationSectionView({
     [nodeId, section.rows],
   );
 
-  if (section.rows.length === 0) return null;
-
   const tableContent = (
     <section className="tome-record-section tome-relation-section">
       <SectionTitle api={api} title={section.title} typeNodeId={section.typeNodeId} />
@@ -128,7 +127,9 @@ export function RelationSectionView({
           section.addMode === "link-existing" ? <TableLinkExistingRowTrigger /> : undefined
         }
       />
-      {!hasMatchingRows && hasActiveSearch ? (
+      {!hasRows ? (
+        <div className="tome-database-empty">No rows in this view.</div>
+      ) : !hasMatchingRows && hasActiveSearch ? (
         <div className="tome-database-empty">No rows match “{searchQuery.trim()}”.</div>
       ) : (
         <SectionDataTable

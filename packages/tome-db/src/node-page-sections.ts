@@ -10,10 +10,16 @@ import {
 import { getNodeDetail, type NodeDetail } from "./queries";
 import { getNodePageMetadata, type NodePageMetadata } from "./node-metadata";
 import { buildPropertiesSection, type PropertiesSection } from "./node-type-properties";
-import { INCLUDES_TYPE, relationSectionSupportsLinkExisting } from "./includes-relationship";
+import {
+  INCLUDES_TYPE,
+  isIncludesPerspectiveSlug,
+  relationSectionSupportsLinkExisting,
+} from "./includes-relationship";
 import { findTypeNodeByTitle, typeIdsForInstance } from "./node-capabilities";
 import { normalizeRelationshipType } from "./relation-type";
-import { relationshipRuleContextForType } from "./schema-rules/resolve";
+import {
+  relationshipRuleContextForType,
+} from "./schema-rules/resolve";
 import type { SchemaFile } from "./schema-rules/schema-file";
 import { resolveContentPath } from "./content/paths";
 import {
@@ -25,6 +31,8 @@ import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { generatedProviderId, MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
+import type { TableRelationColumn } from "./content/table-schemas-file";
+import { getTableSchema, relationColumns, slugifyPropertyKey } from "./table-schema";
 
 const RELATION_META_KEYS = new Set([
   "ordinal",
@@ -64,7 +72,7 @@ export interface RelationTableSection {
   title: string;
   /** When set, the section title links to this type node. */
   typeNodeId: string | null;
-  /** UI hint: allowed member_of target type ids for link-existing picker (from schema.json). */
+  /** UI hint: allowed member_of target type ids for link-existing picker (from table-schemas / schema.json). */
   allowedTargetTypeIds?: string[];
   /** Inline table add control: link existing record vs none (structural one-to-many). */
   addMode: RelationTableAddMode;
@@ -133,6 +141,39 @@ function relationGroupKey(
   return INCLUDES_TYPE;
 }
 
+function perspectiveForRelationColumn(col: TableRelationColumn): string {
+  return normalizeRelationshipType(col.perspective ?? slugifyPropertyKey(col.name));
+}
+
+/** Group key for a table-schemas relation column; aligns with {@link relationGroupKey} for `includes` edges. */
+function relationGroupKeyFromColumn(col: TableRelationColumn): string {
+  const perspective = perspectiveForRelationColumn(col);
+  if (isIncludesPerspectiveSlug(perspective) || perspective === INCLUDES_TYPE) {
+    return `${INCLUDES_TYPE}:${col.targetTypeId}`;
+  }
+  return perspective;
+}
+
+function tableRelationByGroupKeyForInstance(
+  db: GraphDatabase,
+  nodeId: string,
+  contentDir: string,
+): Map<string, TableRelationColumn> {
+  const tables = loadTableSchemasFromContent(contentDir);
+  const byGroupKey = new Map<string, TableRelationColumn>();
+  for (const typeId of typeIdsForInstance(db, nodeId)) {
+    const schema = getTableSchema(tables, typeId);
+    if (!schema) continue;
+    for (const col of relationColumns(schema)) {
+      const key = relationGroupKeyFromColumn(col);
+      if (!byGroupKey.has(key)) {
+        byGroupKey.set(key, col);
+      }
+    }
+  }
+  return byGroupKey;
+}
+
 function parseIncludesGroupKey(label: string): { typeNodeId: string | null; perspective: string } {
   if (!label.startsWith(`${INCLUDES_TYPE}:`)) {
     return { typeNodeId: null, perspective: label };
@@ -172,7 +213,11 @@ function typeTableIdsFromContent(contentDir: string): string[] {
 function buildRelationSections(
   db: GraphDatabase,
   nodeId: string,
-  options?: { schema?: SchemaFile; contentDir?: string },
+  options?: {
+    schema?: SchemaFile;
+    contentDir?: string;
+    includeSchemaEmptySections?: boolean;
+  },
 ): RelationTableSection[] {
   const schema = options?.schema;
   const contentDir = options?.contentDir ?? resolveContentPath();
@@ -180,12 +225,21 @@ function buildRelationSections(
   const relationshipTypes = loadRelationshipTypesFromContent(contentDir);
   const outgoing = db.listRelationshipsFromSource(nodeId);
   const byType = new Map<string, typeof outgoing>();
+  const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
 
   for (const connection of outgoing) {
     const groupType = relationGroupKey(db, connection);
     const group = byType.get(groupType) ?? [];
     group.push(connection);
     byType.set(groupType, group);
+  }
+
+  if (options?.includeSchemaEmptySections) {
+    for (const key of tableRelationByGroupKey.keys()) {
+      if (!byType.has(key)) {
+        byType.set(key, []);
+      }
+    }
   }
 
   const sections: RelationTableSection[] = [];
@@ -226,8 +280,9 @@ function buildRelationSections(
     const typeNodeId = isTypeMembership
       ? null
       : (includesTypeId ?? resolveTypeNodeId(db, perspective, connections));
+    const tableRelation = tableRelationByGroupKey.get(label);
     const ruleContext =
-      schema && !isTypeMembership
+      schema && !isTypeMembership && !tableRelation
         ? relationshipRuleContextForType(schema, db, nodeId, perspective)
         : null;
     let columns = [...columnSet].sort((a, b) => a.localeCompare(b));
@@ -272,7 +327,9 @@ function buildRelationSections(
       typeNodeId,
       allowedTargetTypeIds: isTypeMembership
         ? typeTableIds
-        : ruleContext?.allowedTargetTypeIds,
+        : tableRelation
+          ? [tableRelation.targetTypeId]
+          : ruleContext?.allowedTargetTypeIds,
       addMode: isTypeMembership
         ? "link-existing"
         : relationSectionSupportsLinkExisting(perspective)
@@ -301,6 +358,8 @@ export function getNodePageDetail(
     scopeId?: string;
     schema?: SchemaFile;
     contentDir?: string;
+    /** Editor only: emit empty relation sections for type-table relation columns with no outgoing edges yet. */
+    includeSchemaEmptySections?: boolean;
   },
 ): NodePageDetail | null {
   const node = getNodeDetail(db, id);
@@ -338,6 +397,7 @@ export function getNodePageDetail(
     ...buildRelationSections(db, id, {
       schema: options?.schema,
       contentDir,
+      includeSchemaEmptySections: options?.includeSchemaEmptySections,
     }),
   );
 

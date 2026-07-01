@@ -6,6 +6,7 @@ import { GraphDatabase } from "../src/graph";
 import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodePageDetail } from "../src/node-page-sections";
+import { INCLUDES_TYPE } from "../src/includes-relationship";
 import { contentModelDir, relationshipTypesFilePath, tableSchemasFilePath } from "../src/content/paths";
 import {
   serializeRelationshipTypesFile,
@@ -274,6 +275,100 @@ describe("node-sections", () => {
         { targetId: typeA, name: "Type A" },
         { targetId: typeB, name: "Type B" },
       ],
+    });
+  });
+
+  afterAll(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("node-sections table-schema empty relation placeholders", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tome-db-sections-table-schema-empty-"));
+  const contentDir = join(dir, "content");
+  mkdirSync(contentModelDir(contentDir), { recursive: true });
+  writeMembershipRelationshipTypes(contentDir);
+  writeFileSync(
+    tableSchemasFilePath(contentDir),
+    serializeTableSchemasFile({
+      version: 1,
+      tables: {
+        "2eea538996934ce8abafc27132e576c1": {
+          columns: [
+            {
+              key: "features",
+              name: "Features",
+              type: "relation",
+              targetTypeId: "dd0de9867cc345b898929306bdf9fc83",
+              perspective: "features",
+            },
+          ],
+        },
+      },
+    }),
+  );
+  invalidateTableSchemasCache();
+  process.env.TOME_CONTENT_PATH = contentDir;
+  const dbPath = join(dir, "test.sqlite");
+  const db = new GraphDatabase(dbPath);
+
+  const inspirationsTypeId = "2eea538996934ce8abafc27132e576c1";
+  const featuresTypeId = "dd0de9867cc345b898929306bdf9fc83";
+  const inspirationId = "insp0000000000000000000000000001";
+  const featId = "feat0000000000000000000000000001";
+
+  db.upsertNode(inspirationsTypeId, { ...typeTableMarkerProperties("Inspirations") });
+  db.upsertNode(featuresTypeId, { ...typeTableMarkerProperties("Features") });
+  db.upsertNode(inspirationId, { title: "Dishonored", body: "" });
+  db.upsertRelationship(inspirationId, inspirationsTypeId, MEMBER_OF_TYPE, { row_index: 71 });
+
+  test("includes empty relation section from table-schemas when includeSchemaEmptySections is true", () => {
+    const detail = getNodePageDetail(db, inspirationId, {
+      contentDir,
+      includeSchemaEmptySections: true,
+    });
+    const features = detail?.sections.find(
+      (section) => section.type === "relations" && section.label === INCLUDES_TYPE,
+    );
+
+    expect(features).toMatchObject({
+      type: "relations",
+      label: INCLUDES_TYPE,
+      title: "Features",
+      typeNodeId: featuresTypeId,
+      addMode: "link-existing",
+      allowedTargetTypeIds: [featuresTypeId],
+      columns: [],
+      rows: [],
+    });
+  });
+
+  test("omits table-schema-only relation section by default", () => {
+    const detail = getNodePageDetail(db, inspirationId, { contentDir });
+    const features = detail?.sections.find(
+      (section) => section.type === "relations" && section.label === INCLUDES_TYPE,
+    );
+    expect(features).toBeUndefined();
+  });
+
+  test("does not duplicate section when features link already exists", () => {
+    db.upsertNode(featId, { title: "Desperation" });
+    db.upsertRelationship(featId, featuresTypeId, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship(inspirationId, featId, INCLUDES_TYPE, { ordinal: 0 });
+
+    const detail = getNodePageDetail(db, inspirationId, {
+      contentDir,
+      includeSchemaEmptySections: true,
+    });
+    const featuresSections = detail?.sections.filter(
+      (section) => section.type === "relations" && section.label === INCLUDES_TYPE,
+    );
+
+    expect(featuresSections).toHaveLength(1);
+    expect(featuresSections?.[0]).toMatchObject({
+      title: "Features",
+      rows: [{ targetId: featId, name: "Desperation" }],
     });
   });
 
