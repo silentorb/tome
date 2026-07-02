@@ -34,6 +34,7 @@ export interface ElkEdge {
   targets: string[];
   labels?: ElkLabel[];
   sections?: ElkEdgeSection[];
+  bidirectional?: boolean;
 }
 
 export interface ElkGraph {
@@ -60,6 +61,74 @@ const EDGE_LABEL_FONT_SIZE = 11;
 const EDGE_LABEL_CHAR_WIDTH = 7;
 const EDGE_LABEL_PAD_X = 8;
 const EDGE_LABEL_PAD_Y = 5;
+
+/** Separator between reciprocal relation column labels (e.g. products ↔ characters). */
+export const BIDIRECTIONAL_EDGE_LABEL_SEPARATOR = " ↔ ";
+
+export interface DiagramRelationEdge {
+  id: string;
+  sourceTypeId: string;
+  targetTypeId: string;
+  label: string;
+  bidirectional?: boolean;
+}
+
+function joinUniqueLabels(labels: string[]): string {
+  const seen = new Set<string>();
+  const unique: string[] = [];
+  for (const label of labels) {
+    if (seen.has(label)) continue;
+    seen.add(label);
+    unique.push(label);
+  }
+  return unique.join(", ");
+}
+
+export function mergeBidirectionalEdges(
+  edges: Array<{ id: string; sourceTypeId: string; targetTypeId: string; label: string }>,
+): DiagramRelationEdge[] {
+  const byPair = new Map<string, typeof edges>();
+  for (const edge of edges) {
+    const minId =
+      edge.sourceTypeId < edge.targetTypeId ? edge.sourceTypeId : edge.targetTypeId;
+    const maxId =
+      edge.sourceTypeId < edge.targetTypeId ? edge.targetTypeId : edge.sourceTypeId;
+    const key = `${minId}|${maxId}`;
+    const group = byPair.get(key);
+    if (group) group.push(edge);
+    else byPair.set(key, [edge]);
+  }
+
+  const merged: DiagramRelationEdge[] = [];
+  for (const [key, group] of byPair) {
+    const [minId, maxId] = key.split("|") as [string, string];
+    const forward = group.filter(
+      (edge) => edge.sourceTypeId === minId && edge.targetTypeId === maxId,
+    );
+    const reverse = group.filter(
+      (edge) => edge.sourceTypeId === maxId && edge.targetTypeId === minId,
+    );
+
+    if (forward.length > 0 && reverse.length > 0) {
+      const reverseLabel = joinUniqueLabels(reverse.map((edge) => edge.label));
+      const forwardLabel = joinUniqueLabels(forward.map((edge) => edge.label));
+      merged.push({
+        id: key,
+        sourceTypeId: minId,
+        targetTypeId: maxId,
+        label: `${reverseLabel}${BIDIRECTIONAL_EDGE_LABEL_SEPARATOR}${forwardLabel}`,
+        bidirectional: true,
+      });
+      continue;
+    }
+
+    for (const edge of group) {
+      merged.push({ ...edge, bidirectional: false });
+    }
+  }
+
+  return merged;
+}
 
 export function measureEdgeLabelSize(text: string): { width: number; height: number } {
   return {
@@ -95,7 +164,7 @@ export function buildElkGraph(
   });
 
   const edges: ElkEdge[] = [];
-  for (const edge of filtered.relationColumnEdges) {
+  for (const edge of mergeBidirectionalEdges(filtered.relationColumnEdges)) {
     const sourceExists = children.some((node) => node.id === edge.sourceTypeId);
     const targetExists = children.some((node) => node.id === edge.targetTypeId);
     if (!sourceExists || !targetExists) continue;
@@ -104,6 +173,7 @@ export function buildElkGraph(
       sources: [edge.sourceTypeId],
       targets: [edge.targetTypeId],
       labels: [{ text: edge.label, ...measureEdgeLabelSize(edge.label) }],
+      ...(edge.bidirectional ? { bidirectional: true } : {}),
     });
   }
 

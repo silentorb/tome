@@ -138,4 +138,36 @@ describe("schema diagram render", () => {
     const config = parseSchemaDiagramConfig({}, { memberBadgePosition: "top-left" });
     expect(config.memberBadgePosition).toBe("top-left");
   });
+
+  test("renders bidirectional edges with combined label and arrowheads at both ends", async () => {
+    const result = await renderSchemaDiagramSvg(
+      {
+        typeTables: [
+          { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Product" },
+          { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Character" },
+        ],
+        relationColumnEdges: [
+          {
+            id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:characters",
+            sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            label: "characters",
+          },
+          {
+            id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:products",
+            sourceTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            targetTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            label: "products",
+          },
+        ],
+      },
+      parseSchemaDiagramConfig({}),
+    );
+    expect(result).not.toBeNull();
+    expect(result!.edgeCount).toBe(1);
+    expect(result!.svg).toContain("products ↔ characters");
+    const edgeGroup = result!.svg.match(/<g class="schema-diagram-edge">[\s\S]*?<\/g>/);
+    expect(edgeGroup).not.toBeNull();
+    expect(edgeGroup![0]!.match(/<polygon/g)?.length).toBe(2);
+  });
 });

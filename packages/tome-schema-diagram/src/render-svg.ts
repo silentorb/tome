@@ -239,7 +239,7 @@ function polylinePoints(section: NonNullable<ElkEdge["sections"]>[number], offse
   return points.map((point) => `${point.x},${point.y}`).join(" ");
 }
 
-function arrowHead(
+function arrowHeadAtEnd(
   section: NonNullable<ElkEdge["sections"]>[number],
   offsetX: number,
   offsetY: number,
@@ -265,6 +265,34 @@ function arrowHead(
   };
 
   return `<polygon points="${end.x},${end.y} ${left.x},${left.y} ${right.x},${right.y}" fill="${color}" />`;
+}
+
+function arrowHeadAtStart(
+  section: NonNullable<ElkEdge["sections"]>[number],
+  offsetX: number,
+  offsetY: number,
+  color: string,
+): string {
+  const points = [
+    section.startPoint,
+    ...(section.bendPoints ?? []),
+    section.endPoint,
+  ];
+  if (points.length < 2) return "";
+
+  const start = shiftPoint(points[0]!, offsetX, offsetY);
+  const next = shiftPoint(points[1]!, offsetX, offsetY);
+  const angle = Math.atan2(start.y - next.y, start.x - next.x);
+  const left = {
+    x: start.x - ARROW_SIZE * Math.cos(angle - Math.PI / 6),
+    y: start.y - ARROW_SIZE * Math.sin(angle - Math.PI / 6),
+  };
+  const right = {
+    x: start.x - ARROW_SIZE * Math.cos(angle + Math.PI / 6),
+    y: start.y - ARROW_SIZE * Math.sin(angle + Math.PI / 6),
+  };
+
+  return `<polygon points="${start.x},${start.y} ${left.x},${left.y} ${right.x},${right.y}" fill="${color}" />`;
 }
 
 function renderMemberBadge(
@@ -333,12 +361,16 @@ function renderEdge(edge: ElkEdge, offsetX: number, offsetY: number, palette: Di
   if (sections.length === 0) return "";
 
   const polylines = sections
-    .map(
-      (section) =>
+    .map((section) => {
+      const line =
         `<polyline points="${polylinePoints(section, offsetX, offsetY)}" fill="none" ` +
-        `stroke="${palette.edgeStroke}" stroke-width="1.5" />` +
-        arrowHead(section, offsetX, offsetY, palette.edgeStroke),
-    )
+        `stroke="${palette.edgeStroke}" stroke-width="1.5" />`;
+      const endArrow = arrowHeadAtEnd(section, offsetX, offsetY, palette.edgeStroke);
+      const startArrow = edge.bidirectional
+        ? arrowHeadAtStart(section, offsetX, offsetY, palette.edgeStroke)
+        : "";
+      return line + startArrow + endArrow;
+    })
     .join("");
 
   const label = edge.labels?.[0] as ElkLabelPositioned | undefined;

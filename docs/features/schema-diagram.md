@@ -18,7 +18,7 @@ For page-block contracts: [page-blocks.md](../extensions/page-blocks.md). For ex
 
 - **Entities:** type tables from `table-schemas.json` (titles from graph nodes)
 - **Member badges:** each type table shows a notification-style pill with `member_of` set size (`setMemberIds`); hidden when count is 0; corner placement is project-configurable (see below)
-- **Edges:** `table-schemas.json` relation columns — one directed edge per column (`sourceTypeId` → `targetTypeId`), labeled by `perspective` (fallback `key`)
+- **Edges:** `table-schemas.json` relation columns — one edge per column in the meta-model; reciprocal columns between the same two type tables merge into a single edge labeled with both perspectives (e.g. `products ↔ characters`) and arrowheads at both ends
 - **Default scope:** full project (all types and relation columns)
 - **Optional filters:** block `data` may restrict `typeIds` and `relationshipTypes` (matches column `perspective` / `key` labels)
 
