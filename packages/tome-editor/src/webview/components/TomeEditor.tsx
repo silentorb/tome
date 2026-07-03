@@ -20,6 +20,7 @@ import { installCalloutDecoration } from "../callout-decoration";
 import { installCalloutPaste } from "../callout-paste";
 import { installDynamicLinkDecoration } from "../dynamic-node-link-decoration";
 import { installDynamicLinkDemote } from "../dynamic-node-link-demote";
+import { installBlockHandleMenu } from "../block-handle-menu";
 import { installListItemDeleteKeymap } from "../list-item-delete-keymap";
 import { resolveDynamicLinkTitles, titleResolverFromMap } from "../dynamic-link-titles";
 import { installMentionSync } from "../mention-sync";
@@ -115,6 +116,7 @@ export function TomeEditor({
     let crepe: Crepe | null = null;
     let onKeyDown: ((event: KeyboardEvent) => void) | null = null;
     let detachEditorLinkNavigation: (() => void) | null = null;
+    let detachBlockHandleMenu: (() => void) | null = null;
     setInitError(null);
     setIsEmpty(!initialBody.trim());
     root.replaceChildren();
@@ -205,6 +207,7 @@ export function TomeEditor({
         installDynamicLinkDecoration(view);
         installDynamicLinkDemote(view);
         installListItemDeleteKeymap(view);
+        detachBlockHandleMenu = installBlockHandleMenu(view, root);
 
         const syncMentionMenu = () => {
           const { state } = view;
@@ -305,6 +308,7 @@ export function TomeEditor({
         editorDom.removeEventListener("keydown", onKeyDown, true);
       }
       detachEditorLinkNavigation?.();
+      detachBlockHandleMenu?.();
       root.replaceChildren();
       void crepe?.destroy();
       crepeRef.current = null;

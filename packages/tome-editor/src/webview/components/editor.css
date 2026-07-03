@@ -228,6 +228,41 @@
   border-radius: 8px;
 }
 
+.tome-block-handle-menu {
+  position: fixed;
+  z-index: 200;
+  min-width: 140px;
+  padding: 4px;
+  border: 1px solid var(--tome-border);
+  border-radius: 8px;
+  background: var(--tome-surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.tome-block-handle-menu-item {
+  display: block;
+  width: 100%;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--tome-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.tome-block-handle-menu-item:hover {
+  background: var(--tome-hover);
+}
+
+.tome-block-handle-menu-item.is-danger {
+  color: #f87171;
+}
+
+.tome-block-handle-menu-item.is-danger:hover {
+  background: color-mix(in srgb, #f87171 12%, transparent);
+}
+
 .tome-mention-menu {
   position: absolute;
   z-index: 20;

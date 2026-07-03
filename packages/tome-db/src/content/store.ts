@@ -32,18 +32,9 @@ import {
   registerIncludesType,
   registerSetMembershipType,
   registerUnidirectionalType,
-  resolveCompositeType,
   serializeRelationshipTypesFile,
 } from "./relationship-types-file";
-
-function storageTypeForLocal(
-  registry: RelationshipTypesFile,
-  localType: string,
-): string {
-  const normalized = normalizeRelationshipType(localType);
-  if (isIncludesPerspectiveSlug(normalized)) return INCLUDES_TYPE;
-  return resolveCompositeType(registry, normalized);
-}
+import { resolveCompositeTypeForLink } from "./resolve-composite-for-link";
 
 function entryMatchesLocalType(
   registry: RelationshipTypesFile,
@@ -234,7 +225,14 @@ export class ContentStore {
     const normalized = normalizeRelationshipType(localType);
     const { a, b } = sortEndpoints(source, target);
 
-    let composite = storageTypeForLocal(registry, normalized);
+    let composite = resolveCompositeTypeForLink(
+      registry,
+      file.relationships,
+      this.contentDir,
+      source,
+      target,
+      normalized,
+    );
     const existing = file.relationships.find((e) => e.a === a && e.b === b && e.type === composite);
 
     if (!existing) {
@@ -249,7 +247,10 @@ export class ContentStore {
 
     const index = file.relationships.findIndex((e) => e.a === a && e.b === b && e.type === composite);
     const useIncludes = isIncludesStorageType(composite);
-    const omitDirectedFrom = useIncludes || isSetMembershipStorageType(composite);
+    const omitDirectedFrom =
+      useIncludes ||
+      isSetMembershipStorageType(composite) ||
+      isBidirectionalComposite(registry, composite);
     const entry: RelationshipEntry = {
       a,
       b,
@@ -316,7 +317,14 @@ export class ContentStore {
     const normalized = normalizeRelationshipType(localType);
     const { a, b } = sortEndpoints(source, target);
 
-    let composite = storageTypeForLocal(registry, normalized);
+    let composite = resolveCompositeTypeForLink(
+      registry,
+      file.relationships,
+      this.contentDir,
+      source,
+      target,
+      normalized,
+    );
     let index = file.relationships.findIndex((e) => e.a === a && e.b === b && e.type === composite);
 
     if (index < 0) {
@@ -334,7 +342,10 @@ export class ContentStore {
 
     const prev = file.relationships[index]!;
     const useIncludes = isIncludesStorageType(composite);
-    const omitDirectedFrom = useIncludes || isSetMembershipStorageType(composite);
+    const omitDirectedFrom =
+      useIncludes ||
+      isSetMembershipStorageType(composite) ||
+      isBidirectionalComposite(registry, composite);
     file.relationships[index] = {
       ...prev,
       ...(omitDirectedFrom ? {} : { directedFrom: source }),
