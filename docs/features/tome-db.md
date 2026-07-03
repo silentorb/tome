@@ -2,7 +2,7 @@
 
 ## Summary
 
-The Marloth design corpus is a **git-tracked content store** under `content/` (`content/data/` for nodes and relationship instances; `content/model/` for workspace JSON). Implementation lives in `packages/tome-db`. **`content/` is the canonical root**; `data/tome.sqlite` is the **local, gitignored query cache** rebuilt from content (legacy `data/marloth.sqlite` is still read when present). A legacy Notion import pipeline (`packages/notion-importer`) populated the initial graph; use `bun run content:export` to migrate an old SQLite file into `content/` (see [notion-import.md](./notion-import.md)).
+The Marloth design corpus is a **git-tracked content store** under `content/` (`content/data/` for nodes and relationship instances; `content/model/` for workspace JSON). Implementation lives in `packages/tome-db`. **`content/` is the canonical root**; `data/tome.sqlite` is the **local, gitignored query cache** rebuilt from content (legacy `data/marloth.sqlite` is still read when present). Use `bun run content:export` to migrate an old SQLite file into `content/`.
 
 ## When to read this
 
@@ -140,8 +140,6 @@ Helpers: `expandDynamicNodeLinks`, `collapseDynamicEditorLinks`, `findMarkdownLi
 | Relation column | Outgoing relationships from the row page; scoped by row `is_a` membership |
 | Stored scalars | Keys from `table-schemas.json` columns, values on `is_a` edge properties |
 
-Legacy Notion import mapping (archival): see [notion-import.md](./notion-import.md).
-
 Database table **relation columns** are scoped by the row node's **`is_a` membership** in the viewing database—not by per-edge `via_database` properties (removed; see `scripts/migrate-remove-via-database.ts`).
 
 Consolidate legacy dual directed edges with `bun scripts/consolidate-relationships.ts` (already run on the corpus). Migrate associative composites to `includes` with `bun scripts/migrate-to-includes.ts` (already run on the corpus).
@@ -190,16 +188,12 @@ db.close();
 "
 ```
 
-Legacy full import from `./exports/` (avoid for routine work): `bun run notion:import -- --clean` — see [notion-import.md](./notion-import.md).
-
 ## Configuration
 
 | Setting | CLI | Environment | Default |
 | --- | --- | --- | --- |
 | Content directory | — | `MARLOTH_CONTENT_PATH` | `{repo}/content` |
 | Cache database path | — | `MARLOTH_DB_PATH` | `data/marloth.sqlite` |
-
-See [notion-import.md](./notion-import.md) for archival export layout (mining only).
 
 ## Verification
 

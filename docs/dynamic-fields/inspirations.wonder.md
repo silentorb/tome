@@ -6,7 +6,7 @@ Count of linked Features that are associated with the Wonderland theme page.
 
 ## Database
 
-- **NotionDatabase id:** `2eea538996934ce8abafc27132e576c1` (Inspirations)
+- **Database id:** `2eea538996934ce8abafc27132e576c1` (Inspirations)
 - **Column key:** `wonder`
 - **Column display name:** Wonder
 - **Column type:** number
@@ -27,7 +27,7 @@ wonder(inspiration) =
   }|
 ```
 
-This replaces the Notion rollup chain that summed Features **Wonderland count** (itself a workaround for a `Wonderland` tag).
+This replaces the legacy rollup chain that summed Features **Wonderland count** (itself a workaround for a `Wonderland` tag).
 
 ## Graph paths
 
@@ -43,7 +43,7 @@ Theme relationships are created by `scripts/migrate-theme-edges.ts` from legacy 
 
 ## Replaces legacy field
 
-- Inspirations Notion rollup **Wonder** (`wonder` on `IS_A` relationship properties)
+- Inspirations legacy rollup **Wonder** (`wonder` on `IS_A` relationship properties)
 - Features workaround **Wonderland count** (`wonderland_count`) — no longer needed for this calculation
 
 ## Worked example

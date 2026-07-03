@@ -16,7 +16,7 @@ export interface OrderedAssociationConfig {
   partProductCompositeType: string;
   groupTypeDatabaseId: string;
   unassignedGroupTitle: string;
-  /** Notion view name used internally for column visibility (no view tabs in UI). */
+  /** Reference view name used internally for column visibility (no view tabs in UI). */
   columnViewName?: string;
   /** Slugified column keys excluded from table columns (UI-redundant or deprecated). */
   excludedColumnKeys?: string[];

@@ -11,7 +11,7 @@ Read this doc when your task involves:
 - Editing graph node bodies (`body` property on nodes)
 - Cross-linking between design nodes in markdown
 - The Marloth editor API or webview packages
-- Notion-like editing UX for the design corpus
+- Block-based editing UX for the design corpus
 - Graph Explorer (multi-resolution graph visualization)
 
 For graph storage semantics, read [`tome-db.md`](./tome-db.md) and [`../ontology.md`](../ontology.md).
@@ -83,7 +83,7 @@ Keyboard shortcuts in combobox-style pickers (global search, Relate, record link
 
 - The editor UI **must** default to a **dark** theme, independent of OS `prefers-color-scheme`.
 - Shared colors **must** live as `--tome-*` CSS custom properties on `:root` in `src/webview/styles.css`; canvas or library code that cannot use CSS directly should read those tokens (see `src/webview/theme.ts`).
-- Editable **enum** property fields (Properties section and database/relation table cells) **should** use collapsed pill labels that open a popover option list on click (Notion-like), not native `<select>` controls. Empty values **must** show a muted placeholder until the user picks an option—never display a schema default as if it were already stored.
+- Editable **enum** property fields (Properties section and database/relation table cells) **should** use collapsed pill labels that open a popover option list on click, not native `<select>` controls. Empty values **must** show a muted placeholder until the user picks an option—never display a schema default as if it were already stored.
 
 ### Interaction targets
 
@@ -114,9 +114,9 @@ Pointer handlers (click, context menu, drag affordances) **must** cover the **fu
 
 ## Design rationale
 
-### Notion-like UX on graph data
+### Familiar editing UX on graph data
 
-Design work in Marloth is relational and markdown-heavy. A web editor with `@` linking matches author mental models from Notion while preserving git-tracked `content/` files as source of truth and a SQLite cache for fast graph queries.
+Design work in Marloth is relational and markdown-heavy. A web editor with `@` linking matches familiar block-editor mental models while preserving git-tracked `content/` files as source of truth and a SQLite cache for fast graph queries.
 
 ### HTTP API for graph access
 

@@ -6,7 +6,7 @@ Sum of priority weights for all Features linked to an Inspiration.
 
 ## Database
 
-- **NotionDatabase id:** `2eea538996934ce8abafc27132e576c1` (Inspirations)
+- **Database id:** `2eea538996934ce8abafc27132e576c1` (Inspirations)
 - **Column key:** `weighted_use`
 - **Column display name:** Weighted Use
 - **Column type:** number
@@ -47,7 +47,7 @@ weighted_use(inspiration) =
 
 ## Replaces legacy field
 
-Notion rollup **Weighted Use** (`weighted_use` on `IS_A` relationship properties). No longer depends on Features **Weight** formula snapshots.
+Legacy rollup **Weighted Use** (`weighted_use` on `IS_A` relationship properties). No longer depends on Features **Weight** formula snapshots.
 
 ## Worked example
 

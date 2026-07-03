@@ -51,8 +51,6 @@ Legacy v1 nested format was migrated with:
 bun scripts/migrate-views-json-v2.ts
 ```
 
-Earlier Notion view tabs were migrated with `bun scripts/migrate-notion-views-to-views-json.ts` (deprecated).
-
 ## Code
 
 | Area | Path |

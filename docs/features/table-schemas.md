@@ -82,6 +82,4 @@ Row data for instances is stored on `is_a` relationship properties, not on the i
 
 ## Migration
 
-One-time migration from `notion_schema` frontmatter: `bun scripts/migrate-notion-schema-to-table-schemas.ts` (already run on the corpus). Legacy provenance keys are stripped by `bun scripts/strip-notion-provenance.ts`.
-
 Select/status enum backfill (post-migration): `bun scripts/seed-select-enums.ts` — adds `schema.json` enums and `table-schemas.json` `enumId` for columns that were imported without workspace enum wiring.

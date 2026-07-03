@@ -6,7 +6,7 @@ Dimension-expanded columns: one scene-count column per Product that appears on a
 
 ## Database
 
-- **NotionDatabase id:** `f984a934ad644f8480b0f8f51449569f` (Characters)
+- **Database id:** `f984a934ad644f8480b0f8f51449569f` (Characters)
 - **Column key pattern:** `scene_count__{productId}`
 - **Column display name pattern:** `{productTitle} Scene count`
 - **Column type:** number
@@ -39,7 +39,7 @@ scene_count__P(C) =
 
 ### Replaces legacy field
 
-Notion formula **TWOLD Scene count** (`twold_scene_count`). TWOLD becomes one generated column among all products with character-linked scenes.
+Legacy formula **TWOLD Scene count** (`twold_scene_count`). TWOLD becomes one generated column among all products with character-linked scenes.
 
 ## Graph paths
 

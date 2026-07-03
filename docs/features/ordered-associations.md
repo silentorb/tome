@@ -31,7 +31,7 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, re
 
 | Setting | Value |
 | --- | --- |
-| Type database | Scenes NotionDatabase (`204dba198db74611b0b49a98dd53e8f5`) |
+| Type database | Scenes type table (`204dba198db74611b0b49a98dd53e8f5`) |
 | Membership relationship | `member_of` with `order` property |
 | Scope (book tabs) | `product` relationship from scene → Product |
 | Group (part subsections) | `part` relationship from scene → Part |
@@ -58,14 +58,14 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, re
 
 ### Import interaction
 
-- Full Notion re-import is **deprecated** for workflow (see [notion-import.md](./notion-import.md)). It would merge relationship properties and **could overwrite** manually adjusted `order` values from CSV.
+- Full re-import is **deprecated** for workflow. It would merge relationship properties and **could overwrite** manually adjusted `order` values from CSV.
 - **Authoritative:** graph `order` from ordered-association edits and direct DB updates. Preserve `order` when mining export data into existing rows.
 
 ## Design rationale
 
 ### Hidden automatic order
 
-Notion required manual juggling of an Order column. Ordered associations move sequencing into first-class tooling: drag-and-drop reflects author intent without exposing implementation details.
+Legacy tooling required manual juggling of an Order column. Ordered associations move sequencing into first-class tooling: drag-and-drop reflects author intent without exposing implementation details.
 
 ### Book-scoped order with Part grouping
 

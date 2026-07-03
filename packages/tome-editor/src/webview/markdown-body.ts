@@ -1,4 +1,4 @@
-/** Leading `# …` line in imported Notion bodies (page title duplicated in markdown). */
+/** Leading `# …` line in legacy imported bodies (page title duplicated in markdown). */
 const LEADING_TITLE_HEADING = /^#\s+(.+?)(?:\n|$)/;
 
 function normalizeNewlines(body: string): string {

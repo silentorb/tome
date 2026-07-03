@@ -1,5 +1,5 @@
 /**
- * Validation/migration tooling for Notion export layout — not used by editor runtime.
+ * Validation/migration tooling for legacy export layout — not used by editor runtime.
  */
 import type { GraphDatabase, Relationship, Properties } from "./graph";
 import { MEMBER_OF_TYPE, MEMBERS_TYPE, TYPE_MEMBERSHIP_TYPES } from "./labels";
@@ -47,7 +47,7 @@ export interface NestedPageSpuriousMembership {
   reason: "outside_instance_root" | "nested_sub_page";
 }
 
-/** Matches Notion database CSV basename: `{DisplayName} {32hex-id}[_all].csv`. */
+/** Matches type-table CSV basename: `{DisplayName} {32hex-id}[_all].csv`. */
 const CSV_BASENAME =
   /^(.+?)\s+([a-f0-9]{32})((?:_all(?:_[0-9]+)?)?)\.csv$/i;
 
@@ -75,7 +75,7 @@ export function typeFolderFromPath(
 }
 
 /**
- * Deepest path segment after `{exportPathPrefix}/` that matches a NotionDatabase title.
+ * Deepest path segment after `{exportPathPrefix}/` that matches a type-table title.
  * e.g. `{prefix}/Inspirations/Traversal reasons` → `Traversal reasons`, not `Inspirations`.
  */
 export function typeDatabaseTitleFromPath(
@@ -104,7 +104,7 @@ export function expectedTypeDatabaseForPage(
 }
 
 /** Strip export archive prefix so paths compare as `{exportPathPrefix}/...`. */
-export function notionPathFromSourceExport(sourceExport: string): string | null {
+export function pathFromSourceExport(sourceExport: string): string | null {
   if (!sourceExport.trim()) return null;
   const zipIdx = sourceExport.indexOf(".zip/");
   const path = zipIdx >= 0 ? sourceExport.slice(zipIdx + 5) : sourceExport;
@@ -116,7 +116,7 @@ export function notionPathFromSourceExport(sourceExport: string): string | null 
  * e.g. `{prefix}/Features {id}_all.csv` → `{prefix}/Features/`.
  */
 export function instanceRootFromTypeTableExport(sourceExport: string): string | null {
-  const path = notionPathFromSourceExport(sourceExport);
+  const path = pathFromSourceExport(sourceExport);
   if (!path) return null;
   const slash = path.lastIndexOf("/");
   const basename = slash >= 0 ? path.slice(slash + 1) : path;
@@ -135,7 +135,7 @@ export function folderDepthUnderInstanceRoot(
   pageExport: string,
   instanceRoot: string,
 ): number | null {
-  const path = notionPathFromSourceExport(pageExport);
+  const path = pathFromSourceExport(pageExport);
   if (!path || !path.toLowerCase().endsWith(".md")) return null;
   if (!path.startsWith(instanceRoot)) return null;
   const relative = path.slice(instanceRoot.length);
@@ -156,7 +156,7 @@ export function isNestedPageSpuriousTypeMembership(
     : null;
   if (!instanceRoot) return { spurious: false };
 
-  const path = notionPathFromSourceExport(pageExport);
+  const path = pathFromSourceExport(pageExport);
   if (!path || !path.toLowerCase().endsWith(".md")) {
     return { spurious: false };
   }

@@ -6,14 +6,14 @@ Count of all scenes linked to a character, regardless of product scope.
 
 ## Database
 
-- **NotionDatabase id:** `f984a934ad644f8480b0f8f51449569f` (Characters)
+- **Database id:** `f984a934ad644f8480b0f8f51449569f` (Characters)
 - **Column key:** `all_scene_count`
 - **Column display name:** All Scene count
 - **Column type:** number
 
 ## Requirement
 
-For each character row (`NotionPage` node with `IS_A` membership in the Characters database):
+For each character row (node with `IS_A` membership in the Characters database):
 
 - **Must** count outgoing relationships labeled `SCENES` from the character page to scene pages.
 - **Must** return the count as a decimal string (e.g. `"113"`).
@@ -28,13 +28,13 @@ all_scene_count(character) =
 
 | Role | Pattern |
 | --- | --- |
-| Row page | Character `NotionPage` |
+| Row page | Character node |
 | Membership | `(character)-[:IS_A]->(Characters DB)` |
 | Counted relationships | `(character)-[:SCENES]->(scene)` |
 
 ## Replaces legacy field
 
-Notion formula column **All Scene count** (`all_scene_count` on `IS_A` relationship properties). Imported snapshots are often stale.
+Legacy formula column **All Scene count** (`all_scene_count` on `IS_A` relationship properties). Imported snapshots are often stale.
 
 ## Worked example
 

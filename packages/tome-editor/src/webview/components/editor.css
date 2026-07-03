@@ -30,7 +30,7 @@
   outline: none;
 }
 
-/* Notion-like: page title is outside the editor; demote in-content headings one level. */
+/* Page title is rendered outside the editor; demote in-content headings one level. */
 .tome-editor-body .milkdown .ProseMirror h1 {
   font-size: 32px;
   line-height: 40px;

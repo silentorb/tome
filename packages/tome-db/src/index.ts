@@ -176,7 +176,7 @@ export {
   folderDepthUnderInstanceRoot,
   instanceRootFromTypeTableExport,
   isNestedPageSpuriousTypeMembership,
-  notionPathFromSourceExport,
+  pathFromSourceExport,
   typeDatabaseTitleFromPath,
   typeFolderFromPath,
 } from "./type-membership-audit";

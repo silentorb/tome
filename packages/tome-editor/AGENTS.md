@@ -2,7 +2,7 @@
 
 ## What it is
 
-Browser editor for design corpus nodes stored in `content/` with a SQLite query cache. Uses **Milkdown Crepe** for a Notion-like markdown experience with `@` cross-link autocomplete.
+Browser editor for design corpus nodes stored in `content/` with a SQLite query cache. Uses **Milkdown Crepe** for a modern block-based markdown experience with `@` cross-link autocomplete.
 
 ## Terminology
 
