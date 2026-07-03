@@ -75,7 +75,7 @@ export function isIncludesPerspectiveSlug(localType: string): boolean {
 }
 
 export function resolveStorageTypeForPerspective(
-  registryTypes: Record<string, { bidirectional: boolean; perspectives: string[] }>,
+  registryTypes: Record<string, { perspectives: readonly string[] }>,
   localType: string,
 ): string {
   const normalized = normalizeRelationshipType(localType);

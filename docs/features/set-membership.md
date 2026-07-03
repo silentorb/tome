@@ -44,14 +44,14 @@ For design-domain meaning of types and sets, read [`../ontology.md`](../../marlo
 
 ### Projection expansion
 
-Expansion is driven solely by `perspectives.length` in `relationship-types.json`:
+Every relationship type in `relationship-types.json` defines a `perspectives` **tuple of exactly two** slugs, so expansion always emits two projections:
 
-| `perspectives.length` | Projections |
+| Endpoint | Projection |
 | --- | --- |
-| ≥ 2 | Index 0: member → set with `member_of`; index 1: set → member with `members` (oriented via set node ids) |
-| 1 | Single projection `a → b` with `perspectives[0]` |
+| Index 0 | member → set with `member_of` (oriented via set node ids) |
+| Index 1 | set → member with `members` |
 
-The legacy `bidirectional` flag is **deprecated** — parsers may ignore it; expansion uses perspective count only.
+There is **no `bidirectional` field** — the parser rejects any type that does not define exactly two perspectives, so a non-bidirectional type cannot exist. (An unregistered storage type falls back to a single defensive projection during sync, but registered types are always a pair.)
 
 For `member_of`: `(member)-[:member_of]->(set)` and `(set)-[:members]->(member)` from one content record.
 

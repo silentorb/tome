@@ -98,8 +98,8 @@ function expandProjections(
   if (projectionCount >= 2) {
     const [typeFromA, typeFromB] = perspectives;
     return [
-      projectionRow(recordId, entry.a, entry.b, typeFromA!, properties),
-      projectionRow(recordId, entry.b, entry.a, typeFromB!, properties),
+      projectionRow(recordId, entry.a, entry.b, typeFromA ?? entry.type, properties),
+      projectionRow(recordId, entry.b, entry.a, typeFromB ?? entry.type, properties),
     ];
   }
 

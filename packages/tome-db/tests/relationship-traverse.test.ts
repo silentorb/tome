@@ -38,10 +38,10 @@ describe("relationship-traverse", () => {
   const typesFile = {
     version: 1 as const,
     types: {
-      scenes_product: { bidirectional: true, perspectives: ["scenes", "product"] },
-      scenes_part: { bidirectional: true, perspectives: ["scenes", "part"] },
-      scenes_location: { bidirectional: true, perspectives: ["location", "scenes"] },
-      member_of: { bidirectional: true, perspectives: ["member_of", "members"] },
+      scenes_product: { perspectives: ["scenes", "product"] },
+      scenes_part: { perspectives: ["scenes", "part"] },
+      scenes_location: { perspectives: ["location", "scenes"] },
+      member_of: { perspectives: ["member_of", "members"] },
     },
   };
   fixture.ctx.store.writeRelationshipTypesFile(typesFile);

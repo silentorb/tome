@@ -122,9 +122,8 @@ describe("linkOutgoingRelationship scenes_product from product", () => {
     serializeRelationshipTypesFile({
       version: 1,
       types: {
-        member_of: { bidirectional: true, perspectives: ["member_of", "members"] },
-        scenes: { bidirectional: false, perspectives: ["scenes"] },
-        scenes_product: { bidirectional: true, perspectives: ["scenes", "product"] },
+        member_of: { perspectives: ["member_of", "members"] },
+        scenes_product: { perspectives: ["scenes", "product"] },
       },
     }),
   );

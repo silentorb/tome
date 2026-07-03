@@ -14,7 +14,6 @@ describe("relationship-type-label", () => {
   test("perspectiveDisplayLabel uses configured title", () => {
     const registry = emptyRelationshipTypesFile();
     registry.types.member_of = {
-      bidirectional: true,
       perspectives: ["member_of", "members"],
       perspectiveLabels: { member_of: "Membership" },
     };
@@ -28,7 +27,6 @@ describe("relationship-type-label", () => {
   test("perspectiveLinkAddLabel uses configured linkAdd", () => {
     const registry = emptyRelationshipTypesFile();
     registry.types.member_of = {
-      bidirectional: true,
       perspectives: ["member_of", "members"],
       perspectiveLabels: {
         member_of: { title: "Membership", linkAdd: "Link type table" },

@@ -7,11 +7,12 @@ export type PerspectiveLabelConfig =
   | string
   | { title: string; linkAdd?: string };
 
+/** Exactly two perspectives: one projection per endpoint (a→b, b→a). Symmetric types repeat the same slug. */
+export type PerspectivePair = [string, string];
+
 export interface RelationshipTypeDefinition {
-  /** @deprecated Ignored for expansion; use perspectives.length instead. */
-  bidirectional?: boolean;
-  /** Length ≥2: dual projection (a→b, b→a). Length 1: single projection (legacy directedFrom optional). */
-  perspectives: string[];
+  /** Local type names projected from each endpoint. Always a pair — every relationship is bidirectional. */
+  perspectives: PerspectivePair;
   /** UI labels keyed by perspective slug (e.g. member_of → "Membership"). */
   perspectiveLabels?: Record<string, PerspectiveLabelConfig>;
 }
@@ -88,14 +89,14 @@ export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
     const perspectives = row.perspectives
       .filter((p): p is string => typeof p === "string" && p.trim().length > 0)
       .map((p) => normalizeRelationshipType(p));
-    const bidirectional =
-      typeof row.bidirectional === "boolean"
-        ? row.bidirectional
-        : perspectives.length >= 2;
+    if (perspectives.length !== 2) {
+      throw new Error(
+        `relationship-types.json: type ${key} must define exactly two perspectives`,
+      );
+    }
     const perspectiveLabels = parsePerspectiveLabels(row.perspectiveLabels, key);
     types[normalizeRelationshipType(key)] = {
-      bidirectional,
-      perspectives,
+      perspectives: [perspectives[0]!, perspectives[1]!],
       ...(perspectiveLabels ? { perspectiveLabels } : {}),
     };
   }
@@ -130,12 +131,11 @@ export function perspectiveCountForExpansion(
   typeDef: RelationshipTypeDefinition | undefined,
   compositeType: string,
 ): number {
-  if (!typeDef) return 1;
-  return typeDef.perspectives.length >= 2 ? typeDef.perspectives.length : 1;
+  return typeDef ? 2 : 1;
 }
 
 export function isDualPerspectiveType(typeDef: RelationshipTypeDefinition | undefined): boolean {
-  return (typeDef?.perspectives.length ?? 0) >= 2;
+  return typeDef !== undefined;
 }
 
 export function isBidirectionalComposite(
@@ -170,24 +170,12 @@ export function registerTypeDefinition(
   def: RelationshipTypeDefinition,
 ): void {
   file.types[normalizeRelationshipType(compositeType)] = {
-    bidirectional: def.bidirectional,
-    perspectives: def.perspectives.map((p) => normalizeRelationshipType(p)),
+    perspectives: [
+      normalizeRelationshipType(def.perspectives[0]),
+      normalizeRelationshipType(def.perspectives[1]),
+    ],
     ...(def.perspectiveLabels ? { perspectiveLabels: { ...def.perspectiveLabels } } : {}),
   };
-}
-
-/** @deprecated Only kept for legacy migration scripts. Do not use in new code. */
-export function registerUnidirectionalType(
-  file: RelationshipTypesFile,
-  type: string,
-): void {
-  const normalized = normalizeRelationshipType(type);
-  if (!file.types[normalized]) {
-    registerTypeDefinition(file, normalized, {
-      bidirectional: false,
-      perspectives: [normalized],
-    });
-  }
 }
 
 export function registerBidirectionalType(
@@ -197,7 +185,6 @@ export function registerBidirectionalType(
 ): string {
   const composite = compositeTypeForPerspectives(typeFromA, typeFromB);
   registerTypeDefinition(file, composite, {
-    bidirectional: true,
     perspectives: [
       normalizeRelationshipType(typeFromA),
       normalizeRelationshipType(typeFromB),
@@ -209,7 +196,6 @@ export function registerBidirectionalType(
 /** Set membership: member→set as member_of, set→member as members. */
 export function registerSetMembershipType(file: RelationshipTypesFile): void {
   registerTypeDefinition(file, "member_of", {
-    bidirectional: true,
     perspectives: ["member_of", "members"],
   });
 }
@@ -218,7 +204,6 @@ export function registerSetMembershipType(file: RelationshipTypesFile): void {
 export function registerIncludesType(file: RelationshipTypesFile): void {
   const type = "includes";
   registerTypeDefinition(file, type, {
-    bidirectional: true,
     perspectives: [type, type],
   });
 }

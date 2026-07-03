@@ -22,7 +22,6 @@ function writeMembershipRelationshipTypes(contentDir: string): void {
       version: 1,
       types: {
         member_of: {
-          bidirectional: true,
           perspectives: ["member_of", "members"],
           perspectiveLabels: {
             member_of: { title: "Membership", linkAdd: "Link type table" },

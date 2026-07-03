@@ -207,7 +207,6 @@ describe("database-view-relations", () => {
     seedTestNode(fixture, { id: locationB, properties: { title: "South grove" } });
     const registry = emptyRelationshipTypesFile();
     registerTypeDefinition(registry, "neighbor", {
-      bidirectional: true,
       perspectives: ["neighbor", "neighbor"],
     });
     fixture.ctx.store.writeRelationshipTypesFile(registry);

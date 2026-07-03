@@ -15,10 +15,14 @@ export {
   parseRelationshipTypesFile,
   registerBidirectionalType,
   registerIncludesType,
-  registerUnidirectionalType,
   serializeRelationshipTypesFile,
 } from "./relationship-types-file";
-export type { RelationshipTypeDefinition, RelationshipTypesFile, PerspectiveLabelConfig } from "./relationship-types-file";
+export type {
+  RelationshipTypeDefinition,
+  RelationshipTypesFile,
+  PerspectiveLabelConfig,
+  PerspectivePair,
+} from "./relationship-types-file";
 export { expandAllRelationships } from "./relationship-sync-expand";
 export {
   DYNAMIC_FIELDS_FILE_VERSION,

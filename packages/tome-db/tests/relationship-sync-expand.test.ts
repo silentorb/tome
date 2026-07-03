@@ -9,10 +9,10 @@ import type { RelationshipTypesFile } from "../src/content/relationship-types-fi
 const registry: RelationshipTypesFile = {
   version: 1,
   types: {
-    member_of: { bidirectional: true, perspectives: ["member_of", "members"] },
-    includes: { bidirectional: true, perspectives: ["includes", "includes"] },
-    scenes_product: { bidirectional: true, perspectives: ["scenes", "product"] },
-    children: { bidirectional: false, perspectives: ["children"] },
+    member_of: { perspectives: ["member_of", "members"] },
+    includes: { perspectives: ["includes", "includes"] },
+    scenes_product: { perspectives: ["scenes", "product"] },
+    parents_children: { perspectives: ["children", "parents"] },
   },
 };
 
@@ -61,22 +61,26 @@ describe("expandRelationshipEntry", () => {
     expect(projections[1]?.type).toBe("product");
   });
 
-  test("single-perspective type uses directedFrom when present", () => {
-    const parent = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  test("parents_children composite emits distinct child/parent projections", () => {
     const child = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const parent = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
     const entry: RelationshipEntry = {
       a: child,
       b: parent,
-      type: "children",
-      directedFrom: parent,
+      type: "parents_children",
       properties: {},
     };
     const { projections } = expandRelationshipEntry(entry, registry);
-    expect(projections).toHaveLength(1);
+    expect(projections).toHaveLength(2);
     expect(projections[0]).toMatchObject({
+      sourceNodeId: child,
+      targetNodeId: parent,
+      type: "children",
+    });
+    expect(projections[1]).toMatchObject({
       sourceNodeId: parent,
       targetNodeId: child,
-      type: "children",
+      type: "parents",
     });
   });
 
