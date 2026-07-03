@@ -22,7 +22,7 @@ export const MIGRATE_TO_INCLUDES_STORAGE_TYPES: ReadonlySet<string> = new Set([
   "characters_character_attributes",
 ]);
 
-/** Legacy Notion column slugs that resolve to `includes` storage (not taxonomy↔inspiration). */
+/** Perspective slugs that resolve to `includes` storage (not taxonomy↔inspiration or structural). */
 export const INCLUDES_PERSPECTIVE_SLUGS: ReadonlySet<string> = new Set([
   "includes",
   "inspirations",
@@ -34,9 +34,14 @@ export const INCLUDES_PERSPECTIVE_SLUGS: ReadonlySet<string> = new Set([
   "bible_passages",
   "groups",
   "character_attributes",
+  "scenes",
+  "scenes_2",
+  "themes",
+  "theme",
+  "motivation",
 ]);
 
-/** Taxonomy↔inspiration composites kept as-is (deferred). */
+/** Taxonomy↔inspiration composites: stored as {perspective}_inspirations. */
 export const TAXONOMY_INSPIRATION_PERSPECTIVES: ReadonlySet<string> = new Set([
   "monsters",
   "pacing",
@@ -45,6 +50,14 @@ export const TAXONOMY_INSPIRATION_PERSPECTIVES: ReadonlySet<string> = new Set([
   "traversal_reasons",
   "prop_type",
 ]);
+
+/** Structural parent/child perspectives that route to `parents_children` composite. */
+export const PARENTS_CHILDREN_PERSPECTIVES: ReadonlySet<string> = new Set([
+  "parents",
+  "children",
+]);
+
+export const PARENTS_CHILDREN_COMPOSITE = "parents_children";
 
 export function isIncludesStorageType(type: string): boolean {
   return normalizeRelationshipType(type) === INCLUDES_TYPE;
@@ -57,6 +70,7 @@ export function isMigratableToIncludesStorageType(type: string): boolean {
 export function isIncludesPerspectiveSlug(localType: string): boolean {
   const normalized = normalizeRelationshipType(localType);
   if (TAXONOMY_INSPIRATION_PERSPECTIVES.has(normalized)) return false;
+  if (PARENTS_CHILDREN_PERSPECTIVES.has(normalized)) return false;
   return INCLUDES_PERSPECTIVE_SLUGS.has(normalized);
 }
 

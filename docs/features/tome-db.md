@@ -93,6 +93,8 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 - **`includes` does not** use `directedFrom` — association is symmetric in storage; UI resolves direction via the relation column's target database.
 - **Associative** links use `includes` (migrated from legacy composites such as `inspirations_features`, `scenes_characters`).
 - **Structural** and **taxonomy↔inspiration** pairs still use named composite types (e.g. `scenes_part`, `monsters_inspirations`).
+- **Single-perspective (unidirectional) types are forbidden.** Every entry in `relationship-types.json` must be `bidirectional: true` with `≥2` perspectives. The write path (`resolveCompositeTypeForLink`) throws `LinkResolutionError` if a local type cannot resolve to `includes`, a dual-perspective composite, or `member_of`. See `packages/tome-db/scripts/audit-relationship-resolution.ts` to verify a content directory has no unresolvable entries.
+- **`directedFrom` is never written** by current code. Legacy entries are stripped on migration.
 - Record id: `{a}:{b}:{type}`.
 
 **SQLite cache (denormalized):** expanded on sync for fast directed queries:

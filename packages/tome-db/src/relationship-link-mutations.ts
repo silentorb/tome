@@ -1,6 +1,7 @@
 import type { Properties } from "./graph";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
+import { LinkResolutionError } from "./content/resolve-composite-for-link";
 import { MEMBER_OF_TYPE } from "./labels";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
 import { normalizeRelationshipType } from "./relation-type";
@@ -12,7 +13,8 @@ export type LinkOutgoingRelationshipError =
   | "source_not_found"
   | "target_not_found"
   | "duplicate"
-  | "target_type_not_allowed";
+  | "target_type_not_allowed"
+  | "unresolvable_type";
 
 export type UnlinkOutgoingRelationshipError = "not_found";
 
@@ -92,7 +94,12 @@ export function linkOutgoingRelationship(
     }
   }
 
-  ctx.store.upsertRelationship(sourceId, targetId, normalizedType, relProps);
+  try {
+    ctx.store.upsertRelationship(sourceId, targetId, normalizedType, relProps);
+  } catch (err) {
+    if (err instanceof LinkResolutionError) return "unresolvable_type";
+    throw err;
+  }
   syncAfterRelationshipsWrite(ctx);
   return null;
 }

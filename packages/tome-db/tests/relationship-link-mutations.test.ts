@@ -96,17 +96,17 @@ describe("relationship-link-mutations", () => {
     linkOutgoingRelationship(ctx, {
       sourceId: source3,
       targetId: target3a,
-      type: "items",
+      type: "features",
       properties: { ordinal: 1 },
     });
     linkOutgoingRelationship(ctx, {
       sourceId: source3,
       targetId: target3b,
-      type: "items",
+      type: "features",
       properties: { ordinal: 7 },
     });
 
-    const edge = ctx.store.findRelationship(source3, target3b, "items");
+    const edge = ctx.store.findRelationship(source3, target3b, "features");
     expect(edge?.properties.ordinal).toBe(7);
   });
 

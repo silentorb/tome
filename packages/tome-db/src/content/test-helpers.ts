@@ -35,7 +35,6 @@ import {
   registerBidirectionalType,
   registerIncludesType,
   registerSetMembershipType,
-  registerUnidirectionalType,
 } from "./relationship-types-file";
 import { INCLUDES_TYPE } from "../includes-relationship";
 import {
@@ -314,8 +313,10 @@ export function seedTestRelationships(
   for (const connection of connections) {
     if (connection.type === "member_of") {
       registerSetMembershipType(registry);
+    } else if (connection.type === "includes") {
+      registerIncludesType(registry);
     } else {
-      registerUnidirectionalType(registry, connection.type);
+      registerBidirectionalType(registry, connection.type, connection.type);
     }
     const entry = entryFromSeedConnection(connection);
     const index = file.relationships.findIndex(
@@ -336,4 +337,4 @@ export function seedTestRelationships(
   fixture.ctx.sync.syncRelationships();
 }
 
-export { registerBidirectionalType, registerUnidirectionalType, sortEndpoints };
+export { registerBidirectionalType, sortEndpoints };

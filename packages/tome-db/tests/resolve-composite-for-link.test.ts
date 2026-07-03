@@ -194,4 +194,64 @@ describe("linkOutgoingRelationship scenes_product from product", () => {
     expect(entry?.type).toBe("scenes_product");
     expect(entry?.directedFrom).toBeUndefined();
   });
+
+  test("upsert never writes directedFrom for any relationship type", () => {
+    const nodeA = "aa11111111111111111111111111aaaa";
+    const nodeB = "bb22222222222222222222222222bbbb";
+    seedTestNode(fixture, { id: nodeA, properties: { title: "Node A" } });
+    seedTestNode(fixture, { id: nodeB, properties: { title: "Node B" } });
+
+    ctx.store.upsertRelationship(nodeA, nodeB, "includes");
+
+    const entries = ctx.store.readRelationshipsFile().relationships;
+    for (const entry of entries) {
+      expect(entry.directedFrom).toBeUndefined();
+    }
+  });
+});
+
+describe("LinkResolutionError", () => {
+  const fixture = createTestContentFixture("tome-link-resolution-error-");
+  const ctx = fixture.ctx;
+
+  afterAll(() => {
+    destroyTestContentFixture(fixture);
+  });
+
+  test("linkOutgoingRelationship returns unresolvable_type for unknown perspective", () => {
+    const nodeA = "ee11111111111111111111111111eeee";
+    const nodeB = "ff22222222222222222222222222ffff";
+    seedTestNode(fixture, { id: nodeA, properties: { title: "A" } });
+    seedTestNode(fixture, { id: nodeB, properties: { title: "B" } });
+
+    const error = linkOutgoingRelationship(ctx, {
+      sourceId: nodeA,
+      targetId: nodeB,
+      type: "completely_unknown_type",
+    });
+    expect(error).toBe("unresolvable_type");
+  });
+
+  test("parents perspective resolves to parents_children composite", () => {
+    const nodeA = "cc11111111111111111111111111cccc";
+    const nodeB = "dd22222222222222222222222222dddd";
+    seedTestNode(fixture, { id: nodeA, properties: { title: "Child" } });
+    seedTestNode(fixture, { id: nodeB, properties: { title: "Parent" } });
+
+    expect(
+      linkOutgoingRelationship(ctx, {
+        sourceId: nodeA,
+        targetId: nodeB,
+        type: "parents",
+      }),
+    ).toBeNull();
+
+    const entry = ctx.store
+      .readRelationshipsFile()
+      .relationships.find(
+        (row) => (row.a === nodeA || row.b === nodeA) && (row.a === nodeB || row.b === nodeB),
+      );
+    expect(entry?.type).toBe("parents_children");
+    expect(entry?.directedFrom).toBeUndefined();
+  });
 });

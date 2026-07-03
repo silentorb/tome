@@ -570,6 +570,9 @@ export function createApiHandler(
         if (error === "target_type_not_allowed") {
           return json({ error: "target type not allowed" }, 400);
         }
+        if (error === "unresolvable_type") {
+          return json({ error: "unresolvable relationship type" }, 400);
+        }
         return json({ ok: true });
       }
 
@@ -593,6 +596,9 @@ export function createApiHandler(
         if (error === "duplicate") return json({ error: "duplicate" }, 409);
         if (error === "target_type_not_allowed") {
           return json({ error: "target type not allowed" }, 400);
+        }
+        if (error === "unresolvable_type") {
+          return json({ error: "unresolvable relationship type" }, 400);
         }
         return json({ ok: true });
       }

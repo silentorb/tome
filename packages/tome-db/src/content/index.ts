@@ -75,6 +75,7 @@ export {
   resolveContentPath,
 } from "./paths";
 export { ContentStore } from "./store";
+export { LinkResolutionError } from "./resolve-composite-for-link";
 export {
   CacheSync,
   invalidateDynamicFieldsCache,

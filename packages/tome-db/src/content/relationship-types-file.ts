@@ -146,7 +146,7 @@ export function isBidirectionalComposite(
   return isDualPerspectiveType(def);
 }
 
-/** Find composite storage type for a local perspective between two endpoints. */
+/** Find composite storage type for a local perspective (only returns dual-perspective composites). */
 export function resolveCompositeType(
   registry: RelationshipTypesFile,
   localType: string,
@@ -157,9 +157,6 @@ export function resolveCompositeType(
     return compositeTypeForPerspectives(normalized, otherLocalType);
   }
   for (const [composite, def] of Object.entries(registry.types)) {
-    if (!isDualPerspectiveType(def) && def.perspectives.includes(normalized)) {
-      return composite;
-    }
     if (isDualPerspectiveType(def) && def.perspectives.includes(normalized)) {
       return composite;
     }
@@ -179,6 +176,7 @@ export function registerTypeDefinition(
   };
 }
 
+/** @deprecated Only kept for legacy migration scripts. Do not use in new code. */
 export function registerUnidirectionalType(
   file: RelationshipTypesFile,
   type: string,

@@ -9,7 +9,14 @@ import {
 import { dirname } from "node:path";
 import type { Node, Properties } from "../graph";
 import { relationshipId } from "../graph";
-import { INCLUDES_TYPE, isIncludesPerspectiveSlug, isIncludesStorageType } from "../includes-relationship";
+import {
+  INCLUDES_TYPE,
+  PARENTS_CHILDREN_COMPOSITE,
+  PARENTS_CHILDREN_PERSPECTIVES,
+  TAXONOMY_INSPIRATION_PERSPECTIVES,
+  isIncludesPerspectiveSlug,
+  isIncludesStorageType,
+} from "../includes-relationship";
 import { isSetMembershipStorageType } from "../set-membership";
 import { normalizeRelationshipType } from "../relation-type";
 import {
@@ -31,7 +38,6 @@ import {
   registerBidirectionalType,
   registerIncludesType,
   registerSetMembershipType,
-  registerUnidirectionalType,
   serializeRelationshipTypesFile,
 } from "./relationship-types-file";
 import { resolveCompositeTypeForLink } from "./resolve-composite-for-link";
@@ -246,16 +252,10 @@ export class ContentStore {
     }
 
     const index = file.relationships.findIndex((e) => e.a === a && e.b === b && e.type === composite);
-    const useIncludes = isIncludesStorageType(composite);
-    const omitDirectedFrom =
-      useIncludes ||
-      isSetMembershipStorageType(composite) ||
-      isBidirectionalComposite(registry, composite);
     const entry: RelationshipEntry = {
       a,
       b,
       type: composite,
-      ...(omitDirectedFrom ? {} : { directedFrom: source }),
       properties,
     };
 
@@ -265,19 +265,20 @@ export class ContentStore {
       file.relationships[index] = {
         ...prevRest,
         ...entry,
-        ...(omitDirectedFrom
-          ? {}
-          : { directedFrom: prev.directedFrom ?? entry.directedFrom }),
         properties: { ...(prev.properties ?? {}), ...properties },
       };
     } else {
       if (!registry.types[composite]) {
-        if (useIncludes) {
+        if (isIncludesStorageType(composite)) {
           registerIncludesType(registry);
         } else if (isSetMembershipStorageType(composite)) {
           registerSetMembershipType(registry);
+        } else if (composite === PARENTS_CHILDREN_COMPOSITE) {
+          registerBidirectionalType(registry, "parents", "children");
+        } else if (TAXONOMY_INSPIRATION_PERSPECTIVES.has(normalized)) {
+          registerBidirectionalType(registry, normalized, "inspirations");
         } else {
-          registerUnidirectionalType(registry, composite);
+          registerBidirectionalType(registry, normalized, normalized);
         }
         this.writeRelationshipTypesFile(registry);
       }
@@ -341,14 +342,9 @@ export class ContentStore {
     if (index < 0) return false;
 
     const prev = file.relationships[index]!;
-    const useIncludes = isIncludesStorageType(composite);
-    const omitDirectedFrom =
-      useIncludes ||
-      isSetMembershipStorageType(composite) ||
-      isBidirectionalComposite(registry, composite);
+    const { directedFrom: _drop, ...prevRest } = prev;
     file.relationships[index] = {
-      ...prev,
-      ...(omitDirectedFrom ? {} : { directedFrom: source }),
+      ...prevRest,
       properties,
     };
     this.writeRelationshipsFile(file);
@@ -463,4 +459,4 @@ export class ContentStore {
   }
 }
 
-export { relationshipRecordId, registerBidirectionalType, registerUnidirectionalType };
+export { relationshipRecordId, registerBidirectionalType };

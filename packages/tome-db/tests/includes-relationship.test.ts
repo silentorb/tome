@@ -21,9 +21,12 @@ describe("relationSectionSupportsLinkExisting", () => {
     expect(relationSectionSupportsLinkExisting("prop_type")).toBe(true);
   });
 
-  test("returns false for structural one-to-many perspectives", () => {
+  test("returns true for scenes (now an includes slug)", () => {
+    expect(relationSectionSupportsLinkExisting("scenes")).toBe(true);
+  });
+
+  test("returns false for structural/composite perspectives that are not includes slugs", () => {
     expect(relationSectionSupportsLinkExisting("part")).toBe(false);
-    expect(relationSectionSupportsLinkExisting("scenes")).toBe(false);
     expect(relationSectionSupportsLinkExisting("parents")).toBe(false);
     expect(relationSectionSupportsLinkExisting("product")).toBe(false);
   });
