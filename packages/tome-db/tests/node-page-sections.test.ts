@@ -101,7 +101,7 @@ describe("node-sections", () => {
     });
   });
 
-  test("adds database table section for NotionDatabase records after markdown", () => {
+  test("adds database table section for type-table records after markdown", () => {
     const databaseId = "db42345678901234567890123456789012";
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features DB"), body: "# About" });
     db.upsertNode("page4", { title: "Guest consultant" });
@@ -134,13 +134,6 @@ describe("node-sections", () => {
     db.upsertNode("page5", { title: "Scene A", body: "Prose" });
     db.upsertNode(databaseId, {
       ...typeTableMarkerProperties("Scene Archive"),
-      notion_schema: JSON.stringify({
-        syncedAt: "test",
-        properties: {
-          Name: { id: "title", name: "Name", type: "title", config: {} },
-          Priority: { id: "Vpkf", name: "Priority", type: "select", config: {} },
-        },
-      }),
     });
     db.upsertRelationship("page5", databaseId, MEMBER_OF_TYPE, {
       view: "default",
@@ -185,13 +178,6 @@ describe("node-sections", () => {
     db.upsertNode("page6", { title: "Legacy row" });
     db.upsertNode(databaseId, {
       ...typeTableMarkerProperties("Legacy Features"),
-      notion_schema: JSON.stringify({
-        syncedAt: "test",
-        properties: {
-          Name: { id: "title", name: "Name", type: "title", config: {} },
-          Status: { id: "status", name: "Status", type: "select", config: {} },
-        },
-      }),
     });
     db.upsertRelationship("page6", databaseId, MEMBER_OF_TYPE, { status: "Unresolved" });
 
@@ -216,7 +202,7 @@ describe("node-sections", () => {
     });
   });
 
-  test("resolves typeNodeId by matching FEATURES label to NotionDatabase title", () => {
+  test("resolves typeNodeId by matching FEATURES label to type-table title", () => {
     const featuresTypeId = "f72345678901234567890123456789012";
     db.upsertNode("scene2", { title: "Chase" });
     db.upsertNode(featuresTypeId, { ...typeTableMarkerProperties("Features") });
@@ -235,7 +221,7 @@ describe("node-sections", () => {
     });
   });
 
-  test("resolves typeNodeId by matching NotionDatabase title to relation label", () => {
+  test("resolves typeNodeId by matching type-table title to relation label", () => {
     const inspTypeId = "f82345678901234567890123456789012";
     db.upsertNode("scene3", { title: "Ball" });
     db.upsertNode(inspTypeId, { ...typeTableMarkerProperties("Inspirations") });

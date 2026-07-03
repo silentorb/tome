@@ -19,7 +19,7 @@ For per-field logic, read the spec in [`docs/dynamic-fields/`](../dynamic-fields
 
 ### Core model
 
-- Dynamic values **must** be computed in `tome-db` when building `DatabaseViewDetail`, before Notion view filter/sort evaluation.
+- Dynamic values **must** be computed in `tome-db` when building `DatabaseViewDetail`, before view filter/sort evaluation.
 - Dynamic values **must** override stale `IS_A` relationship properties when column keys match.
 - Core graph files **must not** store dynamic field configuration; `dynamic-fields.json` only.
 - Each dynamic field **must** have an authoritative spec under `docs/dynamic-fields/`.

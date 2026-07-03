@@ -8,7 +8,7 @@ Type-table column definitions live in [`content/model/table-schemas.json`](../..
 
 - Adding or editing database table columns (select, relation, checkbox, etc.)
 - Understanding how `is_a` row properties map to UI columns
-- Migrating or auditing type tables after the Notion schema migration
+- Migrating or auditing type tables after the schema migration
 
 See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./schema.md).
 
@@ -38,7 +38,7 @@ See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./s
 
 | Rule | Detail |
 | --- | --- |
-| **Identity** | Column identity is `key` (slug), not Notion property ids |
+| **Identity** | Column identity is `key` (slug), not legacy property ids |
 | **Scalars** | `select`, `multi_select`, `checkbox`, `number`, `text`, `date`, `url`, `email`, `phone_number` |
 | **Relations** | `targetTypeId` is a graph node id; `perspective` maps to [`relationship-types.json`](../../content/model/relationship-types.json) |
 | **Enums** | `enumId` references [`schema.json`](../../content/model/schema.json) `enums` |

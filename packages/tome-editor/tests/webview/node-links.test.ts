@@ -14,7 +14,7 @@ import { editorDynamicNodeHref } from "tome-db/dynamic-node-links";
 import { tomeHref, standaloneNodeUrl } from "../../src/shared/types";
 
 describe("node-links", () => {
-  test("resolveNodeLinkTarget accepts marloth, relative, and legacy notion hrefs", () => {
+  test("resolveNodeLinkTarget accepts marloth, relative, and legacy export hrefs", () => {
     const id = "72b6fb455b824b78962b0e509cc091c9";
     expect(resolveNodeLinkTarget(tomeHref(id))).toBe(id);
     expect(resolveNodeLinkTarget(`./${id}.md`)).toBe(id);

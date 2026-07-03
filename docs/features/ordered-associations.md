@@ -44,7 +44,7 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, re
 - Book tabs **must** appear at the start of the section; each tab filters to one Product that has scenes.
 - Each Part **must** have its own subsection with a table of scenes in that part.
 - Tables **must** be sorted only by `order` (server-provided); column header sorting **must not** be available.
-- Table columns **must** come from the Scenes database `notion_schema`, using the configured reference view (`TWOLD Active`) for visibility. Product, Part, Order, and Status **must** be excluded from columns because scope tabs, part groups, or drag-and-drop ordering replace them.
+- Table columns **must** come from the Scenes database table schema, using the configured reference view (`TWOLD Active`) for visibility. Product, Part, Order, and Status **must** be excluded from columns because scope tabs, part groups, or drag-and-drop ordering replace them.
 - Relation columns **must** be hydrated from outgoing graph relationships (same pipeline as standard database table views), not inferred only from `member_of` edge properties.
 - Users **must** be able to drag scenes within a part to reorder (book-wide sequence).
 - Users **must** be able to drag scenes to a different part to change the `PART` association.

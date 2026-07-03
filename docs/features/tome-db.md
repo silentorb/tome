@@ -22,9 +22,9 @@ For **what design nodes mean** (features, inspirations, products, traceability),
 | --- | --- |
 | **Node** | Entity in `nodes` (replaces *vertex* / *record* in API and docs). |
 | **Relationship** | Link between two nodes with a **relationship type** and JSON properties. |
-| **Relationship type** | Lower snake_case name (e.g. `is_a`, `inspirations_features`, `part`). Bidirectional Notion pairs use a single composite type. |
+| **Relationship type** | Lower snake_case name (e.g. `is_a`, `inspirations_features`, `part`). Bidirectional relationship pairs use a single composite type. |
 | **Perspective type** | Local type name used in UI/API from one endpoint (e.g. `inspirations` on a Feature page). Mapped to composite storage types via `relationship-types.json`. |
-| **Page** | Editor-facing node view (`getNodePageDetail`, `NodePageView`)—not a Notion export file. |
+| **Page** | Editor-facing node view (`getNodePageDetail`, `NodePageView`)—not a filesystem export file. |
 | **Type table** | Node listed in [`table-schemas.json`](./table-schemas.md) and/or receiving `is_a` rows. |
 | **Schema** | Workspace model config in `content/model/schema.json` (relationship rules, enums) — see [schema.md](./schema.md). |
 
@@ -37,11 +37,8 @@ API names: `ContentStore`, `openTomeWriteContext`, `getNodeDetail`, `getNodePage
 - Use `ContentStore` / `TomeWriteContext` (via editor API or `openTomeWriteContext`), or edit `content/data/{id}.md`, `content/data/relationships.json`, and `content/model/relationship-types.json` directly.
 - Commit changes under `content/`; do not commit `data/tome.sqlite` or legacy `data/marloth.sqlite`.
 - Run `bun run content:sync` after bulk file edits if the editor API is not running (otherwise the file watcher syncs automatically).
-- **Do not** modify `packages/notion-importer` and run `bun run notion:import` / `--clean` for routine work.
 
-**When data exists only in `./exports/`:** read the relevant Notion `.md` or `.csv` from the archival export and apply **targeted** upserts using the same mapping rules as the legacy importer (pages → nodes, relations → relationships, CSV rows → `is_a`, etc.). Reuse importer parsing helpers if helpful; do not run a full-graph rebuild.
-
-**Schema changes:** bump `SCHEMA_VERSION` in `schema.ts`, migrate existing rows in place, document steps here or in commit notes. Re-import is not a migration strategy.
+**Schema changes:** bump `SCHEMA_VERSION` in `schema.ts`, migrate existing rows in place, document steps here or in commit notes.
 
 ## Requirements
 
@@ -116,7 +113,7 @@ One-time backfill for existing archive members: `bun scripts/migrate-archive-rel
 
 Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTableNode` in `node-capabilities.ts`).
 
-- Node ids **must** be stable text keys (Notion pages use 32-hex ids).
+- Node ids **must** be stable text keys (32-hex strings).
 - Projection ids **must** be deterministic: `{source_id}:{type}:{target_id}` (local perspective type).
 - Relationship types **must** be lower snake_case (e.g. `scenes` → `scenes`, not `SCENES`).
 
@@ -173,8 +170,6 @@ Writes go to `content/` via `ContentStore`; sync expands to SQLite projections.
 | `scripts/migrate-remove-via-database.ts` | Strip legacy `via_database` edge properties (scoping uses row `is_a`) |
 | `scripts/migrate-archive-to-includes.ts` | Migrate archive membership from hub links / legacy paths to `includes` on the Archive hub |
 | `scripts/migrate-archive-relationship-flags.ts` | Flag incident relationships `archived: true` for existing archive members |
-| `docs/notion-import-manifest.json` | Import summary (nodes, databases, counts) |
-| `docs/notion-link-report.txt` | Unresolved relation paths |
 
 ## Quick start
 
@@ -200,7 +195,6 @@ db.close();
 - **Unit tests:** `bun test` in `packages/tome-db/`.
 - **After content edits:** `bun run content:sync` or use the editor API; spot-check via `getNodeDetail` or the editor.
 - **Content model guard:** `bun run validate:content-model` — fails on legacy `notion_*` / `source_export` frontmatter keys.
-- **Legacy import only:** `docs/notion-import-manifest.json` and `docs/notion-link-report.txt` (importer archived under `packages/_archive/notion-importer/`).
 
 ## Implementation pointers
 
@@ -219,7 +213,6 @@ db.close();
 | `packages/tome-db/src/database-view-relations.ts` | Relation-column hydration |
 | `packages/tome-db/src/ordered-associations.ts` | Ordered association config, view query, move mutation |
 | `packages/tome-db/src/table-schemas/load.ts` | `table-schemas.json` loader |
-| `packages/_archive/notion-importer/src/graph-pipeline.ts` | Notion → graph import (legacy, archival) |
 
 ## See also
 

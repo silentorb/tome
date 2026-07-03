@@ -66,18 +66,6 @@ describe("database-view-relations", () => {
   test("listRelationConnectionsForRow resolves prop_type via row is_a membership", () => {
     db.upsertNode(inspirationsDb, {
       ...typeTableMarkerProperties("Inspirations"),
-      notion_schema: JSON.stringify({
-        syncedAt: "2024-01-01T00:00:00.000Z",
-        properties: {
-          Name: { id: "title", name: "Name", type: "title", config: {} },
-          Type: {
-            id: "fsWJ",
-            name: "Type",
-            type: "relation",
-            config: { database_id: inspirationTypesDb },
-          },
-        },
-      }),
     });
     db.upsertNode(inspirationTypesDb, { ...typeTableMarkerProperties("Inspiration types") });
     db.upsertNode(inspirationId, { title: "Ash vs. the Evil Dead" });

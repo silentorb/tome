@@ -23,7 +23,6 @@ describe("node-file", () => {
       properties: {
         title: "Test Page",
         alias: "TP",
-        notion_id: id,
       },
     };
     const body = "# Hello\n\nParagraph.";

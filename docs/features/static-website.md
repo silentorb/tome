@@ -16,7 +16,7 @@ The `tome-static-site` package reads the git-tracked design corpus via `tome-db`
 
 - **Must** include every node returned by `ContentStore.listNodeIds()` (~all `content/data/*.md` files).
 - **Must** render title, markdown body, metadata (including backlinks), type properties, relation tables, and type-table Items tables per node.
-- **Must** rewrite internal graph links (`./{id}.md`, `marloth:{id}`, `[[id]]`, legacy Notion `{32-hex}.md` paths, and optional `url_alias` paths) to static node URLs.
+- **Must** rewrite internal graph links (`./{id}.md`, `marloth:{id}`, `[[id]]`, legacy `{32-hex}.md` export paths, and optional `url_alias` paths) to static node URLs.
 - **Must** use a dark theme consistent with the Marloth editor palette.
 - **Must** write to `dist/web/` by default; output directory **must** be configurable for external tools.
 - **Must** support a configurable Astro `base` path for subdirectory embedding.

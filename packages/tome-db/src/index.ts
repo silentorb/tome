@@ -2,7 +2,7 @@ export { GraphDatabase, relationshipId } from "./graph";
 export type { Relationship, GraphCounts, Node, Properties, PropertyValue } from "./graph";
 export {
   isArchivedNode,
-  isLegacyArchivedNotionPath,
+  isLegacyArchivedPath,
   listArchivedNodeIds,
 } from "./archive-status";
 export {
@@ -59,7 +59,7 @@ export type {
   DatabaseViewDetail,
   RelationLink,
 } from "./database-view";
-export { normalizeNotionId } from "./notion-ids";
+export { normalizeHex32Id } from "./hex-ids";
 export {
   linkOutgoingRelationship,
   moveRelationshipConnection,

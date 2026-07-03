@@ -48,7 +48,7 @@ describe("CacheSync schema enum causality", () => {
       serializeSchemaFile(SCHEMA_V1),
       "utf-8",
     );
-    seedTestNode(fixture, { id: databaseId, properties: { title: "Features", notion_schema: {} } });
+    seedTestNode(fixture, { id: databaseId, properties: { title: "Features" } });
     seedTestNode(fixture, { id: pageId, properties: { title: "Feature A" } });
     seedTestRelationships(fixture, [
       { source: pageId, target: databaseId, type: MEMBER_OF_TYPE, properties: { priority: "High" } },

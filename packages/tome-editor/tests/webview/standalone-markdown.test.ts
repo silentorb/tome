@@ -31,7 +31,7 @@ describe("prepareEditorMarkdown", () => {
     expect(out).toBe(`[Cozy horror](?node=${TARGET})`);
   });
 
-  test("rewrites notion export links to navigable hrefs", () => {
+  test("rewrites legacy export links to navigable hrefs", () => {
     const body = "See [Cozy horror](Cozy%20horror%20e5cc80dc61ed4c629951cdf472b20b7a.md).";
     const out = prepareEditorMarkdown(body);
     expect(out).toContain(`?node=${TARGET}`);

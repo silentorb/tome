@@ -21,7 +21,7 @@ Cross-read: [`tome-editor.md`](./tome-editor.md) (editor shell), [`tome-db.md`](
 
 - Graph Explorer **must** be a distinct editor view (`graph-explorer`), separate from the node page view.
 - The graph **must** be derived from active nodes and relationships in `data/marloth.sqlite` (same export surface as full graph export).
-- Nodes under archived Notion paths (`Marloth/Archive` and descendants) **must** be excluded, along with any relationships touching them.
+- Nodes under archived legacy paths (`Marloth/Archive` and descendants) **must** be excluded, along with any relationships touching them.
 - By default, the graph **must** be scoped to the **connected component** reachable from an **anchor node** via undirected traversal (treat relationships as bidirectional for reachability).
 - Default anchor **must** be the TWOLD product node (`e028aa0786f5449984a4f497c1d746fa`). Invalid or missing anchor IDs fall back to this default.
 - Standalone browser URLs **must** use `?view=explorer&anchor={32-hex-id}`; the `anchor` query param is cleared when leaving Graph Explorer.

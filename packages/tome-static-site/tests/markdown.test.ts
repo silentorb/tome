@@ -56,7 +56,7 @@ describe("rewriteMarkdownLinks", () => {
     expect(output).toBe(`See [Target](/${TARGET}/) here.`);
   });
 
-  test("rewrites legacy Notion export paths", () => {
+  test("rewrites legacy export paths", () => {
     const urls = urlsForNodes([{ id: TARGET }]);
     const input = `[Page](../foo/${TARGET}.md)`;
     const output = rewriteMarkdownLinks(input, urls);

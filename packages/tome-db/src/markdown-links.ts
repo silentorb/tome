@@ -14,7 +14,7 @@ function warnLegacyHrefResolution(href: string): void {
 }
 const NODE_ID_PATTERN = /^[a-f0-9]{32}$/i;
 const MD_LINK = /\[([^\]]*)\]\(([^)]+)\)/g;
-const NOTION_PAREN_LINK =
+const LEGACY_PAREN_LINK =
   /(?<!\[)([^\[\]\n(]+?)\s*\(\s*([^)]+?\.(?:md|csv))(?:#([^)]*))?\s*\)(?!\])/gi;
 
 function hasDynamicLinkMarker(href: string): boolean {
@@ -174,9 +174,9 @@ export function findMarkdownLinksToTarget(
     }
   }
 
-  NOTION_PAREN_LINK.lastIndex = 0;
+  LEGACY_PAREN_LINK.lastIndex = 0;
   let parenMatch: RegExpExecArray | null;
-  while ((parenMatch = NOTION_PAREN_LINK.exec(body)) !== null) {
+  while ((parenMatch = LEGACY_PAREN_LINK.exec(body)) !== null) {
     const linkText = parenMatch[1]?.trim() ?? "";
     const pathPart = parenMatch[2]?.trim() ?? "";
     if (resolveMarkdownHrefTarget(pathPart) === normalizedTarget) {

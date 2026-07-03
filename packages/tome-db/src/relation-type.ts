@@ -1,5 +1,5 @@
 /**
- * Maps Notion database property names to graph relationship types for relation columns.
+ * Maps type-table property names to graph relationship types for relation columns.
  */
 
 const EMOJI_OR_SYMBOL =
@@ -28,7 +28,7 @@ function slugifyPropertySlug(name: string): string {
   return s;
 }
 
-/** Graph relationship type for a Notion relation property (e.g. "Bible passages" → "bible_passages"). */
+/** Graph relationship type for a relation property (e.g. "Bible passages" → "bible_passages"). */
 export function relationType(propertyName: string): string {
   return slugifyPropertySlug(propertyName).replace(/-/g, "_");
 }

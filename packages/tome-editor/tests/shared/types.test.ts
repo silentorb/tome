@@ -26,7 +26,7 @@ describe("link helpers", () => {
     expect(nodeIdFromUri(`marloth://node/${id}`)).toBe(id);
   });
 
-  test("resolves legacy notion export paths", () => {
+  test("resolves legacy export paths", () => {
     const href = "Marloth/TWOLD%20design%2013458e628ba28073850dea0edb9acde1.md";
     expect(resolveLinkTarget(href)).toBe("13458e628ba28073850dea0edb9acde1");
   });

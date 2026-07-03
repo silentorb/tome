@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { isArchivedNode, isLegacyArchivedNotionPath } from "../src/archive-status";
+import { isArchivedNode, isLegacyArchivedPath } from "../src/archive-status";
 import { GraphDatabase } from "../src/graph";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -13,12 +13,12 @@ import {
 describe("archive-status", () => {
   const fixture = createTestContentFixture("tome-archive-status-fixture-");
 
-  test("isLegacyArchivedNotionPath matches archive root and nested pages", () => {
+  test("isLegacyArchivedPath matches archive root and nested pages", () => {
     const contentDir = fixture.ctx.store.contentDir;
-    expect(isLegacyArchivedNotionPath("Marloth/Archive", contentDir)).toBe(true);
-    expect(isLegacyArchivedNotionPath("Marloth/Archive/Foils/old", contentDir)).toBe(true);
-    expect(isLegacyArchivedNotionPath("Marloth/Scenes/active", contentDir)).toBe(false);
-    expect(isLegacyArchivedNotionPath(null, contentDir)).toBe(false);
+    expect(isLegacyArchivedPath("Marloth/Archive", contentDir)).toBe(true);
+    expect(isLegacyArchivedPath("Marloth/Archive/Foils/old", contentDir)).toBe(true);
+    expect(isLegacyArchivedPath("Marloth/Scenes/active", contentDir)).toBe(false);
+    expect(isLegacyArchivedPath(null, contentDir)).toBe(false);
   });
 
   test("isArchivedNode uses is_a membership on Archive hub", () => {

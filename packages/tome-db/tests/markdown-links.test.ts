@@ -119,7 +119,7 @@ describe("findMarkdownLinksToTarget", () => {
     expect(findMarkdownLinksToTarget(body, TARGET)).toEqual([{ linkText: "Target" }]);
   });
 
-  test("finds inline notion paren links in prose", () => {
+  test("finds inline legacy paren links in prose", () => {
     const body = `See Target (${TARGET}.md) for more.`;
     const matches = findMarkdownLinksToTarget(body, TARGET);
     expect(matches).toHaveLength(1);

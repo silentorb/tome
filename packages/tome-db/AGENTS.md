@@ -11,7 +11,7 @@
 - **Relationship** — link in `content/data/relationships.json` (v2: `{ a, b, type }`) with types in lower snake_case.
 - **Relationship type** — storage type (composite for bidirectional pairs, e.g. `inspirations_features`) or local perspective (e.g. `inspirations` in UI).
 - **Page** — editor view of a node (`getNodePageDetail`, `node-page-sections.ts`).
-- **Type table** — node with incoming `is_a` and/or `notion_schema` metadata (`isTypeTableNode`).
+- **Type table** — node with incoming `is_a` and/or a [`table-schemas.json`](../../docs/features/table-schemas.md) entry (`isTypeTableNode`).
 - **Schema** — relationship rules in `content/model/schema.json` ([`docs/features/schema.md`](../../../docs/features/schema.md)).
 - **Extensions config** — `content/model/extensions.json` ([`docs/features/extensions.md`](../../../docs/features/extensions.md)).
 
@@ -26,7 +26,7 @@ Cache tables: `nodes`, `relationship_records`, `relationship_projections` (`SCHE
 - **Canonical store:** `content/` — commit markdown + JSON changes (`relationships.json`, `relationship-types.json`).
 - Use `ContentStore` / `TomeWriteContext` for mutations.
 - Rebuild cache: `bun run content:sync` from repo root.
-- **Do not** edit `data/tome.sqlite` directly or run `notion:import` / `--clean` for routine updates.
+- **Do not** edit `data/tome.sqlite` directly for routine updates.
 
 ## Repo-wide context
 - **Feature spec:** [`docs/features/tome-db.md`](../../../docs/features/tome-db.md)
