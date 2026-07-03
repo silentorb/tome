@@ -194,7 +194,6 @@ db.close();
 
 - **Unit tests:** `bun test` in `packages/tome-db/`.
 - **After content edits:** `bun run content:sync` or use the editor API; spot-check via `getNodeDetail` or the editor.
-- **Content model guard:** `bun run validate:content-model` — fails on legacy `notion_*` / `source_export` frontmatter keys.
 
 ## Implementation pointers
 

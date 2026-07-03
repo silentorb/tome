@@ -334,6 +334,61 @@ describe("database-view-relations", () => {
     ]);
   });
 
+  test("story_scale relation column hydrates from relationships, not a stale scalar member_of property", () => {
+    // Regression guard for the legacy-import cleanup: the corpus historically stored
+    // a scalar `story_scale` (and `traversal_types`) on the member_of edge holding a
+    // comma-joined URL string. Relation columns must hydrate from the
+    // `{perspective}_inspirations` composite relationships and never surface the
+    // stale scalar (which used to leak a raw URL into the cell).
+    const storyScaleRowsDb = "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1";
+    const storyScaleDb = "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2";
+    const storyScaleRowId = "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3";
+    const extendedScaleId = "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4";
+
+    writeFileSync(
+      tableSchemasFilePath(contentDir),
+      serializeTableSchemasFile({
+        version: 1,
+        tables: {
+          [storyScaleRowsDb]: {
+            columns: [
+              {
+                key: "story_scale",
+                name: "Story scale",
+                type: "relation",
+                targetTypeId: storyScaleDb,
+                perspective: "story_scale",
+              },
+            ],
+          },
+        },
+      }),
+    );
+    invalidateTableSchemasCache();
+
+    db.upsertNode(storyScaleRowsDb, { ...typeTableMarkerProperties("Traversal reasons") });
+    db.upsertNode(storyScaleDb, { ...typeTableMarkerProperties("Story scale") });
+    db.upsertNode(storyScaleRowId, { title: "Mission-based" });
+    db.upsertNode(extendedScaleId, { title: "Extended" });
+    db.upsertRelationship(storyScaleRowId, storyScaleRowsDb, MEMBER_OF_TYPE, {
+      row_index: 0,
+      story_scale: "https://legacy.example/86324f5585d84ca0a6a36deafd6b91fc",
+    });
+    db.upsertRelationship(extendedScaleId, storyScaleDb, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship(storyScaleRowId, extendedScaleId, "story_scale_inspirations", {
+      ordinal: 0,
+      via_view: "default",
+    });
+
+    const detail = getDatabaseViewDetail(db, storyScaleRowsDb, undefined, contentDir);
+    const row = detail?.rows.find((r) => r.nodeId === storyScaleRowId);
+    expect(row?.relationCells?.story_scale).toEqual([
+      { targetId: extendedScaleId, title: "Extended" },
+    ]);
+    expect(row?.cells.story_scale).toBe("Extended");
+    expect(row?.cells.story_scale ?? "").not.toContain("://");
+  });
+
   afterAll(() => {
     db.close();
     rmSync(dir, { recursive: true, force: true });
