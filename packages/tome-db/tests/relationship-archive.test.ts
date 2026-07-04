@@ -25,7 +25,7 @@ function entry(
   type: string,
   extra: Partial<RelationshipEntry> = {},
 ): RelationshipEntry {
-  return { a: a < b ? a : b, b: a < b ? b : a, type, ...extra };
+  return { a, b, type, ...extra };
 }
 
 describe("relationship-archive helpers", () => {
@@ -46,7 +46,7 @@ describe("relationship-archive helpers", () => {
   test("filterEntriesForCacheSync drops archived entries", () => {
     const filtered = filterEntriesForCacheSync([
       entry(NODE_A, NODE_B, "includes"),
-      entry(NODE_A, NODE_C, "member_of", { archived: true, directedFrom: NODE_A }),
+      entry(NODE_A, NODE_C, "member_of", { archived: true }),
     ]);
     expect(filtered).toHaveLength(1);
     expect(filtered[0]?.b).toBe(NODE_B);

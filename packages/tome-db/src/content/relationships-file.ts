@@ -2,14 +2,18 @@ import type { Properties, Relationship } from "../graph";
 import { relationshipId } from "../graph";
 import { normalizeRelationshipType } from "../relation-type";
 
-export const RELATIONSHIPS_FILE_VERSION = 2;
+export const RELATIONSHIPS_FILE_VERSION = 3;
 
+/**
+ * A relationship is an ordered tuple `(a, b)`. The positions carry no built-in
+ * meaning (not source/target): the edge type assigns a per-position value to
+ * each index (see `RelationshipTypeDefinition.perspectives`). Relative semantics
+ * come from tuple order + the type registry, never from lexicographic node order.
+ */
 export interface RelationshipEntry {
   a: string;
   b: string;
   type: string;
-  /** @deprecated Legacy directed types only; set membership and includes omit directedFrom. */
-  directedFrom?: string;
   /** When true, entry is kept in content but excluded from SQLite cache sync. */
   archived?: boolean;
   properties?: Properties;
@@ -20,13 +24,13 @@ export interface RelationshipsFile {
   relationships: RelationshipEntry[];
 }
 
-export function sortEndpoints(source: string, target: string): { a: string; b: string } {
-  return source < target ? { a: source, b: target } : { a: target, b: source };
+/** True when `entry` connects `x` and `y` in either tuple position. */
+export function connectsEndpoints(entry: RelationshipEntry, x: string, y: string): boolean {
+  return (entry.a === x && entry.b === y) || (entry.a === y && entry.b === x);
 }
 
 export function relationshipRecordId(a: string, b: string, type: string): string {
-  const { a: na, b: nb } = sortEndpoints(a, b);
-  return `${na}:${nb}:${normalizeRelationshipType(type)}`;
+  return `${a}:${b}:${normalizeRelationshipType(type)}`;
 }
 
 export function parseRelationshipsFile(raw: string): RelationshipsFile {
@@ -57,73 +61,45 @@ export function parseRelationshipsFile(raw: string): RelationshipsFile {
     const archived = row.archived === true ? true : undefined;
 
     if (typeof row.a === "string" && typeof row.b === "string" && typeof row.type === "string") {
-      const { a, b } = sortEndpoints(row.a, row.b);
-      const directedFrom =
-        typeof row.directedFrom === "string" && row.directedFrom.trim()
-          ? row.directedFrom.trim()
-          : undefined;
       entries.push({
-        a,
-        b,
+        a: row.a,
+        b: row.b,
         type: normalizeRelationshipType(row.type),
-        ...(directedFrom ? { directedFrom } : {}),
         ...(archived ? { archived } : {}),
         ...(properties ? { properties } : {}),
       });
       continue;
     }
 
-    // v1 compat: { source, target, label }
-    const source = row.source;
-    const target = row.target;
-    const legacyLabel = row.label ?? row.type;
-    if (
-      typeof source === "string" &&
-      typeof target === "string" &&
-      typeof legacyLabel === "string"
-    ) {
-      const { a, b } = sortEndpoints(source, target);
-      entries.push({
-        a,
-        b,
-        type: normalizeRelationshipType(legacyLabel),
-        directedFrom: source,
-        ...(archived ? { archived } : {}),
-        ...(properties ? { properties } : {}),
-      });
-      continue;
-    }
-
-    throw new Error("relationships.json: each relationship requires a, b, type (or v1 source, target, label)");
+    throw new Error("relationships.json: each relationship requires a, b, type");
   }
 
   return { version, relationships: entries };
 }
 
+/**
+ * Directed view of an entry from its authored tuple order: index 0 is the
+ * projection source, index 1 the target. The projection `type` is the raw
+ * composite; perspective expansion happens in relationship-sync-expand.
+ */
 export function relationshipFromEntry(entry: RelationshipEntry): Relationship {
-  if (!entry.directedFrom) {
-    throw new Error("relationship entry requires directedFrom");
-  }
-  const sourceNodeId = entry.directedFrom;
-  const targetNodeId = entry.a === sourceNodeId ? entry.b : entry.a;
   const type = entry.type;
   return {
-    id: relationshipId(sourceNodeId, type, targetNodeId),
+    id: relationshipId(entry.a, type, entry.b),
     recordId: relationshipRecordId(entry.a, entry.b, type),
-    sourceNodeId,
-    targetNodeId,
+    sourceNodeId: entry.a,
+    targetNodeId: entry.b,
     type,
     properties: entry.properties ?? {},
   };
 }
 
+/** Build an entry preserving the relationship's directed order (source -> a, target -> b). */
 export function entryFromRelationship(relationship: Relationship): RelationshipEntry {
-  const { a, b } = sortEndpoints(relationship.sourceNodeId, relationship.targetNodeId);
   return {
-    a,
-    b,
+    a: relationship.sourceNodeId,
+    b: relationship.targetNodeId,
     type: relationship.type,
-    directedFrom: relationship.sourceNodeId,
     ...(Object.keys(relationship.properties).length > 0
       ? { properties: relationship.properties }
       : {}),
@@ -137,7 +113,6 @@ export function serializeRelationshipsFile(file: RelationshipsFile): string {
       a: r.a,
       b: r.b,
       type: r.type,
-      ...(r.directedFrom ? { directedFrom: r.directedFrom } : {}),
       ...(r.archived === true ? { archived: true } : {}),
       ...(r.properties && Object.keys(r.properties).length > 0 ? { properties: r.properties } : {}),
     })),

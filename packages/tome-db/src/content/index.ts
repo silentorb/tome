@@ -5,7 +5,7 @@ export {
   parseRelationshipsFile,
   serializeRelationshipsFile,
   relationshipRecordId,
-  sortEndpoints,
+  connectsEndpoints,
 } from "./relationships-file";
 export type { RelationshipEntry, RelationshipsFile } from "./relationships-file";
 export {

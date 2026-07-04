@@ -34,7 +34,6 @@ import {
 } from "./paths";
 import { ContentStore } from "./store";
 import { expandAllRelationships } from "./relationship-sync-expand";
-import { collectSetNodeIds } from "../set-membership";
 import { filterEntriesForCacheSync } from "../relationship-archive";
 
 let cachedDynamicConfig: {
@@ -177,16 +176,13 @@ export class CacheSync {
     const allEntries = this.store.readRelationshipsFile().relationships;
     const entries = filterEntriesForCacheSync(allEntries);
     const registry = this.store.readRelationshipTypesFile();
-    const setNodeIds = collectSetNodeIds(this.contentDir);
-    const { records, projections } = expandAllRelationships(entries, registry, { setNodeIds });
+    const { records, projections } = expandAllRelationships(entries, registry);
 
     this.db.runExec("BEGIN");
     try {
       this.db.clearRelationshipCache();
-      for (let i = 0; i < records.length; i++) {
-        const record = records[i]!;
-        const entry = entries[i];
-        this.db.upsertRelationshipRecord(record, entry?.directedFrom);
+      for (const record of records) {
+        this.db.upsertRelationshipRecord(record);
       }
       for (const projection of projections) {
         this.db.upsertRelationshipProjection(projection);

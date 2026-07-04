@@ -16,7 +16,7 @@ import {
   rowBelongsToDatabase,
 } from "../src/relationship-traverse";
 import type { RelationshipEntry } from "../src/content/relationships-file";
-import { RELATIONSHIPS_FILE_VERSION, sortEndpoints } from "../src/content/relationships-file";
+import { RELATIONSHIPS_FILE_VERSION } from "../src/content/relationships-file";
 
 describe("relationship-traverse", () => {
   const fixture = createTestContentFixture("tome-rel-traverse-");
@@ -46,9 +46,12 @@ describe("relationship-traverse", () => {
   };
   fixture.ctx.store.writeRelationshipTypesFile(typesFile);
 
+  // Authored tuple order carries the semantics: for member_of the member is at
+  // index 0 and the set (type table) at index 1; asymmetric composites place
+  // each endpoint at the index whose perspective matches its role.
   const relationships: RelationshipEntry[] = [
-    { a: scene, b: product, type: "scenes_product", properties: { ordinal: 0 } },
-    { a: scene, b: part, type: "scenes_part", properties: { ordinal: 0 } },
+    { a: product, b: scene, type: "scenes_product", properties: { ordinal: 0 } },
+    { a: part, b: scene, type: "scenes_part", properties: { ordinal: 0 } },
     {
       a: scene,
       b: location,
@@ -58,14 +61,6 @@ describe("relationship-traverse", () => {
     { a: scene, b: scenesDb, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
     { a: location, b: locationsDb, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
   ];
-  for (const entry of relationships) {
-    const sorted = sortEndpoints(entry.a, entry.b);
-    entry.a = sorted.a;
-    entry.b = sorted.b;
-    if (entry.type === MEMBER_OF_TYPE) {
-      entry.directedFrom = entry.a === scene ? scene : location;
-    }
-  }
   fixture.ctx.store.writeRelationshipsFile({
     version: RELATIONSHIPS_FILE_VERSION,
     relationships,

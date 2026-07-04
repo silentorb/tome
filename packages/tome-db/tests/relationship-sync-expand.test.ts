@@ -26,9 +26,7 @@ describe("expandRelationshipEntry", () => {
       type: "member_of",
       properties: { view: "All" },
     };
-    const { projections } = expandRelationshipEntry(entry, registry, {
-      setNodeIds: new Set([set]),
-    });
+    const { projections } = expandRelationshipEntry(entry, registry);
     expect(projections).toHaveLength(2);
     expect(projections[0]).toMatchObject({
       sourceNodeId: member,
@@ -84,21 +82,19 @@ describe("expandRelationshipEntry", () => {
     });
   });
 
-  test("legacy is_a with directedFrom still expands to dual projections", () => {
-    const member = "0000000000000000000000002C";
+  test("member_of orientation follows tuple order, not node-id ordering", () => {
+    // member id sorts AFTER set id — lexicographic order would invert membership.
     const set = "00000000000000000000000013";
+    const member = "0000000000000000000000002C";
     const entry: RelationshipEntry = {
-      a: member < set ? member : set,
-      b: member < set ? set : member,
+      a: member,
+      b: set,
       type: "member_of",
-      directedFrom: member,
       properties: {},
     };
-    const { projections } = expandRelationshipEntry(entry, registry, {
-      setNodeIds: new Set([set]),
-    });
-    expect(projections.some((p) => p.type === "member_of" && p.targetNodeId === set)).toBe(true);
-    expect(projections.some((p) => p.type === "members" && p.sourceNodeId === set)).toBe(true);
+    const { projections } = expandRelationshipEntry(entry, registry);
+    expect(projections.some((p) => p.type === "member_of" && p.sourceNodeId === member && p.targetNodeId === set)).toBe(true);
+    expect(projections.some((p) => p.type === "members" && p.sourceNodeId === set && p.targetNodeId === member)).toBe(true);
   });
 });
 

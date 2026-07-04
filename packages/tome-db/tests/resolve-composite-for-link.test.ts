@@ -187,25 +187,12 @@ describe("linkOutgoingRelationship scenes_product from product", () => {
       }),
     ).toBeNull();
 
+    // scenes_product perspectives = [scenes, product]; linking via "scenes" from
+    // the product places the product at index 0 (its "scenes" perspective).
     const entry = ctx.store
       .readRelationshipsFile()
       .relationships.find((row) => row.a === productId && row.b === sceneId);
     expect(entry?.type).toBe("scenes_product");
-    expect(entry?.directedFrom).toBeUndefined();
-  });
-
-  test("upsert never writes directedFrom for any relationship type", () => {
-    const nodeA = "0000000000000000000000001K";
-    const nodeB = "00000000000000000000000023";
-    seedTestNode(fixture, { id: nodeA, properties: { title: "Node A" } });
-    seedTestNode(fixture, { id: nodeB, properties: { title: "Node B" } });
-
-    ctx.store.upsertRelationship(nodeA, nodeB, "includes");
-
-    const entries = ctx.store.readRelationshipsFile().relationships;
-    for (const entry of entries) {
-      expect(entry.directedFrom).toBeUndefined();
-    }
   });
 });
 
@@ -251,6 +238,5 @@ describe("LinkResolutionError", () => {
         (row) => (row.a === nodeA || row.b === nodeA) && (row.a === nodeB || row.b === nodeB),
       );
     expect(entry?.type).toBe("parents_children");
-    expect(entry?.directedFrom).toBeUndefined();
   });
 });

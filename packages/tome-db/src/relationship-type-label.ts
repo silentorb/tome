@@ -17,8 +17,16 @@ export function formatRelationshipTypeLabel(type: string): string {
 function perspectiveLabelConfig(
   registry: RelationshipTypesFile,
   perspective: string,
+  compositeType?: string,
 ): PerspectiveLabelConfig | null {
   const normalized = normalizeRelationshipType(perspective);
+  // Preferred: resolve the label from the specific composite so a perspective
+  // slug shared by several edge types (e.g. "inspirations") maps to the label
+  // authored for THIS type + position, not the first arbitrary registry match.
+  if (compositeType) {
+    const def = registry.types[normalizeRelationshipType(compositeType)];
+    return def?.perspectiveLabels?.[normalized] ?? null;
+  }
   for (const def of Object.values(registry.types)) {
     if (!def.perspectives.includes(normalized)) continue;
     const label = def.perspectiveLabels?.[normalized];
@@ -35,12 +43,17 @@ function linkAddFromPerspectiveLabelConfig(config: PerspectiveLabelConfig): stri
   return typeof config === "string" ? null : (config.linkAdd ?? null);
 }
 
-/** Section heading for a perspective; falls back to formatRelationshipTypeLabel. */
+/**
+ * Section heading for a perspective; falls back to formatRelationshipTypeLabel.
+ * Pass `compositeType` to resolve the label from that specific edge type (tuple
+ * position), avoiding ambiguity when a slug is shared across composites.
+ */
 export function perspectiveDisplayLabel(
   registry: RelationshipTypesFile,
   perspective: string,
+  compositeType?: string,
 ): string {
-  const config = perspectiveLabelConfig(registry, perspective);
+  const config = perspectiveLabelConfig(registry, perspective, compositeType);
   if (config) return titleFromPerspectiveLabelConfig(config);
   return formatRelationshipTypeLabel(perspective);
 }
@@ -55,8 +68,9 @@ export function perspectiveLinkAddLabel(
   registry: RelationshipTypesFile,
   perspective: string,
   sectionTitle: string,
+  compositeType?: string,
 ): string {
-  const config = perspectiveLabelConfig(registry, perspective);
+  const config = perspectiveLabelConfig(registry, perspective, compositeType);
   if (config) {
     const linkAdd = linkAddFromPerspectiveLabelConfig(config);
     if (linkAdd) return linkAdd;

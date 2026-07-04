@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 10;
+export const SCHEMA_VERSION = 11;
 
 export const DDL = `
 CREATE TABLE IF NOT EXISTS meta (
@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS relationship_records (
   node_b TEXT NOT NULL,
   composite_type TEXT NOT NULL,
   properties TEXT NOT NULL DEFAULT '{}',
-  directed_from TEXT,
   UNIQUE (node_a, node_b, composite_type)
 );
 

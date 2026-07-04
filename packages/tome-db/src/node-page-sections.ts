@@ -313,11 +313,11 @@ function buildRelationSections(
         );
 
     const sectionTitle = isTypeMembership
-      ? perspectiveDisplayLabel(relationshipTypes, perspective)
+      ? perspectiveDisplayLabel(relationshipTypes, perspective, MEMBER_OF_TYPE)
       : sectionTitleForType(db, perspective, typeNodeId);
     const linkAddLabel =
       isTypeMembership && perspective === MEMBER_OF_TYPE
-        ? perspectiveLinkAddLabel(relationshipTypes, perspective, sectionTitle)
+        ? perspectiveLinkAddLabel(relationshipTypes, perspective, sectionTitle, MEMBER_OF_TYPE)
         : undefined;
 
     sections.push({

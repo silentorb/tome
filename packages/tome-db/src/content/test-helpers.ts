@@ -25,10 +25,10 @@ import { openTomeWriteContext, type TomeWriteContext } from "./write-context";
 import { writeFileSync } from "node:fs";
 import { contentModelDir, nodeFilePath, orderedAssociationsFilePath, workspaceFilePath } from "./paths";
 import {
+  connectsEndpoints,
   entryFromRelationship,
   RELATIONSHIPS_FILE_VERSION,
   type RelationshipEntry,
-  sortEndpoints,
 } from "./relationships-file";
 import { relationshipId } from "../graph";
 import {
@@ -221,16 +221,14 @@ export function seedTestIncludes(
   registerIncludesType(registry);
 
   for (const connection of connections) {
-    const { a, b } = sortEndpoints(connection.a, connection.b);
     const entry: RelationshipEntry = {
-      a,
-      b,
+      a: connection.a,
+      b: connection.b,
       type: INCLUDES_TYPE,
       properties: connection.properties ?? {},
     };
     const index = file.relationships.findIndex(
-      (existing) =>
-        existing.a === entry.a && existing.b === entry.b && existing.type === entry.type,
+      (existing) => existing.type === entry.type && connectsEndpoints(existing, entry.a, entry.b),
     );
     if (index >= 0) {
       file.relationships[index] = entry;
@@ -244,6 +242,11 @@ export function seedTestIncludes(
   fixture.ctx.sync.syncRelationships();
 }
 
+/**
+ * Seed composite relationships as ordered tuples. Node `a` occupies tuple index 0
+ * (projecting `typeFromA`); node `b` occupies index 1 (projecting `typeFromB`).
+ * Direction is carried by this authored order alone — there is no directedFrom.
+ */
 export function seedTestCompositeRelationships(
   fixture: TestContentFixture,
   connections: Array<{
@@ -252,7 +255,6 @@ export function seedTestCompositeRelationships(
     typeFromA: string;
     typeFromB: string;
     properties?: Properties;
-    directedFrom?: string;
   }>,
   options?: { replace?: boolean },
 ): void {
@@ -269,17 +271,14 @@ export function seedTestCompositeRelationships(
       connection.typeFromA,
       connection.typeFromB,
     );
-    const { a, b } = sortEndpoints(connection.a, connection.b);
     const entry: RelationshipEntry = {
-      a,
-      b,
+      a: connection.a,
+      b: connection.b,
       type: compositeType,
       properties: connection.properties ?? {},
-      directedFrom: connection.directedFrom,
     };
     const index = file.relationships.findIndex(
-      (existing) =>
-        existing.a === entry.a && existing.b === entry.b && existing.type === entry.type,
+      (existing) => existing.type === entry.type && connectsEndpoints(existing, entry.a, entry.b),
     );
     if (index >= 0) {
       file.relationships[index] = entry;
@@ -337,4 +336,4 @@ export function seedTestRelationships(
   fixture.ctx.sync.syncRelationships();
 }
 
-export { registerBidirectionalType, sortEndpoints };
+export { registerBidirectionalType };

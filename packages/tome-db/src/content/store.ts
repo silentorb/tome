@@ -23,10 +23,10 @@ import {
   type RelationshipEntry,
   type RelationshipsFile,
   RELATIONSHIPS_FILE_VERSION,
+  connectsEndpoints,
   parseRelationshipsFile,
   relationshipRecordId,
   serializeRelationshipsFile,
-  sortEndpoints,
 } from "./relationships-file";
 import {
   type RelationshipTypesFile,
@@ -54,6 +54,27 @@ function entryMatchesLocalType(
   const perspectives = localTypesForComposite(registry, entry.type);
   if (perspectives.includes(normalized)) return true;
   return !isBidirectionalComposite(registry, entry.type) && entry.type === normalized;
+}
+
+/**
+ * Place `source`/`target` into the tuple so that `source` occupies the position
+ * whose registry perspective matches the requested `localType`. When the type is
+ * symmetric or `localType` is not a perspective of the composite, `source` stays
+ * at index 0. This is the sole authority for a new entry's node order.
+ */
+function orderedEndpointsForLocalType(
+  registry: RelationshipTypesFile,
+  composite: string,
+  source: string,
+  target: string,
+  localType: string,
+): { a: string; b: string } {
+  const normalized = normalizeRelationshipType(localType);
+  const [p0, p1] = localTypesForComposite(registry, composite);
+  if (p1 === normalized && p0 !== normalized) {
+    return { a: target, b: source };
+  }
+  return { a: source, b: target };
 }
 import {
   type DynamicFieldsFile,
@@ -196,10 +217,9 @@ export class ContentStore {
   ): RelationshipEntry | null {
     const registry = this.readRelationshipTypesFile();
     const normalized = normalizeRelationshipType(localType);
-    const { a, b } = sortEndpoints(source, target);
 
     for (const entry of this.readRelationshipsFile().relationships) {
-      if (entry.a !== a || entry.b !== b) continue;
+      if (!connectsEndpoints(entry, source, target)) continue;
       if (entryMatchesLocalType(registry, entry, normalized)) {
         return entry;
       }
@@ -229,7 +249,6 @@ export class ContentStore {
     const registry = this.readRelationshipTypesFile();
     const file = this.readRelationshipsFile();
     const normalized = normalizeRelationshipType(localType);
-    const { a, b } = sortEndpoints(source, target);
 
     let composite = resolveCompositeTypeForLink(
       registry,
@@ -239,32 +258,28 @@ export class ContentStore {
       target,
       normalized,
     );
-    const existing = file.relationships.find((e) => e.a === a && e.b === b && e.type === composite);
 
-    if (!existing) {
-      for (const entry of file.relationships) {
-        if (entry.a !== a || entry.b !== b) continue;
+    let index = file.relationships.findIndex(
+      (e) => connectsEndpoints(e, source, target) && e.type === composite,
+    );
+
+    if (index < 0) {
+      for (let i = 0; i < file.relationships.length; i++) {
+        const entry = file.relationships[i]!;
+        if (!connectsEndpoints(entry, source, target)) continue;
         if (entryMatchesLocalType(registry, entry, normalized)) {
           composite = entry.type;
+          index = i;
           break;
         }
       }
     }
 
-    const index = file.relationships.findIndex((e) => e.a === a && e.b === b && e.type === composite);
-    const entry: RelationshipEntry = {
-      a,
-      b,
-      type: composite,
-      properties,
-    };
-
     if (index >= 0) {
       const prev = file.relationships[index]!;
-      const { directedFrom: _drop, ...prevRest } = prev;
       file.relationships[index] = {
-        ...prevRest,
-        ...entry,
+        ...prev,
+        type: composite,
         properties: { ...(prev.properties ?? {}), ...properties },
       };
     } else {
@@ -282,7 +297,14 @@ export class ContentStore {
         }
         this.writeRelationshipTypesFile(registry);
       }
-      file.relationships.push(entry);
+      const { a, b } = orderedEndpointsForLocalType(
+        registry,
+        composite,
+        source,
+        target,
+        normalized,
+      );
+      file.relationships.push({ a, b, type: composite, properties });
     }
     this.writeRelationshipsFile(file);
   }
@@ -316,9 +338,8 @@ export class ContentStore {
     const registry = this.readRelationshipTypesFile();
     const file = this.readRelationshipsFile();
     const normalized = normalizeRelationshipType(localType);
-    const { a, b } = sortEndpoints(source, target);
 
-    let composite = resolveCompositeTypeForLink(
+    const composite = resolveCompositeTypeForLink(
       registry,
       file.relationships,
       this.contentDir,
@@ -326,14 +347,16 @@ export class ContentStore {
       target,
       normalized,
     );
-    let index = file.relationships.findIndex((e) => e.a === a && e.b === b && e.type === composite);
+    let index = file.relationships.findIndex(
+      (e) => connectsEndpoints(e, source, target) && e.type === composite,
+    );
 
     if (index < 0) {
-      for (const entry of file.relationships) {
-        if (entry.a !== a || entry.b !== b) continue;
+      for (let i = 0; i < file.relationships.length; i++) {
+        const entry = file.relationships[i]!;
+        if (!connectsEndpoints(entry, source, target)) continue;
         if (entryMatchesLocalType(registry, entry, normalized)) {
-          composite = entry.type;
-          index = file.relationships.indexOf(entry);
+          index = i;
           break;
         }
       }
@@ -342,9 +365,8 @@ export class ContentStore {
     if (index < 0) return false;
 
     const prev = file.relationships[index]!;
-    const { directedFrom: _drop, ...prevRest } = prev;
     file.relationships[index] = {
-      ...prevRest,
+      ...prev,
       properties,
     };
     this.writeRelationshipsFile(file);
@@ -355,11 +377,10 @@ export class ContentStore {
     const registry = this.readRelationshipTypesFile();
     const file = this.readRelationshipsFile();
     const normalized = normalizeRelationshipType(localType);
-    const { a, b } = sortEndpoints(source, target);
     const before = file.relationships.length;
 
     file.relationships = file.relationships.filter((entry) => {
-      if (entry.a !== a || entry.b !== b) return true;
+      if (!connectsEndpoints(entry, source, target)) return true;
       return !entryMatchesLocalType(registry, entry, normalized);
     });
 

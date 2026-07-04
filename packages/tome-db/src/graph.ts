@@ -119,8 +119,8 @@ export class GraphDatabase {
       "UPDATE nodes SET properties = ? WHERE id = ?",
     );
     this.insertRecord = this.db.prepare(
-      `INSERT INTO relationship_records (id, node_a, node_b, composite_type, properties, directed_from)
-       VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
+      `INSERT INTO relationship_records (id, node_a, node_b, composite_type, properties)
+       VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
     );
     this.updateRecordProps = this.db.prepare(
       "UPDATE relationship_records SET properties = ? WHERE id = ?",
@@ -173,17 +173,13 @@ export class GraphDatabase {
     this.db.exec("DELETE FROM relationship_records");
   }
 
-  upsertRelationshipRecord(
-    record: RelationshipRecordRow,
-    directedFrom?: string | null,
-  ): void {
+  upsertRelationshipRecord(record: RelationshipRecordRow): void {
     this.insertRecord.run(
       record.id,
       record.nodeA,
       record.nodeB,
       record.compositeType,
       stringifyRelationshipProperties(record.properties),
-      directedFrom ?? null,
     );
     const existing = this.getRelationshipRecord(record.id);
     if (existing && Object.keys(record.properties).length > 0) {
@@ -218,11 +214,10 @@ export class GraphDatabase {
     const id = relationshipId(sourceNodeId, type, targetNodeId);
     this.insertRecord.run(
       id,
-      sourceNodeId < targetNodeId ? sourceNodeId : targetNodeId,
-      sourceNodeId < targetNodeId ? targetNodeId : sourceNodeId,
+      sourceNodeId,
+      targetNodeId,
       type,
       stringifyRelationshipProperties(properties),
-      sourceNodeId,
     );
     this.insertProjection.run(
       id,

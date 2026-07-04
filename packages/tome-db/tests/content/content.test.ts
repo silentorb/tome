@@ -41,14 +41,14 @@ describe("node-file", () => {
 });
 
 describe("relationships-file", () => {
-  test("round-trips relationships", () => {
+  test("round-trips relationships preserving tuple order", () => {
     const raw = JSON.stringify({
-      version: 1,
+      version: 3,
       relationships: [
         {
-          source: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
-          target: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
-          label: "scenes",
+          a: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+          b: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+          type: "scenes",
           properties: { ordinal: 1 },
         },
       ],
@@ -56,8 +56,14 @@ describe("relationships-file", () => {
     const parsed = parseRelationshipsFile(raw);
     expect(parsed.relationships).toHaveLength(1);
     const conn = relationshipFromEntry(parsed.relationships[0]!);
+    // Directed view follows authored order: index 0 -> source, index 1 -> target.
     expect(conn.id).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAA:scenes:BBBBBBBBBBBBBBBBBBBBBBBBBB");
-    expect(entryFromRelationship(conn).type).toBe("scenes");
+    expect(conn.sourceNodeId).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAA");
+    expect(conn.targetNodeId).toBe("BBBBBBBBBBBBBBBBBBBBBBBBBB");
+    const entry = entryFromRelationship(conn);
+    expect(entry.type).toBe("scenes");
+    expect(entry.a).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAA");
+    expect(entry.b).toBe("BBBBBBBBBBBBBBBBBBBBBBBBBB");
   });
 });
 

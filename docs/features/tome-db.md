@@ -28,7 +28,7 @@ For **what design nodes mean** (features, inspirations, products, traceability),
 | **Type table** | Node listed in [`table-schemas.json`](./table-schemas.md) and/or receiving `is_a` rows. |
 | **Schema** | Workspace model config in `content/model/schema.json` (relationship rules, enums) — see [schema.md](./schema.md). |
 
-API names: `ContentStore`, `openTomeWriteContext`, `getNodeDetail`, `getNodePageDetail`, `GET /api/nodes`, `?node=`. Cache tables: `nodes`, `relationship_records`, `relationship_projections` (`SCHEMA_VERSION` **10**).
+API names: `ContentStore`, `openTomeWriteContext`, `getNodeDetail`, `getNodePageDetail`, `GET /api/nodes`, `?node=`. Cache tables: `nodes`, `relationship_records`, `relationship_projections` (`SCHEMA_VERSION` **11**).
 
 ## Editing the graph (agent workflow)
 
@@ -47,8 +47,8 @@ API names: `ContentStore`, `openTomeWriteContext`, `getNodeDetail`, `getNodePage
 | Path | Role |
 | --- | --- |
 | `content/data/{nodeId}.md` | Canonical node (YAML frontmatter + markdown body) |
-| `content/data/relationships.json` | Canonical bidirectional relationship records (v2) |
-| `content/model/relationship-types.json` | Composite type → perspective mapping; optional `perspectiveLabels` per perspective for relation-section titles and link-add copy |
+| `content/data/relationships.json` | Canonical bidirectional relationship records as ordered `(a, b)` tuples (v3) |
+| `content/model/relationship-types.json` | Composite type → ordered `perspectives` pair (`perspectives[0]` describes the node at tuple index 0, `perspectives[1]` the node at index 1); optional `perspectiveLabels` per perspective for relation-section titles and link-add copy |
 | `content/model/views.json` | UI table tab definitions (custom + generated providers) |
 | `content/model/dynamic-fields.json` | Dynamic table field bindings |
 | `content/model/schema.json` | Relationship rules and property enums |
@@ -82,17 +82,17 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 **Content (canonical, compact):** one record per logical link:
 
 ```json
-{ "a": "<ulid>", "b": "<ulid>", "type": "is_a", "properties": { } }
+{ "a": "<ulid>", "b": "<ulid>", "type": "member_of", "properties": { } }
 ```
 
-- Endpoints `a` / `b` are sorted lexicographically (`a` < `b`).
-- **Set membership** (`is_a`) expands to dual projections (`is_a`, `members`); content omits `directedFrom`. See [set-membership.md](./set-membership.md).
-- **`includes` does not** use `directedFrom` — association is symmetric in storage; UI resolves direction via the relation column's target database.
+- Endpoints `a` / `b` are an **ordered tuple**. Positions 0 (`a`) and 1 (`b`) carry **no inherent source/target meaning** — each position's meaning is defined entirely by the relationship type's ordered `perspectives` pair in `relationship-types.json` (`perspectives[0]` describes the node at `a`, `perspectives[1]` the node at `b`). Authored order is preserved verbatim: there is **no lexicographic endpoint sorting** and no `directedFrom` field.
+- **Relative semantics come from tuple position + the type's per-position perspective** — never from slug comparison, endpoint sorting, or a stored direction flag.
+- **Set membership** (`member_of`) is authored as `(member, set)` (member at index 0, set at index 1) and expands to dual projections (`member_of`, `members`). See [set-membership.md](./set-membership.md).
+- **Symmetric** types (e.g. `includes`, `neighbor`, `enemies_enemies`) carry no directional meaning, so tuple order is irrelevant for them; UI resolves association context via the relation column's target database.
 - **Associative** links use `includes` (migrated from legacy composites such as `inspirations_features`, `scenes_characters`).
-- **Structural** and **taxonomy↔inspiration** pairs still use named composite types (e.g. `scenes_part`, `monsters_inspirations`).
+- **Structural** and **taxonomy↔inspiration** pairs use named composite types (e.g. `scenes_part`, `monsters_inspirations`) whose two perspectives fix the meaning of each tuple position.
 - **Single-perspective (unidirectional) types are forbidden.** Every entry in `relationship-types.json` defines a `perspectives` **tuple of exactly two** slugs (typed `PerspectivePair`); there is no `bidirectional` field, and the parser rejects any type that does not have exactly two perspectives. All relationships are bidirectional by construction. The write path (`resolveCompositeTypeForLink`) throws `LinkResolutionError` if a local type cannot resolve to `includes`, a dual-perspective composite, or `member_of`. See `packages/tome-db/scripts/audit-relationship-resolution.ts` to verify a content directory has no unresolvable entries.
-- **`directedFrom` is never written** by current code. Legacy entries are stripped on migration.
-- Record id: `{a}:{b}:{type}`.
+- Record id: `{a}:{b}:{type}` (keyed on authored tuple order, so it is order-sensitive).
 
 **SQLite cache (denormalized):** expanded on sync for fast directed queries:
 
@@ -166,6 +166,7 @@ Writes go to `content/` via `ContentStore`; sync expands to SQLite projections.
 | `content/` | Canonical property graph root (`data/` + `model/`) |
 | `data/marloth.sqlite` | Local query cache |
 | `scripts/consolidate-relationships.ts` | One-time / re-run migration v1 → v2 relationships |
+| `packages/tome-db/scripts/migrate-relationship-order.ts` | Reorder relationship tuples into meaningful order + drop `directedFrom` + bump v2 → v3, then rebuild cache and validate |
 | `scripts/migrate-to-includes.ts` | Migrate associative relationship types to `includes` |
 | `scripts/migrate-remove-via-database.ts` | Strip legacy `via_database` edge properties (scoping uses row `is_a`) |
 | `scripts/migrate-archive-to-includes.ts` | Migrate archive membership from hub links / legacy paths to `includes` on the Archive hub |
@@ -201,7 +202,8 @@ db.close();
 | --- | --- |
 | `packages/tome-db/src/schema.ts` | DDL and version |
 | `packages/tome-db/src/graph.ts` | GraphDatabase API (reads projections) |
-| `packages/tome-db/src/content/relationships-file.ts` | v2 `relationships.json` parse/serialize |
+| `packages/tome-db/src/content/relationships-file.ts` | v3 `relationships.json` parse/serialize (ordered `(a, b)` tuples) |
+| `packages/tome-db/src/migrations/relationship-order.ts` | Reorder tuples into meaningful `(index0, index1)` order (member→set, typed asymmetric via node types); drop legacy `directedFrom`; bump v2→v3 |
 | `packages/tome-db/src/content/relationship-types-file.ts` | `relationship-types.json` parse/serialize + composite helpers |
 | `packages/tome-db/src/relationship-types/load.ts` | Cached `relationship-types.json` loader |
 | `packages/tome-db/src/relationship-type-label.ts` | `perspectiveDisplayLabel`, `perspectiveLinkAddLabel` |

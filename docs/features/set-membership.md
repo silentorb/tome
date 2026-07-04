@@ -31,15 +31,15 @@ For design-domain meaning of types and sets, read [`../ontology.md`](../../marlo
 
 ```json
 {
-  "a": "<sorted-smaller-id>",
-  "b": "<sorted-smaller-id>",
+  "a": "<member-id>",
+  "b": "<set-id>",
   "type": "member_of",
   "properties": { "view": "All", "row_index": 3 }
 }
 ```
 
-- Endpoints `a` / `b` **must** be sorted lexicographically.
-- **`directedFrom` must not** appear on membership records — direction is expressed by perspective at query time.
+- Endpoints `a` / `b` are an **ordered tuple**: the **member** is at index 0 (`a`), the **set** at index 1 (`b`). This matches the type's `perspectives` pair `["member_of", "members"]` (`perspectives[0]` = member position, `perspectives[1]` = set position). There is **no lexicographic sorting**.
+- **No `directedFrom` field exists** — direction is derived from tuple position + the type's perspectives, not a stored flag.
 - Row scalars for type tables live on edge `properties` (keys from `table-schemas.json`).
 
 ### Projection expansion
@@ -48,8 +48,8 @@ Every relationship type in `relationship-types.json` defines a `perspectives` **
 
 | Endpoint | Projection |
 | --- | --- |
-| Index 0 | member → set with `member_of` (oriented via set node ids) |
-| Index 1 | set → member with `members` |
+| Index 0 | node at `a` → node at `b` with `perspectives[0]` (`member_of`) — oriented purely by tuple position |
+| Index 1 | node at `b` → node at `a` with `perspectives[1]` (`members`) |
 
 There is **no `bidirectional` field** — the parser rejects any type that does not define exactly two perspectives, so a non-bidirectional type cannot exist. (An unregistered storage type falls back to a single defensive projection during sync, but registered types are always a pair.)
 
@@ -103,7 +103,7 @@ The auto-generated inverse **`members`** relation section is **not** emitted on 
 
 ## Design rationale
 
-**Why dual projections without `directedFrom`?** Membership is asymmetric in meaning (member belongs to set; set contains members) but symmetric in storage (sorted endpoints). Perspectives encode the asymmetry; queries use `listRelationshipsFromSource` with the appropriate perspective slug.
+**Why dual projections without `directedFrom`?** Membership is asymmetric in meaning (member belongs to set; set contains members) and that asymmetry is encoded by the **ordered tuple** `(member, set)` plus the type's ordered perspectives — not by a stored direction flag. Expansion binds `perspectives[0]` to index 0 and `perspectives[1]` to index 1; queries use `listRelationshipsFromSource` with the appropriate perspective slug.
 
 **Why unify archive with type tables?** Both are “node belongs to set” with different set-kind behavior. Special-casing archive as `includes` duplicated query paths and collided semantically with peer association.
 
@@ -121,7 +121,7 @@ flowchart LR
   EXP --> PROJ
 ```
 
-1. Content write: `ContentStore.upsertRelationship` writes sorted `{a,b,type:member_of,properties}` without `directedFrom`.
+1. Content write: `ContentStore.upsertRelationship` writes the ordered tuple `{a:member,b:set,type:member_of,properties}` (member at index 0, set at index 1).
 2. Sync: `expandRelationshipEntry` emits two projections for `member_of`.
 3. Query: type tables use `listSetMembership(setId, "members")`; instance Properties use `listSetMembership(instanceId, "member_of")`.
 
@@ -143,6 +143,7 @@ Scripts (marloth-story):
 
 1. `scripts/migrate-membership-projections.ts` — strip `directedFrom`, archive `includes`→membership, backfill row metadata (historical; may reference legacy `is_a` slug)
 2. `scripts/migrate-is-a-to-member-of.ts` — rename storage `is_a`→`member_of`, `views.json` `sections.items`→`sections.members`
+3. `packages/tome-db/scripts/migrate-relationship-order.ts` — reorder every `member_of` tuple into `(member, set)` order (via set membership) and bump `relationships.json` v2→v3; type-table↔archive edges (both endpoints are sets) are reported ambiguous and left as-is
 
 **Invariants after full migration:**
 
