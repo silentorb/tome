@@ -337,7 +337,7 @@ export class CacheSync {
 
     const match = NODE_FILE_PATTERN.exec(relativeName);
     if (match) {
-      const id = relativeName.slice(0, 32);
+      const id = relativeName.slice(0, -3);
       this.syncNode(id);
       this.updateCacheMarkers();
     }

@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { generateNodeId } from "./node-id";
 import type { Properties } from "./graph";
 import { INCLUDES_TYPE, isIncludesPerspectiveSlug } from "./includes-relationship";
 import { MEMBER_OF_TYPE } from "./labels";
@@ -34,10 +34,6 @@ export interface CreateNodeResult {
 
 function nowIso(): string {
   return new Date().toISOString();
-}
-
-function generateNodeId(): string {
-  return randomUUID().replace(/-/g, "");
 }
 
 function allocateNodeId(ctx: TomeWriteContext): string {

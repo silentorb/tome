@@ -112,7 +112,7 @@ export function schemaDiagramPageBlockServices(
 
 function parseNodeId(value: unknown, path: string): string {
   if (typeof value !== "string" || !isNodeId(value)) {
-    throw new Error(`${path}: must be a 32-character hex node id`);
+    throw new Error(`${path}: must be a node id (ULID)`);
   }
   return value;
 }
@@ -277,14 +277,14 @@ function parseEditor(raw: unknown, path: string): WorkspaceEditor | undefined {
 export function emptyWorkspaceFile(): WorkspaceFile {
   return {
     version: WORKSPACE_FILE_VERSION,
-    homeNodeId: "00000000000000000000000000000001",
-    archiveNodeId: "00000000000000000000000000000002",
+    homeNodeId: "00000000000000000000000001",
+    archiveNodeId: "00000000000000000000000002",
     protectedNodeIds: [
-      "00000000000000000000000000000001",
-      "00000000000000000000000000000002",
+      "00000000000000000000000001",
+      "00000000000000000000000002",
     ],
-    graphExplorer: { defaultAnchorNodeId: "00000000000000000000000000000003" },
-    staticSite: { homeNodeId: "00000000000000000000000000000001" },
+    graphExplorer: { defaultAnchorNodeId: "00000000000000000000000003" },
+    staticSite: { homeNodeId: "00000000000000000000000001" },
     quickLinks: [],
   };
 }

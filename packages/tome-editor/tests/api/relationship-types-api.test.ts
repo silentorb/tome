@@ -10,10 +10,10 @@ import { contentModelDir, schemaFilePath } from "tome-db/content";
 import { createTestApiFromContent } from "./test-api-setup";
 
 describe("relationship types API", () => {
-  const sourceId = "a3333333333333333333333333333333";
-  const targetId = "b3333333333333333333333333333333";
-  const sceneTypeId = "204dba198db74611b0b49a98dd53e8f5";
-  const featureTypeId = "dd0de9867cc345b898929306bdf9fc83";
+  const sourceId = "0000000000000000000000001G";
+  const targetId = "00000000000000000000000021";
+  const sceneTypeId = "0000000000000000000000000D";
+  const featureTypeId = "0000000000000000000000002P";
 
   const fixture = createTestContentFixture("tome-rel-types-api-");
   seedTestNode(fixture, { id: sourceId, properties: { title: "Scene page" } });

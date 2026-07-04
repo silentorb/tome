@@ -34,7 +34,7 @@ scene_count__P(C) =
 ```
 
 - **Must** return `"0"` when the column exists but the character has no matching scenes.
-- Column keys use the full 32-hex product page id (e.g. `scene_count__e028aa0786f5449984a4f497c1d746fa`).
+- Column keys use the full ULID product page id (e.g. `scene_count__01KWN86X6MFZQAJ1V36T9592ABC`).
 - Display names use the product page title (e.g. `TWOLD Scene count`).
 
 ### Replaces legacy field

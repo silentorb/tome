@@ -15,7 +15,7 @@ import {
 import { bodyFromNode, nodeFromFile, parseNodeFile, serializeNodeFile } from "../../src/content/node-file";
 
 describe("node-file", () => {
-  const id = "0123456789abcdef0123456789abcdef";
+  const id = "00000000000000000000000001";
 
   test("round-trips frontmatter and body", () => {
     const node: Node = {
@@ -46,8 +46,8 @@ describe("relationships-file", () => {
       version: 1,
       relationships: [
         {
-          source: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-          target: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          source: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+          target: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
           label: "scenes",
           properties: { ordinal: 1 },
         },
@@ -56,7 +56,7 @@ describe("relationships-file", () => {
     const parsed = parseRelationshipsFile(raw);
     expect(parsed.relationships).toHaveLength(1);
     const conn = relationshipFromEntry(parsed.relationships[0]!);
-    expect(conn.id).toBe("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:scenes:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    expect(conn.id).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAA:scenes:BBBBBBBBBBBBBBBBBBBBBBBBBB");
     expect(entryFromRelationship(conn).type).toBe("scenes");
   });
 });
@@ -75,7 +75,7 @@ describe("dynamic-fields-file", () => {
       fields: [
         {
           id: "test-field",
-          databaseId: "dddddddddddddddddddddddddddddddd",
+          databaseId: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
           columnKey: "count",
           columnName: "Count",
           columnType: "number",

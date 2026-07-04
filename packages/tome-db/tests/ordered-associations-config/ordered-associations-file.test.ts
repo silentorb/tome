@@ -8,13 +8,13 @@ import {
 
 const VALID_CONFIG = {
   id: "scenes-by-book",
-  typeDatabaseId: "204dba198db74611b0b49a98dd53e8f5",
+  typeDatabaseId: "0000000000000000000000000D",
   membershipEdgeType: "member_of",
   orderProperty: "order",
   scopeCompositeType: "scenes_product",
   groupCompositeType: "scenes_part",
   partProductCompositeType: "products_parts_database",
-  groupTypeDatabaseId: "5e45eefc69a14f45b988ad1f3c9d1ef5",
+  groupTypeDatabaseId: "0000000000000000000000000Z",
   unassignedGroupTitle: "Unassigned",
   columnViewName: "TWOLD Active",
   excludedColumnKeys: ["order", "product", "part", "status"],

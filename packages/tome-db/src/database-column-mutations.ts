@@ -114,7 +114,7 @@ function buildColumnDef(input: CreateDatabaseColumnInput, key: string): TableCol
       key,
       name,
       type: "relation",
-      targetTypeId: input.targetTypeId.toLowerCase(),
+      targetTypeId: input.targetTypeId,
     };
     if (input.perspective?.trim()) {
       column.perspective = input.perspective.trim();
@@ -227,7 +227,7 @@ function applyColumnPatch(
       key: existing.key,
       name,
       type: "relation",
-      targetTypeId: targetTypeId.toLowerCase(),
+      targetTypeId,
     };
     if (input.perspective !== undefined) {
       if (input.perspective.trim()) column.perspective = input.perspective.trim();

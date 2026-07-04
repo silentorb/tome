@@ -3,8 +3,9 @@ import {
   resolveMarkdownHrefTarget,
 } from "./markdown-links";
 
-const NODE_ID_PATTERN = /^[a-f0-9]{32}$/i;
-const DYNAMIC_NODE_LINK = /\[\[([a-f0-9]{32})\]\]/gi;
+import { NODE_ID_PATTERN, NODE_ID_RE_SRC } from "./node-id";
+
+const DYNAMIC_NODE_LINK = new RegExp(`\\[\\[(${NODE_ID_RE_SRC})\\]\\]`, "g");
 const MD_LINK = /\[([^\]]*)\]\(([^)]+)\)/g;
 /** Ephemeral editor query param for dynamic-titled links (avoids `&` which GFM escapes on save). */
 export const DYNAMIC_NODE_EDITOR_QUERY_PARAM = "dynnode";
@@ -14,10 +15,6 @@ export const DYNAMIC_NODE_LINK_QUERY_VALUE = "1";
 
 function unescapeMarkdownHref(href: string): string {
   return href.replace(/\\&/g, "&").replace(/&amp;/g, "&");
-}
-
-function normalizeRecordId(id: string): string {
-  return id.toLowerCase();
 }
 
 /** Accent/case-insensitive trimmed title comparison for migration. */
@@ -44,7 +41,7 @@ export function linkTextMatchesAnyNodeName(
 
 /** Stored dynamic link: `[[{nodeId}]]`. */
 export function formatDynamicNodeLink(nodeId: string): string {
-  return `[[${normalizeRecordId(nodeId)}]]`;
+  return `[[${nodeId}]]`;
 }
 
 /** Unique node ids referenced by `[[id]]` in body (outside code fences). */
@@ -55,7 +52,7 @@ export function parseDynamicNodeLinkIds(body: string): string[] {
     let match: RegExpExecArray | null;
     while ((match = DYNAMIC_NODE_LINK.exec(segment)) !== null) {
       const id = match[1];
-      if (id) ids.add(normalizeRecordId(id));
+      if (id) ids.add(id);
     }
     return segment;
   });
@@ -97,7 +94,7 @@ function stripDynamicQueryParam(href: string): string {
 }
 
 export function editorDynamicNodeHref(nodeId: string): string {
-  return `?${DYNAMIC_NODE_EDITOR_QUERY_PARAM}=${normalizeRecordId(nodeId)}`;
+  return `?${DYNAMIC_NODE_EDITOR_QUERY_PARAM}=${nodeId}`;
 }
 
 /** Expand `[[id]]` to titled markdown links (outside code fences). */
@@ -108,7 +105,7 @@ export function expandDynamicNodeLinks(
 ): string {
   return transformOutsideCodeFences(body, (segment) =>
     segment.replace(DYNAMIC_NODE_LINK, (_match, id: string) => {
-      const nodeId = normalizeRecordId(id);
+      const nodeId = id;
       const title = titleForId(nodeId);
       return `[${title}](${hrefForId(nodeId)})`;
     }),
@@ -196,8 +193,8 @@ export function migrateStaticLinksInBodies(
       return segment;
     });
 
-    const dynamicAfter = (nextBody.match(/\[\[[a-f0-9]{32}\]\]/gi) ?? []).length;
-    const dynamicBefore = (body.match(/\[\[[a-f0-9]{32}\]\]/gi) ?? []).length;
+    const dynamicAfter = (nextBody.match(DYNAMIC_NODE_LINK) ?? []).length;
+    const dynamicBefore = (body.match(DYNAMIC_NODE_LINK) ?? []).length;
     report.linksConverted += dynamicAfter - dynamicBefore;
 
     for (const link of beforeLinks) {

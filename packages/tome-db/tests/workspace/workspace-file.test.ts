@@ -10,15 +10,15 @@ import {
 
 const VALID = {
   version: 1,
-  homeNodeId: "13458e628ba28073850dea0edb9acde1",
-  archiveNodeId: "0f558a609a56485185beed4d1fd1cd9f",
+  homeNodeId: "00000000000000000000000005",
+  archiveNodeId: "00000000000000000000000002",
   protectedNodeIds: [
-    "13458e628ba28073850dea0edb9acde1",
-    "0f558a609a56485185beed4d1fd1cd9f",
+    "00000000000000000000000005",
+    "00000000000000000000000002",
   ],
-  graphExplorer: { defaultAnchorNodeId: "e028aa0786f5449984a4f497c1d746fa" },
-  staticSite: { homeNodeId: "5bfc10918fa24207879d68a030927dd3" },
-  quickLinks: [{ nodeId: "dd0de9867cc345b898929306bdf9fc83", label: "Features", icon: "★" }],
+  graphExplorer: { defaultAnchorNodeId: "0000000000000000000000002V" },
+  staticSite: { homeNodeId: "0000000000000000000000000Y" },
+  quickLinks: [{ nodeId: "0000000000000000000000002P", label: "Features", icon: "★" }],
   branding: { appTitle: "Tome" },
   legacy: { exportPathPrefix: "Marloth", archivePathPrefix: "Marloth/Archive" },
 };
@@ -69,7 +69,7 @@ describe("parseWorkspaceFile", () => {
       JSON.stringify({
         ...legacyShape,
         sidebar: {
-          links: [{ nodeId: "dd0de9867cc345b898929306bdf9fc83", label: "Features", icon: "★" }],
+          links: [{ nodeId: "0000000000000000000000002P", label: "Features", icon: "★" }],
         },
       }),
     );

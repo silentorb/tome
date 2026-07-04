@@ -48,8 +48,7 @@ export function resolvePageTitleAndContent(
 
 /** URL path for a node page, including site base when embedded. */
 export function nodePagePath(id: string, base = "/", pathById?: Record<string, string>): string {
-  const normalizedId = id.toLowerCase();
-  const paths = pathById ?? { [normalizedId]: normalizedId };
+  const paths = pathById ?? { [id]: id };
   return createNodeUrlResolver({ pathById: paths, base }).pagePath(id);
 }
 
@@ -60,8 +59,7 @@ export function nodeTabPath(
   base = "/",
   pathById?: Record<string, string>,
 ): string {
-  const normalizedId = id.toLowerCase();
-  const paths = pathById ?? { [normalizedId]: normalizedId };
+  const paths = pathById ?? { [id]: id };
   return createNodeUrlResolver({ pathById: paths, base }).tabPath(id, tabId);
 }
 

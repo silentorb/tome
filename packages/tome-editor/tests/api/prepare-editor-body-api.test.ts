@@ -13,7 +13,7 @@ import {
 import { contentModelDir } from "tome-db/content";
 import { createTestApiFromContent } from "./test-api-setup";
 
-const nodeId = "c3333333333333333333333333333333";
+const nodeId = "00000000000000000000000029";
 
 describe("prepare-editor-body API", () => {
   const fixture = createTestContentFixture("tome-prepare-body-api-");

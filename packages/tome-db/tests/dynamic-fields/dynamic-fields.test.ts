@@ -42,13 +42,13 @@ const LEGACY_CHARACTER_PRODUCT_PARAMS = {
 
 const LEGACY_INSPIRATION_WEIGHTED_PARAMS = {
   features_edge_label: "features",
-  features_database_id: "dd0de9867cc345b898929306bdf9fc83",
+  features_database_id: "0000000000000000000000002P",
 };
 
 const LEGACY_INSPIRATION_WONDER_PARAMS = {
   features_edge_label: "features",
   theme_edge_label: "THEME",
-  theme_target_id: "3cbc40d2ba2a4c76b4b9dc370452fcfe",
+  theme_target_id: "0000000000000000000000000P",
 };
 
 describe("dynamic-fields resolvers", () => {
@@ -56,20 +56,20 @@ describe("dynamic-fields resolvers", () => {
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
 
-  const CHAR_DB = "f984a934ad644f8480b0f8f51449569f";
-  const INSP_DB = "2eea538996934ce8abafc27132e576c1";
-  const FEAT_DB = "dd0de9867cc345b898929306bdf9fc83";
-  const TWOLD = "e028aa0786f5449984a4f497c1d746fa";
-  const OTHER_PRODUCT = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  const WONDERLAND = "3cbc40d2ba2a4c76b4b9dc370452fcfe";
+  const CHAR_DB = "00000000000000000000000035";
+  const INSP_DB = "0000000000000000000000000K";
+  const FEAT_DB = "0000000000000000000000002P";
+  const TWOLD = "0000000000000000000000002V";
+  const OTHER_PRODUCT = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const WONDERLAND = "0000000000000000000000000P";
 
-  const character = "cccccccccccccccccccccccccccccccc";
-  const scene1 = "11111111111111111111111111111111";
-  const scene2 = "22222222222222222222222222222222";
-  const scene3 = "33333333333333333333333333333333";
-  const inspiration = "44444444444444444444444444444444";
-  const featureWonder = "55555555555555555555555555555555";
-  const featurePlain = "66666666666666666666666666666666";
+  const character = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
+  const scene1 = "11111111111111111111111111";
+  const scene2 = "22222222222222222222222222";
+  const scene3 = "33333333333333333333333333";
+  const inspiration = "44444444444444444444444444";
+  const featureWonder = "55555555555555555555555555";
+  const featurePlain = "66666666666666666666666666";
 
   beforeAll(() => {
     const contentDir = join(dir, "content");
@@ -226,12 +226,12 @@ describe("dynamic-fields resolvers", () => {
 
 describe("dynamic-fields with composite relationships", () => {
   const fixture = createTestContentFixture("tome-df-composite-");
-  const INSP_DB = "2eea538996934ce8abafc27132e576c1";
-  const FEAT_DB = "dd0de9867cc345b898929306bdf9fc83";
-  const WONDERLAND = "3cbc40d2ba2a4c76b4b9dc370452fcfe";
-  const inspiration = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  const featureWonder = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-  const featurePlain = "cccccccccccccccccccccccccccccccc";
+  const INSP_DB = "0000000000000000000000000K";
+  const FEAT_DB = "0000000000000000000000002P";
+  const WONDERLAND = "0000000000000000000000000P";
+  const inspiration = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const featureWonder = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
+  const featurePlain = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
 
   beforeAll(() => {
     process.env.TOME_CONTENT_PATH = fixture.ctx.store.contentDir;
@@ -342,14 +342,14 @@ describe("dynamic-fields with composite relationships", () => {
 
 describe("dynamic-fields character includes with product edges (Marloth regression)", () => {
   const fixture = createTestContentFixture("tome-df-char-includes-");
-  const CHAR_DB = "f984a934ad644f8480b0f8f51449569f";
-  const SCENES_DB = "204dba198db74611b0b49a98dd53e8f5";
-  const PRODUCTS_DB = "4e973268d3474f71bd7992094fb39663";
-  const TWOLD = "e028aa0786f5449984a4f497c1d746fa";
-  const OTHER_PRODUCT = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-  const character = "cccccccccccccccccccccccccccccccc";
-  const scene1 = "11111111111111111111111111111111";
-  const scene2 = "22222222222222222222222222222222";
+  const CHAR_DB = "00000000000000000000000035";
+  const SCENES_DB = "0000000000000000000000000D";
+  const PRODUCTS_DB = "0000000000000000000000000S";
+  const TWOLD = "0000000000000000000000002V";
+  const OTHER_PRODUCT = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
+  const character = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
+  const scene1 = "11111111111111111111111111";
+  const scene2 = "22222222222222222222222222";
 
   const productionParams = {
     characters_scene_composite: "scenes_characters",
@@ -472,13 +472,13 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
 
 describe("dynamic-fields character composite relationships", () => {
   const fixture = createTestContentFixture("tome-df-char-composite-");
-  const CHAR_DB = "f984a934ad644f8480b0f8f51449569f";
-  const TWOLD = "e028aa0786f5449984a4f497c1d746fa";
-  const OTHER_PRODUCT = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-  const character = "cccccccccccccccccccccccccccccccc";
-  const scene1 = "11111111111111111111111111111111";
-  const scene2 = "22222222222222222222222222222222";
-  const scene3 = "33333333333333333333333333333333";
+  const CHAR_DB = "00000000000000000000000035";
+  const TWOLD = "0000000000000000000000002V";
+  const OTHER_PRODUCT = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
+  const character = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
+  const scene1 = "11111111111111111111111111";
+  const scene2 = "22222222222222222222222222";
+  const scene3 = "33333333333333333333333333";
 
   const productionParams = {
     characters_scene_composite: "scenes_characters",

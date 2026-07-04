@@ -7,11 +7,11 @@ import {
 
 const BASE_WORKSPACE = {
   version: 1,
-  homeNodeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-  archiveNodeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  protectedNodeIds: ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],
-  graphExplorer: { defaultAnchorNodeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
-  staticSite: { homeNodeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" },
+  homeNodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+  archiveNodeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+  protectedNodeIds: ["AAAAAAAAAAAAAAAAAAAAAAAAAA"],
+  graphExplorer: { defaultAnchorNodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA" },
+  staticSite: { homeNodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA" },
   quickLinks: [],
 };
 

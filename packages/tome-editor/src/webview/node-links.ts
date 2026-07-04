@@ -7,39 +7,38 @@ import {
 } from "../shared/types";
 import { DYNAMIC_NODE_EDITOR_QUERY_PARAM } from "tome-db/dynamic-node-links";
 import { resolveMarkdownHrefTarget } from "tome-db/markdown-links";
-
-const RECORD_ID_PATTERN = /^[a-f0-9]{32}$/i;
+import { NODE_ID_PATTERN } from "tome-db/node-id";
 
 export function isNodeId(value: string): boolean {
-  return RECORD_ID_PATTERN.test(value);
+  return NODE_ID_PATTERN.test(value);
 }
 
 export function resolveGraphExplorerAnchor(
   anchorId: string | null | undefined,
   defaultAnchorId: string,
 ): string {
-  if (anchorId && isNodeId(anchorId)) return anchorId.toLowerCase();
-  return defaultAnchorId.toLowerCase();
+  if (anchorId && isNodeId(anchorId)) return anchorId;
+  return defaultAnchorId;
 }
 
 export function anchorFromLocation(): string | undefined {
   if (typeof window === "undefined") return undefined;
   const anchor = new URLSearchParams(window.location.search).get("anchor");
-  return anchor && isNodeId(anchor) ? anchor.toLowerCase() : undefined;
+  return anchor && isNodeId(anchor) ? anchor : undefined;
 }
 
 export function resolveNodeLinkTarget(href: string): string | null {
   return resolveMarkdownHrefTarget(href) ?? nodeIdFromHref(href);
 }
 
-/** Resolve a navigable node id from any in-app link href (?node=, tome://, legacy export paths). */
+/** Resolve a navigable node id from any in-app link href (?node=, tome://, ./<id>.md). */
 export function resolveNodePageTarget(href: string, base?: string | URL): string | null {
   if (typeof window !== "undefined" && isStandaloneNodeHref(href, base)) {
     try {
       const url = new URL(href, base ?? window.location.href);
       const nodeParam =
         url.searchParams.get("node") ?? url.searchParams.get(DYNAMIC_NODE_EDITOR_QUERY_PARAM);
-      if (nodeParam && isNodeId(nodeParam)) return nodeParam.toLowerCase();
+      if (nodeParam && isNodeId(nodeParam)) return nodeParam;
     } catch {
       /* fall through */
     }
@@ -56,7 +55,7 @@ export function isStandaloneNodeHref(href: string, base?: string | URL): boolean
     const url = new URL(href, base ?? window.location.href);
     const nodeParam =
       url.searchParams.get("node") ?? url.searchParams.get(DYNAMIC_NODE_EDITOR_QUERY_PARAM);
-    return nodeParam !== null && /^[a-f0-9]{32}$/i.test(nodeParam);
+    return nodeParam !== null && NODE_ID_PATTERN.test(nodeParam);
   } catch {
     return false;
   }

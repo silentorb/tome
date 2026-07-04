@@ -7,8 +7,7 @@ export type QuickLinkError = "not_found" | "already_exists" | "not_a_quick_link"
 const FALLBACK_ICON = "M";
 
 export function isWorkspaceQuickLink(workspace: WorkspaceFile, nodeId: string): boolean {
-  const normalized = nodeId.toLowerCase();
-  return workspace.quickLinks.some((link) => link.nodeId.toLowerCase() === normalized);
+  return workspace.quickLinks.some((link) => link.nodeId === nodeId);
 }
 
 function defaultQuickLinkIcon(workspace: WorkspaceFile): string {
@@ -28,7 +27,7 @@ export function addWorkspaceQuickLink(
   nodeId: string,
   options?: { label?: string; icon?: string },
 ): QuickLinkError | null {
-  const normalizedId = nodeId.toLowerCase();
+  const normalizedId = nodeId;
   if (!ctx.store.readNode(normalizedId)) return "not_found";
 
   const workspace = loadWorkspaceFromContent(ctx.store.contentDir);
@@ -62,15 +61,13 @@ export function removeWorkspaceQuickLink(
   ctx: TomeWriteContext,
   nodeId: string,
 ): QuickLinkError | null {
-  const normalizedId = nodeId.toLowerCase();
+  const normalizedId = nodeId;
   const workspace = loadWorkspaceFromContent(ctx.store.contentDir);
   if (!isWorkspaceQuickLink(workspace, normalizedId)) return "not_a_quick_link";
 
   const next: WorkspaceFile = {
     ...workspace,
-    quickLinks: workspace.quickLinks.filter(
-      (link) => link.nodeId.toLowerCase() !== normalizedId,
-    ),
+    quickLinks: workspace.quickLinks.filter((link) => link.nodeId !== normalizedId),
   };
 
   ctx.store.writeWorkspaceFile(next);
@@ -83,8 +80,8 @@ export function reorderWorkspaceQuickLinks(
   nodeIds: readonly string[],
 ): QuickLinkError | null {
   const workspace = loadWorkspaceFromContent(ctx.store.contentDir);
-  const currentIds = workspace.quickLinks.map((link) => link.nodeId.toLowerCase());
-  const normalized = nodeIds.map((id) => id.toLowerCase());
+  const currentIds = workspace.quickLinks.map((link) => link.nodeId);
+  const normalized = [...nodeIds];
 
   if (normalized.length !== currentIds.length) return "invalid_order";
 
@@ -93,7 +90,7 @@ export function reorderWorkspaceQuickLinks(
   if (new Set(normalized).size !== normalized.length) return "invalid_order";
 
   const byId = new Map(
-    workspace.quickLinks.map((link) => [link.nodeId.toLowerCase(), link] as const),
+    workspace.quickLinks.map((link) => [link.nodeId, link] as const),
   );
   const quickLinks = normalized.map((id) => byId.get(id)!);
 

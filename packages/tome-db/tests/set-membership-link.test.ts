@@ -14,8 +14,8 @@ import { getNodePageDetail } from "../src/node-page-sections";
 import { listSetMemberRowConnections } from "../src/set-membership";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 
-const TYPE_ID = "dddddddddddddddddddddddddddddddd";
-const MEMBER_A = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const TYPE_ID = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
+const MEMBER_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 describe("linkOutgoingRelationship member_of row metadata", () => {
   const fixture: TestContentFixture = createTestContentFixture("tome-link-member-of-row-");

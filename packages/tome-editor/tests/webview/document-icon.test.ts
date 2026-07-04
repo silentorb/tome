@@ -4,8 +4,8 @@ import { buildQuickLinkIconMaps } from "../../src/webview/quick-links-nav";
 import { iconToFaviconHref, resolveDocumentIcon } from "../../src/webview/document-icon";
 
 const quickLinkIconMaps = buildQuickLinkIconMaps([
-  { nodeId: "204dba198db74611b0b49a98dd53e8f5", label: "Scenes", icon: "▶" },
-  { nodeId: "dd0de9867cc345b898929306bdf9fc83", label: "Features", icon: "★" },
+  { nodeId: "0000000000000000000000000D", label: "Scenes", icon: "▶" },
+  { nodeId: "0000000000000000000000002P", label: "Features", icon: "★" },
 ]);
 
 describe("resolveDocumentIcon", () => {
@@ -48,7 +48,7 @@ describe("resolveDocumentIcon", () => {
     expect(
       resolveDocumentIcon({
         view: "node-page",
-        nodeId: "204dba198db74611b0b49a98dd53e8f5",
+        nodeId: "0000000000000000000000000D",
         quickLinkIconByNodeId: quickLinkIconMaps.byNodeId,
       }),
     ).toBe("▶");

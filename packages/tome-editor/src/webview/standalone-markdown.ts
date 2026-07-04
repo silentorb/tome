@@ -6,7 +6,7 @@ import {
 
 /** Markdown href for in-editor static node links (relative to current page URL). */
 export function standaloneEditorNodeHref(nodeId: string): string {
-  return `?node=${nodeId.toLowerCase()}`;
+  return `?node=${nodeId}`;
 }
 
 /** Prepare markdown loaded into Milkdown: expand dynamic and static node links. */

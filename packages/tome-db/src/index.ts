@@ -59,7 +59,6 @@ export type {
   DatabaseViewDetail,
   RelationLink,
 } from "./database-view";
-export { normalizeHex32Id } from "./hex-ids";
 export {
   linkOutgoingRelationship,
   moveRelationshipConnection,

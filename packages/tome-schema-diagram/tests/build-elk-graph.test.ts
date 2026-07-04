@@ -4,21 +4,21 @@ import { parseSchemaDiagramConfig } from "../src/config";
 
 const SNAPSHOT = {
   typeTables: [
-    { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene" },
-    { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Feature" },
-    { id: "cccccccccccccccccccccccccccccccc", title: "Inspiration" },
+    { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Scene" },
+    { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Feature" },
+    { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Inspiration" },
   ],
   relationColumnEdges: [
     {
-      id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:features",
-      sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      id: "AAAAAAAAAAAAAAAAAAAAAAAAAA:features",
+      sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+      targetTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
       label: "features",
     },
     {
-      id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:inspirations",
-      sourceTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      targetTypeId: "cccccccccccccccccccccccccccccccc",
+      id: "BBBBBBBBBBBBBBBBBBBBBBBBBB:inspirations",
+      sourceTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+      targetTypeId: "CCCCCCCCCCCCCCCCCCCCCCCCCC",
       label: "inspirations",
     },
   ],
@@ -44,7 +44,7 @@ describe("buildElkGraph", () => {
 
   test("filters by typeIds and relationshipTypes", () => {
     const config = parseSchemaDiagramConfig({
-      typeIds: ["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
+      typeIds: ["AAAAAAAAAAAAAAAAAAAAAAAAAA", "BBBBBBBBBBBBBBBBBBBBBBBBBB"],
       relationshipTypes: ["features"],
     });
     const result = buildElkGraph(SNAPSHOT, config);
@@ -90,14 +90,14 @@ describe("buildElkGraph", () => {
     const result = buildElkGraph(
       {
         typeTables: [
-          { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene" },
-          { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Feature" },
+          { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Scene" },
+          { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Feature" },
         ],
         relationColumnEdges: [
           {
-            id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:features",
-            sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            id: "AAAAAAAAAAAAAAAAAAAAAAAAAA:features",
+            sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+            targetTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
             label: "features",
           },
         ],

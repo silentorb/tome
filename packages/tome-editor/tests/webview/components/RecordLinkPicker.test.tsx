@@ -35,9 +35,9 @@ describe("RecordLinkPicker CSS", () => {
 describe("RecordLinkPicker", () => {
   test("preserves API result order without re-sorting", async () => {
     const search = mock(async () => [
-      { id: "cccccccccccccccccccccccccccccccc", title: "Zeta", primaryTypeTitle: null },
-      { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Alpha", primaryTypeTitle: null },
-      { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Mike", primaryTypeTitle: null },
+      { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Zeta", primaryTypeTitle: null },
+      { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Alpha", primaryTypeTitle: null },
+      { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Mike", primaryTypeTitle: null },
     ]);
     const api = {
       ...makeMockEditorApi(),
@@ -65,9 +65,9 @@ describe("RecordLinkPicker", () => {
 
   test("omits excluded ids from search results", async () => {
     const search = mock(async () => [
-      { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Alpha", primaryTypeTitle: null },
-      { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Beta", primaryTypeTitle: null },
-      { id: "cccccccccccccccccccccccccccccccc", title: "Gamma", primaryTypeTitle: null },
+      { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Alpha", primaryTypeTitle: null },
+      { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Beta", primaryTypeTitle: null },
+      { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Gamma", primaryTypeTitle: null },
     ]);
     const api = {
       ...makeMockEditorApi(),
@@ -78,7 +78,7 @@ describe("RecordLinkPicker", () => {
       <RecordLinkPicker
         api={api}
         embedded
-        excludedIds={["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"]}
+        excludedIds={["BBBBBBBBBBBBBBBBBBBBBBBBBB"]}
         ariaLabel="Search records"
         onSelect={async () => {}}
         onClose={() => {}}
@@ -99,7 +99,7 @@ describe("RecordLinkPicker", () => {
       ...makeMockEditorApi(),
       search,
     };
-    const featuresDbId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const featuresDbId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
     render(
       <RecordLinkPicker

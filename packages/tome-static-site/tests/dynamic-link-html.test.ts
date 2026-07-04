@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { decorateDynamicLinkHtml } from "../src/lib/dynamic-link-html";
 import { buildNodeUrlIndex, createNodeUrlResolver } from "../src/lib/node-urls";
 
-const TARGET = "aabbccdd112233445566778899aabbcc";
+const TARGET = "0000000000000000000000001S";
 
 describe("decorateDynamicLinkHtml", () => {
   test("prefixes icon on dynamic node links only", () => {

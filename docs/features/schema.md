@@ -19,9 +19,9 @@ This is separate from:
   "relationshipRules": [
     {
       "id": "scene-features",
-      "sourceTypeId": "<32-hex type node id>",
+      "sourceTypeId": "<ulid type node id>",
       "type": "features",
-      "allowedTargetTypeIds": ["<32-hex type node id>"]
+      "allowedTargetTypeIds": ["<ulid type node id>"]
     }
   ],
   "enums": {

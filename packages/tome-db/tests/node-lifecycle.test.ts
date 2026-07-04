@@ -13,9 +13,9 @@ import {
 } from "../src/content/test-helpers";
 import { MEMBER_OF_TYPE } from "../src/labels";
 
-const PAGE_ACTIVE = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const PAGE_ARCHIVED = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const PAGE_DELETE = "cccccccccccccccccccccccccccccccc";
+const PAGE_ACTIVE = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const PAGE_ARCHIVED = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
+const PAGE_DELETE = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
 
 describe("record lifecycle", () => {
   const fixture = createTestContentFixture("tome-db-lifecycle-");

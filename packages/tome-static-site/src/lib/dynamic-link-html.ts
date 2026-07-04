@@ -1,4 +1,5 @@
 import { nodeIdFromPageHref, type NodeUrlResolver } from "./node-urls";
+import { NODE_ID_RE_SRC } from "tome-db/node-id";
 
 const NODE_LINK_ICON =
   '<span class="tome-node-link-icon" aria-hidden="true">' +
@@ -24,7 +25,7 @@ export function decorateDynamicLinkHtml(
     if (!href) return full;
     const nodeId = pathById
       ? nodeIdFromPageHref(href, pathById, base)
-      : /\/([a-f0-9]{32})\/(?:tabs\/[^/?#]+\/)?\/?(?:[#?].*)?$/i.exec(href)?.[1]?.toLowerCase() ??
+      : new RegExp(`/(${NODE_ID_RE_SRC})/(?:tabs/[^/?#]+/)?/?(?:[#?].*)?$`).exec(href)?.[1] ??
         null;
     if (!nodeId || !dynamicNodeIds.has(nodeId)) return full;
     const classMatch = /\bclass="([^"]*)"/i.exec(attrs);

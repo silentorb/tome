@@ -9,8 +9,8 @@ import {
   seedTestNode,
 } from "tome-db/content/test-helpers";
 
-const NODE_ID = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const OTHER_NODE_ID = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const NODE_ID = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const OTHER_NODE_ID = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
 describe("quick links API", () => {
   test("POST and DELETE /api/nodes/:id/quick-link", async () => {

@@ -29,18 +29,18 @@ describe("type-membership-audit path matching", () => {
   const fixture = createTestContentFixture("tome-type-audit-path-");
   const db = fixture.ctx.db;
 
-  seedTestTableSchema(fixture, "2eea538996934ce8abafc27132e576c1", []);
-  seedTestTableSchema(fixture, "ec2d335a7cd84ada8911b7585cc05ab1", []);
-  seedTestTableSchema(fixture, "dd0de9867cc345b898929306bdf9fc83", []);
+  seedTestTableSchema(fixture, "0000000000000000000000000K", []);
+  seedTestTableSchema(fixture, "00000000000000000000000030", []);
+  seedTestTableSchema(fixture, "0000000000000000000000002P", []);
 
   test("typeDatabaseTitleFromPath prefers deepest matching database segment", () => {
-    db.upsertNode("2eea538996934ce8abafc27132e576c1", {
+    db.upsertNode("0000000000000000000000000K", {
       ...typeTableMarkerProperties("Inspirations"),
     });
-    db.upsertNode("ec2d335a7cd84ada8911b7585cc05ab1", {
+    db.upsertNode("00000000000000000000000030", {
       ...typeTableMarkerProperties("Traversal reasons"),
     });
-    db.upsertNode("dd0de9867cc345b898929306bdf9fc83", {
+    db.upsertNode("0000000000000000000000002P", {
       ...typeTableMarkerProperties("Features"),
     });
 
@@ -58,7 +58,7 @@ describe("type-membership-audit path matching", () => {
   });
 
   test("typeDatabaseTitleFromPath accepts custom export path prefix", () => {
-    db.upsertNode("2eea538996934ce8abafc27132e576c1", {
+    db.upsertNode("0000000000000000000000000K", {
       ...typeTableMarkerProperties("Inspirations"),
     });
     const contentDir = fixture.ctx.store.contentDir;
@@ -84,9 +84,9 @@ describe("expectedTypeDatabaseForPage legacy paths", () => {
 });
 
 describe("nested page type membership", () => {
-  const FEATURES_DB = "dd0de9867cc345b898929306bdf9fc83";
-  const CHARACTERS_DB = "f984a934ad644f8480b0f8f51449569f";
-  const TRAVERSAL_DB = "ec2d335a7cd84ada8911b7585cc05ab1";
+  const FEATURES_DB = "0000000000000000000000002P";
+  const CHARACTERS_DB = "00000000000000000000000035";
+  const TRAVERSAL_DB = "00000000000000000000000030";
 
   const featuresCsv = `${EXPORT_PREFIX}Marloth/Features ${FEATURES_DB}_all.csv`;
   const charactersCsv = `${EXPORT_PREFIX}Marloth/Data/Characters ${CHARACTERS_DB}_all.csv`;
@@ -102,18 +102,18 @@ describe("nested page type membership", () => {
 
   test("folderDepthUnderInstanceRoot counts nested sub-pages", () => {
     const root = "Marloth/Features/";
-    const direct = `${EXPORT_PREFIX}Marloth/Features/Surreal cee6644b68094859bf1b17c5e7fd25de.md`;
-    const nested = `${EXPORT_PREFIX}Marloth/Features/Surreal/Applied surrealism 29a58e628ba280dfa7a0ecf58f43045c.md`;
+    const direct = `${EXPORT_PREFIX}Marloth/Features/Surreal 0000000000000000000000002J.md`;
+    const nested = `${EXPORT_PREFIX}Marloth/Features/Surreal/Applied surrealism 0000000000000000000000000H.md`;
     expect(folderDepthUnderInstanceRoot(direct, root)).toBe(0);
     expect(folderDepthUnderInstanceRoot(nested, root)).toBe(1);
   });
 
   test("isNestedPageSpuriousTypeMembership flags nested and out-of-root pages", () => {
-    const applied = `${EXPORT_PREFIX}Marloth/Features/Surreal/Applied surrealism 29a58e628ba280dfa7a0ecf58f43045c.md`;
-    const surreal = `${EXPORT_PREFIX}Marloth/Features/Surreal cee6644b68094859bf1b17c5e7fd25de.md`;
-    const quest = `${EXPORT_PREFIX}Marloth/Inspirations/Traversal reasons/Quest a4f61ad2283b441ea7492e1afb41160f.md`;
-    const archive = `${EXPORT_PREFIX}Marloth/Archive/Values/Family provision e7524ffe3a8b4bd59f2c7fa7719051f2.md`;
-    const nestedChar = `${EXPORT_PREFIX}Marloth/Data/Characters/The Tea Shop Owner/Tea shop owner scoping 2cb58e628ba28067b6f6facdac8f5e13.md`;
+    const applied = `${EXPORT_PREFIX}Marloth/Features/Surreal/Applied surrealism 0000000000000000000000000H.md`;
+    const surreal = `${EXPORT_PREFIX}Marloth/Features/Surreal 0000000000000000000000002J.md`;
+    const quest = `${EXPORT_PREFIX}Marloth/Inspirations/Traversal reasons/Quest 0000000000000000000000001J.md`;
+    const archive = `${EXPORT_PREFIX}Marloth/Archive/Values/Family provision 0000000000000000000000002Y.md`;
+    const nestedChar = `${EXPORT_PREFIX}Marloth/Data/Characters/The Tea Shop Owner/Tea shop owner scoping 0000000000000000000000000J.md`;
 
     expect(isNestedPageSpuriousTypeMembership(applied, featuresCsv)).toEqual({
       spurious: true,
@@ -153,10 +153,10 @@ describe("nested page type membership", () => {
       source_export: traversalCsv,
     });
 
-    const appliedId = "29a58e628ba280dfa7a0ecf58f43045c";
-    const surrealId = "cee6644b68094859bf1b17c5e7fd25de";
-    const questId = "a4f61ad2283b441ea7492e1afb41160f";
-    const nestedCharId = "2cb58e628ba28067b6f6facdac8f5e13";
+    const appliedId = "0000000000000000000000000H";
+    const surrealId = "0000000000000000000000002J";
+    const questId = "0000000000000000000000001J";
+    const nestedCharId = "0000000000000000000000000J";
 
     db.upsertNode(appliedId, {
       title: "Applied surrealism",

@@ -18,7 +18,7 @@ mock.module("react-force-graph-2d", () => ({
 }));
 
 const record = makeNodePageDetail({
-  id: "ebeb0a7ab2ef479a80e96ccb25e9d7b5",
+  id: "0000000000000000000000002Z",
   title: "Example page",
 });
 

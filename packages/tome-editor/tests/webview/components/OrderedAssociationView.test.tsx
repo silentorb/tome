@@ -6,7 +6,7 @@ import type { OrderedAssociationViewDetail } from "../../../src/shared/types";
 
 const view: OrderedAssociationViewDetail = {
   configId: "scenes-by-book",
-  typeDatabaseId: "204dba198db74611b0b49a98dd53e8f5",
+  typeDatabaseId: "0000000000000000000000000D",
   typeDatabaseTitle: "Scenes",
   tabs: {
     kind: "generated",

@@ -31,7 +31,7 @@ export interface OrderedAssociationsFile {
 
 function parseNodeId(value: unknown, path: string): string {
   if (typeof value !== "string" || !isNodeId(value)) {
-    throw new Error(`${path}: must be a 32-character hex node id`);
+    throw new Error(`${path}: must be a node id (ULID)`);
   }
   return value;
 }

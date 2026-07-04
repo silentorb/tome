@@ -174,7 +174,7 @@ describe("NodePageView", () => {
     const node = makeNodePageDetail({
       properties: {
         type: "properties",
-        databaseId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        databaseId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
         typeTitle: "Features",
         columns: ["priority"],
         columnDefs: [
@@ -225,7 +225,7 @@ describe("NodePageView", () => {
     const node = makeNodePageDetail({
       properties: {
         type: "properties",
-        databaseId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        databaseId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
         typeTitle: "Features",
         columns: ["priority"],
         columnDefs: [
@@ -272,10 +272,10 @@ describe("PropertiesSectionView", () => {
     render(
       <PropertiesSectionView
         api={api}
-        nodeId="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        nodeId="AAAAAAAAAAAAAAAAAAAAAAAAAA"
         section={{
           type: "properties",
-          databaseId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          databaseId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
           typeTitle: "Characters",
           columns: ["all_scene_count"],
           columnDefs: [
@@ -300,7 +300,7 @@ describe("PropertiesSectionView", () => {
 describe("NodePageView IS_A relation section", () => {
   test("renders IS_A relation table alongside Properties", () => {
     const api = makeMockEditorApi();
-    const typeId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const typeId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
     render(
       <UserSettingsProvider api={api}>

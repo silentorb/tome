@@ -12,7 +12,7 @@ mock.module("react-force-graph-2d", () => ({
 }));
 
 const record = makeNodePageDetail({
-  id: "ebeb0a7ab2ef479a80e96ccb25e9d7b5",
+  id: "0000000000000000000000002Z",
   title: "Example page",
 });
 
@@ -30,7 +30,7 @@ describe("App", () => {
     window.history.replaceState(
       {},
       "",
-      "/?scope=e028aa0786f5449984a4f497c1d746fa&node=ebeb0a7ab2ef479a80e96ccb25e9d7b5",
+      "/?scope=0000000000000000000000002V&node=0000000000000000000000002Z",
     );
 
     const { container } = render(<App />);
@@ -46,7 +46,7 @@ describe("App", () => {
     window.history.replaceState(
       {},
       "",
-      "/?scope=e028aa0786f5449984a4f497c1d746fa&node=ebeb0a7ab2ef479a80e96ccb25e9d7b5",
+      "/?scope=0000000000000000000000002V&node=0000000000000000000000002Z",
     );
 
     const { container } = render(<App />);

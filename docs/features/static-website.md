@@ -16,7 +16,7 @@ The `tome-static-site` package reads the git-tracked design corpus via `tome-db`
 
 - **Must** include every node returned by `ContentStore.listNodeIds()` (~all `content/data/*.md` files).
 - **Must** render title, markdown body, metadata (including backlinks), type properties, relation tables, and type-table Items tables per node.
-- **Must** rewrite internal graph links (`./{id}.md`, `marloth:{id}`, `[[id]]`, legacy `{32-hex}.md` export paths, and optional `url_alias` paths) to static node URLs.
+- **Must** rewrite internal graph links (`./{id}.md`, `[[id]]`, and optional `url_alias` paths) to static node URLs.
 - **Must** use a dark theme consistent with the Marloth editor palette.
 - **Must** write to `dist/web/` by default; output directory **must** be configurable for external tools.
 - **Must** support a configurable Astro `base` path for subdirectory embedding.
@@ -38,7 +38,7 @@ Astro produces plain static HTML suitable for copying into any host or parent bu
 
 ## URL aliases
 
-Nodes may set optional frontmatter `url_alias` (e.g. `design/twold`) to publish at a human-readable path instead of the 32-hex node id. This affects **static site output only** — the editor is unchanged.
+Nodes may set optional frontmatter `url_alias` (e.g. `design/twold`) to publish at a human-readable path instead of the ULID node id. This affects **static site output only** — the editor is unchanged.
 
 | Rule | Behavior |
 | --- | --- |

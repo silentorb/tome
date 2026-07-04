@@ -18,17 +18,17 @@ describe("GraphDatabase enum cache encoding", () => {
     expect(priorityEnum).not.toBeNull();
 
     const db = new GraphDatabase(dbPath, { clean: true });
-    const recordId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:is_a";
+    const recordId = "AAAAAAAAAAAAAAAAAAAAAAAAAA:BBBBBBBBBBBBBBBBBBBBBBBBBB:is_a";
 
     db.upsertRelationshipRecord(
       {
         id: recordId,
-        nodeA: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        nodeB: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        nodeA: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+        nodeB: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
         compositeType: "member_of",
         properties: { priority: "High", row_index: 4 },
       },
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "AAAAAAAAAAAAAAAAAAAAAAAAAA",
     );
 
     const record = db.getRelationshipRecord(recordId);

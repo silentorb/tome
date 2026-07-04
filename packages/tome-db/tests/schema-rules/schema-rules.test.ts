@@ -36,9 +36,9 @@ describe("schema rules", () => {
         relationshipRules: [
           {
             id: "test",
-            sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
             label: "features",
-            allowedTargetTypeIds: ["bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"],
+            allowedTargetTypeIds: ["BBBBBBBBBBBBBBBBBBBBBBBBBB"],
           },
         ],
       }),
@@ -48,9 +48,9 @@ describe("schema rules", () => {
 
   test("resolveRelationshipRule matches source type membership", () => {
     const db = new GraphDatabase(":memory:", { clean: true });
-    const scenesType = "204dba198db74611b0b49a98dd53e8f5";
-    const featuresType = "dd0de9867cc345b898929306bdf9fc83";
-    const scene = "cccccccccccccccccccccccccccccccc";
+    const scenesType = "0000000000000000000000000D";
+    const featuresType = "0000000000000000000000002P";
+    const scene = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
 
     db.upsertNode(scenesType, typeTableMarkerProperties("Scenes"));
     db.upsertNode(featuresType, typeTableMarkerProperties("Features"));

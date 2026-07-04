@@ -10,7 +10,7 @@ import { getNodeDetail } from "../../src/queries";
 
 describe("CacheSync node body reconciliation", () => {
   const fixture = createTestContentFixture("tome-node-body-reconcile-");
-  const nodeId = "cccccccccccccccccccccccccccccccc";
+  const nodeId = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
   const pageBlockBody = serializePageBlock("spatial-graph.block", {
     relationships: { parentTypes: ["parents"] },
   });

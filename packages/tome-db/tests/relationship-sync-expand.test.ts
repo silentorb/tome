@@ -18,8 +18,8 @@ const registry: RelationshipTypesFile = {
 
 describe("expandRelationshipEntry", () => {
   test("member_of emits dual projections when set node is known", () => {
-    const member = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const set = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const member = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const set = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     const entry: RelationshipEntry = {
       a: member,
       b: set,
@@ -43,8 +43,8 @@ describe("expandRelationshipEntry", () => {
   });
 
   test("includes emits symmetric dual projections", () => {
-    const a = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const b = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const a = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const b = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     const entry: RelationshipEntry = { a, b, type: "includes", properties: {} };
     const { projections } = expandRelationshipEntry(entry, registry);
     expect(projections).toHaveLength(2);
@@ -52,8 +52,8 @@ describe("expandRelationshipEntry", () => {
   });
 
   test("named composite emits distinct perspective types", () => {
-    const scene = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const product = "cccccccccccccccccccccccccccccccc";
+    const scene = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const product = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
     const entry: RelationshipEntry = { a: scene, b: product, type: "scenes_product", properties: {} };
     const { projections } = expandRelationshipEntry(entry, registry);
     expect(projections).toHaveLength(2);
@@ -62,8 +62,8 @@ describe("expandRelationshipEntry", () => {
   });
 
   test("parents_children composite emits distinct child/parent projections", () => {
-    const child = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const parent = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const child = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const parent = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     const entry: RelationshipEntry = {
       a: child,
       b: parent,
@@ -85,8 +85,8 @@ describe("expandRelationshipEntry", () => {
   });
 
   test("legacy is_a with directedFrom still expands to dual projections", () => {
-    const member = "c80ee480543c42eda65e330b6d1c6d9b";
-    const set = "6f330e7947c94764a26456f93cfedaa4";
+    const member = "0000000000000000000000002C";
+    const set = "00000000000000000000000013";
     const entry: RelationshipEntry = {
       a: member < set ? member : set,
       b: member < set ? set : member,
@@ -105,7 +105,7 @@ describe("expandRelationshipEntry", () => {
 describe("expandAllRelationships", () => {
   test("batch expansion preserves record count", () => {
     const entries: RelationshipEntry[] = [
-      { a: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", b: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", type: "member_of" },
+      { a: "AAAAAAAAAAAAAAAAAAAAAAAAAA", b: "BBBBBBBBBBBBBBBBBBBBBBBBBB", type: "member_of" },
     ];
     const { records, projections } = expandAllRelationships(entries, registry);
     expect(records).toHaveLength(1);

@@ -45,7 +45,7 @@ describe("DatabaseTableView", () => {
         },
         {
           rowIndex: 1,
-          nodeId: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          nodeId: "EEEEEEEEEEEEEEEEEEEEEEEEEE",
           name: "Alpha",
           cells: { priority: "Low" },
         },
@@ -156,7 +156,7 @@ describe("DatabaseTableView", () => {
               },
               {
                 rowIndex: 1,
-                nodeId: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                nodeId: "EEEEEEEEEEEEEEEEEEEEEEEEEE",
                 name: "Other item",
                 cells: { priority: "Low" },
               },
@@ -198,7 +198,7 @@ describe("DatabaseTableView", () => {
               },
               {
                 rowIndex: 1,
-                nodeId: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+                nodeId: "EEEEEEEEEEEEEEEEEEEEEEEEEE",
                 name: "Other record",
                 cells: { priority: "Low" },
               },

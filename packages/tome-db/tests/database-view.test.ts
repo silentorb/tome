@@ -71,7 +71,7 @@ describe("database-view", () => {
   });
 
   test("reads IS_A edges for a view", () => {
-    const databaseId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const databaseId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     writeTableSchema(databaseId, [
       { key: "priority", name: "Priority", type: "select", enumId: "priority" },
     ]);
@@ -111,7 +111,7 @@ describe("database-view", () => {
   });
 
   test("derives row name from linked page title, not edge row_name", () => {
-    const databaseId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const databaseId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page2", { title: "Peace in the eye of the storm" });
@@ -126,8 +126,8 @@ describe("database-view", () => {
   });
 
   test("hydrates relation columns from row is_a membership", () => {
-    const databaseId = "cccccccccccccccccccccccccccccccc";
-    const parentId = "dddddddddddddddddddddddddddddddd";
+    const databaseId = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
+    const parentId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
     writeTableSchema(databaseId, [
       {
         key: "parents",
@@ -155,7 +155,7 @@ describe("database-view", () => {
   });
 
   test("enriches select column with explicit enumId to editable enum metadata", () => {
-    const databaseId = "2eea538996934ce8abafc27132e576c1";
+    const databaseId = "0000000000000000000000000K";
     writeSchema({
       yes_no: { options: ["False", "True"], default: "False" },
     });
@@ -186,7 +186,7 @@ describe("database-view", () => {
   });
 
   test("ignores orphan_row properties on the database vertex", () => {
-    const databaseId = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    const databaseId = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.mergeNodeProperties(databaseId, {

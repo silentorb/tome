@@ -2,6 +2,7 @@
  * Validation/migration tooling for legacy export layout — not used by editor runtime.
  */
 import type { GraphDatabase, Relationship, Properties } from "./graph";
+import { NODE_ID_RE_SRC } from "./node-id";
 import { MEMBER_OF_TYPE, MEMBERS_TYPE, TYPE_MEMBERSHIP_TYPES } from "./labels";
 import { findSetMembershipRelationship, listSetMemberRowConnections } from "./set-membership";
 import { findTypeNodeByTitle, isTypeTableNode } from "./node-capabilities";
@@ -47,9 +48,10 @@ export interface NestedPageSpuriousMembership {
   reason: "outside_instance_root" | "nested_sub_page";
 }
 
-/** Matches type-table CSV basename: `{DisplayName} {32hex-id}[_all].csv`. */
-const CSV_BASENAME =
-  /^(.+?)\s+([a-f0-9]{32})((?:_all(?:_[0-9]+)?)?)\.csv$/i;
+/** Matches type-table CSV basename: `{DisplayName} {nodeId}[_all].csv`. */
+const CSV_BASENAME = new RegExp(
+  `^(.+?)\\s+(${NODE_ID_RE_SRC})((?:_all(?:_[0-9]+)?)?)\\.csv$`,
+);
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;

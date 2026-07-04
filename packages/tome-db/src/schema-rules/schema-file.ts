@@ -132,11 +132,11 @@ export function parseSchemaFile(raw: string): SchemaFile {
     }
     relationshipRules.push({
       id: rule.id.trim(),
-      sourceTypeId: rule.sourceTypeId.trim().toLowerCase(),
+      sourceTypeId: rule.sourceTypeId.trim(),
       type: normalizeRelationshipType(rawType),
       allowedTargetTypeIds: rule.allowedTargetTypeIds
         .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
-        .map((id) => id.trim().toLowerCase()),
+        .map((id) => id.trim()),
     });
   }
 

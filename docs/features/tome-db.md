@@ -82,7 +82,7 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 **Content (canonical, compact):** one record per logical link:
 
 ```json
-{ "a": "<32-hex>", "b": "<32-hex>", "type": "is_a", "properties": { } }
+{ "a": "<ulid>", "b": "<ulid>", "type": "is_a", "properties": { } }
 ```
 
 - Endpoints `a` / `b` are sorted lexicographically (`a` < `b`).
@@ -103,7 +103,7 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 | `nodes` | Entity property bags; `is_archived` denormalized flag (recomputed on sync) |
 | `meta` | Schema version, content mtime, enum config fingerprint |
 
-**Archive membership:** a page is archived when it has set membership (`is_a`) on the Archive hub node (`0f558a609a56485185beed4d1fd1cd9f`). Archiving (`POST /api/nodes/:id/archive`) marks every other incident relationship in `relationships.json` with top-level `"archived": true`, then adds the hub membership edge (without `archived`). Unarchiving (`POST /api/nodes/:id/unarchive`) removes the hub membership edge and clears `archived` on incident relationships whose other endpoint is not still archived.
+**Archive membership:** a page is archived when it has set membership (`is_a`) on the Archive hub node (`01KWN86X6MFZQAJ1V36T95928S`). Archiving (`POST /api/nodes/:id/archive`) marks every other incident relationship in `relationships.json` with top-level `"archived": true`, then adds the hub membership edge (without `archived`). Unarchiving (`POST /api/nodes/:id/unarchive`) removes the hub membership edge and clears `archived` on incident relationships whose other endpoint is not still archived.
 
 **Archived relationships in content:** entries with `"archived": true` are kept in git-tracked `relationships.json` but **skipped** when syncing to SQLite. The hub membership `includes` edge is always synced so `nodes.is_archived` can be recomputed. Search and `nodes.is_archived` exclude archived pages; graph export also excludes archived nodes.
 
@@ -113,7 +113,7 @@ One-time backfill for existing archive members: `bun scripts/migrate-archive-rel
 
 Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTableNode` in `node-capabilities.ts`).
 
-- Node ids **must** be stable text keys (32-hex strings).
+- Node ids **must** be canonical uppercase 26-char ULIDs (`[0-9A-HJKMNP-TV-Z]{26}`), minted by `generateNodeId()` in `node-create.ts`. They are compared as exact strings — no case/dash normalization.
 - Projection ids **must** be deterministic: `{source_id}:{type}:{target_id}` (local perspective type).
 - Relationship types **must** be lower snake_case (e.g. `scenes` → `scenes`, not `SCENES`).
 

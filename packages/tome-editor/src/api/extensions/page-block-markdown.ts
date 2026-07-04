@@ -47,7 +47,7 @@ async function renderBlockHtml(
       services: {
         graphQuery,
         schemaQuery,
-        nodePageHref: (targetNodeId) => `?node=${targetNodeId.toLowerCase()}`,
+        nodePageHref: (targetNodeId) => `?node=${targetNodeId}`,
         ...(spatialGraph ? { spatialGraph } : {}),
         ...(schemaDiagram ? { schemaDiagram } : {}),
       },

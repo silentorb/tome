@@ -12,8 +12,8 @@ import {
 
 const HUB = TEST_ARCHIVE_NODE_ID;
 const HOME = TEST_HOME_NODE_ID;
-const NODE_A = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const NODE_B = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const NODE_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const NODE_B = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
 describe("shared archived edge unarchive", () => {
   const fixture = createTestContentFixture("tome-lifecycle-shared-");

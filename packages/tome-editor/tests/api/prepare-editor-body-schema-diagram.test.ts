@@ -18,9 +18,9 @@ import {
 import { contentModelDir, schemaFilePath } from "tome-db/content";
 import { createTestApiFromContent } from "./test-api-setup";
 
-const nodeId = "d4444444444444444444444444444444";
-const sceneTypeId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const featureTypeId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const nodeId = "0000000000000000000000002M";
+const sceneTypeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const featureTypeId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
 describe("prepare-editor-body API — schema diagram", () => {
   const fixture = createTestContentFixture("tome-prepare-schema-diagram-");

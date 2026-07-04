@@ -34,7 +34,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
 
   const titleById: Record<string, string> = {};
   for (const node of nodes) {
-    titleById[node.id.toLowerCase()] = node.title;
+    titleById[node.id] = node.title;
   }
 
   const htmlRuntime = new ExtensionHtmlRuntime(config.contentDir);
@@ -62,7 +62,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
         node.body,
         node.title,
         urls,
-        (id) => titleById[id.toLowerCase()] ?? "Untitled",
+        (id) => titleById[id] ?? "Untitled",
         ctx,
       );
     }

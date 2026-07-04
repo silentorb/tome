@@ -15,8 +15,8 @@ import {
 } from "../src/dynamic-node-links";
 import { canonicalizeMarkdownBodyLinks, findMarkdownLinksToTarget } from "../src/markdown-links";
 
-const TARGET = "0123456789abcdef0123456789abcdef";
-const OTHER = "fedcba9876543210fedcba9876543210";
+const TARGET = "00000000000000000000000001";
+const OTHER = "00000000000000000000000036";
 
 describe("formatDynamicNodeLink", () => {
   test("returns lowercase id in brackets", () => {
@@ -31,7 +31,7 @@ describe("parseDynamicNodeLinkIds", () => {
   });
 
   test("ignores ids inside fenced code blocks", () => {
-    const body = "``````\n[[0123456789abcdef0123456789abcdef]]\n``````".replace(/``/g, "`");
+    const body = "``````\n[[00000000000000000000000001]]\n``````".replace(/``/g, "`");
     expect(parseDynamicNodeLinkIds(body)).toEqual([]);
   });
 });
@@ -44,7 +44,7 @@ describe("expandDynamicNodeLinksForEditor", () => {
   });
 
   test("leaves content inside code fences unchanged", () => {
-    const body = "``````\n[[0123456789abcdef0123456789abcdef]]\n``````".replace(/``/g, "`");
+    const body = "``````\n[[00000000000000000000000001]]\n``````".replace(/``/g, "`");
     expect(expandDynamicNodeLinksForEditor(body, () => "Title")).toBe(body);
   });
 });
@@ -131,7 +131,7 @@ describe("migrateStaticLinksToDynamic", () => {
   });
 
   test("skips links inside code fences", () => {
-    const body = "``````\n[My Page](./0123456789abcdef0123456789abcdef.md)\n``````".replace(
+    const body = "``````\n[My Page](./00000000000000000000000001.md)\n``````".replace(
       /``/g,
       "`",
     );
@@ -170,6 +170,6 @@ describe("expandDynamicNodeLinks for static site", () => {
       () => "Page",
       (id) => `/nodes/${id}/`,
     );
-    expect(out).toBe("[Page](/nodes/0123456789abcdef0123456789abcdef/)");
+    expect(out).toBe("[Page](/nodes/00000000000000000000000001/)");
   });
 });

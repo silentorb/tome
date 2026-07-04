@@ -16,9 +16,9 @@ describe("deleteDatabaseColumn", () => {
   const fixture = createTestContentFixture("tome-db-delete-col-");
 
   test("removes stored scalar from schema and all membership edges", () => {
-    const databaseId = "dddddddddddddddddddddddddddddddd";
-    const page1 = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const page2 = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
+    const page1 = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const page2 = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),
@@ -61,9 +61,9 @@ describe("deleteDatabaseColumn", () => {
   });
 
   test("removes relation column from schema and unlinks all row edges", () => {
-    const databaseId = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-    const pageId = "cccccccccccccccccccccccccccccccc";
-    const parentId = "ffffffffffffffffffffffffffffffff";
+    const databaseId = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
+    const pageId = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
+    const parentId = "FFFFFFFFFFFFFFFFFFFFFFFFFF";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),
@@ -101,8 +101,8 @@ describe("deleteDatabaseColumn", () => {
   });
 
   test("cleans views.json columnOrder and tab sorts", () => {
-    const databaseId = "11111111111111111111111111111111";
-    const pageId = "22222222222222222222222222222222";
+    const databaseId = "11111111111111111111111111";
+    const pageId = "22222222222222222222222222";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Tasks"),
@@ -141,7 +141,7 @@ describe("deleteDatabaseColumn", () => {
   });
 
   test("rejects dynamic columns", () => {
-    const databaseId = "33333333333333333333333333333333";
+    const databaseId = "33333333333333333333333333";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Characters"),
@@ -164,7 +164,7 @@ describe("deleteDatabaseColumn", () => {
   });
 
   test("returns column_not_found for unknown column", () => {
-    const databaseId = "44444444444444444444444444444444";
+    const databaseId = "44444444444444444444444444";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),

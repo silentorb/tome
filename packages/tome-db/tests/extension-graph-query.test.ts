@@ -10,10 +10,10 @@ import { createExtensionGraphQueryServices } from "../src/extension-graph-query"
 
 describe("createExtensionGraphQueryServices", () => {
   let fixture: TestContentFixture;
-  const typeId = "d1111111111111111111111111111111";
-  const cityA = "a1111111111111111111111111111111";
-  const cityB = "b2222222222222222222222222222222";
-  const house = "c3333333333333333333333333333333";
+  const typeId = "0000000000000000000000002K";
+  const cityA = "0000000000000000000000001C";
+  const cityB = "0000000000000000000000001X";
+  const house = "00000000000000000000000029";
 
   beforeAll(() => {
     fixture = createTestContentFixture("tome-ext-graph-query-");

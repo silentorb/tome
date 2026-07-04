@@ -15,8 +15,8 @@ describe("recent nodes API", () => {
     const dbPath = join(dir, "api.sqlite");
 
     const fixture = createTestContentFixture("tome-recent-nodes-content-");
-    const olderId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const newerId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const olderId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const newerId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     seedTestNode(fixture, {
       id: olderId,
       properties: {

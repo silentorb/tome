@@ -6,7 +6,7 @@ import { createNodeUrlResolver } from "../../src/lib/node-urls";
 import type { ResolvedExtensionComponent } from "tome-db";
 import { serializePageBlock } from "tome-interfaces/page-block";
 
-const NODE_ID = "aabbccdd112233445566778899aabbcc";
+const NODE_ID = "0000000000000000000000001S";
 const urls = createNodeUrlResolver({
   pathById: { [NODE_ID]: NODE_ID },
   base: "/",

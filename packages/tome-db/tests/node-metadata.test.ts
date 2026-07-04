@@ -9,9 +9,9 @@ import {
   seedTestNode,
 } from "../src/content/test-helpers";
 
-const PAGE_A = "0123456789abcdef0123456789abcdef";
-const PAGE_B = "11111111111111111111111111111111";
-const PAGE_C = "22222222222222222222222222222222";
+const PAGE_A = "00000000000000000000000001";
+const PAGE_B = "11111111111111111111111111";
+const PAGE_C = "22222222222222222222222222";
 
 describe("node-metadata", () => {
   test("counts incident edges but ignores them for backlinks", () => {
@@ -34,11 +34,11 @@ describe("node-metadata", () => {
     db.upsertNode(PAGE_A, { title: "Page A" });
     db.upsertNode(PAGE_B, {
       title: "Page B",
-      body: `# Page B\n\nSee [Page A](marloth:${PAGE_A}).`,
+      body: `# Page B\n\nSee [Page A](./${PAGE_A}.md).`,
     });
     db.upsertNode(PAGE_C, {
       title: "Page C",
-      body: `# Page C\n\nRelated (${PAGE_A}.md)`,
+      body: `# Page C\n\nRelated (./${PAGE_A}.md)`,
     });
 
     const meta = getNodePageMetadata(db, PAGE_A);

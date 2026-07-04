@@ -4,7 +4,7 @@ import { relationSectionSupportsLinkExisting } from "../src/includes-relationshi
 describe("relationSectionSupportsLinkExisting", () => {
   test("returns true for includes and grouped includes perspectives", () => {
     expect(relationSectionSupportsLinkExisting("includes")).toBe(true);
-    expect(relationSectionSupportsLinkExisting("includes:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb")).toBe(
+    expect(relationSectionSupportsLinkExisting("includes:BBBBBBBBBBBBBBBBBBBBBBBBBB")).toBe(
       true,
     );
   });

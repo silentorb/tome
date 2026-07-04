@@ -8,7 +8,7 @@ const data = siteData as SiteData;
 function derivePathById(): Record<string, string> {
   if (data.pathById) return data.pathById;
   return Object.fromEntries(
-    data.nodes.map((node) => [node.id.toLowerCase(), node.urlPath ?? node.id.toLowerCase()]),
+    data.nodes.map((node) => [node.id, node.urlPath ?? node.id]),
   );
 }
 
@@ -16,7 +16,7 @@ function deriveAliasToId(): Record<string, string> {
   if (data.aliasToId) return data.aliasToId;
   const out: Record<string, string> = {};
   for (const node of data.nodes) {
-    if (node.urlAlias) out[node.urlAlias] = node.id.toLowerCase();
+    if (node.urlAlias) out[node.urlAlias] = node.id;
   }
   return out;
 }
@@ -30,13 +30,12 @@ export function loadAllNodes(): SiteNode[] {
 }
 
 export function loadNodeById(id: string): SiteNode | undefined {
-  const normalized = id.toLowerCase();
-  return data.nodes.find((node) => node.id.toLowerCase() === normalized);
+  return data.nodes.find((node) => node.id === id);
 }
 
 export function loadNodeByUrlPath(slug: string): SiteNode | undefined {
-  const normalized = normalizeHrefAsSitePath(slug, "/") ?? slug.replace(/^\/+|\/+$/g, "").toLowerCase();
-  return data.nodes.find((node) => (node.urlPath ?? node.id.toLowerCase()) === normalized);
+  const normalized = normalizeHrefAsSitePath(slug, "/") ?? slug.replace(/^\/+|\/+$/g, "");
+  return data.nodes.find((node) => (node.urlPath ?? node.id) === normalized);
 }
 
 export function loadNodeSummaries(): Pick<SiteNode, "id" | "title">[] {
@@ -68,7 +67,7 @@ export function loadTabItemsPayload(nodeId: string, tabId: string): TabItemsPayl
 }
 
 export function titleByIdRecord(): Record<string, string> {
-  return Object.fromEntries(data.nodes.map((node) => [node.id.toLowerCase(), node.title]));
+  return Object.fromEntries(data.nodes.map((node) => [node.id, node.title]));
 }
 
 export function getPathById(): Record<string, string> {

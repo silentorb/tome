@@ -19,7 +19,7 @@ import { readUrlAlias } from "./node-urls";
 import { viewSortsToTableSort } from "./table-sort";
 
 export function tabPayloadKey(nodeId: string, tabId: string): string {
-  return `${nodeId.toLowerCase()}:${tabId}`;
+  return `${nodeId}:${tabId}`;
 }
 
 function defaultSortForTab(
@@ -156,7 +156,7 @@ export function buildSiteNode(
     archived: detail.archived,
     primaryTypeTitle: detail.primaryTypeTitle,
     urlAlias,
-    urlPath: urlAlias ?? detail.id.toLowerCase(),
+    urlPath: urlAlias ?? detail.id,
     metadata: detail.metadata,
     properties: detail.properties,
     body: detail.body,

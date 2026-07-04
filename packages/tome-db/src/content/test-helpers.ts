@@ -44,10 +44,10 @@ import {
 } from "../workspace/workspace-file";
 
 /** Test workspace ids — match committed content/model/workspace.json. */
-export const TEST_HOME_NODE_ID = "13458e628ba28073850dea0edb9acde1";
-export const TEST_ARCHIVE_NODE_ID = "0f558a609a56485185beed4d1fd1cd9f";
-export const TEST_GRAPH_ANCHOR_NODE_ID = "e028aa0786f5449984a4f497c1d746fa";
-export const TEST_STATIC_SITE_HOME_NODE_ID = "5bfc10918fa24207879d68a030927dd3";
+export const TEST_HOME_NODE_ID = "00000000000000000000000005";
+export const TEST_ARCHIVE_NODE_ID = "00000000000000000000000002";
+export const TEST_GRAPH_ANCHOR_NODE_ID = "0000000000000000000000002V";
+export const TEST_STATIC_SITE_HOME_NODE_ID = "0000000000000000000000000Y";
 
 export interface TestContentFixture {
   tempDir: string;
@@ -87,13 +87,13 @@ export function defaultTestOrderedAssociationsFile(): OrderedAssociationsFile {
     configs: [
       {
         id: "scenes-by-book",
-        typeDatabaseId: "204dba198db74611b0b49a98dd53e8f5",
+        typeDatabaseId: "0000000000000000000000000D",
         membershipEdgeType: "member_of",
         orderProperty: "order",
         scopeCompositeType: "scenes_product",
         groupCompositeType: "scenes_part",
         partProductCompositeType: "products_parts_database",
-        groupTypeDatabaseId: "5e45eefc69a14f45b988ad1f3c9d1ef5",
+        groupTypeDatabaseId: "0000000000000000000000000Z",
         unassignedGroupTitle: "Unassigned",
         columnViewName: "TWOLD Active",
         excludedColumnKeys: ["order", "product", "part", "status"],

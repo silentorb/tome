@@ -1,10 +1,10 @@
 import type { DatabaseViewDetail, NodePageDetail, RelationTableSection } from "../../../src/shared/types";
 
-export const FIXTURE_PAGE_ID = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-export const FIXTURE_TYPE_ID = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-export const FIXTURE_TARGET_ID = "cccccccccccccccccccccccccccccccc";
+export const FIXTURE_PAGE_ID = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+export const FIXTURE_TYPE_ID = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
+export const FIXTURE_TARGET_ID = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
 
-export const FIXTURE_DATABASE_ID = "dddddddddddddddddddddddddddddddd";
+export const FIXTURE_DATABASE_ID = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
 export function makeDatabaseViewDetail(
   overrides: Partial<DatabaseViewDetail> = {},

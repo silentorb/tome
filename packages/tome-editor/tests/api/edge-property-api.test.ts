@@ -11,8 +11,8 @@ import { createTestApiFromContent } from "./test-api-setup";
 describe("edge property API", () => {
   const fixture = createTestContentFixture("tome-editor-edge-");
 
-  const databaseId = "dddddddddddddddddddddddddddddddd";
-  const nodeId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
+  const nodeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
   seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Features") });
   seedTestNode(fixture, { id: nodeId, properties: { title: "Feature" } });

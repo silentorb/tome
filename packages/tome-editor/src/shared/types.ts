@@ -3,6 +3,7 @@ import {
   resolveMarkdownHrefTarget,
   TOME_LINK_SCHEME,
 } from "tome-db/markdown-links";
+import { NODE_ID_RE_SRC } from "tome-db/node-id";
 
 export { TOME_LINK_SCHEME };
 
@@ -10,9 +11,8 @@ export function isProtectedEditorNode(
   id: string,
   protectedIds: ReadonlySet<string> | readonly string[],
 ): boolean {
-  const normalized = id.toLowerCase();
   const ids = Array.isArray(protectedIds) ? protectedIds : [...protectedIds];
-  return ids.some((protectedId) => protectedId.toLowerCase() === normalized);
+  return ids.some((protectedId) => protectedId === id);
 }
 
 export type {
@@ -75,8 +75,8 @@ export function nodeUri(nodeId: string): string {
 }
 
 export function nodeIdFromUri(uri: string): string | null {
-  const m = /^(?:tome|marloth):\/\/node\/([a-f0-9]{32})$/i.exec(uri);
-  return m?.[1]?.toLowerCase() ?? null;
+  const m = new RegExp(`^(?:tome|marloth)://node/(${NODE_ID_RE_SRC})$`).exec(uri);
+  return m?.[1] ?? null;
 }
 
 import { stripTableSearchParams } from "./table-search-url";

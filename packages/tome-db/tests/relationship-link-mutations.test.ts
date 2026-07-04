@@ -15,9 +15,9 @@ describe("relationship-link-mutations", () => {
   const fixture = createTestContentFixture("tome-link-");
   const ctx = fixture.ctx;
 
-  const sourceId = "a1111111111111111111111111111111";
-  const targetId = "b2222222222222222222222222222222";
-  const databaseId = "d1111111111111111111111111111111";
+  const sourceId = "0000000000000000000000001C";
+  const targetId = "0000000000000000000000001X";
+  const databaseId = "0000000000000000000000002K";
 
   test("links and unlinks without via_database property", () => {
     seedTestNode(fixture, { id: sourceId, properties: { title: "Source" } });
@@ -43,8 +43,8 @@ describe("relationship-link-mutations", () => {
   });
 
   test("rejects duplicate links", () => {
-    const source2 = "a2222222222222222222222222222222";
-    const target2 = "b3333333333333333333333333333333";
+    const source2 = "0000000000000000000000001E";
+    const target2 = "00000000000000000000000021";
     seedTestNode(fixture, { id: source2, properties: { title: "Source 2" } });
     seedTestNode(fixture, { id: target2, properties: { title: "Target 2" } });
 
@@ -55,9 +55,9 @@ describe("relationship-link-mutations", () => {
   });
 
   test("moveRelationshipConnection preserves properties and retargets edge", () => {
-    const pageId = "a4444444444444444444444444444444";
-    const rowId = "b4444444444444444444444444444444";
-    const newPageId = "c4444444444444444444444444444444";
+    const pageId = "0000000000000000000000001H";
+    const rowId = "00000000000000000000000022";
+    const newPageId = "0000000000000000000000002B";
     seedTestNode(fixture, { id: pageId, properties: { title: "Page A" } });
     seedTestNode(fixture, { id: rowId, properties: { title: "Row" } });
     seedTestNode(fixture, { id: newPageId, properties: { title: "Page B" } });
@@ -86,9 +86,9 @@ describe("relationship-link-mutations", () => {
   });
 
   test("linkOutgoingRelationship preserves explicit ordinal in properties", () => {
-    const source3 = "a3333333333333331111111111111111";
-    const target3a = "b3333333333333331111111111111111";
-    const target3b = "b3333333333333332222222222222222";
+    const source3 = "0000000000000000000000001F";
+    const target3a = "0000000000000000000000001Z";
+    const target3b = "00000000000000000000000020";
     seedTestNode(fixture, { id: source3, properties: { title: "Source 3" } });
     seedTestNode(fixture, { id: target3a, properties: { title: "Target 3a" } });
     seedTestNode(fixture, { id: target3b, properties: { title: "Target 3b" } });

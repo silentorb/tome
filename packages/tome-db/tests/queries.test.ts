@@ -20,14 +20,14 @@ describe("queries", () => {
 
   test("getNodeDetail returns title and body", () => {
     seedTestNode(fixture, {
-      id: "0123456789abcdef0123456789abcdef",
+      id: "00000000000000000000000001",
       properties: {
         title: "Alpha",
         body: "# Hello",
       },
     });
-    const detail = getNodeDetail(fixture.ctx.db, "0123456789abcdef0123456789abcdef");
-    expect(detail?.id).toBe("0123456789abcdef0123456789abcdef");
+    const detail = getNodeDetail(fixture.ctx.db, "00000000000000000000000001");
+    expect(detail?.id).toBe("00000000000000000000000001");
     expect(detail?.title).toBe("Alpha");
     expect(detail?.body.trimEnd()).toBe("# Hello");
     expect(detail?.primaryTypeTitle).toBeNull();
@@ -35,16 +35,16 @@ describe("queries", () => {
 
   test("searchNodes matches title prefix", () => {
     seedTestNode(fixture, {
-      id: "123456789abcdef0123456789abcdef0",
+      id: "00000000000000000000000004",
       properties: { title: "Beta Record" },
     });
     const hits = searchNodes(fixture.ctx.db, "Beta", 10);
-    expect(hits.some((h) => h.id === "123456789abcdef0123456789abcdef0")).toBe(true);
+    expect(hits.some((h) => h.id === "00000000000000000000000004")).toBe(true);
   });
 
   test("searchNodes ranks exact title matches before longer substring matches", () => {
-    const exactId = "aabbccddeeff00112233445566778899";
-    const longerId = "bbaaccddffee11223344556677889900";
+    const exactId = "0000000000000000000000001T";
+    const longerId = "00000000000000000000000024";
     seedTestNode(fixture, {
       id: exactId,
       properties: { title: "Surreal" },
@@ -59,8 +59,8 @@ describe("queries", () => {
   });
 
   test("searchNodes with includeBody lists title matches before body-only matches", () => {
-    const titleMatchId = "ccddaabbeeff00112233445566778899";
-    const bodyOnlyId = "ddccbbaaeeff11223344556677889900";
+    const titleMatchId = "0000000000000000000000002F";
+    const bodyOnlyId = "0000000000000000000000002R";
     seedTestNode(fixture, {
       id: titleMatchId,
       properties: {
@@ -85,7 +85,7 @@ describe("queries", () => {
   });
 
   test("searchNodes matches body when includeBody is enabled", () => {
-    const bodyOnlyId = "3456789abcdef0123456789abcdef012";
+    const bodyOnlyId = "0000000000000000000000000N";
     seedTestNode(fixture, {
       id: bodyOnlyId,
       properties: {
@@ -103,7 +103,7 @@ describe("queries", () => {
   });
 
   test("searchNodes attaches matchPreview for body matches when includeBody is enabled", () => {
-    const bodyOnlyId = "456789abcdef0123456789abcdef0123";
+    const bodyOnlyId = "0000000000000000000000000Q";
     seedTestNode(fixture, {
       id: bodyOnlyId,
       properties: {
@@ -123,7 +123,7 @@ describe("queries", () => {
   });
 
   test("searchNodes omits matchPreview for title-only matches", () => {
-    const titleOnlyId = "56789abcdef0123456789abcdef01234";
+    const titleOnlyId = "0000000000000000000000000W";
     seedTestNode(fixture, {
       id: titleOnlyId,
       properties: {
@@ -140,11 +140,11 @@ describe("queries", () => {
   });
 
   test("searchNodes with allowedTypeIds returns title-ordered eligible nodes up to limit", () => {
-    const featuresDbId = "11111111111111111111111111111111";
-    const alphaId = "22222222222222222222222222222222";
-    const betaId = "33333333333333333333333333333333";
-    const zetaId = "44444444444444444444444444444444";
-    const outsiderId = "55555555555555555555555555555555";
+    const featuresDbId = "11111111111111111111111111";
+    const alphaId = "22222222222222222222222222";
+    const betaId = "33333333333333333333333333";
+    const zetaId = "44444444444444444444444444";
+    const outsiderId = "55555555555555555555555555";
 
     seedTestNode(fixture, { id: featuresDbId, properties: { title: "Features" } });
     seedTestNode(fixture, { id: alphaId, properties: { title: "Alpha Feature" } });
@@ -163,18 +163,18 @@ describe("queries", () => {
 
   test("updateNodeBody persists markdown", () => {
     seedTestNode(fixture, {
-      id: "23456789abcdef0123456789abcdef01",
+      id: "0000000000000000000000000E",
       properties: { title: "Gamma", body: "old" },
     });
-    expect(updateNodeBody(fixture.ctx, "23456789abcdef0123456789abcdef01", "new body")).toBe(true);
-    expect(getNodeDetail(fixture.ctx.db, "23456789abcdef0123456789abcdef01")?.body.trimEnd()).toBe(
+    expect(updateNodeBody(fixture.ctx, "0000000000000000000000000E", "new body")).toBe(true);
+    expect(getNodeDetail(fixture.ctx.db, "0000000000000000000000000E")?.body.trimEnd()).toBe(
       "new body",
     );
   });
 
   test("listRecentNodesByModifiedAt orders by modified_at descending", () => {
-    const olderId = "6789abcdef0123456789abcdef012345";
-    const newerId = "789abcdef0123456789abcdef0123456";
+    const olderId = "00000000000000000000000011";
+    const newerId = "00000000000000000000000016";
     seedTestNode(fixture, {
       id: olderId,
       properties: {
@@ -199,8 +199,8 @@ describe("queries", () => {
   });
 
   test("listRecentNodesByModifiedAt omits nodes without modified_at", () => {
-    const withTimestamp = "89abcdef0123456789abcdef01234567";
-    const withoutTimestamp = "9abcdef0123456789abcdef012345678";
+    const withTimestamp = "0000000000000000000000001A";
+    const withoutTimestamp = "0000000000000000000000001B";
     seedTestNode(fixture, {
       id: withTimestamp,
       properties: {
@@ -219,8 +219,8 @@ describe("queries", () => {
   });
 
   test("listRecentNodesByModifiedAt ignores relationship property updates", () => {
-    const pageId = "abcdef0123456789abcdef0123456789";
-    const targetId = "bcdef0123456789abcdef01234567890";
+    const pageId = "0000000000000000000000001V";
+    const targetId = "00000000000000000000000027";
     seedTestNode(fixture, {
       id: pageId,
       properties: {
@@ -261,8 +261,8 @@ describe("queries", () => {
   });
 
   test("listRecentNodesByModifiedAt excludes archived nodes", () => {
-    const activeId = "cdef0123456789abcdef012345678901";
-    const archivedId = "def0123456789abcdef0123456789012";
+    const activeId = "0000000000000000000000002H";
+    const archivedId = "0000000000000000000000002S";
     seedTestNode(fixture, {
       id: TEST_ARCHIVE_NODE_ID,
       properties: { title: "Archive" },

@@ -7,19 +7,11 @@ import {
   resolveMarkdownHrefTarget,
 } from "../src/markdown-links";
 
-const TARGET = "0123456789abcdef0123456789abcdef";
+const TARGET = "00000000000000000000000001";
 
 describe("resolveMarkdownHrefTarget", () => {
-  test("resolves marloth scheme links", () => {
-    expect(resolveMarkdownHrefTarget(`marloth:${TARGET}`)).toBe(TARGET);
-  });
-
   test("resolves tome scheme links", () => {
     expect(resolveMarkdownHrefTarget(`tome:${TARGET}`)).toBe(TARGET);
-  });
-
-  test("resolves marloth node URIs", () => {
-    expect(resolveMarkdownHrefTarget(`marloth://node/${TARGET}`)).toBe(TARGET);
   });
 
   test("resolves tome node URIs", () => {
@@ -45,11 +37,6 @@ describe("resolveMarkdownHrefTarget", () => {
     expect(resolveMarkdownHrefTarget(`https://editor.example/?record=${TARGET}`)).toBe(TARGET);
   });
 
-  test("resolves export-style md paths", () => {
-    expect(resolveMarkdownHrefTarget(`Some Page ${TARGET}.md`)).toBe(TARGET);
-    expect(resolveMarkdownHrefTarget(encodeURIComponent(`Some Page ${TARGET}.md`))).toBe(TARGET);
-  });
-
   test("ignores external and fragment-only hrefs", () => {
     expect(resolveMarkdownHrefTarget("https://example.com")).toBeNull();
     expect(resolveMarkdownHrefTarget("#section")).toBeNull();
@@ -58,16 +45,16 @@ describe("resolveMarkdownHrefTarget", () => {
 });
 
 describe("canonicalNodeMarkdownHref", () => {
-  test("returns lowercase relative path", () => {
-    expect(canonicalNodeMarkdownHref("ABCDEF0123456789ABCDEF0123456789")).toBe(
-      "./abcdef0123456789abcdef0123456789.md",
+  test("returns relative path with the id unchanged", () => {
+    expect(canonicalNodeMarkdownHref("0123456789ABCDEFGHJKMNPQRS")).toBe(
+      "./0123456789ABCDEFGHJKMNPQRS.md",
     );
   });
 });
 
 describe("expandMarkdownBodyLinks", () => {
   test("rewrites storage paths to display hrefs", () => {
-    const body = `[A](./${TARGET}.md) [B](marloth:${TARGET})`;
+    const body = `[A](./${TARGET}.md) [B](tome:${TARGET})`;
     const out = expandMarkdownBodyLinks(body, (id) => `?node=${id}`);
     expect(out).toBe(`[A](?node=${TARGET}) [B](?node=${TARGET})`);
   });
@@ -79,12 +66,12 @@ describe("expandMarkdownBodyLinks", () => {
 });
 
 describe("canonicalizeMarkdownBodyLinks", () => {
-  test("rewrites marloth and absolute editor links to relative paths", () => {
+  test("rewrites scheme and absolute editor links to relative paths", () => {
     const body = [
-      `[A](marloth:${TARGET})`,
+      `[A](tome:${TARGET})`,
       `[B](http://127.0.0.1:5173/?node=${TARGET})`,
       `[C](./${TARGET}.md)`,
-      `[D](marloth://node/${TARGET})`,
+      `[D](tome://node/${TARGET})`,
     ].join(" ");
     const out = canonicalizeMarkdownBodyLinks(body);
     const canonical = `./${TARGET}.md`;
@@ -104,8 +91,8 @@ describe("canonicalizeMarkdownBodyLinks", () => {
 });
 
 describe("findMarkdownLinksToTarget", () => {
-  test("finds marloth markdown links", () => {
-    const body = `# Page\n\nSee [Target title](marloth:${TARGET}) for details.`;
+  test("finds tome scheme markdown links", () => {
+    const body = `# Page\n\nSee [Target title](tome:${TARGET}) for details.`;
     expect(findMarkdownLinksToTarget(body, TARGET)).toEqual([{ linkText: "Target title" }]);
   });
 
@@ -114,20 +101,15 @@ describe("findMarkdownLinksToTarget", () => {
     expect(findMarkdownLinksToTarget(body, TARGET)).toEqual([{ linkText: "Target" }]);
   });
 
-  test("finds export-style markdown links", () => {
-    const body = `Related: [Target](Target%20${TARGET}.md)`;
-    expect(findMarkdownLinksToTarget(body, TARGET)).toEqual([{ linkText: "Target" }]);
-  });
-
-  test("finds inline legacy paren links in prose", () => {
-    const body = `See Target (${TARGET}.md) for more.`;
+  test("finds inline paren links in prose", () => {
+    const body = `See Target (./${TARGET}.md) for more.`;
     const matches = findMarkdownLinksToTarget(body, TARGET);
     expect(matches).toHaveLength(1);
     expect(matches[0]?.linkText).toBe("See Target");
   });
 
   test("returns empty when no match", () => {
-    const body = `[Other](marloth:fedcba9876543210fedcba9876543210)`;
+    const body = `[Other](tome:00000000000000000000000036)`;
     expect(findMarkdownLinksToTarget(body, TARGET)).toEqual([]);
   });
 });

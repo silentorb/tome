@@ -33,14 +33,14 @@ describe("database-view-relations", () => {
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
 
-  const inspirationsDb = "2eea538996934ce8abafc27132e576c1";
-  const inspirationTypesDb = "819dc2fea6cc4cddb5fce9cc4efd0e85";
-  const inspirationId = "6c3ea4b72e4e4e6e8f3474bbab490186";
-  const tvSeriesTypeId = "c847c77114e94ca5ba74405c2a088c76";
-  const scenesDb = "55555555555555555555555555555556";
-  const partsDb = "66666666666666666666666666666667";
-  const sceneId = "11111111111111111111111111111112";
-  const partId = "33333333333333333333333333333334";
+  const inspirationsDb = "0000000000000000000000000K";
+  const inspirationTypesDb = "00000000000000000000000018";
+  const inspirationId = "00000000000000000000000012";
+  const tvSeriesTypeId = "0000000000000000000000002D";
+  const scenesDb = "0000000000000000000000000V";
+  const partsDb = "00000000000000000000000010";
+  const sceneId = "00000000000000000000000003";
+  const partId = "0000000000000000000000000M";
 
   writeFileSync(
     tableSchemasFilePath(contentDir),
@@ -100,9 +100,9 @@ describe("database-view-relations", () => {
   });
 
   test("hydrates parents and children columns without cross-column bleed", () => {
-    const locationsDb = "df096ab26e8347e6992e95698345aad0";
-    const parentLocationId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const childLocationId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const locationsDb = "0000000000000000000000002T";
+    const parentLocationId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const childLocationId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
     writeFileSync(
       tableSchemasFilePath(contentDir),
@@ -186,9 +186,9 @@ describe("database-view-relations", () => {
 
   test("hydrates neighbor column on both locations for symmetric neighbor links", () => {
     const fixture = createTestContentFixture("tome-db-view-rel-neighbor-");
-    const locationsDb = "df096ab26e8347e6992e95698345aad0";
-    const locationA = "cccccccccccccccccccccccccccccccc";
-    const locationB = "dddddddddddddddddddddddddddddddd";
+    const locationsDb = "0000000000000000000000002T";
+    const locationA = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
+    const locationB = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
     seedTestNode(fixture, { id: locationsDb, properties: typeTableMarkerProperties("Locations") });
     seedTestNode(fixture, { id: locationA, properties: { title: "North grove" } });
@@ -285,12 +285,12 @@ describe("database-view-relations", () => {
   });
 
   test("hydrates Features column with scoped and unscoped includes edges", () => {
-    const featuresDb = "dd0de9867cc345b898929306bdf9fc83";
-    const inspirationWithMixedFeatures = "e13fc17c7fa440db84b67399994f1c17";
-    const cozyHorrorId = "e5cc80dc61ed4c629951cdf472b20b7a";
-    const chaoticWorldId = "15258e628ba2805abd70e0c63f03c571";
-    const adventureId = "1d458e628ba28026830dfe3db74cba19";
-    const darkForestId = "181a3aae0f4b4056b6c28bb49e27978e";
+    const featuresDb = "0000000000000000000000002P";
+    const inspirationWithMixedFeatures = "0000000000000000000000002W";
+    const cozyHorrorId = "0000000000000000000000002X";
+    const chaoticWorldId = "0000000000000000000000000A";
+    const adventureId = "0000000000000000000000000C";
+    const darkForestId = "0000000000000000000000000B";
 
     db.upsertNode(featuresDb, { ...typeTableMarkerProperties("Features") });
     db.upsertNode(inspirationWithMixedFeatures, { title: "The Evil Within 2" });
@@ -340,10 +340,10 @@ describe("database-view-relations", () => {
     // comma-joined URL string. Relation columns must hydrate from the
     // `{perspective}_inspirations` composite relationships and never surface the
     // stale scalar (which used to leak a raw URL into the cell).
-    const storyScaleRowsDb = "a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1";
-    const storyScaleDb = "b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2";
-    const storyScaleRowId = "c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3";
-    const extendedScaleId = "d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4d4";
+    const storyScaleRowsDb = "0000000000000000000000001D";
+    const storyScaleDb = "0000000000000000000000001Y";
+    const storyScaleRowId = "0000000000000000000000002A";
+    const extendedScaleId = "0000000000000000000000002N";
 
     writeFileSync(
       tableSchemasFilePath(contentDir),
@@ -372,7 +372,7 @@ describe("database-view-relations", () => {
     db.upsertNode(extendedScaleId, { title: "Extended" });
     db.upsertRelationship(storyScaleRowId, storyScaleRowsDb, MEMBER_OF_TYPE, {
       row_index: 0,
-      story_scale: "https://legacy.example/86324f5585d84ca0a6a36deafd6b91fc",
+      story_scale: "https://legacy.example/00000000000000000000000019",
     });
     db.upsertRelationship(extendedScaleId, storyScaleDb, MEMBER_OF_TYPE, { row_index: 0 });
     db.upsertRelationship(storyScaleRowId, extendedScaleId, "story_scale_inspirations", {

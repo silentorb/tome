@@ -18,9 +18,9 @@ import {
 
 const HUB = TEST_ARCHIVE_NODE_ID;
 const HOME = TEST_HOME_NODE_ID;
-const TYPE_DB = "dddddddddddddddddddddddddddddddd";
-const PAGE = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-const OTHER = "ffffffffffffffffffffffffffffffff";
+const TYPE_DB = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
+const PAGE = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
+const OTHER = "FFFFFFFFFFFFFFFFFFFFFFFFFF";
 
 describe("archive relationship flags", () => {
   const fixture = createTestContentFixture("tome-lifecycle-archive-");

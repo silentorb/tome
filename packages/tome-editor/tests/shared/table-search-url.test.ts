@@ -35,11 +35,11 @@ describe("table search URL helpers", () => {
 
   test("standaloneNodeUrl strips table search params", () => {
     const href = standaloneNodeUrl(
-      "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "AAAAAAAAAAAAAAAAAAAAAAAAAA",
       "http://127.0.0.1:5173/?search_items=quest&search_RELATED=foo",
     );
     const url = new URL(href);
-    expect(url.searchParams.get("node")).toBe("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(url.searchParams.get("node")).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAA");
     expect(url.searchParams.get("search_items")).toBeNull();
     expect(url.searchParams.get("search_RELATED")).toBeNull();
   });

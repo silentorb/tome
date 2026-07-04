@@ -16,9 +16,9 @@ import { createExtensionSchemaQueryServices } from "../src/extension-schema-quer
 
 describe("createExtensionSchemaQueryServices", () => {
   let fixture: TestContentFixture;
-  const sceneTypeId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  const featureTypeId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-  const inspirationTypeId = "cccccccccccccccccccccccccccccccc";
+  const sceneTypeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const featureTypeId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
+  const inspirationTypeId = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
 
   fixture = createTestContentFixture("tome-schema-query-");
   const modelDir = contentModelDir(fixture.ctx.store.contentDir);
@@ -113,8 +113,8 @@ describe("createExtensionSchemaQueryServices", () => {
   });
 
   test("listTypeTables includes memberCount from set membership", () => {
-    const member1 = "dddddddddddddddddddddddddddddddd";
-    const member2 = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    const member1 = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
+    const member2 = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
     seedTestNode(fixture, { id: member1, properties: { title: "Scene A" } });
     seedTestNode(fixture, { id: member2, properties: { title: "Scene B" } });
     fixture.ctx.db.upsertRelationship(member1, sceneTypeId, "member_of", { row_index: 0 });

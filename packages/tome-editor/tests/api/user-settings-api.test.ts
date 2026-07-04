@@ -18,7 +18,7 @@ describe("user-settings API", () => {
 
     const fixture = createTestContentFixture("tome-user-settings-content-");
     seedTestNode(fixture, {
-      id: "0123456789abcdef0123456789abcdef",
+      id: "00000000000000000000000001",
       properties: { title: "Alpha" },
     });
 
@@ -36,7 +36,7 @@ describe("user-settings API", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tableSorts: {
-            "records/0123456789abcdef0123456789abcdef/relations/RELATED": {
+            "records/00000000000000000000000001/relations/RELATED": {
               orderBy: [{ column: "priority", direction: "desc" }],
             },
           },
@@ -48,7 +48,7 @@ describe("user-settings API", () => {
       settings: { tableSorts?: Record<string, unknown> };
     };
     expect(
-      payload.settings.tableSorts?.["records/0123456789abcdef0123456789abcdef/relations/RELATED"],
+      payload.settings.tableSorts?.["records/00000000000000000000000001/relations/RELATED"],
     ).toEqual({
       orderBy: [{ column: "priority", direction: "desc" }],
     });

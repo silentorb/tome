@@ -16,8 +16,8 @@ import {
   seedTestWorkspace,
 } from "../../src/content/test-helpers";
 
-const NODE_ID = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const OTHER_NODE_ID = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const NODE_ID = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const OTHER_NODE_ID = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
 describe("workspace quick links", () => {
   test("addWorkspaceQuickLink appends entry with defaults", () => {

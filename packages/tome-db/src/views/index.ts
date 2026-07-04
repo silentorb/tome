@@ -12,8 +12,7 @@ export function relationshipKey(nodeId: string, relationshipType: string): strin
 }
 
 export function viewsForNode(file: ViewsFile, nodeId: string): ViewsFile["views"] {
-  const normalized = nodeId.toLowerCase();
-  return file.views.filter((view) => view.nodeId === normalized);
+  return file.views.filter((view) => view.nodeId === nodeId);
 }
 
 export function viewsForRelationship(
@@ -21,11 +20,10 @@ export function viewsForRelationship(
   nodeId: string,
   relationshipType: string,
 ): ViewDefinition[] {
-  const normalized = nodeId.toLowerCase();
   return file.views.filter(
     (view): view is ViewDefinition =>
       isViewDefinition(view) &&
-      view.nodeId === normalized &&
+      view.nodeId === nodeId &&
       view.relationshipType === relationshipType,
   );
 }
@@ -35,11 +33,10 @@ export function generatedViewForRelationship(
   nodeId: string,
   relationshipType: string,
 ): GeneratedViewRecord | null {
-  const normalized = nodeId.toLowerCase();
   const match = file.views.find(
     (view): view is GeneratedViewRecord =>
       isGeneratedViewRecord(view) &&
-      view.nodeId === normalized &&
+      view.nodeId === nodeId &&
       view.relationshipType === relationshipType,
   );
   return match ?? null;
@@ -94,11 +91,10 @@ export function indicesForRelationship(
   nodeId: string,
   relationshipType: string,
 ): number[] {
-  const normalized = nodeId.toLowerCase();
   const indices: number[] = [];
   for (let index = 0; index < file.views.length; index += 1) {
     const view = file.views[index]!;
-    if (view.nodeId === normalized && view.relationshipType === relationshipType) {
+    if (view.nodeId === nodeId && view.relationshipType === relationshipType) {
       indices.push(index);
     }
   }

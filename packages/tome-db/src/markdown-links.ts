@@ -1,21 +1,13 @@
+import { NODE_ID_PATTERN, NODE_ID_RE_SRC } from "./node-id";
+
 export const TOME_LINK_SCHEME = "tome:";
 
-const TOME_NODE_URI = /^tome:\/\/node\/([a-f0-9]{32})$/i;
-const WIKI_LINK = /^\[\[([a-f0-9]{32})\]\]$/i;
-const LEGACY_EXPORT_PATH = /([a-f0-9]{32})(?:\.(?:md|csv))?$/i;
-const warnedLegacyHrefs = new Set<string>();
-
-function warnLegacyHrefResolution(href: string): void {
-  if (warnedLegacyHrefs.has(href)) return;
-  warnedLegacyHrefs.add(href);
-  console.warn(
-    `[markdown-links] legacy export-style href resolved; prefer ./{nodeId}.md or [[{nodeId}]]: ${href}`,
-  );
-}
-const NODE_ID_PATTERN = /^[a-f0-9]{32}$/i;
+const TOME_NODE_URI = new RegExp(`^tome://node/(${NODE_ID_RE_SRC})$`);
+const WIKI_LINK = new RegExp(`^\\[\\[(${NODE_ID_RE_SRC})\\]\\]$`);
+const CANONICAL_MD_LINK = new RegExp(`^\\./(${NODE_ID_RE_SRC})\\.md$`);
 const MD_LINK = /\[([^\]]*)\]\(([^)]+)\)/g;
-const LEGACY_PAREN_LINK =
-  /(?<!\[)([^\[\]\n(]+?)\s*\(\s*([^)]+?\.(?:md|csv))(?:#([^)]*))?\s*\)(?!\])/gi;
+const PAREN_LINK =
+  /(?<!\[)([^\[\]\n(]+?)\s*\(\s*([^)]+?\.(?:md|csv))(?:#([^)]*))?\s*\)(?!\])/g;
 
 function hasDynamicLinkMarker(href: string): boolean {
   const trimmed = href.replace(/\\&/g, "&").replace(/&amp;/g, "&").trim();
@@ -31,13 +23,9 @@ function hasDynamicLinkMarker(href: string): boolean {
   }
 }
 
-function normalizeRecordId(id: string): string {
-  return id.toLowerCase();
-}
-
 function nodeIdFromQueryParam(value: string | null): string | null {
   if (!value || !NODE_ID_PATTERN.test(value)) return null;
-  return normalizeRecordId(value);
+  return value;
 }
 
 function resolveNodeIdFromUrl(href: string): string | null {
@@ -66,22 +54,22 @@ function resolveNodeIdFromQueryOnlyHref(href: string): string | null {
 
 function resolveNodeIdFromInternalUri(trimmed: string): string | null {
   const match = TOME_NODE_URI.exec(trimmed);
-  if (match?.[1]) return normalizeRecordId(match[1]);
+  if (match?.[1]) return match[1];
   return null;
 }
 
 function resolveNodeIdFromInternalScheme(trimmed: string): string | null {
   if (!trimmed.startsWith(TOME_LINK_SCHEME)) return null;
   const id = trimmed.slice(TOME_LINK_SCHEME.length).trim();
-  return id && NODE_ID_PATTERN.test(id) ? normalizeRecordId(id) : null;
+  return id && NODE_ID_PATTERN.test(id) ? id : null;
 }
 
 /** Canonical relative href for a node markdown file in `content/data/`. */
 export function canonicalNodeMarkdownHref(nodeId: string): string {
-  return `./${normalizeRecordId(nodeId)}.md`;
+  return `./${nodeId}.md`;
 }
 
-/** Resolve a markdown href to a 32-hex record id, if it references a graph node. */
+/** Resolve a markdown href to a node id, if it references a graph node. */
 export function resolveMarkdownHrefTarget(href: string): string | null {
   const trimmed = href.trim();
   if (!trimmed) return null;
@@ -111,18 +99,11 @@ export function resolveMarkdownHrefTarget(href: string): string | null {
   }
 
   const wikiMatch = WIKI_LINK.exec(decoded);
-  if (wikiMatch?.[1]) return normalizeRecordId(wikiMatch[1]);
+  if (wikiMatch?.[1]) return wikiMatch[1];
 
-  const canonicalMatch = /^\.\/([a-f0-9]{32})\.md$/i.exec(decoded);
-  if (canonicalMatch?.[1]) return normalizeRecordId(canonicalMatch[1]);
+  const canonicalMatch = CANONICAL_MD_LINK.exec(decoded);
+  if (canonicalMatch?.[1]) return canonicalMatch[1];
 
-  const hashIdx = decoded.indexOf("#");
-  const pathOnly = hashIdx >= 0 ? decoded.slice(0, hashIdx) : decoded;
-  const legacyMatch = LEGACY_EXPORT_PATH.exec(pathOnly.trim());
-  if (legacyMatch?.[1]) {
-    warnLegacyHrefResolution(trimmed);
-    return normalizeRecordId(legacyMatch[1]);
-  }
   return null;
 }
 
@@ -161,7 +142,6 @@ export function findMarkdownLinksToTarget(
   body: string,
   targetId: string,
 ): MarkdownLinkMatch[] {
-  const normalizedTarget = normalizeRecordId(targetId);
   const matches: MarkdownLinkMatch[] = [];
 
   MD_LINK.lastIndex = 0;
@@ -169,27 +149,26 @@ export function findMarkdownLinksToTarget(
   while ((mdMatch = MD_LINK.exec(body)) !== null) {
     const linkText = mdMatch[1] ?? "";
     const href = mdMatch[2] ?? "";
-    if (resolveMarkdownHrefTarget(href) === normalizedTarget) {
+    if (resolveMarkdownHrefTarget(href) === targetId) {
       matches.push({ linkText });
     }
   }
 
-  LEGACY_PAREN_LINK.lastIndex = 0;
+  PAREN_LINK.lastIndex = 0;
   let parenMatch: RegExpExecArray | null;
-  while ((parenMatch = LEGACY_PAREN_LINK.exec(body)) !== null) {
+  while ((parenMatch = PAREN_LINK.exec(body)) !== null) {
     const linkText = parenMatch[1]?.trim() ?? "";
     const pathPart = parenMatch[2]?.trim() ?? "";
-    if (resolveMarkdownHrefTarget(pathPart) === normalizedTarget) {
+    if (resolveMarkdownHrefTarget(pathPart) === targetId) {
       matches.push({ linkText });
     }
   }
 
-  const DYNAMIC_NODE_LINK = /\[\[([a-f0-9]{32})\]\]/gi;
-  DYNAMIC_NODE_LINK.lastIndex = 0;
+  const dynamicLink = new RegExp(`\\[\\[(${NODE_ID_RE_SRC})\\]\\]`, "g");
   let dynamicMatch: RegExpExecArray | null;
-  while ((dynamicMatch = DYNAMIC_NODE_LINK.exec(body)) !== null) {
+  while ((dynamicMatch = dynamicLink.exec(body)) !== null) {
     const id = dynamicMatch[1];
-    if (id && normalizeRecordId(id) === normalizedTarget) {
+    if (id && id === targetId) {
       matches.push({ linkText: "" });
     }
   }

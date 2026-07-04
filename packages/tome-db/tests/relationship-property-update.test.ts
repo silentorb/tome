@@ -13,8 +13,8 @@ describe("relationship-property-update", () => {
   const fixture = createTestContentFixture("tome-db-conn-prop-");
 
   test("updates priority on database membership edge", () => {
-    const databaseId = "dddddddddddddddddddddddddddddddd";
-    const pageId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
+    const pageId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),
@@ -36,8 +36,8 @@ describe("relationship-property-update", () => {
   });
 
   test("coerces empty priority to Low", () => {
-    const pageId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const targetId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const pageId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const targetId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     seedTestNode(fixture, { id: pageId, properties: { title: "A" } });
     seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
     seedTestRelationships(fixture, [
@@ -52,8 +52,8 @@ describe("relationship-property-update", () => {
   });
 
   test("rejects invalid priority values", () => {
-    const pageId = "cccccccccccccccccccccccccccccccc";
-    const targetId = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+    const pageId = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
+    const targetId = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
     seedTestNode(fixture, { id: pageId, properties: { title: "A" } });
     seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
     seedTestRelationships(fixture, [{ source: pageId, target: targetId, type: "related", properties: {} }]);

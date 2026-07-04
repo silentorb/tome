@@ -139,7 +139,7 @@ async function withDom<T>(run: (container: HTMLElement) => Promise<T> | T): Prom
 export async function layoutSpatialGraphSvg(
   elements: CytoscapeElementDefinition[],
   config: SpatialGraphConfig,
-  nodePageHref: (nodeId: string) => string = (nodeId) => `./${nodeId.toLowerCase()}.md`,
+  nodePageHref: (nodeId: string) => string = (nodeId) => `./${nodeId}.md`,
 ): Promise<string> {
   if (elements.length === 0) {
     return "";

@@ -12,13 +12,13 @@ import {
 } from "../../../src/shared/user-settings";
 
 const sampleResults: NodeSummary[] = [
-  { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Alpha Scene", primaryTypeTitle: null },
-  { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Beta Feature", primaryTypeTitle: null },
+  { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Alpha Scene", primaryTypeTitle: null },
+  { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Beta Feature", primaryTypeTitle: null },
 ];
 
 const resultsWithPreview: NodeSummary[] = [
   {
-    id: "cccccccccccccccccccccccccccccccc",
+    id: "CCCCCCCCCCCCCCCCCCCCCCCCCC",
     title: "Gamma Note",
     primaryTypeTitle: null,
     matchPreview: {
@@ -94,7 +94,7 @@ describe("GlobalSearch", () => {
       ".tome-global-search-item",
     ) as HTMLAnchorElement;
     expect(link.tagName).toBe("A");
-    expect(link.getAttribute("href")).toContain("node=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(link.getAttribute("href")).toContain("node=AAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 
   test("shows body match preview when search node contents is enabled", async () => {

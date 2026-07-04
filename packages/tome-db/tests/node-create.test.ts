@@ -38,16 +38,16 @@ describe("createNode", () => {
 
   test("creates outgoing relation row", () => {
     fixture = createTestContentFixture("tome-create-");
-    const sourceId = "a1111111111111111111111111111111";
+    const sourceId = "0000000000000000000000001C";
     seedTestNode(fixture, {
       id: sourceId,
       properties: { title: "Scene" },
     });
     seedTestNode(fixture, {
-      id: "b1111111111111111111111111111111",
+      id: "0000000000000000000000001W",
       properties: { title: "Existing feat" },
     });
-    fixture.ctx.store.upsertRelationship(sourceId, "b1111111111111111111111111111111", "features", {
+    fixture.ctx.store.upsertRelationship(sourceId, "0000000000000000000000001W", "features", {
       ordinal: 2,
     });
     fixture.ctx.sync.syncRelationships();
@@ -65,17 +65,17 @@ describe("createNode", () => {
 
   test("creates database IS_A row", () => {
     fixture = createTestContentFixture("tome-create-");
-    const databaseId = "c1111111111111111111111111111111";
+    const databaseId = "00000000000000000000000028";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),
     });
     seedTestTableSchema(fixture, databaseId, []);
     seedTestNode(fixture, {
-      id: "d1111111111111111111111111111111",
+      id: "0000000000000000000000002K",
       properties: { title: "Old row" },
     });
-    fixture.ctx.store.upsertRelationship("d1111111111111111111111111111111", databaseId, MEMBER_OF_TYPE, {
+    fixture.ctx.store.upsertRelationship("0000000000000000000000002K", databaseId, MEMBER_OF_TYPE, {
       row_index: 4,
       view: "default",
     });
@@ -99,7 +99,7 @@ describe("createNode", () => {
         title: "X",
         link: {
           kind: "outgoing",
-          sourceId: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          sourceId: "EEEEEEEEEEEEEEEEEEEEEEEEEE",
           type: "features",
         },
       }),

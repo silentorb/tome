@@ -28,13 +28,13 @@ describe("normalizeEditorBody", () => {
   });
 
   test("canonicalizes node links to relative sibling paths", () => {
-    const id = "28358e628ba2807fb560caaac1c4aa47";
+    const id = "0000000000000000000000000F";
     const body = `[Action](http://127.0.0.1:5173/?node=${id})`;
     expect(normalizeEditorBody(body, "Page")).toBe(`[Action](./${id}.md)`);
   });
 
   test("collapses dynamic editor links to storage syntax", () => {
-    const id = "28358e628ba2807fb560caaac1c4aa47";
+    const id = "0000000000000000000000000F";
     const body = `[Target](?dynnode=${id})`;
     expect(normalizeEditorBody(body, "Page")).toBe(`[[${id}]]`);
   });

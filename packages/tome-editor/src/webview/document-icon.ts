@@ -26,8 +26,8 @@ export interface DocumentIconContext {
 export function resolveDocumentIcon(ctx: DocumentIconContext): string {
   if (ctx.view === "graph-explorer") return VIEW_ICONS["graph-explorer"];
 
-  const nodeId = ctx.nodeId?.toLowerCase();
-  if (nodeId && ctx.homeId && nodeId === ctx.homeId.toLowerCase()) return HOME_ICON;
+  const nodeId = ctx.nodeId;
+  if (nodeId && ctx.homeId && nodeId === ctx.homeId) return HOME_ICON;
 
   const bodyIcon = ctx.recordBody ? extractPageIconFromMarkdown(ctx.recordBody) : null;
   if (bodyIcon) return bodyIcon;

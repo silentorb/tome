@@ -31,10 +31,10 @@ describe("node-type-properties", () => {
   invalidateWorkspaceCache();
   process.env.TOME_CONTENT_PATH = contentDir;
 
-  const CHAR_DB = "f984a934ad644f8480b0f8f51449569f";
-  const character = "cccccccccccccccccccccccccccccccc";
-  const scene1 = "11111111111111111111111111111111";
-  const scene2 = "22222222222222222222222222222222";
+  const CHAR_DB = "00000000000000000000000035";
+  const character = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
+  const scene1 = "11111111111111111111111111";
+  const scene2 = "22222222222222222222222222";
 
   test("includes computed dynamic fields with allViews", () => {
     new ContentStore(contentDir).writeDynamicFieldsFile(

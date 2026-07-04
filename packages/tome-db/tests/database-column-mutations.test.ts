@@ -43,7 +43,7 @@ describe("database column mutations", () => {
   });
 
   test("createDatabaseColumn adds scalar column to schema", () => {
-    const databaseId = "dddddddddddddddddddddddddddddddd";
+    const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),
@@ -70,8 +70,8 @@ describe("database column mutations", () => {
   });
 
   test("createDatabaseColumn adds relation column", () => {
-    const databaseId = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
-    const parentDbId = "ffffffffffffffffffffffffffffffff";
+    const databaseId = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
+    const parentDbId = "FFFFFFFFFFFFFFFFFFFFFFFFFF";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),
@@ -100,8 +100,8 @@ describe("database column mutations", () => {
   });
 
   test("updateDatabaseColumn renames key and migrates row data", () => {
-    const databaseId = "11111111111111111111111111111111";
-    const pageId = "22222222222222222222222222222222";
+    const databaseId = "11111111111111111111111111";
+    const pageId = "22222222222222222222222222";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Notes"),
@@ -153,9 +153,9 @@ describe("database column mutations", () => {
   });
 
   test("updateDatabaseColumn scalar to relation clears scalars", () => {
-    const databaseId = "33333333333333333333333333333333";
-    const parentDbId = "44444444444444444444444444444444";
-    const rowId = "55555555555555555555555555555555";
+    const databaseId = "33333333333333333333333333";
+    const parentDbId = "44444444444444444444444444";
+    const rowId = "55555555555555555555555555";
     seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Tasks") });
     seedTestNode(fixture, { id: parentDbId, properties: typeTableMarkerProperties("Parents") });
     seedTestTableSchema(fixture, parentDbId, []);
@@ -177,10 +177,10 @@ describe("database column mutations", () => {
   });
 
   test("updateDatabaseColumn relation to scalar unlinks edges", () => {
-    const databaseId = "66666666666666666666666666666666";
-    const parentDbId = "77777777777777777777777777777777";
-    const rowId = "88888888888888888888888888888888";
-    const parentId = "99999999999999999999999999999999";
+    const databaseId = "66666666666666666666666666";
+    const parentDbId = "77777777777777777777777777";
+    const rowId = "88888888888888888888888888";
+    const parentId = "99999999999999999999999999";
     seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Links") });
     seedTestNode(fixture, { id: parentDbId, properties: typeTableMarkerProperties("Parents") });
     seedTestTableSchema(fixture, parentDbId, []);
@@ -210,11 +210,11 @@ describe("database column mutations", () => {
   });
 
   test("updateDatabaseColumn relation target change unlinks old links", () => {
-    const databaseId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa01";
-    const parentDbId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa02";
-    const otherParentDb = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa03";
-    const rowId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa04";
-    const parentId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa05";
+    const databaseId = "0000000000000000000000001M";
+    const parentDbId = "0000000000000000000000001N";
+    const otherParentDb = "0000000000000000000000001P";
+    const rowId = "0000000000000000000000001Q";
+    const parentId = "0000000000000000000000001R";
     seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Items") });
     seedTestNode(fixture, { id: parentDbId, properties: typeTableMarkerProperties("Parents") });
     seedTestNode(fixture, { id: otherParentDb, properties: typeTableMarkerProperties("Other") });
@@ -244,7 +244,7 @@ describe("database column mutations", () => {
   });
 
   test("rejects duplicate and reserved keys", () => {
-    const databaseId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb01";
+    const databaseId = "00000000000000000000000025";
     seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Dup"),

@@ -116,7 +116,7 @@ export class ContentStore {
     try {
       return readdirSync(contentDataDir(this.contentDir))
         .filter((name) => NODE_FILE_PATTERN.test(name))
-        .map((name) => name.slice(0, 32));
+        .map((name) => name.slice(0, -3));
     } catch {
       return [];
     }

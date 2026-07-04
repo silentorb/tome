@@ -69,7 +69,7 @@ describe("SectionDataTable", () => {
         <SectionDataTable
           tableKey="test-row-actions"
           columns={[]}
-          rows={[{ id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", name: "Row A", cells: {} }]}
+          rows={[{ id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", name: "Row A", cells: {} }]}
           renderNameCell={(row) => row.name}
           rowPageActions={{
             onArchiveNode: async () => {},

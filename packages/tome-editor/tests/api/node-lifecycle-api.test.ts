@@ -8,7 +8,7 @@ import {
 } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
 
-const nodeId = "d1111111111111111111111111111111";
+const nodeId = "0000000000000000000000002K";
 
 describe("node lifecycle API", () => {
   const fixture = createTestContentFixture("tome-lifecycle-api-");

@@ -53,7 +53,7 @@ function findViewIndex(
   relationshipType: string,
   viewId: string,
 ): number {
-  const normalized = nodeId.toLowerCase();
+  const normalized = nodeId;
   return file.views.findIndex(
     (view) =>
       isViewDefinition(view) &&
@@ -106,7 +106,7 @@ export function createView(
     input.properties ?? siblingViewProperties(file, nodeId, relationshipType);
   const view: ViewDefinition = {
     id,
-    nodeId: nodeId.toLowerCase(),
+    nodeId,
     relationshipType,
     name: trimmed,
     sorts: input.sorts ?? [{ column: "name", direction: "asc" }],
@@ -241,7 +241,7 @@ export function updateRelationshipViewProperties(
   if (views.length === 0) {
     const defaultView: ViewDefinition = {
       ...DEFAULT_VIEW,
-      nodeId: nodeId.toLowerCase(),
+      nodeId,
       relationshipType,
     };
     file.views.push(defaultView);
@@ -273,7 +273,7 @@ export function ensureCustomViewsForRelationship(
   definitions: Pick<ViewDefinition, "id" | "name" | "sorts">[],
 ): void {
   const file = store.readViewsFile();
-  const normalized = nodeId.toLowerCase();
+  const normalized = nodeId;
   file.views = file.views.filter(
     (view) => !(view.nodeId === normalized && view.relationshipType === relationshipType),
   );
@@ -303,7 +303,7 @@ export function ensureGeneratedView(
   generator: string,
 ): void {
   const file = store.readViewsFile();
-  const normalized = nodeId.toLowerCase();
+  const normalized = nodeId;
   file.views = file.views.filter(
     (view) => !(view.nodeId === normalized && view.relationshipType === relationshipType),
   );

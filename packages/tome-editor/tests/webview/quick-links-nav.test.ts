@@ -7,13 +7,13 @@ import {
 } from "../../src/webview/quick-links-nav";
 
 const testQuickLinks: readonly WorkspaceQuickLink[] = [
-  { nodeId: "dd0de9867cc345b898929306bdf9fc83", label: "Features", icon: "★" },
-  { nodeId: "528384943746443a9c89699b57e3bbec", label: "Solutions", icon: "✓" },
-  { nodeId: "204dba198db74611b0b49a98dd53e8f5", label: "Scenes", icon: "▶" },
-  { nodeId: "2eea538996934ce8abafc27132e576c1", label: "Inspirations", icon: "✦" },
-  { nodeId: "5a585a2a311c4768be4a81f27bdcdfb4", label: "Articles", icon: "§" },
-  { nodeId: "f984a934ad644f8480b0f8f51449569f", label: "Characters", icon: "◎" },
-  { nodeId: "df096ab26e8347e6992e95698345aad0", label: "Locations", icon: "⌖" },
+  { nodeId: "0000000000000000000000002P", label: "Features", icon: "★" },
+  { nodeId: "0000000000000000000000000T", label: "Solutions", icon: "✓" },
+  { nodeId: "0000000000000000000000000D", label: "Scenes", icon: "▶" },
+  { nodeId: "0000000000000000000000000K", label: "Inspirations", icon: "✦" },
+  { nodeId: "0000000000000000000000000X", label: "Articles", icon: "§" },
+  { nodeId: "00000000000000000000000035", label: "Characters", icon: "◎" },
+  { nodeId: "0000000000000000000000002T", label: "Locations", icon: "⌖" },
 ];
 
 describe("quick-links-nav", () => {
@@ -30,13 +30,13 @@ describe("quick-links-nav", () => {
       "Characters",
       "Locations",
     ]);
-    expect(byNodeId["204dba198db74611b0b49a98dd53e8f5"]).toBe("▶");
+    expect(byNodeId["0000000000000000000000000D"]).toBe("▶");
   });
 
   test("Inspirations links to the database, not the parent page", () => {
     const inspirations = testQuickLinks.find((link) => link.label === "Inspirations");
-    expect(inspirations?.nodeId).toBe("2eea538996934ce8abafc27132e576c1");
-    expect(inspirations?.nodeId).not.toBe("f8c501a697f94792a07c4c1bb7760d15");
+    expect(inspirations?.nodeId).toBe("0000000000000000000000000K");
+    expect(inspirations?.nodeId).not.toBe("00000000000000000000000034");
   });
 
   test("returns empty maps for missing links", () => {
@@ -44,8 +44,8 @@ describe("quick-links-nav", () => {
   });
 });
 
-const NODE_ID = "e5cc80dc61ed4c629951cdf472b20b7a";
-const BASE = "http://127.0.0.1:5173/?node=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const NODE_ID = "0000000000000000000000002X";
+const BASE = "http://127.0.0.1:5173/?node=AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 describe("navigateQuickLinkPointerUp", () => {
   let originalAssign: typeof window.location.assign;

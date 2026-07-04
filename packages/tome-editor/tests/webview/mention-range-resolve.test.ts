@@ -11,7 +11,7 @@ import {
 } from "../../src/webview/mention-range";
 import { formatNodeMarkdownLink, nodeMarkdownHref } from "../../src/shared/types";
 
-const TARGET_ID = "e5cc80dc61ed4c629951cdf472b20b7a";
+const TARGET_ID = "0000000000000000000000002X";
 
 describe("isMentionFragment", () => {
   test("accepts @ with empty query", () => {

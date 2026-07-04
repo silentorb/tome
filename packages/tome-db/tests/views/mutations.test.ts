@@ -15,7 +15,7 @@ import {
 
 describe("views mutations", () => {
   const fixture = createTestContentFixture("tome-views-mut-");
-  const nodeId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const nodeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
   seedTestViews(fixture, {
     version: VIEWS_FILE_VERSION,

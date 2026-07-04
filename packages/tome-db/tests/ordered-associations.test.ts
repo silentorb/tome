@@ -20,20 +20,20 @@ import {
 import { VIEWS_FILE_VERSION } from "../src/content/views-file";
 import { firstRelatedNodeId } from "../src/relationship-traverse";
 
-const SCENES_DB = "204dba198db74611b0b49a98dd53e8f5";
-const PARTS_DB = "5e45eefc69a14f45b988ad1f3c9d1ef5";
-const PRODUCTS_DB = "4e973268d3474f71bd7992094fb39663";
-const CHARACTERS_DB = "f984a934ad644f8480b0f8f51449569f";
+const SCENES_DB = "0000000000000000000000000D";
+const PARTS_DB = "0000000000000000000000000Z";
+const PRODUCTS_DB = "0000000000000000000000000S";
+const CHARACTERS_DB = "00000000000000000000000035";
 const CONFIG_ID = "scenes-by-book";
 
-const bookA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const bookB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const part1 = "11111111111111111111111111111111";
-const part2 = "22222222222222222222222222222222";
-const scene1 = "33333333333333333333333333333333";
-const scene2 = "44444444444444444444444444444444";
-const scene3 = "55555555555555555555555555555555";
-const character1 = "77777777777777777777777777777777";
+const bookA = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const bookB = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
+const part1 = "11111111111111111111111111";
+const part2 = "22222222222222222222222222";
+const scene1 = "33333333333333333333333333";
+const scene2 = "44444444444444444444444444";
+const scene3 = "55555555555555555555555555";
+const character1 = "77777777777777777777777777";
 
 describe("ordered-associations", () => {
   const fixture = createTestContentFixture("tome-ordered-");
@@ -64,7 +64,7 @@ describe("ordered-associations", () => {
       key: "solutions",
       name: "Solutions",
       type: "relation",
-      targetTypeId: "528384943746443a9c89699b57e3bbec",
+      targetTypeId: "0000000000000000000000000T",
       perspective: "solutions",
     },
     {
@@ -78,7 +78,7 @@ describe("ordered-associations", () => {
       key: "location",
       name: "📁 Location",
       type: "relation",
-      targetTypeId: "df096ab26e8347e6992e95698345aad0",
+      targetTypeId: "0000000000000000000000002T",
       perspective: "location",
     },
     { key: "order", name: "Order", type: "number" },
@@ -178,7 +178,7 @@ describe("ordered-associations", () => {
   });
 
   test("places scenes without part in Unassigned group", () => {
-    const unassigned = "66666666666666666666666666666666";
+    const unassigned = "66666666666666666666666666";
     seedTestNode(fixture, { id: unassigned, properties: { title: "Loose Scene" } });
     seedTestRelationships(fixture, [
       { source: unassigned, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { order: "40" } },

@@ -8,12 +8,12 @@ import { emptyUserSettings } from "../../../src/shared/user-settings";
 
 const recentNodes: NodeSummary[] = [
   {
-    id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    id: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
     title: "Newer Page",
     primaryTypeTitle: "Scenes",
   },
   {
-    id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    id: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
     title: "Older Page",
     primaryTypeTitle: null,
   },
@@ -35,8 +35,8 @@ describe("RecentNodesPanel", () => {
         <RecentNodesPanel
           api={api}
           activeView="node-page"
-          activeNodeId="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-          homeNodeId="cccccccccccccccccccccccccccccccc"
+          activeNodeId="AAAAAAAAAAAAAAAAAAAAAAAAAA"
+          homeNodeId="CCCCCCCCCCCCCCCCCCCCCCCCCC"
           collapsed={false}
           refreshKey={0}
           pageBase="http://127.0.0.1:5173/?node=home"
@@ -49,8 +49,8 @@ describe("RecentNodesPanel", () => {
     });
 
     const links = Array.from(container.querySelectorAll<HTMLAnchorElement>("a.tome-side-panel-item"));
-    expect(links[0]?.href).toContain("node=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-    expect(links[1]?.href).toContain("node=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    expect(links[0]?.href).toContain("node=AAAAAAAAAAAAAAAAAAAAAAAAAA");
+    expect(links[1]?.href).toContain("node=BBBBBBBBBBBBBBBBBBBBBBBBBB");
     expect(links[0]?.classList.contains("is-active")).toBe(true);
     expect(container.querySelector(".tome-side-panel-section-label")?.textContent).toBe("Recent");
   });

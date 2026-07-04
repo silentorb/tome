@@ -129,7 +129,7 @@ export function createApiHandler(
         const limit = Number.parseInt(url.searchParams.get("limit") ?? "20", 10);
         const allowedRaw = url.searchParams.get("allowedTypeIds");
         const allowedTypeIds = allowedRaw
-          ? allowedRaw.split(",").map((id) => id.trim().toLowerCase()).filter(Boolean)
+          ? allowedRaw.split(",").map((id) => id.trim()).filter(Boolean)
           : undefined;
         const includeBodyParam = url.searchParams.get("includeBody");
         const includeBody =
@@ -172,9 +172,9 @@ export function createApiHandler(
       }
 
       const linkOptionsMatch =
-        /^\/api\/nodes\/([a-f0-9]{32})\/relationship-link-options$/i.exec(path);
+        /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationship-link-options$/i.exec(path);
       if (linkOptionsMatch && req.method === "GET") {
-        const sourceId = linkOptionsMatch[1]!.toLowerCase();
+        const sourceId = linkOptionsMatch[1]!;
         const type = url.searchParams.get("type");
         if (!type?.trim()) return json({ error: "type query parameter required" }, 400);
         const node = db.getNode(sourceId);
@@ -182,9 +182,9 @@ export function createApiHandler(
         return json(db.getRelationshipLinkOptions(sourceId, type));
       }
 
-      const prepareBodyMatch = /^\/api\/nodes\/([a-f0-9]{32})\/prepare-editor-body$/i.exec(path);
+      const prepareBodyMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/prepare-editor-body$/i.exec(path);
       if (prepareBodyMatch && req.method === "POST") {
-        const id = prepareBodyMatch[1]!.toLowerCase();
+        const id = prepareBodyMatch[1]!;
         const payload = (await req.json()) as { markdown?: string };
         if (typeof payload.markdown !== "string") {
           return json({ error: "markdown required" }, 400);
@@ -194,9 +194,9 @@ export function createApiHandler(
         return json({ markdown });
       }
 
-      const nodeMatch = /^\/api\/nodes\/([a-f0-9]{32})$/i.exec(path);
+      const nodeMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (nodeMatch) {
-        const id = nodeMatch[1]!.toLowerCase();
+        const id = nodeMatch[1]!;
         if (req.method === "GET") {
           const tab =
             url.searchParams.get("tab") ??
@@ -232,9 +232,9 @@ export function createApiHandler(
       }
 
       const relationRowMatch =
-        /^\/api\/nodes\/([a-f0-9]{32})\/relation-rows$/i.exec(path);
+        /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relation-rows$/i.exec(path);
       if (relationRowMatch && req.method === "POST") {
-        const sourceId = relationRowMatch[1]!.toLowerCase();
+        const sourceId = relationRowMatch[1]!;
         const payload = (await req.json()) as {
           type?: string;
           title?: string;
@@ -253,25 +253,25 @@ export function createApiHandler(
         return json({ node: result });
       }
 
-      const archiveMatch = /^\/api\/nodes\/([a-f0-9]{32})\/archive$/i.exec(path);
+      const archiveMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/archive$/i.exec(path);
       if (archiveMatch && req.method === "POST") {
-        const id = archiveMatch[1]!.toLowerCase();
+        const id = archiveMatch[1]!;
         const error = db.archiveNode(id);
         if (error) return json({ error: lifecycleMessage(error) }, lifecycleStatus(error));
         return json({ ok: true });
       }
 
-      const unarchiveMatch = /^\/api\/nodes\/([a-f0-9]{32})\/unarchive$/i.exec(path);
+      const unarchiveMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/unarchive$/i.exec(path);
       if (unarchiveMatch && req.method === "POST") {
-        const id = unarchiveMatch[1]!.toLowerCase();
+        const id = unarchiveMatch[1]!;
         const error = db.unarchiveNode(id);
         if (error) return json({ error: lifecycleMessage(error) }, lifecycleStatus(error));
         return json({ ok: true });
       }
 
-      const quickLinkMatch = /^\/api\/nodes\/([a-f0-9]{32})\/quick-link$/i.exec(path);
+      const quickLinkMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/quick-link$/i.exec(path);
       if (quickLinkMatch && req.method === "POST") {
-        const id = quickLinkMatch[1]!.toLowerCase();
+        const id = quickLinkMatch[1]!;
         let options: { label?: string; icon?: string } | undefined;
         try {
           const payload = (await req.json()) as { label?: string; icon?: string };
@@ -289,23 +289,23 @@ export function createApiHandler(
         return json({ ok: true });
       }
       if (quickLinkMatch && req.method === "DELETE") {
-        const id = quickLinkMatch[1]!.toLowerCase();
+        const id = quickLinkMatch[1]!;
         const error = db.removeQuickLink(id);
         if (error) return json({ error: quickLinkMessage(error) }, quickLinkStatus(error));
         return json({ ok: true });
       }
 
-      const viewsNodeMatch = /^\/api\/views\/nodes\/([a-f0-9]{32})$/i.exec(path);
+      const viewsNodeMatch = /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (viewsNodeMatch && req.method === "GET") {
-        const nodeId = viewsNodeMatch[1]!.toLowerCase();
+        const nodeId = viewsNodeMatch[1]!;
         const views = db.getNodeViews(nodeId);
         return json({ views });
       }
 
       const viewsRelationshipMatch =
-        /^\/api\/views\/nodes\/([a-f0-9]{32})\/relationships\/([a-z0-9_-]+)$/i.exec(path);
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationships\/([a-z0-9_-]+)$/i.exec(path);
       if (viewsRelationshipMatch && req.method === "PATCH") {
-        const nodeId = viewsRelationshipMatch[1]!.toLowerCase();
+        const nodeId = viewsRelationshipMatch[1]!;
         const relationshipType = viewsRelationshipMatch[2]!;
         const payload = (await req.json()) as {
           viewOrder?: string[];
@@ -328,9 +328,9 @@ export function createApiHandler(
       }
 
       const viewsCollectionMatch =
-        /^\/api\/views\/nodes\/([a-f0-9]{32})\/relationships\/([a-z0-9_-]+)\/views$/i.exec(path);
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationships\/([a-z0-9_-]+)\/views$/i.exec(path);
       if (viewsCollectionMatch && req.method === "POST") {
-        const nodeId = viewsCollectionMatch[1]!.toLowerCase();
+        const nodeId = viewsCollectionMatch[1]!;
         const relationshipType = viewsCollectionMatch[2]!;
         const payload = (await req.json()) as {
           name?: string;
@@ -353,11 +353,11 @@ export function createApiHandler(
       }
 
       const viewsItemMatch =
-        /^\/api\/views\/nodes\/([a-f0-9]{32})\/relationships\/([a-z0-9_-]+)\/views\/([a-z0-9-]+)$/i.exec(
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationships\/([a-z0-9_-]+)\/views\/([a-z0-9-]+)$/i.exec(
           path,
         );
       if (viewsItemMatch) {
-        const nodeId = viewsItemMatch[1]!.toLowerCase();
+        const nodeId = viewsItemMatch[1]!;
         const relationshipType = viewsItemMatch[2]!;
         const viewId = viewsItemMatch[3]!;
         if (req.method === "PATCH") {
@@ -384,9 +384,9 @@ export function createApiHandler(
         }
       }
 
-      const databaseMatch = /^\/api\/databases\/([a-f0-9]{32})$/i.exec(path);
+      const databaseMatch = /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (databaseMatch) {
-        const id = databaseMatch[1]!.toLowerCase();
+        const id = databaseMatch[1]!;
         if (req.method === "GET") {
           const tab =
             url.searchParams.get("tab") ??
@@ -398,9 +398,9 @@ export function createApiHandler(
         }
       }
 
-      const databaseRowsMatch = /^\/api\/databases\/([a-f0-9]{32})\/rows$/i.exec(path);
+      const databaseRowsMatch = /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/rows$/i.exec(path);
       if (databaseRowsMatch && req.method === "POST") {
-        const databaseId = databaseRowsMatch[1]!.toLowerCase();
+        const databaseId = databaseRowsMatch[1]!;
         const payload = (await req.json()) as {
           title?: string;
           view?: string;
@@ -424,10 +424,10 @@ export function createApiHandler(
       }
 
       const databaseRowMatch =
-        /^\/api\/databases\/([a-f0-9]{32})\/rows\/([a-f0-9]{32})$/i.exec(path);
+        /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/rows\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (databaseRowMatch && req.method === "PATCH") {
-        const databaseId = databaseRowMatch[1]!.toLowerCase();
-        const nodeId = databaseRowMatch[2]!.toLowerCase();
+        const databaseId = databaseRowMatch[1]!;
+        const nodeId = databaseRowMatch[2]!;
         const payload = (await req.json()) as { property?: string; value?: string | null };
         if (typeof payload.property !== "string") {
           return json({ error: "property required" }, 400);
@@ -447,9 +447,9 @@ export function createApiHandler(
         return json({ ok: true });
       }
 
-      const databaseColumnsMatch = /^\/api\/databases\/([a-f0-9]{32})\/columns$/i.exec(path);
+      const databaseColumnsMatch = /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/columns$/i.exec(path);
       if (databaseColumnsMatch && req.method === "POST") {
-        const databaseId = databaseColumnsMatch[1]!.toLowerCase();
+        const databaseId = databaseColumnsMatch[1]!;
         const payload = (await req.json()) as {
           key?: string;
           name?: string;
@@ -484,9 +484,9 @@ export function createApiHandler(
       }
 
       const databaseColumnMatch =
-        /^\/api\/databases\/([a-f0-9]{32})\/columns\/([a-z0-9_]+)$/i.exec(path);
+        /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/columns\/([a-z0-9_]+)$/i.exec(path);
       if (databaseColumnMatch && req.method === "PATCH") {
-        const databaseId = databaseColumnMatch[1]!.toLowerCase();
+        const databaseId = databaseColumnMatch[1]!;
         const columnKey = databaseColumnMatch[2]!.toLowerCase();
         const payload = (await req.json()) as {
           name?: string;
@@ -523,7 +523,7 @@ export function createApiHandler(
       }
 
       if (databaseColumnMatch && req.method === "DELETE") {
-        const databaseId = databaseColumnMatch[1]!.toLowerCase();
+        const databaseId = databaseColumnMatch[1]!;
         const columnKey = databaseColumnMatch[2]!.toLowerCase();
         const result = db.deleteDatabaseColumn(databaseId, columnKey);
         if (result === "database_not_found") return json({ error: "not found" }, 404);
@@ -557,10 +557,10 @@ export function createApiHandler(
         }
         const error = db.moveRelationshipConnection({
           type: payload.type,
-          oldSourceId: payload.oldSourceId.toLowerCase(),
-          oldTargetId: payload.oldTargetId.toLowerCase(),
-          newSourceId: payload.newSourceId.toLowerCase(),
-          newTargetId: payload.newTargetId.toLowerCase(),
+          oldSourceId: payload.oldSourceId,
+          oldTargetId: payload.oldTargetId,
+          newSourceId: payload.newSourceId,
+          newTargetId: payload.newTargetId,
         });
         if (error === "not_found") return json({ error: "not found" }, 404);
         if (error === "source_not_found" || error === "target_not_found") {
@@ -576,9 +576,9 @@ export function createApiHandler(
         return json({ ok: true });
       }
 
-      const connectionsPostMatch = /^\/api\/nodes\/([a-f0-9]{32})\/connections$/i.exec(path);
+      const connectionsPostMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/connections$/i.exec(path);
       if (connectionsPostMatch && req.method === "POST") {
-        const sourceId = connectionsPostMatch[1]!.toLowerCase();
+        const sourceId = connectionsPostMatch[1]!;
         const payload = (await req.json()) as {
           type?: string;
           targetId?: string;
@@ -588,7 +588,7 @@ export function createApiHandler(
         }
         const error = db.linkOutgoingRelationship(sourceId, {
           type: payload.type,
-          targetId: payload.targetId.toLowerCase(),
+          targetId: payload.targetId,
         });
         if (error === "source_not_found" || error === "target_not_found") {
           return json({ error: "not found" }, 404);
@@ -604,20 +604,20 @@ export function createApiHandler(
       }
 
       const connectionMatch =
-        /^\/api\/nodes\/([a-f0-9]{32})\/connections\/([^/]+)\/([a-f0-9]{32})$/i.exec(path);
+        /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/connections\/([^/]+)\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (connectionMatch && req.method === "DELETE") {
-        const sourceId = connectionMatch[1]!.toLowerCase();
+        const sourceId = connectionMatch[1]!;
         const type = decodeURIComponent(connectionMatch[2]!);
-        const targetId = connectionMatch[3]!.toLowerCase();
+        const targetId = connectionMatch[3]!;
         const error = db.unlinkOutgoingRelationship(sourceId, type, targetId);
         if (error === "not_found") return json({ error: "not found" }, 404);
         return json({ ok: true });
       }
 
       if (connectionMatch && req.method === "PATCH") {
-        const nodeId = connectionMatch[1]!.toLowerCase();
+        const nodeId = connectionMatch[1]!;
         const type = decodeURIComponent(connectionMatch[2]!);
-        const targetId = connectionMatch[3]!.toLowerCase();
+        const targetId = connectionMatch[3]!;
         const payload = (await req.json()) as { property?: string; value?: string | null };
         if (typeof payload.property !== "string") {
           return json({ error: "property required" }, 400);

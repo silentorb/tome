@@ -124,7 +124,7 @@ function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
     throw new Error(`${path}: id is required`);
   }
   if (typeof obj.nodeId !== "string" || !isNodeId(obj.nodeId)) {
-    throw new Error(`${path}: nodeId must be a 32-character hex node id`);
+    throw new Error(`${path}: nodeId must be a node id (ULID)`);
   }
   if (typeof obj.relationshipType !== "string" || !obj.relationshipType.trim()) {
     throw new Error(`${path}: relationshipType is required`);
@@ -139,7 +139,7 @@ function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
   const hiddenColumns = parseHiddenColumns(obj.hiddenColumns, `${path}.hiddenColumns`);
   return {
     id: obj.id.trim(),
-    nodeId: obj.nodeId.trim().toLowerCase(),
+    nodeId: obj.nodeId.trim(),
     relationshipType: obj.relationshipType.trim(),
     name: obj.name.trim(),
     sorts: obj.sorts.map((sort, sortIndex) =>
@@ -157,7 +157,7 @@ function parseGeneratedViewRecord(raw: unknown, index: number): GeneratedViewRec
   }
   const obj = raw as Record<string, unknown>;
   if (typeof obj.nodeId !== "string" || !isNodeId(obj.nodeId)) {
-    throw new Error(`${path}: nodeId must be a 32-character hex node id`);
+    throw new Error(`${path}: nodeId must be a node id (ULID)`);
   }
   if (typeof obj.relationshipType !== "string" || !obj.relationshipType.trim()) {
     throw new Error(`${path}: relationshipType is required`);
@@ -169,7 +169,7 @@ function parseGeneratedViewRecord(raw: unknown, index: number): GeneratedViewRec
     throw new Error(`${path}: generated views must not include id, name, or sorts`);
   }
   return {
-    nodeId: obj.nodeId.trim().toLowerCase(),
+    nodeId: obj.nodeId.trim(),
     relationshipType: obj.relationshipType.trim(),
     generator: obj.generator.trim(),
   };

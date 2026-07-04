@@ -30,9 +30,9 @@ describe("writeSiteData", () => {
     fixture = createTestContentFixture("tome-static-export-");
     outDir = mkdtempSync(join(tmpdir(), "tome-static-out-"));
 
-    const typeId = "13458e628ba28073850dea0edb9acde2";
-    const instanceId = "13458e628ba28073850dea0edb9acde3";
-    const relatedId = "13458e628ba28073850dea0edb9acde4";
+    const typeId = "00000000000000000000000006";
+    const instanceId = "00000000000000000000000007";
+    const relatedId = "00000000000000000000000008";
 
     seedTestNode(fixture, {
       id: typeId,
@@ -91,7 +91,7 @@ describe("writeSiteData", () => {
     expect(data.pathById[instanceId.toLowerCase()]).toBe(instanceId.toLowerCase());
     expect(data.aliasToId).toEqual({});
 
-    const aliasId = "13458e628ba28073850dea0edb9acde5";
+    const aliasId = "00000000000000000000000009";
     seedTestNode(fixture, {
       id: aliasId,
       properties: { title: "Alias page", url_alias: "design/alias-test", body: "Alias body" },

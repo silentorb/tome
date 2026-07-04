@@ -6,9 +6,9 @@ import { createNodeUrlResolver } from "../../src/lib/node-urls";
 import type { ResolvedExtensionComponent } from "tome-db";
 import { serializePageBlock } from "tome-interfaces/page-block";
 
-const NODE_ID = "aabbccdd112233445566778899aabbcc";
-const SCENE_TYPE_ID = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const FEATURE_TYPE_ID = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const NODE_ID = "0000000000000000000000001S";
+const SCENE_TYPE_ID = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const FEATURE_TYPE_ID = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
 const urls = createNodeUrlResolver({
   pathById: { [NODE_ID]: NODE_ID },

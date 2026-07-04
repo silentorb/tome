@@ -9,7 +9,7 @@ describe("RelationCellEditor", () => {
     const { container } = render(
       <RelationCellEditor
         api={makeMockEditorApi()}
-        links={[{ targetId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Parent" }]}
+        links={[{ targetId: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Parent" }]}
         columnName="Parents"
         onAdd={async () => {}}
         onRemove={onRemove}
@@ -25,7 +25,7 @@ describe("RelationCellEditor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Remove Parent" }));
     await waitFor(() =>
-      expect(onRemove).toHaveBeenCalledWith("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"),
+      expect(onRemove).toHaveBeenCalledWith("BBBBBBBBBBBBBBBBBBBBBBBBBB"),
     );
   });
 
@@ -33,7 +33,7 @@ describe("RelationCellEditor", () => {
     const { container } = render(
       <RelationCellEditor
         api={makeMockEditorApi()}
-        links={[{ targetId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Parent" }]}
+        links={[{ targetId: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Parent" }]}
         columnName="Parents"
         onAdd={async () => {}}
         onRemove={async () => {}}
@@ -50,7 +50,7 @@ describe("RelationCellEditor", () => {
     const { container } = render(
       <RelationCellEditor
         api={makeMockEditorApi()}
-        links={[{ targetId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Parent" }]}
+        links={[{ targetId: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Parent" }]}
         columnName="Parents"
         onAdd={async () => {}}
         onRemove={async () => {}}
@@ -58,7 +58,7 @@ describe("RelationCellEditor", () => {
     );
 
     const link = screen.getByRole("link", { name: "Parent" });
-    expect(link.getAttribute("href")).toContain("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    expect(link.getAttribute("href")).toContain("BBBBBBBBBBBBBBBBBBBBBBBBBB");
     fireEvent.click(link);
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(container.querySelector(".tome-relation-cell.is-popup-open")).toBeNull();
@@ -87,7 +87,7 @@ describe("RelationCellEditor", () => {
 
   test("adds link inside dialog without closing", async () => {
     const search = mock(async () => [
-      { id: "cccccccccccccccccccccccccccccccc", title: "Child", primaryTypeTitle: null },
+      { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Child", primaryTypeTitle: null },
     ]);
     const onAdd = mock(async () => {});
     const api = {
@@ -119,7 +119,7 @@ describe("RelationCellEditor", () => {
   test("defers onEditingComplete until popup closes after mutations", async () => {
     const onEditingComplete = mock(() => {});
     const search = mock(async () => [
-      { id: "cccccccccccccccccccccccccccccccc", title: "Child", primaryTypeTitle: null },
+      { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Child", primaryTypeTitle: null },
     ]);
     const onAdd = mock(async () => {});
     const api = {
@@ -197,7 +197,7 @@ describe("RelationCellEditor", () => {
     render(
       <RelationCellEditor
         api={makeMockEditorApi()}
-        links={[{ targetId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Parent" }]}
+        links={[{ targetId: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Parent" }]}
         columnName="Parents"
         onAdd={async () => {}}
         onRemove={async () => {}}
@@ -213,9 +213,9 @@ describe("RelationCellEditor", () => {
       <RelationCellEditor
         api={makeMockEditorApi()}
         links={[
-          { targetId: "cccccccccccccccccccccccccccccccc", title: "Zeta Parent" },
-          { targetId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Alpha Parent" },
-          { targetId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Mike Parent" },
+          { targetId: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Zeta Parent" },
+          { targetId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Alpha Parent" },
+          { targetId: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Mike Parent" },
         ]}
         columnName="Parents"
         onAdd={async () => {}}

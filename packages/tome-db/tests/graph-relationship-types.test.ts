@@ -8,9 +8,9 @@ import {
 
 describe("listDistinctRelationshipTypes", () => {
   const fixture = createTestContentFixture("tome-distinct-types-");
-  const nodeA = "a1111111111111111111111111111111";
-  const nodeB = "b1111111111111111111111111111111";
-  const nodeC = "c1111111111111111111111111111111";
+  const nodeA = "0000000000000000000000001C";
+  const nodeB = "0000000000000000000000001W";
+  const nodeC = "00000000000000000000000028";
 
   seedTestNode(fixture, { id: nodeA, properties: { title: "A" } });
   seedTestNode(fixture, { id: nodeB, properties: { title: "B" } });

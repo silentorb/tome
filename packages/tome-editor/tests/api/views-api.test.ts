@@ -17,7 +17,7 @@ describe("views API", () => {
       serializeWorkspaceFile(defaultTestWorkspaceFile()),
       "utf-8",
     );
-    const nodeId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const nodeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     writeFileSync(
       viewsFilePath(contentDir),
       serializeViewsFile({

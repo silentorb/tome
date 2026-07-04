@@ -15,7 +15,7 @@ describe("views-file", () => {
       views: [
         {
           id: "all",
-          nodeId: "dddddddddddddddddddddddddddddddd",
+          nodeId: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
           relationshipType: "members",
           name: "All",
           sorts: [{ column: "name", direction: "asc" as const }],
@@ -23,7 +23,7 @@ describe("views-file", () => {
           hiddenColumns: ["priority"],
         },
         {
-          nodeId: "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+          nodeId: "EEEEEEEEEEEEEEEEEEEEEEEEEE",
           relationshipType: "members",
           generator: "scenes-by-book",
         },

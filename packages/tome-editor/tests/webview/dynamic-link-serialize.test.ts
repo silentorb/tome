@@ -7,7 +7,7 @@ import { editorDynamicNodeHref } from "tome-db/dynamic-node-links";
 import { formatEditorDynamicNodeLink } from "../../src/webview/standalone-markdown";
 import { normalizeEditorBody } from "../../src/webview/editor-save";
 
-const TARGET = "e5cc80dc61ed4c629951cdf472b20b7a";
+const TARGET = "0000000000000000000000002X";
 
 describe("dynamic link milkdown serialization", () => {
   test("GFM getMarkdown preserves dynnode href and save collapses to [[id]]", async () => {

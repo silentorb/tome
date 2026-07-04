@@ -9,8 +9,8 @@ import {
 } from "../src/lib/markdown";
 import { buildNodeUrlIndex, createNodeUrlResolver } from "../src/lib/node-urls";
 
-const TARGET = "aabbccdd112233445566778899aabbcc";
-const ALIASED = "bbccddee2233445566778899aabbccdd";
+const TARGET = "0000000000000000000000001S";
+const ALIASED = "00000000000000000000000026";
 
 function urlsForNodes(
   nodes: { id: string; urlAlias?: string }[],
@@ -42,13 +42,6 @@ describe("stripLeadingTitleHeading", () => {
 });
 
 describe("rewriteMarkdownLinks", () => {
-  test("rewrites marloth links", () => {
-    const urls = urlsForNodes([{ id: TARGET }]);
-    const input = `See [Target](marloth:${TARGET}) here.`;
-    const output = rewriteMarkdownLinks(input, urls);
-    expect(output).toBe(`See [Target](/${TARGET}/) here.`);
-  });
-
   test("rewrites relative sibling md paths", () => {
     const urls = urlsForNodes([{ id: TARGET }]);
     const input = `See [Target](./${TARGET}.md) here.`;
@@ -56,16 +49,9 @@ describe("rewriteMarkdownLinks", () => {
     expect(output).toBe(`See [Target](/${TARGET}/) here.`);
   });
 
-  test("rewrites legacy export paths", () => {
-    const urls = urlsForNodes([{ id: TARGET }]);
-    const input = `[Page](../foo/${TARGET}.md)`;
-    const output = rewriteMarkdownLinks(input, urls);
-    expect(output).toBe(`[Page](/${TARGET}/)`);
-  });
-
   test("applies base prefix for embedding", () => {
     const urls = urlsForNodes([{ id: TARGET }], "/design/");
-    const input = `[Target](marloth:${TARGET})`;
+    const input = `[Target](./${TARGET}.md)`;
     const output = rewriteMarkdownLinks(input, urls);
     expect(output).toBe(`[Target](/design/${TARGET}/)`);
   });
@@ -75,7 +61,7 @@ describe("rewriteMarkdownLinks", () => {
       { id: TARGET, urlAlias: "design/twold" },
       { id: ALIASED },
     ]);
-    const input = `[Target](marloth:${TARGET})`;
+    const input = `[Target](./${TARGET}.md)`;
     expect(rewriteMarkdownLinks(input, urls)).toBe(`[Target](/design/twold/)`);
   });
 
@@ -117,7 +103,7 @@ describe("nodeTabPath", () => {
 describe("prepareNodeMarkdown", () => {
   test("deduplicates title and rewrites links", () => {
     const urls = urlsForNodes([{ id: TARGET }], "/docs/");
-    const body = `# Page\n\nLink [x](marloth:${TARGET}).`;
+    const body = `# Page\n\nLink [x](./${TARGET}.md).`;
     const result = prepareNodeMarkdown(body, "Page", urls);
     expect(result.markdown).toBe(`Link [x](/docs/${TARGET}/).`);
     expect(result.dynamicNodeIds.size).toBe(0);

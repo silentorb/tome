@@ -20,12 +20,12 @@ import { RELATIONSHIPS_FILE_VERSION, sortEndpoints } from "../src/content/relati
 
 describe("relationship-traverse", () => {
   const fixture = createTestContentFixture("tome-rel-traverse-");
-  const scene = "11111111111111111111111111111111";
-  const product = "22222222222222222222222222222222";
-  const part = "33333333333333333333333333333333";
-  const location = "44444444444444444444444444444444";
-  const scenesDb = "55555555555555555555555555555555";
-  const locationsDb = "66666666666666666666666666666666";
+  const scene = "11111111111111111111111111";
+  const product = "22222222222222222222222222";
+  const part = "33333333333333333333333333";
+  const location = "44444444444444444444444444";
+  const scenesDb = "55555555555555555555555555";
+  const locationsDb = "66666666666666666666666666";
 
   seedTestNode(fixture, { id: scenesDb, properties: typeTableMarkerProperties("Scenes") });
   seedTestNode(fixture, { id: locationsDb, properties: typeTableMarkerProperties("Locations") });

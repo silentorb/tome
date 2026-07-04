@@ -43,7 +43,7 @@ describe("graph LOD navigation", () => {
 
   test("isOpenableGraphNode rejects cluster nodes", () => {
     expect(isOpenableGraphNode({ id: "aaaa0001", isCluster: true })).toBe(false);
-    expect(isOpenableGraphNode({ id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" })).toBe(true);
+    expect(isOpenableGraphNode({ id: "AAAAAAAAAAAAAAAAAAAAAAAAAA" })).toBe(true);
   });
 
   test("clusterGatewayId reads bundle gateway id", () => {

@@ -2,7 +2,7 @@
 
 ## Summary
 
-Type-table column definitions live in [`content/model/table-schemas.json`](../../content/model/table-schemas.json). Each entry is keyed by the **type-table node id** (32-hex). The editor and `tome-db` table views read columns from this file—not from node frontmatter.
+Type-table column definitions live in [`content/model/table-schemas.json`](../../content/model/table-schemas.json). Each entry is keyed by the **type-table node id** (26-char ULID). The editor and `tome-db` table views read columns from this file—not from node frontmatter.
 
 ## When to read this
 
@@ -18,14 +18,14 @@ See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./s
 {
   "version": 1,
   "tables": {
-    "dd0de9867cc345b898929306bdf9fc83": {
+    "01KWN86X6NJZMP5ZESZTNDXY0N": {
       "columns": [
         { "key": "priority", "name": "Priority", "type": "select", "enumId": "priority" },
         {
           "key": "inspirations",
           "name": "Inspirations",
           "type": "relation",
-          "targetTypeId": "2eea538996934ce8abafc27132e576c1",
+          "targetTypeId": "01KWN86X6NJZMP5ZESZTNDXY3J",
           "perspective": "inspirations"
         }
       ]

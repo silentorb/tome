@@ -11,36 +11,36 @@ describe("mergeBidirectionalEdges", () => {
     const merged = mergeBidirectionalEdges([
       {
         id: "product:characters",
-        sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+        targetTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
         label: "characters",
       },
       {
         id: "character:products",
-        sourceTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        targetTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        sourceTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+        targetTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
         label: "products",
       },
     ]);
     expect(merged).toHaveLength(1);
     expect(merged[0]?.bidirectional).toBe(true);
     expect(merged[0]?.label).toBe(`products${BIDIRECTIONAL_EDGE_LABEL_SEPARATOR}characters`);
-    expect(merged[0]?.sourceTypeId).toBe("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-    expect(merged[0]?.targetTypeId).toBe("bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+    expect(merged[0]?.sourceTypeId).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAA");
+    expect(merged[0]?.targetTypeId).toBe("BBBBBBBBBBBBBBBBBBBBBBBBBB");
   });
 
   test("keeps unidirectional edges separate", () => {
     const merged = mergeBidirectionalEdges([
       {
         id: "scene:features",
-        sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-        targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+        targetTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
         label: "features",
       },
       {
         id: "feature:inspirations",
-        sourceTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-        targetTypeId: "cccccccccccccccccccccccccccccccc",
+        sourceTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+        targetTypeId: "CCCCCCCCCCCCCCCCCCCCCCCCCC",
         label: "inspirations",
       },
     ]);
@@ -55,20 +55,20 @@ describe("buildElkGraph bidirectional edges", () => {
     const result = buildElkGraph(
       {
         typeTables: [
-          { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Product" },
-          { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Character" },
+          { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Product" },
+          { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Character" },
         ],
         relationColumnEdges: [
           {
-            id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:characters",
-            sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            id: "AAAAAAAAAAAAAAAAAAAAAAAAAA:characters",
+            sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+            targetTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
             label: "characters",
           },
           {
-            id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:products",
-            sourceTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            targetTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            id: "BBBBBBBBBBBBBBBBBBBBBBBBBB:products",
+            sourceTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+            targetTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
             label: "products",
           },
         ],

@@ -15,9 +15,9 @@ import {
 } from "../src/content/test-helpers";
 
 const HUB = TEST_ARCHIVE_NODE_ID;
-const NODE_A = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const NODE_B = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-const NODE_C = "cccccccccccccccccccccccccccccccc";
+const NODE_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const NODE_B = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
+const NODE_C = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
 
 function entry(
   a: string,

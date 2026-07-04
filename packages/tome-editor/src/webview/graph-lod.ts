@@ -1,4 +1,5 @@
 import type { GraphLodSnapshot } from "tome-db";
+import { NODE_ID_PATTERN } from "tome-db/node-id";
 import type { GraphExplorerMode } from "./graph-preferences";
 
 export function defaultExplorerLayerIndex(_layerCount: number): number {
@@ -54,7 +55,7 @@ export function pickExplorerSnapshot(lod: GraphLodSnapshot, layerIndex: number):
 
 export function isOpenableGraphNode(node: { id: string; isCluster?: boolean }): boolean {
   if (node.isCluster) return false;
-  return /^[a-f0-9]{32}$/i.test(node.id);
+  return NODE_ID_PATTERN.test(node.id);
 }
 
 export function isAggregatedLayer(layerIndex: number, layerCount: number): boolean {

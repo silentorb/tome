@@ -37,8 +37,8 @@ const SCHEMA_V2 = {
 
 describe("CacheSync schema enum causality", () => {
   const fixture = createTestContentFixture("tome-schema-enum-sync-");
-  const pageId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  const databaseId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const pageId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const databaseId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
   let recordId: string;
 
   beforeAll(() => {

@@ -24,7 +24,7 @@ Cross-read: [`tome-editor.md`](./tome-editor.md) (editor shell), [`tome-db.md`](
 - Nodes under archived legacy paths (`Marloth/Archive` and descendants) **must** be excluded, along with any relationships touching them.
 - By default, the graph **must** be scoped to the **connected component** reachable from an **anchor node** via undirected traversal (treat relationships as bidirectional for reachability).
 - Default anchor **must** be the TWOLD product node (`e028aa0786f5449984a4f497c1d746fa`). Invalid or missing anchor IDs fall back to this default.
-- Standalone browser URLs **must** use `?view=explorer&anchor={32-hex-id}`; the `anchor` query param is cleared when leaving Graph Explorer.
+- Standalone browser URLs **must** use `?view=explorer&anchor={ulid}`; the `anchor` query param is cleared when leaving Graph Explorer.
 
 ### Multi-resolution layers
 
@@ -35,7 +35,7 @@ Cross-read: [`tome-editor.md`](./tome-editor.md) (editor shell), [`tome-db.md`](
 - Cluster nodes **must** be visually distinguishable (warm amber color; size reflects member count; labels show the gateway title only). They **must not** be openable as node pages.
 - The anchor node (or its branch cluster when merged) **must** use a distinct anchor color (green by default), separate from cluster amber and node-type colors.
 - Individual design nodes **must** use cool-toned colors by node type (`group`); the toolbar legend **must** list the anchor, clusters, and each node type present in the current view (not a generic “Record” swatch).
-- Individual design nodes (32-character hex IDs, non-cluster) **must** be openable: click → same tab; Ctrl/Cmd/middle-click → new tab (same navigation semantics as node links elsewhere in the editor).
+- Individual design nodes (26-char ULIDs, non-cluster) **must** be openable: click → same tab; Ctrl/Cmd/middle-click → new tab (same navigation semantics as node links elsewhere in the editor).
 
 ### Interaction
 

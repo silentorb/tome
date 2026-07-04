@@ -1,9 +1,9 @@
 import type { Properties } from "tome-db";
 import { resolveMarkdownHrefTarget } from "tome-db/markdown-links";
+import { NODE_ID_PATTERN, NODE_ID_RE_SRC } from "tome-db/node-id";
 
 export const URL_ALIAS_PROPERTY = "url_alias";
 
-const NODE_ID_PATTERN = /^[a-f0-9]{32}$/i;
 const RESERVED_PATH_ROOTS = new Set(["_astro"]);
 
 export interface NodeUrlIndex {
@@ -61,7 +61,7 @@ export function buildNodeUrlIndex(nodes: NodeUrlIndexInput[]): NodeUrlIndex {
   const pathOwner = new Map<string, string>();
 
   for (const node of nodes) {
-    const nodeId = node.id.toLowerCase();
+    const nodeId = node.id;
     const urlPath = node.urlAlias ?? nodeId;
     node.urlPath = urlPath;
 
@@ -122,7 +122,7 @@ export function resolveStaticHrefTarget(
   const path = normalizeHrefAsSitePath(href, base);
   if (!path) return null;
 
-  if (NODE_ID_PATTERN.test(path)) return path.toLowerCase();
+  if (NODE_ID_PATTERN.test(path)) return path;
   return aliasToId[path] ?? null;
 }
 
@@ -147,12 +147,12 @@ export function createNodeUrlResolver(options: {
     aliasToId,
     base,
     pagePath(id: string) {
-      const nodeId = id.toLowerCase();
+      const nodeId = id;
       const urlPath = pathById[nodeId] ?? nodeId;
       return joinBasePath(base, urlPath);
     },
     tabPath(id: string, tabId: string) {
-      const nodeId = id.toLowerCase();
+      const nodeId = id;
       const urlPath = pathById[nodeId] ?? nodeId;
       return joinBasePath(base, urlPath, "tabs", tabId);
     },
@@ -168,8 +168,8 @@ export function nodeIdFromPageHref(
   pathById: Record<string, string>,
   base = "/",
 ): string | null {
-  const hexMatch = /\/([a-f0-9]{32})\/(?:tabs\/[^/?#]+\/)?\/?(?:[#?].*)?$/i.exec(href);
-  if (hexMatch?.[1]) return hexMatch[1].toLowerCase();
+  const idMatch = new RegExp(`/(${NODE_ID_RE_SRC})/(?:tabs/[^/?#]+/)?/?(?:[#?].*)?$`).exec(href);
+  if (idMatch?.[1]) return idMatch[1];
 
   const sitePath = normalizeHrefAsSitePath(href, base);
   if (!sitePath) return null;

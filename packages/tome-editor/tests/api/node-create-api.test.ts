@@ -9,8 +9,8 @@ import {
 } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
 
-const sourceId = "a2222222222222222222222222222222";
-const databaseId = "b2222222222222222222222222222222";
+const sourceId = "0000000000000000000000001E";
+const databaseId = "0000000000000000000000001X";
 
 describe("node create API", () => {
   const fixture = createTestContentFixture("tome-create-api-");
@@ -86,8 +86,8 @@ describe("node create API", () => {
 });
 
 describe("connections API", () => {
-  const linkSourceId = "f1111111111111111111111111111111";
-  const linkTargetId = "f2222222222222222222222222222222";
+  const linkSourceId = "00000000000000000000000032";
+  const linkTargetId = "00000000000000000000000033";
   const fixture = createTestContentFixture("tome-conn-api-");
   seedTestNode(fixture, { id: linkSourceId, properties: { title: "Link source" } });
   seedTestNode(fixture, { id: linkTargetId, properties: { title: "Link target" } });

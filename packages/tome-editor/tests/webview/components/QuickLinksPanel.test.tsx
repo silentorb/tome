@@ -4,8 +4,8 @@ import type { EditorApi } from "../../../src/webview/api/client";
 import { QuickLinksPanel } from "../../../src/webview/components/QuickLinksPanel";
 
 const mockApi = {} as EditorApi;
-const NODE_A = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const NODE_B = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+const NODE_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const NODE_B = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
 function nodeActionMocks() {
   return {
@@ -53,7 +53,7 @@ describe("QuickLinksPanel", () => {
       <QuickLinksPanel
         api={mockApi}
         quickLinks={[
-          { nodeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", label: "Features", icon: "★" },
+          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features", icon: "★" },
         ]}
         activeView="node-page"
         activeNodeId={null}
@@ -64,7 +64,7 @@ describe("QuickLinksPanel", () => {
 
     const link = getByRole("link", { name: /Features/ });
     expect(link.tagName).toBe("A");
-    expect(link.getAttribute("href")).toContain("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(link.getAttribute("href")).toContain("AAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 
   test("calls onRemoveQuickLink from page actions menu", async () => {
@@ -74,7 +74,7 @@ describe("QuickLinksPanel", () => {
       <QuickLinksPanel
         api={mockApi}
         quickLinks={[
-          { nodeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", label: "Features", icon: "★" },
+          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features", icon: "★" },
         ]}
         activeView="node-page"
         activeNodeId={null}
@@ -90,7 +90,7 @@ describe("QuickLinksPanel", () => {
       within(document.body).getByRole("menuitem", { name: "Remove quick link" }),
     );
 
-    expect(onRemoveQuickLink).toHaveBeenCalledWith("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(onRemoveQuickLink).toHaveBeenCalledWith("AAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 
   test("hides page actions menu when collapsed", () => {
@@ -98,7 +98,7 @@ describe("QuickLinksPanel", () => {
       <QuickLinksPanel
         api={mockApi}
         quickLinks={[
-          { nodeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", label: "Features", icon: "★" },
+          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features", icon: "★" },
         ]}
         activeView="node-page"
         activeNodeId={null}
@@ -123,7 +123,7 @@ describe("QuickLinksPanel", () => {
       <QuickLinksPanel
         api={mockApi}
         quickLinks={[
-          { nodeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", label: "Features", icon: "★" },
+          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features", icon: "★" },
         ]}
         activeView="node-page"
         activeNodeId={null}

@@ -10,14 +10,14 @@ import {
 } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
 
-const SCENES_DB = "204dba198db74611b0b49a98dd53e8f5";
-const PARTS_DB = "5e45eefc69a14f45b988ad1f3c9d1ef5";
-const PRODUCTS_DB = "4e973268d3474f71bd7992094fb39663";
+const SCENES_DB = "0000000000000000000000000D";
+const PARTS_DB = "0000000000000000000000000Z";
+const PRODUCTS_DB = "0000000000000000000000000S";
 
-const book = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-const part = "11111111111111111111111111111111";
-const scene1 = "33333333333333333333333333333333";
-const scene2 = "44444444444444444444444444444444";
+const book = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const part = "11111111111111111111111111";
+const scene1 = "33333333333333333333333333";
+const scene2 = "44444444444444444444444444";
 
 describe("ordered-associations API", () => {
   const fixture = createTestContentFixture("tome-ordered-api-");

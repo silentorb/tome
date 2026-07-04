@@ -99,7 +99,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
-    const databaseId = "dddddddddddddddddddddddddddddddd";
+    const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
     writeFileSync(
       viewsFilePath(contentDir),
@@ -153,7 +153,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
-    const databaseId = "dddddddddddddddddddddddddddddddd";
+    const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
     writeFileSync(
       viewsFilePath(contentDir),
@@ -206,7 +206,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
-    const databaseId = "dddddddddddddddddddddddddddddddd";
+    const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
     writeFileSync(
       viewsFilePath(contentDir),
@@ -261,8 +261,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
-    const featuresDb = "dd0de9867cc345b898929306bdf9fc83";
-    const inspirationsDb = "2eea538996934ce8abafc27132e576c1";
+    const featuresDb = "0000000000000000000000002P";
+    const inspirationsDb = "0000000000000000000000000K";
 
     writeFileSync(
       viewsFilePath(contentDir),

@@ -16,7 +16,7 @@ import {
 import { formatEditorDynamicNodeLink } from "../../src/webview/standalone-markdown";
 import { normalizeEditorBody } from "../../src/webview/editor-save";
 
-const TARGET_ID = "e5cc80dc61ed4c629951cdf472b20b7a";
+const TARGET_ID = "0000000000000000000000002X";
 
 async function setupEditor(body: string): Promise<{ editor: Editor; root: HTMLDivElement }> {
   const root = document.createElement("div");

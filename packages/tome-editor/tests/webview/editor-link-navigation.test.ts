@@ -1,8 +1,8 @@
 import { describe, expect, test, afterEach, beforeEach } from "bun:test";
 import { handleEditorLinkPointerEvent } from "../../src/webview/editor-link-navigation";
 
-const TARGET_ID = "e5cc80dc61ed4c629951cdf472b20b7a";
-const BASE = "http://127.0.0.1:5173/?node=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const TARGET_ID = "0000000000000000000000002X";
+const BASE = "http://127.0.0.1:5173/?node=AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 describe("handleEditorLinkPointerEvent", () => {
   let originalAssign: typeof window.location.assign;

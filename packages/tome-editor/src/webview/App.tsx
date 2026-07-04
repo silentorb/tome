@@ -654,9 +654,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
 
   const isNodeQuickLink = useCallback(
     (nodeId: string) =>
-      (workspace?.quickLinks ?? []).some(
-        (link) => link.nodeId.toLowerCase() === nodeId.toLowerCase(),
-      ),
+      (workspace?.quickLinks ?? []).some((link) => link.nodeId === nodeId),
     [workspace?.quickLinks],
   );
 

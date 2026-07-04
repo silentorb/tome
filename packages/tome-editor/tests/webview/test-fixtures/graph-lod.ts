@@ -3,8 +3,8 @@ import type { GraphLodSnapshot } from "../../../src/shared/types";
 export function makeGraphLodSnapshot(
   overrides: Partial<GraphLodSnapshot> = {},
 ): GraphLodSnapshot {
-  const anchorId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-  const neighborId = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const anchorId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+  const neighborId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
   return {
     layerCount: 2,

@@ -5,13 +5,13 @@ import { renderSchemaDiagramHtml } from "../src/render";
 import { renderSchemaDiagramSvg } from "../src/render-svg";
 
 const SCHEMA_QUERY = {
-  listTypeTables: () => [{ id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene" }],
+  listTypeTables: () => [{ id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Scene" }],
   listRelationshipRules: () => [],
   listRelationColumnEdges: () => [
     {
-      id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:features",
-      sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      id: "AAAAAAAAAAAAAAAAAAAAAAAAAA:features",
+      sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+      targetTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
       label: "features",
     },
   ],
@@ -23,8 +23,8 @@ describe("schema diagram render", () => {
       {
         ...SCHEMA_QUERY,
         listTypeTables: () => [
-          { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene" },
-          { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Feature" },
+          { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Scene" },
+          { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Feature" },
         ],
       },
       {},
@@ -48,14 +48,14 @@ describe("schema diagram render", () => {
     const result = await renderSchemaDiagramSvg(
       {
         typeTables: [
-          { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene" },
-          { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Feature" },
+          { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Scene" },
+          { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Feature" },
         ],
         relationColumnEdges: [
           {
-            id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:features",
-            sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            id: "AAAAAAAAAAAAAAAAAAAAAAAAAA:features",
+            sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+            targetTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
             label: "features",
           },
         ],
@@ -76,8 +76,8 @@ describe("schema diagram render", () => {
     const result = await renderSchemaDiagramSvg(
       {
         typeTables: [
-          { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene", memberCount: 3 },
-          { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Feature", memberCount: 0 },
+          { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Scene", memberCount: 3 },
+          { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Feature", memberCount: 0 },
         ],
         relationColumnEdges: [],
       },
@@ -92,7 +92,7 @@ describe("schema diagram render", () => {
   test("hides member badge when count is zero", async () => {
     const result = await renderSchemaDiagramSvg(
       {
-        typeTables: [{ id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene", memberCount: 0 }],
+        typeTables: [{ id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Scene", memberCount: 0 }],
         relationColumnEdges: [],
       },
       parseSchemaDiagramConfig({}),
@@ -105,14 +105,14 @@ describe("schema diagram render", () => {
     const result = await renderSchemaDiagramSvg(
       {
         typeTables: [
-          { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Scene" },
-          { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Feature" },
+          { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Scene" },
+          { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Feature" },
         ],
         relationColumnEdges: [
           {
-            id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:character_attributes",
-            sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            id: "AAAAAAAAAAAAAAAAAAAAAAAAAA:character_attributes",
+            sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+            targetTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
             label: "character_attributes",
           },
         ],
@@ -143,20 +143,20 @@ describe("schema diagram render", () => {
     const result = await renderSchemaDiagramSvg(
       {
         typeTables: [
-          { id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", title: "Product" },
-          { id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", title: "Character" },
+          { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Product" },
+          { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Character" },
         ],
         relationColumnEdges: [
           {
-            id: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa:characters",
-            sourceTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-            targetTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+            id: "AAAAAAAAAAAAAAAAAAAAAAAAAA:characters",
+            sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+            targetTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
             label: "characters",
           },
           {
-            id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb:products",
-            sourceTypeId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-            targetTypeId: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            id: "BBBBBBBBBBBBBBBBBBBBBBBBBB:products",
+            sourceTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+            targetTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
             label: "products",
           },
         ],

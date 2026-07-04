@@ -6,9 +6,9 @@ import {
   resolveStaticHrefTarget,
 } from "../src/lib/node-urls";
 
-const ID_A = "aabbccdd112233445566778899aabbcc";
-const ID_B = "bbccddee2233445566778899aabbccdd";
-const ID_C = "ccddeeff33445566778899aabbccddee";
+const ID_A = "0000000000000000000000001S";
+const ID_B = "00000000000000000000000026";
+const ID_C = "0000000000000000000000002G";
 
 describe("normalizeUrlAlias", () => {
   test("trims and strips slashes", () => {

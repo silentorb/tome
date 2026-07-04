@@ -21,7 +21,7 @@ export function isHomeNavActive(
   homeNodeId: string | null | undefined,
 ): boolean {
   if (activeView !== "node-page" || !activeNodeId || !homeNodeId) return false;
-  return activeNodeId.toLowerCase() === homeNodeId.toLowerCase();
+  return activeNodeId === homeNodeId;
 }
 
 interface SidePanelProps {

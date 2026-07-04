@@ -10,7 +10,7 @@ const metadata: NodePageMetadata = {
   relationshipCount: 3,
   backlinks: [
     {
-      sourceId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      sourceId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
       title: "Source page",
       linkText: "Target page",
     },
@@ -24,7 +24,7 @@ describe("NodeMetadataPanel", () => {
       <NodeMetadataPanel
         api={api}
         metadata={metadata}
-        nodeId="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        nodeId="AAAAAAAAAAAAAAAAAAAAAAAAAA"
         properties={null}
         expanded={false}
         onExpandedChange={() => {}}
@@ -39,7 +39,7 @@ describe("NodeMetadataPanel", () => {
       <NodeMetadataPanel
         api={api}
         metadata={metadata}
-        nodeId="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        nodeId="AAAAAAAAAAAAAAAAAAAAAAAAAA"
         properties={null}
         expanded={true}
         onExpandedChange={() => {}}
@@ -57,10 +57,10 @@ describe("NodeMetadataPanel", () => {
       <NodeMetadataPanel
         api={api}
         metadata={metadata}
-        nodeId="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        nodeId="AAAAAAAAAAAAAAAAAAAAAAAAAA"
         properties={{
           type: "properties",
-          databaseId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          databaseId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
           typeTitle: "Features",
           columns: ["priority"],
           columnDefs: [
@@ -88,10 +88,10 @@ describe("NodeMetadataPanel", () => {
       <NodeMetadataPanel
         api={api}
         metadata={metadata}
-        nodeId="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        nodeId="AAAAAAAAAAAAAAAAAAAAAAAAAA"
         properties={{
           type: "properties",
-          databaseId: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          databaseId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
           typeTitle: "Features",
           columns: ["priority"],
           columnDefs: [

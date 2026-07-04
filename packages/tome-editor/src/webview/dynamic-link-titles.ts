@@ -24,5 +24,5 @@ export async function resolveDynamicLinkTitles(
 }
 
 export function titleResolverFromMap(map: Map<string, string>): (nodeId: string) => string {
-  return (nodeId: string) => map.get(nodeId.toLowerCase()) ?? map.get(nodeId) ?? "Untitled";
+  return (nodeId: string) => map.get(nodeId) ?? "Untitled";
 }

@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
+import { NODE_ID_PATTERN, NODE_FILE_PATTERN, isNodeId } from "../node-id";
 
 export const CONTENT_DATA_SUBDIR = "data";
 export const CONTENT_MODEL_SUBDIR = "model";
@@ -15,12 +16,7 @@ export const TABLE_SCHEMAS_FILENAME = "table-schemas.json";
 export const WORKSPACE_FILENAME = "workspace.json";
 export const ORDERED_ASSOCIATIONS_FILENAME = "ordered-associations.json";
 export const EXTENSIONS_FILENAME = "extensions.json";
-export const NODE_ID_PATTERN = /^[0-9a-f]{32}$/;
-export const NODE_FILE_PATTERN = /^[0-9a-f]{32}\.md$/;
-
-export function isNodeId(id: string): boolean {
-  return NODE_ID_PATTERN.test(id);
-}
+export { NODE_ID_PATTERN, NODE_FILE_PATTERN, isNodeId };
 
 export function nodeFileName(id: string): string {
   if (!isNodeId(id)) throw new Error(`Invalid node id: ${id}`);

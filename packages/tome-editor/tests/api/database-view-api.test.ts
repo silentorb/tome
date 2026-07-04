@@ -13,8 +13,8 @@ import { createTestApiFromContent } from "./test-api-setup";
 
 describe("database view API", () => {
   const fixture = createTestContentFixture("tome-editor-db-view-");
-  const databaseId = "dddddddddddddddddddddddddddddddd";
-  const nodeId = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+  const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
+  const nodeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
   seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Features") });
   seedTestNode(fixture, { id: nodeId, properties: { title: "Feature row" } });
@@ -42,7 +42,7 @@ describe("database view API", () => {
   });
 
   test("POST /api/databases/:id/columns adds column to schema", async () => {
-    const dbWithSchema = "77777777777777777777777777777777";
+    const dbWithSchema = "77777777777777777777777777";
     seedTestTableSchema(fixture, dbWithSchema, []);
     seedTestNode(fixture, {
       id: dbWithSchema,
@@ -72,7 +72,7 @@ describe("database view API", () => {
   });
 
   test("PATCH /api/databases/:id/columns/:key updates column metadata", async () => {
-    const dbWithSchema = "88888888888888888888888888888888";
+    const dbWithSchema = "88888888888888888888888888";
     seedTestTableSchema(fixture, dbWithSchema, [
       { key: "notes", name: "Notes", type: "text" },
     ]);
@@ -100,8 +100,8 @@ describe("database view API", () => {
   });
 
   test("DELETE /api/databases/:id/columns/:key removes column from schema and rows", async () => {
-    const dbWithSchema = "55555555555555555555555555555555";
-    const rowId = "66666666666666666666666666666666";
+    const dbWithSchema = "55555555555555555555555555";
+    const rowId = "66666666666666666666666666";
     seedTestTableSchema(fixture, dbWithSchema, [
       { key: "status", name: "Status", type: "select" },
     ]);

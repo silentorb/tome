@@ -239,8 +239,8 @@ describe("node-sections", () => {
   });
 
   test("groups multiple member_of parents in one Membership section", () => {
-    const typeA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-    const typeB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    const typeA = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const typeB = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     db.upsertNode("multi-member", { title: "Shared row", body: "" });
     db.upsertNode(typeA, { ...typeTableMarkerProperties("Type A") });
     db.upsertNode(typeB, { ...typeTableMarkerProperties("Type B") });
@@ -279,13 +279,13 @@ describe("node-sections table-schema empty relation placeholders", () => {
     serializeTableSchemasFile({
       version: 1,
       tables: {
-        "2eea538996934ce8abafc27132e576c1": {
+        "0000000000000000000000000K": {
           columns: [
             {
               key: "features",
               name: "Features",
               type: "relation",
-              targetTypeId: "dd0de9867cc345b898929306bdf9fc83",
+              targetTypeId: "0000000000000000000000002P",
               perspective: "features",
             },
           ],
@@ -298,8 +298,8 @@ describe("node-sections table-schema empty relation placeholders", () => {
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
 
-  const inspirationsTypeId = "2eea538996934ce8abafc27132e576c1";
-  const featuresTypeId = "dd0de9867cc345b898929306bdf9fc83";
+  const inspirationsTypeId = "0000000000000000000000000K";
+  const featuresTypeId = "0000000000000000000000002P";
   const inspirationId = "insp0000000000000000000000000001";
   const featId = "feat0000000000000000000000000001";
 
@@ -370,9 +370,9 @@ describe("node-sections bible passages regression", () => {
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
 
-  const biblePassagesId = "28358e628ba280889942da28069b6dbc";
-  const memberId = "7bbfdc05d5474f3d948274b485060fdc";
-  const featuresTypeId = "dd0de9867cc345b898929306bdf9fc83";
+  const biblePassagesId = "0000000000000000000000000G";
+  const memberId = "00000000000000000000000017";
+  const featuresTypeId = "0000000000000000000000002P";
 
   writeFileSync(
     tableSchemasFilePath(contentDir),

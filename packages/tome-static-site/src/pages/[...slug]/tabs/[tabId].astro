@@ -14,14 +14,14 @@ import { resolvePageTitleAndContent } from "../../../lib/markdown";
 
 export function getStaticPaths() {
   const titleById = titleByIdRecord();
-  const nodesById = new Map(loadAllNodes().map((node) => [node.id.toLowerCase(), node]));
+  const nodesById = new Map(loadAllNodes().map((node) => [node.id, node]));
   const pathById = getPathById();
 
   return loadTabRoutes().flatMap(({ nodeId, tabId }) => {
-    const node = nodesById.get(nodeId.toLowerCase());
+    const node = nodesById.get(nodeId);
     const tabPayload = loadTabItemsPayload(nodeId, tabId);
     if (!node || !tabPayload) return [];
-    const slug = pathById[nodeId.toLowerCase()] ?? nodeId.toLowerCase();
+    const slug = pathById[nodeId] ?? nodeId;
     return [
       {
         params: { slug, tabId },

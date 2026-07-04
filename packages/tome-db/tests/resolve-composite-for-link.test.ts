@@ -25,10 +25,10 @@ describe("resolveCompositeTypeForLink", () => {
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
 
-  const productsDb = "4e973268d3474f71bd7992094fb39663";
-  const scenesDb = "204dba198db74611b0b49a98dd53e8f5";
-  const productId = "4d73a389101c473ba6bee76d5b4bf0e4";
-  const sceneId = "76404657aa3a47a895430469498ba090";
+  const productsDb = "0000000000000000000000000S";
+  const scenesDb = "0000000000000000000000000D";
+  const productId = "0000000000000000000000000R";
+  const sceneId = "00000000000000000000000015";
 
   const registry = parseRelationshipTypesFile(
     readFileSync(
@@ -112,10 +112,10 @@ describe("linkOutgoingRelationship scenes_product from product", () => {
   const fixture = createTestContentFixture("tome-scenes-product-link-");
   const ctx = fixture.ctx;
 
-  const productsDb = "4e973268d3474f71bd7992094fb39663";
-  const scenesDb = "204dba198db74611b0b49a98dd53e8f5";
-  const productId = "4d73a389101c473ba6bee76d5b4bf0e4";
-  const sceneId = "76404657aa3a47a895430469498ba090";
+  const productsDb = "0000000000000000000000000S";
+  const scenesDb = "0000000000000000000000000D";
+  const productId = "0000000000000000000000000R";
+  const sceneId = "00000000000000000000000015";
 
   writeFileSync(
     relationshipTypesFilePath(fixture.ctx.store.contentDir),
@@ -195,8 +195,8 @@ describe("linkOutgoingRelationship scenes_product from product", () => {
   });
 
   test("upsert never writes directedFrom for any relationship type", () => {
-    const nodeA = "aa11111111111111111111111111aaaa";
-    const nodeB = "bb22222222222222222222222222bbbb";
+    const nodeA = "0000000000000000000000001K";
+    const nodeB = "00000000000000000000000023";
     seedTestNode(fixture, { id: nodeA, properties: { title: "Node A" } });
     seedTestNode(fixture, { id: nodeB, properties: { title: "Node B" } });
 
@@ -218,8 +218,8 @@ describe("LinkResolutionError", () => {
   });
 
   test("linkOutgoingRelationship returns unresolvable_type for unknown perspective", () => {
-    const nodeA = "ee11111111111111111111111111eeee";
-    const nodeB = "ff22222222222222222222222222ffff";
+    const nodeA = "00000000000000000000000031";
+    const nodeB = "00000000000000000000000037";
     seedTestNode(fixture, { id: nodeA, properties: { title: "A" } });
     seedTestNode(fixture, { id: nodeB, properties: { title: "B" } });
 
@@ -232,8 +232,8 @@ describe("LinkResolutionError", () => {
   });
 
   test("parents perspective resolves to parents_children composite", () => {
-    const nodeA = "cc11111111111111111111111111cccc";
-    const nodeB = "dd22222222222222222222222222dddd";
+    const nodeA = "0000000000000000000000002E";
+    const nodeB = "0000000000000000000000002Q";
     seedTestNode(fixture, { id: nodeA, properties: { title: "Child" } });
     seedTestNode(fixture, { id: nodeB, properties: { title: "Parent" } });
 
