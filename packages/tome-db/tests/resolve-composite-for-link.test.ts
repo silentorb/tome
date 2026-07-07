@@ -31,10 +31,7 @@ describe("resolveCompositeTypeForLink", () => {
   const sceneId = "00000000000000000000000015";
 
   const registry = parseRelationshipTypesFile(
-    readFileSync(
-      "/workspaces/silentorb-workbench/repos/marloth-story/content/model/relationship-types.json",
-      "utf-8",
-    ),
+    readFileSync("/workspaces/marloth-story/content/model/relationship-types.json", "utf-8"),
   );
 
   writeFileSync(
@@ -75,8 +72,8 @@ describe("resolveCompositeTypeForLink", () => {
 
   test("product→scene scenes link resolves to scenes_product", () => {
     const relationships = [
-      { a: productId, b: productsDb, type: "member_of", properties: {} },
-      { a: sceneId, b: scenesDb, type: "member_of", properties: {} },
+      { a: productsDb, b: productId, type: "member_of", properties: {} },
+      { a: scenesDb, b: sceneId, type: "member_of", properties: {} },
     ];
     expect(
       resolveCompositeTypeForLink(
@@ -92,8 +89,8 @@ describe("resolveCompositeTypeForLink", () => {
 
   test("scene→product product link resolves to scenes_product", () => {
     const relationships = [
-      { a: productId, b: productsDb, type: "member_of", properties: {} },
-      { a: sceneId, b: scenesDb, type: "member_of", properties: {} },
+      { a: productsDb, b: productId, type: "member_of", properties: {} },
+      { a: scenesDb, b: sceneId, type: "member_of", properties: {} },
     ];
     expect(
       resolveCompositeTypeForLink(
@@ -105,6 +102,23 @@ describe("resolveCompositeTypeForLink", () => {
         "product",
       ),
     ).toBe("scenes_product");
+  });
+
+  test("routes member_of and members perspectives via set trait", () => {
+    const setRegistry = parseRelationshipTypesFile(
+      JSON.stringify({
+        version: 1,
+        types: {
+          member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
+        },
+      }),
+    );
+    expect(
+      resolveCompositeTypeForLink(setRegistry, [], contentDir, productId, productsDb, "member_of"),
+    ).toBe("member_of");
+    expect(
+      resolveCompositeTypeForLink(setRegistry, [], contentDir, productsDb, productId, "members"),
+    ).toBe("member_of");
   });
 });
 
@@ -122,7 +136,7 @@ describe("linkOutgoingRelationship scenes_product from product", () => {
     serializeRelationshipTypesFile({
       version: 1,
       types: {
-        member_of: { perspectives: ["member_of", "members"] },
+        member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
         scenes_product: { perspectives: ["scenes", "product"] },
       },
     }),

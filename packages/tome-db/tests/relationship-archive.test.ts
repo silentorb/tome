@@ -29,16 +29,34 @@ function entry(
 }
 
 describe("relationship-archive helpers", () => {
-  test("isArchiveMembershipEntry detects hub is_a membership", () => {
-    expect(isArchiveMembershipEntry(entry(HUB, NODE_A, "member_of"), HUB)).toBe(true);
-    expect(isArchiveMembershipEntry(entry(NODE_A, NODE_B, "includes"), HUB)).toBe(false);
-    expect(isArchiveMembershipEntry(entry(NODE_A, NODE_B, "member_of"), HUB)).toBe(false);
+  const fixture = createTestContentFixture("tome-rel-archive-helpers-");
+  const contentDir = fixture.ctx.store.contentDir;
+
+  afterAll(() => destroyTestContentFixture(fixture));
+
+  test("isArchiveMembershipEntry detects hub membership", () => {
+    fixture.ctx.store.writeRelationshipTypesFile({
+      version: 1,
+      types: {
+        member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
+      },
+    });
+    expect(isArchiveMembershipEntry(entry(HUB, NODE_A, "member_of"), HUB, contentDir)).toBe(true);
+    expect(isArchiveMembershipEntry(entry(NODE_A, NODE_B, "includes"), HUB, contentDir)).toBe(false);
+    expect(isArchiveMembershipEntry(entry(NODE_A, NODE_B, "member_of"), HUB, contentDir)).toBe(false);
   });
 
   test("listArchiveMemberIds returns non-hub endpoints", () => {
+    fixture.ctx.store.writeRelationshipTypesFile({
+      version: 1,
+      types: {
+        member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
+      },
+    });
     const ids = listArchiveMemberIds(
       [entry(HUB, NODE_A, "member_of"), entry(HUB, NODE_B, "member_of"), entry(NODE_A, NODE_C, "includes")],
       HUB,
+      contentDir,
     );
     expect(ids.sort()).toEqual([NODE_A, NODE_B].sort());
   });
@@ -56,6 +74,13 @@ describe("relationship-archive helpers", () => {
 describe("relationship-archive store mutations", () => {
   const fixture: TestContentFixture = createTestContentFixture("tome-rel-archive-");
   const { store } = fixture.ctx;
+
+  store.writeRelationshipTypesFile({
+    version: 1,
+    types: {
+      member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
+    },
+  });
 
   test("markIncidentRelationshipsArchived flags incident edges but not hub membership", () => {
     store.writeRelationshipsFile({

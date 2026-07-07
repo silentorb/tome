@@ -52,7 +52,7 @@ describe("archive relationship flags", () => {
     expect(membership?.archived).toBeUndefined();
 
     const incident = file.relationships.filter(
-      (e) => !isArchiveMembershipEntry(e, HUB) && (e.a === PAGE || e.b === PAGE),
+      (e) => !isArchiveMembershipEntry(e, HUB, fixture.ctx.store.contentDir) && (e.a === PAGE || e.b === PAGE),
     );
     expect(incident.length).toBeGreaterThanOrEqual(2);
     for (const entry of incident) {

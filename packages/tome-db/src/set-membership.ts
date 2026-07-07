@@ -1,8 +1,10 @@
 import type { GraphDatabase, Relationship } from "./graph";
 import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "./labels";
 import { resolveContentPath } from "./content/paths";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { archiveNodeId } from "./workspace/resolve";
 import { hasTableSchemaEntry, loadTableSchemasFromContent } from "./table-schemas/load";
+import { isSetTraitComposite } from "./relationship-type-traits";
 
 export const SET_MEMBERSHIP_TYPE = MEMBER_OF_TYPE;
 
@@ -12,8 +14,10 @@ export type MembershipPerspective = (typeof MEMBERSHIP_PERSPECTIVES)[number];
 
 export type SetKind = "type_table" | "archive";
 
-export function isSetMembershipStorageType(type: string): boolean {
-  return type === SET_MEMBERSHIP_TYPE;
+export function isSetMembershipStorageType(type: string, contentDir?: string): boolean {
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
+  return isSetTraitComposite(registry, type);
 }
 
 export function isMembershipPerspective(perspective: string): perspective is MembershipPerspective {

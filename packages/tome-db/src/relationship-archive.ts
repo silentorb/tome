@@ -1,23 +1,25 @@
 import type { ContentStore } from "./content/store";
 import type { RelationshipEntry } from "./content/relationships-file";
-import { SET_MEMBERSHIP_TYPE, isSetMembershipStorageType } from "./set-membership";
+import { isSetMembershipStorageType } from "./set-membership";
 import { archiveNodeId } from "./workspace/resolve";
 
 export function isArchiveMembershipEntry(
   entry: RelationshipEntry,
   archiveHubId: string,
+  contentDir?: string,
 ): boolean {
-  if (!isSetMembershipStorageType(entry.type)) return false;
+  if (!isSetMembershipStorageType(entry.type, contentDir)) return false;
   return entry.a === archiveHubId || entry.b === archiveHubId;
 }
 
 export function listArchiveMemberIds(
   entries: readonly RelationshipEntry[],
   archiveHubId: string,
+  contentDir?: string,
 ): string[] {
   const members = new Set<string>();
   for (const entry of entries) {
-    if (!isArchiveMembershipEntry(entry, archiveHubId)) continue;
+    if (!isArchiveMembershipEntry(entry, archiveHubId, contentDir)) continue;
     const memberId = entry.a === archiveHubId ? entry.b : entry.a;
     if (memberId !== archiveHubId) members.add(memberId);
   }
@@ -47,7 +49,7 @@ export function markIncidentRelationshipsArchived(
   for (let i = 0; i < file.relationships.length; i++) {
     const entry = file.relationships[i]!;
     if (!isIncidentEntry(entry, nodeId)) continue;
-    if (isArchiveMembershipEntry(entry, archiveHubId)) continue;
+    if (isArchiveMembershipEntry(entry, archiveHubId, store.contentDir)) continue;
     if (entry.archived === true) continue;
     file.relationships[i] = { ...entry, archived: true };
     changed++;
@@ -69,7 +71,7 @@ export function unmarkIncidentRelationshipsArchived(
   for (let i = 0; i < file.relationships.length; i++) {
     const entry = file.relationships[i]!;
     if (!isIncidentEntry(entry, nodeId)) continue;
-    if (isArchiveMembershipEntry(entry, archiveHubId)) continue;
+    if (isArchiveMembershipEntry(entry, archiveHubId, store.contentDir)) continue;
     if (entry.archived !== true) continue;
 
     const other = otherEndpoint(entry, nodeId);
@@ -86,5 +88,5 @@ export function unmarkIncidentRelationshipsArchived(
 
 export function listArchiveMemberIdsFromStore(store: ContentStore, archiveHubId?: string): string[] {
   const hubId = archiveHubId ?? archiveNodeId(store.contentDir);
-  return listArchiveMemberIds(store.readRelationshipsFile().relationships, hubId);
+  return listArchiveMemberIds(store.readRelationshipsFile().relationships, hubId, store.contentDir);
 }

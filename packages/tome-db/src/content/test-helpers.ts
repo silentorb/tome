@@ -193,6 +193,14 @@ function entryFromSeedConnection(connection: {
   type: string;
   properties?: Properties;
 }): RelationshipEntry {
+  if (connection.type === "member_of") {
+    return {
+      a: connection.target,
+      b: connection.source,
+      type: connection.type,
+      properties: connection.properties ?? {},
+    };
+  }
   return entryFromRelationship({
     id: relationshipId(connection.source, connection.type, connection.target),
     sourceNodeId: connection.source,

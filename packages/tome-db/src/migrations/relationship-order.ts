@@ -32,7 +32,7 @@ import {
  * tuple order, so the authored order must carry the intent.
  *
  * Orientation source of truth (in priority):
- *   - **member_of**: member at index 0, set (type table / archive) at index 1.
+ *   - **member_of**: parent (set) at index 0, child (member) at index 1.
  *   - **asymmetric cross-type**: place the endpoint whose node type owns the
  *     `perspectives[0]` relation column (targeting the other endpoint's type) at
  *     index 0, derived from `table-schemas.json`.
@@ -82,15 +82,15 @@ function ownsPerspective(
   return false;
 }
 
-/** Orient a `member_of` tuple as (member, set). Returns null when undecidable. */
+/** Orient a `member_of` tuple as (parent/set, child/member). Returns null when undecidable. */
 function orientMemberOf(
   entry: RelationshipEntry,
   ctx: RelationshipOrderContext,
 ): { a: string; b: string } | null {
   const aIsSet = ctx.setNodeIds.has(entry.a);
   const bIsSet = ctx.setNodeIds.has(entry.b);
-  if (bIsSet && !aIsSet) return { a: entry.a, b: entry.b };
-  if (aIsSet && !bIsSet) return { a: entry.b, b: entry.a };
+  if (aIsSet && !bIsSet) return { a: entry.a, b: entry.b };
+  if (bIsSet && !aIsSet) return { a: entry.b, b: entry.a };
   return null;
 }
 

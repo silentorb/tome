@@ -6,7 +6,13 @@ import {
   PARENTS_CHILDREN_COMPOSITE,
 } from "../includes-relationship";
 import { normalizeRelationshipType } from "../relation-type";
-import { collectSetNodeIds, isSetMembershipStorageType, isMembershipPerspective, SET_MEMBERSHIP_TYPE } from "../set-membership";
+import { collectSetNodeIds } from "../set-membership";
+import {
+  childNodeId,
+  isSetTraitType,
+  parentNodeId,
+  resolveSetTraitComposite,
+} from "../relationship-type-traits";
 import { getTableSchema, relationColumns, slugifyPropertyKey } from "../table-schema";
 import { loadTableSchemasFromContent } from "../table-schemas/load";
 import type { RelationshipEntry } from "./relationships-file";
@@ -33,25 +39,29 @@ function perspectiveForRelationColumn(col: TableRelationColumn): string {
 }
 
 function memberDatabaseId(
+  registry: RelationshipTypesFile,
   nodeId: string,
   relationships: RelationshipEntry[],
   setNodeIds: Set<string>,
 ): string | null {
   for (const entry of relationships) {
-    if (!isSetMembershipStorageType(entry.type)) continue;
-    if (entry.a === nodeId && setNodeIds.has(entry.b)) return entry.b;
-    if (entry.b === nodeId && setNodeIds.has(entry.a)) return entry.a;
+    const def = registry.types[normalizeRelationshipType(entry.type)];
+    if (!isSetTraitType(def)) continue;
+    const child = childNodeId(def, entry);
+    const parent = parentNodeId(def, entry);
+    if (child === nodeId && setNodeIds.has(parent)) return parent;
   }
   return null;
 }
 
 function schemaIdForNode(
+  registry: RelationshipTypesFile,
   nodeId: string,
   relationships: RelationshipEntry[],
   setNodeIds: Set<string>,
 ): string | null {
   if (setNodeIds.has(nodeId)) return nodeId;
-  return memberDatabaseId(nodeId, relationships, setNodeIds);
+  return memberDatabaseId(registry, nodeId, relationships, setNodeIds);
 }
 
 /**
@@ -78,10 +88,9 @@ export function resolveCompositeTypeForLink(
 ): string {
   const normalized = normalizeRelationshipType(localType);
 
-  // 0. set membership (member_of/members) → always stored as "member_of"
-  if (isSetMembershipStorageType(normalized) || isMembershipPerspective(normalized)) {
-    return SET_MEMBERSHIP_TYPE;
-  }
+  // 0. set-trait composites (e.g. member_of)
+  const setComposite = resolveSetTraitComposite(registry, normalized);
+  if (setComposite) return setComposite;
 
   // 1. parents/children → structural composite
   if (PARENTS_CHILDREN_PERSPECTIVES.has(normalized)) {
@@ -98,8 +107,8 @@ export function resolveCompositeTypeForLink(
 
   // 3. table-schema inverse column lookup (specific composite)
   const setNodeIds = collectSetNodeIds(contentDir);
-  const sourceSchemaId = schemaIdForNode(source, relationships, setNodeIds);
-  const targetSchemaId = schemaIdForNode(target, relationships, setNodeIds);
+  const sourceSchemaId = schemaIdForNode(registry, source, relationships, setNodeIds);
+  const targetSchemaId = schemaIdForNode(registry, target, relationships, setNodeIds);
   if (sourceSchemaId && targetSchemaId) {
     const schemas = loadTableSchemasFromContent(contentDir);
     const sourceSchema = getTableSchema(schemas, sourceSchemaId);

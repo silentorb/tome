@@ -35,7 +35,7 @@ function ctxFixture(): RelationshipOrderContext {
     registry: {
       version: 1,
       types: {
-        member_of: { perspectives: ["member_of", "members"] },
+        member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
         scenes_product: { perspectives: ["scenes", "product"] },
         parents_children: { perspectives: ["children", "parents"] },
         includes: { perspectives: ["includes", "includes"] },
@@ -61,26 +61,26 @@ function ctxFixture(): RelationshipOrderContext {
 }
 
 describe("reorderRelationshipsFile", () => {
-  test("member_of places the member at index 0 and set at index 1", () => {
+  test("member_of places the parent at index 0 and child at index 1", () => {
     const file: RelationshipsFile = {
       version: 2,
-      relationships: [{ a: setId, b: member, type: "member_of", properties: { row_index: 3 } }],
+      relationships: [{ a: member, b: setId, type: "member_of", properties: { row_index: 3 } }],
     };
     const { file: next, report } = reorderRelationshipsFile(file, ctxFixture());
     expect(next.version).toBe(3);
     expect(next.relationships[0]).toEqual({
-      a: member,
-      b: setId,
+      a: setId,
+      b: member,
       type: "member_of",
       properties: { row_index: 3 },
     });
     expect(report.reordered).toBe(1);
   });
 
-  test("member_of already in member->set order is left unchanged", () => {
+  test("member_of already in parent->child order is left unchanged", () => {
     const file: RelationshipsFile = {
       version: 2,
-      relationships: [{ a: member, b: setId, type: "member_of" }],
+      relationships: [{ a: setId, b: member, type: "member_of" }],
     };
     const { report } = reorderRelationshipsFile(file, ctxFixture());
     expect(report.reordered).toBe(0);
@@ -125,7 +125,7 @@ describe("reorderRelationshipsFile", () => {
     const file: RelationshipsFile = {
       version: 2,
       relationships: [
-        { a: setId, b: member, type: "member_of" },
+        { a: member, b: setId, type: "member_of" },
         { a: scene, b: product, type: "scenes_product" },
         { a: parent, b: child, type: "parents_children" },
       ],
@@ -164,21 +164,20 @@ describe("migrateRelationshipOrder (end-to-end over a content dir)", () => {
     fixture.ctx.store.writeRelationshipTypesFile({
       version: 1,
       types: {
-        member_of: { perspectives: ["member_of", "members"] },
+        member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
         scenes_product: { perspectives: ["scenes", "product"] },
       },
     });
 
-    // Author a v2 file with "wrong" tuple orders: set-first membership and
-    // scene-first product edge (lexicographic/legacy style).
+    // Author a v2 file with child-first membership and scene-first product edge.
     writeFileSync(
       relationshipsFilePath(contentDir),
       `${JSON.stringify(
         {
           version: 2,
           relationships: [
-            { a: productsDb, b: prod, type: "member_of" },
-            { a: scenesDb, b: scn, type: "member_of" },
+            { a: prod, b: productsDb, type: "member_of" },
+            { a: scn, b: scenesDb, type: "member_of" },
             { a: scn, b: prod, type: "scenes_product" },
           ],
         },
@@ -195,9 +194,8 @@ describe("migrateRelationshipOrder (end-to-end over a content dir)", () => {
     expect(file.version).toBe(3);
     const memberships = file.relationships.filter((r) => r.type === "member_of");
     for (const m of memberships) {
-      // member at index 0, type table at index 1
-      expect([productsDb, scenesDb]).toContain(m.b);
-      expect([productsDb, scenesDb]).not.toContain(m.a);
+      expect([productsDb, scenesDb]).toContain(m.a);
+      expect([productsDb, scenesDb]).not.toContain(m.b);
     }
     const sp = file.relationships.find((r) => r.type === "scenes_product")!;
     expect(sp.a).toBe(prod);

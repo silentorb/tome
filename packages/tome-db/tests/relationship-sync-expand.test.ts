@@ -6,7 +6,7 @@ import {
 import type { RelationshipEntry } from "../src/content/relationships-file";
 import type { RelationshipTypesFile } from "../src/content/relationship-types-file";
 
-const registry: RelationshipTypesFile = {
+const legacyRegistry: RelationshipTypesFile = {
   version: 1,
   types: {
     member_of: { perspectives: ["member_of", "members"] },
@@ -16,35 +16,59 @@ const registry: RelationshipTypesFile = {
   },
 };
 
+const parentFirstRegistry: RelationshipTypesFile = {
+  version: 1,
+  types: {
+    member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
+    includes: { perspectives: ["includes", "includes"] },
+    scenes_product: { perspectives: ["scenes", "product"] },
+    parents_children: { perspectives: ["children", "parents"] },
+  },
+};
+
 describe("expandRelationshipEntry", () => {
-  test("member_of emits dual projections when set node is known", () => {
+  test("member_of emits dual projections with parent-first tuple", () => {
     const member = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     const set = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     const entry: RelationshipEntry = {
-      a: member,
-      b: set,
+      a: set,
+      b: member,
       type: "member_of",
       properties: { view: "All" },
     };
-    const { projections } = expandRelationshipEntry(entry, registry);
+    const { projections } = expandRelationshipEntry(entry, parentFirstRegistry);
     expect(projections).toHaveLength(2);
     expect(projections[0]).toMatchObject({
-      sourceNodeId: member,
-      targetNodeId: set,
-      type: "member_of",
-    });
-    expect(projections[1]).toMatchObject({
       sourceNodeId: set,
       targetNodeId: member,
       type: "members",
     });
+    expect(projections[1]).toMatchObject({
+      sourceNodeId: member,
+      targetNodeId: set,
+      type: "member_of",
+    });
+  });
+
+  test("parent-first tuple+perspectives preserve member_of graph semantics", () => {
+    const set = "00000000000000000000000013";
+    const member = "0000000000000000000000002C";
+    const legacyEntry: RelationshipEntry = { a: member, b: set, type: "member_of", properties: {} };
+    const parentFirstEntry: RelationshipEntry = { a: set, b: member, type: "member_of", properties: {} };
+
+    const legacy = expandRelationshipEntry(legacyEntry, legacyRegistry).projections;
+    const parentFirst = expandRelationshipEntry(parentFirstEntry, parentFirstRegistry).projections;
+
+    const key = (p: { sourceNodeId: string; targetNodeId: string; type: string }) =>
+      `${p.sourceNodeId}:${p.type}:${p.targetNodeId}`;
+    expect(new Set(parentFirst.map(key))).toEqual(new Set(legacy.map(key)));
   });
 
   test("includes emits symmetric dual projections", () => {
     const a = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     const b = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     const entry: RelationshipEntry = { a, b, type: "includes", properties: {} };
-    const { projections } = expandRelationshipEntry(entry, registry);
+    const { projections } = expandRelationshipEntry(entry, parentFirstRegistry);
     expect(projections).toHaveLength(2);
     expect(projections.map((p) => p.type)).toEqual(["includes", "includes"]);
   });
@@ -53,7 +77,7 @@ describe("expandRelationshipEntry", () => {
     const scene = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     const product = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
     const entry: RelationshipEntry = { a: scene, b: product, type: "scenes_product", properties: {} };
-    const { projections } = expandRelationshipEntry(entry, registry);
+    const { projections } = expandRelationshipEntry(entry, parentFirstRegistry);
     expect(projections).toHaveLength(2);
     expect(projections[0]?.type).toBe("scenes");
     expect(projections[1]?.type).toBe("product");
@@ -68,7 +92,7 @@ describe("expandRelationshipEntry", () => {
       type: "parents_children",
       properties: {},
     };
-    const { projections } = expandRelationshipEntry(entry, registry);
+    const { projections } = expandRelationshipEntry(entry, parentFirstRegistry);
     expect(projections).toHaveLength(2);
     expect(projections[0]).toMatchObject({
       sourceNodeId: child,
@@ -81,29 +105,14 @@ describe("expandRelationshipEntry", () => {
       type: "parents",
     });
   });
-
-  test("member_of orientation follows tuple order, not node-id ordering", () => {
-    // member id sorts AFTER set id — lexicographic order would invert membership.
-    const set = "00000000000000000000000013";
-    const member = "0000000000000000000000002C";
-    const entry: RelationshipEntry = {
-      a: member,
-      b: set,
-      type: "member_of",
-      properties: {},
-    };
-    const { projections } = expandRelationshipEntry(entry, registry);
-    expect(projections.some((p) => p.type === "member_of" && p.sourceNodeId === member && p.targetNodeId === set)).toBe(true);
-    expect(projections.some((p) => p.type === "members" && p.sourceNodeId === set && p.targetNodeId === member)).toBe(true);
-  });
 });
 
 describe("expandAllRelationships", () => {
   test("batch expansion preserves record count", () => {
     const entries: RelationshipEntry[] = [
-      { a: "AAAAAAAAAAAAAAAAAAAAAAAAAA", b: "BBBBBBBBBBBBBBBBBBBBBBBBBB", type: "member_of" },
+      { a: "BBBBBBBBBBBBBBBBBBBBBBBBBB", b: "AAAAAAAAAAAAAAAAAAAAAAAAAA", type: "member_of" },
     ];
-    const { records, projections } = expandAllRelationships(entries, registry);
+    const { records, projections } = expandAllRelationships(entries, parentFirstRegistry);
     expect(records).toHaveLength(1);
     expect(projections).toHaveLength(2);
   });

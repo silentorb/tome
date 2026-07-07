@@ -261,6 +261,20 @@ export {
   maxRowIndexForSet,
 } from "./set-membership";
 export { registerSetMembershipType } from "./content/relationship-types-file";
+export type { TraitValue } from "./content/relationship-types-file";
+export {
+  SET_TRAIT,
+  childNodeId,
+  hasTrait,
+  isSetTraitComposite,
+  isSetTraitEntry,
+  isSetTraitType,
+  parentNodeId,
+  resolveSetTraitComposite,
+  setRoleIndices,
+  traitConfig,
+  typesWithTrait,
+} from "./relationship-type-traits";
 export { loadSchemaFromContent, loadWorkspaceSchema, invalidateSchemaCache } from "./schema-rules/load";
 export { loadViewsFromContent, invalidateViewsCache } from "./views/load";
 export {

@@ -68,7 +68,7 @@ describe("relationship tuple order carries relative semantics", () => {
     expect(targets(sceneLow, "product")).toEqual([productHigh]);
   });
 
-  test("member_of / members derive from tuple order (member at index 0)", () => {
+  test("member_of / members derive from tuple order (parent at index 0)", () => {
     // member sorts AFTER the set; lexicographic ordering would invert membership.
     const set = "00000000000000000000000002";
     const member = "ZZZZZZZZZZZZZZZZZZZZZZZZZY";

@@ -22,6 +22,7 @@ export type {
   RelationshipTypesFile,
   PerspectiveLabelConfig,
   PerspectivePair,
+  TraitValue,
 } from "./relationship-types-file";
 export { expandAllRelationships } from "./relationship-sync-expand";
 export {

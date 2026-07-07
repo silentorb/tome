@@ -24,21 +24,22 @@ For design-domain meaning of types and sets, read [`../ontology.md`](../../marlo
 
 | Family | Storage type | Perspectives | Examples |
 | --- | --- | --- | --- |
-| **Set membership** | `member_of` | `["member_of", "members"]` | Features row, Themes row, Archive member |
+| **Set membership** | `member_of` | `["members", "member_of"]` | Features row, Themes row, Archive member |
 | **Peer association** | `includes` (+ named composites) | `["includes", "includes"]` or distinct pair | Scene↔Feature, taxonomy↔Inspiration |
 
 ### Content record shape (membership)
 
 ```json
 {
-  "a": "<member-id>",
-  "b": "<set-id>",
+  "a": "<set-id>",
+  "b": "<member-id>",
   "type": "member_of",
   "properties": { "view": "All", "row_index": 3 }
 }
 ```
 
-- Endpoints `a` / `b` are an **ordered tuple**: the **member** is at index 0 (`a`), the **set** at index 1 (`b`). This matches the type's `perspectives` pair `["member_of", "members"]` (`perspectives[0]` = member position, `perspectives[1]` = set position). There is **no lexicographic sorting**.
+- Endpoints `a` / `b` are an **ordered tuple**: the **parent (set)** is at index 0 (`a`), the **child (member)** at index 1 (`b`). This matches the type's `perspectives` pair `["members", "member_of"]` (`perspectives[0]` = parent/set position, `perspectives[1]` = child/member position). There is **no lexicographic sorting**.
+- The `member_of` registry entry carries `traits: { "set": true }` — a minimal trait declaring parent/child tuple roles only (not type-table detection, archive behavior, or row ordering).
 - **No `directedFrom` field exists** — direction is derived from tuple position + the type's perspectives, not a stored flag.
 - Row scalars for type tables live on edge `properties` (keys from `table-schemas.json`).
 
@@ -48,8 +49,8 @@ Every relationship type in `relationship-types.json` defines a `perspectives` **
 
 | Endpoint | Projection |
 | --- | --- |
-| Index 0 | node at `a` → node at `b` with `perspectives[0]` (`member_of`) — oriented purely by tuple position |
-| Index 1 | node at `b` → node at `a` with `perspectives[1]` (`members`) |
+| Index 0 | node at `a` → node at `b` with `perspectives[0]` (`members`) — oriented purely by tuple position |
+| Index 1 | node at `b` → node at `a` with `perspectives[1]` (`member_of`) |
 
 There is **no `bidirectional` field** — the parser rejects any type that does not define exactly two perspectives, so a non-bidirectional type cannot exist. (An unregistered storage type falls back to a single defensive projection during sync, but registered types are always a pair.)
 
@@ -85,7 +86,7 @@ Higher-level helpers:
 Archive membership uses `member_of` edges to the Archive hub (same family as type tables). Archiving:
 
 1. Marks incident relationships `archived: true` in content
-2. Adds hub membership edge `(member)-[:member_of]->(archive)` (no `archived` on hub edge)
+2. Adds hub membership edge `(archive)-[:members]->(member)` stored as `{ a: archive, b: member, type: member_of }` (no `archived` on hub edge)
 3. Recomputes `nodes.is_archived` on sync
 
 ### Link vs create row
@@ -121,7 +122,7 @@ flowchart LR
   EXP --> PROJ
 ```
 
-1. Content write: `ContentStore.upsertRelationship` writes the ordered tuple `{a:member,b:set,type:member_of,properties}` (member at index 0, set at index 1).
+1. Content write: `ContentStore.upsertRelationship` writes the ordered tuple `{ a: set, b: member, type: member_of, properties }` (parent at index 0, child at index 1).
 2. Sync: `expandRelationshipEntry` emits two projections for `member_of`.
 3. Query: type tables use `listSetMembership(setId, "members")`; instance Properties use `listSetMembership(instanceId, "member_of")`.
 
@@ -130,11 +131,12 @@ flowchart LR
 | Path | Role |
 | --- | --- |
 | `content/data/relationships.json` | Canonical membership records |
-| `content/model/relationship-types.json` | `member_of` perspectives; optional `perspectiveLabels.member_of` (Marloth: **Membership**) |
+| `content/model/relationship-types.json` | `member_of` perspectives, `traits.set`, optional `perspectiveLabels.member_of` (Marloth: **Membership**) |
 | `content/model/table-schemas.json` | Type-table set detection + column defs |
 | `content/model/views.json` | `sections.members` tab config for Members table |
 | `content/model/workspace.json` | `archiveNodeId` for archive set detection |
 | `packages/tome-db/src/set-membership.ts` | Unified membership query API |
+| `packages/tome-db/src/relationship-type-traits.ts` | Set trait helpers (`parentNodeId`, `childNodeId`, `resolveSetTraitComposite`) |
 | `packages/tome-db/src/content/relationship-sync-expand.ts` | Perspective-based expansion |
 
 ## Migration
@@ -143,7 +145,7 @@ Scripts (marloth-story):
 
 1. `scripts/migrate-membership-projections.ts` — strip `directedFrom`, archive `includes`→membership, backfill row metadata (historical; may reference legacy `is_a` slug)
 2. `scripts/migrate-is-a-to-member-of.ts` — rename storage `is_a`→`member_of`, `views.json` `sections.items`→`sections.members`
-3. `packages/tome-db/scripts/migrate-relationship-order.ts` — reorder every `member_of` tuple into `(member, set)` order (via set membership) and bump `relationships.json` v2→v3; type-table↔archive edges (both endpoints are sets) are reported ambiguous and left as-is
+3. `packages/tome-db/src/migrations/relationship-order.ts` — reorder every `member_of` tuple into `(parent/set, child/member)` order and bump `relationships.json` v2→v3; type-table↔archive edges (both endpoints are sets) are reported ambiguous and left as-is
 
 **Invariants after full migration:**
 

@@ -80,7 +80,7 @@ describe("node-type-properties", () => {
     ).toBe("dynamic");
   });
 
-  test("getNodePageDetail exposes properties without membership relation section", () => {
+  test("getNodePageDetail exposes properties alongside membership relation section", () => {
     new ContentStore(contentDir).writeDynamicFieldsFile(
       fileFromSeedInputs([
         {
@@ -102,7 +102,9 @@ describe("node-type-properties", () => {
     const membership = detail?.sections.find(
       (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
     );
-    expect(membership).toBeUndefined();
+    expect(membership?.rows).toEqual([
+      { targetId: CHAR_DB, name: "Characters", cells: {} },
+    ]);
   });
 
   afterAll(() => {

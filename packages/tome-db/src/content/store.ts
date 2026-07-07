@@ -17,7 +17,8 @@ import {
   isIncludesPerspectiveSlug,
   isIncludesStorageType,
 } from "../includes-relationship";
-import { isSetMembershipStorageType } from "../set-membership";
+import { isSetTraitComposite, resolveSetTraitComposite } from "../relationship-type-traits";
+import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "../labels";
 import { normalizeRelationshipType } from "../relation-type";
 import {
   type RelationshipEntry,
@@ -250,6 +251,14 @@ export class ContentStore {
     const file = this.readRelationshipsFile();
     const normalized = normalizeRelationshipType(localType);
 
+    if (
+      (normalized === MEMBER_OF_TYPE || normalized === MEMBERS_TYPE) &&
+      !registry.types[MEMBER_OF_TYPE]
+    ) {
+      registerSetMembershipType(registry);
+      this.writeRelationshipTypesFile(registry);
+    }
+
     let composite = resolveCompositeTypeForLink(
       registry,
       file.relationships,
@@ -286,7 +295,7 @@ export class ContentStore {
       if (!registry.types[composite]) {
         if (isIncludesStorageType(composite)) {
           registerIncludesType(registry);
-        } else if (isSetMembershipStorageType(composite)) {
+        } else if (isSetTraitComposite(registry, composite) || resolveSetTraitComposite(registry, normalized)) {
           registerSetMembershipType(registry);
         } else if (composite === PARENTS_CHILDREN_COMPOSITE) {
           registerBidirectionalType(registry, "parents", "children");

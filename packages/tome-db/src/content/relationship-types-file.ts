@@ -10,11 +10,16 @@ export type PerspectiveLabelConfig =
 /** Exactly two perspectives: one projection per endpoint (a→b, b→a). Symmetric types repeat the same slug. */
 export type PerspectivePair = [string, string];
 
+/** Flag trait: `true`. Configured trait: plain object. */
+export type TraitValue = true | Record<string, unknown>;
+
 export interface RelationshipTypeDefinition {
   /** Local type names projected from each endpoint. Always a pair — every relationship is bidirectional. */
   perspectives: PerspectivePair;
   /** UI labels keyed by perspective slug (e.g. member_of → "Membership"). */
   perspectiveLabels?: Record<string, PerspectiveLabelConfig>;
+  /** Cross-cutting capabilities (e.g. set trait for parent/child tuple roles). */
+  traits?: Record<string, TraitValue>;
 }
 
 export interface RelationshipTypesFile {
@@ -64,6 +69,33 @@ function parsePerspectiveLabels(
   return Object.keys(labels).length > 0 ? labels : undefined;
 }
 
+function parseTraitValue(value: unknown, context: string): TraitValue {
+  if (value === true) return true;
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`relationship-types.json: ${context} must be true or a plain object`);
+  }
+  return { ...(value as Record<string, unknown>) };
+}
+
+function parseTraits(
+  raw: unknown,
+  typeKey: string,
+): Record<string, TraitValue> | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`relationship-types.json: type ${typeKey} traits must be an object`);
+  }
+  const traits: Record<string, TraitValue> = {};
+  for (const [traitKey, value] of Object.entries(raw as Record<string, unknown>)) {
+    const key = normalizeRelationshipType(traitKey);
+    if (!key) {
+      throw new Error(`relationship-types.json: type ${typeKey} traits keys must be non-empty`);
+    }
+    traits[key] = parseTraitValue(value, `type ${typeKey} traits.${key}`);
+  }
+  return Object.keys(traits).length > 0 ? traits : undefined;
+}
+
 export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
   const data = JSON.parse(raw) as unknown;
   if (!data || typeof data !== "object" || Array.isArray(data)) {
@@ -95,9 +127,11 @@ export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
       );
     }
     const perspectiveLabels = parsePerspectiveLabels(row.perspectiveLabels, key);
+    const traits = parseTraits(row.traits, key);
     types[normalizeRelationshipType(key)] = {
       perspectives: [perspectives[0]!, perspectives[1]!],
       ...(perspectiveLabels ? { perspectiveLabels } : {}),
+      ...(traits ? { traits } : {}),
     };
   }
 
@@ -175,6 +209,7 @@ export function registerTypeDefinition(
       normalizeRelationshipType(def.perspectives[1]),
     ],
     ...(def.perspectiveLabels ? { perspectiveLabels: { ...def.perspectiveLabels } } : {}),
+    ...(def.traits ? { traits: { ...def.traits } } : {}),
   };
 }
 
@@ -193,10 +228,11 @@ export function registerBidirectionalType(
   return composite;
 }
 
-/** Set membership: member→set as member_of, set→member as members. */
+/** Set membership: parent (set) at index 0, child (member) at index 1. */
 export function registerSetMembershipType(file: RelationshipTypesFile): void {
   registerTypeDefinition(file, "member_of", {
-    perspectives: ["member_of", "members"],
+    perspectives: ["members", "member_of"],
+    traits: { set: true },
   });
 }
 

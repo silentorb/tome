@@ -5,6 +5,62 @@ import {
   serializeRelationshipTypesFile,
 } from "../src/content/relationship-types-file";
 
+describe("relationship-types-file traits", () => {
+  test("parses flag trait", () => {
+    const file = parseRelationshipTypesFile(
+      JSON.stringify({
+        version: 1,
+        types: {
+          member_of: {
+            perspectives: ["members", "member_of"],
+            traits: { set: true },
+          },
+        },
+      }),
+    );
+    expect(file.types.member_of?.traits).toEqual({ set: true });
+  });
+
+  test("parses configured trait", () => {
+    const file = parseRelationshipTypesFile(
+      JSON.stringify({
+        version: 1,
+        types: {
+          member_of: {
+            perspectives: ["members", "member_of"],
+            traits: { set: { parentIndex: 0, childIndex: 1 } },
+          },
+        },
+      }),
+    );
+    expect(file.types.member_of?.traits?.set).toEqual({ parentIndex: 0, childIndex: 1 });
+  });
+
+  test("round-trips traits through serialize", () => {
+    const file = emptyRelationshipTypesFile();
+    file.types.member_of = {
+      perspectives: ["members", "member_of"],
+      traits: { set: true },
+      perspectiveLabels: {
+        member_of: { title: "Membership", linkAdd: "Link type table" },
+      },
+    };
+    const roundTrip = parseRelationshipTypesFile(serializeRelationshipTypesFile(file));
+    expect(roundTrip.types.member_of).toEqual(file.types.member_of);
+  });
+
+  test("rejects invalid trait values", () => {
+    expect(() =>
+      parseRelationshipTypesFile(
+        JSON.stringify({
+          version: 1,
+          types: { member_of: { perspectives: ["members", "member_of"], traits: { set: "yes" } } },
+        }),
+      ),
+    ).toThrow(/must be true or a plain object/);
+  });
+});
+
 describe("relationship-types-file perspectiveLabels", () => {
   test("parses string shorthand perspectiveLabels", () => {
     const file = parseRelationshipTypesFile(
@@ -12,7 +68,7 @@ describe("relationship-types-file perspectiveLabels", () => {
         version: 1,
         types: {
           member_of: {
-            perspectives: ["member_of", "members"],
+            perspectives: ["members", "member_of"],
             perspectiveLabels: { member_of: "Membership" },
           },
         },
@@ -29,7 +85,7 @@ describe("relationship-types-file perspectiveLabels", () => {
         version: 1,
         types: {
           member_of: {
-            perspectives: ["member_of", "members"],
+            perspectives: ["members", "member_of"],
             perspectiveLabels: {
               member_of: { title: "Membership", linkAdd: "Link type table" },
             },
@@ -46,7 +102,7 @@ describe("relationship-types-file perspectiveLabels", () => {
   test("round-trips perspectiveLabels through serialize", () => {
     const file = emptyRelationshipTypesFile();
     file.types.member_of = {
-      perspectives: ["member_of", "members"],
+      perspectives: ["members", "member_of"],
       perspectiveLabels: {
         member_of: { title: "Membership", linkAdd: "Link type table" },
       },
