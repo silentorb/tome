@@ -12,7 +12,7 @@ import {
   enrichColumnDefs,
   isPriorityColumnKey,
 } from "./property-enums";
-const ROW_META_KEYS = new Set(["view", "row_index", "row_name", "order"]);
+const ROW_META_KEYS = new Set(["view", "row_name", "order", "row_index", "number"]);
 
 export interface PropertiesSection {
   type: "properties";

@@ -42,8 +42,9 @@ function scopeForRow(
   rowId: string,
   databaseId: string,
   relationships: Relationship[],
+  contentDir?: string,
 ): Relationship[] {
-  return filterRelationshipsByRowDatabaseContext(db, rowId, databaseId, relationships);
+  return filterRelationshipsByRowDatabaseContext(db, rowId, databaseId, relationships, contentDir);
 }
 
 /** Keep projections emitted from this row's local perspective (source + type). */
@@ -66,18 +67,19 @@ export function listRelationConnectionsForRow(
   connectionType: string,
   databaseId: string,
   targetDatabaseId?: string,
+  contentDir?: string,
 ): Relationship[] {
-  if (!rowBelongsToDatabase(db, nodeId, databaseId)) return [];
+  if (!rowBelongsToDatabase(db, nodeId, databaseId, contentDir)) return [];
 
   if (targetDatabaseId && shouldUseIncludesLookup(connectionType)) {
-    const byIncludes = listIncludesIncident(db, nodeId, targetDatabaseId);
-    const includesFiltered = scopeForRow(db, nodeId, databaseId, byIncludes);
+    const byIncludes = listIncludesIncident(db, nodeId, targetDatabaseId, contentDir);
+    const includesFiltered = scopeForRow(db, nodeId, databaseId, byIncludes, contentDir);
     if (includesFiltered.length > 0) return includesFiltered;
   }
 
   if (targetDatabaseId && targetDatabaseId !== databaseId) {
-    const byTargetDb = listRelationshipsToDatabaseMembers(db, nodeId, targetDatabaseId);
-    const filtered = scopeForRow(db, nodeId, databaseId, byTargetDb);
+    const byTargetDb = listRelationshipsToDatabaseMembers(db, nodeId, targetDatabaseId, contentDir);
+    const filtered = scopeForRow(db, nodeId, databaseId, byTargetDb, contentDir);
     if (filtered.length > 0) return filtered;
   }
 
@@ -93,13 +95,14 @@ export function listRelationConnectionsForRow(
         nodeId,
         databaseId,
         filterByOutgoingPerspective(nodeId, connectionType, byComposite),
+        contentDir,
       );
       if (compositeFiltered.length > 0) return compositeFiltered;
     }
   }
 
   const outgoing = db.listRelationshipsFromSource(nodeId, connectionType);
-  return scopeForRow(db, nodeId, databaseId, outgoing);
+  return scopeForRow(db, nodeId, databaseId, outgoing, contentDir);
 }
 
 function inferInverseRelationType(localType: string): string {
@@ -147,6 +150,7 @@ export function hydrateRelationCellsForRows(
   databaseId: string,
   columnDefs: DatabaseColumnDef[],
   rows: EvalRow[],
+  contentDir?: string,
 ): void {
   const relationColumns = columnDefs.filter((col) => col.type === "relation");
   if (relationColumns.length === 0) return;
@@ -161,6 +165,7 @@ export function hydrateRelationCellsForRows(
         type,
         databaseId,
         col.targetDatabaseId,
+        contentDir,
       );
       const links = linksFromRelationships(db, row.nodeId, relationships);
       row.relationCells[col.key] = links;

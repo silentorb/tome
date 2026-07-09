@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { GraphDatabase } from "../../src/graph";
-import { MEMBER_OF_TYPE } from "../../src/labels";
+import { MEMBER_OF_TYPE, ORDERED_MEMBER_OF_TYPE } from "../../src/labels";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { schemaFilePath } from "../../src/content/paths";
 import { loadSchemaFromContent, invalidateSchemaCache } from "../../src/schema-rules/load";
@@ -47,6 +47,9 @@ describe("schema rules", () => {
   });
 
   test("resolveRelationshipRule matches source type membership", () => {
+    const previousContentPath = process.env.TOME_CONTENT_PATH;
+    process.env.TOME_CONTENT_PATH = "/workspaces/marloth-story/content";
+
     const db = new GraphDatabase(":memory:", { clean: true });
     const scenesType = "0000000000000000000000000D";
     const featuresType = "0000000000000000000000002P";
@@ -55,7 +58,7 @@ describe("schema rules", () => {
     db.upsertNode(scenesType, typeTableMarkerProperties("Scenes"));
     db.upsertNode(featuresType, typeTableMarkerProperties("Features"));
     db.upsertNode(scene, { title: "Test scene" });
-    db.upsertRelationship(scene, scenesType, MEMBER_OF_TYPE, {});
+    db.upsertRelationship(scene, scenesType, ORDERED_MEMBER_OF_TYPE, {});
 
     const schema = parseSchemaFile(
       JSON.stringify({
@@ -71,20 +74,24 @@ describe("schema rules", () => {
       }),
     );
 
-    const rule = resolveRelationshipRule(schema, db, scene, "features");
+    const rule = resolveRelationshipRule(schema, db, scene, "features", "/workspaces/marloth-story/content");
     expect(rule?.id).toBe("scene-features");
 
-    const context = relationshipRuleContextForType(schema, db, scene, "features");
+    const context = relationshipRuleContextForType(schema, db, scene, "features", "/workspaces/marloth-story/content");
     expect(context?.allowedTargetTypeIds).toEqual([featuresType]);
+
+    if (previousContentPath === undefined) {
+      delete process.env.TOME_CONTENT_PATH;
+    } else {
+      process.env.TOME_CONTENT_PATH = previousContentPath;
+    }
   });
 
   test("loadSchemaFromContent reads repo schema.json", () => {
-    const contentPath = marlothContentPathForIntegrationTest();
-    if (!contentPath) {
-      return;
-    }
+    const previousContentPath = process.env.TOME_CONTENT_PATH;
+    process.env.TOME_CONTENT_PATH = "/workspaces/marloth-story/content";
     invalidateSchemaCache();
-    const schema = loadSchemaFromContent(contentPath);
+    const schema = loadSchemaFromContent("/workspaces/marloth-story/content");
     expect(schema.relationshipRules.length).toBeGreaterThan(0);
     expect(schema.enums.priority?.options).toEqual([
       "Consideration",
@@ -95,6 +102,12 @@ describe("schema rules", () => {
     ]);
     expect(schema.enums.priority?.defaultOrder).toBe("desc");
     expect(schema.enums.priority?.values?.High).toBe(4);
+
+    if (previousContentPath === undefined) {
+      delete process.env.TOME_CONTENT_PATH;
+    } else {
+      process.env.TOME_CONTENT_PATH = previousContentPath;
+    }
   });
 
   test("parseSchemaFile validates enums", () => {

@@ -12,6 +12,8 @@ import {
 import { loadViewsFromContent } from "./load";
 import type { ResolvedTab, TableTabsDetail } from "./tabs";
 
+export const ORDERED_MEMBERS_SECTION_KEY = "ordered_members";
+
 export const MEMBERS_RELATIONSHIP_TYPE = "members";
 
 /** @deprecated Use MEMBERS_RELATIONSHIP_TYPE */

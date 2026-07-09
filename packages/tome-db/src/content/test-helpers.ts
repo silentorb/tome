@@ -34,6 +34,7 @@ import { relationshipId } from "../graph";
 import {
   registerBidirectionalType,
   registerIncludesType,
+  registerOrderedSetMembershipType,
   registerSetMembershipType,
 } from "./relationship-types-file";
 import { INCLUDES_TYPE } from "../includes-relationship";
@@ -88,8 +89,6 @@ export function defaultTestOrderedAssociationsFile(): OrderedAssociationsFile {
       {
         id: "scenes-by-book",
         typeDatabaseId: "0000000000000000000000000D",
-        membershipEdgeType: "member_of",
-        orderProperty: "order",
         scopeCompositeType: "scenes_product",
         groupCompositeType: "scenes_part",
         partProductCompositeType: "products_parts_database",
@@ -97,10 +96,28 @@ export function defaultTestOrderedAssociationsFile(): OrderedAssociationsFile {
         unassignedGroupTitle: "Unassigned",
         columnViewName: "TWOLD Active",
         excludedColumnKeys: ["order", "product", "part", "status"],
-        partNumberProperty: "number",
       },
     ],
   };
+}
+
+export function seedDefaultRelationshipTypes(fixture: TestContentFixture): void {
+  const registry = fixture.ctx.store.readRelationshipTypesFile();
+  registerSetMembershipType(registry);
+  registerOrderedSetMembershipType(registry);
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
+}
+
+export function seedDefaultOrderedAssociationTableSchemas(fixture: TestContentFixture): void {
+  const scenesDb = "0000000000000000000000000D";
+  const partsDb = "0000000000000000000000000Z";
+  const productsDb = "0000000000000000000000000S";
+  const file = fixture.ctx.store.readTableSchemasFile();
+  file.tables[scenesDb] = { membershipComposite: "ordered_member_of", columns: [] };
+  file.tables[partsDb] = { membershipComposite: "ordered_member_of", columns: [] };
+  file.tables[productsDb] = { membershipComposite: "ordered_member_of", columns: [] };
+  fixture.ctx.store.writeTableSchemasFile(file);
+  invalidateTableSchemasCache();
 }
 
 export function seedTestOrderedAssociations(
@@ -133,6 +150,8 @@ export function createTestContentFixture(prefix = "tome-content-test-"): TestCon
   const fixture = { tempDir, ctx };
   ctx.store.writeDynamicFieldsFile(fileFromSeedInputs([], []));
   invalidateDynamicFieldsCache();
+  seedDefaultRelationshipTypes(fixture);
+  seedDefaultOrderedAssociationTableSchemas(fixture);
   seedTestOrderedAssociations(fixture);
   return fixture;
 }
@@ -180,9 +199,12 @@ export function seedTestTableSchema(
   fixture: TestContentFixture,
   databaseId: string,
   columns: TableColumnDef[],
+  membershipComposite?: string,
 ): void {
   const file = fixture.ctx.store.readTableSchemasFile();
-  file.tables[databaseId] = { columns };
+  file.tables[databaseId] = membershipComposite
+    ? { columns, membershipComposite }
+    : { columns };
   fixture.ctx.store.writeTableSchemasFile(file);
   invalidateTableSchemasCache();
 }
@@ -193,7 +215,7 @@ function entryFromSeedConnection(connection: {
   type: string;
   properties?: Properties;
 }): RelationshipEntry {
-  if (connection.type === "member_of") {
+  if (connection.type === "member_of" || connection.type === "ordered_member_of") {
     return {
       a: connection.target,
       b: connection.source,
@@ -320,6 +342,8 @@ export function seedTestRelationships(
   for (const connection of connections) {
     if (connection.type === "member_of") {
       registerSetMembershipType(registry);
+    } else if (connection.type === "ordered_member_of") {
+      registerOrderedSetMembershipType(registry);
     } else if (connection.type === "includes") {
       registerIncludesType(registry);
     } else {

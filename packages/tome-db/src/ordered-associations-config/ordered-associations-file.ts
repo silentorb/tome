@@ -1,13 +1,13 @@
-import { isNodeId } from "../content/paths";
-import { MEMBER_OF_TYPE } from "../labels";
+import { isNodeId, resolveContentPath } from "../content/paths";
+import { ORDERED_MEMBER_OF_TYPE } from "../labels";
+import { getTableSchema } from "../table-schema";
+import { loadTableSchemasFromContent } from "../table-schemas/load";
 
 export const ORDERED_ASSOCIATIONS_FILE_VERSION = 1;
 
 export interface OrderedAssociationConfig {
   id: string;
   typeDatabaseId: string;
-  membershipEdgeType: string;
-  orderProperty: string;
   /** Composite relationship type for member ↔ scope tabs (e.g. scenes_product). */
   scopeCompositeType: string;
   /** Composite relationship type for member ↔ group subsection (e.g. scenes_part). */
@@ -20,8 +20,6 @@ export interface OrderedAssociationConfig {
   columnViewName?: string;
   /** Slugified column keys excluded from table columns (UI-redundant or deprecated). */
   excludedColumnKeys?: string[];
-  /** Membership property on group rows used for subsection sort order. */
-  partNumberProperty?: string;
 }
 
 export interface OrderedAssociationsFile {
@@ -51,34 +49,37 @@ function parseStringArray(value: unknown, path: string): string[] | undefined {
   return value.map((entry, index) => parseRequiredString(entry, `${path}[${index}]`));
 }
 
-function parseConfig(raw: unknown, path: string): OrderedAssociationConfig {
+function assertOrderedMembershipTable(nodeId: string, path: string, contentDir?: string): void {
+  const dir = contentDir ?? resolveContentPath();
+  const schema = getTableSchema(loadTableSchemasFromContent(dir), nodeId);
+  if (schema?.membershipComposite !== ORDERED_MEMBER_OF_TYPE) {
+    throw new Error(
+      `${path}: table must declare membershipComposite "${ORDERED_MEMBER_OF_TYPE}" in table-schemas.json`,
+    );
+  }
+}
+
+function parseConfig(raw: unknown, path: string, contentDir?: string): OrderedAssociationConfig {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`${path}: must be an object`);
   }
   const obj = raw as Record<string, unknown>;
 
-  const membershipEdgeType = parseRequiredString(
-    obj.membershipEdgeType,
-    `${path}.membershipEdgeType`,
-  );
-  if (membershipEdgeType !== MEMBER_OF_TYPE) {
-    throw new Error(
-      `${path}.membershipEdgeType: must be "${MEMBER_OF_TYPE}" (legacy "is_a" was renamed; run migrate-is-a-to-member-of.ts)`,
-    );
-  }
+  const typeDatabaseId = parseNodeId(obj.typeDatabaseId, `${path}.typeDatabaseId`);
+  const groupTypeDatabaseId = parseNodeId(obj.groupTypeDatabaseId, `${path}.groupTypeDatabaseId`);
+  assertOrderedMembershipTable(typeDatabaseId, `${path}.typeDatabaseId`, contentDir);
+  assertOrderedMembershipTable(groupTypeDatabaseId, `${path}.groupTypeDatabaseId`, contentDir);
 
   const config: OrderedAssociationConfig = {
     id: parseRequiredString(obj.id, `${path}.id`),
-    typeDatabaseId: parseNodeId(obj.typeDatabaseId, `${path}.typeDatabaseId`),
-    membershipEdgeType,
-    orderProperty: parseRequiredString(obj.orderProperty, `${path}.orderProperty`),
+    typeDatabaseId,
     scopeCompositeType: parseRequiredString(obj.scopeCompositeType, `${path}.scopeCompositeType`),
     groupCompositeType: parseRequiredString(obj.groupCompositeType, `${path}.groupCompositeType`),
     partProductCompositeType: parseRequiredString(
       obj.partProductCompositeType,
       `${path}.partProductCompositeType`,
     ),
-    groupTypeDatabaseId: parseNodeId(obj.groupTypeDatabaseId, `${path}.groupTypeDatabaseId`),
+    groupTypeDatabaseId,
     unassignedGroupTitle: parseRequiredString(
       obj.unassignedGroupTitle,
       `${path}.unassignedGroupTitle`,
@@ -92,12 +93,6 @@ function parseConfig(raw: unknown, path: string): OrderedAssociationConfig {
   if (excludedColumnKeys) {
     config.excludedColumnKeys = excludedColumnKeys;
   }
-  if (obj.partNumberProperty !== undefined) {
-    config.partNumberProperty = parseRequiredString(
-      obj.partNumberProperty,
-      `${path}.partNumberProperty`,
-    );
-  }
 
   return config;
 }
@@ -106,7 +101,10 @@ export function emptyOrderedAssociationsFile(): OrderedAssociationsFile {
   return { version: ORDERED_ASSOCIATIONS_FILE_VERSION, configs: [] };
 }
 
-export function parseOrderedAssociationsFile(raw: string): OrderedAssociationsFile {
+export function parseOrderedAssociationsFile(
+  raw: string,
+  contentDir?: string,
+): OrderedAssociationsFile {
   const data = JSON.parse(raw) as unknown;
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     throw new Error("ordered-associations.json: root must be an object");
@@ -122,7 +120,7 @@ export function parseOrderedAssociationsFile(raw: string): OrderedAssociationsFi
   }
 
   const configs = obj.configs.map((entry, index) =>
-    parseConfig(entry, `ordered-associations.json configs[${index}]`),
+    parseConfig(entry, `ordered-associations.json configs[${index}]`, contentDir),
   );
 
   const seenIds = new Set<string>();

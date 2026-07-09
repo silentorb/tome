@@ -242,6 +242,8 @@ export {
   IS_A_TYPE,
   IS_A_LABEL,
   MEMBERS_TYPE,
+  ORDERED_MEMBER_OF_TYPE,
+  ORDERED_MEMBERS_TYPE,
   TYPE_MEMBERSHIP_TYPES,
   TYPE_MEMBERSHIP_LABELS,
   isTypeMembershipType,
@@ -258,23 +260,41 @@ export {
   isSetNode,
   findSetMembershipRelationship,
   isSetMembershipStorageType,
-  maxRowIndexForSet,
 } from "./set-membership";
-export { registerSetMembershipType } from "./content/relationship-types-file";
-export type { TraitValue } from "./content/relationship-types-file";
+export {
+  registerSetMembershipType,
+  registerOrderedSetMembershipType,
+} from "./content/relationship-types-file";
+export type { TraitEntry, TraitObjectEntry } from "./content/relationship-types-file";
 export {
   SET_TRAIT,
+  ORDERED_TRAIT,
+  ORDERED_PROPERTY_DEFAULT,
   childNodeId,
   hasTrait,
+  isOrderedTraitComposite,
+  isOrderedMembershipSet,
   isSetTraitComposite,
   isSetTraitEntry,
   isSetTraitType,
+  membershipCompositeForSet,
+  membershipPerspectivesForSet,
+  orderedPropertyName,
   parentNodeId,
+  resolveOrderedSetTraitComposite,
   resolveSetTraitComposite,
   setRoleIndices,
   traitConfig,
+  traitMap,
   typesWithTrait,
 } from "./relationship-type-traits";
+export {
+  ORDER_META_KEYS,
+  applySparseOrderRewrite,
+  listOrderedMemberConnections,
+  maxOrderAtSet,
+  stampOrderIfMissing,
+} from "./ordered-relationships";
 export { loadSchemaFromContent, loadWorkspaceSchema, invalidateSchemaCache } from "./schema-rules/load";
 export { loadViewsFromContent, invalidateViewsCache } from "./views/load";
 export {

@@ -39,6 +39,8 @@ export type TableColumnDef = TableScalarColumn | TableRelationColumn;
 
 export interface TableSchema {
   columns: TableColumnDef[];
+  /** Storage composite for set membership rows (default `member_of`). */
+  membershipComposite?: string;
 }
 
 export interface TableSchemasFile {
@@ -148,7 +150,16 @@ function parseTableSchema(raw: unknown, tableId: string): TableSchema {
     }
     keys.add(col.key);
   }
-  return { columns };
+  const schema: TableSchema = { columns };
+  if (obj.membershipComposite !== undefined) {
+    if (typeof obj.membershipComposite !== "string" || !obj.membershipComposite.trim()) {
+      throw new Error(
+        `table-schemas.json tables.${tableId}: membershipComposite must be a non-empty string`,
+      );
+    }
+    schema.membershipComposite = obj.membershipComposite.trim();
+  }
+  return schema;
 }
 
 export function emptyTableSchemasFile(): TableSchemasFile {

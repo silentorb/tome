@@ -7,8 +7,9 @@ export function rowBelongsToDatabase(
   db: GraphDatabase,
   rowId: string,
   databaseId: string,
+  contentDir?: string,
 ): boolean {
-  return findSetMembershipRelationship(db, rowId, databaseId) !== null;
+  return findSetMembershipRelationship(db, rowId, databaseId, contentDir) !== null;
 }
 
 /** Keep incident edges when row is a member of the viewing database. */
@@ -17,8 +18,9 @@ export function filterRelationshipsByRowDatabaseContext(
   rowId: string,
   databaseId: string,
   relationships: Relationship[],
+  contentDir?: string,
 ): Relationship[] {
-  if (!rowBelongsToDatabase(db, rowId, databaseId)) return [];
+  if (!rowBelongsToDatabase(db, rowId, databaseId, contentDir)) return [];
   return relationships;
 }
 
@@ -58,6 +60,7 @@ export function listIncludesIncident(
   db: GraphDatabase,
   nodeId: string,
   targetDatabaseId?: string,
+  contentDir?: string,
 ): Relationship[] {
   let includes = listRelationshipsForComposite(db, nodeId, INCLUDES_TYPE);
   if (includes.length === 0) {
@@ -67,7 +70,7 @@ export function listIncludesIncident(
     ]);
   }
   if (!targetDatabaseId) return includes;
-  const byTargetDb = listRelationshipsToDatabaseMembers(db, nodeId, targetDatabaseId);
+  const byTargetDb = listRelationshipsToDatabaseMembers(db, nodeId, targetDatabaseId, contentDir);
   return byTargetDb.filter(
     (relationship) => normalizeRelationshipType(relationship.type) === INCLUDES_TYPE,
   );
@@ -147,8 +150,8 @@ export function firstRelatedNodeId(
   return relationships[0] ? otherEndpoint(relationships[0], nodeId) : null;
 }
 
-function databaseMemberIds(db: GraphDatabase, databaseId: string): Set<string> {
-  return new Set(setMemberIds(db, databaseId));
+function databaseMemberIds(db: GraphDatabase, databaseId: string, contentDir?: string): Set<string> {
+  return new Set(setMemberIds(db, databaseId, contentDir));
 }
 
 /** Incident relationships whose opposite endpoint belongs to targetDatabaseId. */
@@ -156,8 +159,9 @@ export function listRelationshipsToDatabaseMembers(
   db: GraphDatabase,
   nodeId: string,
   targetDatabaseId: string,
+  contentDir?: string,
 ): Relationship[] {
-  const members = databaseMemberIds(db, targetDatabaseId);
+  const members = databaseMemberIds(db, targetDatabaseId, contentDir);
   const incident = uniqueRelationships([
     ...db.listRelationshipsFromSource(nodeId),
     ...db.listRelationshipsToTarget(nodeId),

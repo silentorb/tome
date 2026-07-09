@@ -1,5 +1,4 @@
 import type { GraphDatabase } from "./graph";
-import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "./labels";
 import { listSetMemberRowConnections } from "./set-membership";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
@@ -13,14 +12,21 @@ import {
   activeTabName,
   getSectionTabsConfig,
   MEMBERS_SECTION_KEY,
+  ORDERED_MEMBERS_SECTION_KEY,
 } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
 import { applySectionColumnOrder } from "./views/column-order";
 import { applyHiddenColumns } from "./views/column-visibility";
 import type { TableTabsDetail } from "./views/tabs";
+import { ORDER_META_KEYS } from "./ordered-relationships";
+import {
+  isOrderedMembershipSet,
+  membershipPerspectivesForSet,
+  ORDERED_PROPERTY_DEFAULT,
+} from "./relationship-type-traits";
 
-const ROW_META_KEYS = new Set(["view", "row_index", "row_name", "order"]);
+const ROW_META_KEYS = ORDER_META_KEYS;
 
 import type { RelationLink } from "./relation-link";
 export type { RelationLink } from "./relation-link";
@@ -97,6 +103,12 @@ function cellsFromProperties(properties: Record<string, unknown>): Record<string
   return cells;
 }
 
+function numericOrderValue(raw: unknown, fallback: number): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  const parsed = Number.parseFloat(String(raw ?? ""));
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 function collectLegacyViews(connectionViews: string[]): string[] {
   const views = new Set<string>();
   for (const view of connectionViews) {
@@ -123,6 +135,12 @@ function rowSort(a: DatabaseRow, b: DatabaseRow): number {
   return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 }
 
+function membersSectionKey(databaseId: string, contentDir: string): string {
+  return isOrderedMembershipSet(databaseId, contentDir)
+    ? ORDERED_MEMBERS_SECTION_KEY
+    : MEMBERS_SECTION_KEY;
+}
+
 function buildCustomViewDetail(
   db: GraphDatabase,
   databaseId: string,
@@ -133,21 +151,20 @@ function buildCustomViewDetail(
 ): DatabaseViewDetail {
   const resolved = resolveCustomTabsForNode(contentDir, databaseId, requestedTabId);
   const tabName = activeTabName(resolved);
+  const ordered = isOrderedMembershipSet(databaseId, contentDir);
 
   const evalRows: EvalRow[] = [];
   for (const connection of incoming) {
-    const rowIndexRaw = connection.properties.row_index;
-    const rowIndex =
-      typeof rowIndexRaw === "number"
-        ? rowIndexRaw
-        : Number.parseInt(String(rowIndexRaw ?? ""), 10);
     const page = db.getNode(connection.sourceNodeId);
     const name = page ? titleFromProperties(page.properties) : "Untitled";
+    const rowIndex = ordered
+      ? numericOrderValue(connection.properties[ORDERED_PROPERTY_DEFAULT], evalRows.length)
+      : evalRows.length;
     evalRows.push({
       nodeId: connection.sourceNodeId,
       name,
       cells: cellsFromProperties(connection.properties),
-      rowIndex: Number.isFinite(rowIndex) ? rowIndex : evalRows.length,
+      rowIndex,
       createdAt: page ? isoFromProperties(page.properties, "created_at") : null,
       modifiedAt: page ? isoFromProperties(page.properties, "modified_at") : null,
     });
@@ -170,7 +187,7 @@ function buildCustomViewDetail(
     { contentDir },
   );
 
-  hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, enrichedRows);
+  hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, enrichedRows, contentDir);
 
   const sorted = sortEvalRowsFromViewSorts(enrichedRows, resolved.activeDefinition.sorts);
 
@@ -182,12 +199,13 @@ function buildCustomViewDetail(
         );
 
   const views = loadViewsFromContent(contentDir);
+  const sectionKey = membersSectionKey(databaseId, contentDir);
   const { columns: allColumns, columnDefs: orderedColumnDefs } = applySectionColumnOrder(
     defaultColumns,
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     databaseId,
-    MEMBERS_SECTION_KEY,
+    sectionKey,
   );
 
   const { visibleColumns } = applyHiddenColumns(
@@ -250,20 +268,12 @@ function buildLegacyViewDetail(
     const connectionView = stringProperty(connection.properties.view) ?? "default";
     if (connectionView !== view) continue;
 
-    const rowIndexRaw = connection.properties.row_index;
-    const rowIndex =
-      typeof rowIndexRaw === "number"
-        ? rowIndexRaw
-        : Number.parseInt(String(rowIndexRaw ?? ""), 10);
-    const safeRowIndex = Number.isFinite(rowIndex) ? rowIndex : rowsByNodeId.size;
-
     const page = db.getNode(connection.sourceNodeId);
     const name = page ? titleFromProperties(page.properties) : "Untitled";
-
     const cells = cellsFromProperties(connection.properties);
 
     rowsByNodeId.set(connection.sourceNodeId, {
-      rowIndex: safeRowIndex,
+      rowIndex: rowsByNodeId.size,
       nodeId: connection.sourceNodeId,
       name,
       cells,
@@ -334,7 +344,7 @@ function buildLegacyViewDetail(
   };
 }
 
-/** Build a database table view from incoming IS_A (type instance) connections and linked page titles. */
+/** Build a database table view from membership connections and linked page titles. */
 export function getDatabaseViewDetail(
   db: GraphDatabase,
   databaseId: string,
@@ -345,11 +355,12 @@ export function getDatabaseViewDetail(
   const dir = contentDir ?? resolveContentPath();
   if (!database || !isTypeTableNode(db, databaseId, dir)) return null;
 
-  const incoming = listSetMemberRowConnections(db, databaseId);
+  const incoming = listSetMemberRowConnections(db, databaseId, dir);
 
   const title = titleFromProperties(database.properties);
   const views = loadViewsFromContent(dir);
-  const sectionConfig = getSectionTabsConfig(views, databaseId, MEMBERS_SECTION_KEY);
+  const sectionKey = membersSectionKey(databaseId, dir);
+  const sectionConfig = getSectionTabsConfig(views, databaseId, sectionKey);
 
   if (sectionConfig?.kind === "generated") {
     return null;

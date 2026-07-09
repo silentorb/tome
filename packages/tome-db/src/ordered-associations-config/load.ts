@@ -33,7 +33,7 @@ export function loadOrderedAssociationsFromContent(contentDir: string): OrderedA
 
   let file: OrderedAssociationsFile;
   try {
-    file = parseOrderedAssociationsFile(readFileSync(path, "utf-8"));
+    file = parseOrderedAssociationsFile(readFileSync(path, "utf-8"), contentDir);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       file = emptyOrderedAssociationsFile();

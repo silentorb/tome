@@ -2,14 +2,14 @@ import type { GraphDatabase, Relationship, Properties } from "./graph";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
 import { relationshipId } from "./graph";
-import { TYPE_MEMBERSHIP_TYPES } from "./labels";
+import { ORDERED_MEMBER_OF_TYPE, ORDERED_MEMBERS_TYPE } from "./labels";
 import type { DatabaseColumnDef } from "./database-view";
 import type { RelationLink } from "./relation-link";
 import { applyDynamicFields } from "./dynamic-fields";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import type { EvalRow } from "./row-sort";
-import { resolveGeneratedTabsFromScopes, MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
+import { resolveGeneratedTabsFromScopes, ORDERED_MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { resolveContentPath } from "./content/paths";
 import { applySectionColumnOrder } from "./views/column-order";
@@ -22,19 +22,18 @@ import {
 import type { OrderedAssociationConfig } from "./ordered-associations-config/ordered-associations-file";
 import { loadOrderedAssociationsFromContent } from "./ordered-associations-config/load";
 import { listSetMemberRowConnections } from "./set-membership";
+import {
+  ORDERED_PROPERTY_DEFAULT,
+  membershipPerspectivesForSet,
+} from "./relationship-type-traits";
+import { ORDER_META_KEYS, applySparseOrderRewrite } from "./ordered-relationships";
 
 export type { OrderedAssociationConfig } from "./ordered-associations-config/ordered-associations-file";
 
 /** Synthetic group id for members with no group association. */
 export const UNASSIGNED_GROUP_ID = "__unassigned__";
 
-const ORDERED_ASSOCIATION_META_KEYS = new Set([
-  "ordinal",
-  "via_view",
-  "view",
-  "row_index",
-  "row_name",
-]);
+const ORDERED_ASSOCIATION_META_KEYS = ORDER_META_KEYS;
 
 function loadConfigs(contentDir?: string): OrderedAssociationConfig[] {
   return loadOrderedAssociationsFromContent(contentDir ?? resolveContentPath()).configs;
@@ -112,7 +111,7 @@ function cellsFromMembershipRelationship(
   const cells: Record<string, string> = {};
   for (const [key, value] of Object.entries(properties)) {
     if (ORDERED_ASSOCIATION_META_KEYS.has(key)) continue;
-    if (key === config.orderProperty) continue;
+    if (key === ORDERED_PROPERTY_DEFAULT) continue;
     const text = stringProperty(value);
     if (text !== null) cells[key] = text;
   }
@@ -153,28 +152,31 @@ function groupConnectionTarget(
   return firstRelatedNodeId(db, sceneId, compositeType);
 }
 
-function membershipRelationships(db: GraphDatabase, config: OrderedAssociationConfig): Relationship[] {
-  return listSetMemberRowConnections(db, config.typeDatabaseId);
+function membershipRelationships(
+  db: GraphDatabase,
+  config: OrderedAssociationConfig,
+  contentDir?: string,
+): Relationship[] {
+  return listSetMemberRowConnections(db, config.typeDatabaseId, contentDir);
 }
 
 function scopeMembershipSortKey(db: GraphDatabase, scopeNodeId: string): number {
-  for (const label of TYPE_MEMBERSHIP_TYPES) {
-    for (const edge of db.listRelationshipsFromSource(scopeNodeId, label)) {
-      return numericSortKey(edge.properties.order, numericSortKey(edge.properties.row_index, 999));
-    }
+  for (const edge of db.listRelationshipsFromSource(scopeNodeId, ORDERED_MEMBER_OF_TYPE)) {
+    return numericSortKey(edge.properties[ORDERED_PROPERTY_DEFAULT], 999);
   }
   return 999;
 }
 
-function partSortKey(db: GraphDatabase, partId: string, config: OrderedAssociationConfig): number {
-  const numberProperty = config.partNumberProperty ?? "number";
-  for (const label of TYPE_MEMBERSHIP_TYPES) {
-    const edge = db.getRelationship(relationshipId(partId, label, config.groupTypeDatabaseId));
-    if (edge) {
-      const fromNumber = numericSortKey(edge.properties[numberProperty], Number.NaN);
-      if (Number.isFinite(fromNumber)) return fromNumber;
-      return numericSortKey(edge.properties.row_index, numericSortKey(edge.properties.order, 999));
-    }
+function partSortKey(
+  db: GraphDatabase,
+  partId: string,
+  groupTypeDatabaseId: string,
+  contentDir: string,
+): number {
+  const [, memberPerspective] = membershipPerspectivesForSet(groupTypeDatabaseId, contentDir);
+  const edge = db.getRelationship(relationshipId(partId, memberPerspective, groupTypeDatabaseId));
+  if (edge) {
+    return numericSortKey(edge.properties[ORDERED_PROPERTY_DEFAULT], 999);
   }
   return 999;
 }
@@ -183,22 +185,25 @@ function partsForScope(
   db: GraphDatabase,
   config: OrderedAssociationConfig,
   scopeId: string,
+  contentDir: string,
 ): { id: string; title: string; sortKey: number }[] {
   const parts: { id: string; title: string; sortKey: number }[] = [];
+  const [, memberPerspective] = membershipPerspectivesForSet(config.groupTypeDatabaseId, contentDir);
 
-  for (const label of TYPE_MEMBERSHIP_TYPES) {
-    for (const connection of db.listRelationshipsToTarget(config.groupTypeDatabaseId, label)) {
-      const partId = connection.sourceNodeId;
-      const productIds = relatedNodeIds(db, partId, config.partProductCompositeType);
-      if (!productIds.includes(scopeId)) continue;
+  for (const connection of db.listRelationshipsToTarget(
+    config.groupTypeDatabaseId,
+    memberPerspective,
+  )) {
+    const partId = connection.sourceNodeId;
+    const productIds = relatedNodeIds(db, partId, config.partProductCompositeType);
+    if (!productIds.includes(scopeId)) continue;
 
-      const vertex = db.getNode(partId);
-      parts.push({
-        id: partId,
-        title: vertex ? titleFromProperties(vertex.properties) : "Untitled",
-        sortKey: partSortKey(db, partId, config),
-      });
-    }
+    const vertex = db.getNode(partId);
+    parts.push({
+      id: partId,
+      title: vertex ? titleFromProperties(vertex.properties) : "Untitled",
+      sortKey: partSortKey(db, partId, config.groupTypeDatabaseId, contentDir),
+    });
   }
 
   const byId = new Map<string, { id: string; title: string; sortKey: number }>();
@@ -250,12 +255,13 @@ function collectMembersInScope(
   db: GraphDatabase,
   config: OrderedAssociationConfig,
   scopeId: string,
+  contentDir: string,
 ): MemberInfo[] {
-  const scopeParts = partsForScope(db, config, scopeId);
+  const scopeParts = partsForScope(db, config, scopeId, contentDir);
   const members: MemberInfo[] = [];
   let fallbackOrder = 0;
 
-  for (const connection of membershipRelationships(db, config)) {
+  for (const connection of membershipRelationships(db, config, contentDir)) {
     const sceneId = connection.sourceNodeId;
     const productId = scopeRelationshipTarget(db, sceneId, config.scopeCompositeType);
     if (productId !== scopeId) continue;
@@ -267,7 +273,7 @@ function collectMembersInScope(
     members.push({
       sceneId,
       name: vertex ? titleFromProperties(vertex.properties) : "Untitled",
-      order: numericSortKey(connection.properties[config.orderProperty], fallbackOrder),
+      order: numericSortKey(connection.properties[ORDERED_PROPERTY_DEFAULT], fallbackOrder),
       partId,
       membershipRelationship: connection,
       cells: cellsFromMembershipRelationship(config, connection.properties),
@@ -287,8 +293,9 @@ function buildGroups(
   config: OrderedAssociationConfig,
   scopeId: string,
   members: MemberInfo[],
+  contentDir: string,
 ): OrderedAssociationGroup[] {
-  const parts = partsForScope(db, config, scopeId);
+  const parts = partsForScope(db, config, scopeId, contentDir);
   const membersByPart = new Map<string | null, MemberInfo[]>();
 
   for (const member of members) {
@@ -337,10 +344,11 @@ function collectColumns(members: MemberInfo[]): string[] {
 function discoverScopes(
   db: GraphDatabase,
   config: OrderedAssociationConfig,
+  contentDir: string,
 ): OrderedAssociationScope[] {
   const scopeIds = new Set<string>();
 
-  for (const connection of membershipRelationships(db, config)) {
+  for (const connection of membershipRelationships(db, config, contentDir)) {
     const productId = scopeRelationshipTarget(db, connection.sourceNodeId, config.scopeCompositeType);
     if (productId) scopeIds.add(productId);
   }
@@ -377,13 +385,13 @@ export function getOrderedAssociationView(
   const database = db.getNode(config.typeDatabaseId);
   if (!database) return null;
 
-  const scopes = discoverScopes(db, config);
+  const scopes = discoverScopes(db, config, dir);
   const tabs = resolveGeneratedTabsFromScopes(scopes, requestedTabId);
   const activeScopeId = tabs.activeTabId;
 
-  const members = activeScopeId ? collectMembersInScope(db, config, activeScopeId) : [];
+  const members = activeScopeId ? collectMembersInScope(db, config, activeScopeId, dir) : [];
   const groups = activeScopeId
-    ? buildGroups(db, config, activeScopeId, members)
+    ? buildGroups(db, config, activeScopeId, members, dir)
     : [];
 
   const excludeKeys = new Set(config.excludedColumnKeys ?? []);
@@ -410,7 +418,7 @@ export function getOrderedAssociationView(
     hiddenColumnKeys,
     { excludeKeys, contentDir: dir },
   );
-  hydrateRelationCellsForRows(db, config.typeDatabaseId, mergedColumnDefs, enrichedRows);
+  hydrateRelationCellsForRows(db, config.typeDatabaseId, mergedColumnDefs, enrichedRows, dir);
   const rowBySceneId = new Map(enrichedRows.map((row) => [row.nodeId, row]));
   const enrichedGroups = groups.map((group) => ({
     ...group,
@@ -436,7 +444,7 @@ export function getOrderedAssociationView(
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     config.typeDatabaseId,
-    MEMBERS_SECTION_KEY,
+    ORDERED_MEMBERS_SECTION_KEY,
   );
 
   return {
@@ -465,8 +473,9 @@ function groupsFromMembers(
   config: OrderedAssociationConfig,
   scopeId: string,
   members: MemberInfo[],
+  contentDir: string,
 ): OrderedAssociationGroup[] {
-  return buildGroups(db, config, scopeId, members);
+  return buildGroups(db, config, scopeId, members, contentDir);
 }
 
 function applyMoveToGroups(
@@ -511,10 +520,10 @@ export function applyOrderedAssociationMove(
   const config = getConfig(configId, contentDir);
   if (!config) return null;
 
-  const members = collectMembersInScope(db, config, params.scopeId);
+  const members = collectMembersInScope(db, config, params.scopeId, contentDir);
   if (!members.some((member) => member.sceneId === params.sceneId)) return null;
 
-  const groups = groupsFromMembers(db, config, params.scopeId, members);
+  const groups = groupsFromMembers(db, config, params.scopeId, members, contentDir);
   const nextGroups = applyMoveToGroups(
     groups,
     params.sceneId,
@@ -523,31 +532,23 @@ export function applyOrderedAssociationMove(
   );
 
   const orderedSceneIds = flattenGroupRows(nextGroups);
-  const memberById = new Map(members.map((member) => [member.sceneId, member]));
-
-  for (let index = 0; index < orderedSceneIds.length; index++) {
-    const sceneId = orderedSceneIds[index]!;
-    const member = memberById.get(sceneId);
-    if (!member) continue;
-
-    const newOrder = (index + 1) * 10;
-    const membershipProps = {
-      ...member.membershipRelationship.properties,
-      [config.orderProperty]: String(newOrder),
-    };
-    ctx.store.mergeRelationshipProperties(
-      member.membershipRelationship.sourceNodeId,
-      member.membershipRelationship.targetNodeId,
-      member.membershipRelationship.type,
-      membershipProps,
-    );
-  }
+  applySparseOrderRewrite(
+    ctx,
+    config.typeDatabaseId,
+    members.map((member) => ({
+      sourceNodeId: member.membershipRelationship.sourceNodeId,
+      targetNodeId: member.membershipRelationship.targetNodeId,
+      type: member.membershipRelationship.type,
+      properties: member.membershipRelationship.properties,
+    })),
+    orderedSceneIds,
+  );
 
   const currentPartId = resolveScenePartId(
     db,
     config,
     params.sceneId,
-    partsForScope(db, config, params.scopeId),
+    partsForScope(db, config, params.scopeId, contentDir),
   );
   const targetPartId =
     params.targetGroupId === UNASSIGNED_GROUP_ID ? null : params.targetGroupId;

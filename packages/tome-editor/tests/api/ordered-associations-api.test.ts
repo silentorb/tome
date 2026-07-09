@@ -1,11 +1,12 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { MEMBER_OF_TYPE, typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
+import { ORDERED_MEMBER_OF_TYPE, typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestCompositeRelationships,
   seedTestRelationships,
   seedTestNode,
+  seedTestTableSchema,
   seedTestViews,
 } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
@@ -25,15 +26,18 @@ describe("ordered-associations API", () => {
   seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
   seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
   seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
+  seedTestTableSchema(fixture, SCENES_DB, [], "ordered_member_of");
+  seedTestTableSchema(fixture, PARTS_DB, [], "ordered_member_of");
+  seedTestTableSchema(fixture, PRODUCTS_DB, [], "ordered_member_of");
   seedTestNode(fixture, { id: book, properties: { title: "TWOLD" } });
   seedTestNode(fixture, { id: part, properties: { title: "Part 1" } });
   seedTestNode(fixture, { id: scene1, properties: { title: "Scene One" } });
   seedTestNode(fixture, { id: scene2, properties: { title: "Scene Two" } });
   seedTestRelationships(fixture, [
-    { source: book, target: PRODUCTS_DB, type: MEMBER_OF_TYPE, properties: { order: "1", row_index: 0 } },
-    { source: part, target: PARTS_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
-    { source: scene1, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { order: "10" } },
-    { source: scene2, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { order: "20" } },
+    { source: book, target: PRODUCTS_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "1" } },
+    { source: part, target: PARTS_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "1" } },
+    { source: scene1, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "10" } },
+    { source: scene2, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "20" } },
   ]);
   seedTestCompositeRelationships(fixture, [
     { a: scene1, b: book, typeFromA: "scenes", typeFromB: "product", properties: { ordinal: 0 } },
@@ -44,13 +48,13 @@ describe("ordered-associations API", () => {
   ]);
   seedTestViews(fixture, {
     version: VIEWS_FILE_VERSION,
-    nodes: {
-      [SCENES_DB]: {
-        sections: {
-          items: { tabs: { kind: "generated", provider: "scenes-by-book" } },
-        },
+    views: [
+      {
+        nodeId: SCENES_DB,
+        relationshipType: "ordered_members",
+        generator: "scenes-by-book",
       },
-    },
+    ],
   });
 
   const api = createTestApiFromContent(fixture);

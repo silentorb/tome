@@ -8,7 +8,6 @@ import {
   seedTestTableSchema,
   type TestContentFixture,
 } from "../src/content/test-helpers";
-import { registerSetMembershipType } from "../src/content/relationship-types-file";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { getNodePageDetail } from "../src/node-page-sections";
 import { listSetMemberRowConnections } from "../src/set-membership";
@@ -22,15 +21,10 @@ describe("linkOutgoingRelationship member_of row metadata", () => {
   const { ctx } = fixture;
   const store = ctx.store;
 
-  const types = store.readRelationshipTypesFile();
-  registerSetMembershipType(types);
-  store.writeRelationshipTypesFile(types);
-  ctx.sync.syncRelationships();
-
   seedTestNode(fixture, { id: TYPE_ID, properties: typeTableMarkerProperties("Themes") });
   seedTestTableSchema(fixture, TYPE_ID, []);
 
-  test("link-existing stamps view and row_index so row appears in type table", () => {
+  test("link-existing creates member_of without row_index stamping", () => {
     seedTestNode(fixture, { id: MEMBER_A, properties: { title: "Community" } });
 
     const err = linkOutgoingRelationship(ctx, {
@@ -42,8 +36,8 @@ describe("linkOutgoingRelationship member_of row metadata", () => {
 
     const db = ctx.db;
     const membership = db.listRelationshipsFromSource(MEMBER_A, MEMBER_OF_TYPE)[0];
-    expect(membership?.properties.view).toBe("default");
-    expect(membership?.properties.row_index).toBe(0);
+    expect(membership?.properties.view).toBeUndefined();
+    expect(membership?.properties.row_index).toBeUndefined();
 
     const membersProjections = db.listRelationshipsFromSource(TYPE_ID, "members");
     expect(membersProjections.some((p) => p.targetNodeId === MEMBER_A)).toBe(true);

@@ -109,7 +109,7 @@ describe("resolveCompositeTypeForLink", () => {
       JSON.stringify({
         version: 1,
         types: {
-          member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
+          member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
         },
       }),
     );
@@ -136,7 +136,7 @@ describe("linkOutgoingRelationship scenes_product from product", () => {
     serializeRelationshipTypesFile({
       version: 1,
       types: {
-        member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
+        member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
         scenes_product: { perspectives: ["scenes", "product"] },
       },
     }),

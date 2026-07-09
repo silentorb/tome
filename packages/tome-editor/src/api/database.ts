@@ -299,7 +299,7 @@ export function openEditorDatabase(
       return writeCtx.db.listDistinctRelationshipTypes();
     },
     getRelationshipLinkOptions(sourceId: string, type: string) {
-      const rule = relationshipRuleContextForType(schema(), writeCtx.db, sourceId, type);
+      const rule = relationshipRuleContextForType(schema(), writeCtx.db, sourceId, type, contentPath);
       return {
         allowedTargetTypeIds: rule ? [...rule.allowedTargetTypeIds] : null,
       };

@@ -341,17 +341,6 @@ export function findNodeScalarsOnTypedNodes(db: GraphDatabase): NodeScalarOnType
   return violations.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
 }
 
-export function maxRowIndexForDatabase(db: GraphDatabase, databaseId: string): number {
-  let max = -1;
-  for (const connection of listSetMemberRowConnections(db, databaseId)) {
-    const raw = connection.properties.row_index;
-    const index =
-      typeof raw === "number" ? raw : Number.parseInt(String(raw ?? ""), 10);
-    if (Number.isFinite(index) && index > max) max = index;
-  }
-  return max;
-}
-
 export function mergeNodeScalarsOntoRelationshipProperties(
   connectionProperties: Properties,
   nodeScalars: Record<string, string>,

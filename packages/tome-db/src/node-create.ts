@@ -1,12 +1,15 @@
 import { generateNodeId } from "./node-id";
 import type { Properties } from "./graph";
 import { INCLUDES_TYPE, isIncludesPerspectiveSlug } from "./includes-relationship";
-import { MEMBER_OF_TYPE } from "./labels";
 import { normalizeRelationshipType } from "./relation-type";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
-import { maxRowIndexForSet } from "./set-membership";
+import { stampOrderIfMissing } from "./ordered-relationships";
+import {
+  membershipCompositeForSet,
+  membershipPerspectivesForSet,
+} from "./relationship-type-traits";
 
 export type CreateNodeError = "invalid_title" | "source_not_found" | "database_not_found";
 
@@ -16,7 +19,7 @@ export type CreateNodeLink =
       sourceId: string;
       type: string;
       properties?: Properties;
-      /** When set, also create member_of membership on the new node to this type. */
+      /** When set, also create membership on the new node to this type table. */
       membershipTypeId?: string;
     }
   | { kind: "database-row"; databaseId: string; view?: string; properties?: Properties };
@@ -66,9 +69,6 @@ function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: stri
   return Math.max(...ordinals) + 1;
 }
 
-import { MEMBER_OF_TYPE } from "./labels";
-import { maxRowIndexForSet } from "./set-membership";
-
 export function createNode(
   ctx: TomeWriteContext,
   input: CreateNodeInput,
@@ -113,19 +113,26 @@ export function createNode(
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
     ctx.store.upsertRelationship(sourceId, id, type, relProps);
     if (membershipTypeId) {
-      ctx.store.upsertRelationship(id, membershipTypeId, MEMBER_OF_TYPE, {});
+      const [, memberPerspective] = membershipPerspectivesForSet(
+        membershipTypeId,
+        ctx.store.contentDir,
+      );
+      const membershipProps = stampOrderIfMissing(
+        ctx,
+        membershipTypeId,
+        id,
+        {},
+      );
+      ctx.store.upsertRelationship(id, membershipTypeId, memberPerspective, membershipProps);
     }
     syncAfterRelationshipsWrite(ctx);
   }
 
   if (input.link?.kind === "database-row") {
-    const { databaseId, view, properties = {} } = input.link;
-    const relProps: Properties = {
-      ...properties,
-      row_index: maxRowIndexForSet(ctx.db, databaseId) + 1,
-      view: view ?? properties.view ?? "default",
-    };
-    ctx.store.upsertRelationship(id, databaseId, MEMBER_OF_TYPE, relProps);
+    const { databaseId, properties = {} } = input.link;
+    const [, memberPerspective] = membershipPerspectivesForSet(databaseId, ctx.store.contentDir);
+    const relProps = stampOrderIfMissing(ctx, databaseId, id, { ...properties });
+    ctx.store.upsertRelationship(id, databaseId, memberPerspective, relProps);
     syncAfterRelationshipsWrite(ctx);
   }
 

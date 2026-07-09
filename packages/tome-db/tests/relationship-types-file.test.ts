@@ -6,41 +6,56 @@ import {
 } from "../src/content/relationship-types-file";
 
 describe("relationship-types-file traits", () => {
-  test("parses flag trait", () => {
+  test("parses flag trait string", () => {
     const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         types: {
           member_of: {
             perspectives: ["members", "member_of"],
-            traits: { set: true },
+            traits: ["set"],
           },
         },
       }),
     );
-    expect(file.types.member_of?.traits).toEqual({ set: true });
+    expect(file.types.member_of?.traits).toEqual(["set"]);
   });
 
-  test("parses configured trait", () => {
+  test("parses configured trait object with key", () => {
     const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         types: {
           member_of: {
             perspectives: ["members", "member_of"],
-            traits: { set: { parentIndex: 0, childIndex: 1 } },
+            traits: [{ key: "set", parentIndex: 0, childIndex: 1 }],
           },
         },
       }),
     );
-    expect(file.types.member_of?.traits?.set).toEqual({ parentIndex: 0, childIndex: 1 });
+    expect(file.types.member_of?.traits).toEqual([{ key: "set", parentIndex: 0, childIndex: 1 }]);
+  });
+
+  test("parses multiple traits", () => {
+    const file = parseRelationshipTypesFile(
+      JSON.stringify({
+        version: 1,
+        types: {
+          ordered_member_of: {
+            perspectives: ["ordered_members", "ordered_member_of"],
+            traits: ["set", "ordered"],
+          },
+        },
+      }),
+    );
+    expect(file.types.ordered_member_of?.traits).toEqual(["set", "ordered"]);
   });
 
   test("round-trips traits through serialize", () => {
     const file = emptyRelationshipTypesFile();
     file.types.member_of = {
       perspectives: ["members", "member_of"],
-      traits: { set: true },
+      traits: ["set"],
       perspectiveLabels: {
         member_of: { title: "Membership", linkAdd: "Link type table" },
       },
@@ -49,15 +64,44 @@ describe("relationship-types-file traits", () => {
     expect(roundTrip.types.member_of).toEqual(file.types.member_of);
   });
 
-  test("rejects invalid trait values", () => {
+  test("rejects duplicate trait names", () => {
     expect(() =>
       parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
-          types: { member_of: { perspectives: ["members", "member_of"], traits: { set: "yes" } } },
+          types: {
+            member_of: { perspectives: ["members", "member_of"], traits: ["set", "set"] },
+          },
         }),
       ),
-    ).toThrow(/must be true or a plain object/);
+    ).toThrow(/duplicate trait/);
+  });
+
+  test("rejects object trait without key", () => {
+    expect(() =>
+      parseRelationshipTypesFile(
+        JSON.stringify({
+          version: 1,
+          types: {
+            member_of: {
+              perspectives: ["members", "member_of"],
+              traits: [{ parentIndex: 0 }],
+            },
+          },
+        }),
+      ),
+    ).toThrow(/key must be a non-empty string/);
+  });
+
+  test("rejects traits object map (legacy shape)", () => {
+    expect(() =>
+      parseRelationshipTypesFile(
+        JSON.stringify({
+          version: 1,
+          types: { member_of: { perspectives: ["members", "member_of"], traits: { set: true } } },
+        }),
+      ),
+    ).toThrow(/must be an array/);
   });
 });
 

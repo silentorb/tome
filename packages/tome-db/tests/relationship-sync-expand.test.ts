@@ -19,7 +19,7 @@ const legacyRegistry: RelationshipTypesFile = {
 const parentFirstRegistry: RelationshipTypesFile = {
   version: 1,
   types: {
-    member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
+    member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
     includes: { perspectives: ["includes", "includes"] },
     scenes_product: { perspectives: ["scenes", "product"] },
     parents_children: { perspectives: ["children", "parents"] },

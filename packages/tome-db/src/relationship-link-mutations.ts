@@ -2,12 +2,12 @@ import type { Properties } from "./graph";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
 import { LinkResolutionError } from "./content/resolve-composite-for-link";
-import { MEMBER_OF_TYPE } from "./labels";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
 import { normalizeRelationshipType } from "./relation-type";
 import { relationshipRuleContextForType } from "./schema-rules/resolve";
 import type { SchemaFile } from "./schema-rules/schema-file";
-import { maxRowIndexForDatabase } from "./type-membership-audit";
+import { stampOrderIfMissing } from "./ordered-relationships";
+import { membershipPerspectivesForSet } from "./relationship-type-traits";
 
 export type LinkOutgoingRelationshipError =
   | "source_not_found"
@@ -76,21 +76,16 @@ export function linkOutgoingRelationship(
     }
   }
 
-  const relProps: Properties = { ...properties };
+  let relProps: Properties = { ...properties };
   if (!("ordinal" in relProps)) {
     const nextOrdinal = nextOutgoingOrdinal(ctx, sourceId, normalizedType);
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
   }
 
-  if (
-    normalizedType === MEMBER_OF_TYPE &&
-    isTypeTableNode(ctx.db, targetId, ctx.store.contentDir)
-  ) {
-    if (!("row_index" in relProps)) {
-      relProps.row_index = maxRowIndexForDatabase(ctx.db, targetId) + 1;
-    }
-    if (!("view" in relProps)) {
-      relProps.view = "default";
+  if (isTypeTableNode(ctx.db, targetId, ctx.store.contentDir)) {
+    const [, memberPerspective] = membershipPerspectivesForSet(targetId, ctx.store.contentDir);
+    if (normalizedType === memberPerspective) {
+      relProps = stampOrderIfMissing(ctx, targetId, sourceId, relProps);
     }
   }
 

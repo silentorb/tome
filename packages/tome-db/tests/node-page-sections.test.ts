@@ -22,7 +22,8 @@ function writeMembershipRelationshipTypes(contentDir: string): void {
       version: 1,
       types: {
         member_of: {
-          perspectives: ["member_of", "members"],
+          perspectives: ["members", "member_of"],
+          traits: ["set"],
           perspectiveLabels: {
             member_of: { title: "Membership", linkAdd: "Link type table" },
           },
@@ -106,8 +107,6 @@ describe("node-sections", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features DB"), body: "# About" });
     db.upsertNode("page4", { title: "Guest consultant" });
     db.upsertRelationship("page4", databaseId, MEMBER_OF_TYPE, {
-      view: "default",
-      row_index: 0,
       status: "Partial",
     });
 
@@ -137,7 +136,6 @@ describe("node-sections", () => {
     });
     db.upsertRelationship("page5", databaseId, MEMBER_OF_TYPE, {
       view: "default",
-      row_index: 3,
       priority: "High",
     });
 

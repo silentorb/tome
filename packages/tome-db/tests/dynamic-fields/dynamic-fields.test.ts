@@ -8,7 +8,7 @@ import { invalidateDynamicFieldsCache } from "../../src/content/sync";
 import { invalidateSchemaCache } from "../../src/schema-rules/load";
 import { GraphDatabase } from "../../src/graph";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
-import { MEMBER_OF_TYPE } from "../../src/labels";
+import { MEMBER_OF_TYPE, ORDERED_MEMBER_OF_TYPE } from "../../src/labels";
 import { getDatabaseViewDetail } from "../../src/database-view";
 import {
   createTestContentFixture,
@@ -401,16 +401,11 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
     seedTestNode(fixture, { id: scene1, properties: { title: "Scene A" } });
     seedTestNode(fixture, { id: scene2, properties: { title: "Scene B" } });
     seedTestRelationships(fixture, [
-      { source: character, target: CHAR_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
-      { source: scene1, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
-      { source: scene2, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { row_index: 1 } },
-      { source: TWOLD, target: PRODUCTS_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
-      {
-        source: OTHER_PRODUCT,
-        target: PRODUCTS_DB,
-        type: MEMBER_OF_TYPE,
-        properties: { row_index: 1 },
-      },
+      { source: character, target: CHAR_DB, type: MEMBER_OF_TYPE },
+      { source: scene1, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE },
+      { source: scene2, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE },
+      { source: TWOLD, target: PRODUCTS_DB, type: ORDERED_MEMBER_OF_TYPE },
+      { source: OTHER_PRODUCT, target: PRODUCTS_DB, type: ORDERED_MEMBER_OF_TYPE },
     ]);
     seedTestIncludes(fixture, [
       { a: character, b: scene1 },

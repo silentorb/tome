@@ -1,7 +1,7 @@
 import type { GraphDatabase, Relationship } from "./graph";
 import { getDatabaseViewDetail, type DatabaseColumnDef, type DatabaseViewDetail } from "./database-view";
 import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./property-enums";
-import { MEMBER_OF_TYPE, MEMBERS_TYPE, isTypeMembershipType } from "./labels";
+import { MEMBER_OF_TYPE, MEMBERS_TYPE, ORDERED_MEMBER_OF_TYPE, ORDERED_MEMBERS_TYPE, isTypeMembershipType } from "./labels";
 import {
   getConfigByProvider,
   getOrderedAssociationView,
@@ -28,7 +28,7 @@ import {
   perspectiveLinkAddLabel,
 } from "./relationship-type-label";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
-import { generatedProviderId, MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
+import { generatedProviderId, MEMBERS_SECTION_KEY, ORDERED_MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
 import type { TableRelationColumn } from "./content/table-schemas-file";
@@ -38,8 +38,8 @@ const RELATION_META_KEYS = new Set([
   "ordinal",
   "via_view",
   "view",
-  "row_index",
   "row_name",
+  "order",
 ]);
 
 export interface MarkdownSection {
@@ -186,7 +186,7 @@ function resolveTypeNodeId(
   relationshipType: string,
   connections: Relationship[],
 ): string | null {
-  if (relationshipType === MEMBER_OF_TYPE) {
+  if (relationshipType === MEMBER_OF_TYPE || relationshipType === ORDERED_MEMBER_OF_TYPE) {
     const targetIds = [...new Set(connections.map((connection) => connection.targetNodeId))];
     if (targetIds.length === 1) return targetIds[0]!;
   }
@@ -248,7 +248,7 @@ function buildRelationSections(
     relationTypeSortKey(a).localeCompare(relationTypeSortKey(b)),
   )) {
     const { perspective: groupPerspective } = parseIncludesGroupKey(label);
-    if (groupPerspective === MEMBERS_TYPE) continue;
+    if (groupPerspective === MEMBERS_TYPE || groupPerspective === ORDERED_MEMBERS_TYPE) continue;
 
     const connections = byType.get(label)!;
     const columnSet = new Set<string>();
@@ -312,12 +312,20 @@ function buildRelationSections(
           })),
         );
 
+    const membershipCompositeKey =
+      perspective === ORDERED_MEMBER_OF_TYPE ? ORDERED_MEMBER_OF_TYPE : MEMBER_OF_TYPE;
     const sectionTitle = isTypeMembership
-      ? perspectiveDisplayLabel(relationshipTypes, perspective, MEMBER_OF_TYPE)
+      ? perspectiveDisplayLabel(relationshipTypes, perspective, membershipCompositeKey)
       : sectionTitleForType(db, perspective, typeNodeId);
     const linkAddLabel =
-      isTypeMembership && perspective === MEMBER_OF_TYPE
-        ? perspectiveLinkAddLabel(relationshipTypes, perspective, sectionTitle, MEMBER_OF_TYPE)
+      isTypeMembership &&
+      (perspective === MEMBER_OF_TYPE || perspective === ORDERED_MEMBER_OF_TYPE)
+        ? perspectiveLinkAddLabel(
+            relationshipTypes,
+            perspective,
+            sectionTitle,
+            membershipCompositeKey,
+          )
         : undefined;
 
     sections.push({
@@ -372,7 +380,9 @@ export function getNodePageDetail(
   const sections: NodeSection[] = [{ type: "markdown", body: node.body }];
 
   if (node.isTypeTable) {
-    const provider = generatedProviderId(views, id, MEMBERS_SECTION_KEY);
+    const provider =
+      generatedProviderId(views, id, ORDERED_MEMBERS_SECTION_KEY) ??
+      generatedProviderId(views, id, MEMBERS_SECTION_KEY);
     if (provider) {
       const config = getConfigByProvider(provider, contentDir);
       if (config) {

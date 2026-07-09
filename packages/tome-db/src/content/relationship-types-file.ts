@@ -10,16 +10,22 @@ export type PerspectiveLabelConfig =
 /** Exactly two perspectives: one projection per endpoint (a→b, b→a). Symmetric types repeat the same slug. */
 export type PerspectivePair = [string, string];
 
-/** Flag trait: `true`. Configured trait: plain object. */
-export type TraitValue = true | Record<string, unknown>;
+/** Configured trait entry — `key` names the trait; remaining keys are trait config. */
+export interface TraitObjectEntry {
+  key: string;
+  [configKey: string]: unknown;
+}
+
+/** Flag trait (string) or configured trait (object with `key`). */
+export type TraitEntry = string | TraitObjectEntry;
 
 export interface RelationshipTypeDefinition {
   /** Local type names projected from each endpoint. Always a pair — every relationship is bidirectional. */
   perspectives: PerspectivePair;
   /** UI labels keyed by perspective slug (e.g. member_of → "Membership"). */
   perspectiveLabels?: Record<string, PerspectiveLabelConfig>;
-  /** Cross-cutting capabilities (e.g. set trait for parent/child tuple roles). */
-  traits?: Record<string, TraitValue>;
+  /** Cross-cutting capabilities (array interpreted as a set). */
+  traits?: TraitEntry[];
 }
 
 export interface RelationshipTypesFile {
@@ -69,31 +75,71 @@ function parsePerspectiveLabels(
   return Object.keys(labels).length > 0 ? labels : undefined;
 }
 
-function parseTraitValue(value: unknown, context: string): TraitValue {
-  if (value === true) return true;
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`relationship-types.json: ${context} must be true or a plain object`);
+function parseTraitObjectEntry(raw: unknown, context: string): TraitObjectEntry {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`relationship-types.json: ${context} must be an object`);
   }
-  return { ...(value as Record<string, unknown>) };
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.key !== "string" || !obj.key.trim()) {
+    throw new Error(`relationship-types.json: ${context}.key must be a non-empty string`);
+  }
+  const key = normalizeRelationshipType(obj.key);
+  const entry: TraitObjectEntry = { key };
+  for (const [prop, value] of Object.entries(obj)) {
+    if (prop === "key") continue;
+    entry[prop] = value;
+  }
+  return entry;
 }
 
-function parseTraits(
-  raw: unknown,
-  typeKey: string,
-): Record<string, TraitValue> | undefined {
+function parseTraitEntry(raw: unknown, context: string): TraitEntry {
+  if (typeof raw === "string" && raw.trim()) {
+    return normalizeRelationshipType(raw);
+  }
+  return parseTraitObjectEntry(raw, context);
+}
+
+function parseTraits(raw: unknown, typeKey: string): TraitEntry[] | undefined {
   if (raw === undefined) return undefined;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error(`relationship-types.json: type ${typeKey} traits must be an object`);
+  if (!Array.isArray(raw)) {
+    throw new Error(`relationship-types.json: type ${typeKey} traits must be an array`);
   }
-  const traits: Record<string, TraitValue> = {};
-  for (const [traitKey, value] of Object.entries(raw as Record<string, unknown>)) {
-    const key = normalizeRelationshipType(traitKey);
-    if (!key) {
-      throw new Error(`relationship-types.json: type ${typeKey} traits keys must be non-empty`);
+  const seen = new Set<string>();
+  const traits: TraitEntry[] = [];
+  for (let index = 0; index < raw.length; index++) {
+    const entry = parseTraitEntry(raw[index], `type ${typeKey} traits[${index}]`);
+    const traitKey = typeof entry === "string" ? entry : entry.key;
+    if (seen.has(traitKey)) {
+      throw new Error(
+        `relationship-types.json: type ${typeKey} traits duplicate trait "${traitKey}"`,
+      );
     }
-    traits[key] = parseTraitValue(value, `type ${typeKey} traits.${key}`);
+    seen.add(traitKey);
+    traits.push(entry);
   }
-  return Object.keys(traits).length > 0 ? traits : undefined;
+  return traits.length > 0 ? traits : undefined;
+}
+
+function traitEntryKey(entry: TraitEntry): string {
+  return typeof entry === "string" ? entry : entry.key;
+}
+
+function serializeTraitEntry(entry: TraitEntry): TraitEntry {
+  if (typeof entry === "string") return entry;
+  const { key, ...config } = entry;
+  if (Object.keys(config).length === 0) return { key };
+  return { key, ...config };
+}
+
+function serializeTraits(traits: TraitEntry[] | undefined): TraitEntry[] | undefined {
+  if (!traits || traits.length === 0) return undefined;
+  const sorted = [...traits].sort((a, b) => {
+    const aObj = typeof a !== "string";
+    const bObj = typeof b !== "string";
+    if (aObj !== bObj) return aObj ? 1 : -1;
+    return traitEntryKey(a).localeCompare(traitEntryKey(b));
+  });
+  return sorted.map(serializeTraitEntry);
 }
 
 export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
@@ -141,7 +187,12 @@ export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
 export function serializeRelationshipTypesFile(file: RelationshipTypesFile): string {
   const sortedTypes: Record<string, RelationshipTypeDefinition> = {};
   for (const key of Object.keys(file.types).sort()) {
-    sortedTypes[key] = file.types[key]!;
+    const def = file.types[key]!;
+    sortedTypes[key] = {
+      perspectives: [...def.perspectives],
+      ...(def.perspectiveLabels ? { perspectiveLabels: { ...def.perspectiveLabels } } : {}),
+      ...(def.traits ? { traits: serializeTraits(def.traits) } : {}),
+    };
   }
   return `${JSON.stringify({ version: file.version, types: sortedTypes }, null, 2)}\n`;
 }
@@ -209,7 +260,7 @@ export function registerTypeDefinition(
       normalizeRelationshipType(def.perspectives[1]),
     ],
     ...(def.perspectiveLabels ? { perspectiveLabels: { ...def.perspectiveLabels } } : {}),
-    ...(def.traits ? { traits: { ...def.traits } } : {}),
+    ...(def.traits ? { traits: [...def.traits] } : {}),
   };
 }
 
@@ -232,7 +283,15 @@ export function registerBidirectionalType(
 export function registerSetMembershipType(file: RelationshipTypesFile): void {
   registerTypeDefinition(file, "member_of", {
     perspectives: ["members", "member_of"],
-    traits: { set: true },
+    traits: ["set"],
+  });
+}
+
+/** Ordered set membership: parent (set) at index 0, child (member) at index 1. */
+export function registerOrderedSetMembershipType(file: RelationshipTypesFile): void {
+  registerTypeDefinition(file, "ordered_member_of", {
+    perspectives: ["ordered_members", "ordered_member_of"],
+    traits: ["set", "ordered"],
   });
 }
 

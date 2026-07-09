@@ -79,7 +79,6 @@ describe("database-view", () => {
     db.upsertNode("page1", { title: "Desperation" });
     db.upsertRelationship("page1", databaseId, MEMBER_OF_TYPE, {
       view: "all",
-      row_index: 0,
       priority: "High",
     });
 

@@ -10,7 +10,7 @@ Read this doc when your task involves:
 
 - Scene ordering within a book
 - Drag-and-drop reordering of graph associations
-- The `order` relationship property on `member_of` set membership edges
+- The `order` property on **`ordered_member_of`** edges (Scenes, Parts, Products type tables)
 - Extending ordered-association configuration to new node types
 
 For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, read [tome-editor.md](./tome-editor.md). For domain semantics (Scene, Part, Product), read [`../ontology.md`](../ontology.md).
@@ -19,11 +19,11 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, re
 
 ### Core model
 
-- Ordered associations **must** store sequence in a designated relationship property (`order` by default) on the membership relationship (e.g. `(scene)-[:member_of {order}]->(Scenes database)`).
+- Ordered associations **must** store sequence in the `order` property on **`ordered_member_of`** membership edges (default key from the `ordered` trait).
 - The `order` property **must** be treated as import/metadata: hidden from all table columns and never exposed as an editable field in the UI.
 - Order **must** be scoped: for scenes, order applies within a **book** (Product), not globally across all scenes in the database.
 - **Grouping** (Part) is a display dimension only; all scenes in a book share one global sequence. Part subsections sort scenes by that book-wide order.
-- Part subsections **must** sort by the Parts database `number` property (with **Unassigned** always last), not by table row index.
+- Part subsections **must** sort by the Parts database `order` property on each Part's `ordered_member_of` membership (with **Unassigned** always last).
 - Part membership **must** resolve when import created duplicate part nodes: match scene→`part` to the canonical Parts-database row by title.
 - Configurations **must** be defined in [`content/model/ordered-associations.json`](../../content/model/ordered-associations.json); v1 has no UI for adding new configs.
 
@@ -31,16 +31,16 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, re
 
 | Setting | Value |
 | --- | --- |
-| Type database | Scenes type table (`204dba198db74611b0b49a98dd53e8f5`) |
-| Membership relationship | `member_of` with `order` property |
+| Type database | Scenes type table (`01KWN86X6MFZQAJ1V36T9592EA`) |
+| Membership relationship | `ordered_member_of` with `order` property (`membershipComposite` in table-schemas) |
 | Scope (book tabs) | `product` relationship from scene → Product |
 | Group (part subsections) | `part` relationship from scene → Part |
-| Part subsection order | Parts database `number` property on each Part's `member_of` membership (Unassigned always last) |
+| Part subsection order | Parts database `order` on each Part's `ordered_member_of` edge (Unassigned always last) |
 | Unassigned | Scenes with a Product but no Part appear in an **Unassigned** group at the end |
 
 ### Editor UI (Scenes Members section)
 
-- The Scenes database **Members** section **must** replace the flat database table with an ordered-association view.
+- The Scenes database **Ordered members** section (`views.json` → `relationshipType: "ordered_members"`) **must** replace the flat database table with an ordered-association view.
 - Book tabs **must** appear at the start of the section; each tab filters to one Product that has scenes.
 - Each Part **must** have its own subsection with a table of scenes in that part.
 - Tables **must** be sorted only by `order` (server-provided); column header sorting **must not** be available.

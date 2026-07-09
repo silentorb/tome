@@ -1,5 +1,10 @@
 import type { GraphDatabase, Node, Properties } from "./graph";
-import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "./labels";
+import {
+  MEMBER_OF_TYPE,
+  MEMBERS_TYPE,
+  ORDERED_MEMBER_OF_TYPE,
+  ORDERED_MEMBERS_TYPE,
+} from "./labels";
 import { memberSetIds } from "./set-membership";
 import { resolveContentPath } from "./content/paths";
 import { hasTableSchemaEntry, loadTableSchemasFromContent } from "./table-schemas/load";
@@ -12,9 +17,11 @@ function titleFromProperties(properties: Record<string, unknown>): string {
   return "Untitled";
 }
 
-export function hasIncomingIsA(db: GraphDatabase, nodeId: string): boolean {
+export function hasIncomingIsA(db: GraphDatabase, nodeId: string, contentDir?: string): boolean {
   if (db.listRelationshipsToTarget(nodeId, MEMBER_OF_TYPE).length > 0) return true;
+  if (db.listRelationshipsToTarget(nodeId, ORDERED_MEMBER_OF_TYPE).length > 0) return true;
   if (db.listRelationshipsFromSource(nodeId, MEMBERS_TYPE).length > 0) return true;
+  if (db.listRelationshipsFromSource(nodeId, ORDERED_MEMBERS_TYPE).length > 0) return true;
   return false;
 }
 
@@ -28,8 +35,12 @@ export function isTypeTableNode(
   return hasIncomingIsA(db, nodeId);
 }
 
-export function typeIdsForInstance(db: GraphDatabase, nodeId: string): string[] {
-  return memberSetIds(db, nodeId);
+export function typeIdsForInstance(
+  db: GraphDatabase,
+  nodeId: string,
+  contentDir?: string,
+): string[] {
+  return memberSetIds(db, nodeId, contentDir);
 }
 
 /** Lexicographically first IS_A type title for an instance page, when any. */

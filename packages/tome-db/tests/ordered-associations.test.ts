@@ -1,5 +1,5 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { MEMBER_OF_TYPE } from "../src/labels";
+import { ORDERED_MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import {
   applyOrderedAssociationMove,
@@ -41,11 +41,21 @@ describe("ordered-associations", () => {
   seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
   seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
   seedTestNode(fixture, { id: CHARACTERS_DB, properties: typeTableMarkerProperties("Characters") });
+  seedTestTableSchema(
+    fixture,
+    PRODUCTS_DB,
+    [],
+    "ordered_member_of",
+  );
+  seedTestTableSchema(fixture, PARTS_DB, [], "ordered_member_of");
   seedTestNode(fixture, {
     id: SCENES_DB,
     properties: typeTableMarkerProperties("Scenes"),
   });
-  seedTestTableSchema(fixture, SCENES_DB, [
+  seedTestTableSchema(
+    fixture,
+    SCENES_DB,
+    [
     {
       key: "product",
       name: "Product",
@@ -82,7 +92,9 @@ describe("ordered-associations", () => {
       perspective: "location",
     },
     { key: "order", name: "Order", type: "number" },
-  ]);
+  ],
+    "ordered_member_of",
+  );
   seedTestNode(fixture, { id: bookA, properties: { title: "Book A" } });
   seedTestNode(fixture, { id: bookB, properties: { title: "Book B" } });
   seedTestNode(fixture, { id: part1, properties: { title: "Part 1" } });
@@ -93,14 +105,14 @@ describe("ordered-associations", () => {
   seedTestNode(fixture, { id: character1, properties: { title: "Hero" } });
 
   seedTestRelationships(fixture, [
-    { source: bookA, target: PRODUCTS_DB, type: MEMBER_OF_TYPE, properties: { order: "1", row_index: 0 } },
-    { source: bookB, target: PRODUCTS_DB, type: MEMBER_OF_TYPE, properties: { order: "2", row_index: 1 } },
-    { source: part1, target: PARTS_DB, type: MEMBER_OF_TYPE, properties: { row_index: 5, number: "1" } },
-    { source: part2, target: PARTS_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0, number: "2" } },
-    { source: scene1, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { order: "10" } },
-    { source: scene2, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { order: "20" } },
-    { source: scene3, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { order: "30" } },
-    { source: character1, target: CHARACTERS_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
+    { source: bookA, target: PRODUCTS_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "1" } },
+    { source: bookB, target: PRODUCTS_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "2" } },
+    { source: part1, target: PARTS_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "1" } },
+    { source: part2, target: PARTS_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "2" } },
+    { source: scene1, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "10" } },
+    { source: scene2, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "20" } },
+    { source: scene3, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "30" } },
+    { source: character1, target: CHARACTERS_DB, type: "member_of" },
   ]);
 
   seedTestCompositeRelationships(fixture, [
@@ -138,7 +150,7 @@ describe("ordered-associations", () => {
     views: [
       {
         nodeId: SCENES_DB,
-        relationshipType: "members",
+        relationshipType: "ordered_members",
         generator: CONFIG_ID,
       },
     ],
@@ -171,7 +183,7 @@ describe("ordered-associations", () => {
     expect(sceneOne?.relationCells?.characters?.[0]?.title).toBe("Hero");
   });
 
-  test("sorts part subsections by number property, not row_index", () => {
+  test("sorts part subsections by order property", () => {
     const view = getOrderedAssociationView(db(), CONFIG_ID, bookA, contentDir());
     const partGroups = view?.groups.filter((group) => group.groupId !== UNASSIGNED_GROUP_ID) ?? [];
     expect(partGroups.map((group) => group.title)).toEqual(["Part 1", "Part 2"]);
@@ -181,7 +193,7 @@ describe("ordered-associations", () => {
     const unassigned = "66666666666666666666666666";
     seedTestNode(fixture, { id: unassigned, properties: { title: "Loose Scene" } });
     seedTestRelationships(fixture, [
-      { source: unassigned, target: SCENES_DB, type: MEMBER_OF_TYPE, properties: { order: "40" } },
+      { source: unassigned, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "40" } },
     ]);
     seedTestCompositeRelationships(fixture, [
       { a: unassigned, b: bookA, typeFromA: "scenes", typeFromB: "product", properties: { ordinal: 0 } },
@@ -203,8 +215,8 @@ describe("ordered-associations", () => {
     const partGroup = updated?.groups.find((group) => group.groupId === part1);
     expect(partGroup?.rows.map((row) => row.sceneId)).toEqual([scene2, scene1]);
 
-    const edge1 = db().getRelationship(`${scene1}:${MEMBER_OF_TYPE}:${SCENES_DB}`);
-    const edge2 = db().getRelationship(`${scene2}:${MEMBER_OF_TYPE}:${SCENES_DB}`);
+    const edge1 = db().getRelationship(`${scene1}:${ORDERED_MEMBER_OF_TYPE}:${SCENES_DB}`);
+    const edge2 = db().getRelationship(`${scene2}:${ORDERED_MEMBER_OF_TYPE}:${SCENES_DB}`);
     expect(edge1?.properties.order).toBe("20");
     expect(edge2?.properties.order).toBe("10");
   });

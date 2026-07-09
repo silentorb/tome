@@ -1,14 +1,26 @@
 import type { GraphDatabase, Relationship } from "./graph";
-import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "./labels";
+import { MEMBER_OF_TYPE, MEMBERS_TYPE, ORDERED_MEMBER_OF_TYPE, ORDERED_MEMBERS_TYPE } from "./labels";
 import { resolveContentPath } from "./content/paths";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { archiveNodeId } from "./workspace/resolve";
 import { hasTableSchemaEntry, loadTableSchemasFromContent } from "./table-schemas/load";
-import { isSetTraitComposite } from "./relationship-type-traits";
+import {
+  isSetTraitComposite,
+  membershipCompositeForSet,
+  membershipPerspectivesForSet,
+  setRoleIndices,
+  typesWithTrait,
+  SET_TRAIT,
+} from "./relationship-type-traits";
 
 export const SET_MEMBERSHIP_TYPE = MEMBER_OF_TYPE;
 
-export const MEMBERSHIP_PERSPECTIVES = [MEMBER_OF_TYPE, MEMBERS_TYPE] as const;
+export const MEMBERSHIP_PERSPECTIVES = [
+  MEMBER_OF_TYPE,
+  MEMBERS_TYPE,
+  ORDERED_MEMBER_OF_TYPE,
+  ORDERED_MEMBERS_TYPE,
+] as const;
 
 export type MembershipPerspective = (typeof MEMBERSHIP_PERSPECTIVES)[number];
 
@@ -28,19 +40,33 @@ export function isMembershipPerspective(perspective: string): perspective is Mem
 export function listSetMembership(
   db: GraphDatabase,
   nodeId: string,
-  perspective: MembershipPerspective,
+  perspective: string,
 ): Relationship[] {
   return db.listRelationshipsFromSource(nodeId, perspective);
 }
 
-export function memberSetIds(db: GraphDatabase, memberId: string): string[] {
-  return listSetMembership(db, memberId, MEMBER_OF_TYPE).map((r) => r.targetNodeId);
+export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: string): string[] {
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
+  const ids = new Set<string>();
+  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+    const def = registry.types[composite];
+    if (!def) continue;
+    const { childIndex } = setRoleIndices(def);
+    const memberPerspective = def.perspectives[childIndex];
+    for (const rel of db.listRelationshipsFromSource(memberId, memberPerspective)) {
+      ids.add(rel.targetNodeId);
+    }
+  }
+  return [...ids];
 }
 
-export function setMemberIds(db: GraphDatabase, setId: string): string[] {
-  const viaMembers = listSetMembership(db, setId, MEMBERS_TYPE).map((r) => r.targetNodeId);
-  if (viaMembers.length > 0) return viaMembers;
-  return db.listRelationshipsToTarget(setId, MEMBER_OF_TYPE).map((r) => r.sourceNodeId);
+export function setMemberIds(db: GraphDatabase, setId: string, contentDir?: string): string[] {
+  const dir = contentDir ?? resolveContentPath();
+  const [setPerspective, memberPerspective] = membershipPerspectivesForSet(setId, dir);
+  const viaSet = listSetMembership(db, setId, setPerspective).map((r) => r.targetNodeId);
+  if (viaSet.length > 0) return viaSet;
+  return db.listRelationshipsToTarget(setId, memberPerspective).map((r) => r.sourceNodeId);
 }
 
 export function collectSetNodeIds(contentDir?: string): Set<string> {
@@ -65,7 +91,7 @@ export function setKindForNode(
   const archiveId = archiveNodeId(dir);
   if (archiveId && nodeId === archiveId) return "archive";
   if (hasTableSchemaEntry(dir, nodeId)) return "type_table";
-  if (setMemberIds(db, nodeId).length > 0 || memberSetIds(db, nodeId).length > 0) {
+  if (setMemberIds(db, nodeId, dir).length > 0 || memberSetIds(db, nodeId, dir).length > 0) {
     return "type_table";
   }
   return null;
@@ -79,9 +105,13 @@ export function findSetMembershipRelationship(
   db: GraphDatabase,
   memberId: string,
   setId: string,
+  contentDir?: string,
 ): Relationship | null {
+  const dir = contentDir ?? resolveContentPath();
+  const [, memberPerspective] = membershipPerspectivesForSet(setId, dir);
   return (
-    listSetMembership(db, memberId, MEMBER_OF_TYPE).find((r) => r.targetNodeId === setId) ?? null
+    listSetMembership(db, memberId, memberPerspective).find((r) => r.targetNodeId === setId) ??
+    null
   );
 }
 
@@ -89,8 +119,11 @@ export function findSetMembershipRelationship(
 export function listSetMemberRowConnections(
   db: GraphDatabase,
   setId: string,
+  contentDir?: string,
 ): Relationship[] {
-  const viaMembers = listSetMembership(db, setId, MEMBERS_TYPE);
+  const dir = contentDir ?? resolveContentPath();
+  const [setPerspective, memberPerspective] = membershipPerspectivesForSet(setId, dir);
+  const viaMembers = listSetMembership(db, setId, setPerspective);
   if (viaMembers.length > 0) {
     return viaMembers.map((r) => ({
       ...r,
@@ -98,23 +131,5 @@ export function listSetMemberRowConnections(
       targetNodeId: setId,
     }));
   }
-  return db.listRelationshipsToTarget(setId, MEMBER_OF_TYPE);
-}
-
-export function maxRowIndexForSet(db: GraphDatabase, setId: string): number {
-  let max = -1;
-  for (const connection of listSetMembership(db, setId, MEMBERS_TYPE)) {
-    const raw = connection.properties.row_index;
-    const index =
-      typeof raw === "number" ? raw : Number.parseInt(String(raw ?? ""), 10);
-    if (Number.isFinite(index) && index > max) max = index;
-  }
-  if (max >= 0) return max;
-  for (const connection of db.listRelationshipsToTarget(setId, MEMBER_OF_TYPE)) {
-    const raw = connection.properties.row_index;
-    const index =
-      typeof raw === "number" ? raw : Number.parseInt(String(raw ?? ""), 10);
-    if (Number.isFinite(index) && index > max) max = index;
-  }
-  return max;
+  return db.listRelationshipsToTarget(setId, memberPerspective);
 }

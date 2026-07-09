@@ -5,8 +5,11 @@ import {
   destroyTestContentFixture,
   seedTestNode,
   seedTestRelationships,
+  seedTestTableSchema,
 } from "tome-db/content/test-helpers";
+import { ORDERED_MEMBER_OF_TYPE } from "tome-db";
 import { contentModelDir, schemaFilePath } from "tome-db/content";
+import { invalidateSchemaCache } from "tome-db";
 import { createTestApiFromContent } from "./test-api-setup";
 
 describe("relationship types API", () => {
@@ -16,10 +19,11 @@ describe("relationship types API", () => {
   const featureTypeId = "0000000000000000000000002P";
 
   const fixture = createTestContentFixture("tome-rel-types-api-");
+  seedTestTableSchema(fixture, sceneTypeId, [], "ordered_member_of");
   seedTestNode(fixture, { id: sourceId, properties: { title: "Scene page" } });
   seedTestNode(fixture, { id: targetId, properties: { title: "Feature page" } });
   seedTestRelationships(fixture, [
-    { source: sourceId, target: sceneTypeId, type: "member_of" },
+    { source: sourceId, target: sceneTypeId, type: ORDERED_MEMBER_OF_TYPE },
     { source: targetId, target: featureTypeId, type: "member_of" },
     { source: sourceId, target: targetId, type: "features" },
   ]);
@@ -40,6 +44,7 @@ describe("relationship types API", () => {
     }),
     "utf-8",
   );
+  invalidateSchemaCache();
 
   const api = createTestApiFromContent(fixture);
 
@@ -65,7 +70,7 @@ describe("relationship types API", () => {
   test("GET relationship-link-options returns null when no rule matches", async () => {
     const res = await api.handler(
       new Request(
-        `http://127.0.0.1/api/nodes/${sourceId}/relationship-link-options?type=theme`,
+        `http://127.0.0.1/api/nodes/${sourceId}/relationship-link-options?type=verses`,
       ),
     );
     expect(res.status).toBe(200);

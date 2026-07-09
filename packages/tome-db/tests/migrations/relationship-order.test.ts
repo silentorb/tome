@@ -35,7 +35,7 @@ function ctxFixture(): RelationshipOrderContext {
     registry: {
       version: 1,
       types: {
-        member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
+        member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
         scenes_product: { perspectives: ["scenes", "product"] },
         parents_children: { perspectives: ["children", "parents"] },
         includes: { perspectives: ["includes", "includes"] },
@@ -164,7 +164,7 @@ describe("migrateRelationshipOrder (end-to-end over a content dir)", () => {
     fixture.ctx.store.writeRelationshipTypesFile({
       version: 1,
       types: {
-        member_of: { perspectives: ["members", "member_of"], traits: { set: true } },
+        member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
         scenes_product: { perspectives: ["scenes", "product"] },
       },
     });

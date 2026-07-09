@@ -2,7 +2,14 @@
 
 ## Summary
 
-Set membership is one of two **relationship families** in the Tome property graph. A membership edge links a **set node** (type table, Archive hub, future tag/scope sets) to a **member node**. Storage uses composite type `member_of` with asymmetric **perspectives**: `member_of` from the member, `members` from the set.
+Set membership is one of two **relationship families** in the Tome property graph. A membership edge links a **set node** (type table, Archive hub, future tag/scope sets) to a **member node**. Storage uses composite types with asymmetric **perspectives**:
+
+| Composite | Perspectives | Traits | Use |
+| --- | --- | --- | --- |
+| `member_of` | `members` / `member_of` | `set` | Plain type tables, Archive |
+| `ordered_member_of` | `ordered_members` / `ordered_member_of` | `set`, `ordered` | Scenes, Parts, Products (sequence on `order`) |
+
+Which composite a type table uses is declared per set in `table-schemas.json` as `membershipComposite` (default `member_of`).
 
 Peer **association** (scene↔feature, etc.) remains on the separate `includes` family — see [tome-db.md](./tome-db.md).
 
@@ -24,7 +31,8 @@ For design-domain meaning of types and sets, read [`../ontology.md`](../../marlo
 
 | Family | Storage type | Perspectives | Examples |
 | --- | --- | --- | --- |
-| **Set membership** | `member_of` | `["members", "member_of"]` | Features row, Themes row, Archive member |
+| **Plain set membership** | `member_of` | `["members", "member_of"]` | Features, Themes, Archive |
+| **Ordered set membership** | `ordered_member_of` | `["ordered_members", "ordered_member_of"]` | Scenes, Parts, Products rows |
 | **Peer association** | `includes` (+ named composites) | `["includes", "includes"]` or distinct pair | Scene↔Feature, taxonomy↔Inspiration |
 
 ### Content record shape (membership)
@@ -34,14 +42,16 @@ For design-domain meaning of types and sets, read [`../ontology.md`](../../marlo
   "a": "<set-id>",
   "b": "<member-id>",
   "type": "member_of",
-  "properties": { "view": "All", "row_index": 3 }
+  "properties": { "priority": "High" }
 }
 ```
 
-- Endpoints `a` / `b` are an **ordered tuple**: the **parent (set)** is at index 0 (`a`), the **child (member)** at index 1 (`b`). This matches the type's `perspectives` pair `["members", "member_of"]` (`perspectives[0]` = parent/set position, `perspectives[1]` = child/member position). There is **no lexicographic sorting**.
-- The `member_of` registry entry carries `traits: { "set": true }` — a minimal trait declaring parent/child tuple roles only (not type-table detection, archive behavior, or row ordering).
+Ordered sets use `type: "ordered_member_of"` with an `order` property (default sequence key from the `ordered` trait).
+
+- Endpoints `a` / `b` are an **ordered tuple**: the **parent (set)** is at index 0 (`a`), the **child (member)** at index 1 (`b`). This matches the type's `perspectives` pair (`perspectives[0]` = parent/set position, `perspectives[1]` = child/member position). There is **no lexicographic sorting**.
+- Registry entries carry `traits` as an **array interpreted as a set** — e.g. `["set"]` or `["set", "ordered"]`. Configured traits use `{ "key": "ordered", "property": "rank" }`; when `property` is omitted, `order` is the default sequence key.
 - **No `directedFrom` field exists** — direction is derived from tuple position + the type's perspectives, not a stored flag.
-- Row scalars for type tables live on edge `properties` (keys from `table-schemas.json`).
+- Row scalars for type tables live on edge `properties` (keys from `table-schemas.json`). Legacy `row_index` is not written or displayed.
 
 ### Projection expansion
 
@@ -91,14 +101,14 @@ Archive membership uses `member_of` edges to the Archive hub (same family as typ
 
 ### Link vs create row
 
-Linking an existing node to a type table via `linkOutgoingRelationship` **must** stamp `view` and `row_index` on the membership edge (same as `createNode` with `kind: "database-row"`).
+Linking or creating a type-table row **must** use the set's configured membership composite (`member_of` or `ordered_member_of`). Plain tables get no placement metadata. Ordered tables auto-stamp `order` when missing (`ordered-relationships.ts`).
 
 ### Node page sections
 
 | Page kind | Membership UI |
 | --- | --- |
-| **Set / type-table node** | Single **Members** table section (`database` or `ordered-association`) — full columns, tabs, editing via `getDatabaseViewDetail` |
-| **Member instance node** | **Properties** panel in metadata (edge scalars from `member_of`) **and** one **Membership** relation section below the markdown body (title from `perspectiveLabels.member_of` in `relationship-types.json`; parent type-table nodes as rows; link/unlink there) |
+| **Set / type-table node** | Single **Members** or **Ordered members** table section (`database` or `ordered-association`) — full columns, tabs, editing via `getDatabaseViewDetail` |
+| **Member instance node** | **Properties** panel in metadata (edge scalars from membership) **and** one **Membership** relation section below the markdown body |
 
 The auto-generated inverse **`members`** relation section is **not** emitted on set pages — membership listing there uses the rich Members table only. The Membership section header does **not** link to a single parent set (rows link to each parent).
 
@@ -131,8 +141,8 @@ flowchart LR
 | Path | Role |
 | --- | --- |
 | `content/data/relationships.json` | Canonical membership records |
-| `content/model/relationship-types.json` | `member_of` perspectives, `traits.set`, optional `perspectiveLabels.member_of` (Marloth: **Membership**) |
-| `content/model/table-schemas.json` | Type-table set detection + column defs |
+| `content/model/relationship-types.json` | `member_of` / `ordered_member_of` perspectives, traits array, optional `perspectiveLabels` |
+| `content/model/table-schemas.json` | Type-table set detection, optional `membershipComposite`, column defs |
 | `content/model/views.json` | `sections.members` tab config for Members table |
 | `content/model/workspace.json` | `archiveNodeId` for archive set detection |
 | `packages/tome-db/src/set-membership.ts` | Unified membership query API |
@@ -169,7 +179,7 @@ Scripts (marloth-story):
 | `node-page-sections.ts` | Members table on set pages; Properties on instances |
 | `archive-status.ts` | Archive via membership to hub |
 | `node-lifecycle.ts` | Archive/unarchive writes membership edges |
-| `relationship-link-mutations.ts` | Row metadata on link-existing |
+| `relationship-link-mutations.ts` | Membership edge creation; ordered `order` stamp when composite is ordered |
 
 ## See also
 

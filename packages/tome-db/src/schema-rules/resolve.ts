@@ -18,9 +18,10 @@ export function resolveRelationshipRule(
   db: GraphDatabase,
   sourceNodeId: string,
   type: string,
+  contentDir?: string,
 ): RelationshipRuleEntry | null {
   const lookupType = ruleLookupType(type);
-  const sourceTypes = typeIdsForInstance(db, sourceNodeId);
+  const sourceTypes = typeIdsForInstance(db, sourceNodeId, contentDir);
 
   for (const rule of schema.relationshipRules) {
     if (rule.type !== lookupType) continue;
@@ -34,8 +35,9 @@ export function resolveRelationshipRulesForSource(
   schema: SchemaFile,
   db: GraphDatabase,
   sourceNodeId: string,
+  contentDir?: string,
 ): RelationshipRuleEntry[] {
-  const sourceTypes = typeIdsForInstance(db, sourceNodeId);
+  const sourceTypes = typeIdsForInstance(db, sourceNodeId, contentDir);
   if (sourceTypes.length === 0) return [];
 
   return schema.relationshipRules.filter((rule) => sourceTypes.includes(rule.sourceTypeId));
@@ -52,8 +54,9 @@ export function relationshipRuleContextForType(
   db: GraphDatabase,
   sourceNodeId: string,
   type: string,
+  contentDir?: string,
 ): RelationshipRuleContext | null {
-  const rule = resolveRelationshipRule(schema, db, sourceNodeId, type);
+  const rule = resolveRelationshipRule(schema, db, sourceNodeId, type, contentDir);
   if (!rule) return null;
   return {
     ruleId: rule.id,

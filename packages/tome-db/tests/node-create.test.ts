@@ -63,7 +63,7 @@ describe("createNode", () => {
     expect(rel?.properties.ordinal).toBe(3);
   });
 
-  test("creates database IS_A row", () => {
+  test("creates database row without row_index stamping", () => {
     fixture = createTestContentFixture("tome-create-");
     const databaseId = "00000000000000000000000028";
     seedTestNode(fixture, {
@@ -75,21 +75,18 @@ describe("createNode", () => {
       id: "0000000000000000000000002K",
       properties: { title: "Old row" },
     });
-    fixture.ctx.store.upsertRelationship("0000000000000000000000002K", databaseId, MEMBER_OF_TYPE, {
-      row_index: 4,
-      view: "default",
-    });
+    fixture.ctx.store.upsertRelationship("0000000000000000000000002K", databaseId, MEMBER_OF_TYPE, {});
     fixture.ctx.sync.syncRelationships();
 
     const result = createNode(fixture.ctx, {
       title: "Fresh row",
-      link: { kind: "database-row", databaseId, view: "default" },
+      link: { kind: "database-row", databaseId },
     });
     if (typeof result === "string") throw new Error(result);
 
     const rel = fixture.ctx.store.findRelationship(result.id, databaseId, MEMBER_OF_TYPE);
-    expect(rel?.properties.row_index).toBe(5);
-    expect(rel?.properties.view).toBe("default");
+    expect(rel?.properties.row_index).toBeUndefined();
+    expect(rel?.properties.view).toBeUndefined();
   });
 
   test("returns source_not_found for missing parent", () => {
