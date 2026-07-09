@@ -1,22 +1,14 @@
 import type { GraphDatabase, Relationship } from "./graph";
 import type { DatabaseColumnDef } from "./database-view";
 import type { RelationLink } from "./relation-link";
-import {
-  isIncludesPerspectiveSlug,
-  isMigratableToIncludesStorageType,
-  TAXONOMY_INSPIRATION_PERSPECTIVES,
-} from "./includes-relationship";
 import { relationType } from "./relation-type";
 import type { EvalRow } from "./row-sort";
 import {
   filterRelationshipsByRowDatabaseContext,
-  listIncludesIncident,
   listRelationshipsForComposite,
-  listRelationshipsToDatabaseMembers,
   otherEndpoint,
   rowBelongsToDatabase,
 } from "./relationship-traverse";
-import { compositeTypeForPerspectives } from "./content/relationship-types-file";
 import { normalizeRelationshipType } from "./relation-type";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
@@ -30,11 +22,6 @@ function ordinalFromProperties(properties: Record<string, unknown>): number {
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
   const parsed = Number.parseInt(String(raw ?? ""), 10);
   return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
-}
-
-function shouldUseIncludesLookup(connectionType: string): boolean {
-  if (TAXONOMY_INSPIRATION_PERSPECTIVES.has(connectionType)) return false;
-  return isIncludesPerspectiveSlug(connectionType);
 }
 
 function scopeForRow(
@@ -66,58 +53,25 @@ export function listRelationConnectionsForRow(
   nodeId: string,
   connectionType: string,
   databaseId: string,
-  targetDatabaseId?: string,
+  compositeType?: string,
   contentDir?: string,
 ): Relationship[] {
   if (!rowBelongsToDatabase(db, nodeId, databaseId, contentDir)) return [];
 
-  if (targetDatabaseId && shouldUseIncludesLookup(connectionType)) {
-    const byIncludes = listIncludesIncident(db, nodeId, targetDatabaseId, contentDir);
-    const includesFiltered = scopeForRow(db, nodeId, databaseId, byIncludes, contentDir);
-    if (includesFiltered.length > 0) return includesFiltered;
-  }
-
-  if (targetDatabaseId && targetDatabaseId !== databaseId) {
-    const byTargetDb = listRelationshipsToDatabaseMembers(db, nodeId, targetDatabaseId, contentDir);
-    const filtered = scopeForRow(db, nodeId, databaseId, byTargetDb, contentDir);
-    if (filtered.length > 0) return filtered;
-  }
-
-  if (targetDatabaseId && !TAXONOMY_INSPIRATION_PERSPECTIVES.has(connectionType)) {
-    const compositeType = compositeTypeForPerspectives(
-      connectionType,
-      inferInverseRelationType(connectionType),
+  if (compositeType) {
+    const byComposite = listRelationshipsForComposite(db, nodeId, compositeType);
+    const compositeFiltered = scopeForRow(
+      db,
+      nodeId,
+      databaseId,
+      filterByOutgoingPerspective(nodeId, connectionType, byComposite),
+      contentDir,
     );
-    if (!isMigratableToIncludesStorageType(compositeType)) {
-      const byComposite = listRelationshipsForComposite(db, nodeId, compositeType);
-      const compositeFiltered = scopeForRow(
-        db,
-        nodeId,
-        databaseId,
-        filterByOutgoingPerspective(nodeId, connectionType, byComposite),
-        contentDir,
-      );
-      if (compositeFiltered.length > 0) return compositeFiltered;
-    }
+    if (compositeFiltered.length > 0) return compositeFiltered;
   }
 
   const outgoing = db.listRelationshipsFromSource(nodeId, connectionType);
   return scopeForRow(db, nodeId, databaseId, outgoing, contentDir);
-}
-
-function inferInverseRelationType(localType: string): string {
-  switch (localType) {
-    case "scenes":
-      return "location";
-    case "location":
-      return "scenes";
-    case "parents":
-      return "children";
-    case "children":
-      return "parents";
-    default:
-      return localType;
-  }
 }
 
 function linksFromRelationships(
@@ -164,7 +118,7 @@ export function hydrateRelationCellsForRows(
         row.nodeId,
         type,
         databaseId,
-        col.targetDatabaseId,
+        col.relationshipCompositeType,
         contentDir,
       );
       const links = linksFromRelationships(db, row.nodeId, relationships);

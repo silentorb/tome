@@ -33,11 +33,10 @@ import {
 import { relationshipId } from "../graph";
 import {
   registerBidirectionalType,
-  registerIncludesType,
   registerOrderedSetMembershipType,
   registerSetMembershipType,
 } from "./relationship-types-file";
-import { INCLUDES_TYPE } from "../includes-relationship";
+import { normalizeRelationshipType } from "../relation-type";
 import {
   serializeWorkspaceFile,
   type WorkspaceFile,
@@ -237,6 +236,7 @@ export function seedTestIncludes(
   connections: Array<{
     a: string;
     b: string;
+    compositeType: string;
     properties?: Properties;
   }>,
   options?: { replace?: boolean },
@@ -248,13 +248,15 @@ export function seedTestIncludes(
     ? { version: RELATIONSHIPS_FILE_VERSION, relationships: [] as RelationshipEntry[] }
     : fixture.ctx.store.readRelationshipsFile();
 
-  registerIncludesType(registry);
-
   for (const connection of connections) {
+    const compositeType = normalizeRelationshipType(connection.compositeType);
+    if (!registry.types[compositeType]) {
+      registerBidirectionalType(registry, compositeType, compositeType);
+    }
     const entry: RelationshipEntry = {
       a: connection.a,
       b: connection.b,
-      type: INCLUDES_TYPE,
+      type: compositeType,
       properties: connection.properties ?? {},
     };
     const index = file.relationships.findIndex(
@@ -344,10 +346,11 @@ export function seedTestRelationships(
       registerSetMembershipType(registry);
     } else if (connection.type === "ordered_member_of") {
       registerOrderedSetMembershipType(registry);
-    } else if (connection.type === "includes") {
-      registerIncludesType(registry);
     } else {
-      registerBidirectionalType(registry, connection.type, connection.type);
+      const composite = normalizeRelationshipType(connection.type);
+      if (!registry.types[composite]) {
+        registerBidirectionalType(registry, composite, composite);
+      }
     }
     const entry = entryFromSeedConnection(connection);
     const index = file.relationships.findIndex(

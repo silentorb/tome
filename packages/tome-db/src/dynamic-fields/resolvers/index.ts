@@ -1,11 +1,9 @@
 import type { GraphDatabase, Relationship } from "../../graph";
-import { INCLUDES_TYPE } from "../../includes-relationship";
 import { TYPE_MEMBERSHIP_TYPES } from "../../labels";
 import { priorityWeight } from "../../property-enums";
 import { normalizeRelationshipType } from "../../relation-type";
 import type { DynamicResolverContext } from "../registry";
 import {
-  listIncludesIncident,
   listRelationshipsForComposite,
   otherEndpoint,
 } from "../../relationship-traverse";
@@ -21,32 +19,18 @@ function listAssociationsFromComposite(
   compositeType: string,
 ): Relationship[] {
   if (!compositeType) return [];
-  const includes = listRelationshipsForComposite(db, nodeId, INCLUDES_TYPE);
-  if (includes.length > 0) return includes;
   return listRelationshipsForComposite(db, nodeId, compositeType);
 }
 
-/** Character→scene links via scoped includes, composite, or legacy SCENES edges. */
+/** Character→scene links via named composite. */
 function listCharacterSceneConnections(
   db: GraphDatabase,
   nodeId: string,
   params: Record<string, unknown>,
 ): Relationship[] {
   const composite = stringParam(params, "characters_scene_composite");
-  const scenesDatabaseId = stringParam(params, "scenes_database_id");
-
-  if (scenesDatabaseId) {
-    const includes = listIncludesIncident(db, nodeId, scenesDatabaseId);
-    if (includes.length > 0) return includes;
-  } else {
-    const includes = listRelationshipsForComposite(db, nodeId, INCLUDES_TYPE);
-    if (includes.length > 0) return includes;
-  }
-
-  if (composite) {
-    return listRelationshipsForComposite(db, nodeId, composite);
-  }
-  return [];
+  if (!composite) return [];
+  return listRelationshipsForComposite(db, nodeId, composite);
 }
 
 function relatedProductIdsFromScene(

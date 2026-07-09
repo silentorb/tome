@@ -14,7 +14,6 @@ export {
   emptyRelationshipTypesFile,
   parseRelationshipTypesFile,
   registerBidirectionalType,
-  registerIncludesType,
   serializeRelationshipTypesFile,
 } from "./relationship-types-file";
 export type {
@@ -22,7 +21,9 @@ export type {
   RelationshipTypesFile,
   PerspectiveLabelConfig,
   PerspectivePair,
-  TraitValue,
+  TraitEntry,
+  RelationshipTypeEndpoints,
+  RelationshipEndpointConstraint,
 } from "./relationship-types-file";
 export { expandAllRelationships } from "./relationship-sync-expand";
 export {

@@ -194,8 +194,7 @@ export function createHttpEditorClient(baseUrl: string): EditorApiClient {
         name: string;
         type: string;
         enumId?: string;
-        targetTypeId?: string;
-        perspective?: string;
+        relationshipType?: string;
       },
     ): Promise<{
       column: import("tome-db").TableColumnDef;
@@ -217,8 +216,7 @@ export function createHttpEditorClient(baseUrl: string): EditorApiClient {
         newKey?: string;
         type?: string;
         enumId?: string | null;
-        targetTypeId?: string;
-        perspective?: string;
+        relationshipType?: string;
       },
     ): Promise<{
       column: import("tome-db").TableColumnDef;

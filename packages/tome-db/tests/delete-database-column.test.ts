@@ -73,10 +73,18 @@ describe("deleteDatabaseColumn", () => {
         key: "parents",
         name: "Parents",
         type: "relation",
-        targetTypeId: parentId,
-        perspective: "parents",
+        relationshipType: "parents_children",
       },
     ]);
+    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    registry.types.parents_children = {
+      perspectives: ["children", "parents"],
+      endpoints: {
+        0: { typeId: databaseId },
+        1: { typeId: parentId },
+      },
+    };
+    fixture.ctx.store.writeRelationshipTypesFile(registry);
     seedTestNode(fixture, { id: pageId, properties: { title: "Child feature" } });
     seedTestNode(fixture, { id: parentId, properties: { title: "Parent feature" } });
     seedTestRelationships(fixture, [
@@ -84,7 +92,7 @@ describe("deleteDatabaseColumn", () => {
       {
         source: pageId,
         target: parentId,
-        type: "parents",
+        type: "children",
         properties: { ordinal: 0 },
       },
     ]);
@@ -94,7 +102,7 @@ describe("deleteDatabaseColumn", () => {
 
     const tableSchema = fixture.ctx.store.readTableSchemasFile().tables[databaseId];
     expect(tableSchema?.columns.some((col) => col.key === "parents")).toBe(false);
-    expect(fixture.ctx.db.listRelationshipsFromSource(pageId, "parents")).toHaveLength(0);
+    expect(fixture.ctx.db.listRelationshipsFromSource(pageId, "children")).toHaveLength(0);
 
     const detail = getDatabaseViewDetail(fixture.ctx.db, databaseId, undefined, fixture.ctx.store.contentDir);
     expect(detail?.columns).not.toContain("parents");

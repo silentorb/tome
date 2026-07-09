@@ -1,14 +1,7 @@
 #!/usr/bin/env bun
 /**
- * Audit all relationships in a content store, reporting any that use unidirectional
- * (single-perspective) types or directedFrom. Simulates the resolution rules the
- * write path will use after hardening:
- *
- *  1. includes slug → "includes"
- *  2. taxonomy inspiration slug → *_inspirations composite
- *  3. parents|children → parents_children
- *  4. registered dual-perspective composite via table-schema inverse lookup
- *  5. BLOCKER (cannot resolve)
+ * Audit relationships in a content store: every stored edge should use a registered
+ * dual-perspective composite type (no legacy includes bucket or unidirectional types).
  *
  * Usage: bun packages/tome-db/scripts/audit-relationship-resolution.ts [contentDir]
  *
@@ -17,10 +10,6 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import {
-  INCLUDES_TYPE,
-  TAXONOMY_INSPIRATION_PERSPECTIVES,
-} from "../src/includes-relationship";
 import { normalizeRelationshipType } from "../src/relation-type";
 import {
   relationshipsFilePath,
@@ -28,7 +17,6 @@ import {
 } from "../src/content/paths";
 import {
   parseRelationshipTypesFile,
-  compositeTypeForPerspectives,
   isDualPerspectiveType,
   type RelationshipTypesFile,
 } from "../src/content/relationship-types-file";
@@ -36,32 +24,6 @@ import {
   parseRelationshipsFile,
   type RelationshipEntry,
 } from "../src/content/relationships-file";
-
-const INCLUDES_PERSPECTIVE_SLUGS_EXPANDED = new Set([
-  "includes",
-  "inspirations",
-  "features",
-  "characters",
-  "location",
-  "products",
-  "solutions",
-  "bible_passages",
-  "groups",
-  "character_attributes",
-  "scenes",
-  "scenes_2",
-  "themes",
-  "theme",
-  "motivation",
-]);
-
-function isExpandedIncludesSlug(perspective: string): boolean {
-  return INCLUDES_PERSPECTIVE_SLUGS_EXPANDED.has(normalizeRelationshipType(perspective));
-}
-
-function isTaxonomyInspirationSlug(perspective: string): boolean {
-  return TAXONOMY_INSPIRATION_PERSPECTIVES.has(normalizeRelationshipType(perspective));
-}
 
 function resolveExpectedComposite(
   entry: RelationshipEntry,
@@ -74,32 +36,15 @@ function resolveExpectedComposite(
     return null;
   }
 
-  if (type === INCLUDES_TYPE) return null;
-  if (type === "member_of") return null;
-
-  const perspective = typeDef?.perspectives[0] ?? type;
-
-  if (isExpandedIncludesSlug(perspective)) {
-    return { target: INCLUDES_TYPE, rule: "includes-slug" };
+  if (type === "includes") {
+    return { target: "BLOCKER", rule: "legacy-includes-storage" };
   }
 
-  if (isTaxonomyInspirationSlug(perspective)) {
-    const composite = compositeTypeForPerspectives(perspective, "inspirations");
-    if (registry.types[composite] && isDualPerspectiveType(registry.types[composite])) {
-      return { target: composite, rule: "taxonomy-inspiration" };
-    }
-    return { target: composite, rule: "taxonomy-inspiration (MISSING REGISTRY)" };
+  if (typeDef) {
+    return { target: "BLOCKER", rule: "unidirectional-or-invalid-composite" };
   }
 
-  if (perspective === "parents" || perspective === "children") {
-    const composite = "parents_children";
-    if (registry.types[composite] && isDualPerspectiveType(registry.types[composite])) {
-      return { target: composite, rule: "parents-children" };
-    }
-    return { target: composite, rule: "parents-children (MISSING REGISTRY)" };
-  }
-
-  return { target: "BLOCKER", rule: "unresolvable" };
+  return { target: "BLOCKER", rule: "unknown-type" };
 }
 
 export function auditRelationships(contentDir: string): {

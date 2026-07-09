@@ -155,17 +155,23 @@ describe("migrateRelationshipOrder (end-to-end over a content dir)", () => {
 
     // Products type table owns the "scenes" column -> Scenes type table.
     seedTestTableSchema(fixture, productsDb, [
-      { key: "scenes", name: "Scenes", type: "relation", targetTypeId: scenesDb, perspective: "scenes" },
+      { key: "scenes", name: "Scenes", type: "relation", relationshipType: "scenes_product" },
     ]);
     seedTestTableSchema(fixture, scenesDb, [
-      { key: "product", name: "Product", type: "relation", targetTypeId: productsDb, perspective: "product" },
+      { key: "product", name: "Product", type: "relation", relationshipType: "scenes_product" },
     ]);
 
     fixture.ctx.store.writeRelationshipTypesFile({
       version: 1,
       types: {
         member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
-        scenes_product: { perspectives: ["scenes", "product"] },
+        scenes_product: {
+          perspectives: ["scenes", "product"],
+          endpoints: {
+            0: { typeId: productsDb },
+            1: { typeId: scenesDb },
+          },
+        },
       },
     });
 

@@ -1,8 +1,9 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { DatabaseColumnDef } from "../../shared/types";
 import type { EditorApi } from "../api/client";
-import { relationPerspectiveFromName, slugifyColumnKey } from "./column-editor-utils";
+import { slugifyColumnKey } from "./column-editor-utils";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { RelationshipTypePicker } from "./RelationshipTypePicker";
 import "./add-relationship-dialog.css";
 import "./column-editor-dialog.css";
 
@@ -36,10 +37,6 @@ interface ColumnEditorDialogProps {
   onSaved: () => void;
 }
 
-function relationPerspectivePreview(name: string): string {
-  return relationPerspectiveFromName(name);
-}
-
 function initialFormFromColumn(def: DatabaseColumnDef | undefined, mode: "add" | "edit") {
   if (mode === "edit" && def) {
     return {
@@ -47,9 +44,8 @@ function initialFormFromColumn(def: DatabaseColumnDef | undefined, mode: "add" |
       key: def.key,
       type: def.type === "relation" ? "relation" : def.type,
       enumId: def.enumId ?? "",
-      targetTypeId: def.targetDatabaseId ?? "",
-      perspective:
-        def.type === "relation" ? (def.relationType ?? relationPerspectivePreview(def.name)) : "",
+      relationshipType:
+        def.type === "relation" ? (def.relationshipCompositeType ?? "") : "",
     };
   }
   return {
@@ -57,8 +53,7 @@ function initialFormFromColumn(def: DatabaseColumnDef | undefined, mode: "add" |
     key: "",
     type: "text",
     enumId: "",
-    targetTypeId: "",
-    perspective: "",
+    relationshipType: "",
   };
 }
 
@@ -80,10 +75,7 @@ function migrationConfirmMessage(
       parts.push("Changing the column type may leave existing cell values incompatible.");
     }
   } else if (next.type === "relation") {
-    if (
-      next.targetTypeId !== initial.targetTypeId ||
-      next.perspective !== initial.perspective
-    ) {
+    if (next.relationshipType !== initial.relationshipType) {
       parts.push("Changing relation settings will unlink all existing links for this column.");
     }
   }
@@ -106,7 +98,6 @@ export function ColumnEditorDialog({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enumIds, setEnumIds] = useState<string[]>([]);
-  const [typeTables, setTypeTables] = useState<{ id: string; title: string }[]>([]);
   const [confirmMessage, setConfirmMessage] = useState<string | null>(null);
   const [pendingSubmit, setPendingSubmit] = useState<(() => Promise<void>) | null>(null);
 
@@ -134,9 +125,8 @@ export function ColumnEditorDialog({
 
   useEffect(() => {
     if (!open) return;
-    void Promise.all([api.getSchema(), api.listTypeTables()]).then(([schema, tables]) => {
+    void api.getSchema().then((schema) => {
       setEnumIds(Object.keys(schema.enums).sort());
-      setTypeTables(tables);
     });
   }, [api, open]);
 
@@ -151,8 +141,6 @@ export function ColumnEditorDialog({
 
   const autoKey = slugifyColumnKey(form.name);
   const effectiveKey = form.key.trim() || autoKey;
-  const perspectivePreview =
-    form.perspective.trim() || relationPerspectivePreview(form.name || "Property");
 
   const submitPayload = () => {
     const name = form.name.trim();
@@ -166,8 +154,7 @@ export function ColumnEditorDialog({
     if (form.type === "relation") {
       return {
         ...base,
-        targetTypeId: form.targetTypeId,
-        perspective: form.perspective.trim() || relationPerspectivePreview(name),
+        relationshipType: form.relationshipType.trim(),
       };
     }
     if (form.type === "select" || form.type === "status") {
@@ -183,8 +170,8 @@ export function ColumnEditorDialog({
       setError("Name is required.");
       return;
     }
-    if (form.type === "relation" && !form.targetTypeId) {
-      setError("Target type table is required for relation columns.");
+    if (form.type === "relation" && !form.relationshipType.trim()) {
+      setError("Relationship type is required for relation columns.");
       return;
     }
     if ((form.type === "select" || form.type === "status") && !form.enumId.trim()) {
@@ -202,8 +189,8 @@ export function ColumnEditorDialog({
           key: payload.key,
           type: payload.type,
           enumId: "enumId" in payload ? payload.enumId : undefined,
-          targetTypeId: "targetTypeId" in payload ? payload.targetTypeId : undefined,
-          perspective: "perspective" in payload ? payload.perspective : undefined,
+          relationshipType:
+            "relationshipType" in payload ? payload.relationshipType : undefined,
         });
       } else if (state.columnKey) {
         await api.updateDatabaseColumn(databaseId, state.columnKey, {
@@ -214,8 +201,8 @@ export function ColumnEditorDialog({
             form.type === "select" || form.type === "status"
               ? form.enumId.trim()
               : null,
-          targetTypeId: "targetTypeId" in payload ? payload.targetTypeId : undefined,
-          perspective: "perspective" in payload ? payload.perspective : undefined,
+          relationshipType:
+            "relationshipType" in payload ? payload.relationshipType : undefined,
         });
       }
       onSaved();
@@ -233,7 +220,6 @@ export function ColumnEditorDialog({
     const migrationMessage = migrationConfirmMessage(state.mode, initialForm, {
       ...form,
       key: effectiveKey,
-      perspective: perspectivePreview,
     });
     if (migrationMessage) {
       setConfirmMessage(migrationMessage);
@@ -298,12 +284,6 @@ export function ColumnEditorDialog({
                       state.mode === "add" || current.key === slugifyColumnKey(current.name)
                         ? slugifyColumnKey(name)
                         : current.key,
-                    perspective:
-                      current.type === "relation" &&
-                      (!current.perspective ||
-                        current.perspective === relationPerspectivePreview(current.name))
-                        ? relationPerspectivePreview(name)
-                        : current.perspective,
                   }));
                 }}
               />
@@ -342,12 +322,8 @@ export function ColumnEditorDialog({
                       event.target.value === "select" || event.target.value === "status"
                         ? current.enumId
                         : "",
-                    targetTypeId:
-                      event.target.value === "relation" ? current.targetTypeId : "",
-                    perspective:
-                      event.target.value === "relation"
-                        ? current.perspective || relationPerspectivePreview(current.name)
-                        : "",
+                    relationshipType:
+                      event.target.value === "relation" ? current.relationshipType : "",
                   }))
                 }
               >
@@ -384,36 +360,20 @@ export function ColumnEditorDialog({
             ) : null}
 
             {form.type === "relation" ? (
-              <>
-                <label className="tome-column-editor-field">
-                  <span>Target type table</span>
-                  <select
-                    value={form.targetTypeId}
-                    disabled={busy}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, targetTypeId: event.target.value }))
-                    }
-                  >
-                    <option value="">Select type table…</option>
-                    {typeTables.map((table) => (
-                      <option key={table.id} value={table.id}>
-                        {table.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="tome-column-editor-field">
-                  <span>Perspective</span>
-                  <input
-                    value={form.perspective}
-                    disabled={busy}
-                    placeholder={perspectivePreview}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, perspective: event.target.value }))
-                    }
-                  />
-                </label>
-              </>
+              <label className="tome-column-editor-field">
+                <span>Relationship type</span>
+                <RelationshipTypePicker
+                  api={api}
+                  selectedType={form.relationshipType || null}
+                  ariaLabel="Relationship type"
+                  onSelect={(relationshipType) =>
+                    setForm((current) => ({ ...current, relationshipType }))
+                  }
+                />
+                <span className="tome-column-editor-hint">
+                  Cross-table link flavor from relationship-types.json.
+                </span>
+              </label>
             ) : null}
 
             {error ? <p className="tome-add-relationship-error">{error}</p> : null}

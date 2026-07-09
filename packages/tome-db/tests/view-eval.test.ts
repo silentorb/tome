@@ -13,9 +13,12 @@ import {
   contentModelDir,
   viewsFilePath,
   dynamicFieldsFilePath,
+  relationshipTypesFilePath,
   tableSchemasFilePath,
 } from "../src/content/paths";
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
+import { serializeRelationshipTypesFile } from "../src/content/relationship-types-file";
+import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
 
 describe("row-sort", () => {
   const rows: EvalRow[] = [
@@ -265,6 +268,22 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const inspirationsDb = "0000000000000000000000000K";
 
     writeFileSync(
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile({
+        version: 1,
+        types: {
+          inspirations_features: {
+            perspectives: ["features", "inspirations"],
+            endpoints: {
+              0: { typeId: featuresDb },
+              1: { typeId: inspirationsDb },
+            },
+          },
+        },
+      }),
+    );
+    invalidateRelationshipTypesCache();
+    writeFileSync(
       viewsFilePath(contentDir),
       serializeViewsFile({
         version: VIEWS_FILE_VERSION,
@@ -294,8 +313,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
                 key: "inspirations",
                 name: "Inspirations",
                 type: "relation",
-                targetTypeId: inspirationsDb,
-                perspective: "inspirations",
+                relationshipType: "inspirations_features",
               },
             ],
           },
@@ -318,11 +336,11 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertRelationship("insp-a", inspirationsDb, MEMBER_OF_TYPE, { row_index: 0 });
     db.upsertRelationship("insp-b", inspirationsDb, MEMBER_OF_TYPE, { row_index: 1 });
     db.upsertRelationship("insp-c", inspirationsDb, MEMBER_OF_TYPE, { row_index: 2 });
-    db.upsertRelationship("feature-few", "insp-a", "includes");
-    db.upsertRelationship("feature-few", "insp-b", "includes");
-    db.upsertRelationship("feature-many", "insp-a", "includes");
-    db.upsertRelationship("feature-many", "insp-b", "includes");
-    db.upsertRelationship("feature-many", "insp-c", "includes");
+    db.upsertRelationship("feature-few", "insp-a", "features");
+    db.upsertRelationship("feature-few", "insp-b", "features");
+    db.upsertRelationship("feature-many", "insp-a", "features");
+    db.upsertRelationship("feature-many", "insp-b", "features");
+    db.upsertRelationship("feature-many", "insp-c", "features");
 
     const view = getDatabaseViewDetail(db, featuresDb, "by-inspirations", contentDir);
     expect(view?.rows.map((row) => row.name)).toEqual([

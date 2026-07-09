@@ -60,36 +60,31 @@ describe("ordered-associations", () => {
       key: "product",
       name: "Product",
       type: "relation",
-      targetTypeId: PRODUCTS_DB,
-      perspective: "product",
+      relationshipType: "scenes_product",
     },
     {
       key: "part",
       name: "Part",
       type: "relation",
-      targetTypeId: PARTS_DB,
-      perspective: "part",
+      relationshipType: "scenes_part",
     },
     {
       key: "solutions",
       name: "Solutions",
       type: "relation",
-      targetTypeId: "0000000000000000000000000T",
-      perspective: "solutions",
+      relationshipType: "solutions_scenes",
     },
     {
       key: "characters",
       name: "📁 Characters",
       type: "relation",
-      targetTypeId: CHARACTERS_DB,
-      perspective: "characters",
+      relationshipType: "scenes_characters",
     },
     {
       key: "location",
       name: "📁 Location",
       type: "relation",
-      targetTypeId: "0000000000000000000000002T",
-      perspective: "location",
+      relationshipType: "scenes_location",
     },
     { key: "order", name: "Order", type: "number" },
   ],
@@ -144,6 +139,45 @@ describe("ordered-associations", () => {
       properties: { ordinal: 0 },
     },
   ]);
+
+  const registry = fixture.ctx.store.readRelationshipTypesFile();
+  registry.types.scenes_product = {
+    perspectives: ["scenes", "product"],
+    endpoints: {
+      0: { typeId: PRODUCTS_DB },
+      1: { typeId: SCENES_DB },
+    },
+  };
+  registry.types.scenes_part = {
+    perspectives: ["scenes", "part"],
+    endpoints: {
+      0: { typeId: SCENES_DB },
+      1: { typeId: PARTS_DB },
+    },
+  };
+  registry.types.solutions_scenes = {
+    perspectives: ["solutions", "scenes"],
+    endpoints: {
+      0: { typeId: "0000000000000000000000000T" },
+      1: { typeId: SCENES_DB },
+    },
+  };
+  registry.types.scenes_characters = {
+    perspectives: ["scenes", "characters"],
+    endpoints: {
+      0: { typeId: SCENES_DB },
+      1: { typeId: CHARACTERS_DB },
+    },
+  };
+  registry.types.scenes_location = {
+    perspectives: ["location", "scenes"],
+    endpoints: {
+      0: { typeId: "0000000000000000000000002T" },
+      1: { typeId: SCENES_DB },
+    },
+  };
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
+  fixture.ctx.sync.syncRelationships();
 
   seedTestViews(fixture, {
     version: VIEWS_FILE_VERSION,

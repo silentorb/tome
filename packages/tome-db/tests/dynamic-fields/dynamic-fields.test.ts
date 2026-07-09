@@ -407,12 +407,10 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
       { source: TWOLD, target: PRODUCTS_DB, type: ORDERED_MEMBER_OF_TYPE },
       { source: OTHER_PRODUCT, target: PRODUCTS_DB, type: ORDERED_MEMBER_OF_TYPE },
     ]);
-    seedTestIncludes(fixture, [
-      { a: character, b: scene1 },
-      { a: character, b: scene2 },
-      { a: character, b: TWOLD },
-    ]);
     seedTestCompositeRelationships(fixture, [
+      { a: scene1, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
+      { a: scene2, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
+      { a: TWOLD, b: character, typeFromA: "products", typeFromB: "characters", properties: {} },
       { a: scene1, b: TWOLD, typeFromA: "scenes", typeFromB: "product", properties: {} },
       { a: scene2, b: TWOLD, typeFromA: "scenes", typeFromB: "product", properties: {} },
       { a: scene2, b: OTHER_PRODUCT, typeFromA: "scenes", typeFromB: "product", properties: {} },

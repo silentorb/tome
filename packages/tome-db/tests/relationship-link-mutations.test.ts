@@ -1,4 +1,5 @@
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, beforeAll, afterAll } from "bun:test";
+import { writeFileSync } from "node:fs";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import {
   linkOutgoingRelationship,
@@ -10,6 +11,12 @@ import {
   destroyTestContentFixture,
   seedTestNode,
 } from "../src/content/test-helpers";
+import { relationshipTypesFilePath } from "../src/content/paths";
+import {
+  registerBidirectionalType,
+  serializeRelationshipTypesFile,
+} from "../src/content/relationship-types-file";
+import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
 
 describe("relationship-link-mutations", () => {
   const fixture = createTestContentFixture("tome-link-");
@@ -18,6 +25,15 @@ describe("relationship-link-mutations", () => {
   const sourceId = "0000000000000000000000001C";
   const targetId = "0000000000000000000000001X";
   const databaseId = "0000000000000000000000002K";
+
+  beforeAll(() => {
+    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    registerBidirectionalType(registry, "parents", "children");
+    registerBidirectionalType(registry, "features", "targets");
+    registerBidirectionalType(registry, "scenes", "rows");
+    fixture.ctx.store.writeRelationshipTypesFile(registry);
+    invalidateRelationshipTypesCache();
+  });
 
   test("links and unlinks without via_database property", () => {
     seedTestNode(fixture, { id: sourceId, properties: { title: "Source" } });

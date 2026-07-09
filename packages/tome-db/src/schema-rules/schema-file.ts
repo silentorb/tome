@@ -107,12 +107,12 @@ export function parseSchemaFile(raw: string): SchemaFile {
   if (typeof obj.version !== "number") {
     throw new Error("schema.json: version is required");
   }
-  if (!Array.isArray(obj.relationshipRules)) {
+  if (obj.relationshipRules !== undefined && !Array.isArray(obj.relationshipRules)) {
     throw new Error("schema.json: relationshipRules must be an array");
   }
 
   const relationshipRules: RelationshipRuleEntry[] = [];
-  for (const entry of obj.relationshipRules) {
+  for (const entry of obj.relationshipRules ?? []) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
       throw new Error("schema.json: each relationship rule must be an object");
     }

@@ -6,7 +6,7 @@ import {
 } from "./database-column-data";
 import { loadDynamicFields } from "./dynamic-fields";
 import { isTypeTableNode } from "./node-capabilities";
-import { relationType } from "./relation-type";
+import { normalizeRelationshipType } from "./relation-type";
 import { resolvePropertyEnumFromContent } from "./property-enums";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
@@ -44,8 +44,7 @@ export interface CreateDatabaseColumnInput {
   name: string;
   type: TableColumnType;
   enumId?: string;
-  targetTypeId?: string;
-  perspective?: string;
+  relationshipType?: string;
 }
 
 export interface UpdateDatabaseColumnInput {
@@ -53,8 +52,7 @@ export interface UpdateDatabaseColumnInput {
   newKey?: string;
   type?: TableColumnType;
   enumId?: string | null;
-  targetTypeId?: string;
-  perspective?: string;
+  relationshipType?: string;
 }
 
 export interface DatabaseColumnMutationResult {
@@ -109,17 +107,14 @@ function buildColumnDef(input: CreateDatabaseColumnInput, key: string): TableCol
   if (!name) return null;
 
   if (input.type === "relation") {
-    if (!input.targetTypeId || !isNodeId(input.targetTypeId)) return null;
-    const column: TableRelationColumn = {
+    if (!input.relationshipType?.trim()) return null;
+    const relationshipType = normalizeRelationshipType(input.relationshipType);
+    return {
       key,
       name,
       type: "relation",
-      targetTypeId: input.targetTypeId,
+      relationshipType,
     };
-    if (input.perspective?.trim()) {
-      column.perspective = input.perspective.trim();
-    }
-    return column;
   }
 
   if (!validateScalarType(input.type)) return null;
@@ -183,8 +178,11 @@ export function createDatabaseColumn(
     if (columnDef.type === "select" || columnDef.type === "status") {
       if (!validateEnumId(ctx, columnDef.enumId)) return "invalid_enum";
     }
-  } else if (!isTypeTableNode(ctx.db, columnDef.targetTypeId, ctx.store.contentDir)) {
-    return "invalid_relation_target";
+  } else {
+    const registry = ctx.store.readRelationshipTypesFile();
+    if (!registry.types[columnDef.relationshipType]) {
+      return "invalid_relation_target";
+    }
   }
 
   const schemasFile = ctx.store.readTableSchemasFile();
@@ -219,22 +217,17 @@ function applyColumnPatch(
   const nextType = input.type ?? existing.type;
 
   if (nextType === "relation") {
-    const targetTypeId =
-      input.targetTypeId ??
-      (existing.type === "relation" ? existing.targetTypeId : undefined);
-    if (!targetTypeId || !isNodeId(targetTypeId)) return null;
-    const column: TableRelationColumn = {
+    const relationshipType = normalizeRelationshipType(
+      input.relationshipType ??
+        (existing.type === "relation" ? existing.relationshipType : ""),
+    );
+    if (!relationshipType) return null;
+    return {
       key: existing.key,
       name,
       type: "relation",
-      targetTypeId,
+      relationshipType,
     };
-    if (input.perspective !== undefined) {
-      if (input.perspective.trim()) column.perspective = input.perspective.trim();
-    } else if (existing.type === "relation" && existing.perspective) {
-      column.perspective = existing.perspective;
-    }
-    return column;
   }
 
   if (!validateScalarType(nextType)) return null;
@@ -266,9 +259,7 @@ function relationConfigChanged(
   oldCol: TableColumnDef & { type: "relation" },
   newCol: TableColumnDef & { type: "relation" },
 ): boolean {
-  const oldPerspective = oldCol.perspective ?? relationType(oldCol.name);
-  const newPerspective = newCol.perspective ?? relationType(newCol.name);
-  return oldCol.targetTypeId !== newCol.targetTypeId || oldPerspective !== newPerspective;
+  return oldCol.relationshipType !== newCol.relationshipType;
 }
 
 export function updateDatabaseColumn(
@@ -307,8 +298,11 @@ export function updateDatabaseColumn(
     if (patched.type === "select" || patched.type === "status") {
       if (!validateEnumId(ctx, patched.enumId)) return "invalid_enum";
     }
-  } else if (!isTypeTableNode(ctx.db, patched.targetTypeId, ctx.store.contentDir)) {
-    return "invalid_relation_target";
+  } else {
+    const registry = ctx.store.readRelationshipTypesFile();
+    if (!registry.types[(patched as TableRelationColumn).relationshipType]) {
+      return "invalid_relation_target";
+    }
   }
 
   const newKeyRaw = input.newKey?.trim();

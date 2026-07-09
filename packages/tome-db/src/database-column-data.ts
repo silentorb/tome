@@ -2,7 +2,8 @@ import { listRelationConnectionsForRow } from "./database-view-relations";
 import { TYPE_MEMBERSHIP_TYPES } from "./labels";
 import { unlinkOutgoingRelationship } from "./relationship-link-mutations";
 import { otherEndpoint } from "./relationship-traverse";
-import { relationType } from "./relation-type";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import { perspectiveForRelationColumn, relationColumnCompositeType } from "./table-relation-column";
 import type { TomeWriteContext } from "./content/write-context";
 import type { TableColumnDef } from "./content/table-schemas-file";
 
@@ -61,8 +62,9 @@ export function unlinkRelationColumnFromAllRows(
   databaseId: string,
   column: TableColumnDef & { type: "relation" },
 ): number {
-  const connectionType = column.perspective ?? relationType(column.name);
-  const targetDatabaseId = column.targetTypeId;
+  const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
+  const connectionType = perspectiveForRelationColumn(registry, databaseId, column);
+  const compositeType = relationColumnCompositeType(column);
 
   const rowIds = new Set<string>();
   for (const type of TYPE_MEMBERSHIP_TYPES) {
@@ -78,7 +80,7 @@ export function unlinkRelationColumnFromAllRows(
       rowId,
       connectionType,
       databaseId,
-      targetDatabaseId,
+      compositeType,
     );
     for (const relationship of relationships) {
       toUnlink.push({ rowId, targetId: otherEndpoint(relationship, rowId) });

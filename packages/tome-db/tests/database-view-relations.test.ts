@@ -2,7 +2,7 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { contentModelDir, dynamicFieldsFilePath, tableSchemasFilePath } from "../src/content/paths";
+import { contentModelDir, dynamicFieldsFilePath, relationshipTypesFilePath, tableSchemasFilePath } from "../src/content/paths";
 import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "../src/content/dynamic-fields-file";
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
 import { invalidateTableSchemasCache } from "../src/table-schemas/load";
@@ -20,7 +20,9 @@ import { RELATIONSHIPS_FILE_VERSION } from "../src/content/relationships-file";
 import {
   emptyRelationshipTypesFile,
   registerTypeDefinition,
+  serializeRelationshipTypesFile,
 } from "../src/content/relationship-types-file";
+import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
 
 describe("database-view-relations", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-view-rel-"));
@@ -41,6 +43,44 @@ describe("database-view-relations", () => {
   const partsDb = "00000000000000000000000010";
   const sceneId = "00000000000000000000000003";
   const partId = "0000000000000000000000000M";
+  const featuresDb = "0000000000000000000000002P";
+
+  writeFileSync(
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        prop_type_inspirations: {
+          perspectives: ["prop_type", "inspirations"],
+          endpoints: {
+            0: { typeId: inspirationsDb },
+            1: { typeId: inspirationTypesDb },
+          },
+        },
+        parents_children: {
+          perspectives: ["children", "parents"],
+        },
+        scenes_part: {
+          perspectives: ["scenes", "part"],
+          endpoints: {
+            0: { typeId: scenesDb },
+            1: { typeId: partsDb },
+          },
+        },
+        inspirations_features: {
+          perspectives: ["features", "inspirations"],
+          endpoints: {
+            0: { typeId: featuresDb },
+            1: { typeId: inspirationsDb },
+          },
+        },
+        story_scale_inspirations: {
+          perspectives: ["story_scale", "inspirations"],
+        },
+      },
+    }),
+  );
+  invalidateRelationshipTypesCache();
 
   writeFileSync(
     tableSchemasFilePath(contentDir),
@@ -53,8 +93,7 @@ describe("database-view-relations", () => {
               key: "type",
               name: "Type",
               type: "relation",
-              targetTypeId: inspirationTypesDb,
-              perspective: "prop_type",
+              relationshipType: "prop_type_inspirations",
             },
           ],
         },
@@ -72,7 +111,7 @@ describe("database-view-relations", () => {
     db.upsertNode(tvSeriesTypeId, { title: "TV series" });
     db.upsertRelationship(inspirationId, inspirationsDb, MEMBER_OF_TYPE, { row_index: 0 });
     db.upsertRelationship(tvSeriesTypeId, inspirationTypesDb, MEMBER_OF_TYPE, { row_index: 0 });
-    db.upsertRelationship(inspirationId, tvSeriesTypeId, "prop_type_inspirations", {
+    db.upsertRelationship(inspirationId, tvSeriesTypeId, "prop_type", {
       ordinal: 0,
       via_view: "default",
     });
@@ -82,7 +121,7 @@ describe("database-view-relations", () => {
       inspirationId,
       "prop_type",
       inspirationsDb,
-      inspirationTypesDb,
+      "prop_type_inspirations",
     );
 
     expect(connections).toHaveLength(1);
@@ -115,15 +154,13 @@ describe("database-view-relations", () => {
                 key: "parents",
                 name: "Parents",
                 type: "relation",
-                targetTypeId: locationsDb,
-                perspective: "parents",
+                relationshipType: "parents_children",
               },
               {
                 key: "children",
                 name: "Children",
                 type: "relation",
-                targetTypeId: locationsDb,
-                perspective: "children",
+                relationshipType: "parents_children",
               },
             ],
           },
@@ -258,8 +295,7 @@ describe("database-view-relations", () => {
                 key: "part",
                 name: "Part",
                 type: "relation",
-                targetTypeId: partsDb,
-                perspective: "part",
+                relationshipType: "scenes_part",
               },
             ],
           },
@@ -273,7 +309,7 @@ describe("database-view-relations", () => {
     db.upsertNode(partId, { title: "Part 1" });
     db.upsertRelationship(sceneId, scenesDb, MEMBER_OF_TYPE, { row_index: 0, order: "1005" });
     db.upsertRelationship(partId, partsDb, MEMBER_OF_TYPE, { row_index: 0 });
-    db.upsertRelationship(sceneId, partId, "scenes_part", { ordinal: 0 });
+    db.upsertRelationship(sceneId, partId, "scenes", { ordinal: 0 });
 
     const detail = getDatabaseViewDetail(db, scenesDb, undefined, contentDir);
     const row = detail?.rows.find((r) => r.nodeId === sceneId);
@@ -282,7 +318,6 @@ describe("database-view-relations", () => {
   });
 
   test("hydrates Features column with scoped and unscoped includes edges", () => {
-    const featuresDb = "0000000000000000000000002P";
     const inspirationWithMixedFeatures = "0000000000000000000000002W";
     const cozyHorrorId = "0000000000000000000000002X";
     const chaoticWorldId = "0000000000000000000000000A";
@@ -301,17 +336,17 @@ describe("database-view-relations", () => {
     for (const featureId of [cozyHorrorId, chaoticWorldId, adventureId, darkForestId]) {
       db.upsertRelationship(featureId, featuresDb, MEMBER_OF_TYPE, { row_index: 0 });
     }
-    db.upsertRelationship(inspirationWithMixedFeatures, cozyHorrorId, "includes");
-    db.upsertRelationship(chaoticWorldId, inspirationWithMixedFeatures, "includes");
-    db.upsertRelationship(adventureId, inspirationWithMixedFeatures, "includes");
-    db.upsertRelationship(darkForestId, inspirationWithMixedFeatures, "includes");
+    db.upsertRelationship(inspirationWithMixedFeatures, cozyHorrorId, "inspirations");
+    db.upsertRelationship(inspirationWithMixedFeatures, chaoticWorldId, "inspirations");
+    db.upsertRelationship(inspirationWithMixedFeatures, adventureId, "inspirations");
+    db.upsertRelationship(inspirationWithMixedFeatures, darkForestId, "inspirations");
 
     const connections = listRelationConnectionsForRow(
       db,
       inspirationWithMixedFeatures,
-      "features",
+      "inspirations",
       inspirationsDb,
-      featuresDb,
+      "inspirations_features",
     );
     expect(connections).toHaveLength(4);
     const linkedTitles = connections
@@ -353,8 +388,7 @@ describe("database-view-relations", () => {
                 key: "story_scale",
                 name: "Story scale",
                 type: "relation",
-                targetTypeId: storyScaleDb,
-                perspective: "story_scale",
+                relationshipType: "story_scale_inspirations",
               },
             ],
           },
@@ -372,7 +406,7 @@ describe("database-view-relations", () => {
       story_scale: "https://legacy.example/00000000000000000000000019",
     });
     db.upsertRelationship(extendedScaleId, storyScaleDb, MEMBER_OF_TYPE, { row_index: 0 });
-    db.upsertRelationship(storyScaleRowId, extendedScaleId, "story_scale_inspirations", {
+    db.upsertRelationship(storyScaleRowId, extendedScaleId, "story_scale", {
       ordinal: 0,
       via_view: "default",
     });

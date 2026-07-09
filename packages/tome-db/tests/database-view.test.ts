@@ -9,12 +9,15 @@ import { getDatabaseViewDetail } from "../src/database-view";
 import {
   contentModelDir,
   dynamicFieldsFilePath,
+  relationshipTypesFilePath,
   schemaFilePath,
   tableSchemasFilePath,
 } from "../src/content/paths";
 import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "../src/content/dynamic-fields-file";
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
 import { serializeSchemaFile } from "../src/schema-rules/schema-file";
+import { serializeRelationshipTypesFile } from "../src/content/relationship-types-file";
+import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
 import { invalidateSchemaCache } from "../src/schema-rules/load";
 import { invalidateTableSchemasCache } from "../src/table-schemas/load";
 
@@ -26,6 +29,18 @@ describe("database-view", () => {
     dynamicFieldsFilePath(contentDir),
     serializeDynamicFieldsFile(emptyDynamicFieldsFile()),
   );
+  writeFileSync(
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        parents_children: {
+          perspectives: ["children", "parents"],
+        },
+      },
+    }),
+  );
+  invalidateRelationshipTypesCache();
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
 
@@ -132,8 +147,7 @@ describe("database-view", () => {
         key: "parents",
         name: "Parents",
         type: "relation",
-        targetTypeId: parentId,
-        perspective: "parents",
+        relationshipType: "parents_children",
       },
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });

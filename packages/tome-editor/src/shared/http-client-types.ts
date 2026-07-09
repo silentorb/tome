@@ -91,8 +91,7 @@ export interface EditorApiClient {
       name: string;
       type: string;
       enumId?: string;
-      targetTypeId?: string;
-      perspective?: string;
+      relationshipType?: string;
     },
   ): Promise<{
     column: import("tome-db").TableColumnDef;
@@ -108,8 +107,7 @@ export interface EditorApiClient {
       newKey?: string;
       type?: string;
       enumId?: string | null;
-      targetTypeId?: string;
-      perspective?: string;
+      relationshipType?: string;
     },
   ): Promise<{
     column: import("tome-db").TableColumnDef;

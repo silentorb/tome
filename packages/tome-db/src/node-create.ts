@@ -1,7 +1,8 @@
 import { generateNodeId } from "./node-id";
 import type { Properties } from "./graph";
-import { INCLUDES_TYPE, isIncludesPerspectiveSlug } from "./includes-relationship";
 import { normalizeRelationshipType } from "./relation-type";
+import { resolveCompositeType } from "./content/relationship-types-file";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
@@ -56,10 +57,11 @@ function ordinalFromProperties(properties: Record<string, unknown>): number | nu
 
 function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: string): number | undefined {
   const normalized = normalizeRelationshipType(type);
+  const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
+  const composite = resolveCompositeType(registry, normalized);
   const outgoing = ctx.db.listRelationshipsFromSource(sourceId).filter((c) => {
     const edgeType = normalizeRelationshipType(c.type);
-    if (edgeType === normalized) return true;
-    return isIncludesPerspectiveSlug(normalized) && edgeType === INCLUDES_TYPE;
+    return edgeType === composite || edgeType === normalized;
   });
   if (outgoing.length === 0) return undefined;
   const ordinals = outgoing

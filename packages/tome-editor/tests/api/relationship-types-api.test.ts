@@ -1,5 +1,5 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -7,9 +7,8 @@ import {
   seedTestRelationships,
   seedTestTableSchema,
 } from "tome-db/content/test-helpers";
-import { ORDERED_MEMBER_OF_TYPE } from "tome-db";
-import { contentModelDir, schemaFilePath } from "tome-db/content";
-import { invalidateSchemaCache } from "tome-db";
+import { invalidateRelationshipTypesCache, invalidateSchemaCache } from "tome-db";
+import { schemaFilePath } from "tome-db/content";
 import { createTestApiFromContent } from "./test-api-setup";
 
 describe("relationship types API", () => {
@@ -19,29 +18,30 @@ describe("relationship types API", () => {
   const featureTypeId = "0000000000000000000000002P";
 
   const fixture = createTestContentFixture("tome-rel-types-api-");
-  seedTestTableSchema(fixture, sceneTypeId, [], "ordered_member_of");
+  const registry = fixture.ctx.store.readRelationshipTypesFile();
+  registry.types.scenes_features = {
+    perspectives: ["features", "scenes"],
+    endpoints: {
+      "0": { typeId: sceneTypeId },
+      "1": { typeId: featureTypeId },
+    },
+  };
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
+  invalidateRelationshipTypesCache();
+
+  seedTestTableSchema(fixture, sceneTypeId, []);
   seedTestNode(fixture, { id: sourceId, properties: { title: "Scene page" } });
   seedTestNode(fixture, { id: targetId, properties: { title: "Feature page" } });
   seedTestRelationships(fixture, [
-    { source: sourceId, target: sceneTypeId, type: ORDERED_MEMBER_OF_TYPE },
+    { source: sourceId, target: sceneTypeId, type: "member_of" },
     { source: targetId, target: featureTypeId, type: "member_of" },
-    { source: sourceId, target: targetId, type: "features" },
   ]);
+  fixture.ctx.store.upsertRelationship(sourceId, targetId, "features");
+  fixture.ctx.sync.syncRelationships();
 
-  mkdirSync(contentModelDir(fixture.ctx.store.contentDir), { recursive: true });
   writeFileSync(
     schemaFilePath(fixture.ctx.store.contentDir),
-    JSON.stringify({
-      version: 1,
-      relationshipRules: [
-        {
-          id: "scene-features",
-          sourceTypeId: sceneTypeId,
-          type: "includes",
-          allowedTargetTypeIds: [featureTypeId],
-        },
-      ],
-    }),
+    JSON.stringify({ version: 1, enums: {} }),
     "utf-8",
   );
   invalidateSchemaCache();
@@ -56,7 +56,7 @@ describe("relationship types API", () => {
     expect(payload.types).toContain("member_of");
   });
 
-  test("GET relationship-link-options returns schema allowed targets", async () => {
+  test("GET relationship-link-options returns registry endpoint allowed targets", async () => {
     const res = await api.handler(
       new Request(
         `http://127.0.0.1/api/nodes/${sourceId}/relationship-link-options?type=features`,

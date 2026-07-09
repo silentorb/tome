@@ -9,13 +9,16 @@ import {
   serializeSchemaFile,
 } from "tome-db";
 import {
+  serializeRelationshipTypesFile,
+} from "tome-db/content";
+import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestNode,
   seedTestWorkspace,
   TEST_HOME_NODE_ID,
 } from "tome-db/content/test-helpers";
-import { contentModelDir, schemaFilePath } from "tome-db/content";
+import { contentModelDir, relationshipTypesFilePath, schemaFilePath } from "tome-db/content";
 import { createTestApiFromContent } from "./test-api-setup";
 
 const nodeId = "0000000000000000000000002M";
@@ -86,8 +89,7 @@ describe("prepare-editor-body API — schema diagram", () => {
                 key: "features",
                 name: "Features",
                 type: "relation",
-                targetTypeId: featureTypeId,
-                perspective: "features",
+                relationshipType: "scenes_features",
               },
             ],
           },
@@ -100,6 +102,23 @@ describe("prepare-editor-body API — schema diagram", () => {
     "utf-8",
   );
   invalidateTableSchemasCache();
+
+  writeFileSync(
+    relationshipTypesFilePath(fixture.ctx.store.contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        scenes_features: {
+          perspectives: ["features", "scenes"],
+          endpoints: {
+            "0": { typeId: sceneTypeId },
+            "1": { typeId: featureTypeId },
+          },
+        },
+      },
+    }),
+    "utf-8",
+  );
 
   writeFileSync(
     schemaFilePath(fixture.ctx.store.contentDir),

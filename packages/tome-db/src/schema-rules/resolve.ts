@@ -1,18 +1,19 @@
 import type { GraphDatabase } from "../graph";
-import { INCLUDES_TYPE, isIncludesPerspectiveSlug } from "../includes-relationship";
 import { typeIdsForInstance } from "../node-capabilities";
 import { normalizeRelationshipType } from "../relation-type";
-
-function ruleLookupType(localType: string): string {
-  const normalized = normalizeRelationshipType(localType);
-  return isIncludesPerspectiveSlug(normalized) ? INCLUDES_TYPE : normalized;
-}
+import {
+  allowedTargetTypeIdsForPerspective,
+  relationshipTypeRuleContext,
+} from "../relationship-type-endpoints";
+import { loadRelationshipTypesFromContent } from "../relationship-types/load";
+import { resolveContentPath } from "../content/paths";
 import type { RelationshipRuleEntry, SchemaFile } from "./schema-file";
 
 export function allowedTargetTypeIdsForRule(rule: RelationshipRuleEntry): string[] {
   return [...rule.allowedTargetTypeIds];
 }
 
+/** @deprecated relationshipRules removed from schema.json; use relationship-types endpoints. */
 export function resolveRelationshipRule(
   schema: SchemaFile,
   db: GraphDatabase,
@@ -20,27 +21,53 @@ export function resolveRelationshipRule(
   type: string,
   contentDir?: string,
 ): RelationshipRuleEntry | null {
-  const lookupType = ruleLookupType(type);
-  const sourceTypes = typeIdsForInstance(db, sourceNodeId, contentDir);
-
-  for (const rule of schema.relationshipRules) {
-    if (rule.type !== lookupType) continue;
-    if (!sourceTypes.includes(rule.sourceTypeId)) continue;
-    return rule;
-  }
-  return null;
+  void schema;
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
+  const ctx = relationshipTypeRuleContext(registry, db, sourceNodeId, type, dir);
+  if (!ctx) return null;
+  return {
+    id: ctx.compositeType,
+    sourceTypeId: typeIdsForInstance(db, sourceNodeId, dir)[0] ?? "",
+    type: ctx.type,
+    allowedTargetTypeIds: ctx.allowedTargetTypeIds,
+  };
 }
 
+/** @deprecated relationshipRules removed from schema.json. */
 export function resolveRelationshipRulesForSource(
   schema: SchemaFile,
   db: GraphDatabase,
   sourceNodeId: string,
   contentDir?: string,
 ): RelationshipRuleEntry[] {
-  const sourceTypes = typeIdsForInstance(db, sourceNodeId, contentDir);
+  void schema;
+  const dir = contentDir ?? resolveContentPath();
+  const sourceTypes = typeIdsForInstance(db, sourceNodeId, dir);
   if (sourceTypes.length === 0) return [];
 
-  return schema.relationshipRules.filter((rule) => sourceTypes.includes(rule.sourceTypeId));
+  const registry = loadRelationshipTypesFromContent(dir);
+  const rules: RelationshipRuleEntry[] = [];
+  for (const [composite, def] of Object.entries(registry.types)) {
+    if (!def.endpoints) continue;
+    for (const sourceTypeId of sourceTypes) {
+      const hostIndex =
+        def.endpoints[0].typeId === sourceTypeId
+          ? 0
+          : def.endpoints[1].typeId === sourceTypeId
+            ? 1
+            : null;
+      if (hostIndex === null) continue;
+      const perspective = def.perspectives[hostIndex];
+      rules.push({
+        id: composite,
+        sourceTypeId,
+        type: perspective,
+        allowedTargetTypeIds: allowedTargetTypeIdsForPerspective(registry, composite, perspective),
+      });
+    }
+  }
+  return rules;
 }
 
 export interface RelationshipRuleContext {
@@ -56,12 +83,15 @@ export function relationshipRuleContextForType(
   type: string,
   contentDir?: string,
 ): RelationshipRuleContext | null {
-  const rule = resolveRelationshipRule(schema, db, sourceNodeId, type, contentDir);
-  if (!rule) return null;
+  void schema;
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
+  const ctx = relationshipTypeRuleContext(registry, db, sourceNodeId, type, dir);
+  if (!ctx) return null;
   return {
-    ruleId: rule.id,
-    type: rule.type,
-    allowedTargetTypeIds: allowedTargetTypeIdsForRule(rule),
+    ruleId: ctx.compositeType,
+    type: ctx.type,
+    allowedTargetTypeIds: ctx.allowedTargetTypeIds,
   };
 }
 

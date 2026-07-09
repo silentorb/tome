@@ -204,7 +204,7 @@ export type {
   RelationTableAddMode,
   RelationTableSection,
 } from "./node-page-sections";
-export { relationSectionSupportsLinkExisting } from "./includes-relationship";
+export { relationSectionSupportsLinkExisting } from "./relationship-type-endpoints";
 export {
   applyOrderedAssociationMove,
   getConfigByProvider,
@@ -296,6 +296,10 @@ export {
   stampOrderIfMissing,
 } from "./ordered-relationships";
 export { loadSchemaFromContent, loadWorkspaceSchema, invalidateSchemaCache } from "./schema-rules/load";
+export {
+  loadRelationshipTypesFromContent,
+  invalidateRelationshipTypesCache,
+} from "./relationship-types/load";
 export { loadViewsFromContent, invalidateViewsCache } from "./views/load";
 export {
   loadWorkspaceFromContent,

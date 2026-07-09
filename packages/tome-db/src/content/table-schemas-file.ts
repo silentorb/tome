@@ -1,4 +1,5 @@
 import { isNodeId } from "./paths";
+import { normalizeRelationshipType } from "../relation-type";
 
 export const TABLE_SCHEMAS_FILE_VERSION = 1;
 
@@ -30,9 +31,8 @@ export interface TableRelationColumn {
   key: string;
   name: string;
   type: "relation";
-  targetTypeId: string;
-  /** Local perspective / relationship slug (defaults from name via relationType). */
-  perspective?: string;
+  /** Registered relationship type id (storage composite). */
+  relationshipType: string;
 }
 
 export type TableColumnDef = TableScalarColumn | TableRelationColumn;
@@ -105,22 +105,15 @@ function parseRelationColumn(raw: unknown, path: string): TableRelationColumn {
   if (obj.type !== "relation") {
     throw new Error(`${path}: relation column must have type "relation"`);
   }
-  if (typeof obj.targetTypeId !== "string" || !isNodeId(obj.targetTypeId)) {
-    throw new Error(`${path}: relation column requires valid targetTypeId`);
+  if (typeof obj.relationshipType !== "string" || !obj.relationshipType.trim()) {
+    throw new Error(`${path}: relation column requires non-empty relationshipType`);
   }
-  const column: TableRelationColumn = {
+  return {
     key: obj.key.trim(),
     name: obj.name.trim(),
     type: "relation",
-    targetTypeId: obj.targetTypeId,
+    relationshipType: normalizeRelationshipType(obj.relationshipType),
   };
-  if (obj.perspective !== undefined) {
-    if (typeof obj.perspective !== "string" || !obj.perspective.trim()) {
-      throw new Error(`${path}: column.perspective must be a non-empty string`);
-    }
-    column.perspective = obj.perspective.trim();
-  }
-  return column;
 }
 
 function parseColumn(raw: unknown, path: string): TableColumnDef {

@@ -1,16 +1,22 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestNode,
   type TestContentFixture,
 } from "../src/content/test-helpers";
-import { contentModelDir, schemaFilePath, tableSchemasFilePath } from "../src/content/paths";
+import {
+  contentModelDir,
+  relationshipTypesFilePath,
+  schemaFilePath,
+  tableSchemasFilePath,
+} from "../src/content/paths";
 import { serializeSchemaFile } from "../src/schema-rules/schema-file";
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
+import { serializeRelationshipTypesFile } from "../src/content/relationship-types-file";
 import { invalidateSchemaCache } from "../src/schema-rules/load";
+import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
 import { invalidateTableSchemasCache } from "../src/table-schemas/load";
 import { createExtensionSchemaQueryServices } from "../src/extension-schema-query";
 
@@ -38,6 +44,38 @@ describe("createExtensionSchemaQueryServices", () => {
   });
 
   writeFileSync(
+    relationshipTypesFilePath(fixture.ctx.store.contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        scene_features: {
+          perspectives: ["features", "scenes"],
+          endpoints: {
+            0: { typeId: featureTypeId },
+            1: { typeId: sceneTypeId },
+          },
+        },
+        scene_inspirations: {
+          perspectives: ["inspirations", "scenes"],
+          endpoints: {
+            0: { typeId: inspirationTypeId },
+            1: { typeId: sceneTypeId },
+          },
+        },
+        inspirations_features: {
+          perspectives: ["features", "inspirations"],
+          endpoints: {
+            0: { typeId: featureTypeId },
+            1: { typeId: inspirationTypeId },
+          },
+        },
+      },
+    }),
+    "utf-8",
+  );
+  invalidateRelationshipTypesCache();
+
+  writeFileSync(
     tableSchemasFilePath(fixture.ctx.store.contentDir),
     serializeTableSchemasFile({
       version: 1,
@@ -48,15 +86,13 @@ describe("createExtensionSchemaQueryServices", () => {
               key: "features",
               name: "Features",
               type: "relation",
-              targetTypeId: featureTypeId,
-              perspective: "features",
+              relationshipType: "scene_features",
             },
             {
               key: "inspirations",
               name: "Inspirations",
               type: "relation",
-              targetTypeId: inspirationTypeId,
-              perspective: "inspirations",
+              relationshipType: "scene_inspirations",
             },
           ],
         },
@@ -66,8 +102,7 @@ describe("createExtensionSchemaQueryServices", () => {
               key: "inspirations",
               name: "Inspirations",
               type: "relation",
-              targetTypeId: inspirationTypeId,
-              perspective: "inspirations",
+              relationshipType: "inspirations_features",
             },
           ],
         },
@@ -145,19 +180,19 @@ describe("createExtensionSchemaQueryServices", () => {
         id: `${featureTypeId}:inspirations`,
         sourceTypeId: featureTypeId,
         targetTypeId: inspirationTypeId,
-        label: "inspirations",
+        label: "features",
       },
       {
         id: `${sceneTypeId}:features`,
         sourceTypeId: sceneTypeId,
         targetTypeId: featureTypeId,
-        label: "features",
+        label: "scenes",
       },
       {
         id: `${sceneTypeId}:inspirations`,
         sourceTypeId: sceneTypeId,
         targetTypeId: inspirationTypeId,
-        label: "inspirations",
+        label: "scenes",
       },
     ]);
   });

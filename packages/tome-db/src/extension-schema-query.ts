@@ -8,6 +8,11 @@ import type { GraphDatabase, Node } from "./graph";
 import { loadSchemaFromContent } from "./schema-rules/load";
 import { setMemberIds } from "./set-membership";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import {
+  perspectiveForRelationColumn,
+  targetTypeIdForRelationColumn,
+} from "./table-relation-column";
 
 function titleFromNode(node: Node | null): string {
   if (!node) return "Untitled";
@@ -51,6 +56,7 @@ export function createExtensionSchemaQueryServices(
 
     listRelationColumnEdges(): SchemaQueryRelationColumnEdge[] {
       const schemas = loadTableSchemasFromContent(contentDir);
+      const registry = loadRelationshipTypesFromContent(contentDir);
       const titleByTypeId = new Map<string, string>();
       for (const id of Object.keys(schemas.tables)) {
         titleByTypeId.set(id, titleFromNode(db.getNode(id)));
@@ -60,13 +66,14 @@ export function createExtensionSchemaQueryServices(
       for (const [sourceTypeId, table] of Object.entries(schemas.tables)) {
         for (const column of table.columns) {
           if (column.type !== "relation") continue;
-          if (!column.targetTypeId) continue;
-          const perspective = column.perspective?.trim();
+          const targetTypeId = targetTypeIdForRelationColumn(registry, sourceTypeId, column);
+          if (!targetTypeId) continue;
+          const label = perspectiveForRelationColumn(registry, sourceTypeId, column);
           edges.push({
             id: `${sourceTypeId}:${column.key}`,
             sourceTypeId,
-            targetTypeId: column.targetTypeId,
-            label: perspective || column.key,
+            targetTypeId,
+            label,
           });
         }
       }

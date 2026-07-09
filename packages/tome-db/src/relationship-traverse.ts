@@ -1,5 +1,4 @@
 import type { GraphDatabase, Properties, Relationship } from "./graph";
-import { INCLUDES_TYPE } from "./includes-relationship";
 import { findSetMembershipRelationship, setMemberIds } from "./set-membership";
 import { normalizeRelationshipType } from "./relation-type";
 
@@ -53,27 +52,6 @@ function mapProjectionRows(
     type: row.type,
     properties: JSON.parse(row.properties) as Properties,
   }));
-}
-
-/** Incident `includes` edges, optionally filtered to targets in targetDatabaseId. */
-export function listIncludesIncident(
-  db: GraphDatabase,
-  nodeId: string,
-  targetDatabaseId?: string,
-  contentDir?: string,
-): Relationship[] {
-  let includes = listRelationshipsForComposite(db, nodeId, INCLUDES_TYPE);
-  if (includes.length === 0) {
-    includes = dedupeByRecordId([
-      ...db.listRelationshipsFromSource(nodeId, INCLUDES_TYPE),
-      ...db.listRelationshipsToTarget(nodeId, INCLUDES_TYPE),
-    ]);
-  }
-  if (!targetDatabaseId) return includes;
-  const byTargetDb = listRelationshipsToDatabaseMembers(db, nodeId, targetDatabaseId, contentDir);
-  return byTargetDb.filter(
-    (relationship) => normalizeRelationshipType(relationship.type) === INCLUDES_TYPE,
-  );
 }
 
 /** All projections for a composite relationship type incident to nodeId. */

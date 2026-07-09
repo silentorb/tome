@@ -1,4 +1,4 @@
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, afterAll, beforeAll } from "bun:test";
 import { typeTableMarkerProperties } from "tome-db";
 import {
   createTestContentFixture,
@@ -7,6 +7,7 @@ import {
   seedTestTableSchema,
   TEST_HOME_NODE_ID,
 } from "tome-db/content/test-helpers";
+import { registerBidirectionalType } from "tome-db/content";
 import { createTestApiFromContent } from "./test-api-setup";
 
 const sourceId = "0000000000000000000000001E";
@@ -14,6 +15,12 @@ const databaseId = "0000000000000000000000001X";
 
 describe("node create API", () => {
   const fixture = createTestContentFixture("tome-create-api-");
+
+  beforeAll(() => {
+    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    registerBidirectionalType(registry, "features", "targets");
+    fixture.ctx.store.writeRelationshipTypesFile(registry);
+  });
 
   seedTestNode(fixture, {
     id: TEST_HOME_NODE_ID,
@@ -89,6 +96,13 @@ describe("connections API", () => {
   const linkSourceId = "00000000000000000000000032";
   const linkTargetId = "00000000000000000000000033";
   const fixture = createTestContentFixture("tome-conn-api-");
+
+  beforeAll(() => {
+    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    registerBidirectionalType(registry, "features", "targets");
+    fixture.ctx.store.writeRelationshipTypesFile(registry);
+  });
+
   seedTestNode(fixture, { id: linkSourceId, properties: { title: "Link source" } });
   seedTestNode(fixture, { id: linkTargetId, properties: { title: "Link target" } });
   const api = createTestApiFromContent(fixture);

@@ -455,8 +455,7 @@ export function createApiHandler(
           name?: string;
           type?: string;
           enumId?: string;
-          targetTypeId?: string;
-          perspective?: string;
+          relationshipType?: string;
         };
         if (typeof payload.name !== "string" || typeof payload.type !== "string") {
           return json({ error: "name and type required" }, 400);
@@ -466,8 +465,7 @@ export function createApiHandler(
           name: payload.name,
           type: payload.type as import("tome-db").TableColumnDef["type"],
           enumId: payload.enumId,
-          targetTypeId: payload.targetTypeId,
-          perspective: payload.perspective,
+          relationshipType: payload.relationshipType,
         });
         if (result === "database_not_found") return json({ error: "not found" }, 404);
         if (result === "column_key_taken") return json({ error: "column key taken" }, 409);
@@ -493,16 +491,14 @@ export function createApiHandler(
           newKey?: string;
           type?: string;
           enumId?: string | null;
-          targetTypeId?: string;
-          perspective?: string;
+          relationshipType?: string;
         };
         const result = db.updateDatabaseColumn(databaseId, columnKey, {
           name: payload.name,
           newKey: payload.newKey,
           type: payload.type as import("tome-db").TableColumnDef["type"] | undefined,
           enumId: payload.enumId,
-          targetTypeId: payload.targetTypeId,
-          perspective: payload.perspective,
+          relationshipType: payload.relationshipType,
         });
         if (result === "database_not_found") return json({ error: "not found" }, 404);
         if (result === "column_not_found") return json({ error: "column not found" }, 404);

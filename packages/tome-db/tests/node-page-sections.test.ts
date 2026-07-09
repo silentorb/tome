@@ -6,7 +6,6 @@ import { GraphDatabase } from "../src/graph";
 import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodePageDetail } from "../src/node-page-sections";
-import { INCLUDES_TYPE } from "../src/includes-relationship";
 import { contentModelDir, relationshipTypesFilePath, tableSchemasFilePath } from "../src/content/paths";
 import {
   serializeRelationshipTypesFile,
@@ -26,6 +25,69 @@ function writeMembershipRelationshipTypes(contentDir: string): void {
           traits: ["set"],
           perspectiveLabels: {
             member_of: { title: "Membership", linkAdd: "Link type table" },
+          },
+        },
+        inspirations_features: {
+          perspectives: ["features", "inspirations"],
+        },
+      },
+    }),
+  );
+  invalidateRelationshipTypesCache();
+}
+
+function writeInspirationsFeaturesRelationshipTypes(
+  contentDir: string,
+  inspirationsTypeId: string,
+  featuresTypeId: string,
+): void {
+  writeFileSync(
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        member_of: {
+          perspectives: ["members", "member_of"],
+          traits: ["set"],
+          perspectiveLabels: {
+            member_of: { title: "Membership", linkAdd: "Link type table" },
+          },
+        },
+        inspirations_features: {
+          perspectives: ["features", "inspirations"],
+          endpoints: {
+            0: { typeId: featuresTypeId },
+            1: { typeId: inspirationsTypeId },
+          },
+        },
+      },
+    }),
+  );
+  invalidateRelationshipTypesCache();
+}
+
+function writeFeaturesBiblePassagesRelationshipTypes(
+  contentDir: string,
+  biblePassagesTypeId: string,
+  featuresTypeId: string,
+): void {
+  writeFileSync(
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        member_of: {
+          perspectives: ["members", "member_of"],
+          traits: ["set"],
+          perspectiveLabels: {
+            member_of: { title: "Membership", linkAdd: "Link type table" },
+          },
+        },
+        features_bible_passages: {
+          perspectives: ["features", "bible_passages"],
+          endpoints: {
+            0: { typeId: featuresTypeId },
+            1: { typeId: biblePassagesTypeId },
           },
         },
       },
@@ -271,7 +333,14 @@ describe("node-sections table-schema empty relation placeholders", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-sections-table-schema-empty-"));
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
+
+  const inspirationsTypeId = "0000000000000000000000000K";
+  const featuresTypeId = "0000000000000000000000002P";
+  const inspirationId = "insp0000000000000000000000000001";
+  const featId = "feat0000000000000000000000000001";
+
   writeMembershipRelationshipTypes(contentDir);
+  writeInspirationsFeaturesRelationshipTypes(contentDir, inspirationsTypeId, featuresTypeId);
   writeFileSync(
     tableSchemasFilePath(contentDir),
     serializeTableSchemasFile({
@@ -283,8 +352,7 @@ describe("node-sections table-schema empty relation placeholders", () => {
               key: "features",
               name: "Features",
               type: "relation",
-              targetTypeId: "0000000000000000000000002P",
-              perspective: "features",
+              relationshipType: "inspirations_features",
             },
           ],
         },
@@ -295,11 +363,6 @@ describe("node-sections table-schema empty relation placeholders", () => {
   process.env.TOME_CONTENT_PATH = contentDir;
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
-
-  const inspirationsTypeId = "0000000000000000000000000K";
-  const featuresTypeId = "0000000000000000000000002P";
-  const inspirationId = "insp0000000000000000000000000001";
-  const featId = "feat0000000000000000000000000001";
 
   db.upsertNode(inspirationsTypeId, { ...typeTableMarkerProperties("Inspirations") });
   db.upsertNode(featuresTypeId, { ...typeTableMarkerProperties("Features") });
@@ -312,14 +375,14 @@ describe("node-sections table-schema empty relation placeholders", () => {
       includeSchemaEmptySections: true,
     });
     const features = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === INCLUDES_TYPE,
+      (section) => section.type === "relations" && section.label === "inspirations",
     );
 
     expect(features).toMatchObject({
       type: "relations",
-      label: INCLUDES_TYPE,
-      title: "Features",
-      typeNodeId: featuresTypeId,
+      label: "inspirations",
+      title: "Inspirations",
+      typeNodeId: inspirationsTypeId,
       addMode: "link-existing",
       allowedTargetTypeIds: [featuresTypeId],
       columns: [],
@@ -330,7 +393,7 @@ describe("node-sections table-schema empty relation placeholders", () => {
   test("omits table-schema-only relation section by default", () => {
     const detail = getNodePageDetail(db, inspirationId, { contentDir });
     const features = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === INCLUDES_TYPE,
+      (section) => section.type === "relations" && section.label === "inspirations",
     );
     expect(features).toBeUndefined();
   });
@@ -338,19 +401,19 @@ describe("node-sections table-schema empty relation placeholders", () => {
   test("does not duplicate section when features link already exists", () => {
     db.upsertNode(featId, { title: "Desperation" });
     db.upsertRelationship(featId, featuresTypeId, MEMBER_OF_TYPE, { row_index: 0 });
-    db.upsertRelationship(inspirationId, featId, INCLUDES_TYPE, { ordinal: 0 });
+    db.upsertRelationship(inspirationId, featId, "inspirations", { ordinal: 0 });
 
     const detail = getNodePageDetail(db, inspirationId, {
       contentDir,
       includeSchemaEmptySections: true,
     });
     const featuresSections = detail?.sections.filter(
-      (section) => section.type === "relations" && section.label === INCLUDES_TYPE,
+      (section) => section.type === "relations" && section.label === "inspirations",
     );
 
     expect(featuresSections).toHaveLength(1);
     expect(featuresSections?.[0]).toMatchObject({
-      title: "Features",
+      title: "Inspirations",
       rows: [{ targetId: featId, name: "Desperation" }],
     });
   });
@@ -372,6 +435,7 @@ describe("node-sections bible passages regression", () => {
   const memberId = "00000000000000000000000017";
   const featuresTypeId = "0000000000000000000000002P";
 
+  writeFeaturesBiblePassagesRelationshipTypes(contentDir, biblePassagesId, featuresTypeId);
   writeFileSync(
     tableSchemasFilePath(contentDir),
     serializeTableSchemasFile({
@@ -383,8 +447,7 @@ describe("node-sections bible passages regression", () => {
               key: "features",
               name: "Features",
               type: "relation",
-              targetTypeId: featuresTypeId,
-              perspective: "features",
+              relationshipType: "features_bible_passages",
             },
             { key: "verses", name: "Verses", type: "rich_text" },
           ],

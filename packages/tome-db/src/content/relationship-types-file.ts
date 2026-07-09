@@ -1,3 +1,4 @@
+import { isNodeId } from "./paths";
 import { normalizeRelationshipType } from "../relation-type";
 
 export const RELATIONSHIP_TYPES_FILE_VERSION = 1;
@@ -19,6 +20,16 @@ export interface TraitObjectEntry {
 /** Flag trait (string) or configured trait (object with `key`). */
 export type TraitEntry = string | TraitObjectEntry;
 
+export interface RelationshipEndpointConstraint {
+  typeId: string;
+}
+
+/** Tuple index 0/1 → allowed `is_a` type node id at that endpoint. */
+export interface RelationshipTypeEndpoints {
+  0: RelationshipEndpointConstraint;
+  1: RelationshipEndpointConstraint;
+}
+
 export interface RelationshipTypeDefinition {
   /** Local type names projected from each endpoint. Always a pair — every relationship is bidirectional. */
   perspectives: PerspectivePair;
@@ -26,6 +37,8 @@ export interface RelationshipTypeDefinition {
   perspectiveLabels?: Record<string, PerspectiveLabelConfig>;
   /** Cross-cutting capabilities (array interpreted as a set). */
   traits?: TraitEntry[];
+  /** Optional endpoint type constraints (replaces schema.json relationship rules). */
+  endpoints?: RelationshipTypeEndpoints;
 }
 
 export interface RelationshipTypesFile {
@@ -131,6 +144,41 @@ function serializeTraitEntry(entry: TraitEntry): TraitEntry {
   return { key, ...config };
 }
 
+function parseEndpointConstraint(
+  raw: unknown,
+  context: string,
+): RelationshipEndpointConstraint {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`relationship-types.json: ${context} must be an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.typeId !== "string" || !isNodeId(obj.typeId)) {
+    throw new Error(`relationship-types.json: ${context}.typeId must be a valid node id`);
+  }
+  return { typeId: obj.typeId };
+}
+
+function parseEndpoints(raw: unknown, typeKey: string): RelationshipTypeEndpoints | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`relationship-types.json: type ${typeKey} endpoints must be an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  const e0 = parseEndpointConstraint(obj["0"], `type ${typeKey} endpoints.0`);
+  const e1 = parseEndpointConstraint(obj["1"], `type ${typeKey} endpoints.1`);
+  return { 0: e0, 1: e1 };
+}
+
+function serializeEndpoints(
+  endpoints: RelationshipTypeEndpoints | undefined,
+): RelationshipTypeEndpoints | undefined {
+  if (!endpoints) return undefined;
+  return {
+    0: { typeId: endpoints[0].typeId },
+    1: { typeId: endpoints[1].typeId },
+  };
+}
+
 function serializeTraits(traits: TraitEntry[] | undefined): TraitEntry[] | undefined {
   if (!traits || traits.length === 0) return undefined;
   const sorted = [...traits].sort((a, b) => {
@@ -174,10 +222,12 @@ export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
     }
     const perspectiveLabels = parsePerspectiveLabels(row.perspectiveLabels, key);
     const traits = parseTraits(row.traits, key);
+    const endpoints = parseEndpoints(row.endpoints, key);
     types[normalizeRelationshipType(key)] = {
       perspectives: [perspectives[0]!, perspectives[1]!],
       ...(perspectiveLabels ? { perspectiveLabels } : {}),
       ...(traits ? { traits } : {}),
+      ...(endpoints ? { endpoints } : {}),
     };
   }
 
@@ -192,6 +242,7 @@ export function serializeRelationshipTypesFile(file: RelationshipTypesFile): str
       perspectives: [...def.perspectives],
       ...(def.perspectiveLabels ? { perspectiveLabels: { ...def.perspectiveLabels } } : {}),
       ...(def.traits ? { traits: serializeTraits(def.traits) } : {}),
+      ...(def.endpoints ? { endpoints: serializeEndpoints(def.endpoints) } : {}),
     };
   }
   return `${JSON.stringify({ version: file.version, types: sortedTypes }, null, 2)}\n`;
@@ -261,6 +312,7 @@ export function registerTypeDefinition(
     ],
     ...(def.perspectiveLabels ? { perspectiveLabels: { ...def.perspectiveLabels } } : {}),
     ...(def.traits ? { traits: [...def.traits] } : {}),
+    ...(def.endpoints ? { endpoints: serializeEndpoints(def.endpoints) } : {}),
   };
 }
 
@@ -295,10 +347,3 @@ export function registerOrderedSetMembershipType(file: RelationshipTypesFile): v
   });
 }
 
-/** Symmetric association type (both perspectives are `includes`). */
-export function registerIncludesType(file: RelationshipTypesFile): void {
-  const type = "includes";
-  registerTypeDefinition(file, type, {
-    perspectives: [type, type],
-  });
-}

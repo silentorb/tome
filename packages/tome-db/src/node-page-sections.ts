@@ -11,10 +11,8 @@ import { getNodeDetail, type NodeDetail } from "./queries";
 import { getNodePageMetadata, type NodePageMetadata } from "./node-metadata";
 import { buildPropertiesSection, type PropertiesSection } from "./node-type-properties";
 import {
-  INCLUDES_TYPE,
-  isIncludesPerspectiveSlug,
   relationSectionSupportsLinkExisting,
-} from "./includes-relationship";
+} from "./relationship-type-endpoints";
 import { findTypeNodeByTitle, typeIdsForInstance } from "./node-capabilities";
 import { normalizeRelationshipType } from "./relation-type";
 import {
@@ -32,7 +30,11 @@ import { generatedProviderId, MEMBERS_SECTION_KEY, ORDERED_MEMBERS_SECTION_KEY }
 import { loadViewsFromContent } from "./views/load";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
 import type { TableRelationColumn } from "./content/table-schemas-file";
-import { getTableSchema, relationColumns, slugifyPropertyKey } from "./table-schema";
+import { getTableSchema, relationColumns } from "./table-schema";
+import {
+  perspectiveForRelationColumn,
+  targetTypeIdForRelationColumn,
+} from "./table-relation-column";
 
 const RELATION_META_KEYS = new Set([
   "ordinal",
@@ -131,27 +133,17 @@ function ordinalFromProperties(properties: Record<string, unknown>): number {
   return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
 }
 
-function relationGroupKey(
-  db: GraphDatabase,
-  connection: { type: string; targetNodeId: string },
+function relationGroupKey(connection: { type: string }): string {
+  return connection.type;
+}
+
+/** Group key for a table-schemas relation column; aligns with {@link relationGroupKey}. */
+function relationGroupKeyFromColumn(
+  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
+  hostTypeId: string,
+  col: TableRelationColumn,
 ): string {
-  if (normalizeRelationshipType(connection.type) !== INCLUDES_TYPE) return connection.type;
-  const targetTypes = typeIdsForInstance(db, connection.targetNodeId);
-  if (targetTypes.length === 1) return `${INCLUDES_TYPE}:${targetTypes[0]}`;
-  return INCLUDES_TYPE;
-}
-
-function perspectiveForRelationColumn(col: TableRelationColumn): string {
-  return normalizeRelationshipType(col.perspective ?? slugifyPropertyKey(col.name));
-}
-
-/** Group key for a table-schemas relation column; aligns with {@link relationGroupKey} for `includes` edges. */
-function relationGroupKeyFromColumn(col: TableRelationColumn): string {
-  const perspective = perspectiveForRelationColumn(col);
-  if (isIncludesPerspectiveSlug(perspective) || perspective === INCLUDES_TYPE) {
-    return `${INCLUDES_TYPE}:${col.targetTypeId}`;
-  }
-  return perspective;
+  return perspectiveForRelationColumn(registry, hostTypeId, col);
 }
 
 function tableRelationByGroupKeyForInstance(
@@ -160,25 +152,20 @@ function tableRelationByGroupKeyForInstance(
   contentDir: string,
 ): Map<string, TableRelationColumn> {
   const tables = loadTableSchemasFromContent(contentDir);
+  const registry = loadRelationshipTypesFromContent(contentDir);
   const byGroupKey = new Map<string, TableRelationColumn>();
   for (const typeId of typeIdsForInstance(db, nodeId)) {
     const schema = getTableSchema(tables, typeId);
     if (!schema) continue;
     for (const col of relationColumns(schema)) {
-      const key = relationGroupKeyFromColumn(col);
+      if (col.type !== "relation") continue;
+      const key = relationGroupKeyFromColumn(registry, typeId, col);
       if (!byGroupKey.has(key)) {
         byGroupKey.set(key, col);
       }
     }
   }
   return byGroupKey;
-}
-
-function parseIncludesGroupKey(label: string): { typeNodeId: string | null; perspective: string } {
-  if (!label.startsWith(`${INCLUDES_TYPE}:`)) {
-    return { typeNodeId: null, perspective: label };
-  }
-  return { typeNodeId: label.slice(INCLUDES_TYPE.length + 1), perspective: INCLUDES_TYPE };
 }
 
 function resolveTypeNodeId(
@@ -228,7 +215,7 @@ function buildRelationSections(
   const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
 
   for (const connection of outgoing) {
-    const groupType = relationGroupKey(db, connection);
+    const groupType = relationGroupKey(connection);
     const group = byType.get(groupType) ?? [];
     group.push(connection);
     byType.set(groupType, group);
@@ -247,8 +234,8 @@ function buildRelationSections(
   for (const label of [...byType.keys()].sort((a, b) =>
     relationTypeSortKey(a).localeCompare(relationTypeSortKey(b)),
   )) {
-    const { perspective: groupPerspective } = parseIncludesGroupKey(label);
-    if (groupPerspective === MEMBERS_TYPE || groupPerspective === ORDERED_MEMBERS_TYPE) continue;
+    const perspective = label;
+    if (perspective === MEMBERS_TYPE || perspective === ORDERED_MEMBERS_TYPE) continue;
 
     const connections = byType.get(label)!;
     const columnSet = new Set<string>();
@@ -275,15 +262,15 @@ function buildRelationSections(
       return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     });
 
-    const { typeNodeId: includesTypeId, perspective } = parseIncludesGroupKey(label);
     const isTypeMembership = isTypeMembershipType(perspective);
     const typeNodeId = isTypeMembership
       ? null
-      : (includesTypeId ?? resolveTypeNodeId(db, perspective, connections));
-    const tableRelation = tableRelationByGroupKey.get(label);
+      : resolveTypeNodeId(db, perspective, connections);
+    const tableRelation = tableRelationByGroupKey.get(perspective);
+    const hostTypeId = typeIdsForInstance(db, nodeId, contentDir)[0];
     const ruleContext =
       schema && !isTypeMembership && !tableRelation
-        ? relationshipRuleContextForType(schema, db, nodeId, perspective)
+        ? relationshipRuleContextForType(schema, db, nodeId, perspective, contentDir)
         : null;
     let columns = [...columnSet].sort((a, b) => a.localeCompare(b));
     if (isTypeMembership) {
@@ -335,12 +322,14 @@ function buildRelationSections(
       typeNodeId,
       allowedTargetTypeIds: isTypeMembership
         ? typeTableIds
-        : tableRelation
-          ? [tableRelation.targetTypeId]
+        : tableRelation && hostTypeId
+          ? (targetTypeIdForRelationColumn(relationshipTypes, hostTypeId, tableRelation)
+              ? [targetTypeIdForRelationColumn(relationshipTypes, hostTypeId, tableRelation)!]
+              : undefined)
           : ruleContext?.allowedTargetTypeIds,
       addMode: isTypeMembership
         ? "link-existing"
-        : relationSectionSupportsLinkExisting(perspective)
+        : relationSectionSupportsLinkExisting(relationshipTypes, perspective)
           ? "link-existing"
           : "none",
       ...(linkAddLabel ? { linkAddLabel } : {}),

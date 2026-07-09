@@ -4,13 +4,13 @@ import { resolveContentPath } from "./content/paths";
 import type { TableColumnDef, TableSchema } from "./content/table-schemas-file";
 import { getTableSchema } from "./table-schema";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
-import { relationType } from "./relation-type";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import {
-  coalescePriorityValue,
-  enrichColumnDef,
-  enrichColumnDefs,
-  isPriorityColumnKey,
-} from "./property-enums";
+  perspectiveForRelationColumn,
+  relationColumnCompositeType,
+  targetTypeIdForRelationColumn,
+} from "./table-relation-column";
+import { enrichColumnDef, enrichColumnDefs, coalescePriorityValue, isPriorityColumnKey } from "./property-enums";
 import { loadSchemaFromContent } from "./schema-rules/load";
 import type { SchemaFile } from "./schema-rules/schema-file";
 
@@ -19,14 +19,21 @@ export interface BuildDatabaseColumnDefsOptions {
   contentDir?: string;
 }
 
-function databaseColumnFromTableColumn(col: TableColumnDef, schema: SchemaFile): DatabaseColumnDef {
+function databaseColumnFromTableColumn(
+  col: TableColumnDef,
+  schema: SchemaFile,
+  databaseId: string,
+  contentDir: string,
+): DatabaseColumnDef {
   if (col.type === "relation") {
+    const registry = loadRelationshipTypesFromContent(contentDir);
     return {
       key: col.key,
       name: col.name,
       type: col.type,
-      relationType: col.perspective ?? relationType(col.name),
-      targetDatabaseId: col.targetTypeId,
+      relationType: perspectiveForRelationColumn(registry, databaseId, col),
+      relationshipCompositeType: relationColumnCompositeType(col),
+      targetDatabaseId: targetTypeIdForRelationColumn(registry, databaseId, col) ?? undefined,
     };
   }
   const base: DatabaseColumnDef = {
@@ -84,7 +91,7 @@ export function buildDatabaseColumnDefs(
   if (schema) {
     for (const col of schema.columns) {
       if (excludeKeys.has(col.key)) continue;
-      columnDefs.push(databaseColumnFromTableColumn(col, schemaFile));
+      columnDefs.push(databaseColumnFromTableColumn(col, schemaFile, databaseId, contentDir));
     }
   }
 

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { GraphDatabase } from "../../src/graph";
-import { MEMBER_OF_TYPE, ORDERED_MEMBER_OF_TYPE } from "../../src/labels";
+import { ORDERED_MEMBER_OF_TYPE } from "../../src/labels";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { schemaFilePath } from "../../src/content/paths";
 import { loadSchemaFromContent, invalidateSchemaCache } from "../../src/schema-rules/load";
@@ -46,39 +46,45 @@ describe("schema rules", () => {
     expect(file.relationshipRules[0]?.type).toBe("features");
   });
 
-  test("resolveRelationshipRule matches source type membership", () => {
+  test("parseSchemaFile allows absent relationshipRules", () => {
+    const file = parseSchemaFile(JSON.stringify({ version: 1, enums: {} }));
+    expect(file.relationshipRules).toEqual([]);
+  });
+
+  test("resolveRelationshipRule reads allowed targets from relationship-types endpoints", () => {
     const previousContentPath = process.env.TOME_CONTENT_PATH;
     process.env.TOME_CONTENT_PATH = "/workspaces/marloth-story/content";
 
     const db = new GraphDatabase(":memory:", { clean: true });
-    const scenesType = "0000000000000000000000000D";
-    const featuresType = "0000000000000000000000002P";
-    const scene = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
+    const scenesType = "01KWN86X6NJZMP5ZESZTNDXY8C";
+    const featuresType = "01KWN86X6NJZMP5ZESZTNDXY4Q";
+    const featureRow = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
 
     db.upsertNode(scenesType, typeTableMarkerProperties("Scenes"));
-    db.upsertNode(featuresType, typeTableMarkerProperties("Features"));
-    db.upsertNode(scene, { title: "Test scene" });
-    db.upsertRelationship(scene, scenesType, ORDERED_MEMBER_OF_TYPE, {});
+    db.upsertNode(featuresType, typeTableMarkerProperties("Features test"));
+    db.upsertNode(featureRow, { title: "Test feature" });
+    db.upsertRelationship(featureRow, featuresType, ORDERED_MEMBER_OF_TYPE, {});
 
-    const schema = parseSchemaFile(
-      JSON.stringify({
-        version: 1,
-        relationshipRules: [
-          {
-            id: "scene-features",
-            sourceTypeId: scenesType,
-            type: "includes",
-            allowedTargetTypeIds: [featuresType],
-          },
-        ],
-      }),
+    const schema = parseSchemaFile(JSON.stringify({ version: 1, enums: {} }));
+
+    const rule = resolveRelationshipRule(
+      schema,
+      db,
+      featureRow,
+      "features_test",
+      "/workspaces/marloth-story/content",
     );
+    expect(rule?.id).toBe("scenes_features_test");
+    expect(rule?.allowedTargetTypeIds).toEqual([scenesType]);
 
-    const rule = resolveRelationshipRule(schema, db, scene, "features", "/workspaces/marloth-story/content");
-    expect(rule?.id).toBe("scene-features");
-
-    const context = relationshipRuleContextForType(schema, db, scene, "features", "/workspaces/marloth-story/content");
-    expect(context?.allowedTargetTypeIds).toEqual([featuresType]);
+    const context = relationshipRuleContextForType(
+      schema,
+      db,
+      featureRow,
+      "features_test",
+      "/workspaces/marloth-story/content",
+    );
+    expect(context?.allowedTargetTypeIds).toEqual([scenesType]);
 
     if (previousContentPath === undefined) {
       delete process.env.TOME_CONTENT_PATH;
@@ -92,7 +98,7 @@ describe("schema rules", () => {
     process.env.TOME_CONTENT_PATH = "/workspaces/marloth-story/content";
     invalidateSchemaCache();
     const schema = loadSchemaFromContent("/workspaces/marloth-story/content");
-    expect(schema.relationshipRules.length).toBeGreaterThan(0);
+    expect(schema.relationshipRules).toEqual([]);
     expect(schema.enums.priority?.options).toEqual([
       "Consideration",
       "Low",

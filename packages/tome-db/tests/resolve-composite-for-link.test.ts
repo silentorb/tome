@@ -45,8 +45,7 @@ describe("resolveCompositeTypeForLink", () => {
               key: "scenes",
               name: "Scenes",
               type: "relation",
-              targetTypeId: scenesDb,
-              perspective: "scenes",
+              relationshipType: "scenes_product",
             },
           ],
         },
@@ -56,8 +55,7 @@ describe("resolveCompositeTypeForLink", () => {
               key: "product",
               name: "Product",
               type: "relation",
-              targetTypeId: productsDb,
-              perspective: "product",
+              relationshipType: "scenes_product",
             },
           ],
         },
@@ -154,8 +152,7 @@ describe("linkOutgoingRelationship scenes_product from product", () => {
               key: "scenes",
               name: "Scenes",
               type: "relation",
-              targetTypeId: scenesDb,
-              perspective: "scenes",
+              relationshipType: "scenes_product",
             },
           ],
         },
@@ -165,8 +162,7 @@ describe("linkOutgoingRelationship scenes_product from product", () => {
               key: "product",
               name: "Product",
               type: "relation",
-              targetTypeId: productsDb,
-              perspective: "product",
+              relationshipType: "scenes_product",
             },
           ],
         },
@@ -252,5 +248,139 @@ describe("LinkResolutionError", () => {
         (row) => (row.a === nodeA || row.b === nodeA) && (row.a === nodeB || row.b === nodeB),
       );
     expect(entry?.type).toBe("parents_children");
+  });
+});
+
+describe("named composite link identity does not bleed", () => {
+  const fixture = createTestContentFixture("tome-named-composite-bleed-");
+  const ctx = fixture.ctx;
+
+  const scenesDb = "0000000000000000000000000D";
+  const charactersDb = "0000000000000000000000000C";
+  const featuresDb = "0000000000000000000000000F";
+  const sceneId = "00000000000000000000000015";
+  const characterId = "00000000000000000000000016";
+  const featureId = "00000000000000000000000017";
+
+  writeFileSync(
+    relationshipTypesFilePath(fixture.ctx.store.contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
+        scenes_characters: {
+          perspectives: ["characters", "scenes"],
+          endpoints: {
+            "0": { typeId: scenesDb },
+            "1": { typeId: charactersDb },
+          },
+        },
+        scenes_features: {
+          perspectives: ["features", "scenes"],
+          endpoints: {
+            "0": { typeId: scenesDb },
+            "1": { typeId: featuresDb },
+          },
+        },
+      },
+    }),
+  );
+  invalidateRelationshipTypesCache();
+
+  writeFileSync(
+    tableSchemasFilePath(fixture.ctx.store.contentDir),
+    serializeTableSchemasFile({
+      version: 1,
+      tables: {
+        [scenesDb]: {
+          columns: [
+            {
+              key: "characters",
+              name: "Characters",
+              type: "relation",
+              relationshipType: "scenes_characters",
+            },
+            {
+              key: "features",
+              name: "Features",
+              type: "relation",
+              relationshipType: "scenes_features",
+            },
+          ],
+        },
+        [charactersDb]: { columns: [] },
+        [featuresDb]: { columns: [] },
+      },
+    }),
+  );
+  invalidateTableSchemasCache();
+
+  afterAll(() => {
+    destroyTestContentFixture(fixture);
+  });
+
+  test("scene→character and scene→feature store as distinct composite types", () => {
+    seedTestNode(fixture, {
+      id: scenesDb,
+      properties: typeTableMarkerProperties("Scenes"),
+    });
+    seedTestNode(fixture, {
+      id: charactersDb,
+      properties: typeTableMarkerProperties("Characters"),
+    });
+    seedTestNode(fixture, {
+      id: featuresDb,
+      properties: typeTableMarkerProperties("Features"),
+    });
+    seedTestNode(fixture, { id: sceneId, properties: { title: "Crash scene" } });
+    seedTestNode(fixture, { id: characterId, properties: { title: "Hero" } });
+    seedTestNode(fixture, { id: featureId, properties: { title: "Combat" } });
+    ctx.store.upsertRelationship(sceneId, scenesDb, "member_of", { view: "default" });
+    ctx.store.upsertRelationship(characterId, charactersDb, "member_of", { view: "default" });
+    ctx.store.upsertRelationship(featureId, featuresDb, "member_of", { view: "default" });
+
+    expect(
+      linkOutgoingRelationship(ctx, {
+        sourceId: sceneId,
+        targetId: characterId,
+        type: "characters",
+      }),
+    ).toBeNull();
+    expect(
+      linkOutgoingRelationship(ctx, {
+        sourceId: sceneId,
+        targetId: featureId,
+        type: "features",
+      }),
+    ).toBeNull();
+
+    const relationships = ctx.store.readRelationshipsFile().relationships;
+    const characterEdge = relationships.find(
+      (row) =>
+        (row.a === sceneId && row.b === characterId) ||
+        (row.a === characterId && row.b === sceneId),
+    );
+    const featureEdge = relationships.find(
+      (row) =>
+        (row.a === sceneId && row.b === featureId) || (row.a === featureId && row.b === sceneId),
+    );
+    expect(characterEdge?.type).toBe("scenes_characters");
+    expect(featureEdge?.type).toBe("scenes_features");
+
+    ctx.store.deleteRelationship(sceneId, characterId, "characters");
+    const afterDelete = ctx.store.readRelationshipsFile().relationships;
+    expect(
+      afterDelete.find(
+        (row) =>
+          (row.a === sceneId && row.b === characterId) ||
+          (row.a === characterId && row.b === sceneId),
+      ),
+    ).toBeUndefined();
+    expect(
+      afterDelete.find(
+        (row) =>
+          (row.a === sceneId && row.b === featureId) || (row.a === featureId && row.b === sceneId),
+      )?.type,
+    ).toBe("scenes_features");
   });
 });

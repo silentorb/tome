@@ -10,13 +10,10 @@ import { dirname } from "node:path";
 import type { Node, Properties } from "../graph";
 import { relationshipId } from "../graph";
 import {
-  INCLUDES_TYPE,
   PARENTS_CHILDREN_COMPOSITE,
   PARENTS_CHILDREN_PERSPECTIVES,
   TAXONOMY_INSPIRATION_PERSPECTIVES,
-  isIncludesPerspectiveSlug,
-  isIncludesStorageType,
-} from "../includes-relationship";
+} from "../relationship-type-endpoints";
 import { isSetTraitComposite, resolveSetTraitComposite } from "../relationship-type-traits";
 import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "../labels";
 import { normalizeRelationshipType } from "../relation-type";
@@ -37,7 +34,6 @@ import {
   localTypesForComposite,
   parseRelationshipTypesFile,
   registerBidirectionalType,
-  registerIncludesType,
   registerSetMembershipType,
   serializeRelationshipTypesFile,
 } from "./relationship-types-file";
@@ -49,9 +45,6 @@ function entryMatchesLocalType(
   localType: string,
 ): boolean {
   const normalized = normalizeRelationshipType(localType);
-  if (isIncludesStorageType(entry.type)) {
-    return isIncludesPerspectiveSlug(normalized);
-  }
   const perspectives = localTypesForComposite(registry, entry.type);
   if (perspectives.includes(normalized)) return true;
   return !isBidirectionalComposite(registry, entry.type) && entry.type === normalized;
@@ -293,9 +286,7 @@ export class ContentStore {
       };
     } else {
       if (!registry.types[composite]) {
-        if (isIncludesStorageType(composite)) {
-          registerIncludesType(registry);
-        } else if (isSetTraitComposite(registry, composite) || resolveSetTraitComposite(registry, normalized)) {
+        if (isSetTraitComposite(registry, composite) || resolveSetTraitComposite(registry, normalized)) {
           registerSetMembershipType(registry);
         } else if (composite === PARENTS_CHILDREN_COMPOSITE) {
           registerBidirectionalType(registry, "parents", "children");

@@ -156,6 +156,63 @@ describe("relationship-types-file perspectiveLabels", () => {
   });
 });
 
+describe("relationship-types-file endpoints", () => {
+  const featuresTypeId = "0000000000000000000000002P";
+  const inspirationsTypeId = "0000000000000000000000000K";
+
+  test("parses endpoint type constraints", () => {
+    const file = parseRelationshipTypesFile(
+      JSON.stringify({
+        version: 1,
+        types: {
+          inspirations_features: {
+            perspectives: ["features", "inspirations"],
+            endpoints: {
+              0: { typeId: featuresTypeId },
+              1: { typeId: inspirationsTypeId },
+            },
+          },
+        },
+      }),
+    );
+    expect(file.types.inspirations_features?.endpoints).toEqual({
+      0: { typeId: featuresTypeId },
+      1: { typeId: inspirationsTypeId },
+    });
+  });
+
+  test("round-trips endpoints through serialize", () => {
+    const file = emptyRelationshipTypesFile();
+    file.types.inspirations_features = {
+      perspectives: ["features", "inspirations"],
+      endpoints: {
+        0: { typeId: featuresTypeId },
+        1: { typeId: inspirationsTypeId },
+      },
+    };
+    const roundTrip = parseRelationshipTypesFile(serializeRelationshipTypesFile(file));
+    expect(roundTrip.types.inspirations_features?.endpoints).toEqual(
+      file.types.inspirations_features.endpoints,
+    );
+  });
+
+  test("rejects endpoint with invalid typeId", () => {
+    expect(() =>
+      parseRelationshipTypesFile(
+        JSON.stringify({
+          version: 1,
+          types: {
+            bad: {
+              perspectives: ["a", "b"],
+              endpoints: { 0: { typeId: "not-a-node-id" }, 1: { typeId: featuresTypeId } },
+            },
+          },
+        }),
+      ),
+    ).toThrow(/valid node id/);
+  });
+});
+
 describe("relationship-types-file bidirectional field removal", () => {
   test("serialization never emits a bidirectional field", () => {
     const file = emptyRelationshipTypesFile();
