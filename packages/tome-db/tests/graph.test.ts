@@ -3,6 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import { GraphDatabase } from "../src/graph";
+import {
+  createTestContentFixture,
+  destroyTestContentFixture,
+  TEST_ARCHIVE_NODE_ID,
+} from "../src/content/test-helpers";
 
 describe("GraphDatabase", () => {
   let tempDir: string;
@@ -69,5 +74,33 @@ describe("GraphDatabase", () => {
     expect(db.deleteNode("a")).toBe(true);
     expect(db.getNode("a")).toBeNull();
     db.close();
+  });
+
+  test("listArchiveMemberIds finds members via registry-derived set-trait perspectives", () => {
+    const fixture = createTestContentFixture("tome-graph-archive-");
+    const { db, store } = fixture.ctx;
+    const hub = TEST_ARCHIVE_NODE_ID;
+    const member = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
+
+    fixture.ctx.store.writeRelationshipTypesFile({
+      version: 1,
+      types: {
+        archive_membership: {
+          perspectives: ["archive_hosts", "archived_in"],
+          traits: ["set"],
+        },
+      },
+    });
+
+    db.upsertNode(member, { title: "Archived page" });
+    db.upsertRelationship(member, hub, "archived_in");
+
+    const ids = db.listArchiveMemberIds(hub, store.contentDir);
+    expect(ids).toEqual([member]);
+
+    db.recomputeArchivedFlags(hub, store.contentDir);
+    expect(db.isNodeArchived(member)).toBe(true);
+
+    destroyTestContentFixture(fixture);
   });
 });

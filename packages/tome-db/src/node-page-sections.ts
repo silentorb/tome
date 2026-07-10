@@ -1,7 +1,6 @@
 import type { GraphDatabase, Relationship } from "./graph";
 import { getDatabaseViewDetail, type DatabaseColumnDef, type DatabaseViewDetail } from "./database-view";
 import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./property-enums";
-import { MEMBER_OF_TYPE, MEMBERS_TYPE, ORDERED_MEMBER_OF_TYPE, ORDERED_MEMBERS_TYPE, isTypeMembershipType } from "./labels";
 import {
   getConfigByProvider,
   getOrderedAssociationView,
@@ -27,6 +26,12 @@ import {
   perspectiveLinkAddLabel,
 } from "./relationship-type-label";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import {
+  isMemberSidePerspective,
+  isSetSidePerspective,
+  isSetTraitPerspective,
+  membershipCompositeForPerspective,
+} from "./relationship-type-traits";
 import { generatedProviderId, MEMBERS_SECTION_KEY, ORDERED_MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
@@ -123,8 +128,11 @@ function cellsFromConnectionProperties(properties: Record<string, unknown>): Rec
   return cells;
 }
 
-function relationTypeSortKey(type: string): string {
-  if (isTypeMembershipType(type)) return "z:member_of";
+function relationTypeSortKey(
+  type: string,
+  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
+): string {
+  if (isSetTraitPerspective(registry, type)) return "z:member_of";
   return `a:${type}`;
 }
 
@@ -174,8 +182,9 @@ function resolveTypeNodeId(
   db: GraphDatabase,
   relationshipType: string,
   connections: Relationship[],
+  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
 ): string | null {
-  if (relationshipType === MEMBER_OF_TYPE || relationshipType === ORDERED_MEMBER_OF_TYPE) {
+  if (isMemberSidePerspective(registry, relationshipType)) {
     const targetIds = [...new Set(connections.map((connection) => connection.targetNodeId))];
     if (targetIds.length === 1) return targetIds[0]!;
   }
@@ -258,10 +267,10 @@ function buildRelationSections(
   const sections: RelationTableSection[] = [];
 
   for (const label of [...byType.keys()].sort((a, b) =>
-    relationTypeSortKey(a).localeCompare(relationTypeSortKey(b)),
+    relationTypeSortKey(a, relationshipTypes).localeCompare(relationTypeSortKey(b, relationshipTypes)),
   )) {
     const perspective = label;
-    if (perspective === MEMBERS_TYPE || perspective === ORDERED_MEMBERS_TYPE) continue;
+    if (isSetSidePerspective(relationshipTypes, perspective)) continue;
 
     const connections = byType.get(label)!;
     const columnSet = new Set<string>();
@@ -288,10 +297,10 @@ function buildRelationSections(
       return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     });
 
-    const isTypeMembership = isTypeMembershipType(perspective);
+    const isTypeMembership = isSetTraitPerspective(relationshipTypes, perspective);
     const typeNodeId = isTypeMembership
       ? null
-      : resolveTypeNodeId(db, perspective, connections);
+      : resolveTypeNodeId(db, perspective, connections, relationshipTypes);
     const tableRelation = tableRelationByGroupKey.get(perspective);
     const hostTypeId = typeIdsForInstance(db, nodeId, contentDir)[0];
     const ruleContext =
@@ -326,13 +335,12 @@ function buildRelationSections(
         );
 
     const membershipCompositeKey =
-      perspective === ORDERED_MEMBER_OF_TYPE ? ORDERED_MEMBER_OF_TYPE : MEMBER_OF_TYPE;
+      membershipCompositeForPerspective(relationshipTypes, perspective) ?? perspective;
     const sectionTitle = isTypeMembership
       ? perspectiveDisplayLabel(relationshipTypes, perspective, membershipCompositeKey)
       : sectionTitleForType(db, perspective, typeNodeId);
     const linkAddLabel =
-      isTypeMembership &&
-      (perspective === MEMBER_OF_TYPE || perspective === ORDERED_MEMBER_OF_TYPE)
+      isTypeMembership && isMemberSidePerspective(relationshipTypes, perspective)
         ? perspectiveLinkAddLabel(
             relationshipTypes,
             perspective,
@@ -393,10 +401,10 @@ export function getNodePageDetail(
     includeSchemaEmptySections?: boolean;
   },
 ): NodePageDetail | null {
-  const node = getNodeDetail(db, id);
+  const contentDir = options?.contentDir ?? resolveContentPath();
+  const node = getNodeDetail(db, id, contentDir);
   if (!node) return null;
 
-  const contentDir = options?.contentDir ?? resolveContentPath();
   const tabId = options?.tabId ?? options?.scopeId ?? options?.databaseView;
   const views = loadViewsFromContent(contentDir);
 
@@ -434,7 +442,7 @@ export function getNodePageDetail(
     }),
   );
 
-  const properties = node.isTypeTable ? null : buildPropertiesSection(db, id);
+  const properties = node.isTypeTable ? null : buildPropertiesSection(db, id, contentDir);
 
   const metadata = getNodePageMetadata(db, id)!;
 

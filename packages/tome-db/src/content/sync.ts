@@ -197,7 +197,7 @@ export class CacheSync {
 
   recomputeArchivedFlags(): void {
     const archiveId = loadWorkspaceFromContent(this.contentDir).archiveNodeId;
-    this.db.recomputeArchivedFlags(archiveId);
+    this.db.recomputeArchivedFlags(archiveId, this.contentDir);
   }
 
   fullRebuild(): void {

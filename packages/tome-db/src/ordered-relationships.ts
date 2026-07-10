@@ -1,9 +1,9 @@
 import type { GraphDatabase, Properties, Relationship } from "./graph";
 import type { TomeWriteContext } from "./content/write-context";
 import { relationshipId } from "./graph";
-import { ORDERED_MEMBER_OF_TYPE } from "./labels";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import {
+  defaultOrderedSetMembershipComposite,
   isOrderedTraitComposite,
   membershipCompositeForSet,
   membershipPerspectivesForSet,
@@ -124,7 +124,9 @@ export function isOrderedMembershipComposite(
 }
 
 export function orderedMembershipCompositeType(contentDir?: string): string {
-  return ORDERED_MEMBER_OF_TYPE;
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
+  return defaultOrderedSetMembershipComposite(registry);
 }
 
 export function memberPerspectiveForSet(setId: string, contentDir?: string): string {

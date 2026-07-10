@@ -1,5 +1,7 @@
 import type { GraphDatabase, Relationship } from "../../graph";
-import { TYPE_MEMBERSHIP_TYPES } from "../../labels";
+import { resolveContentPath } from "../../content/paths";
+import { loadRelationshipTypesFromContent } from "../../relationship-types/load";
+import { setTraitPerspectives } from "../../relationship-type-traits";
 import { priorityWeight } from "../../property-enums";
 import { normalizeRelationshipType } from "../../relation-type";
 import type { DynamicResolverContext } from "../registry";
@@ -220,7 +222,8 @@ export function buildWeightedUsePrefetch(
 
   const priorityByFeature = new Map<string, number>();
   if (featuresDbId) {
-    for (const type of TYPE_MEMBERSHIP_TYPES) {
+    const registry = loadRelationshipTypesFromContent(resolveContentPath());
+    for (const type of setTraitPerspectives(registry)) {
       for (const connection of ctx.db.listRelationshipsToTarget(featuresDbId, type)) {
         priorityByFeature.set(connection.sourceNodeId, priorityWeight(connection.properties.priority));
       }

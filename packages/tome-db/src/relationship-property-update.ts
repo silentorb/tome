@@ -8,7 +8,7 @@ import {
   isPriorityValue,
   isUnsetPriority,
 } from "./property-enums";
-import { TYPE_MEMBERSHIP_TYPES } from "./labels";
+import { membershipPerspectivesForSet } from "./relationship-type-traits";
 
 export type RelationshipPropertyUpdateError = "not_found" | "invalid_value";
 
@@ -54,18 +54,17 @@ export function updateDatabaseRowProperty(
   propertyKey: string,
   value: string | null,
 ): RelationshipPropertyUpdateError | null {
-  for (const type of TYPE_MEMBERSHIP_TYPES) {
-    const connection = ctx.store.findRelationship(nodeId, databaseId, type);
-    if (connection) {
-      return updateOutgoingRelationshipProperty(
-        ctx,
-        nodeId,
-        databaseId,
-        type,
-        propertyKey,
-        value,
-      );
-    }
+  const [, memberPerspective] = membershipPerspectivesForSet(databaseId, ctx.store.contentDir);
+  const connection = ctx.store.findRelationship(nodeId, databaseId, memberPerspective);
+  if (connection) {
+    return updateOutgoingRelationshipProperty(
+      ctx,
+      nodeId,
+      databaseId,
+      memberPerspective,
+      propertyKey,
+      value,
+    );
   }
   return "not_found";
 }

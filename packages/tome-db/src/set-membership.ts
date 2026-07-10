@@ -1,5 +1,4 @@
 import type { GraphDatabase, Relationship } from "./graph";
-import { MEMBER_OF_TYPE, MEMBERS_TYPE, ORDERED_MEMBER_OF_TYPE, ORDERED_MEMBERS_TYPE } from "./labels";
 import { resolveContentPath } from "./content/paths";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { archiveNodeId } from "./workspace/resolve";
@@ -9,22 +8,18 @@ import {
   membershipCompositeForSet,
   membershipPerspectivesForSet,
   setRoleIndices,
+  setTraitPerspectives,
   typesWithTrait,
   SET_TRAIT,
 } from "./relationship-type-traits";
 
-export const SET_MEMBERSHIP_TYPE = MEMBER_OF_TYPE;
-
-export const MEMBERSHIP_PERSPECTIVES = [
-  MEMBER_OF_TYPE,
-  MEMBERS_TYPE,
-  ORDERED_MEMBER_OF_TYPE,
-  ORDERED_MEMBERS_TYPE,
-] as const;
-
-export type MembershipPerspective = (typeof MEMBERSHIP_PERSPECTIVES)[number];
-
 export type SetKind = "type_table" | "archive";
+
+export function membershipPerspectives(contentDir?: string): string[] {
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
+  return setTraitPerspectives(registry);
+}
 
 export function isSetMembershipStorageType(type: string, contentDir?: string): boolean {
   const dir = contentDir ?? resolveContentPath();
@@ -32,8 +27,10 @@ export function isSetMembershipStorageType(type: string, contentDir?: string): b
   return isSetTraitComposite(registry, type);
 }
 
-export function isMembershipPerspective(perspective: string): perspective is MembershipPerspective {
-  return (MEMBERSHIP_PERSPECTIVES as readonly string[]).includes(perspective);
+export function isMembershipPerspective(perspective: string, contentDir?: string): boolean {
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
+  return setTraitPerspectives(registry).includes(perspective);
 }
 
 /** Outgoing membership projections from nodeId for the given perspective. */
@@ -53,7 +50,7 @@ export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: s
     const def = registry.types[composite];
     if (!def) continue;
     const { childIndex } = setRoleIndices(def);
-    const memberPerspective = def.perspectives[childIndex];
+    const memberPerspective = def.perspectives[childIndex]!;
     for (const rel of db.listRelationshipsFromSource(memberId, memberPerspective)) {
       ids.add(rel.targetNodeId);
     }

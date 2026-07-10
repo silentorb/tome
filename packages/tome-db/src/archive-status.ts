@@ -1,6 +1,6 @@
 import type { GraphDatabase } from "./graph";
 import { resolveContentPath } from "./content/paths";
-import { SET_MEMBERSHIP_TYPE, listSetMembership, setMemberIds } from "./set-membership";
+import { findSetMembershipRelationship, setMemberIds } from "./set-membership";
 import { archiveNodeId, legacyArchivePathPrefix } from "./workspace/resolve";
 
 export function isLegacyArchivedPath(path: string | null, contentDir?: string): boolean {
@@ -18,10 +18,6 @@ function resolveArchiveHubId(contentDir?: string): string | null {
   }
 }
 
-function isArchiveHubEndpoint(archiveId: string, nodeId: string, otherId: string): boolean {
-  return otherId === archiveId && nodeId !== archiveId;
-}
-
 /** True when the node has set membership on the Archive hub (not the hub itself). */
 export function isArchivedNode(
   db: GraphDatabase,
@@ -34,20 +30,14 @@ export function isArchivedNode(
   if (db.isNodeArchived(nodeId)) return true;
   if (!archiveId) return false;
 
-  for (const connection of listSetMembership(db, nodeId, SET_MEMBERSHIP_TYPE)) {
-    if (isArchiveHubEndpoint(archiveId, nodeId, connection.targetNodeId)) return true;
-  }
-  for (const connection of db.listRelationshipsToTarget(nodeId, SET_MEMBERSHIP_TYPE)) {
-    if (isArchiveHubEndpoint(archiveId, nodeId, connection.sourceNodeId)) return true;
-  }
-  return false;
+  return findSetMembershipRelationship(db, nodeId, archiveId, dir) !== null;
 }
 
 export function listArchivedNodeIds(db: GraphDatabase, contentDir?: string): string[] {
   const dir = contentDir ?? resolveContentPath();
   const archiveId = resolveArchiveHubId(dir);
   if (!archiveId) return [];
-  const rows = setMemberIds(db, archiveId);
+  const rows = setMemberIds(db, archiveId, dir);
   if (rows.length > 0) return rows.filter((id) => id !== archiveId);
-  return db.listArchiveMemberIds(archiveId).filter((id) => id !== archiveId);
+  return db.listArchiveMemberIds(archiveId, dir).filter((id) => id !== archiveId);
 }

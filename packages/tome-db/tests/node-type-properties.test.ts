@@ -65,7 +65,7 @@ describe("node-type-properties", () => {
     db.upsertRelationship(character, scene1, "SCENES", {});
     db.upsertRelationship(character, scene2, "SCENES", {});
 
-    const properties = buildPropertiesSection(db, character);
+    const properties = buildPropertiesSection(db, character, contentDir);
     expect(properties).toMatchObject({
       databaseId: CHAR_DB,
       typeTitle: "Characters",
@@ -97,7 +97,7 @@ describe("node-type-properties", () => {
       ]),
     );
     invalidateDynamicFieldsCache();
-    const detail = getNodePageDetail(db, character);
+    const detail = getNodePageDetail(db, character, { contentDir });
     expect(detail?.properties?.cells.all_scene_count).toBe("2");
     const membership = detail?.sections.find(
       (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,

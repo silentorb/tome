@@ -1,11 +1,20 @@
 import { describe, expect, test } from "bun:test";
 import {
   childNodeId,
+  defaultOrderedSetMembershipComposite,
+  defaultPlainSetMembershipComposite,
+  isMemberSidePerspective,
+  isSetSidePerspective,
+  isSetTraitPerspective,
+  memberSidePerspectives,
+  membershipCompositeForPerspective,
   orderedPropertyName,
   parentNodeId,
   resolveOrderedSetTraitComposite,
   resolveSetTraitComposite,
   setRoleIndices,
+  setSidePerspectives,
+  setTraitPerspectives,
   SET_TRAIT,
   ORDERED_TRAIT,
   typesWithTrait,
@@ -88,5 +97,49 @@ describe("relationship-type-traits ordered trait", () => {
     registry.types.member_of = setMemberOfDef;
     registry.types.ordered_member_of = orderedMemberOfDef;
     expect(typesWithTrait(registry, ORDERED_TRAIT)).toEqual(["ordered_member_of"]);
+  });
+});
+
+describe("relationship-type-traits membership perspectives", () => {
+  test("setTraitPerspectives collects unique slugs from set-trait composites", () => {
+    const registry = emptyRelationshipTypesFile();
+    registry.types.member_of = setMemberOfDef;
+    registry.types.ordered_member_of = orderedMemberOfDef;
+    expect(setTraitPerspectives(registry).sort()).toEqual(
+      ["member_of", "members", "ordered_member_of", "ordered_members"].sort(),
+    );
+  });
+
+  test("role-side helpers respect setRoleIndices overrides", () => {
+    const registry = emptyRelationshipTypesFile();
+    registry.types.custom_set = {
+      perspectives: ["hosts", "guest_of"],
+      traits: [{ key: "set", parentIndex: 1, childIndex: 0 }],
+    };
+    expect(setSidePerspectives(registry)).toEqual(["guest_of"]);
+    expect(memberSidePerspectives(registry)).toEqual(["hosts"]);
+    expect(isSetTraitPerspective(registry, "guest_of")).toBe(true);
+    expect(isSetSidePerspective(registry, "guest_of")).toBe(true);
+    expect(isMemberSidePerspective(registry, "hosts")).toBe(true);
+    expect(membershipCompositeForPerspective(registry, "hosts")).toBe("custom_set");
+  });
+
+  test("defaultPlainSetMembershipComposite skips ordered set composites", () => {
+    const registry = emptyRelationshipTypesFile();
+    registry.types.member_of = setMemberOfDef;
+    registry.types.ordered_member_of = orderedMemberOfDef;
+    expect(defaultPlainSetMembershipComposite(registry)).toBe("member_of");
+    expect(defaultOrderedSetMembershipComposite(registry)).toBe("ordered_member_of");
+  });
+
+  test("empty registry falls back to conventional membership names", () => {
+    const registry = emptyRelationshipTypesFile();
+    expect(defaultPlainSetMembershipComposite(registry)).toBe("member_of");
+    expect(setTraitPerspectives(registry)).toEqual([
+      "members",
+      "member_of",
+      "ordered_members",
+      "ordered_member_of",
+    ]);
   });
 });

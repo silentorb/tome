@@ -38,7 +38,7 @@ function bodyFromProperties(properties: Record<string, unknown>): string {
   return typeof body === "string" ? body : "";
 }
 
-export function getNodeDetail(db: GraphDatabase, id: string): NodeDetail | null {
+export function getNodeDetail(db: GraphDatabase, id: string, contentDir?: string): NodeDetail | null {
   const node = db.getNode(id);
   if (!node) return null;
   return {
@@ -46,8 +46,8 @@ export function getNodeDetail(db: GraphDatabase, id: string): NodeDetail | null 
     title: titleFromProperties(node.properties),
     primaryTypeTitle: primaryTypeTitleForInstance(db, id),
     body: bodyFromProperties(node.properties),
-    isTypeTable: isTypeTableNode(db, id),
-    archived: isArchivedNode(db, id),
+    isTypeTable: isTypeTableNode(db, id, contentDir),
+    archived: isArchivedNode(db, id, contentDir),
   };
 }
 

@@ -5,7 +5,6 @@ import type {
   RelationshipTypesFile,
   TraitEntry,
 } from "./content/relationship-types-file";
-import { MEMBER_OF_TYPE } from "./labels";
 import { resolveContentPath } from "./content/paths";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { getTableSchema } from "./table-schema";
@@ -161,6 +160,15 @@ export function resolveOrderedSetTraitComposite(
   return null;
 }
 
+const CONVENTIONAL_PLAIN_SET_COMPOSITE = "member_of";
+const CONVENTIONAL_ORDERED_SET_COMPOSITE = "ordered_member_of";
+const CONVENTIONAL_SET_TRAIT_PERSPECTIVES = [
+  "members",
+  "member_of",
+  "ordered_members",
+  "ordered_member_of",
+] as const;
+
 export function isSetTraitEntry(
   registry: RelationshipTypesFile,
   entry: RelationshipEntry,
@@ -168,14 +176,104 @@ export function isSetTraitEntry(
   return isSetTraitComposite(registry, entry.type);
 }
 
+function uniquePerspectives(values: Iterable<string>): string[] {
+  return [...new Set(values)];
+}
+
+export function setTraitPerspectives(registry: RelationshipTypesFile): string[] {
+  const perspectives: string[] = [];
+  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+    const def = registry.types[composite];
+    if (!def) continue;
+    perspectives.push(def.perspectives[0], def.perspectives[1]);
+  }
+  const unique = uniquePerspectives(perspectives);
+  if (unique.length > 0) return unique;
+  return [...CONVENTIONAL_SET_TRAIT_PERSPECTIVES];
+}
+
+export function setSidePerspectives(registry: RelationshipTypesFile): string[] {
+  const perspectives: string[] = [];
+  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+    const def = registry.types[composite];
+    if (!def) continue;
+    const { parentIndex } = setRoleIndices(def);
+    perspectives.push(def.perspectives[parentIndex]!);
+  }
+  const unique = uniquePerspectives(perspectives);
+  if (unique.length > 0) return unique;
+  return ["members", "ordered_members"];
+}
+
+export function memberSidePerspectives(registry: RelationshipTypesFile): string[] {
+  const perspectives: string[] = [];
+  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+    const def = registry.types[composite];
+    if (!def) continue;
+    const { childIndex } = setRoleIndices(def);
+    perspectives.push(def.perspectives[childIndex]!);
+  }
+  const unique = uniquePerspectives(perspectives);
+  if (unique.length > 0) return unique;
+  return ["member_of", "ordered_member_of"];
+}
+
+export function isSetTraitPerspective(
+  registry: RelationshipTypesFile,
+  perspective: string,
+): boolean {
+  const normalized = normalizeRelationshipType(perspective);
+  return setTraitPerspectives(registry).includes(normalized);
+}
+
+export function isSetSidePerspective(
+  registry: RelationshipTypesFile,
+  perspective: string,
+): boolean {
+  const normalized = normalizeRelationshipType(perspective);
+  return setSidePerspectives(registry).includes(normalized);
+}
+
+export function isMemberSidePerspective(
+  registry: RelationshipTypesFile,
+  perspective: string,
+): boolean {
+  const normalized = normalizeRelationshipType(perspective);
+  return memberSidePerspectives(registry).includes(normalized);
+}
+
+export function membershipCompositeForPerspective(
+  registry: RelationshipTypesFile,
+  perspective: string,
+): string | null {
+  return resolveSetTraitComposite(registry, perspective);
+}
+
+export function defaultPlainSetMembershipComposite(registry: RelationshipTypesFile): string {
+  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+    const def = registry.types[composite];
+    if (def && !isOrderedTraitType(def)) return composite;
+  }
+  return CONVENTIONAL_PLAIN_SET_COMPOSITE;
+}
+
+export function defaultOrderedSetMembershipComposite(registry: RelationshipTypesFile): string {
+  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+    const def = registry.types[composite];
+    if (def && isOrderedTraitType(def)) return composite;
+  }
+  return CONVENTIONAL_ORDERED_SET_COMPOSITE;
+}
+
 export function membershipCompositeForSet(setId: string, contentDir?: string): string {
   const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
   const schema = getTableSchema(loadTableSchemasFromContent(dir), setId);
   const composite = schema?.membershipComposite;
   if (typeof composite === "string" && composite.trim()) {
     return normalizeRelationshipType(composite);
   }
-  return MEMBER_OF_TYPE;
+  return defaultPlainSetMembershipComposite(registry);
 }
 
 export function membershipPerspectivesForSet(
@@ -186,8 +284,10 @@ export function membershipPerspectivesForSet(
   const registry = loadRelationshipTypesFromContent(dir);
   const composite = membershipCompositeForSet(setId, dir);
   const def = registry.types[composite];
-  if (!def) return ["members", "member_of"];
-  return [def.perspectives[0], def.perspectives[1]];
+  if (!def) {
+    return ["members", "member_of"] as [string, string];
+  }
+  return [def.perspectives[0]!, def.perspectives[1]!];
 }
 
 export function isOrderedMembershipSet(setId: string, contentDir?: string): boolean {

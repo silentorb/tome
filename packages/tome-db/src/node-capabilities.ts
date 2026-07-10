@@ -1,13 +1,9 @@
 import type { GraphDatabase, Node, Properties } from "./graph";
-import {
-  MEMBER_OF_TYPE,
-  MEMBERS_TYPE,
-  ORDERED_MEMBER_OF_TYPE,
-  ORDERED_MEMBERS_TYPE,
-} from "./labels";
 import { memberSetIds } from "./set-membership";
 import { resolveContentPath } from "./content/paths";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { hasTableSchemaEntry, loadTableSchemasFromContent } from "./table-schemas/load";
+import { memberSidePerspectives, setSidePerspectives } from "./relationship-type-traits";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;
@@ -18,10 +14,14 @@ function titleFromProperties(properties: Record<string, unknown>): string {
 }
 
 export function hasIncomingIsA(db: GraphDatabase, nodeId: string, contentDir?: string): boolean {
-  if (db.listRelationshipsToTarget(nodeId, MEMBER_OF_TYPE).length > 0) return true;
-  if (db.listRelationshipsToTarget(nodeId, ORDERED_MEMBER_OF_TYPE).length > 0) return true;
-  if (db.listRelationshipsFromSource(nodeId, MEMBERS_TYPE).length > 0) return true;
-  if (db.listRelationshipsFromSource(nodeId, ORDERED_MEMBERS_TYPE).length > 0) return true;
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
+  for (const perspective of memberSidePerspectives(registry)) {
+    if (db.listRelationshipsToTarget(nodeId, perspective).length > 0) return true;
+  }
+  for (const perspective of setSidePerspectives(registry)) {
+    if (db.listRelationshipsFromSource(nodeId, perspective).length > 0) return true;
+  }
   return false;
 }
 
@@ -32,7 +32,7 @@ export function isTypeTableNode(
 ): boolean {
   const dir = contentDir ?? resolveContentPath();
   if (hasTableSchemaEntry(dir, nodeId)) return true;
-  return hasIncomingIsA(db, nodeId);
+  return hasIncomingIsA(db, nodeId, dir);
 }
 
 export function typeIdsForInstance(
@@ -69,7 +69,7 @@ export function isTypeTableCandidate(
   if (nodeId && hasTableSchemaEntry(contentDir ?? resolveContentPath(), nodeId)) {
     return true;
   }
-  if (db && nodeId) return hasIncomingIsA(db, nodeId);
+  if (db && nodeId) return hasIncomingIsA(db, nodeId, contentDir);
   return false;
 }
 

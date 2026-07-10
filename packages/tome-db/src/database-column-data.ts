@@ -1,8 +1,8 @@
 import { listRelationConnectionsForRow } from "./database-view-relations";
-import { TYPE_MEMBERSHIP_TYPES } from "./labels";
 import { unlinkOutgoingRelationship } from "./relationship-link-mutations";
 import { otherEndpoint } from "./relationship-traverse";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import { setTraitPerspectives } from "./relationship-type-traits";
 import { perspectiveForRelationColumn, relationColumnCompositeType } from "./table-relation-column";
 import type { TomeWriteContext } from "./content/write-context";
 import type { TableColumnDef } from "./content/table-schemas-file";
@@ -14,8 +14,9 @@ export function stripScalarFromMembershipEdges(
   databaseId: string,
   propertyKey: string,
 ): number {
+  const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
   let count = 0;
-  for (const type of TYPE_MEMBERSHIP_TYPES) {
+  for (const type of setTraitPerspectives(registry)) {
     for (const connection of ctx.db.listRelationshipsToTarget(databaseId, type)) {
       if (!(propertyKey in connection.properties)) continue;
       const props = { ...connection.properties };
@@ -38,8 +39,9 @@ export function renameScalarOnMembershipEdges(
   oldKey: string,
   newKey: string,
 ): number {
+  const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
   let count = 0;
-  for (const type of TYPE_MEMBERSHIP_TYPES) {
+  for (const type of setTraitPerspectives(registry)) {
     for (const connection of ctx.db.listRelationshipsToTarget(databaseId, type)) {
       if (!(oldKey in connection.properties)) continue;
       const props = { ...connection.properties };
@@ -67,7 +69,7 @@ export function unlinkRelationColumnFromAllRows(
   const compositeType = relationColumnCompositeType(column);
 
   const rowIds = new Set<string>();
-  for (const type of TYPE_MEMBERSHIP_TYPES) {
+  for (const type of setTraitPerspectives(registry)) {
     for (const connection of ctx.db.listRelationshipsToTarget(databaseId, type)) {
       rowIds.add(connection.sourceNodeId);
     }

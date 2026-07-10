@@ -2,7 +2,6 @@ import type { GraphDatabase, Relationship, Properties } from "./graph";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
 import { relationshipId } from "./graph";
-import { ORDERED_MEMBER_OF_TYPE, ORDERED_MEMBERS_TYPE } from "./labels";
 import type { DatabaseColumnDef } from "./database-view";
 import type { RelationLink } from "./relation-link";
 import { applyDynamicFields } from "./dynamic-fields";
@@ -11,6 +10,7 @@ import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-de
 import type { EvalRow } from "./row-sort";
 import { resolveGeneratedTabsFromScopes, ORDERED_MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { resolveContentPath } from "./content/paths";
 import { applySectionColumnOrder } from "./views/column-order";
 import type { TableTabsDetail } from "./views/tabs";
@@ -22,9 +22,13 @@ import {
 import type { OrderedAssociationConfig } from "./ordered-associations-config/ordered-associations-file";
 import { loadOrderedAssociationsFromContent } from "./ordered-associations-config/load";
 import { listSetMemberRowConnections } from "./set-membership";
-import {
-  ORDERED_PROPERTY_DEFAULT,
+import { ORDERED_PROPERTY_DEFAULT,
+  isOrderedTraitComposite,
   membershipPerspectivesForSet,
+  orderedPropertyName,
+  setRoleIndices,
+  typesWithTrait,
+  SET_TRAIT,
 } from "./relationship-type-traits";
 import { ORDER_META_KEYS, applySparseOrderRewrite } from "./ordered-relationships";
 
@@ -160,9 +164,23 @@ function membershipRelationships(
   return listSetMemberRowConnections(db, config.typeDatabaseId, contentDir);
 }
 
-function scopeMembershipSortKey(db: GraphDatabase, scopeNodeId: string): number {
-  for (const edge of db.listRelationshipsFromSource(scopeNodeId, ORDERED_MEMBER_OF_TYPE)) {
-    return numericSortKey(edge.properties[ORDERED_PROPERTY_DEFAULT], 999);
+function scopeMembershipSortKey(
+  db: GraphDatabase,
+  scopeNodeId: string,
+  contentDir?: string,
+): number {
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
+  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+    if (!isOrderedTraitComposite(registry, composite)) continue;
+    const def = registry.types[composite];
+    if (!def) continue;
+    const { childIndex } = setRoleIndices(def);
+    const memberPerspective = def.perspectives[childIndex]!;
+    const property = orderedPropertyName(def);
+    for (const edge of db.listRelationshipsFromSource(scopeNodeId, memberPerspective)) {
+      return numericSortKey(edge.properties[property], 999);
+    }
   }
   return 999;
 }
@@ -363,8 +381,8 @@ function discoverScopes(
   }
 
   scopes.sort((a, b) => {
-    const keyA = scopeMembershipSortKey(db, a.id);
-    const keyB = scopeMembershipSortKey(db, b.id);
+    const keyA = scopeMembershipSortKey(db, a.id, contentDir);
+    const keyB = scopeMembershipSortKey(db, b.id, contentDir);
     if (keyA !== keyB) return keyA - keyB;
     return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
   });

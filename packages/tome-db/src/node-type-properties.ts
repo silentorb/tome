@@ -1,11 +1,13 @@
 import type { DatabaseColumnDef } from "./database-view";
 import { applyDynamicFields } from "./dynamic-fields";
 import type { GraphDatabase } from "./graph";
-import { TYPE_MEMBERSHIP_TYPES } from "./labels";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
 import { loadTableSchemaForDatabase } from "./database-column-defs";
 import { storedScalarColumns } from "./table-schema";
+import { resolveContentPath } from "./content/paths";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import { memberSidePerspectives } from "./relationship-type-traits";
 import {
   coalescePriorityValue,
   enrichColumnDef,
@@ -120,10 +122,13 @@ function storedColumnDefsFromTableSchema(databaseId: string): DatabaseColumnDef[
 export function buildPropertiesSection(
   db: GraphDatabase,
   nodeId: string,
+  contentDir?: string,
 ): PropertiesSection | null {
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
   // v1: first type membership connection when a node belongs to multiple types.
   let membershipRelationship = null as ReturnType<GraphDatabase["listRelationshipsFromSource"]>[number] | null;
-  for (const type of TYPE_MEMBERSHIP_TYPES) {
+  for (const type of memberSidePerspectives(registry)) {
     const connections = db.listRelationshipsFromSource(nodeId, type);
     if (connections.length > 0) {
       membershipRelationship = connections[0]!;

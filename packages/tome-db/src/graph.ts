@@ -9,6 +9,9 @@ import type {
 } from "./content/relationship-sync-expand";
 import { decodeEnumProperties, encodeEnumProperties } from "./enum-codec";
 import { loadWorkspaceSchema } from "./schema-rules/load";
+import { resolveContentPath } from "./content/paths";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import { memberSidePerspectives, setTraitPerspectives } from "./relationship-type-traits";
 
 export type PropertyValue = string | number | boolean | null | PropertyValue[] | { [key: string]: PropertyValue };
 export type Properties = Record<string, PropertyValue>;
@@ -282,28 +285,33 @@ export class GraphDatabase {
     return row?.is_archived === 1;
   }
 
-  listArchiveMemberIds(archiveId: string): string[] {
+  listArchiveMemberIds(archiveId: string, contentDir?: string): string[] {
+    const dir = contentDir ?? resolveContentPath();
+    const registry = loadRelationshipTypesFromContent(dir);
+    const types = setTraitPerspectives(registry);
+    if (types.length === 0) return [];
+    const placeholders = types.map(() => "?").join(", ");
     const rows = this.db
       .prepare(
         `SELECT DISTINCT
            CASE WHEN source_node_id = ?1 THEN target_node_id ELSE source_node_id END AS member_id
          FROM relationship_projections
-         WHERE type IN ('members', 'member_of')
+         WHERE type IN (${placeholders})
            AND (source_node_id = ?1 OR target_node_id = ?1)
            AND source_node_id != target_node_id`,
       )
-      .all(archiveId) as { member_id: string }[];
+      .all(archiveId, ...types) as { member_id: string }[];
     return rows.map((row) => row.member_id);
   }
 
   /** @deprecated Use listArchiveMemberIds */
-  listIncludesArchiveMemberIds(archiveId: string): string[] {
-    return this.listArchiveMemberIds(archiveId);
+  listIncludesArchiveMemberIds(archiveId: string, contentDir?: string): string[] {
+    return this.listArchiveMemberIds(archiveId, contentDir);
   }
 
-  recomputeArchivedFlags(archiveId: string): void {
+  recomputeArchivedFlags(archiveId: string, contentDir?: string): void {
     this.db.exec("UPDATE nodes SET is_archived = 0");
-    const memberIds = this.listArchiveMemberIds(archiveId);
+    const memberIds = this.listArchiveMemberIds(archiveId, contentDir);
     if (memberIds.length === 0) return;
     const placeholders = memberIds.map(() => "?").join(", ");
     this.db
@@ -465,8 +473,14 @@ export class GraphDatabase {
     return rows.filter((row) => this.nodeMatchesAnyAllowedType(row.id, allowedTypeIds));
   }
 
-  private nodeMatchesAnyAllowedType(nodeId: string, allowedTypeIds: readonly string[]): boolean {
-    for (const type of ["member_of"] as const) {
+  private nodeMatchesAnyAllowedType(
+    nodeId: string,
+    allowedTypeIds: readonly string[],
+    contentDir?: string,
+  ): boolean {
+    const dir = contentDir ?? resolveContentPath();
+    const registry = loadRelationshipTypesFromContent(dir);
+    for (const type of memberSidePerspectives(registry)) {
       for (const connection of this.listRelationshipsFromSource(nodeId, type)) {
         if (allowedTypeIds.includes(connection.targetNodeId)) return true;
       }

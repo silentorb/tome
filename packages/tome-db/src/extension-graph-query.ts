@@ -4,7 +4,6 @@ import type {
   GraphQueryNode,
 } from "tome-interfaces/extension-services/graph-query";
 import type { GraphDatabase, Node } from "./graph";
-import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "./labels";
 import { setMemberIds } from "./set-membership";
 
 function titleFromNode(node: Node | null): string {

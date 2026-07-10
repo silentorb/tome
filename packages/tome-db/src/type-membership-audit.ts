@@ -3,10 +3,13 @@
  */
 import type { GraphDatabase, Relationship, Properties } from "./graph";
 import { NODE_ID_RE_SRC } from "./node-id";
-import { MEMBER_OF_TYPE, MEMBERS_TYPE, TYPE_MEMBERSHIP_TYPES } from "./labels";
+import { MEMBER_OF_TYPE } from "./labels";
 import { findSetMembershipRelationship, listSetMemberRowConnections } from "./set-membership";
 import { findTypeNodeByTitle, isTypeTableNode } from "./node-capabilities";
 import { legacyExportPathPrefix } from "./workspace/resolve";
+import { resolveContentPath } from "./content/paths";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import { setTraitPerspectives } from "./relationship-type-traits";
 
 /** Node properties that are not database row scalars. */
 export const NODE_META_KEYS = new Set(["title", "body", "alias", "url_alias"]);
@@ -192,7 +195,9 @@ export function findNestedPageSpuriousTypeMembership(
       : null;
     if (!instanceRoot) continue;
 
-    for (const label of TYPE_MEMBERSHIP_TYPES) {
+    const dir = contentDir ?? resolveContentPath();
+    const registry = loadRelationshipTypesFromContent(dir);
+    for (const label of setTraitPerspectives(registry)) {
       for (const connection of db.listRelationshipsToTarget(databaseId, label)) {
         const pageId = connection.sourceNodeId;
         if (isTypeTableNode(db, pageId, contentDir)) continue;
@@ -254,8 +259,10 @@ export function scalarPropertiesFromNode(
   return scalars;
 }
 
-export function findSpuriousTypeMembershipRelationships(db: GraphDatabase): SpuriousTypeMembership[] {
+export function findSpuriousTypeMembershipRelationships(db: GraphDatabase, contentDir?: string): SpuriousTypeMembership[] {
   const spurious: SpuriousTypeMembership[] = [];
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadRelationshipTypesFromContent(dir);
 
   for (const node of db.listNodesForGraphExport()) {
     if (isTypeTableNode(db, node.id)) continue;
@@ -263,7 +270,7 @@ export function findSpuriousTypeMembershipRelationships(db: GraphDatabase): Spur
     const expected = expectedTypeDatabaseForPage(db, node.id);
     if (!expected) continue;
 
-    for (const label of TYPE_MEMBERSHIP_TYPES) {
+    for (const label of setTraitPerspectives(registry)) {
       for (const connection of db.listRelationshipsFromSource(node.id, label)) {
         if (connection.targetNodeId === expected.databaseId) continue;
 
