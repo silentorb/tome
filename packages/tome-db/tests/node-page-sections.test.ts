@@ -30,6 +30,9 @@ function writeMembershipRelationshipTypes(contentDir: string): void {
         inspirations_features: {
           perspectives: ["features", "inspirations"],
         },
+        scenes_part: {
+          perspectives: ["scenes", "part"],
+        },
       },
     }),
   );
@@ -148,12 +151,52 @@ describe("node-sections", () => {
     });
   });
 
-  test("sets addMode none on structural one-to-many relation sections", () => {
+  test("defaults addMode link-existing on part relation sections", () => {
     db.upsertNode("scene5", { title: "Bridge" });
     db.upsertNode("part1", { title: "The Orphanage" });
     db.upsertRelationship("scene5", "part1", "part", { ordinal: 0 });
 
-    const detail = getNodePageDetail(db, "scene5");
+    const detail = getNodePageDetail(db, "scene5", { contentDir });
+    const partSection = detail?.sections.find(
+      (section) => section.type === "relations" && section.label === "part",
+    );
+
+    expect(partSection).toMatchObject({
+      label: "part",
+      addMode: "link-existing",
+    });
+  });
+
+  test("honors registry linkExisting false on relation sections", () => {
+    writeFileSync(
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile({
+        version: 1,
+        types: {
+          member_of: {
+            perspectives: ["members", "member_of"],
+            traits: ["set"],
+            perspectiveLabels: {
+              member_of: { title: "Membership", linkAdd: "Link type table" },
+            },
+          },
+          inspirations_features: {
+            perspectives: ["features", "inspirations"],
+          },
+          scenes_part: {
+            perspectives: ["scenes", "part"],
+            linkExisting: false,
+          },
+        },
+      }),
+    );
+    invalidateRelationshipTypesCache();
+
+    db.upsertNode("scene6", { title: "Harbor" });
+    db.upsertNode("part2", { title: "Act II" });
+    db.upsertRelationship("scene6", "part2", "part", { ordinal: 0 });
+
+    const detail = getNodePageDetail(db, "scene6", { contentDir });
     const partSection = detail?.sections.find(
       (section) => section.type === "relations" && section.label === "part",
     );
@@ -162,6 +205,8 @@ describe("node-sections", () => {
       label: "part",
       addMode: "none",
     });
+
+    writeMembershipRelationshipTypes(contentDir);
   });
 
   test("adds database table section for type-table records after markdown", () => {
@@ -415,6 +460,93 @@ describe("node-sections table-schema empty relation placeholders", () => {
     expect(featuresSections?.[0]).toMatchObject({
       title: "Inspirations",
       rows: [{ targetId: featId, name: "Desperation" }],
+    });
+  });
+
+  afterAll(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("node-sections children_children addMode", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tome-db-sections-children-"));
+  const contentDir = join(dir, "content");
+  mkdirSync(contentModelDir(contentDir), { recursive: true });
+  const dbPath = join(dir, "test.sqlite");
+  const db = new GraphDatabase(dbPath);
+
+  const groupsTypeId = "0000000000000000000000002G";
+
+  writeFileSync(
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        member_of: {
+          perspectives: ["members", "member_of"],
+          traits: ["set"],
+        },
+        parents_children: {
+          perspectives: ["children", "parents"],
+          linkExisting: false,
+        },
+        children_children: {
+          perspectives: ["children", "children"],
+          endpoints: {
+            0: { typeId: groupsTypeId },
+            1: { typeId: groupsTypeId },
+          },
+        },
+      },
+    }),
+  );
+  invalidateRelationshipTypesCache();
+  writeFileSync(
+    tableSchemasFilePath(contentDir),
+    serializeTableSchemasFile({
+      version: 1,
+      tables: {
+        [groupsTypeId]: {
+          columns: [
+            {
+              key: "children",
+              name: "Children",
+              type: "relation",
+              relationshipType: "children_children",
+            },
+            {
+              key: "parents",
+              name: "Parents",
+              type: "relation",
+              relationshipType: "parents_children",
+            },
+          ],
+        },
+      },
+    }),
+  );
+  invalidateTableSchemasCache();
+  process.env.TOME_CONTENT_PATH = contentDir;
+
+  test("uses children_children composite from table-schema for addMode", () => {
+    db.upsertNode(groupsTypeId, { ...typeTableMarkerProperties("Groups") });
+    db.upsertNode("group1", { title: "Alpha Squad" });
+    db.upsertNode("group2", { title: "Beta Squad" });
+    db.upsertRelationship("group1", groupsTypeId, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship("group1", "group2", "children", { ordinal: 0 });
+
+    const detail = getNodePageDetail(db, "group1", {
+      contentDir,
+      includeSchemaEmptySections: true,
+    });
+    const childrenSection = detail?.sections.find(
+      (section) => section.type === "relations" && section.label === "children",
+    );
+
+    expect(childrenSection).toMatchObject({
+      label: "children",
+      addMode: "link-existing",
     });
   });
 

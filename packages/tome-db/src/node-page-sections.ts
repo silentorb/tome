@@ -20,6 +20,7 @@ import {
 } from "./schema-rules/resolve";
 import type { SchemaFile } from "./schema-rules/schema-file";
 import { resolveContentPath } from "./content/paths";
+import { resolveCompositeType } from "./content/relationship-types-file";
 import {
   formatRelationshipTypeLabel,
   perspectiveDisplayLabel,
@@ -33,6 +34,7 @@ import type { TableRelationColumn } from "./content/table-schemas-file";
 import { getTableSchema, relationColumns } from "./table-schema";
 import {
   perspectiveForRelationColumn,
+  relationColumnCompositeType,
   targetTypeIdForRelationColumn,
 } from "./table-relation-column";
 
@@ -76,7 +78,7 @@ export interface RelationTableSection {
   typeNodeId: string | null;
   /** UI hint: allowed member_of target type ids for link-existing picker (from table-schemas / schema.json). */
   allowedTargetTypeIds?: string[];
-  /** Inline table add control: link existing record vs none (structural one-to-many). */
+  /** Inline table add control: link existing record vs none (registry linkExisting presentation). */
   addMode: RelationTableAddMode;
   /** Optional link-existing button label from relationship-types perspectiveLabels. */
   linkAddLabel?: string;
@@ -197,6 +199,30 @@ function typeTableIdsFromContent(contentDir: string): string[] {
   return Object.keys(loadTableSchemasFromContent(contentDir).tables);
 }
 
+function compositeTypeForRelationSection(
+  db: GraphDatabase,
+  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
+  perspective: string,
+  connections: Relationship[],
+  tableRelation?: TableRelationColumn,
+): string {
+  if (tableRelation) {
+    return relationColumnCompositeType(tableRelation);
+  }
+  const first = connections[0];
+  if (first?.recordId) {
+    const record = db.getRelationshipRecord(first.recordId);
+    if (record?.compositeType) {
+      const fromRecord = normalizeRelationshipType(record.compositeType);
+      const def = registry.types[fromRecord];
+      if (def?.perspectives.includes(normalizeRelationshipType(perspective))) {
+        return fromRecord;
+      }
+    }
+  }
+  return resolveCompositeType(registry, perspective);
+}
+
 function buildRelationSections(
   db: GraphDatabase,
   nodeId: string,
@@ -315,6 +341,14 @@ function buildRelationSections(
           )
         : undefined;
 
+    const compositeType = compositeTypeForRelationSection(
+      db,
+      relationshipTypes,
+      perspective,
+      connections,
+      tableRelation,
+    );
+
     sections.push({
       type: "relations",
       label: perspective,
@@ -329,7 +363,7 @@ function buildRelationSections(
           : ruleContext?.allowedTargetTypeIds,
       addMode: isTypeMembership
         ? "link-existing"
-        : relationSectionSupportsLinkExisting(relationshipTypes, perspective)
+        : relationSectionSupportsLinkExisting(relationshipTypes, perspective, compositeType)
           ? "link-existing"
           : "none",
       ...(linkAddLabel ? { linkAddLabel } : {}),

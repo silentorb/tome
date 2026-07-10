@@ -3,10 +3,10 @@ import { normalizeRelationshipType } from "../relation-type";
 
 export const RELATIONSHIP_TYPES_FILE_VERSION = 1;
 
-/** Shorthand title string, or title + optional link-add copy for relation sections. */
+/** Shorthand title string, or title + optional presentation flags for relation sections. */
 export type PerspectiveLabelConfig =
   | string
-  | { title: string; linkAdd?: string };
+  | { title: string; linkAdd?: string; linkExisting?: boolean };
 
 /** Exactly two perspectives: one projection per endpoint (a→b, b→a). Symmetric types repeat the same slug. */
 export type PerspectivePair = [string, string];
@@ -35,6 +35,8 @@ export interface RelationshipTypeDefinition {
   perspectives: PerspectivePair;
   /** UI labels keyed by perspective slug (e.g. member_of → "Membership"). */
   perspectiveLabels?: Record<string, PerspectiveLabelConfig>;
+  /** When false, relation sections default to omitting the inline link-existing control. */
+  linkExisting?: boolean;
   /** Cross-cutting capabilities (array interpreted as a set). */
   traits?: TraitEntry[];
   /** Optional endpoint type constraints (replaces schema.json relationship rules). */
@@ -62,14 +64,30 @@ function parsePerspectiveLabelConfig(
   if (typeof row.title !== "string" || !row.title.trim()) {
     throw new Error(`relationship-types.json: ${context}.title must be a non-empty string`);
   }
-  const out: { title: string; linkAdd?: string } = { title: row.title.trim() };
+  const out: { title: string; linkAdd?: string; linkExisting?: boolean } = {
+    title: row.title.trim(),
+  };
   if (row.linkAdd !== undefined) {
     if (typeof row.linkAdd !== "string" || !row.linkAdd.trim()) {
       throw new Error(`relationship-types.json: ${context}.linkAdd must be a non-empty string`);
     }
     out.linkAdd = row.linkAdd.trim();
   }
+  if (row.linkExisting !== undefined) {
+    if (typeof row.linkExisting !== "boolean") {
+      throw new Error(`relationship-types.json: ${context}.linkExisting must be a boolean`);
+    }
+    out.linkExisting = row.linkExisting;
+  }
   return out;
+}
+
+function parseLinkExisting(raw: unknown, context: string): boolean | undefined {
+  if (raw === undefined) return undefined;
+  if (typeof raw !== "boolean") {
+    throw new Error(`relationship-types.json: ${context} must be a boolean`);
+  }
+  return raw;
 }
 
 function parsePerspectiveLabels(
@@ -221,11 +239,13 @@ export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
       );
     }
     const perspectiveLabels = parsePerspectiveLabels(row.perspectiveLabels, key);
+    const linkExisting = parseLinkExisting(row.linkExisting, `type ${key}.linkExisting`);
     const traits = parseTraits(row.traits, key);
     const endpoints = parseEndpoints(row.endpoints, key);
     types[normalizeRelationshipType(key)] = {
       perspectives: [perspectives[0]!, perspectives[1]!],
       ...(perspectiveLabels ? { perspectiveLabels } : {}),
+      ...(linkExisting !== undefined ? { linkExisting } : {}),
       ...(traits ? { traits } : {}),
       ...(endpoints ? { endpoints } : {}),
     };
@@ -241,6 +261,7 @@ export function serializeRelationshipTypesFile(file: RelationshipTypesFile): str
     sortedTypes[key] = {
       perspectives: [...def.perspectives],
       ...(def.perspectiveLabels ? { perspectiveLabels: { ...def.perspectiveLabels } } : {}),
+      ...(def.linkExisting !== undefined ? { linkExisting: def.linkExisting } : {}),
       ...(def.traits ? { traits: serializeTraits(def.traits) } : {}),
       ...(def.endpoints ? { endpoints: serializeEndpoints(def.endpoints) } : {}),
     };
@@ -311,6 +332,7 @@ export function registerTypeDefinition(
       normalizeRelationshipType(def.perspectives[1]),
     ],
     ...(def.perspectiveLabels ? { perspectiveLabels: { ...def.perspectiveLabels } } : {}),
+    ...(def.linkExisting !== undefined ? { linkExisting: def.linkExisting } : {}),
     ...(def.traits ? { traits: [...def.traits] } : {}),
     ...(def.endpoints ? { endpoints: serializeEndpoints(def.endpoints) } : {}),
   };

@@ -2,6 +2,7 @@ import type { GraphDatabase } from "./graph";
 import { typeIdsForInstance } from "./node-capabilities";
 import { normalizeRelationshipType } from "./relation-type";
 import type {
+  PerspectiveLabelConfig,
   RelationshipTypeDefinition,
   RelationshipTypeEndpoints,
   RelationshipTypesFile,
@@ -26,11 +27,23 @@ export const TAXONOMY_INSPIRATION_PERSPECTIVES: ReadonlySet<string> = new Set([
   "prop_type",
 ]);
 
-/** Perspectives that use structural one-to-many UI (no link-existing). */
-const STRUCTURAL_LINK_PERSPECTIVES: ReadonlySet<string> = new Set([
-  ...PARENTS_CHILDREN_PERSPECTIVES,
-  "part",
-]);
+function linkExistingFromPerspectiveLabel(
+  config: PerspectiveLabelConfig | undefined,
+): boolean | undefined {
+  if (config === undefined) return undefined;
+  if (typeof config === "string") return undefined;
+  return config.linkExisting;
+}
+
+function linkExistingForPerspective(
+  def: RelationshipTypeDefinition,
+  perspective: string,
+): boolean | undefined {
+  const normalized = normalizeRelationshipType(perspective);
+  const fromLabel = linkExistingFromPerspectiveLabel(def.perspectiveLabels?.[normalized]);
+  if (fromLabel !== undefined) return fromLabel;
+  return def.linkExisting;
+}
 
 export function resolveEndpointTypeIds(
   def: RelationshipTypeDefinition | undefined,
@@ -149,21 +162,19 @@ export function matchCompositeForInstances(
   return null;
 }
 
+/** Whether a relation section should show the inline link-existing control. */
 export function relationSectionSupportsLinkExisting(
   registry: RelationshipTypesFile,
   perspective: string,
+  compositeType?: string,
 ): boolean {
   const normalized = normalizeRelationshipType(perspective);
-  if (STRUCTURAL_LINK_PERSPECTIVES.has(normalized)) return false;
-  const composite = resolveCompositeType(registry, normalized);
+  const composite = compositeType
+    ? normalizeRelationshipType(compositeType)
+    : resolveCompositeType(registry, normalized);
   const def = registry.types[composite];
   if (!def) return false;
-  if (composite === PARENTS_CHILDREN_COMPOSITE) return false;
   if (!def.perspectives.includes(normalized)) return false;
-  if (TAXONOMY_INSPIRATION_PERSPECTIVES.has(normalized)) return true;
-  return true;
-}
-
-export function isStructuralHierarchyPerspective(perspective: string): boolean {
-  return PARENTS_CHILDREN_PERSPECTIVES.has(normalizeRelationshipType(perspective));
+  const linkExisting = linkExistingForPerspective(def, normalized);
+  return linkExisting !== undefined ? linkExisting : true;
 }

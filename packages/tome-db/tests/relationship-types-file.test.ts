@@ -154,6 +154,88 @@ describe("relationship-types-file perspectiveLabels", () => {
     const roundTrip = parseRelationshipTypesFile(serializeRelationshipTypesFile(file));
     expect(roundTrip.types.member_of).toEqual(file.types.member_of);
   });
+
+  test("parses perspectiveLabels linkExisting", () => {
+    const file = parseRelationshipTypesFile(
+      JSON.stringify({
+        version: 1,
+        types: {
+          scenes_part: {
+            perspectives: ["scenes", "part"],
+            perspectiveLabels: {
+              part: { title: "Part", linkExisting: false },
+            },
+          },
+        },
+      }),
+    );
+    expect(file.types.scenes_part?.perspectiveLabels?.part).toEqual({
+      title: "Part",
+      linkExisting: false,
+    });
+  });
+
+  test("rejects non-boolean perspectiveLabels linkExisting", () => {
+    expect(() =>
+      parseRelationshipTypesFile(
+        JSON.stringify({
+          version: 1,
+          types: {
+            scenes_part: {
+              perspectives: ["scenes", "part"],
+              perspectiveLabels: { part: { title: "Part", linkExisting: "no" } },
+            },
+          },
+        }),
+      ),
+    ).toThrow(/linkExisting must be a boolean/);
+  });
+});
+
+describe("relationship-types-file linkExisting", () => {
+  test("parses composite-level linkExisting", () => {
+    const file = parseRelationshipTypesFile(
+      JSON.stringify({
+        version: 1,
+        types: {
+          parents_children: {
+            perspectives: ["children", "parents"],
+            linkExisting: false,
+          },
+        },
+      }),
+    );
+    expect(file.types.parents_children?.linkExisting).toBe(false);
+  });
+
+  test("round-trips composite and perspective linkExisting through serialize", () => {
+    const file = emptyRelationshipTypesFile();
+    file.types.parents_children = {
+      perspectives: ["children", "parents"],
+      linkExisting: false,
+      perspectiveLabels: {
+        parents: { title: "Parents", linkExisting: true },
+      },
+    };
+    const roundTrip = parseRelationshipTypesFile(serializeRelationshipTypesFile(file));
+    expect(roundTrip.types.parents_children).toEqual(file.types.parents_children);
+  });
+
+  test("rejects non-boolean composite linkExisting", () => {
+    expect(() =>
+      parseRelationshipTypesFile(
+        JSON.stringify({
+          version: 1,
+          types: {
+            parents_children: {
+              perspectives: ["children", "parents"],
+              linkExisting: 0,
+            },
+          },
+        }),
+      ),
+    ).toThrow(/linkExisting must be a boolean/);
+  });
 });
 
 describe("relationship-types-file endpoints", () => {
