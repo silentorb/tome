@@ -11,6 +11,7 @@ import {
 import { contentModelDir, relationshipTypesFilePath, tableSchemasFilePath } from "../src/content/paths";
 import {
   parseRelationshipTypesFile,
+  registerBidirectionalType,
   serializeRelationshipTypesFile,
 } from "../src/content/relationship-types-file";
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
@@ -117,6 +118,48 @@ describe("resolveCompositeTypeForLink", () => {
     expect(
       resolveCompositeTypeForLink(setRegistry, [], contentDir, productsDb, productId, "members"),
     ).toBe("member_of");
+  });
+
+  test("children perspective from Groups member resolves to children_children via table-schema", () => {
+    const groupsDb = "01KWN86X6NJZMP5ZESZTNDXY3J";
+    const groupMemberId = "000000000000000000000000AA";
+    const childGroupId = "000000000000000000000000BB";
+    const groupsContentDir = join(dir, "groups-content");
+    mkdirSync(contentModelDir(groupsContentDir), { recursive: true });
+    writeFileSync(
+      tableSchemasFilePath(groupsContentDir),
+      serializeTableSchemasFile({
+        version: 1,
+        tables: {
+          [groupsDb]: {
+            columns: [
+              {
+                key: "children",
+                name: "Children",
+                type: "relation",
+                relationshipType: "children_children",
+              },
+            ],
+          },
+        },
+      }),
+    );
+    invalidateTableSchemasCache();
+
+    const relationships = [
+      { a: groupsDb, b: groupMemberId, type: "member_of", properties: {} },
+      { a: groupsDb, b: childGroupId, type: "member_of", properties: {} },
+    ];
+    expect(
+      resolveCompositeTypeForLink(
+        registry,
+        relationships,
+        groupsContentDir,
+        groupMemberId,
+        childGroupId,
+        "children",
+      ),
+    ).toBe("children_children");
   });
 });
 
@@ -228,11 +271,16 @@ describe("LinkResolutionError", () => {
     expect(error).toBe("unresolvable_type");
   });
 
-  test("parents perspective resolves to parents_children composite", () => {
+  test("parents perspective resolves to parents_children when registered in registry", () => {
     const nodeA = "0000000000000000000000002E";
     const nodeB = "0000000000000000000000002Q";
     seedTestNode(fixture, { id: nodeA, properties: { title: "Child" } });
     seedTestNode(fixture, { id: nodeB, properties: { title: "Parent" } });
+
+    const registry = ctx.store.readRelationshipTypesFile();
+    registerBidirectionalType(registry, "parents", "children");
+    ctx.store.writeRelationshipTypesFile(registry);
+    invalidateRelationshipTypesCache();
 
     expect(
       linkOutgoingRelationship(ctx, {
@@ -248,6 +296,44 @@ describe("LinkResolutionError", () => {
         (row) => (row.a === nodeA || row.b === nodeA) && (row.a === nodeB || row.b === nodeB),
       );
     expect(entry?.type).toBe("parents_children");
+  });
+
+  test("linkOutgoingRelationship returns unresolvable_type when composite not in registry", () => {
+    const nodeA = "00000000000000000000000041";
+    const nodeB = "00000000000000000000000042";
+    const typeDb = "00000000000000000000000043";
+    seedTestNode(fixture, { id: typeDb, properties: typeTableMarkerProperties("Items") });
+    seedTestNode(fixture, { id: nodeA, properties: { title: "Item A" } });
+    seedTestNode(fixture, { id: nodeB, properties: { title: "Item B" } });
+    ctx.store.upsertRelationship(nodeA, typeDb, "member_of", { view: "default" });
+    ctx.store.upsertRelationship(nodeB, typeDb, "member_of", { view: "default" });
+
+    writeFileSync(
+      tableSchemasFilePath(fixture.ctx.store.contentDir),
+      serializeTableSchemasFile({
+        version: 1,
+        tables: {
+          [typeDb]: {
+            columns: [
+              {
+                key: "related",
+                name: "Related",
+                type: "relation",
+                relationshipType: "unregistered_composite",
+              },
+            ],
+          },
+        },
+      }),
+    );
+    invalidateTableSchemasCache();
+
+    const error = linkOutgoingRelationship(ctx, {
+      sourceId: nodeA,
+      targetId: nodeB,
+      type: "related",
+    });
+    expect(error).toBe("unresolvable_type");
   });
 });
 

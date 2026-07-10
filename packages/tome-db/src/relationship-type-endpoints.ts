@@ -9,24 +9,6 @@ import type {
 } from "./content/relationship-types-file";
 import { resolveCompositeType } from "./content/relationship-types-file";
 
-/** Structural parent/child perspectives routed to `parents_children`. */
-export const PARENTS_CHILDREN_PERSPECTIVES: ReadonlySet<string> = new Set([
-  "parents",
-  "children",
-]);
-
-export const PARENTS_CHILDREN_COMPOSITE = "parents_children";
-
-/** Taxonomy↔inspiration perspective on the taxonomy side. */
-export const TAXONOMY_INSPIRATION_PERSPECTIVES: ReadonlySet<string> = new Set([
-  "monsters",
-  "pacing",
-  "story_scale",
-  "traversal_types",
-  "traversal_reasons",
-  "prop_type",
-]);
-
 function linkExistingFromPerspectiveLabel(
   config: PerspectiveLabelConfig | undefined,
 ): boolean | undefined {

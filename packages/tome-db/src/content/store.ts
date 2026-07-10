@@ -9,13 +9,6 @@ import {
 import { dirname } from "node:path";
 import type { Node, Properties } from "../graph";
 import { relationshipId } from "../graph";
-import {
-  PARENTS_CHILDREN_COMPOSITE,
-  PARENTS_CHILDREN_PERSPECTIVES,
-  TAXONOMY_INSPIRATION_PERSPECTIVES,
-} from "../relationship-type-endpoints";
-import { isSetTraitComposite, resolveSetTraitComposite } from "../relationship-type-traits";
-import { MEMBER_OF_TYPE, MEMBERS_TYPE } from "../labels";
 import { normalizeRelationshipType } from "../relation-type";
 import {
   type RelationshipEntry,
@@ -33,11 +26,9 @@ import {
   isBidirectionalComposite,
   localTypesForComposite,
   parseRelationshipTypesFile,
-  registerBidirectionalType,
-  registerSetMembershipType,
   serializeRelationshipTypesFile,
 } from "./relationship-types-file";
-import { resolveCompositeTypeForLink } from "./resolve-composite-for-link";
+import { LinkResolutionError, resolveCompositeTypeForLink } from "./resolve-composite-for-link";
 
 function entryMatchesLocalType(
   registry: RelationshipTypesFile,
@@ -244,14 +235,6 @@ export class ContentStore {
     const file = this.readRelationshipsFile();
     const normalized = normalizeRelationshipType(localType);
 
-    if (
-      (normalized === MEMBER_OF_TYPE || normalized === MEMBERS_TYPE) &&
-      !registry.types[MEMBER_OF_TYPE]
-    ) {
-      registerSetMembershipType(registry);
-      this.writeRelationshipTypesFile(registry);
-    }
-
     let composite = resolveCompositeTypeForLink(
       registry,
       file.relationships,
@@ -260,6 +243,10 @@ export class ContentStore {
       target,
       normalized,
     );
+
+    if (!registry.types[composite]) {
+      throw new LinkResolutionError(normalized);
+    }
 
     let index = file.relationships.findIndex(
       (e) => connectsEndpoints(e, source, target) && e.type === composite,
@@ -285,18 +272,6 @@ export class ContentStore {
         properties: { ...(prev.properties ?? {}), ...properties },
       };
     } else {
-      if (!registry.types[composite]) {
-        if (isSetTraitComposite(registry, composite) || resolveSetTraitComposite(registry, normalized)) {
-          registerSetMembershipType(registry);
-        } else if (composite === PARENTS_CHILDREN_COMPOSITE) {
-          registerBidirectionalType(registry, "parents", "children");
-        } else if (TAXONOMY_INSPIRATION_PERSPECTIVES.has(normalized)) {
-          registerBidirectionalType(registry, normalized, "inspirations");
-        } else {
-          registerBidirectionalType(registry, normalized, normalized);
-        }
-        this.writeRelationshipTypesFile(registry);
-      }
       const { a, b } = orderedEndpointsForLocalType(
         registry,
         composite,
@@ -397,14 +372,6 @@ export class ContentStore {
     this.writeRelationshipsFile(file);
   }
 
-  /** Register a bidirectional composite type and return its storage type name. */
-  ensureBidirectionalType(typeFromSource: string, typeFromTarget: string): string {
-    const registry = this.readRelationshipTypesFile();
-    const composite = registerBidirectionalType(registry, typeFromSource, typeFromTarget);
-    this.writeRelationshipTypesFile(registry);
-    return composite;
-  }
-
   readDynamicFieldsFile(): DynamicFieldsFile {
     const path = dynamicFieldsFilePath(this.contentDir);
     try {
@@ -480,4 +447,4 @@ export class ContentStore {
   }
 }
 
-export { relationshipRecordId, registerBidirectionalType };
+export { relationshipRecordId };

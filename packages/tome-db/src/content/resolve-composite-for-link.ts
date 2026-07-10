@@ -1,8 +1,3 @@
-import {
-  TAXONOMY_INSPIRATION_PERSPECTIVES,
-  PARENTS_CHILDREN_PERSPECTIVES,
-  PARENTS_CHILDREN_COMPOSITE,
-} from "../relationship-type-endpoints";
 import { normalizeRelationshipType } from "../relation-type";
 import { collectSetNodeIds } from "../set-membership";
 import {
@@ -19,11 +14,7 @@ import {
 } from "../table-relation-column";
 import type { RelationshipEntry } from "./relationships-file";
 import type { RelationshipTypesFile } from "./relationship-types-file";
-import {
-  compositeTypeForPerspectives,
-  isDualPerspectiveType,
-} from "./relationship-types-file";
-import type { TableRelationColumn } from "./table-schemas-file";
+import { isDualPerspectiveType } from "./relationship-types-file";
 
 export class LinkResolutionError extends Error {
   constructor(public readonly localType: string) {
@@ -66,11 +57,9 @@ function schemaIdForNode(
  *
  * Resolution order:
  *  0. set-trait composites (e.g. member_of)
- *  1. parents/children → "parents_children"
- *  2. taxonomy inspiration → "{perspective}_inspirations" (must be registered dual)
- *  3. table-schema relation column on source type → column's relationshipType
- *  4. direct registry lookup for dual-perspective composite containing the perspective
- *  5. throw LinkResolutionError
+ *  1. table-schema relation column on source type → column's relationshipType
+ *  2. direct registry lookup for dual-perspective composite containing the perspective
+ *  3. throw LinkResolutionError
  */
 export function resolveCompositeTypeForLink(
   registry: RelationshipTypesFile,
@@ -84,17 +73,6 @@ export function resolveCompositeTypeForLink(
 
   const setComposite = resolveSetTraitComposite(registry, normalized);
   if (setComposite) return setComposite;
-
-  if (PARENTS_CHILDREN_PERSPECTIVES.has(normalized)) {
-    return PARENTS_CHILDREN_COMPOSITE;
-  }
-
-  if (TAXONOMY_INSPIRATION_PERSPECTIVES.has(normalized)) {
-    const composite = compositeTypeForPerspectives(normalized, "inspirations");
-    if (registry.types[composite] && isDualPerspectiveType(registry.types[composite])) {
-      return composite;
-    }
-  }
 
   const setNodeIds = collectSetNodeIds(contentDir);
   const sourceSchemaId = schemaIdForNode(registry, source, relationships, setNodeIds);
