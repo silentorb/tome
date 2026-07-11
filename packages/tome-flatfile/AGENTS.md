@@ -5,6 +5,7 @@
 - **Store module:** `createFlatfileModule()` → `TomeStoreModule` (`open` → `ContentStore`)
 - Flatfile canonical store: `content/data/` (nodes + relationships) and `content/model/` (workspace JSON)
 - Implements `TomeDataStore` from `tome-service-interfaces`, including change notifications via `subscribe` / `startWatching`
+- **On-disk format:** [docs/storage-format.md](./docs/storage-format.md) — normative content layout for interoperable storage and agent reference
 
 ## Dependency rules
 

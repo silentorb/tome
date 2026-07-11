@@ -52,23 +52,16 @@ API names: `ContentStore`, `openContentGraph`, `TomeWriteContext` (`{ store, syn
 
 ### Storage
 
+Canonical on-disk layout and file formats: [`packages/tome-flatfile/docs/storage-format.md`](../../packages/tome-flatfile/docs/storage-format.md).
+
 | Path | Role |
 | --- | --- |
 | `content/data/{shard}/{nodeId}.md` | Canonical node (YAML frontmatter + markdown body); `{shard}` is the first two ULID entropy characters (`id.slice(10, 12)`) |
 | `content/data/relationships.json` | Canonical bidirectional relationship records as ordered `(a, b)` tuples (v3) |
-| `content/model/relationship-types.json` | Composite type → ordered `perspectives` pair (`perspectives[0]` describes the node at tuple index 0, `perspectives[1]` the node at index 1); optional `perspectiveLabels` per perspective for relation-section titles and link-add copy |
-| `content/model/views.json` | UI table tab definitions (custom + generated providers) |
-| `content/model/dynamic-fields.json` | Dynamic table field bindings |
-| `content/model/schema.json` | Relationship rules and property enums |
-| `content/model/table-schemas.json` | Type-table column definitions |
-| `content/model/workspace.json` | Home, archive, protected nodes, quick links, branding, legacy path prefixes |
-| `content/model/ordered-associations.json` | Ordered-association configs (e.g. `scenes-by-book`) |
-| `data/marloth.sqlite` | Local query cache (gitignored; default path via `MARLOTH_DB_PATH`) |
+| `content/model/*.json` | Workspace model (relationship types, schema, views, table schemas, workspace, etc.) — see storage-format doc |
+| `data/tome.sqlite` | Local query cache (gitignored; default path via `TOME_DB_PATH`; legacy `data/marloth.sqlite` / `MARLOTH_DB_PATH` still read when present) |
 
-- `content/data/` holds node markdown under entropy shard directories (`{id.slice(10,12)}/`) plus `relationships.json` at the data root.
-- `content/model/` holds workspace model JSON (flat within `model/`).
-- `MARLOTH_CONTENT_PATH` **must** point at the **content root** (`./content`), not `content/data`.
-- Node basenames **must** match `^[0-9A-HJKMNP-TV-Z]{26}\.md$` (uppercase ULID); path is `content/data/{id.slice(10,12)}/{id}.md`.
+- `TOME_CONTENT_PATH` (or legacy `MARLOTH_CONTENT_PATH`) **must** point at the **content root** (`./content`), not `content/data`.
 - SQLite WAL sidecar files (`*.sqlite-wal`, `*.sqlite-shm`) **must not** be committed.
 
 ### Legacy compatibility
