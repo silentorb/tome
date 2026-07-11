@@ -119,7 +119,7 @@ export function createApiHandler(
         return json({ typeTables: db.listTypeTables() });
       }
 
-      if (path === "/api/relationship-types") {
+      if (path === "/api/relationships/types") {
         return json({ types: db.listRelationshipTypes() });
       }
 
@@ -302,10 +302,10 @@ export function createApiHandler(
       }
 
       const viewsRelationshipMatch =
-        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationships\/([a-z0-9_-]+)$/i.exec(path);
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/perspectives\/([a-z0-9_-]+)$/i.exec(path);
       if (viewsRelationshipMatch && req.method === "PATCH") {
         const nodeId = viewsRelationshipMatch[1]!;
-        const relationshipType = viewsRelationshipMatch[2]!;
+        const association = viewsRelationshipMatch[2]!;
         const payload = (await req.json()) as {
           viewOrder?: string[];
           properties?: import("tome-graph-interfaces").ViewProperties;
@@ -316,7 +316,7 @@ export function createApiHandler(
           return json({ error: "viewOrder or properties required" }, 400);
         }
         try {
-          const response = db.patchRelationshipViews(nodeId, relationshipType, {
+          const response = db.patchRelationshipViews(nodeId, association, {
             ...(hasViewOrder ? { viewOrder: payload.viewOrder } : {}),
             ...(hasProperties ? { properties: payload.properties } : {}),
           });
@@ -327,10 +327,10 @@ export function createApiHandler(
       }
 
       const viewsCollectionMatch =
-        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationships\/([a-z0-9_-]+)\/views$/i.exec(path);
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/perspectives\/([a-z0-9_-]+)\/views$/i.exec(path);
       if (viewsCollectionMatch && req.method === "POST") {
         const nodeId = viewsCollectionMatch[1]!;
-        const relationshipType = viewsCollectionMatch[2]!;
+        const association = viewsCollectionMatch[2]!;
         const payload = (await req.json()) as {
           name?: string;
           sorts?: ViewSortSpec[];
@@ -340,7 +340,7 @@ export function createApiHandler(
           return json({ error: "name required" }, 400);
         }
         try {
-          const view = db.createRelationshipView(nodeId, relationshipType, {
+          const view = db.createRelationshipView(nodeId, association, {
             name: payload.name,
             sorts: payload.sorts,
             properties: payload.properties,
@@ -352,12 +352,12 @@ export function createApiHandler(
       }
 
       const viewsItemMatch =
-        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationships\/([a-z0-9_-]+)\/views\/([a-z0-9-]+)$/i.exec(
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/perspectives\/([a-z0-9_-]+)\/views\/([a-z0-9-]+)$/i.exec(
           path,
         );
       if (viewsItemMatch) {
         const nodeId = viewsItemMatch[1]!;
-        const relationshipType = viewsItemMatch[2]!;
+        const association = viewsItemMatch[2]!;
         const viewId = viewsItemMatch[3]!;
         if (req.method === "PATCH") {
           const payload = (await req.json()) as {
@@ -367,7 +367,7 @@ export function createApiHandler(
             hiddenColumns?: string[];
           };
           try {
-            const view = db.updateRelationshipView(nodeId, relationshipType, viewId, payload);
+            const view = db.updateRelationshipView(nodeId, association, viewId, payload);
             return json({ view });
           } catch (err) {
             return json({ error: String(err) }, 400);
@@ -375,7 +375,7 @@ export function createApiHandler(
         }
         if (req.method === "DELETE") {
           try {
-            db.deleteRelationshipView(nodeId, relationshipType, viewId);
+            db.deleteRelationshipView(nodeId, association, viewId);
             return json({ ok: true });
           } catch (err) {
             return json({ error: String(err) }, 400);
@@ -454,7 +454,7 @@ export function createApiHandler(
           name?: string;
           type?: string;
           enumId?: string;
-          relationshipType?: string;
+          association?: string;
         };
         if (typeof payload.name !== "string" || typeof payload.type !== "string") {
           return json({ error: "name and type required" }, 400);
@@ -464,7 +464,7 @@ export function createApiHandler(
           name: payload.name,
           type: payload.type as import("tome-graph-interfaces").TableColumnDef["type"],
           enumId: payload.enumId,
-          relationshipType: payload.relationshipType,
+          association: payload.association,
         });
         if (result === "database_not_found") return json({ error: "not found" }, 404);
         if (result === "column_key_taken") return json({ error: "column key taken" }, 409);
@@ -490,14 +490,14 @@ export function createApiHandler(
           newKey?: string;
           type?: string;
           enumId?: string | null;
-          relationshipType?: string;
+          association?: string;
         };
         const result = db.updateDatabaseColumn(databaseId, columnKey, {
           name: payload.name,
           newKey: payload.newKey,
           type: payload.type as import("tome-graph-interfaces").TableColumnDef["type"] | undefined,
           enumId: payload.enumId,
-          relationshipType: payload.relationshipType,
+          association: payload.association,
         });
         if (result === "database_not_found") return json({ error: "not found" }, 404);
         if (result === "column_not_found") return json({ error: "column not found" }, 404);
@@ -633,7 +633,7 @@ export function createApiHandler(
         return json({ ok: true });
       }
 
-      const moveMatch = /^\/api\/ordered-associations\/([a-z0-9-]+)\/move$/i.exec(path);
+      const moveMatch = /^\/api\/ordered-collections\/([a-z0-9-]+)\/move$/i.exec(path);
       if (moveMatch && req.method === "PATCH") {
         const configId = moveMatch[1]!;
         const payload = (await req.json()) as {
@@ -650,7 +650,7 @@ export function createApiHandler(
         ) {
           return json({ error: "scopeId, sceneId, targetGroupId, and targetIndex required" }, 400);
         }
-        const view = db.moveOrderedAssociation(configId, {
+        const view = db.moveOrderedCollection(configId, {
           scopeId: payload.scopeId,
           sceneId: payload.sceneId,
           targetGroupId: payload.targetGroupId,

@@ -26,7 +26,7 @@ describe("NodePageView", () => {
           onBodyChange={() => {}}
           onTitleChange={() => {}}
           onTabSelect={() => {}}
-          onOrderedAssociationViewChange={() => {}}
+          onOrderedCollectionViewChange={() => {}}
           onArchiveNode={async () => {}}
           onUnarchiveNode={async () => {}}
           onDeleteNode={async () => {}}
@@ -58,7 +58,7 @@ describe("NodePageView", () => {
           onBodyChange={() => {}}
           onTitleChange={() => {}}
           onTabSelect={() => {}}
-          onOrderedAssociationViewChange={() => {}}
+          onOrderedCollectionViewChange={() => {}}
           onArchiveNode={async () => {}}
           onUnarchiveNode={async () => {}}
           onDeleteNode={async () => {}}
@@ -88,7 +88,7 @@ describe("NodePageView", () => {
           onBodyChange={() => {}}
           onTitleChange={() => {}}
           onTabSelect={() => {}}
-          onOrderedAssociationViewChange={() => {}}
+          onOrderedCollectionViewChange={() => {}}
           onArchiveNode={async () => {}}
           onUnarchiveNode={async () => {}}
           onDeleteNode={async () => {}}
@@ -123,7 +123,7 @@ describe("NodePageView", () => {
           onBodyChange={() => {}}
           onTitleChange={() => {}}
           onTabSelect={() => {}}
-          onOrderedAssociationViewChange={() => {}}
+          onOrderedCollectionViewChange={() => {}}
           onArchiveNode={async () => {}}
           onUnarchiveNode={async () => {}}
           onDeleteNode={async () => {}}
@@ -151,7 +151,7 @@ describe("NodePageView", () => {
           onBodyChange={() => {}}
           onTitleChange={() => {}}
           onTabSelect={() => {}}
-          onOrderedAssociationViewChange={() => {}}
+          onOrderedCollectionViewChange={() => {}}
           onArchiveNode={async () => {}}
           onUnarchiveNode={async () => {}}
           onDeleteNode={async () => {}}
@@ -202,7 +202,7 @@ describe("NodePageView", () => {
           onBodyChange={() => {}}
           onTitleChange={() => {}}
           onTabSelect={() => {}}
-          onOrderedAssociationViewChange={() => {}}
+          onOrderedCollectionViewChange={() => {}}
           onArchiveNode={async () => {}}
           onUnarchiveNode={async () => {}}
           onDeleteNode={async () => {}}
@@ -253,7 +253,7 @@ describe("NodePageView", () => {
           onBodyChange={() => {}}
           onTitleChange={() => {}}
           onTabSelect={() => {}}
-          onOrderedAssociationViewChange={() => {}}
+          onOrderedCollectionViewChange={() => {}}
           onArchiveNode={async () => {}}
           onUnarchiveNode={async () => {}}
           onDeleteNode={async () => {}}
@@ -343,7 +343,7 @@ describe("NodePageView IS_A relation section", () => {
           onBodyChange={() => {}}
           onTitleChange={() => {}}
           onTabSelect={() => {}}
-          onOrderedAssociationViewChange={() => {}}
+          onOrderedCollectionViewChange={() => {}}
           onArchiveNode={async () => {}}
           onUnarchiveNode={async () => {}}
           onDeleteNode={async () => {}}

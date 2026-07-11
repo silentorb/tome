@@ -6,7 +6,7 @@ import type { EvalRow } from "./row-sort";
 import { loadTableSchemaForDatabase } from "./database-column-defs";
 import { storedScalarColumns } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { loadAssociationsFromContent } from "tome-flatfile";
 import { memberSidePerspectives } from "tome-flatfile";
 import {
   coalescePriorityValue,
@@ -121,7 +121,7 @@ export function buildPropertiesSection(
   contentDir?: string,
 ): PropertiesSection | null {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
   // v1: first type membership connection when a node belongs to multiple types.
   let membershipRelationship = null as ReturnType<GraphDatabase["listRelationshipsFromSource"]>[number] | null;
   for (const type of memberSidePerspectives(registry)) {

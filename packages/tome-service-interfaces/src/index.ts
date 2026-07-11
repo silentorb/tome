@@ -58,12 +58,12 @@ export interface TomeServerConfig {
 export type StoreChangeKind =
   | "node"
   | "relationships"
-  | "relationship-types"
+  | "associations"
   | "schema"
   | "dynamic-fields"
   | "views"
   | "workspace"
-  | "ordered-associations"
+  | "ordered-collections"
   | "extensions"
   | "table-schemas"
   | "unknown";
@@ -106,26 +106,26 @@ export interface TraitObjectEntry {
 
 export type TraitEntry = string | TraitObjectEntry;
 
-export interface RelationshipEndpointConstraint {
+export interface AssociationEndpointConstraint {
   typeId: string;
 }
 
-export interface RelationshipTypeEndpoints {
-  0: RelationshipEndpointConstraint;
-  1: RelationshipEndpointConstraint;
+export interface AssociationEndpoints {
+  0: AssociationEndpointConstraint;
+  1: AssociationEndpointConstraint;
 }
 
-export interface RelationshipTypeDefinition {
+export interface AssociationDefinition {
   perspectives: PerspectivePair;
   perspectiveLabels?: Record<string, PerspectiveLabelConfig>;
   linkExisting?: boolean;
   traits?: TraitEntry[];
-  endpoints?: RelationshipTypeEndpoints;
+  endpoints?: AssociationEndpoints;
 }
 
-export interface RelationshipTypesFile {
+export interface AssociationsFile {
   version: number;
-  types: Record<string, RelationshipTypeDefinition>;
+  types: Record<string, AssociationDefinition>;
 }
 
 export interface DynamicFieldFileEntry {
@@ -216,8 +216,8 @@ export interface TomeDataStore {
 
   readRelationshipsFile(): RelationshipsFile;
   writeRelationshipsFile(file: RelationshipsFile): void;
-  readRelationshipTypesFile(): RelationshipTypesFile;
-  writeRelationshipTypesFile(file: RelationshipTypesFile): void;
+  readAssociationsFile(): AssociationsFile;
+  writeAssociationsFile(file: AssociationsFile): void;
 
   findContentEntry(source: string, target: string, localType: string): RelationshipEntry | null;
   findRelationship(

@@ -4,17 +4,17 @@ import type {
   NodePageDetail,
   NodeSummary,
   DatabaseViewDetail,
-  OrderedAssociationViewDetail,
+  OrderedCollectionViewDetail,
 } from "tome-graph-interfaces";
 import type { UserSettings, UserSettingsPatch } from "./user-settings";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
 import type { SchemaFile } from "tome-graph-interfaces";
-import type { OrderedAssociationMoveParams, WorkspaceFile } from "tome-graph-interfaces";
+import type { OrderedCollectionMoveParams, WorkspaceFile } from "tome-graph-interfaces";
 
 export type WorkspacePublic = WorkspaceFile & { archiveNodeTitle?: string };
 
 export type { GraphRelationship, GraphNode, GraphSnapshot, GraphLodSnapshot, DatabaseViewDetail } from "tome-graph-interfaces";
-export type { OrderedAssociationViewDetail } from "tome-graph-interfaces";
+export type { OrderedCollectionViewDetail } from "tome-graph-interfaces";
 
 export interface GetNodeOptions {
   tab?: string;
@@ -50,12 +50,12 @@ export interface TomeHttpClient {
   getDatabaseView(id: string, tabId?: string): Promise<DatabaseViewDetail>;
   createRelationshipView(
     nodeId: string,
-    relationshipType: string,
+    association: string,
     input: { name: string; sorts?: import("tome-graph-interfaces").ViewSortSpec[]; properties?: import("tome-graph-interfaces").ViewProperties },
   ): Promise<import("tome-graph-interfaces").ViewDefinition>;
   updateRelationshipView(
     nodeId: string,
-    relationshipType: string,
+    association: string,
     viewId: string,
     input: {
       name?: string;
@@ -66,12 +66,12 @@ export interface TomeHttpClient {
   ): Promise<import("tome-graph-interfaces").ViewDefinition>;
   deleteRelationshipView(
     nodeId: string,
-    relationshipType: string,
+    association: string,
     viewId: string,
   ): Promise<void>;
   patchRelationshipViews(
     nodeId: string,
-    relationshipType: string,
+    association: string,
     input: {
       viewOrder?: string[];
       properties?: import("tome-graph-interfaces").ViewProperties;
@@ -91,7 +91,7 @@ export interface TomeHttpClient {
       name: string;
       type: string;
       enumId?: string;
-      relationshipType?: string;
+      association?: string;
     },
   ): Promise<{
     column: import("tome-graph-interfaces").TableColumnDef;
@@ -107,7 +107,7 @@ export interface TomeHttpClient {
       newKey?: string;
       type?: string;
       enumId?: string | null;
-      relationshipType?: string;
+      association?: string;
     },
   ): Promise<{
     column: import("tome-graph-interfaces").TableColumnDef;
@@ -116,10 +116,10 @@ export interface TomeHttpClient {
     valuesCleared: number;
   }>;
   listTypeTables(): Promise<{ id: string; title: string }[]>;
-  moveOrderedAssociation(
+  moveOrderedCollection(
     configId: string,
-    params: OrderedAssociationMoveParams,
-  ): Promise<OrderedAssociationViewDetail>;
+    params: OrderedCollectionMoveParams,
+  ): Promise<OrderedCollectionViewDetail>;
   search(
     query: string,
     limit?: number,

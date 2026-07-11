@@ -1,6 +1,6 @@
 import type { GraphDatabase } from "tome-sqlite";
 import {
-  loadRelationshipTypesFromContent,
+  loadAssociationsFromContent,
   resolveContentPath,
   setTraitPerspectives,
 } from "tome-flatfile";
@@ -34,7 +34,7 @@ export function isArchivedNode(
   if (db.isNodeArchived(nodeId)) return true;
   if (!archiveId) return false;
 
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
   if (setTraitPerspectives(registry).length === 0) return false;
 
   return findSetMembershipRelationship(db, nodeId, archiveId, dir) !== null;

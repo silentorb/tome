@@ -10,7 +10,7 @@ import {
   type TestContentFixture,
 } from "../src/content/test-helpers";
 import { registerBidirectionalType } from "tome-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { invalidateAssociationsCache } from "tome-flatfile";
 
 describe("createNode", () => {
   let fixture: TestContentFixture;
@@ -39,10 +39,10 @@ describe("createNode", () => {
 
   test("creates outgoing relation row", () => {
     fixture = createTestContentFixture("tome-create-");
-    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    const registry = fixture.ctx.store.readAssociationsFile();
     registerBidirectionalType(registry, "features", "targets");
-    fixture.ctx.store.writeRelationshipTypesFile(registry);
-    invalidateRelationshipTypesCache();
+    fixture.ctx.store.writeAssociationsFile(registry);
+    invalidateAssociationsCache();
 
     const sourceId = "0000000000000000000000001C";
     seedTestNode(fixture, {

@@ -4,8 +4,8 @@ import { syncAfterRelationshipsWrite } from "./content/write-context";
 import { LinkResolutionError } from "tome-flatfile";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
 import { normalizeRelationshipType } from "tome-flatfile";
-import { relationshipTypeRuleContext } from "./relationship-type-endpoints";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { associationRuleContext } from "./association-endpoints";
+import { loadAssociationsFromContent } from "tome-flatfile";
 import { stampOrderIfMissing } from "./ordered-relationships";
 import { membershipPerspectivesForSet } from "tome-flatfile";
 import type {
@@ -60,8 +60,8 @@ export function linkOutgoingRelationship(
     return "duplicate";
   }
 
-  const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
-  const ruleContext = relationshipTypeRuleContext(
+  const registry = loadAssociationsFromContent(ctx.store.contentDir);
+  const ruleContext = associationRuleContext(
     registry,
     ctx.cache,
     sourceId,

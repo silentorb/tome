@@ -11,21 +11,21 @@ import {
   loadSchemaFromContent,
   invalidateViewsCache,
   invalidateTableSchemasCache,
-  invalidateRelationshipTypesCache,
+  invalidateAssociationsCache,
   invalidateWorkspaceCache,
   loadWorkspaceFromContent,
-  invalidateOrderedAssociationsCache,
+  invalidateOrderedCollectionsCache,
   invalidateExtensionsCache,
-  loadRelationshipTypesFromContent,
+  loadAssociationsFromContent,
   setTraitPerspectives,
   RELATIONSHIPS_FILENAME,
-  RELATIONSHIP_TYPES_FILENAME,
+  ASSOCIATIONS_FILENAME,
   DYNAMIC_FIELDS_FILENAME,
   SCHEMA_FILENAME,
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
-  ORDERED_ASSOCIATIONS_FILENAME,
+  ORDERED_COLLECTIONS_FILENAME,
   EXTENSIONS_FILENAME,
   dynamicFieldsFilePath,
   NODE_FILE_PATTERN,
@@ -155,12 +155,12 @@ export class CacheSync {
     const dataDir = contentDataDir(this.contentDir);
     const modelDir = contentModelDir(this.contentDir);
     scanFile(dataDir, RELATIONSHIPS_FILENAME);
-    scanFile(modelDir, RELATIONSHIP_TYPES_FILENAME);
+    scanFile(modelDir, ASSOCIATIONS_FILENAME);
     scanFile(modelDir, DYNAMIC_FIELDS_FILENAME);
     scanFile(modelDir, SCHEMA_FILENAME);
     scanFile(modelDir, VIEWS_FILENAME);
     scanFile(modelDir, WORKSPACE_FILENAME);
-    scanFile(modelDir, ORDERED_ASSOCIATIONS_FILENAME);
+    scanFile(modelDir, ORDERED_COLLECTIONS_FILENAME);
     scanFile(modelDir, EXTENSIONS_FILENAME);
     try {
       for (const id of this.store.listNodeIds()) {
@@ -191,7 +191,7 @@ export class CacheSync {
   private expandRelationshipsToCache(): void {
     const allEntries = this.store.readRelationshipsFile().relationships;
     const entries = filterEntriesForCacheSync(allEntries);
-    const registry = this.store.readRelationshipTypesFile();
+    const registry = this.store.readAssociationsFile();
     const { records, projections } = expandAllRelationships(entries, registry);
 
     this.cache.runExec("BEGIN");
@@ -292,10 +292,10 @@ export class CacheSync {
 
     if (
       relativeName === RELATIONSHIPS_FILENAME ||
-      relativeName === RELATIONSHIP_TYPES_FILENAME
+      relativeName === ASSOCIATIONS_FILENAME
     ) {
-      if (relativeName === RELATIONSHIP_TYPES_FILENAME) {
-        invalidateRelationshipTypesCache();
+      if (relativeName === ASSOCIATIONS_FILENAME) {
+        invalidateAssociationsCache();
       }
       this.syncRelationships();
       this.updateCacheMarkers();
@@ -335,8 +335,8 @@ export class CacheSync {
       return;
     }
 
-    if (relativeName === ORDERED_ASSOCIATIONS_FILENAME) {
-      invalidateOrderedAssociationsCache();
+    if (relativeName === ORDERED_COLLECTIONS_FILENAME) {
+      invalidateOrderedCollectionsCache();
       this.updateCacheMarkers();
       return;
     }
@@ -373,7 +373,7 @@ export function openContentGraph(contentDir: string, dbPath: string): TomeWriteC
       decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
     },
     memberPerspectives: () =>
-      setTraitPerspectives(loadRelationshipTypesFromContent(contentDir)),
+      setTraitPerspectives(loadAssociationsFromContent(contentDir)),
   });
   const sync = new CacheSync(store, cache);
   sync.ensureReady();

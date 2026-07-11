@@ -17,9 +17,9 @@ describe("node create API", () => {
   const fixture = createTestContentFixture("tome-create-api-");
 
   beforeAll(() => {
-    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    const registry = fixture.ctx.store.readAssociationsFile();
     registerBidirectionalType(registry, "features", "targets");
-    fixture.ctx.store.writeRelationshipTypesFile(registry);
+    fixture.ctx.store.writeAssociationsFile(registry);
   });
 
   seedTestNode(fixture, {
@@ -97,9 +97,9 @@ describe("connections API", () => {
   const fixture = createTestContentFixture("tome-conn-api-");
 
   beforeAll(() => {
-    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    const registry = fixture.ctx.store.readAssociationsFile();
     registerBidirectionalType(registry, "features", "targets");
-    fixture.ctx.store.writeRelationshipTypesFile(registry);
+    fixture.ctx.store.writeAssociationsFile(registry);
   });
 
   seedTestNode(fixture, { id: linkSourceId, properties: { title: "Link source" } });

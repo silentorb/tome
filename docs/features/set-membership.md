@@ -55,7 +55,7 @@ Ordered sets use `type: "ordered_member_of"` with an `order` property (default s
 
 ### Projection expansion
 
-Every relationship type in `relationship-types.json` defines a `perspectives` **tuple of exactly two** slugs, so expansion always emits two projections:
+Every relationship type in `associations.json` defines a `perspectives` **tuple of exactly two** slugs, so expansion always emits two projections:
 
 | Endpoint | Projection |
 | --- | --- |
@@ -107,7 +107,7 @@ Linking or creating a type-table row **must** use the set's configured membershi
 
 | Page kind | Membership UI |
 | --- | --- |
-| **Set / type-table node** | Single **Members** or **Ordered members** table section (`database` or `ordered-association`) — full columns, tabs, editing via `getDatabaseViewDetail` |
+| **Set / type-table node** | Single **Members** or **Ordered members** table section (`database` or `ordered-collection`) — full columns, tabs, editing via `getDatabaseViewDetail` |
 | **Member instance node** | **Properties** panel in metadata (edge scalars from membership) **and** one **Membership** relation section below the markdown body |
 
 The auto-generated inverse **`members`** relation section is **not** emitted on set pages — membership listing there uses the rich Members table only. The Membership section header does **not** link to a single parent set (rows link to each parent).
@@ -123,7 +123,7 @@ The auto-generated inverse **`members`** relation section is **not** emitted on 
 ```mermaid
 flowchart LR
   JSON["relationships.json\n{a,b,type,properties}"]
-  REG["relationship-types.json\nperspectives array"]
+  REG["associations.json\nperspectives array"]
   EXP["expandRelationshipEntry"]
   PROJ["relationship_projections"]
 
@@ -141,12 +141,12 @@ flowchart LR
 | Path | Role |
 | --- | --- |
 | `content/data/relationships.json` | Canonical membership records |
-| `content/model/relationship-types.json` | `member_of` / `ordered_member_of` perspectives, traits array, optional `perspectiveLabels` |
+| `content/model/associations.json` | `member_of` / `ordered_member_of` perspectives, traits array, optional `perspectiveLabels` |
 | `content/model/table-schemas.json` | Type-table set detection, optional `membershipComposite`, column defs |
 | `content/model/views.json` | `sections.members` tab config for Members table |
 | `content/model/workspace.json` | `archiveNodeId` for archive set detection |
 | `packages/tome-db/src/set-membership.ts` | Unified membership query API |
-| `packages/tome-db/src/relationship-type-traits.ts` | Set trait helpers (`parentNodeId`, `childNodeId`, `resolveSetTraitComposite`) |
+| `packages/tome-flatfile/src/association-traits.ts` | Set trait helpers (`parentNodeId`, `childNodeId`, `resolveSetTraitComposite`) |
 | `packages/tome-db/src/content/relationship-sync-expand.ts` | Perspective-based expansion |
 
 ## Migration

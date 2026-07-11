@@ -1,6 +1,6 @@
 import type { GraphDatabase, Relationship } from "tome-sqlite";
 import { resolveContentPath } from "tome-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { loadAssociationsFromContent } from "tome-flatfile";
 import { setTraitPerspectives } from "tome-flatfile";
 import { priorityWeight } from "../../property-enums";
 import { normalizeRelationshipType } from "tome-flatfile";
@@ -15,7 +15,7 @@ function stringParam(params: Record<string, unknown>, key: string): string {
   return String(params[key] ?? "").trim();
 }
 
-function listAssociationsFromComposite(
+function listRelationshipTypesFromComposite(
   db: GraphDatabase,
   nodeId: string,
   compositeType: string,
@@ -206,7 +206,7 @@ function inspirationFeatureConnections(
 ): Relationship[] {
   const composite = stringParam(params, "inspiration_feature_composite");
   if (composite) {
-    const fromComposite = listAssociationsFromComposite(db, nodeId, composite);
+    const fromComposite = listRelationshipTypesFromComposite(db, nodeId, composite);
     if (fromComposite.length > 0) return fromComposite;
   }
   const featuresLabel = stringParam(params, "features_edge_label");
@@ -222,7 +222,7 @@ export function buildWeightedUsePrefetch(
 
   const priorityByFeature = new Map<string, number>();
   if (featuresDbId) {
-    const registry = loadRelationshipTypesFromContent(resolveContentPath());
+    const registry = loadAssociationsFromContent(resolveContentPath());
     for (const type of setTraitPerspectives(registry)) {
       for (const connection of ctx.db.listRelationshipsToTarget(featuresDbId, type)) {
         priorityByFeature.set(connection.sourceNodeId, priorityWeight(connection.properties.priority));

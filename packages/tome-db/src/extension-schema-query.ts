@@ -7,8 +7,8 @@ import type {
 import type { GraphDatabase, Node } from "tome-sqlite";
 import { setMemberIds } from "./set-membership";
 import { loadTableSchemasFromContent } from "tome-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
-import { relationshipTypeRulesFromRegistry } from "./relationship-type-endpoints";
+import { loadAssociationsFromContent } from "tome-flatfile";
+import { associationRulesFromRegistry } from "./association-endpoints";
 import {
   perspectiveForRelationColumn,
   targetTypeIdForRelationColumn,
@@ -45,8 +45,8 @@ export function createExtensionSchemaQueryServices(
     },
 
     listRelationshipRules(): SchemaQueryRelationshipRule[] {
-      const registry = loadRelationshipTypesFromContent(contentDir);
-      return relationshipTypeRulesFromRegistry(registry).map((rule) => ({
+      const registry = loadAssociationsFromContent(contentDir);
+      return associationRulesFromRegistry(registry).map((rule) => ({
         id: rule.id,
         sourceTypeId: rule.sourceTypeId,
         type: rule.type,
@@ -56,7 +56,7 @@ export function createExtensionSchemaQueryServices(
 
     listRelationColumnEdges(): SchemaQueryRelationColumnEdge[] {
       const schemas = loadTableSchemasFromContent(contentDir);
-      const registry = loadRelationshipTypesFromContent(contentDir);
+      const registry = loadAssociationsFromContent(contentDir);
       const titleByTypeId = new Map<string, string>();
       for (const id of Object.keys(schemas.tables)) {
         titleByTypeId.set(id, titleFromNode(db.getNode(id)));

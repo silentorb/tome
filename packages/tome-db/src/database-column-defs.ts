@@ -4,7 +4,7 @@ import { resolveContentPath } from "tome-flatfile";
 import type { TableColumnDef, TableSchema } from "tome-flatfile";
 import { getTableSchema } from "tome-flatfile";
 import { loadTableSchemasFromContent } from "tome-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { loadAssociationsFromContent } from "tome-flatfile";
 import {
   perspectiveForRelationColumn,
   relationColumnCompositeType,
@@ -26,7 +26,7 @@ function databaseColumnFromTableColumn(
   contentDir: string,
 ): DatabaseColumnDef {
   if (col.type === "relation") {
-    const registry = loadRelationshipTypesFromContent(contentDir);
+    const registry = loadAssociationsFromContent(contentDir);
     return {
       key: col.key,
       name: col.name,

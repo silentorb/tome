@@ -4,12 +4,12 @@ import type {
   NodePageDetail,
   NodeSummary,
   DatabaseViewDetail,
-  OrderedAssociationViewDetail,
+  OrderedCollectionViewDetail,
 } from "tome-graph-interfaces";
 import type { UserSettings, UserSettingsPatch } from "./user-settings";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
 import type { SchemaFile } from "tome-graph-interfaces";
-import type { OrderedAssociationMoveParams } from "tome-graph-interfaces";
+import type { OrderedCollectionMoveParams } from "tome-graph-interfaces";
 import type {
   CreateNodeResponse,
   TomeHttpClient,
@@ -110,7 +110,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     },
     async createRelationshipView(
       nodeId: string,
-      relationshipType: string,
+      association: string,
       input: {
         name: string;
         sorts?: import("tome-graph-interfaces").ViewSortSpec[];
@@ -118,7 +118,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       },
     ) {
       const data = await fetchJson<{ view: import("tome-graph-interfaces").ViewDefinition }>(
-        `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}/views`,
+        `/api/views/nodes/${nodeId}/perspectives/${encodeURIComponent(association)}/views`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -129,7 +129,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     },
     async updateRelationshipView(
       nodeId: string,
-      relationshipType: string,
+      association: string,
       viewId: string,
       input: {
         name?: string;
@@ -139,7 +139,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       },
     ) {
       const data = await fetchJson<{ view: import("tome-graph-interfaces").ViewDefinition }>(
-        `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}/views/${encodeURIComponent(viewId)}`,
+        `/api/views/nodes/${nodeId}/perspectives/${encodeURIComponent(association)}/views/${encodeURIComponent(viewId)}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -150,17 +150,17 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     },
     async deleteRelationshipView(
       nodeId: string,
-      relationshipType: string,
+      association: string,
       viewId: string,
     ): Promise<void> {
       await fetchJson(
-        `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}/views/${encodeURIComponent(viewId)}`,
+        `/api/views/nodes/${nodeId}/perspectives/${encodeURIComponent(association)}/views/${encodeURIComponent(viewId)}`,
         { method: "DELETE" },
       );
     },
     async patchRelationshipViews(
       nodeId: string,
-      relationshipType: string,
+      association: string,
       input: {
         viewOrder?: string[];
         properties?: import("tome-graph-interfaces").ViewProperties;
@@ -170,7 +170,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         views?: import("tome-graph-interfaces").ViewDefinition[];
         properties?: import("tome-graph-interfaces").ViewProperties;
       }>(
-        `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}`,
+        `/api/views/nodes/${nodeId}/perspectives/${encodeURIComponent(association)}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -194,7 +194,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         name: string;
         type: string;
         enumId?: string;
-        relationshipType?: string;
+        association?: string;
       },
     ): Promise<{
       column: import("tome-graph-interfaces").TableColumnDef;
@@ -216,7 +216,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         newKey?: string;
         type?: string;
         enumId?: string | null;
-        relationshipType?: string;
+        association?: string;
       },
     ): Promise<{
       column: import("tome-graph-interfaces").TableColumnDef;
@@ -239,12 +239,12 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       );
       return data.typeTables;
     },
-    async moveOrderedAssociation(
+    async moveOrderedCollection(
       configId: string,
-      params: OrderedAssociationMoveParams,
-    ): Promise<OrderedAssociationViewDetail> {
-      const data = await fetchJson<{ view: OrderedAssociationViewDetail }>(
-        `/api/ordered-associations/${encodeURIComponent(configId)}/move`,
+      params: OrderedCollectionMoveParams,
+    ): Promise<OrderedCollectionViewDetail> {
+      const data = await fetchJson<{ view: OrderedCollectionViewDetail }>(
+        `/api/ordered-collections/${encodeURIComponent(configId)}/move`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -401,7 +401,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       return data.schema;
     },
     async listRelationshipTypes(): Promise<string[]> {
-      const data = await fetchJson<{ types: string[] }>("/api/relationship-types");
+      const data = await fetchJson<{ types: string[] }>("/api/relationships/types");
       return data.types;
     },
     async getRelationshipLinkOptions(

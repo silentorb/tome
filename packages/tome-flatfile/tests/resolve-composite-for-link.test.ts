@@ -1,14 +1,14 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { contentModelDir, tableSchemasFilePath } from "../src/content/paths";
-import { parseRelationshipTypesFile } from "../src/content/relationship-types-file";
+import { parseAssociationsFile } from "../src/content/associations-file";
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
 import { invalidateTableSchemasCache } from "../src/table-schemas/load";
-import { resolveCompositeTypeForLink } from "../src/content/resolve-composite-for-link";
+import { resolveAssociationIdForLink } from "../src/content/resolve-composite-for-link";
 
-describe("resolveCompositeTypeForLink", () => {
+describe("resolveAssociationIdForLink", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-composite-link-"));
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
@@ -18,8 +18,14 @@ describe("resolveCompositeTypeForLink", () => {
   const productId = "0000000000000000000000000R";
   const sceneId = "00000000000000000000000015";
 
-  const registry = parseRelationshipTypesFile(
-    readFileSync("/workspaces/marloth-story/content/model/relationship-types.json", "utf-8"),
+  const registry = parseAssociationsFile(
+    JSON.stringify({
+      version: 1,
+      associations: {
+        scenes_product: { perspectives: ["scenes", "product"] },
+        children_children: { perspectives: ["children", "children"] },
+      },
+    }),
   );
 
   writeFileSync(
@@ -33,7 +39,7 @@ describe("resolveCompositeTypeForLink", () => {
               key: "scenes",
               name: "Scenes",
               type: "relation",
-              relationshipType: "scenes_product",
+              association: "scenes_product",
             },
           ],
         },
@@ -43,7 +49,7 @@ describe("resolveCompositeTypeForLink", () => {
               key: "product",
               name: "Product",
               type: "relation",
-              relationshipType: "scenes_product",
+              association: "scenes_product",
             },
           ],
         },
@@ -62,7 +68,7 @@ describe("resolveCompositeTypeForLink", () => {
       { a: scenesDb, b: sceneId, type: "member_of", properties: {} },
     ];
     expect(
-      resolveCompositeTypeForLink(
+      resolveAssociationIdForLink(
         registry,
         relationships,
         contentDir,
@@ -79,7 +85,7 @@ describe("resolveCompositeTypeForLink", () => {
       { a: scenesDb, b: sceneId, type: "member_of", properties: {} },
     ];
     expect(
-      resolveCompositeTypeForLink(
+      resolveAssociationIdForLink(
         registry,
         relationships,
         contentDir,
@@ -91,19 +97,19 @@ describe("resolveCompositeTypeForLink", () => {
   });
 
   test("routes member_of and members perspectives via set trait", () => {
-    const setRegistry = parseRelationshipTypesFile(
+    const setRegistry = parseAssociationsFile(
       JSON.stringify({
         version: 1,
-        types: {
+        associations: {
           member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
         },
       }),
     );
     expect(
-      resolveCompositeTypeForLink(setRegistry, [], contentDir, productId, productsDb, "member_of"),
+      resolveAssociationIdForLink(setRegistry, [], contentDir, productId, productsDb, "member_of"),
     ).toBe("member_of");
     expect(
-      resolveCompositeTypeForLink(setRegistry, [], contentDir, productsDb, productId, "members"),
+      resolveAssociationIdForLink(setRegistry, [], contentDir, productsDb, productId, "members"),
     ).toBe("member_of");
   });
 
@@ -124,7 +130,7 @@ describe("resolveCompositeTypeForLink", () => {
                 key: "children",
                 name: "Children",
                 type: "relation",
-                relationshipType: "children_children",
+                association: "children_children",
               },
             ],
           },
@@ -138,7 +144,7 @@ describe("resolveCompositeTypeForLink", () => {
       { a: groupsDb, b: childGroupId, type: "member_of", properties: {} },
     ];
     expect(
-      resolveCompositeTypeForLink(
+      resolveAssociationIdForLink(
         registry,
         relationships,
         groupsContentDir,

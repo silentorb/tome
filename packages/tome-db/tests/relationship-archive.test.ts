@@ -35,9 +35,9 @@ describe("relationship-archive helpers", () => {
   afterAll(() => destroyTestContentFixture(fixture));
 
   test("isArchiveMembershipEntry detects hub membership", () => {
-    fixture.ctx.store.writeRelationshipTypesFile({
+    fixture.ctx.store.writeAssociationsFile({
       version: 1,
-      types: {
+      associations: {
         member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
       },
     });
@@ -47,9 +47,9 @@ describe("relationship-archive helpers", () => {
   });
 
   test("listArchiveMemberIds returns non-hub endpoints", () => {
-    fixture.ctx.store.writeRelationshipTypesFile({
+    fixture.ctx.store.writeAssociationsFile({
       version: 1,
-      types: {
+      associations: {
         member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
       },
     });
@@ -75,9 +75,9 @@ describe("relationship-archive store mutations", () => {
   const fixture: TestContentFixture = createTestContentFixture("tome-rel-archive-");
   const { store } = fixture.ctx;
 
-  store.writeRelationshipTypesFile({
+  store.writeAssociationsFile({
     version: 1,
-    types: {
+    associations: {
       member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
     },
   });

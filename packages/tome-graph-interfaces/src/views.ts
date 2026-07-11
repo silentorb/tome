@@ -13,7 +13,7 @@ export interface ViewProperties {
 export interface ViewDefinition {
   id: string;
   nodeId: string;
-  relationshipType: string;
+  perspective: string;
   name: string;
   sorts: ViewSortSpec[];
   properties?: ViewProperties;
@@ -24,7 +24,7 @@ export interface ViewDefinition {
 /** Generated views computed at runtime from a provider (e.g. scenes-by-book). */
 export interface GeneratedViewRecord {
   nodeId: string;
-  relationshipType: string;
+  perspective: string;
   generator: string;
 }
 

@@ -8,15 +8,15 @@ import { getDatabaseViewDetail } from "../src/database-view";
 import {
   contentModelDir,
   dynamicFieldsFilePath,
-  relationshipTypesFilePath,
+  associationsFilePath,
   schemaFilePath,
   tableSchemasFilePath,
 } from "tome-flatfile";
 import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
 import { serializeSchemaFile } from "tome-flatfile";
-import { serializeRelationshipTypesFile } from "tome-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { serializeAssociationsFile } from "tome-flatfile";
+import { invalidateAssociationsCache } from "tome-flatfile";
 import { invalidateSchemaCache } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
 
@@ -29,10 +29,10 @@ describe("database-view", () => {
     serializeDynamicFieldsFile(emptyDynamicFieldsFile()),
   );
   writeFileSync(
-    relationshipTypesFilePath(contentDir),
-    serializeRelationshipTypesFile({
+    associationsFilePath(contentDir),
+    serializeAssociationsFile({
       version: 1,
-      types: {
+      associations: {
         member_of: {
           perspectives: ["members", "member_of"],
           traits: ["set"],
@@ -47,7 +47,7 @@ describe("database-view", () => {
       },
     }),
   );
-  invalidateRelationshipTypesCache();
+  invalidateAssociationsCache();
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
 
@@ -160,7 +160,7 @@ describe("database-view", () => {
         key: "parents",
         name: "Parents",
         type: "relation",
-        relationshipType: "parents_children",
+        association: "parents_children",
       },
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
@@ -214,10 +214,10 @@ describe("database-view", () => {
   test("exposes set membership perspectives from a non-conventional composite", () => {
     const databaseId = "FFFFFFFFFFFFFFFFFFFFFFFFFF";
     writeFileSync(
-      relationshipTypesFilePath(contentDir),
-      serializeRelationshipTypesFile({
+      associationsFilePath(contentDir),
+      serializeAssociationsFile({
         version: 1,
-        types: {
+        associations: {
           custom_set: {
             perspectives: ["cohort", "belongs_to_cohort"],
             traits: ["set"],
@@ -228,7 +228,7 @@ describe("database-view", () => {
         },
       }),
     );
-    invalidateRelationshipTypesCache();
+    invalidateAssociationsCache();
     writeTableSchema(databaseId, [], "custom_set");
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Cohorts") });
     db.upsertNode("member1", { title: "Member one" });
@@ -236,17 +236,17 @@ describe("database-view", () => {
 
     const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(detail).toMatchObject({
-      viewRelationshipType: "cohort",
+      viewAssociation: "cohort",
       memberSidePerspective: "belongs_to_cohort",
       rows: [{ nodeId: "member1", name: "Member one" }],
     });
 
     // Restore conventional set types for later tests in this file.
     writeFileSync(
-      relationshipTypesFilePath(contentDir),
-      serializeRelationshipTypesFile({
+      associationsFilePath(contentDir),
+      serializeAssociationsFile({
         version: 1,
-        types: {
+        associations: {
           member_of: {
             perspectives: ["members", "member_of"],
             traits: ["set"],
@@ -261,7 +261,7 @@ describe("database-view", () => {
         },
       }),
     );
-    invalidateRelationshipTypesCache();
+    invalidateAssociationsCache();
   });
 
   test("ignores orphan_row properties on the database vertex", () => {

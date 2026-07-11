@@ -14,14 +14,14 @@ export function register(host: EditorPageBlockHost): void {
           ? blockData
           : defaultSchemaDiagramBlockData();
       const typeIds = Array.isArray(data.typeIds) ? data.typeIds.length : 0;
-      const relationshipTypes = Array.isArray(data.relationshipTypes)
-        ? data.relationshipTypes.length
+      const perspectives = Array.isArray(data.perspectives)
+        ? data.perspectives.length
         : 0;
       const scope =
         typeIds > 0
           ? `${typeIds} type(s)`
-          : relationshipTypes > 0
-            ? `all types, ${relationshipTypes} relationship filter(s)`
+          : perspectives > 0
+            ? `all types, ${perspectives} relationship filter(s)`
             : "full project schema";
 
       return (

@@ -6,7 +6,7 @@ export const CONTENT_DATA_SUBDIR = "data";
 export const CONTENT_MODEL_SUBDIR = "model";
 
 export const RELATIONSHIPS_FILENAME = "relationships.json";
-export const RELATIONSHIP_TYPES_FILENAME = "relationship-types.json";
+export const ASSOCIATIONS_FILENAME = "associations.json";
 /** @deprecated Use RELATIONSHIPS_FILENAME. Legacy content file name (pre–relationship terminology). */
 export const CONNECTIONS_FILENAME = "connections.json";
 export const DYNAMIC_FIELDS_FILENAME = "dynamic-fields.json";
@@ -14,7 +14,7 @@ export const SCHEMA_FILENAME = "schema.json";
 export const VIEWS_FILENAME = "views.json";
 export const TABLE_SCHEMAS_FILENAME = "table-schemas.json";
 export const WORKSPACE_FILENAME = "workspace.json";
-export const ORDERED_ASSOCIATIONS_FILENAME = "ordered-associations.json";
+export const ORDERED_COLLECTIONS_FILENAME = "ordered-collections.json";
 export const EXTENSIONS_FILENAME = "extensions.json";
 export { NODE_ID_PATTERN, NODE_FILE_PATTERN, isNodeId };
 
@@ -55,8 +55,8 @@ export function relationshipsFilePath(contentRoot: string): string {
   return resolve(contentDataDir(contentRoot), RELATIONSHIPS_FILENAME);
 }
 
-export function relationshipTypesFilePath(contentRoot: string): string {
-  return resolve(contentModelDir(contentRoot), RELATIONSHIP_TYPES_FILENAME);
+export function associationsFilePath(contentRoot: string): string {
+  return resolve(contentModelDir(contentRoot), ASSOCIATIONS_FILENAME);
 }
 
 /** @deprecated Use relationshipsFilePath. */
@@ -88,8 +88,8 @@ export function workspaceFilePath(contentRoot: string): string {
   return resolve(contentModelDir(contentRoot), WORKSPACE_FILENAME);
 }
 
-export function orderedAssociationsFilePath(contentRoot: string): string {
-  return resolve(contentModelDir(contentRoot), ORDERED_ASSOCIATIONS_FILENAME);
+export function orderedCollectionsFilePath(contentRoot: string): string {
+  return resolve(contentModelDir(contentRoot), ORDERED_COLLECTIONS_FILENAME);
 }
 
 export function extensionsFilePath(contentRoot: string): string {

@@ -2,14 +2,14 @@ import type { GraphDatabase, CustomTabDefinition, SchemaFile } from "tome-db";
 import {
   getDatabaseViewDetail,
   getNodePageDetail,
-  getOrderedAssociationView,
+  getOrderedCollectionView,
   type NodePageDetail,
   type NodeSection,
 } from "tome-db";
 import {
   type DatabaseTabPayload,
   type ItemsTabsMeta,
-  type OrderedAssociationTabPayload,
+  type OrderedCollectionTabPayload,
   type SiteNode,
   type StaticNodeSection,
   type TabItemsPayload,
@@ -32,9 +32,9 @@ function defaultSortForTab(
 
 function findItemsSection(
   sections: NodeSection[],
-): Extract<NodeSection, { type: "database" } | { type: "ordered-association" }> | null {
+): Extract<NodeSection, { type: "database" } | { type: "ordered-collection" }> | null {
   for (const section of sections) {
-    if (section.type === "database" || section.type === "ordered-association") {
+    if (section.type === "database" || section.type === "ordered-collection") {
       return section;
     }
   }
@@ -58,9 +58,9 @@ function toStaticSections(
       });
       continue;
     }
-    if (section.type === "ordered-association") {
+    if (section.type === "ordered-collection") {
       out.push({
-        type: "ordered-association",
+        type: "ordered-collection",
         configId: section.configId,
         view: section.view,
         defaultSort: defaultSortForTab(
@@ -76,7 +76,7 @@ function toStaticSections(
 }
 
 function buildItemsTabsMeta(
-  itemsSection: Extract<NodeSection, { type: "database" } | { type: "ordered-association" }>,
+  itemsSection: Extract<NodeSection, { type: "database" } | { type: "ordered-collection" }>,
 ): ItemsTabsMeta {
   if (itemsSection.type === "database") {
     const { tabs, id } = itemsSection.databaseView;
@@ -90,7 +90,7 @@ function buildItemsTabsMeta(
   return {
     items: itemsSection.view.tabs.items,
     defaultTabId: itemsSection.view.tabs.activeTabId,
-    sectionKind: "ordered-association",
+    sectionKind: "ordered-collection",
     configId: itemsSection.configId,
     databaseId: itemsSection.view.typeDatabaseId,
   };
@@ -120,14 +120,14 @@ function buildExtraTabPayload(
   }
   const configId = itemsTabs.configId;
   if (!configId) return null;
-  const view = getOrderedAssociationView(db, configId, tabId, contentDir);
+  const view = getOrderedCollectionView(db, configId, tabId, contentDir);
   if (!view) return null;
   return {
-    kind: "ordered-association",
+    kind: "ordered-collection",
     configId,
     view,
     defaultSort: defaultSortForTab(view.tabs.customDefinitions, tabId),
-  } satisfies OrderedAssociationTabPayload;
+  } satisfies OrderedCollectionTabPayload;
 }
 
 export function buildSiteNode(
@@ -143,7 +143,7 @@ export function buildSiteNode(
   const itemsTabs =
     detail.isTypeTable && itemsSection && itemsSection.type === "database"
       ? buildItemsTabsMeta(itemsSection)
-      : detail.isTypeTable && itemsSection && itemsSection.type === "ordered-association"
+      : detail.isTypeTable && itemsSection && itemsSection.type === "ordered-collection"
         ? buildItemsTabsMeta(itemsSection)
         : undefined;
 

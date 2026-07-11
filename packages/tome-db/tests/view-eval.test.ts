@@ -12,12 +12,12 @@ import {
   contentModelDir,
   viewsFilePath,
   dynamicFieldsFilePath,
-  relationshipTypesFilePath,
+  associationsFilePath,
   tableSchemasFilePath,
 } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
-import { serializeRelationshipTypesFile } from "tome-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { serializeAssociationsFile } from "tome-flatfile";
+import { invalidateAssociationsCache } from "tome-flatfile";
 import { writeSetMembershipTypes } from "../src/content/test-helpers";
 
 describe("row-sort", () => {
@@ -114,7 +114,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "done-only",
             nodeId: databaseId,
-            relationshipType: "members",
+            perspective: "members",
             name: "Done only",
             sorts: [{ column: "name", direction: "asc" }],
           },
@@ -170,7 +170,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "all",
             nodeId: databaseId,
-            relationshipType: "members",
+            perspective: "members",
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
             properties: { columnOrder: ["status"] },
@@ -225,7 +225,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "all",
             nodeId: databaseId,
-            relationshipType: "members",
+            perspective: "members",
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
             hiddenColumns: ["priority"],
@@ -276,10 +276,10 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const inspirationsDb = "0000000000000000000000000K";
 
     writeFileSync(
-      relationshipTypesFilePath(contentDir),
-      serializeRelationshipTypesFile({
+      associationsFilePath(contentDir),
+      serializeAssociationsFile({
         version: 1,
-        types: {
+        associations: {
           member_of: {
             perspectives: ["members", "member_of"],
             traits: ["set"],
@@ -294,7 +294,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
         },
       }),
     );
-    invalidateRelationshipTypesCache();
+    invalidateAssociationsCache();
     writeFileSync(
       viewsFilePath(contentDir),
       serializeViewsFile({
@@ -303,7 +303,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "by-inspirations",
             nodeId: featuresDb,
-            relationshipType: "members",
+            perspective: "members",
             name: "By inspirations",
             sorts: [{ column: "inspirations", direction: "desc" }],
           },
@@ -325,7 +325,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
                 key: "inspirations",
                 name: "Inspirations",
                 type: "relation",
-                relationshipType: "inspirations_features",
+                association: "inspirations_features",
               },
             ],
           },

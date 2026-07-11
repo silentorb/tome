@@ -1,7 +1,7 @@
 import type { GraphDatabase, Node, Properties } from "tome-sqlite";
 import { memberSetIds } from "./set-membership";
 import { resolveContentPath } from "tome-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { loadAssociationsFromContent } from "tome-flatfile";
 import { hasTableSchemaEntry, loadTableSchemasFromContent } from "tome-flatfile";
 import { memberSidePerspectives, setSidePerspectives } from "tome-flatfile";
 
@@ -15,7 +15,7 @@ function titleFromProperties(properties: Record<string, unknown>): string {
 
 export function hasIncomingIsA(db: GraphDatabase, nodeId: string, contentDir?: string): boolean {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
   for (const perspective of memberSidePerspectives(registry)) {
     if (db.listRelationshipsToTarget(nodeId, perspective).length > 0) return true;
   }

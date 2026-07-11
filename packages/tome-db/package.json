@@ -9,7 +9,7 @@
     "./content": "./src/content/index.ts",
     "./content/test-helpers": "./src/content/test-helpers.ts",
     "./enum-codec": "./src/enum-codec.ts",
-    "./relationship-type-label": "./src/relationship-type-label.ts",
+    "./association-label": "./src/association-label.ts",
     "./row-sort-helpers": "./src/row-sort-helpers.ts",
     "./search-relevance": "./src/search-relevance.ts"
   },

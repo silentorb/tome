@@ -7,7 +7,7 @@ export const RELATIONSHIPS_FILE_VERSION = 3;
 /**
  * A relationship is an ordered tuple `(a, b)`. The positions carry no built-in
  * meaning (not source/target): the edge type assigns a per-position value to
- * each index (see `RelationshipTypeDefinition.perspectives`). Relative semantics
+ * each index (see `AssociationDefinition.perspectives`). Relative semantics
  * come from tuple order + the type registry, never from lexicographic node order.
  */
 export interface RelationshipEntry {

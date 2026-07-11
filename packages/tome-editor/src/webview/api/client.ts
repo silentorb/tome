@@ -60,7 +60,7 @@ export function createEditorApi(): EditorApi {
     getRelationshipLinkOptions: rest.getRelationshipLinkOptions.bind(rest),
     getUserSettings: rest.getUserSettings.bind(rest),
     patchUserSettings: rest.patchUserSettings.bind(rest),
-    moveOrderedAssociation: rest.moveOrderedAssociation.bind(rest),
+    moveOrderedCollection: rest.moveOrderedCollection.bind(rest),
     getExtensionsManifest: rest.getExtensionsManifest.bind(rest),
     prepareEditorBody: rest.prepareEditorBody.bind(rest),
     navigate(nodeId: string, openInNewTab = false): void {

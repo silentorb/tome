@@ -3,7 +3,7 @@ import type { DatabaseColumnDef } from "../../shared/types";
 import type { EditorApi } from "../api/client";
 import { slugifyColumnKey } from "./column-editor-utils";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { RelationshipTypePicker } from "./RelationshipTypePicker";
+import { AssociationPicker } from "./AssociationPicker";
 import "./add-relationship-dialog.css";
 import "./column-editor-dialog.css";
 
@@ -44,7 +44,7 @@ function initialFormFromColumn(def: DatabaseColumnDef | undefined, mode: "add" |
       key: def.key,
       type: def.type === "relation" ? "relation" : def.type,
       enumId: def.enumId ?? "",
-      relationshipType:
+      association:
         def.type === "relation" ? (def.relationshipCompositeType ?? "") : "",
     };
   }
@@ -53,7 +53,7 @@ function initialFormFromColumn(def: DatabaseColumnDef | undefined, mode: "add" |
     key: "",
     type: "text",
     enumId: "",
-    relationshipType: "",
+    association: "",
   };
 }
 
@@ -75,7 +75,7 @@ function migrationConfirmMessage(
       parts.push("Changing the column type may leave existing cell values incompatible.");
     }
   } else if (next.type === "relation") {
-    if (next.relationshipType !== initial.relationshipType) {
+    if (next.association !== initial.association) {
       parts.push("Changing relation settings will unlink all existing links for this column.");
     }
   }
@@ -154,7 +154,7 @@ export function ColumnEditorDialog({
     if (form.type === "relation") {
       return {
         ...base,
-        relationshipType: form.relationshipType.trim(),
+        association: form.association.trim(),
       };
     }
     if (form.type === "select" || form.type === "status") {
@@ -170,7 +170,7 @@ export function ColumnEditorDialog({
       setError("Name is required.");
       return;
     }
-    if (form.type === "relation" && !form.relationshipType.trim()) {
+    if (form.type === "relation" && !form.association.trim()) {
       setError("Relationship type is required for relation columns.");
       return;
     }
@@ -189,8 +189,8 @@ export function ColumnEditorDialog({
           key: payload.key,
           type: payload.type,
           enumId: "enumId" in payload ? payload.enumId : undefined,
-          relationshipType:
-            "relationshipType" in payload ? payload.relationshipType : undefined,
+          association:
+            "association" in payload ? payload.association : undefined,
         });
       } else if (state.columnKey) {
         await api.updateDatabaseColumn(databaseId, state.columnKey, {
@@ -201,8 +201,8 @@ export function ColumnEditorDialog({
             form.type === "select" || form.type === "status"
               ? form.enumId.trim()
               : null,
-          relationshipType:
-            "relationshipType" in payload ? payload.relationshipType : undefined,
+          association:
+            "association" in payload ? payload.association : undefined,
         });
       }
       onSaved();
@@ -322,8 +322,8 @@ export function ColumnEditorDialog({
                       event.target.value === "select" || event.target.value === "status"
                         ? current.enumId
                         : "",
-                    relationshipType:
-                      event.target.value === "relation" ? current.relationshipType : "",
+                    association:
+                      event.target.value === "relation" ? current.association : "",
                   }))
                 }
               >
@@ -362,16 +362,16 @@ export function ColumnEditorDialog({
             {form.type === "relation" ? (
               <label className="tome-column-editor-field">
                 <span>Relationship type</span>
-                <RelationshipTypePicker
+                <AssociationPicker
                   api={api}
-                  selectedType={form.relationshipType || null}
+                  selectedType={form.association || null}
                   ariaLabel="Relationship type"
-                  onSelect={(relationshipType) =>
-                    setForm((current) => ({ ...current, relationshipType }))
+                  onSelect={(association) =>
+                    setForm((current) => ({ ...current, association }))
                   }
                 />
                 <span className="tome-column-editor-hint">
-                  Cross-table link flavor from relationship-types.json.
+                  Cross-table link flavor from associations.json.
                 </span>
               </label>
             ) : null}

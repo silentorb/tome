@@ -20,7 +20,7 @@ For page-block contracts: [page-blocks.md](../extensions/page-blocks.md). For ex
 - **Member badges:** each type table shows a notification-style pill with `member_of` set size (`setMemberIds`); hidden when count is 0; corner placement is project-configurable (see below)
 - **Edges:** `table-schemas.json` relation columns — one edge per column in the meta-model; reciprocal columns between the same two type tables merge into a single edge labeled with both perspectives (e.g. `products ↔ characters`) and arrowheads at both ends
 - **Default scope:** full project (all types and relation columns)
-- **Optional filters:** block `data` may restrict `typeIds` and `relationshipTypes` (matches column `perspective` / `key` labels)
+- **Optional filters:** block `data` may restrict `typeIds` and `associations` (matches column `perspective` / `key` labels)
 
 `schema.json` `relationshipRules` are used for editor enforcement (allowed targets, link picker) — not for diagram edges.
 
@@ -53,7 +53,7 @@ extensions.json + table-schemas.json
 | Key | Default | Purpose |
 | --- | --- | --- |
 | `typeIds` | (all) | Restrict diagram entities |
-| `relationshipTypes` | (all) | Filter edge labels (`perspective` / column `key`) |
+| `associations` | (all) | Filter edge labels (`perspective` / column `key`) |
 | `theme` | `default` | Diagram palette (`data-theme` on figure) |
 | `direction` | `TB` | `TB` or `LR` (ELK `DOWN` / `RIGHT`) |
 

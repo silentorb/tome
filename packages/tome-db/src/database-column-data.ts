@@ -1,7 +1,7 @@
 import { listRelationConnectionsForRow } from "./database-view-relations";
 import { unlinkOutgoingRelationship } from "./relationship-link-mutations";
 import { otherEndpoint } from "./relationship-traverse";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { loadAssociationsFromContent } from "tome-flatfile";
 import { setTraitPerspectives } from "tome-flatfile";
 import { perspectiveForRelationColumn, relationColumnCompositeType } from "tome-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
@@ -14,7 +14,7 @@ export function stripScalarFromMembershipEdges(
   databaseId: string,
   propertyKey: string,
 ): number {
-  const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
+  const registry = loadAssociationsFromContent(ctx.store.contentDir);
   let count = 0;
   for (const type of setTraitPerspectives(registry)) {
     for (const connection of ctx.cache.listRelationshipsToTarget(databaseId, type)) {
@@ -39,7 +39,7 @@ export function renameScalarOnMembershipEdges(
   oldKey: string,
   newKey: string,
 ): number {
-  const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
+  const registry = loadAssociationsFromContent(ctx.store.contentDir);
   let count = 0;
   for (const type of setTraitPerspectives(registry)) {
     for (const connection of ctx.cache.listRelationshipsToTarget(databaseId, type)) {
@@ -64,7 +64,7 @@ export function unlinkRelationColumnFromAllRows(
   databaseId: string,
   column: TableColumnDef & { type: "relation" },
 ): number {
-  const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
+  const registry = loadAssociationsFromContent(ctx.store.contentDir);
   const connectionType = perspectiveForRelationColumn(registry, databaseId, column);
   const compositeType = relationColumnCompositeType(column);
 

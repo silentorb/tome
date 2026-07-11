@@ -72,18 +72,18 @@ describe("deleteDatabaseColumn", () => {
         key: "parents",
         name: "Parents",
         type: "relation",
-        relationshipType: "parents_children",
+        association: "parents_children",
       },
     ]);
-    const registry = fixture.ctx.store.readRelationshipTypesFile();
-    registry.types.parents_children = {
+    const registry = fixture.ctx.store.readAssociationsFile();
+    registry.associations.parents_children = {
       perspectives: ["children", "parents"],
       endpoints: {
         0: { typeId: databaseId },
         1: { typeId: parentId },
       },
     };
-    fixture.ctx.store.writeRelationshipTypesFile(registry);
+    fixture.ctx.store.writeAssociationsFile(registry);
     seedTestNode(fixture, { id: pageId, properties: { title: "Child feature" } });
     seedTestNode(fixture, { id: parentId, properties: { title: "Parent feature" } });
     seedTestRelationships(fixture, [
@@ -127,7 +127,7 @@ describe("deleteDatabaseColumn", () => {
         {
           id: "by-task-state",
           nodeId: databaseId,
-          relationshipType: "members",
+          perspective: "members",
           name: "By task state",
           sorts: [{ column: "task_state", direction: "asc" }],
           properties: { columnOrder: ["task_state"] },

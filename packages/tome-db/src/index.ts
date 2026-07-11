@@ -52,7 +52,7 @@ export {
 export { getDatabaseViewDetail } from "./database-view";
 export { hydrateRelationCellsForRows } from "./database-view-relations";
 export { relationType, normalizeRelationshipType, stripEmojis } from "tome-flatfile";
-export { formatRelationshipTypeLabel } from "./relationship-type-label";
+export { formatAssociationLabel } from "./association-label";
 export type {
   DatabaseColumnDef,
   DatabaseRow,
@@ -169,7 +169,7 @@ export { getNodePageDetail } from "./node-page-sections";
 export type {
   DatabaseTableSection,
   MarkdownSection,
-  OrderedAssociationSection,
+  OrderedCollectionSection,
   NodePageDetail,
   NodeSection,
   RelationRow,
@@ -178,28 +178,28 @@ export type {
 } from "./node-page-sections";
 export {
   relationSectionSupportsLinkExisting,
-  relationshipTypeRuleContext,
-  relationshipTypeRulesFromRegistry,
-} from "./relationship-type-endpoints";
+  associationRuleContext,
+  associationRulesFromRegistry,
+} from "./association-endpoints";
 export type {
-  RelationshipTypeRuleContext,
-  RelationshipTypeRuleEntry,
-} from "./relationship-type-endpoints";
+  AssociationRuleContext,
+  AssociationRuleEntry,
+} from "./association-endpoints";
 export {
-  applyOrderedAssociationMove,
+  applyOrderedCollectionMove,
   getConfigByProvider,
-  getOrderedAssociationConfigForDatabase,
-  getOrderedAssociationView,
+  getOrderedCollectionConfigForDatabase,
+  getOrderedCollectionView,
   UNASSIGNED_GROUP_ID,
-} from "./ordered-associations";
+} from "./ordered-collections";
 export type {
-  OrderedAssociationConfig,
-  OrderedAssociationGroup,
-  OrderedAssociationMoveParams,
-  OrderedAssociationRow,
-  OrderedAssociationScope,
-  OrderedAssociationViewDetail,
-} from "./ordered-associations";
+  OrderedCollectionConfig,
+  OrderedCollectionGroup,
+  OrderedCollectionMoveParams,
+  OrderedCollectionRow,
+  OrderedCollectionScope,
+  OrderedCollectionViewDetail,
+} from "./ordered-collections";
 export type { TomeWriteContext } from "./content/write-context";
 export {
   mergeNodePropertiesOnContent,
@@ -279,15 +279,15 @@ export {
   loadSchemaFromContent,
   loadWorkspaceSchema,
   invalidateSchemaCache,
-  loadRelationshipTypesFromContent,
-  invalidateRelationshipTypesCache,
+  loadAssociationsFromContent,
+  invalidateAssociationsCache,
   loadViewsFromContent,
   invalidateViewsCache,
   loadWorkspaceFromContent,
   loadWorkspace,
   invalidateWorkspaceCache,
-  loadOrderedAssociationsFromContent,
-  invalidateOrderedAssociationsCache,
+  loadOrderedCollectionsFromContent,
+  invalidateOrderedCollectionsCache,
   resolveWorkspace,
   archiveNodeId,
   protectedNodeIds,
@@ -323,12 +323,12 @@ export {
   type QuickLinkError,
 } from "./workspace/quick-links";
 export {
-  parseOrderedAssociationsFile,
-  serializeOrderedAssociationsFile,
-  emptyOrderedAssociationsFile,
-  ORDERED_ASSOCIATIONS_FILE_VERSION,
+  parseOrderedCollectionsFile,
+  serializeOrderedCollectionsFile,
+  emptyOrderedCollectionsFile,
+  ORDERED_COLLECTIONS_FILE_VERSION,
 } from "tome-flatfile";
-export type { OrderedAssociationsFile } from "tome-flatfile";
+export type { OrderedCollectionsFile } from "tome-flatfile";
 export {
   resolveCustomTabs,
   resolveCustomTabsForNode,

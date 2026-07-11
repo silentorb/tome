@@ -2,7 +2,7 @@ export { ContentStore } from "./content/store";
 export { createFlatfileModule } from "./module";
 export { relationshipId } from "./relationship-id";
 export { collectSetNodeIds } from "./set-nodes";
-export { LinkResolutionError, resolveCompositeTypeForLink } from "./content/resolve-composite-for-link";
+export { LinkResolutionError, resolveAssociationIdForLink } from "./content/resolve-composite-for-link";
 
 export {
   RELATIONSHIPS_FILE_VERSION,
@@ -16,31 +16,31 @@ export {
 export type { RelationshipEntry, RelationshipsFile } from "./content/relationships-file";
 
 export {
-  RELATIONSHIP_TYPES_FILE_VERSION,
+  ASSOCIATIONS_FILE_VERSION,
   compositeTypeForPerspectives,
-  emptyRelationshipTypesFile,
-  parseRelationshipTypesFile,
+  emptyAssociationsFile,
+  parseAssociationsFile,
   registerBidirectionalType,
   registerOrderedSetMembershipType,
   registerSetMembershipType,
   registerTypeDefinition,
-  serializeRelationshipTypesFile,
+  serializeAssociationsFile,
   isBidirectionalComposite,
   isDualPerspectiveType,
   localTypesForComposite,
-  resolveCompositeType,
+  resolveAssociationId,
   perspectiveCountForExpansion,
-} from "./content/relationship-types-file";
+} from "./content/associations-file";
 export type {
-  RelationshipTypeDefinition,
-  RelationshipTypesFile,
+  AssociationDefinition,
+  AssociationsFile,
   PerspectiveLabelConfig,
   PerspectivePair,
   TraitEntry,
   TraitObjectEntry,
-  RelationshipTypeEndpoints,
-  RelationshipEndpointConstraint,
-} from "./content/relationship-types-file";
+  AssociationEndpoints,
+  AssociationEndpointConstraint,
+} from "./content/associations-file";
 
 export {
   DYNAMIC_FIELDS_FILE_VERSION,
@@ -75,20 +75,20 @@ export {
   CONTENT_DATA_SUBDIR,
   CONTENT_MODEL_SUBDIR,
   RELATIONSHIPS_FILENAME,
-  RELATIONSHIP_TYPES_FILENAME,
+  ASSOCIATIONS_FILENAME,
   DYNAMIC_FIELDS_FILENAME,
   SCHEMA_FILENAME,
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
-  ORDERED_ASSOCIATIONS_FILENAME,
+  ORDERED_COLLECTIONS_FILENAME,
   EXTENSIONS_FILENAME,
   NODE_FILE_PATTERN,
   NODE_ID_PATTERN,
   contentDataDir,
   contentModelDir,
   relationshipsFilePath,
-  relationshipTypesFilePath,
+  associationsFilePath,
   defaultDbPathForContent,
   DEFAULT_DB_FILENAME,
   readEnv,
@@ -97,7 +97,7 @@ export {
   viewsFilePath,
   tableSchemasFilePath,
   workspaceFilePath,
-  orderedAssociationsFilePath,
+  orderedCollectionsFilePath,
   extensionsFilePath,
   isNodeId,
   nodeFileName,
@@ -263,7 +263,7 @@ export {
   traitMap,
   typesWithTrait,
   viewSectionKeyForSet,
-} from "./relationship-type-traits";
+} from "./association-traits";
 
 export {
   FALLBACK_PRIORITY,
@@ -292,20 +292,20 @@ export {
 } from "./table-relation-column";
 
 export {
-  emptyOrderedAssociationsFile,
-  parseOrderedAssociationsFile,
-  serializeOrderedAssociationsFile,
-  ORDERED_ASSOCIATIONS_FILE_VERSION,
-} from "./ordered-associations-config/ordered-associations-file";
+  emptyOrderedCollectionsFile,
+  parseOrderedCollectionsFile,
+  serializeOrderedCollectionsFile,
+  ORDERED_COLLECTIONS_FILE_VERSION,
+} from "./ordered-collections-config/ordered-collections-file";
 export {
-  loadOrderedAssociationsFromContent,
-  invalidateOrderedAssociationsCache,
-} from "./ordered-associations-config/load";
+  loadOrderedCollectionsFromContent,
+  invalidateOrderedCollectionsCache,
+} from "./ordered-collections-config/load";
 
 export {
-  loadRelationshipTypesFromContent,
-  invalidateRelationshipTypesCache,
-} from "./relationship-types/load";
+  loadAssociationsFromContent,
+  invalidateAssociationsCache,
+} from "./associations/load";
 export {
   loadTableSchemasFromContent,
   hasTableSchemaEntry,
@@ -317,5 +317,5 @@ export {
   perspectiveForHostTable,
   targetTypeIdForHostTable,
   allowedTargetTypeIdsForPerspective,
-  relationshipTypeRulesFromRegistry,
-} from "./relationship-type-endpoints";
+  associationRulesFromRegistry,
+} from "./association-endpoints";

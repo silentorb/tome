@@ -13,13 +13,13 @@ import { resolve } from "node:path";
 import { normalizeRelationshipType } from "../src/relation-type";
 import {
   relationshipsFilePath,
-  relationshipTypesFilePath,
+  associationsFilePath,
 } from "../src/content/paths";
 import {
-  parseRelationshipTypesFile,
+  parseAssociationsFile,
   isDualPerspectiveType,
-  type RelationshipTypesFile,
-} from "../src/content/relationship-types-file";
+  type AssociationsFile,
+} from "../src/content/associations-file";
 import {
   parseRelationshipsFile,
   type RelationshipEntry,
@@ -31,10 +31,10 @@ function isUlidCompositeKey(type: string): boolean {
 
 function resolveExpectedComposite(
   entry: RelationshipEntry,
-  registry: RelationshipTypesFile,
+  registry: AssociationsFile,
 ): { target: string; rule: string } | null {
   const type = normalizeRelationshipType(entry.type);
-  const typeDef = registry.types[type];
+  const typeDef = registry.associations[type];
 
   if (typeDef && isDualPerspectiveType(typeDef)) {
     return null;
@@ -61,9 +61,9 @@ export function auditRelationships(contentDir: string): {
   blockers: { entry: RelationshipEntry; reason: string }[];
 } {
   const relPath = relationshipsFilePath(contentDir);
-  const typesPath = relationshipTypesFilePath(contentDir);
+  const typesPath = associationsFilePath(contentDir);
   const relFile = parseRelationshipsFile(readFileSync(relPath, "utf-8"));
-  const registry = parseRelationshipTypesFile(readFileSync(typesPath, "utf-8"));
+  const registry = parseAssociationsFile(readFileSync(typesPath, "utf-8"));
 
   const migrations = new Map<string, { target: string; rule: string; count: number }>();
   const blockers: { entry: RelationshipEntry; reason: string }[] = [];

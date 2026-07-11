@@ -4,11 +4,11 @@ import {
   expandRelationshipEntry,
 } from "../src/content/relationship-sync-expand";
 import type { RelationshipEntry } from "tome-flatfile";
-import type { RelationshipTypesFile } from "tome-flatfile";
+import type { AssociationsFile } from "tome-flatfile";
 
-const legacyRegistry: RelationshipTypesFile = {
+const legacyRegistry: AssociationsFile = {
   version: 1,
-  types: {
+  associations: {
     member_of: { perspectives: ["member_of", "members"] , traits: ["set"]},
     includes: { perspectives: ["includes", "includes"] },
     scenes_product: { perspectives: ["scenes", "product"] },
@@ -16,9 +16,9 @@ const legacyRegistry: RelationshipTypesFile = {
   },
 };
 
-const parentFirstRegistry: RelationshipTypesFile = {
+const parentFirstRegistry: AssociationsFile = {
   version: 1,
-  types: {
+  associations: {
     member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
     includes: { perspectives: ["includes", "includes"] },
     scenes_product: { perspectives: ["scenes", "product"] },

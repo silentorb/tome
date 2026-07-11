@@ -11,12 +11,12 @@ import {
   destroyTestContentFixture,
   seedTestNode,
 } from "../src/content/test-helpers";
-import { relationshipTypesFilePath } from "tome-flatfile";
+import { associationsFilePath } from "tome-flatfile";
 import {
   registerBidirectionalType,
-  serializeRelationshipTypesFile,
+  serializeAssociationsFile,
 } from "tome-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { invalidateAssociationsCache } from "tome-flatfile";
 
 describe("relationship-link-mutations", () => {
   const fixture = createTestContentFixture("tome-link-");
@@ -27,12 +27,12 @@ describe("relationship-link-mutations", () => {
   const databaseId = "0000000000000000000000002K";
 
   beforeAll(() => {
-    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    const registry = fixture.ctx.store.readAssociationsFile();
     registerBidirectionalType(registry, "parents", "children");
     registerBidirectionalType(registry, "features", "targets");
     registerBidirectionalType(registry, "scenes", "rows");
-    fixture.ctx.store.writeRelationshipTypesFile(registry);
-    invalidateRelationshipTypesCache();
+    fixture.ctx.store.writeAssociationsFile(registry);
+    invalidateAssociationsCache();
   });
 
   test("links and unlinks without via_database property", () => {

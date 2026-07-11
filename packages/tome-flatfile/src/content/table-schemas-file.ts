@@ -80,14 +80,14 @@ function parseRelationColumn(raw: unknown, path: string): TableRelationColumn {
   if (obj.type !== "relation") {
     throw new Error(`${path}: relation column must have type "relation"`);
   }
-  if (typeof obj.relationshipType !== "string" || !obj.relationshipType.trim()) {
-    throw new Error(`${path}: relation column requires non-empty relationshipType`);
+  if (typeof obj.association !== "string" || !obj.association.trim()) {
+    throw new Error(`${path}: relation column requires non-empty association`);
   }
   return {
     key: obj.key.trim(),
     name: obj.name.trim(),
     type: "relation",
-    relationshipType: normalizeRelationshipType(obj.relationshipType),
+    association: normalizeRelationshipType(obj.association),
   };
 }
 

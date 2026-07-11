@@ -1,7 +1,7 @@
 import {
   decodeEnumProperties,
   encodeEnumProperties,
-  loadRelationshipTypesFromContent,
+  loadAssociationsFromContent,
   loadSchemaFromContent,
   setTraitPerspectives,
 } from "tome-db";
@@ -38,7 +38,7 @@ export async function startTomeServer(options?: {
       decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
   };
   const memberPerspectives = () =>
-    setTraitPerspectives(loadRelationshipTypesFromContent(contentDir));
+    setTraitPerspectives(loadAssociationsFromContent(contentDir));
   const cache = await loadConfiguredCache(config.cache, dbPath, {
     propertyCodec,
     memberPerspectives,

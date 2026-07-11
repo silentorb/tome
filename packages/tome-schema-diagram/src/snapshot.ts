@@ -19,12 +19,12 @@ export function filterSnapshot(
     : snapshot.typeTables;
 
   const allowedTypeIds = new Set(typeTables.map((table) => table.id));
-  const relationshipTypeSet = config.relationshipTypes
-    ? new Set(config.relationshipTypes)
+  const associationSet = config.perspectives
+    ? new Set(config.perspectives)
     : null;
 
   const relationColumnEdges = snapshot.relationColumnEdges.filter((edge) => {
-    if (relationshipTypeSet && !relationshipTypeSet.has(edge.label)) return false;
+    if (associationSet && !associationSet.has(edge.label)) return false;
     if (!allowedTypeIds.has(edge.sourceTypeId)) return false;
     return allowedTypeIds.has(edge.targetTypeId);
   });

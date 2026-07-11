@@ -1,8 +1,8 @@
 import { generateNodeId } from "tome-flatfile/node-id";
 import type { Properties } from "tome-sqlite";
 import { normalizeRelationshipType } from "tome-flatfile";
-import { resolveCompositeType } from "tome-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { resolveAssociationId } from "tome-flatfile";
+import { loadAssociationsFromContent } from "tome-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
@@ -47,8 +47,8 @@ function ordinalFromProperties(properties: Record<string, unknown>): number | nu
 
 function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: string): number | undefined {
   const normalized = normalizeRelationshipType(type);
-  const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
-  const composite = resolveCompositeType(registry, normalized);
+  const registry = loadAssociationsFromContent(ctx.store.contentDir);
+  const composite = resolveAssociationId(registry, normalized);
   const outgoing = ctx.cache.listRelationshipsFromSource(sourceId).filter((c) => {
     const edgeType = normalizeRelationshipType(c.type);
     return edgeType === composite || edgeType === normalized;

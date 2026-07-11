@@ -13,7 +13,7 @@ import {
   type AppView,
   type DatabaseViewDetail,
   type NodePageDetail,
-  type OrderedAssociationViewDetail,
+  type OrderedCollectionViewDetail,
 } from "../shared/types";
 import {
   anchorFromLocation,
@@ -85,7 +85,7 @@ function viewToQueryParam(view: AppView): string | null {
 function activeTabIdFromNode(node: NodePageDetail): string | undefined {
   for (const section of node.sections) {
     if (section.type === "database") return section.databaseView.tabs.activeTabId;
-    if (section.type === "ordered-association") return section.view.tabs.activeTabId;
+    if (section.type === "ordered-collection") return section.view.tabs.activeTabId;
   }
   return undefined;
 }
@@ -488,13 +488,13 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     writeGraphShowRelevanceDiagnostics(value);
   }, []);
 
-  const updateOrderedAssociationView = useCallback((view: OrderedAssociationViewDetail) => {
+  const updateOrderedCollectionView = useCallback((view: OrderedCollectionViewDetail) => {
     setNode((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
         sections: prev.sections.map((section) =>
-          section.type === "ordered-association" ? { ...section, view } : section,
+          section.type === "ordered-collection" ? { ...section, view } : section,
         ),
       };
     });
@@ -531,16 +531,16 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       }
 
       const orderedSection = node.sections.find(
-        (section) => section.type === "ordered-association",
+        (section) => section.type === "ordered-collection",
       );
-      if (orderedSection?.type === "ordered-association") {
+      if (orderedSection?.type === "ordered-collection") {
         try {
           const detail = await api.getNode(node.id, { tab: tabId });
           const nextOrdered = detail.sections.find(
-            (section) => section.type === "ordered-association",
+            (section) => section.type === "ordered-collection",
           );
-          if (nextOrdered?.type === "ordered-association") {
-            updateOrderedAssociationView(nextOrdered.view);
+          if (nextOrdered?.type === "ordered-collection") {
+            updateOrderedCollectionView(nextOrdered.view);
           }
         } catch (err) {
           setError(err instanceof Error ? err.message : String(err));
@@ -550,7 +550,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
 
       void loadNode(node.id, { tab: tabId });
     },
-    [api, loadNode, node, setTableTab, syncStandaloneUrl, updateDatabaseView, updateOrderedAssociationView],
+    [api, loadNode, node, setTableTab, syncStandaloneUrl, updateDatabaseView, updateOrderedCollectionView],
   );
 
   const archiveCurrentNode = useCallback(
@@ -725,7 +725,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
             onEditorBaseline={syncEditorBaseline}
             onTitleChange={scheduleSaveTitle}
             onTabSelect={(tabId) => void selectTab(tabId)}
-            onOrderedAssociationViewChange={updateOrderedAssociationView}
+            onOrderedCollectionViewChange={updateOrderedCollectionView}
             onArchiveNode={archiveCurrentNode}
             onUnarchiveNode={unarchiveCurrentNode}
             onDeleteNode={deleteCurrentNode}

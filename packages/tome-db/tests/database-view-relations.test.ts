@@ -2,7 +2,7 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { contentModelDir, dynamicFieldsFilePath, relationshipTypesFilePath, tableSchemasFilePath } from "tome-flatfile";
+import { contentModelDir, dynamicFieldsFilePath, associationsFilePath, tableSchemasFilePath } from "tome-flatfile";
 import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
@@ -17,12 +17,12 @@ import {
 } from "../src/content/test-helpers";
 import { RELATIONSHIPS_FILE_VERSION } from "tome-flatfile";
 import {
-  emptyRelationshipTypesFile,
+  emptyAssociationsFile,
   registerSetMembershipType,
   registerTypeDefinition,
-  serializeRelationshipTypesFile,
+  serializeAssociationsFile,
 } from "tome-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { invalidateAssociationsCache } from "tome-flatfile";
 
 describe("database-view-relations", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-view-rel-"));
@@ -46,7 +46,7 @@ describe("database-view-relations", () => {
   const partId = "0000000000000000000000000M";
   const featuresDb = "0000000000000000000000002P";
 
-  const relationTypes = emptyRelationshipTypesFile();
+  const relationTypes = emptyAssociationsFile();
   registerSetMembershipType(relationTypes);
   registerTypeDefinition(relationTypes, "prop_type_inspirations", {
     perspectives: ["prop_type", "inspirations"],
@@ -76,10 +76,10 @@ describe("database-view-relations", () => {
     perspectives: ["story_scale", "inspirations"],
   });
   writeFileSync(
-    relationshipTypesFilePath(contentDir),
-    serializeRelationshipTypesFile(relationTypes),
+    associationsFilePath(contentDir),
+    serializeAssociationsFile(relationTypes),
   );
-  invalidateRelationshipTypesCache();
+  invalidateAssociationsCache();
 
   writeFileSync(
     tableSchemasFilePath(contentDir),
@@ -92,7 +92,7 @@ describe("database-view-relations", () => {
               key: "type",
               name: "Type",
               type: "relation",
-              relationshipType: "prop_type_inspirations",
+              association: "prop_type_inspirations",
             },
           ],
         },
@@ -154,13 +154,13 @@ describe("database-view-relations", () => {
                 key: "parents",
                 name: "Parents",
                 type: "relation",
-                relationshipType: "parents_children",
+                association: "parents_children",
               },
               {
                 key: "children",
                 name: "Children",
                 type: "relation",
-                relationshipType: "parents_children",
+                association: "parents_children",
               },
             ],
           },
@@ -234,12 +234,12 @@ describe("database-view-relations", () => {
     seedTestNode(fixture, { id: locationsDb, properties: typeTableMarkerProperties("Locations") });
     seedTestNode(fixture, { id: locationA, properties: { title: "North grove" } });
     seedTestNode(fixture, { id: locationB, properties: { title: "South grove" } });
-    const registry = emptyRelationshipTypesFile();
+    const registry = emptyAssociationsFile();
     registerSetMembershipType(registry);
     registerTypeDefinition(registry, "neighbor", {
       perspectives: ["neighbor", "neighbor"],
     });
-    fixture.ctx.store.writeRelationshipTypesFile(registry);
+    fixture.ctx.store.writeAssociationsFile(registry);
     fixture.ctx.store.writeRelationshipsFile({
       version: RELATIONSHIPS_FILE_VERSION,
       relationships: [
@@ -303,7 +303,7 @@ describe("database-view-relations", () => {
                 key: "part",
                 name: "Part",
                 type: "relation",
-                relationshipType: "scenes_part",
+                association: "scenes_part",
               },
             ],
           },
@@ -397,7 +397,7 @@ describe("database-view-relations", () => {
                 key: "story_scale",
                 name: "Story scale",
                 type: "relation",
-                relationshipType: "story_scale_inspirations",
+                association: "story_scale_inspirations",
               },
             ],
           },

@@ -16,12 +16,12 @@ The content root is a directory conventionally named `content/`. Tools discover 
       {nodeId}.md                # one node per file
   model/                         # workspace model (flat JSON)
     workspace.json
-    relationship-types.json
+    associations.json
     schema.json
     table-schemas.json
     views.json
     dynamic-fields.json
-    ordered-associations.json
+    ordered-collections.json
     extensions.json
 ```
 
@@ -145,7 +145,7 @@ Path: `data/relationships.json`.
 | `archived` | boolean | Optional; omit unless `true` |
 | `properties` | object | Optional; omit when empty |
 
-**Ordered tuple, not named source/target.** Positions `a`/`b` have no inherent direction. Meaning comes from `relationship-types.json` `perspectives[0|1]`. Do not lexicographically sort endpoints.
+**Ordered tuple, not named source/target.** Positions `a`/`b` have no inherent direction. Meaning comes from `associations.json` `perspectives[0|1]`. Do not lexicographically sort endpoints.
 
 **Type normalization:** trim → lowercase → `-` → `_`.
 
@@ -161,7 +161,7 @@ Path: `data/relationships.json`.
 
 All model files live under `model/`. Unless noted, serialize as JSON indent 2 + trailing newline. Relationship type and perspective slugs use the same normalization as relationship `type` fields.
 
-### `relationship-types.json` (version 1)
+### `associations.json` (version 1)
 
 Registry of composite storage types.
 
@@ -226,7 +226,7 @@ Enums and optional relationship rules.
 | Field | Notes |
 | --- | --- |
 | `version` | number, required |
-| `relationshipRules` | array (optional; default empty). Endpoint constraints increasingly live on `relationship-types.json` `endpoints` instead |
+| `relationshipRules` | array (optional; default empty). Endpoint constraints increasingly live on `associations.json` `endpoints` instead |
 | `enums` | object (optional; default `{}`) |
 
 **Relationship rule entry**
@@ -259,7 +259,7 @@ Column definitions for type tables (keys are type-node ULIDs).
       "columns": [
         { "key": "name", "name": "Name", "type": "text" },
         { "key": "status", "name": "Status", "type": "select", "enumId": "priority" },
-        { "key": "related", "name": "Related", "type": "relation", "relationshipType": "related_to" }
+        { "key": "related", "name": "Related", "type": "relation", "association": "related_to" }
       ],
       "membershipComposite": "member_of"
     }
@@ -283,7 +283,7 @@ Column definitions for type tables (keys are type-node ULIDs).
 
 `checkbox` | `date` | `email` | `files` | `multi_select` | `number` | `phone_number` | `rich_text` | `select` | `status` | `text` | `url`
 
-**Relation column:** `{ key, name, type: "relation", relationshipType }`
+**Relation column:** `{ key, name, type: "relation", association }`
 
 ### `views.json` (version 2)
 
@@ -296,7 +296,7 @@ Strict version **2**. Table tab definitions (custom and generated).
     {
       "id": "all",
       "nodeId": "01EXAMPLETYPENODEID000000001",
-      "relationshipType": "member_of",
+      "association": "member_of",
       "name": "All",
       "sorts": [{ "column": "name", "direction": "asc" }],
       "properties": { "columnOrder": ["name", "status"] },
@@ -304,22 +304,22 @@ Strict version **2**. Table tab definitions (custom and generated).
     },
     {
       "nodeId": "01EXAMPLETYPENODEID000000001",
-      "relationshipType": "member_of",
+      "association": "member_of",
       "generator": "some_provider"
     }
   ]
 }
 ```
 
-**Custom view:** `{ id, nodeId, relationshipType, name, sorts, properties?, hiddenColumns? }`
+**Custom view:** `{ id, nodeId, association, name, sorts, properties?, hiddenColumns? }`
 
 - `sorts`: `{ column, direction: "asc"|"desc" }[]`
 - `properties.columnOrder`: optional string array
-- Unique custom key: `(nodeId, relationshipType, id)`
+- Unique custom key: `(nodeId, association, id)`
 
-**Generated view:** `{ nodeId, relationshipType, generator }` — must not include `id`, `name`, or `sorts`.
+**Generated view:** `{ nodeId, association, generator }` — must not include `id`, `name`, or `sorts`.
 
-Do not mix generated and custom views for the same `(nodeId, relationshipType)` pair. At most one generated view per pair.
+Do not mix generated and custom views for the same `(nodeId, association)` pair. At most one generated view per pair.
 
 ### `workspace.json` (version 1)
 
@@ -418,7 +418,7 @@ Bindings for computed table columns. Parser validates the wrapper; entry fields 
 
 **Column-set entry:** same pattern with `columnKeyPattern` / `columnNamePattern` instead of fixed keys/names.
 
-### `ordered-associations.json` (version 1)
+### `ordered-collections.json` (version 1)
 
 Configs for ordered part/group associations (e.g. scenes by book).
 
@@ -448,7 +448,7 @@ Configs for ordered part/group associations (e.g. scenes by book).
 
 **Config fields:** `id`, `typeDatabaseId`, `scopeCompositeType`, `groupCompositeType`, `partProductCompositeType`, `groupTypeDatabaseId`, `unassignedGroupTitle`; optional `columnViewName`, `excludedColumnKeys`.
 
-Both `typeDatabaseId` and `groupTypeDatabaseId` must declare a `membershipComposite` in `table-schemas.json` whose type has the **ordered** trait in `relationship-types.json`.
+Both `typeDatabaseId` and `groupTypeDatabaseId` must declare a `membershipComposite` in `table-schemas.json` whose type has the **ordered** trait in `associations.json`.
 
 ### `extensions.json` (version 1)
 
@@ -493,13 +493,13 @@ Runtime extension registration. Version defaults to `1` if omitted on read.
 | --- | --- | --- |
 | `data/{shard}/{id}.md` | required | At least home, archive, and any referenced nodes |
 | `data/relationships.json` | required | May be `{ "version": 3, "relationships": [] }` |
-| `model/relationship-types.json` | required | At least types you use (often include `member_of`) |
+| `model/associations.json` | required | At least types you use (often include `member_of`) |
 | `model/workspace.json` | required | Home, archive, anchors, quick links |
 | `model/schema.json` | optional | Needed when using enums / rules |
 | `model/table-schemas.json` | optional | Needed for type-table columns |
 | `model/views.json` | optional | Needed for custom/generated table tabs |
 | `model/dynamic-fields.json` | optional | Computed columns |
-| `model/ordered-associations.json` | optional | Ordered association UIs |
+| `model/ordered-collections.json` | optional | Ordered collection UIs |
 | `model/extensions.json` | optional | Extension packages |
 
 A Tome-compatible writer should:
@@ -508,7 +508,7 @@ A Tome-compatible writer should:
 2. Write valid frontmatter + body node files.
 3. Store relationships as v3 ordered `(a, b, type)` tuples with normalized type slugs.
 4. Keep enum labels as strings in relationship properties.
-5. Align tuple orientation with `perspectives` in `relationship-types.json`.
+5. Align tuple orientation with `perspectives` in `associations.json`.
 
 ## Non-goals
 
@@ -531,15 +531,15 @@ Normative parsers and path helpers in this package:
 | Node markdown | `src/content/node-file.ts` |
 | Relationships v3 | `src/content/relationships-file.ts` |
 | Type slug normalization | `src/relation-type.ts` |
-| Relationship types | `src/content/relationship-types-file.ts` |
+| Associations | `src/content/associations-file.ts` |
 | Schema / enums | `src/schema-rules/schema-file.ts` |
 | Table schemas | `src/content/table-schemas-file.ts` |
 | Views | `src/content/views-file.ts` |
 | Workspace | `src/workspace/workspace-file.ts` |
 | Dynamic fields | `src/content/dynamic-fields-file.ts` |
-| Ordered associations | `src/ordered-associations-config/ordered-associations-file.ts` |
+| Ordered collections | `src/ordered-collections-config/ordered-collections-file.ts` |
 | Extensions | `src/extensions/extensions-file.ts` |
 | Body link forms | `src/markdown-links.ts`, `src/dynamic-node-links.ts` |
-| Set / ordered traits | `src/relationship-type-traits.ts` |
+| Set / ordered traits | `src/association-traits.ts` |
 
-Related behavioral docs (not format contracts): `docs/features/tome-db.md`, `set-membership.md`, `schema.md`, `views.md`, `table-schemas.md`, `ordered-associations.md`, `extensions.md`, `dynamic-table-fields.md`.
+Related behavioral docs (not format contracts): `docs/features/tome-db.md`, `set-membership.md`, `schema.md`, `views.md`, `table-schemas.md`, `ordered-collections.md`, `extensions.md`, `dynamic-table-fields.md`.

@@ -58,14 +58,14 @@ describe("writeSiteData", () => {
         {
           id: "default",
           nodeId: typeId,
-          relationshipType: "members",
+          perspective: "members",
           name: "Default",
           sorts: [{ column: "name", direction: "asc" }],
         },
         {
           id: "all",
           nodeId: typeId,
-          relationshipType: "members",
+          perspective: "members",
           name: "All",
           sorts: [{ column: "name", direction: "desc" }],
         },

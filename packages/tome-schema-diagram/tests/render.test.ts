@@ -128,7 +128,7 @@ describe("schema diagram render", () => {
   test("parseSchemaDiagramConfig defaults", () => {
     const config = parseSchemaDiagramConfig({});
     expect(config.typeIds).toBeNull();
-    expect(config.relationshipTypes).toBeNull();
+    expect(config.perspectives).toBeNull();
     expect(config.theme).toBe("default");
     expect(config.direction).toBe("TB");
     expect(config.memberBadgePosition).toBe("bottom-right");

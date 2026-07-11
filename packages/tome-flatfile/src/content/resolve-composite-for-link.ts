@@ -5,7 +5,7 @@ import {
   isSetTraitType,
   parentNodeId,
   resolveSetTraitComposite,
-} from "../relationship-type-traits";
+} from "../association-traits";
 import { getTableSchema, relationColumns } from "../table-schema";
 import { loadTableSchemasFromContent } from "../table-schemas/load";
 import {
@@ -13,27 +13,27 @@ import {
   relationColumnCompositeType,
 } from "../table-relation-column";
 import type { RelationshipEntry } from "./relationships-file";
-import type { RelationshipTypesFile } from "./relationship-types-file";
-import { isDualPerspectiveType } from "./relationship-types-file";
+import type { AssociationsFile } from "./associations-file";
+import { isDualPerspectiveType } from "./associations-file";
 
 export class LinkResolutionError extends Error {
   constructor(public readonly localType: string) {
     super(
       `Cannot resolve storage type for perspective "${localType}": ` +
-        `no registered relationship type in relationship-types.json defines this perspective.`,
+        `no registered relationship type in associations.json defines this perspective.`,
     );
     this.name = "LinkResolutionError";
   }
 }
 
 function memberDatabaseId(
-  registry: RelationshipTypesFile,
+  registry: AssociationsFile,
   nodeId: string,
   relationships: RelationshipEntry[],
   setNodeIds: Set<string>,
 ): string | null {
   for (const entry of relationships) {
-    const def = registry.types[normalizeRelationshipType(entry.type)];
+    const def = registry.associations[normalizeRelationshipType(entry.type)];
     if (!isSetTraitType(def)) continue;
     const child = childNodeId(def, entry);
     const parent = parentNodeId(def, entry);
@@ -43,7 +43,7 @@ function memberDatabaseId(
 }
 
 function schemaIdForNode(
-  registry: RelationshipTypesFile,
+  registry: AssociationsFile,
   nodeId: string,
   relationships: RelationshipEntry[],
   setNodeIds: Set<string>,
@@ -57,12 +57,12 @@ function schemaIdForNode(
  *
  * Resolution order:
  *  0. set-trait composites (e.g. "member_of")
- *  1. table-schema relation column on source type → column's relationshipType
+ *  1. table-schema relation column on source type → column's association
  *  2. direct registry lookup for dual-perspective composite containing the perspective
  *  3. throw LinkResolutionError
  */
-export function resolveCompositeTypeForLink(
-  registry: RelationshipTypesFile,
+export function resolveAssociationIdForLink(
+  registry: AssociationsFile,
   relationships: RelationshipEntry[],
   contentDir: string,
   source: string,
@@ -89,7 +89,7 @@ export function resolveCompositeTypeForLink(
     }
   }
 
-  for (const [composite, def] of Object.entries(registry.types)) {
+  for (const [composite, def] of Object.entries(registry.associations)) {
     if (isDualPerspectiveType(def) && def.perspectives.includes(normalized)) {
       return composite;
     }

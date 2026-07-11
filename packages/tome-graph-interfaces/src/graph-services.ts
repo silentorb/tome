@@ -19,9 +19,9 @@ import type {
 import type { NodeLifecycleError } from "./node-lifecycle";
 import type { NodePageDetail } from "./node-page-sections";
 import type {
-  OrderedAssociationMoveParams,
-  OrderedAssociationViewDetail,
-} from "./ordered-associations";
+  OrderedCollectionMoveParams,
+  OrderedCollectionViewDetail,
+} from "./ordered-collections";
 import type { NodeSummary } from "./queries";
 import type {
   LinkOutgoingRelationshipError,
@@ -50,19 +50,19 @@ export interface TomeGraphServices {
   getNodeViews(nodeId: string): ViewDefinition[];
   createRelationshipView(
     nodeId: string,
-    relationshipType: string,
+    association: string,
     input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
   ): ViewDefinition;
   updateRelationshipView(
     nodeId: string,
-    relationshipType: string,
+    association: string,
     viewId: string,
     input: { name?: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
   ): ViewDefinition;
-  deleteRelationshipView(nodeId: string, relationshipType: string, viewId: string): void;
+  deleteRelationshipView(nodeId: string, association: string, viewId: string): void;
   patchRelationshipViews(
     nodeId: string,
-    relationshipType: string,
+    association: string,
     input: { viewOrder?: string[]; properties?: ViewProperties },
   ): { views?: ViewDefinition[]; properties?: ViewProperties };
   deleteDatabaseColumn(
@@ -85,10 +85,10 @@ export interface TomeGraphServices {
     sourceId: string,
     type: string,
   ): { allowedTargetTypeIds: string[] | null };
-  moveOrderedAssociation(
+  moveOrderedCollection(
     configId: string,
-    params: OrderedAssociationMoveParams,
-  ): OrderedAssociationViewDetail | null;
+    params: OrderedCollectionMoveParams,
+  ): OrderedCollectionViewDetail | null;
   search(
     query: string,
     limit?: number,

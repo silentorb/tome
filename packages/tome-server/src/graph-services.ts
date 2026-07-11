@@ -1,5 +1,5 @@
 import {
-  applyOrderedAssociationMove,
+  applyOrderedCollectionMove,
   archiveNode as archiveNodeInDb,
   unarchiveNode as unarchiveNodeInDb,
   addWorkspaceQuickLink,
@@ -15,8 +15,8 @@ import {
   getDatabaseViewDetail,
   getNodePageDetail,
   loadSchemaFromContent,
-  loadRelationshipTypesFromContent,
-  relationshipTypeRuleContext,
+  loadAssociationsFromContent,
+  associationRuleContext,
   searchNodes,
   listRecentNodesByModifiedAt,
   updateNodeBody,
@@ -40,8 +40,8 @@ import {
   type CreateNodeResult,
   type GraphLodSnapshot,
   type GraphSnapshot,
-  type OrderedAssociationMoveParams,
-  type OrderedAssociationViewDetail,
+  type OrderedCollectionMoveParams,
+  type OrderedCollectionViewDetail,
   type NodeLifecycleError,
   type SchemaFile,
   type ViewSortSpec,
@@ -134,28 +134,28 @@ function buildGraphServices(
     },
     createRelationshipView(
       nodeId: string,
-      relationshipType: string,
+      association: string,
       input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
     ) {
-      return createRelationshipView(writeCtx, nodeId, relationshipType, input);
+      return createRelationshipView(writeCtx, nodeId, association, input);
     },
     updateRelationshipView(
       nodeId: string,
-      relationshipType: string,
+      association: string,
       viewId: string,
       input: { name?: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
     ) {
-      return updateRelationshipView(writeCtx, nodeId, relationshipType, viewId, input);
+      return updateRelationshipView(writeCtx, nodeId, association, viewId, input);
     },
-    deleteRelationshipView(nodeId: string, relationshipType: string, viewId: string) {
-      deleteRelationshipView(writeCtx, nodeId, relationshipType, viewId);
+    deleteRelationshipView(nodeId: string, association: string, viewId: string) {
+      deleteRelationshipView(writeCtx, nodeId, association, viewId);
     },
     patchRelationshipViews(
       nodeId: string,
-      relationshipType: string,
+      association: string,
       input: { viewOrder?: string[]; properties?: ViewProperties },
     ) {
-      return patchRelationshipViews(writeCtx, nodeId, relationshipType, input);
+      return patchRelationshipViews(writeCtx, nodeId, association, input);
     },
     deleteDatabaseColumn(databaseId: string, columnKey: string) {
       return deleteDatabaseColumnInDb(writeCtx, databaseId, columnKey);
@@ -193,17 +193,17 @@ function buildGraphServices(
       return writeCtx.cache.listDistinctRelationshipTypes();
     },
     getRelationshipLinkOptions(sourceId: string, type: string) {
-      const registry = loadRelationshipTypesFromContent(contentPath);
-      const rule = relationshipTypeRuleContext(registry, cache, sourceId, type, contentPath);
+      const registry = loadAssociationsFromContent(contentPath);
+      const rule = associationRuleContext(registry, cache, sourceId, type, contentPath);
       return {
         allowedTargetTypeIds: rule ? [...rule.allowedTargetTypeIds] : null,
       };
     },
-    moveOrderedAssociation(
+    moveOrderedCollection(
       configId: string,
-      params: OrderedAssociationMoveParams,
-    ): OrderedAssociationViewDetail | null {
-      return applyOrderedAssociationMove(writeCtx, configId, params);
+      params: OrderedCollectionMoveParams,
+    ): OrderedCollectionViewDetail | null {
+      return applyOrderedCollectionMove(writeCtx, configId, params);
     },
     search(
       query: string,
@@ -274,8 +274,8 @@ function buildGraphServices(
       sourceId: string,
       input: { type: string; title: string; properties?: Record<string, string> },
     ): CreateNodeResult | CreateNodeError {
-      const registry = loadRelationshipTypesFromContent(contentPath);
-      const rule = relationshipTypeRuleContext(
+      const registry = loadAssociationsFromContent(contentPath);
+      const rule = associationRuleContext(
         registry,
         cache,
         sourceId,

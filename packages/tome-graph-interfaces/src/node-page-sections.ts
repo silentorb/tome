@@ -2,7 +2,7 @@ import type { DatabaseColumnDef, DatabaseViewDetail } from "./database-view";
 import type { NodeDetail } from "./queries";
 import type { NodePageMetadata } from "./node-metadata";
 import type { PropertiesSection } from "./node-type-properties";
-import type { OrderedAssociationViewDetail } from "./ordered-associations";
+import type { OrderedCollectionViewDetail } from "./ordered-collections";
 
 export interface MarkdownSection {
   type: "markdown";
@@ -14,10 +14,10 @@ export interface DatabaseTableSection {
   databaseView: DatabaseViewDetail;
 }
 
-export interface OrderedAssociationSection {
-  type: "ordered-association";
+export interface OrderedCollectionSection {
+  type: "ordered-collection";
   configId: string;
-  view: OrderedAssociationViewDetail;
+  view: OrderedCollectionViewDetail;
 }
 
 export interface RelationRow {
@@ -38,7 +38,7 @@ export interface RelationTableSection {
   allowedTargetTypeIds?: string[];
   /** Inline table add control: link existing record vs none (registry linkExisting presentation). */
   addMode: RelationTableAddMode;
-  /** Optional link-existing button label from relationship-types perspectiveLabels. */
+  /** Optional link-existing button label from associations perspectiveLabels. */
   linkAddLabel?: string;
   columns: string[];
   columnDefs?: DatabaseColumnDef[];
@@ -48,7 +48,7 @@ export interface RelationTableSection {
 export type NodeSection =
   | MarkdownSection
   | DatabaseTableSection
-  | OrderedAssociationSection
+  | OrderedCollectionSection
   | RelationTableSection;
 
 export interface NodePageDetail extends NodeDetail {

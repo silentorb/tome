@@ -16,7 +16,7 @@ import {
 } from "../src/relationship-traverse";
 import type { RelationshipEntry } from "tome-flatfile";
 import { RELATIONSHIPS_FILE_VERSION } from "tome-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { invalidateAssociationsCache } from "tome-flatfile";
 
 describe("relationship-traverse", () => {
   const fixture = createTestContentFixture("tome-rel-traverse-");
@@ -38,15 +38,15 @@ describe("relationship-traverse", () => {
   seedTestTableSchema(fixture, locationsDb, []);
   const typesFile = {
     version: 1 as const,
-    types: {
+    associations: {
       scenes_product: { perspectives: ["scenes", "product"] },
       scenes_part: { perspectives: ["scenes", "part"] },
       scenes_location: { perspectives: ["location", "scenes"] },
       member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
     },
   };
-  fixture.ctx.store.writeRelationshipTypesFile(typesFile);
-  invalidateRelationshipTypesCache();
+  fixture.ctx.store.writeAssociationsFile(typesFile);
+  invalidateAssociationsCache();
 
   // Authored tuple order carries the semantics: for "member_of" the set is at
   // index 0 and the member at index 1; asymmetric composites place

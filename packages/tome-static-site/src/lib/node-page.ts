@@ -2,7 +2,7 @@ import type {
   SiteNode,
   StaticDatabaseSection,
   StaticNodeSection,
-  StaticOrderedAssociationSection,
+  StaticOrderedCollectionSection,
   TabItemsPayload,
 } from "./site-types";
 
@@ -42,9 +42,9 @@ export function buildSectionsForTab(
         defaultSort: tabPayload.defaultSort,
       } satisfies StaticDatabaseSection;
     }
-    if (section.type === "ordered-association" && tabPayload.kind === "ordered-association") {
+    if (section.type === "ordered-collection" && tabPayload.kind === "ordered-collection") {
       return {
-        type: "ordered-association",
+        type: "ordered-collection",
         configId: section.configId,
         view: {
           ...tabPayload.view,
@@ -54,7 +54,7 @@ export function buildSectionsForTab(
           },
         },
         defaultSort: tabPayload.defaultSort,
-      } satisfies StaticOrderedAssociationSection;
+      } satisfies StaticOrderedCollectionSection;
     }
     return section;
   });

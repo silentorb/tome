@@ -16,7 +16,7 @@ describe("views-file", () => {
         {
           id: "all",
           nodeId: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
-          relationshipType: "members",
+          perspective: "members",
           name: "All",
           sorts: [{ column: "name", direction: "asc" as const }],
           properties: { columnOrder: ["status", "priority"] },
@@ -24,7 +24,7 @@ describe("views-file", () => {
         },
         {
           nodeId: "EEEEEEEEEEEEEEEEEEEEEEEEEE",
-          relationshipType: "members",
+          perspective: "members",
           generator: "scenes-by-book",
         },
       ],

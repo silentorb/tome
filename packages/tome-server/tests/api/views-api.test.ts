@@ -26,7 +26,7 @@ describe("views API", () => {
           {
             id: "all",
             nodeId,
-            relationshipType: "members",
+            perspective: "members",
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
           },
@@ -35,7 +35,7 @@ describe("views API", () => {
     );
 
     const { handler } = createTestApi({ dbPath: join(dir, "test.sqlite"), contentDir });
-    const base = `/api/views/nodes/${nodeId}/relationships/members`;
+    const base = `/api/views/nodes/${nodeId}/perspectives/members`;
 
     const created = await handler(
       new Request(`http://127.0.0.1${base}/views`, {

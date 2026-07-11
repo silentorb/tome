@@ -16,7 +16,7 @@ export interface CreateDatabaseColumnInput {
   name: string;
   type: TableColumnType;
   enumId?: string;
-  relationshipType?: string;
+  association?: string;
 }
 
 export interface UpdateDatabaseColumnInput {
@@ -24,7 +24,7 @@ export interface UpdateDatabaseColumnInput {
   newKey?: string;
   type?: TableColumnType;
   enumId?: string | null;
-  relationshipType?: string;
+  association?: string;
 }
 
 export interface DatabaseColumnMutationResult {

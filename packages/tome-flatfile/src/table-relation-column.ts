@@ -1,23 +1,23 @@
-import type { RelationshipTypesFile } from "./content/relationship-types-file";
+import type { AssociationsFile } from "./content/associations-file";
 import type { TableRelationColumn } from "./content/table-schemas-file";
 import {
   perspectiveForHostTable,
   targetTypeIdForHostTable,
-} from "./relationship-type-endpoints";
+} from "./association-endpoints";
 import { normalizeRelationshipType } from "./relation-type";
 import { slugifyPropertyKey } from "./table-schema";
 
 export function relationColumnCompositeType(col: TableRelationColumn): string {
-  return normalizeRelationshipType(col.relationshipType);
+  return normalizeRelationshipType(col.association);
 }
 
 export function perspectiveForRelationColumn(
-  registry: RelationshipTypesFile,
+  registry: AssociationsFile,
   hostTypeId: string,
   col: TableRelationColumn,
 ): string {
   const composite = relationColumnCompositeType(col);
-  const def = registry.types[composite];
+  const def = registry.associations[composite];
   if (def) {
     const perspective = perspectiveForHostTable(def, hostTypeId);
     if (perspective) return perspective;
@@ -26,12 +26,12 @@ export function perspectiveForRelationColumn(
 }
 
 export function targetTypeIdForRelationColumn(
-  registry: RelationshipTypesFile,
+  registry: AssociationsFile,
   hostTypeId: string,
   col: TableRelationColumn,
 ): string | null {
   const composite = relationColumnCompositeType(col);
-  const def = registry.types[composite];
+  const def = registry.associations[composite];
   if (!def) return null;
   return targetTypeIdForHostTable(def, hostTypeId);
 }

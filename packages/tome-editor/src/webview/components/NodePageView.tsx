@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { DatabaseTableView } from "./DatabaseTableView";
 import { TomeEditor } from "./TomeEditor";
-import { OrderedAssociationView } from "./OrderedAssociationView";
+import { OrderedCollectionView } from "./OrderedCollectionView";
 import { PageActionsMenu } from "./PageActionsMenu";
 import { PageTitle } from "./PageTitle";
 import { NodeMetadataPanel } from "./NodeMetadataPanel";
 import { RelationSectionView } from "./RelationSectionView";
 import { AddRelationshipDialog } from "./AddRelationshipDialog";
 import type { EditorApi } from "../api/client";
-import type { OrderedAssociationViewDetail, NodePageDetail } from "../../shared/types";
+import type { OrderedCollectionViewDetail, NodePageDetail } from "../../shared/types";
 import { isProtectedEditorNode } from "../../shared/types";
 import { isEffectivelyEmptyMarkdown, resolvePageTitleAndContent } from "../markdown-body";
 import { SectionTitle } from "./NodeNameLink";
@@ -25,7 +25,7 @@ interface NodePageViewProps {
   onEditorBaseline?: (body: string) => void;
   onTitleChange: (title: string) => void;
   onTabSelect: (tabId: string) => void;
-  onOrderedAssociationViewChange: (view: OrderedAssociationViewDetail) => void;
+  onOrderedCollectionViewChange: (view: OrderedCollectionViewDetail) => void;
   onArchiveNode: (nodeId: string) => Promise<void>;
   onUnarchiveNode: (nodeId: string) => Promise<void>;
   onDeleteNode: (nodeId: string) => Promise<void>;
@@ -50,7 +50,7 @@ export function NodePageView({
   onEditorBaseline,
   onTitleChange,
   onTabSelect,
-  onOrderedAssociationViewChange,
+  onOrderedCollectionViewChange,
   onArchiveNode,
   onUnarchiveNode,
   onDeleteNode,
@@ -183,10 +183,10 @@ export function NodePageView({
               </section>
             );
           }
-          if (section.type === "ordered-association") {
+          if (section.type === "ordered-collection") {
             return (
               <section
-                key={`ordered-association-${section.configId}-${section.view.tabs.activeTabId}`}
+                key={`ordered-collection-${section.configId}-${section.view.tabs.activeTabId}`}
                 className="tome-record-section"
               >
                 <SectionTitle
@@ -196,13 +196,13 @@ export function NodePageView({
                     node.id === section.view.typeDatabaseId ? null : section.view.typeDatabaseId
                   }
                 />
-                <OrderedAssociationView
+                <OrderedCollectionView
                   api={api}
                   nodeId={node.id}
                   configId={section.configId}
                   view={section.view}
                   onTabSelect={onTabSelect}
-                  onViewChange={onOrderedAssociationViewChange}
+                  onViewChange={onOrderedCollectionViewChange}
                   onCellUpdated={onTableCellUpdated}
                   onArchiveNode={onArchiveNode}
                   onDeleteNode={onDeleteNode}

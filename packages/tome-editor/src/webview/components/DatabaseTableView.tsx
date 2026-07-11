@@ -82,7 +82,7 @@ export function DatabaseTableView({
         hidden.add(columnKey);
       }
 
-      await api.updateRelationshipView(nodeId, databaseView.viewRelationshipType, activeTabId, {
+      await api.updateRelationshipView(nodeId, databaseView.viewAssociation, activeTabId, {
         hiddenColumns: [...hidden],
       });
       onTabsUpdated?.();
@@ -90,7 +90,7 @@ export function DatabaseTableView({
     [
       api,
       databaseView.tabs.activeTabId,
-      databaseView.viewRelationshipType,
+      databaseView.viewAssociation,
       hiddenColumns,
       nodeId,
       onTabsUpdated,
@@ -298,7 +298,7 @@ export function DatabaseTableView({
             onCreateTab={async (input) => {
               const view = await api.createRelationshipView(
                 nodeId,
-                databaseView.viewRelationshipType,
+                databaseView.viewAssociation,
                 input,
               );
               onTabSelect(view.id);
@@ -307,7 +307,7 @@ export function DatabaseTableView({
             onUpdateTab={async (tabId, input) => {
               await api.updateRelationshipView(
                 nodeId,
-                databaseView.viewRelationshipType,
+                databaseView.viewAssociation,
                 tabId,
                 input,
               );
@@ -316,13 +316,13 @@ export function DatabaseTableView({
             onDeleteTab={async (tabId) => {
               await api.deleteRelationshipView(
                 nodeId,
-                databaseView.viewRelationshipType,
+                databaseView.viewAssociation,
                 tabId,
               );
               onTabsUpdated?.();
             }}
             onTabsReorder={async (tabOrder) => {
-              await api.patchRelationshipViews(nodeId, databaseView.viewRelationshipType, {
+              await api.patchRelationshipViews(nodeId, databaseView.viewAssociation, {
                 viewOrder: tabOrder,
               });
               onTabsUpdated?.();
@@ -345,7 +345,7 @@ export function DatabaseTableView({
             renderCell={renderCell}
             rowPageActions={rowPageActions}
             onColumnsReorder={async (columnOrder) => {
-              await api.patchRelationshipViews(nodeId, databaseView.viewRelationshipType, {
+              await api.patchRelationshipViews(nodeId, databaseView.viewAssociation, {
                 properties: { columnOrder },
               });
               onTabsUpdated?.();

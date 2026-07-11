@@ -3,25 +3,25 @@ import { getDatabaseViewDetail } from "./database-view";
 import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./property-enums";
 import {
   getConfigByProvider,
-  getOrderedAssociationView,
-} from "./ordered-associations";
+  getOrderedCollectionView,
+} from "./ordered-collections";
 import { getNodeDetail } from "./queries";
 import { getNodePageMetadata } from "./node-metadata";
 import { buildPropertiesSection } from "./node-type-properties";
 import {
   relationSectionSupportsLinkExisting,
-  relationshipTypeRuleContext,
-} from "./relationship-type-endpoints";
+  associationRuleContext,
+} from "./association-endpoints";
 import { findTypeNodeByTitle, typeIdsForInstance } from "./node-capabilities";
 import { normalizeRelationshipType } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
-import { resolveCompositeType } from "tome-flatfile";
+import { resolveAssociationId } from "tome-flatfile";
 import {
-  formatRelationshipTypeLabel,
+  formatAssociationLabel,
   perspectiveDisplayLabel,
   perspectiveLinkAddLabel,
-} from "./relationship-type-label";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
+} from "./association-label";
+import { loadAssociationsFromContent } from "tome-flatfile";
 import {
   isMemberSidePerspective,
   isSetSidePerspective,
@@ -53,7 +53,7 @@ export type {
   NodePageDetail,
   NodePageMetadata,
   NodeSection,
-  OrderedAssociationSection,
+  OrderedCollectionSection,
   PropertiesSection,
   RelationRow,
   RelationTableAddMode,
@@ -94,7 +94,7 @@ function cellsFromConnectionProperties(properties: Record<string, unknown>): Rec
 
 function relationTypeSortKey(
   type: string,
-  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
+  registry: ReturnType<typeof loadAssociationsFromContent>,
 ): string {
   if (isSetTraitPerspective(registry, type)) return "z:set";
   return `a:${type}`;
@@ -113,7 +113,7 @@ function relationGroupKey(connection: { type: string }): string {
 
 /** Group key for a table-schemas relation column; aligns with {@link relationGroupKey}. */
 function relationGroupKeyFromColumn(
-  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
+  registry: ReturnType<typeof loadAssociationsFromContent>,
   hostTypeId: string,
   col: TableRelationColumn,
 ): string {
@@ -126,7 +126,7 @@ function tableRelationByGroupKeyForInstance(
   contentDir: string,
 ): Map<string, TableRelationColumn> {
   const tables = loadTableSchemasFromContent(contentDir);
-  const registry = loadRelationshipTypesFromContent(contentDir);
+  const registry = loadAssociationsFromContent(contentDir);
   const byGroupKey = new Map<string, TableRelationColumn>();
   for (const typeId of typeIdsForInstance(db, nodeId)) {
     const schema = getTableSchema(tables, typeId);
@@ -144,16 +144,16 @@ function tableRelationByGroupKeyForInstance(
 
 function resolveTypeNodeId(
   db: GraphDatabase,
-  relationshipType: string,
+  association: string,
   connections: Relationship[],
-  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
+  registry: ReturnType<typeof loadAssociationsFromContent>,
 ): string | null {
-  if (isMemberSidePerspective(registry, relationshipType)) {
+  if (isMemberSidePerspective(registry, association)) {
     const targetIds = [...new Set(connections.map((connection) => connection.targetNodeId))];
     if (targetIds.length === 1) return targetIds[0]!;
   }
 
-  return findTypeNodeByTitle(db, formatRelationshipTypeLabel(relationshipType));
+  return findTypeNodeByTitle(db, formatAssociationLabel(association));
 }
 
 function sectionTitleForType(
@@ -165,7 +165,7 @@ function sectionTitleForType(
     const typeNode = db.getNode(typeNodeId);
     if (typeNode) return titleFromProperties(typeNode.properties);
   }
-  return formatRelationshipTypeLabel(label);
+  return formatAssociationLabel(label);
 }
 
 function typeTableIdsFromContent(contentDir: string): string[] {
@@ -174,7 +174,7 @@ function typeTableIdsFromContent(contentDir: string): string[] {
 
 function compositeTypeForRelationSection(
   db: GraphDatabase,
-  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
+  registry: ReturnType<typeof loadAssociationsFromContent>,
   perspective: string,
   connections: Relationship[],
   tableRelation?: TableRelationColumn,
@@ -187,13 +187,13 @@ function compositeTypeForRelationSection(
     const record = db.getRelationshipRecord(first.recordId);
     if (record?.compositeType) {
       const fromRecord = normalizeRelationshipType(record.compositeType);
-      const def = registry.types[fromRecord];
+      const def = registry.associations[fromRecord];
       if (def?.perspectives.includes(normalizeRelationshipType(perspective))) {
         return fromRecord;
       }
     }
   }
-  return resolveCompositeType(registry, perspective);
+  return resolveAssociationId(registry, perspective);
 }
 
 function buildRelationSections(
@@ -206,7 +206,7 @@ function buildRelationSections(
 ): RelationTableSection[] {
   const contentDir = options?.contentDir ?? resolveContentPath();
   const typeTableIds = typeTableIdsFromContent(contentDir);
-  const relationshipTypes = loadRelationshipTypesFromContent(contentDir);
+  const associations = loadAssociationsFromContent(contentDir);
   const outgoing = db.listRelationshipsFromSource(nodeId);
   const byType = new Map<string, typeof outgoing>();
   const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
@@ -229,10 +229,10 @@ function buildRelationSections(
   const sections: RelationTableSection[] = [];
 
   for (const label of [...byType.keys()].sort((a, b) =>
-    relationTypeSortKey(a, relationshipTypes).localeCompare(relationTypeSortKey(b, relationshipTypes)),
+    relationTypeSortKey(a, associations).localeCompare(relationTypeSortKey(b, associations)),
   )) {
     const perspective = label;
-    if (isSetSidePerspective(relationshipTypes, perspective)) continue;
+    if (isSetSidePerspective(associations, perspective)) continue;
 
     const connections = byType.get(label)!;
     const columnSet = new Set<string>();
@@ -259,15 +259,15 @@ function buildRelationSections(
       return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     });
 
-    const isSetMembership = isSetTraitPerspective(relationshipTypes, perspective);
+    const isSetMembership = isSetTraitPerspective(associations, perspective);
     const typeNodeId = isSetMembership
       ? null
-      : resolveTypeNodeId(db, perspective, connections, relationshipTypes);
+      : resolveTypeNodeId(db, perspective, connections, associations);
     const tableRelation = tableRelationByGroupKey.get(perspective);
     const hostTypeId = typeIdsForInstance(db, nodeId, contentDir)[0];
     const ruleContext =
       !isSetMembership && !tableRelation
-        ? relationshipTypeRuleContext(relationshipTypes, db, nodeId, perspective, contentDir)
+        ? associationRuleContext(associations, db, nodeId, perspective, contentDir)
         : null;
     let columns = [...columnSet].sort((a, b) => a.localeCompare(b));
     if (isSetMembership) {
@@ -297,14 +297,14 @@ function buildRelationSections(
         );
 
     const membershipCompositeKey =
-      membershipCompositeForPerspective(relationshipTypes, perspective) ?? perspective;
+      membershipCompositeForPerspective(associations, perspective) ?? perspective;
     const sectionTitle = isSetMembership
-      ? perspectiveDisplayLabel(relationshipTypes, perspective, membershipCompositeKey)
+      ? perspectiveDisplayLabel(associations, perspective, membershipCompositeKey)
       : sectionTitleForType(db, perspective, typeNodeId);
     const linkAddLabel =
-      isSetMembership && isMemberSidePerspective(relationshipTypes, perspective)
+      isSetMembership && isMemberSidePerspective(associations, perspective)
         ? perspectiveLinkAddLabel(
-            relationshipTypes,
+            associations,
             perspective,
             sectionTitle,
             membershipCompositeKey,
@@ -313,7 +313,7 @@ function buildRelationSections(
 
     const compositeType = compositeTypeForRelationSection(
       db,
-      relationshipTypes,
+      associations,
       perspective,
       connections,
       tableRelation,
@@ -327,13 +327,13 @@ function buildRelationSections(
       allowedTargetTypeIds: isSetMembership
         ? typeTableIds
         : tableRelation && hostTypeId
-          ? (targetTypeIdForRelationColumn(relationshipTypes, hostTypeId, tableRelation)
-              ? [targetTypeIdForRelationColumn(relationshipTypes, hostTypeId, tableRelation)!]
+          ? (targetTypeIdForRelationColumn(associations, hostTypeId, tableRelation)
+              ? [targetTypeIdForRelationColumn(associations, hostTypeId, tableRelation)!]
               : undefined)
           : ruleContext?.allowedTargetTypeIds,
       addMode: isSetMembership
         ? "link-existing"
-        : relationSectionSupportsLinkExisting(relationshipTypes, perspective, compositeType)
+        : relationSectionSupportsLinkExisting(associations, perspective, compositeType)
           ? "link-existing"
           : "none",
       ...(linkAddLabel ? { linkAddLabel } : {}),
@@ -377,10 +377,10 @@ export function getNodePageDetail(
     if (provider) {
       const config = getConfigByProvider(provider, contentDir);
       if (config) {
-        const orderedView = getOrderedAssociationView(db, config.id, tabId, contentDir);
+        const orderedView = getOrderedCollectionView(db, config.id, tabId, contentDir);
         if (orderedView) {
           sections.push({
-            type: "ordered-association",
+            type: "ordered-collection",
             configId: config.id,
             view: orderedView,
           });

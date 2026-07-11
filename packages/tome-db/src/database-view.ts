@@ -103,12 +103,12 @@ function rowSort(a: DatabaseRow, b: DatabaseRow): number {
 function membershipPerspectives(
   databaseId: string,
   contentDir: string,
-): { viewRelationshipType: string; memberSidePerspective: string } {
-  const [viewRelationshipType, memberSidePerspective] = membershipPerspectivesForSet(
+): { viewAssociation: string; memberSidePerspective: string } {
+  const [viewAssociation, memberSidePerspective] = membershipPerspectivesForSet(
     databaseId,
     contentDir,
   );
-  return { viewRelationshipType, memberSidePerspective };
+  return { viewAssociation, memberSidePerspective };
 }
 
 function buildCustomViewDetail(
@@ -119,7 +119,7 @@ function buildCustomViewDetail(
   contentDir: string,
   requestedTabId?: string,
 ): DatabaseViewDetail {
-  const { viewRelationshipType, memberSidePerspective } = membershipPerspectives(
+  const { viewAssociation, memberSidePerspective } = membershipPerspectives(
     databaseId,
     contentDir,
   );
@@ -127,7 +127,7 @@ function buildCustomViewDetail(
     contentDir,
     databaseId,
     requestedTabId,
-    viewRelationshipType,
+    viewAssociation,
   );
   const tabName = activeTabName(resolved);
   const ordered = isOrderedMembershipSet(databaseId, contentDir);
@@ -183,7 +183,7 @@ function buildCustomViewDetail(
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     databaseId,
-    viewRelationshipType,
+    viewAssociation,
   );
 
   const { visibleColumns } = applyHiddenColumns(
@@ -214,7 +214,7 @@ function buildCustomViewDetail(
     views: resolved.items.map((tab) => tab.label),
     view: tabName,
     tabs,
-    viewRelationshipType,
+    viewAssociation,
     memberSidePerspective,
     allColumns,
     columns: visibleColumns,
@@ -270,7 +270,7 @@ function buildLegacyViewDetail(
   }));
 
   const dir = contentDir ?? resolveContentPath();
-  const { viewRelationshipType, memberSidePerspective } = membershipPerspectives(
+  const { viewAssociation, memberSidePerspective } = membershipPerspectives(
     databaseId,
     dir,
   );
@@ -320,7 +320,7 @@ function buildLegacyViewDetail(
     views,
     view,
     tabs: { kind: "custom", items: tabItems, activeTabId },
-    viewRelationshipType,
+    viewAssociation,
     memberSidePerspective,
     allColumns: columns,
     columns,

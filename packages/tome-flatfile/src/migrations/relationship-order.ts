@@ -7,9 +7,9 @@ import {
   type RelationshipsFile,
 } from "../content/relationships-file";
 import {
-  parseRelationshipTypesFile,
-  type RelationshipTypesFile,
-} from "../content/relationship-types-file";
+  parseAssociationsFile,
+  type AssociationsFile,
+} from "../content/associations-file";
 import { parseTableSchemasFile } from "../content/table-schemas-file";
 import {
   perspectiveForRelationColumn,
@@ -19,7 +19,7 @@ import { parseWorkspaceFile } from "../workspace/workspace-file";
 import { normalizeRelationshipType } from "../relation-type";
 import {
   relationshipsFilePath,
-  relationshipTypesFilePath,
+  associationsFilePath,
   tableSchemasFilePath,
   workspaceFilePath,
 } from "../content/paths";
@@ -48,7 +48,7 @@ import {
 const TRIPLE_SEP = "\u0000";
 
 export interface RelationshipOrderContext {
-  registry: RelationshipTypesFile;
+  registry: AssociationsFile;
   /** node id -> type-table ids it is a member of (derived from "member_of" edges). */
   nodeTypes: Map<string, Set<string>>;
   /** Type-table ids plus the archive hub id. */
@@ -130,7 +130,7 @@ export function reorderRelationshipsFile(
   };
 
   const relationships = file.relationships.map((entry) => {
-    const perspectives = ctx.registry.types[normalizeRelationshipType(entry.type)]?.perspectives;
+    const perspectives = ctx.registry.associations[normalizeRelationshipType(entry.type)]?.perspectives;
     const rebuilt = (a: string, b: string): RelationshipEntry => ({
       a,
       b,
@@ -197,10 +197,10 @@ export function buildRelationshipOrderContext(
   contentDir: string,
   relationships: readonly RelationshipEntry[],
 ): RelationshipOrderContext {
-  const registryRaw = safeReadJson(relationshipTypesFilePath(contentDir));
+  const registryRaw = safeReadJson(associationsFilePath(contentDir));
   const registry = registryRaw
-    ? parseRelationshipTypesFile(registryRaw)
-    : { version: 1, types: {} };
+    ? parseAssociationsFile(registryRaw)
+    : { version: 1, associations: {} };
 
   const schemasRaw = safeReadJson(tableSchemasFilePath(contentDir));
   const schemas = schemasRaw ? parseTableSchemasFile(schemasRaw) : { version: 1, tables: {} };

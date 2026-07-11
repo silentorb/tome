@@ -87,13 +87,13 @@ function buildColumnDef(input: CreateDatabaseColumnInput, key: string): TableCol
   if (!name) return null;
 
   if (input.type === "relation") {
-    if (!input.relationshipType?.trim()) return null;
-    const relationshipType = normalizeRelationshipType(input.relationshipType);
+    if (!input.association?.trim()) return null;
+    const association = normalizeRelationshipType(input.association);
     return {
       key,
       name,
       type: "relation",
-      relationshipType,
+      association,
     };
   }
 
@@ -159,8 +159,8 @@ export function createDatabaseColumn(
       if (!validateEnumId(ctx, columnDef.enumId)) return "invalid_enum";
     }
   } else {
-    const registry = ctx.store.readRelationshipTypesFile();
-    if (!registry.types[columnDef.relationshipType]) {
+    const registry = ctx.store.readAssociationsFile();
+    if (!registry.associations[columnDef.association]) {
       return "invalid_relation_target";
     }
   }
@@ -197,16 +197,16 @@ function applyColumnPatch(
   const nextType = input.type ?? existing.type;
 
   if (nextType === "relation") {
-    const relationshipType = normalizeRelationshipType(
-      input.relationshipType ??
-        (existing.type === "relation" ? existing.relationshipType : ""),
+    const association = normalizeRelationshipType(
+      input.association ??
+        (existing.type === "relation" ? existing.association : ""),
     );
-    if (!relationshipType) return null;
+    if (!association) return null;
     return {
       key: existing.key,
       name,
       type: "relation",
-      relationshipType,
+      association,
     };
   }
 
@@ -239,7 +239,7 @@ function relationConfigChanged(
   oldCol: TableColumnDef & { type: "relation" },
   newCol: TableColumnDef & { type: "relation" },
 ): boolean {
-  return oldCol.relationshipType !== newCol.relationshipType;
+  return oldCol.association !== newCol.association;
 }
 
 export function updateDatabaseColumn(
@@ -279,8 +279,8 @@ export function updateDatabaseColumn(
       if (!validateEnumId(ctx, patched.enumId)) return "invalid_enum";
     }
   } else {
-    const registry = ctx.store.readRelationshipTypesFile();
-    if (!registry.types[(patched as TableRelationColumn).relationshipType]) {
+    const registry = ctx.store.readAssociationsFile();
+    if (!registry.associations[(patched as TableRelationColumn).association]) {
       return "invalid_relation_target";
     }
   }

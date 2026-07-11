@@ -15,22 +15,22 @@ import type { SeedDynamicColumnSetInput, SeedDynamicFieldInput } from "tome-flat
 import { invalidateDynamicFieldsCache } from "./sync";
 import { invalidateViewsCache } from "tome-flatfile";
 import { invalidateWorkspaceCache } from "tome-flatfile";
-import { invalidateOrderedAssociationsCache } from "tome-flatfile";
+import { invalidateOrderedCollectionsCache } from "tome-flatfile";
 import {
-  serializeOrderedAssociationsFile,
-  type OrderedAssociationsFile,
-  ORDERED_ASSOCIATIONS_FILE_VERSION,
+  serializeOrderedCollectionsFile,
+  type OrderedCollectionsFile,
+  ORDERED_COLLECTIONS_FILE_VERSION,
 } from "tome-flatfile";
 import { openContentGraph } from "./sync";
 import type { TomeWriteContext } from "./write-context";
 import {
-  emptyRelationshipTypesFile,
+  emptyAssociationsFile,
   registerBidirectionalType,
   registerOrderedSetMembershipType,
   registerSetMembershipType,
-  serializeRelationshipTypesFile,
+  serializeAssociationsFile,
 } from "tome-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { invalidateAssociationsCache } from "tome-flatfile";
 import { normalizeRelationshipType } from "tome-flatfile";
 import {
   serializeWorkspaceFile,
@@ -40,8 +40,8 @@ import {
 import {
   contentModelDir,
   nodeFilePath,
-  orderedAssociationsFilePath,
-  relationshipTypesFilePath,
+  orderedCollectionsFilePath,
+  associationsFilePath,
   workspaceFilePath,
 } from "tome-flatfile";
 import {
@@ -90,9 +90,9 @@ export function seedTestWorkspace(
   invalidateWorkspaceCache();
 }
 
-export function defaultTestOrderedAssociationsFile(): OrderedAssociationsFile {
+export function defaultTestOrderedCollectionsFile(): OrderedCollectionsFile {
   return {
-    version: ORDERED_ASSOCIATIONS_FILE_VERSION,
+    version: ORDERED_COLLECTIONS_FILE_VERSION,
     configs: [
       {
         id: "scenes-by-book",
@@ -109,28 +109,28 @@ export function defaultTestOrderedAssociationsFile(): OrderedAssociationsFile {
   };
 }
 
-export function seedDefaultRelationshipTypes(fixture: TestContentFixture): void {
-  const registry = fixture.ctx.store.readRelationshipTypesFile();
+export function seedDefaultAssociations(fixture: TestContentFixture): void {
+  const registry = fixture.ctx.store.readAssociationsFile();
   registerSetMembershipType(registry);
   registerOrderedSetMembershipType(registry);
-  fixture.ctx.store.writeRelationshipTypesFile(registry);
+  fixture.ctx.store.writeAssociationsFile(registry);
 }
 
 /** Write conventional set-membership types into an ad-hoc content dir (non-fixture tests). */
 export function writeSetMembershipTypes(contentDir: string): void {
-  const registry = emptyRelationshipTypesFile();
+  const registry = emptyAssociationsFile();
   registerSetMembershipType(registry);
   registerOrderedSetMembershipType(registry);
   mkdirSync(contentModelDir(contentDir), { recursive: true });
   writeFileSync(
-    relationshipTypesFilePath(contentDir),
-    serializeRelationshipTypesFile(registry),
+    associationsFilePath(contentDir),
+    serializeAssociationsFile(registry),
     "utf-8",
   );
-  invalidateRelationshipTypesCache();
+  invalidateAssociationsCache();
 }
 
-export function seedDefaultOrderedAssociationTableSchemas(fixture: TestContentFixture): void {
+export function seedDefaultOrderedCollectionTableSchemas(fixture: TestContentFixture): void {
   const scenesDb = "0000000000000000000000000D";
   const partsDb = "0000000000000000000000000Z";
   const productsDb = "0000000000000000000000000S";
@@ -142,18 +142,18 @@ export function seedDefaultOrderedAssociationTableSchemas(fixture: TestContentFi
   invalidateTableSchemasCache();
 }
 
-export function seedTestOrderedAssociations(
+export function seedTestOrderedCollections(
   fixture: TestContentFixture,
-  overrides?: Partial<OrderedAssociationsFile>,
+  overrides?: Partial<OrderedCollectionsFile>,
 ): void {
-  const file = { ...defaultTestOrderedAssociationsFile(), ...overrides };
+  const file = { ...defaultTestOrderedCollectionsFile(), ...overrides };
   mkdirSync(contentModelDir(fixture.ctx.store.contentDir), { recursive: true });
   writeFileSync(
-    orderedAssociationsFilePath(fixture.ctx.store.contentDir),
-    serializeOrderedAssociationsFile(file),
+    orderedCollectionsFilePath(fixture.ctx.store.contentDir),
+    serializeOrderedCollectionsFile(file),
     "utf-8",
   );
-  invalidateOrderedAssociationsCache();
+  invalidateOrderedCollectionsCache();
 }
 
 export function createTestContentFixture(prefix = "tome-content-test-"): TestContentFixture {
@@ -172,9 +172,9 @@ export function createTestContentFixture(prefix = "tome-content-test-"): TestCon
   const fixture: TestContentFixture = { tempDir, ctx };
   ctx.store.writeDynamicFieldsFile(fileFromSeedInputs([], []));
   invalidateDynamicFieldsCache();
-  seedDefaultRelationshipTypes(fixture);
-  seedDefaultOrderedAssociationTableSchemas(fixture);
-  seedTestOrderedAssociations(fixture);
+  seedDefaultAssociations(fixture);
+  seedDefaultOrderedCollectionTableSchemas(fixture);
+  seedTestOrderedCollections(fixture);
   return fixture;
 }
 
@@ -267,15 +267,15 @@ export function seedTestIncludes(
   options?: { replace?: boolean },
 ): void {
   const registry = options?.replace
-    ? { version: 1 as const, types: {} as Record<string, never> }
-    : fixture.ctx.store.readRelationshipTypesFile();
+    ? { version: 1 as const, associations: {} as Record<string, never> }
+    : fixture.ctx.store.readAssociationsFile();
   const file = options?.replace
     ? { version: RELATIONSHIPS_FILE_VERSION, relationships: [] as RelationshipEntry[] }
     : fixture.ctx.store.readRelationshipsFile();
 
   for (const connection of connections) {
     const compositeType = normalizeRelationshipType(connection.compositeType);
-    if (!registry.types[compositeType]) {
+    if (!registry.associations[compositeType]) {
       registerBidirectionalType(registry, compositeType, compositeType);
     }
     const entry: RelationshipEntry = {
@@ -294,7 +294,7 @@ export function seedTestIncludes(
     }
   }
 
-  fixture.ctx.store.writeRelationshipTypesFile(registry);
+  fixture.ctx.store.writeAssociationsFile(registry);
   fixture.ctx.store.writeRelationshipsFile(file);
   fixture.ctx.sync.syncRelationships();
 }
@@ -316,8 +316,8 @@ export function seedTestCompositeRelationships(
   options?: { replace?: boolean },
 ): void {
   const registry = options?.replace
-    ? { version: 1 as const, types: {} as Record<string, never> }
-    : fixture.ctx.store.readRelationshipTypesFile();
+    ? { version: 1 as const, associations: {} as Record<string, never> }
+    : fixture.ctx.store.readAssociationsFile();
   const file = options?.replace
     ? { version: RELATIONSHIPS_FILE_VERSION, relationships: [] as RelationshipEntry[] }
     : fixture.ctx.store.readRelationshipsFile();
@@ -344,7 +344,7 @@ export function seedTestCompositeRelationships(
     }
   }
 
-  fixture.ctx.store.writeRelationshipTypesFile(registry);
+  fixture.ctx.store.writeAssociationsFile(registry);
   fixture.ctx.store.writeRelationshipsFile(file);
   fixture.ctx.sync.syncRelationships();
 }
@@ -360,8 +360,8 @@ export function seedTestRelationships(
   options?: { replace?: boolean },
 ): void {
   const registry = options?.replace
-    ? { version: 1 as const, types: {} as Record<string, never> }
-    : fixture.ctx.store.readRelationshipTypesFile();
+    ? { version: 1 as const, associations: {} as Record<string, never> }
+    : fixture.ctx.store.readAssociationsFile();
   const file = options?.replace
     ? { version: RELATIONSHIPS_FILE_VERSION, relationships: [] as RelationshipEntry[] }
     : fixture.ctx.store.readRelationshipsFile();
@@ -373,7 +373,7 @@ export function seedTestRelationships(
       registerOrderedSetMembershipType(registry);
     } else {
       const composite = normalizeRelationshipType(connection.type);
-      if (!registry.types[composite]) {
+      if (!registry.associations[composite]) {
         registerBidirectionalType(registry, composite, composite);
       }
     }
@@ -391,7 +391,7 @@ export function seedTestRelationships(
     }
   }
 
-  fixture.ctx.store.writeRelationshipTypesFile(registry);
+  fixture.ctx.store.writeAssociationsFile(registry);
   fixture.ctx.store.writeRelationshipsFile(file);
   fixture.ctx.sync.syncRelationships();
 }

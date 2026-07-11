@@ -197,13 +197,13 @@
   text-decoration: underline;
 }
 
-.tome-ordered-association-group {
+.tome-ordered-collection-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.tome-ordered-association-group-title {
+.tome-ordered-collection-group-title {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;

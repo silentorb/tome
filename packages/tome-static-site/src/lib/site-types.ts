@@ -3,7 +3,7 @@ import type {
   DatabaseRow,
   DatabaseViewDetail,
   NodePageMetadata,
-  OrderedAssociationViewDetail,
+  OrderedCollectionViewDetail,
   PropertiesSection,
   RelationTableSection,
   ResolvedTab,
@@ -16,7 +16,7 @@ export interface TableSortSpec {
 export interface ItemsTabsMeta {
   items: ResolvedTab[];
   defaultTabId: string;
-  sectionKind: "database" | "ordered-association";
+  sectionKind: "database" | "ordered-collection";
   configId?: string;
   databaseId?: string;
 }
@@ -27,16 +27,16 @@ export interface StaticDatabaseSection {
   defaultSort?: TableSortSpec;
 }
 
-export interface StaticOrderedAssociationSection {
-  type: "ordered-association";
+export interface StaticOrderedCollectionSection {
+  type: "ordered-collection";
   configId: string;
-  view: OrderedAssociationViewDetail;
+  view: OrderedCollectionViewDetail;
   defaultSort?: TableSortSpec;
 }
 
 export type StaticNodeSection =
   | StaticDatabaseSection
-  | StaticOrderedAssociationSection
+  | StaticOrderedCollectionSection
   | RelationTableSection;
 
 export interface SiteNode {
@@ -62,14 +62,14 @@ export interface DatabaseTabPayload {
   defaultSort?: TableSortSpec;
 }
 
-export interface OrderedAssociationTabPayload {
-  kind: "ordered-association";
+export interface OrderedCollectionTabPayload {
+  kind: "ordered-collection";
   configId: string;
-  view: OrderedAssociationViewDetail;
+  view: OrderedCollectionViewDetail;
   defaultSort?: TableSortSpec;
 }
 
-export type TabItemsPayload = DatabaseTabPayload | OrderedAssociationTabPayload;
+export type TabItemsPayload = DatabaseTabPayload | OrderedCollectionTabPayload;
 
 export interface TabRoute {
   nodeId: string;

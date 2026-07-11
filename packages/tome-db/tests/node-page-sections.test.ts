@@ -5,20 +5,20 @@ import { tmpdir } from "node:os";
 import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodePageDetail } from "../src/node-page-sections";
-import { contentModelDir, relationshipTypesFilePath, tableSchemasFilePath } from "tome-flatfile";
+import { contentModelDir, associationsFilePath, tableSchemasFilePath } from "tome-flatfile";
 import {
-  serializeRelationshipTypesFile,
+  serializeAssociationsFile,
 } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { invalidateAssociationsCache } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
 
-function writeMembershipRelationshipTypes(contentDir: string): void {
+function writeMembershipAssociations(contentDir: string): void {
   writeFileSync(
-    relationshipTypesFilePath(contentDir),
-    serializeRelationshipTypesFile({
+    associationsFilePath(contentDir),
+    serializeAssociationsFile({
       version: 1,
-      types: {
+      associations: {
         member_of: {
           perspectives: ["members", "member_of"],
           traits: ["set"],
@@ -35,19 +35,19 @@ function writeMembershipRelationshipTypes(contentDir: string): void {
       },
     }),
   );
-  invalidateRelationshipTypesCache();
+  invalidateAssociationsCache();
 }
 
-function writeInspirationsFeaturesRelationshipTypes(
+function writeInspirationsFeaturesAssociations(
   contentDir: string,
   inspirationsTypeId: string,
   featuresTypeId: string,
 ): void {
   writeFileSync(
-    relationshipTypesFilePath(contentDir),
-    serializeRelationshipTypesFile({
+    associationsFilePath(contentDir),
+    serializeAssociationsFile({
       version: 1,
-      types: {
+      associations: {
         member_of: {
           perspectives: ["members", "member_of"],
           traits: ["set"],
@@ -65,19 +65,19 @@ function writeInspirationsFeaturesRelationshipTypes(
       },
     }),
   );
-  invalidateRelationshipTypesCache();
+  invalidateAssociationsCache();
 }
 
-function writeFeaturesBiblePassagesRelationshipTypes(
+function writeFeaturesBiblePassagesAssociations(
   contentDir: string,
   biblePassagesTypeId: string,
   featuresTypeId: string,
 ): void {
   writeFileSync(
-    relationshipTypesFilePath(contentDir),
-    serializeRelationshipTypesFile({
+    associationsFilePath(contentDir),
+    serializeAssociationsFile({
       version: 1,
-      types: {
+      associations: {
         member_of: {
           perspectives: ["members", "member_of"],
           traits: ["set"],
@@ -95,14 +95,14 @@ function writeFeaturesBiblePassagesRelationshipTypes(
       },
     }),
   );
-  invalidateRelationshipTypesCache();
+  invalidateAssociationsCache();
 }
 
 describe("node-sections", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-sections-"));
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
-  writeMembershipRelationshipTypes(contentDir);
+  writeMembershipAssociations(contentDir);
   process.env.TOME_CONTENT_PATH = contentDir;
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
@@ -168,10 +168,10 @@ describe("node-sections", () => {
 
   test("honors registry linkExisting false on relation sections", () => {
     writeFileSync(
-      relationshipTypesFilePath(contentDir),
-      serializeRelationshipTypesFile({
+      associationsFilePath(contentDir),
+      serializeAssociationsFile({
         version: 1,
-        types: {
+        associations: {
           member_of: {
             perspectives: ["members", "member_of"],
             traits: ["set"],
@@ -189,7 +189,7 @@ describe("node-sections", () => {
         },
       }),
     );
-    invalidateRelationshipTypesCache();
+    invalidateAssociationsCache();
 
     db.upsertNode("scene6", { title: "Harbor" });
     db.upsertNode("part2", { title: "Act II" });
@@ -205,7 +205,7 @@ describe("node-sections", () => {
       addMode: "none",
     });
 
-    writeMembershipRelationshipTypes(contentDir);
+    writeMembershipAssociations(contentDir);
   });
 
   test("adds database table section for type-table records after markdown", () => {
@@ -383,8 +383,8 @@ describe("node-sections table-schema empty relation placeholders", () => {
   const inspirationId = "insp0000000000000000000000000001";
   const featId = "feat0000000000000000000000000001";
 
-  writeMembershipRelationshipTypes(contentDir);
-  writeInspirationsFeaturesRelationshipTypes(contentDir, inspirationsTypeId, featuresTypeId);
+  writeMembershipAssociations(contentDir);
+  writeInspirationsFeaturesAssociations(contentDir, inspirationsTypeId, featuresTypeId);
   writeFileSync(
     tableSchemasFilePath(contentDir),
     serializeTableSchemasFile({
@@ -396,7 +396,7 @@ describe("node-sections table-schema empty relation placeholders", () => {
               key: "features",
               name: "Features",
               type: "relation",
-              relationshipType: "inspirations_features",
+              association: "inspirations_features",
             },
           ],
         },
@@ -478,10 +478,10 @@ describe("node-sections children_children addMode", () => {
   const groupsTypeId = "0000000000000000000000002G";
 
   writeFileSync(
-    relationshipTypesFilePath(contentDir),
-    serializeRelationshipTypesFile({
+    associationsFilePath(contentDir),
+    serializeAssociationsFile({
       version: 1,
-      types: {
+      associations: {
         member_of: {
           perspectives: ["members", "member_of"],
           traits: ["set"],
@@ -500,7 +500,7 @@ describe("node-sections children_children addMode", () => {
       },
     }),
   );
-  invalidateRelationshipTypesCache();
+  invalidateAssociationsCache();
   writeFileSync(
     tableSchemasFilePath(contentDir),
     serializeTableSchemasFile({
@@ -512,13 +512,13 @@ describe("node-sections children_children addMode", () => {
               key: "children",
               name: "Children",
               type: "relation",
-              relationshipType: "children_children",
+              association: "children_children",
             },
             {
               key: "parents",
               name: "Parents",
               type: "relation",
-              relationshipType: "parents_children",
+              association: "parents_children",
             },
           ],
         },
@@ -567,10 +567,10 @@ describe("node-sections trait-based set presentation", () => {
   const featId = "0000000000000000000000000F";
 
   writeFileSync(
-    relationshipTypesFilePath(contentDir),
-    serializeRelationshipTypesFile({
+    associationsFilePath(contentDir),
+    serializeAssociationsFile({
       version: 1,
-      types: {
+      associations: {
         custom_ordered_set: {
           perspectives: ["custom_sets", "custom_members"],
           traits: ["set", "ordered"],
@@ -581,7 +581,7 @@ describe("node-sections trait-based set presentation", () => {
       },
     }),
   );
-  invalidateRelationshipTypesCache();
+  invalidateAssociationsCache();
   process.env.TOME_CONTENT_PATH = contentDir;
 
   db.upsertNode(customSetDb, { ...typeTableMarkerProperties("Custom Archive") });
@@ -612,10 +612,10 @@ describe("node-sections trait-based set presentation", () => {
 
   test("uses registry linkExisting false for addMode on structural perspectives", () => {
     writeFileSync(
-      relationshipTypesFilePath(contentDir),
-      serializeRelationshipTypesFile({
+      associationsFilePath(contentDir),
+      serializeAssociationsFile({
         version: 1,
-        types: {
+        associations: {
           custom_ordered_set: {
             perspectives: ["custom_sets", "custom_members"],
             traits: ["set", "ordered"],
@@ -627,7 +627,7 @@ describe("node-sections trait-based set presentation", () => {
         },
       }),
     );
-    invalidateRelationshipTypesCache();
+    invalidateAssociationsCache();
 
     db.upsertNode("child1", { title: "Child row" });
     db.upsertNode("parent1", { title: "Parent row" });
@@ -661,7 +661,7 @@ describe("node-sections bible passages regression", () => {
   const memberId = "00000000000000000000000017";
   const featuresTypeId = "0000000000000000000000002P";
 
-  writeFeaturesBiblePassagesRelationshipTypes(contentDir, biblePassagesId, featuresTypeId);
+  writeFeaturesBiblePassagesAssociations(contentDir, biblePassagesId, featuresTypeId);
   writeFileSync(
     tableSchemasFilePath(contentDir),
     serializeTableSchemasFile({
@@ -673,7 +673,7 @@ describe("node-sections bible passages regression", () => {
               key: "features",
               name: "Features",
               type: "relation",
-              relationshipType: "features_bible_passages",
+              association: "features_bible_passages",
             },
             { key: "verses", name: "Verses", type: "rich_text" },
           ],
@@ -682,7 +682,7 @@ describe("node-sections bible passages regression", () => {
     }),
   );
   invalidateTableSchemasCache();
-  writeMembershipRelationshipTypes(contentDir);
+  writeMembershipAssociations(contentDir);
   process.env.TOME_CONTENT_PATH = contentDir;
 
   test("member row shows Verses in Properties and Bible passages in member_of section", () => {

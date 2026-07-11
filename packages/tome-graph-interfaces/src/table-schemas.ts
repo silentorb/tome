@@ -27,7 +27,7 @@ export interface TableRelationColumn {
   name: string;
   type: "relation";
   /** Registered relationship type id (storage composite). */
-  relationshipType: string;
+  association: string;
 }
 
 export type TableColumnDef = TableScalarColumn | TableRelationColumn;

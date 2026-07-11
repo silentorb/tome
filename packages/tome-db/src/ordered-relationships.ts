@@ -1,7 +1,7 @@
 import type { GraphDatabase, Properties, Relationship } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { relationshipId } from "tome-sqlite";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { loadAssociationsFromContent } from "tome-flatfile";
 import {
   defaultOrderedSetMembershipComposite,
   isOrderedTraitComposite,
@@ -10,7 +10,7 @@ import {
   orderedPropertyName,
 } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
-import type { RelationshipTypesFile } from "tome-flatfile";
+import type { AssociationsFile } from "tome-flatfile";
 import { listSetMemberRowConnections } from "./set-membership";
 
 export const ORDER_META_KEYS = new Set([
@@ -30,9 +30,9 @@ function numericOrderValue(raw: unknown, fallback = Number.NaN): number {
 }
 
 function orderPropertyForSet(setId: string, contentDir: string): string {
-  const registry = loadRelationshipTypesFromContent(contentDir);
+  const registry = loadAssociationsFromContent(contentDir);
   const composite = membershipCompositeForSet(setId, contentDir);
-  const def = registry.types[composite];
+  const def = registry.associations[composite];
   return orderedPropertyName(def);
 }
 
@@ -43,7 +43,7 @@ export function listOrderedMemberConnections(
 ): Relationship[] {
   const dir = contentDir ?? resolveContentPath();
   const composite = membershipCompositeForSet(setId, dir);
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
   if (!isOrderedTraitComposite(registry, composite)) {
     return [];
   }
@@ -72,10 +72,10 @@ export function stampOrderIfMissing(
   props: Properties,
 ): Properties {
   const dir = ctx.store.contentDir;
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
   const composite = membershipCompositeForSet(setId, dir);
   if (!isOrderedTraitComposite(registry, composite)) return props;
-  const property = orderedPropertyName(registry.types[composite]);
+  const property = orderedPropertyName(registry.associations[composite]);
   if (property in props) return props;
   return { ...props, [property]: maxOrderAtSet(ctx.cache, setId, dir) + 1 };
 }
@@ -117,7 +117,7 @@ export function applySparseOrderRewrite(
 }
 
 export function isOrderedMembershipComposite(
-  registry: RelationshipTypesFile,
+  registry: AssociationsFile,
   compositeType: string,
 ): boolean {
   return isOrderedTraitComposite(registry, compositeType);
@@ -125,7 +125,7 @@ export function isOrderedMembershipComposite(
 
 export function orderedMembershipCompositeType(contentDir?: string): string {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
   return defaultOrderedSetMembershipComposite(registry);
 }
 

@@ -1,0 +1,79 @@
+import type {
+  PerspectiveLabelConfig,
+  AssociationsFile,
+} from "tome-flatfile";
+import { normalizeRelationshipType } from "tome-flatfile/relation-type";
+
+/** Human-readable label for a local relationship type (e.g. `bible_passages` → `Bible Passages`). */
+export function formatAssociationLabel(type: string): string {
+  return type
+    .toLowerCase()
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function perspectiveLabelConfig(
+  registry: AssociationsFile,
+  perspective: string,
+  compositeType?: string,
+): PerspectiveLabelConfig | null {
+  const normalized = normalizeRelationshipType(perspective);
+  // Preferred: resolve the label from the specific composite so a perspective
+  // slug shared by several edge types (e.g. "inspirations") maps to the label
+  // authored for THIS type + position, not the first arbitrary registry match.
+  if (compositeType) {
+    const def = registry.associations[normalizeRelationshipType(compositeType)];
+    return def?.perspectiveLabels?.[normalized] ?? null;
+  }
+  for (const def of Object.values(registry.associations)) {
+    if (!def.perspectives.includes(normalized)) continue;
+    const label = def.perspectiveLabels?.[normalized];
+    if (label !== undefined) return label;
+  }
+  return null;
+}
+
+function titleFromPerspectiveLabelConfig(config: PerspectiveLabelConfig): string {
+  return typeof config === "string" ? config : config.title;
+}
+
+function linkAddFromPerspectiveLabelConfig(config: PerspectiveLabelConfig): string | null {
+  return typeof config === "string" ? null : (config.linkAdd ?? null);
+}
+
+/**
+ * Section heading for a perspective; falls back to formatAssociationLabel.
+ * Pass `compositeType` to resolve the label from that specific edge type (tuple
+ * position), avoiding ambiguity when a slug is shared across composites.
+ */
+export function perspectiveDisplayLabel(
+  registry: AssociationsFile,
+  perspective: string,
+  compositeType?: string,
+): string {
+  const config = perspectiveLabelConfig(registry, perspective, compositeType);
+  if (config) return titleFromPerspectiveLabelConfig(config);
+  return formatAssociationLabel(perspective);
+}
+
+function defaultLinkAddLabel(sectionTitle: string): string {
+  const singular = sectionTitle.replace(/s$/i, "") || "record";
+  return `Link ${singular}`;
+}
+
+/** Inline link-existing control label for a relation section. */
+export function perspectiveLinkAddLabel(
+  registry: AssociationsFile,
+  perspective: string,
+  sectionTitle: string,
+  compositeType?: string,
+): string {
+  const config = perspectiveLabelConfig(registry, perspective, compositeType);
+  if (config) {
+    const linkAdd = linkAddFromPerspectiveLabelConfig(config);
+    if (linkAdd) return linkAdd;
+  }
+  return defaultLinkAddLabel(sectionTitle);
+}

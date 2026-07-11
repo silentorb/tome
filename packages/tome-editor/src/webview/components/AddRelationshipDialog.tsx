@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { formatRelationshipTypeLabel } from "tome-db/relationship-type-label";
+import { formatAssociationLabel } from "tome-db/association-label";
 import type { EditorApi } from "../api/client";
-import { RelationshipTypePicker } from "./RelationshipTypePicker";
+import { AssociationPicker } from "./AssociationPicker";
 import { RecordLinkPicker } from "./RecordLinkPicker";
 import "./add-relationship-dialog.css";
 
@@ -139,7 +139,7 @@ export function AddRelationshipDialog({
         <div className="tome-add-relationship-fields">
           <div className="tome-add-relationship-field">
             <span className="tome-add-relationship-label">Relationship type</span>
-            <RelationshipTypePicker
+            <AssociationPicker
               api={api}
               selectedType={selectedType}
               ariaLabel="Relationship type"
@@ -156,7 +156,7 @@ export function AddRelationshipDialog({
                 closeOnSelect
                 allowedTypeIds={allowedTypeIds}
                 excludedIds={[nodeId]}
-                ariaLabel={`Search target for ${formatRelationshipTypeLabel(selectedType)}`}
+                ariaLabel={`Search target for ${formatAssociationLabel(selectedType)}`}
                 onSelect={handleLink}
                 onClose={() => {}}
               />

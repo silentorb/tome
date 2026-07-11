@@ -8,15 +8,15 @@ import {
 } from "../src/content/test-helpers";
 import {
   contentModelDir,
-  relationshipTypesFilePath,
+  associationsFilePath,
   schemaFilePath,
   tableSchemasFilePath,
 } from "tome-flatfile";
 import { serializeSchemaFile } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
-import { serializeRelationshipTypesFile } from "tome-flatfile";
+import { serializeAssociationsFile } from "tome-flatfile";
 import { invalidateSchemaCache } from "tome-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { invalidateAssociationsCache } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
 import { createExtensionSchemaQueryServices } from "../src/extension-schema-query";
 
@@ -44,10 +44,10 @@ describe("createExtensionSchemaQueryServices", () => {
   });
 
   writeFileSync(
-    relationshipTypesFilePath(fixture.ctx.store.contentDir),
-    serializeRelationshipTypesFile({
+    associationsFilePath(fixture.ctx.store.contentDir),
+    serializeAssociationsFile({
       version: 1,
-      types: {
+      associations: {
         member_of: {
           perspectives: ["members", "member_of"],
           traits: ["set"],
@@ -77,7 +77,7 @@ describe("createExtensionSchemaQueryServices", () => {
     }),
     "utf-8",
   );
-  invalidateRelationshipTypesCache();
+  invalidateAssociationsCache();
 
   writeFileSync(
     tableSchemasFilePath(fixture.ctx.store.contentDir),
@@ -90,13 +90,13 @@ describe("createExtensionSchemaQueryServices", () => {
               key: "features",
               name: "Features",
               type: "relation",
-              relationshipType: "scene_features",
+              association: "scene_features",
             },
             {
               key: "inspirations",
               name: "Inspirations",
               type: "relation",
-              relationshipType: "scene_inspirations",
+              association: "scene_inspirations",
             },
           ],
         },
@@ -106,7 +106,7 @@ describe("createExtensionSchemaQueryServices", () => {
               key: "inspirations",
               name: "Inspirations",
               type: "relation",
-              relationshipType: "inspirations_features",
+              association: "inspirations_features",
             },
           ],
         },
@@ -158,7 +158,7 @@ describe("createExtensionSchemaQueryServices", () => {
     expect(tables.find((table) => table.id === featureTypeId)?.memberCount).toBe(0);
   });
 
-  test("listRelationshipRules returns rules from relationship-types endpoints", () => {
+  test("listRelationshipRules returns rules from associations endpoints", () => {
     const rules = services.listRelationshipRules();
     expect(rules).toHaveLength(6);
     expect(rules).toContainEqual({

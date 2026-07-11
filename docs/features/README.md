@@ -20,7 +20,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Web markdown editor (browser client) | [tome-editor.md](./tome-editor.md) |
 | Config-driven API host + service modules | [tome-server.md](./tome-server.md) |
 | Graph Explorer (LOD graph visualization) | [graph-explorer.md](./graph-explorer.md) |
-| Ordered associations (scene order, DnD) | [ordered-associations.md](./ordered-associations.md) |
+| Ordered collections (scene order, DnD) | [ordered-collections.md](./ordered-collections.md) |
 | Dynamic table fields (computed columns) | [dynamic-table-fields.md](./dynamic-table-fields.md) |
 | Table view tabs (`views.json`) | [views.md](./views.md) |
 | Static website generation (Astro) | [static-website.md](./static-website.md) |

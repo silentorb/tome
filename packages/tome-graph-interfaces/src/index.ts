@@ -49,14 +49,14 @@ export type {
 } from "./graph-export";
 
 export type {
-  OrderedAssociationConfig,
-  OrderedAssociationsFile,
-  OrderedAssociationScope,
-  OrderedAssociationRow,
-  OrderedAssociationGroup,
-  OrderedAssociationViewDetail,
-  OrderedAssociationMoveParams,
-} from "./ordered-associations";
+  OrderedCollectionConfig,
+  OrderedCollectionsFile,
+  OrderedCollectionScope,
+  OrderedCollectionRow,
+  OrderedCollectionGroup,
+  OrderedCollectionViewDetail,
+  OrderedCollectionMoveParams,
+} from "./ordered-collections";
 
 export type {
   WorkspaceQuickLink,
@@ -129,7 +129,7 @@ export type { PropertiesSection } from "./node-type-properties";
 export type {
   MarkdownSection,
   DatabaseTableSection,
-  OrderedAssociationSection,
+  OrderedCollectionSection,
   RelationRow,
   RelationTableAddMode,
   RelationTableSection,

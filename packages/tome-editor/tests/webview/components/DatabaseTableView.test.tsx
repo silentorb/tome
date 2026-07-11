@@ -219,15 +219,15 @@ describe("DatabaseTableView", () => {
   test("omits hidden columns from the table and toggles visibility via toolbar", async () => {
     const api = makeMockEditorApi();
     let updateInput: { hiddenColumns?: string[] } | undefined;
-    api.updateRelationshipView = async (nodeId, relationshipType, viewId, input) => {
+    api.updateRelationshipView = async (nodeId, association, viewId, input) => {
       void nodeId;
-      void relationshipType;
+      void association;
       void viewId;
       updateInput = input;
       return {
         id: "all",
         nodeId: FIXTURE_DATABASE_ID,
-        relationshipType: "members",
+        association: "members",
         name: "All",
         sorts: [{ column: "name", direction: "asc" }],
         hiddenColumns: input.hiddenColumns,
@@ -292,7 +292,7 @@ describe("DatabaseTableView", () => {
       unlinkOutgoingRelationship,
     };
     const databaseView = makeDatabaseViewDetail({
-      viewRelationshipType: "cohort",
+      viewAssociation: "cohort",
       memberSidePerspective: "belongs_to_cohort",
     });
 
@@ -321,12 +321,12 @@ describe("DatabaseTableView", () => {
     );
   });
 
-  test("creates tabs with viewRelationshipType from the view payload", async () => {
+  test("creates tabs with viewAssociation from the view payload", async () => {
     const createRelationshipView = mock(
-      async (_nodeId: string, relationshipType: string, input: { name: string }) => ({
+      async (_nodeId: string, association: string, input: { name: string }) => ({
         id: "new-tab",
         nodeId: FIXTURE_DATABASE_ID,
-        relationshipType,
+        association,
         name: input.name,
         sorts: [{ column: "name", direction: "asc" as const }],
       }),
@@ -336,7 +336,7 @@ describe("DatabaseTableView", () => {
       createRelationshipView,
     };
     const databaseView = makeDatabaseViewDetail({
-      viewRelationshipType: "cohort",
+      viewAssociation: "cohort",
       memberSidePerspective: "belongs_to_cohort",
     });
     let selectedTab = "";

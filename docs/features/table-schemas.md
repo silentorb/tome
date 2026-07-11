@@ -25,8 +25,7 @@ See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./s
           "key": "inspirations",
           "name": "Inspirations",
           "type": "relation",
-          "targetTypeId": "01KWN86X6NJZMP5ZESZTNDXY3J",
-          "perspective": "inspirations"
+          "association": "inspirations_features"
         }
       ]
     }
@@ -40,7 +39,7 @@ See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./s
 | --- | --- |
 | **Identity** | Column identity is `key` (slug), not legacy property ids |
 | **Scalars** | `select`, `multi_select`, `checkbox`, `number`, `text`, `date`, `url`, `email`, `phone_number` |
-| **Relations** | `targetTypeId` is a graph node id; `perspective` maps to [`relationship-types.json`](../../content/model/relationship-types.json) |
+| **Relations** | `association` is a registered composite in [`associations.json`](../../content/model/associations.json) |
 | **Enums** | `enumId` references [`schema.json`](../../content/model/schema.json) `enums` |
 | **Computed** | Formula/rollup columns are **not** stored here; use [`dynamic-fields.json`](./dynamic-table-fields.md) |
 
@@ -69,13 +68,13 @@ Row data for instances is stored on `is_a` relationship properties, not on the i
 ## Instance node pages (editor)
 
 - For each `type: relation` column on the instance's type table (`member_of` target), the editor shows a relation table section even when no outgoing edges exist yet (static site export still omits empty sections).
-- Section titles and link-existing pickers use the column's `targetTypeId` and `perspective` (same grouping as populated `includes` edges).
+- Section titles and link-existing pickers use the column's `association` (same grouping as populated `includes` edges).
 
 ## Editing
 
 - **Editor UI:** type-table Items sections support **add**, **edit**, **delete**, and **reorder** for stored columns (`table-schemas.json`). Use **+ Column** in the table utility bar or right-click anywhere in a column header cell → **Edit** / **Delete**. Dynamic/computed columns (`dynamic-fields.json`) remain read-only in the UI.
 - **Create / update API:** `POST /api/databases/:id/columns`, `PATCH /api/databases/:id/columns/:key` (see [tome-editor.md](./tome-editor.md)).
-- **Destructive schema edits** (key rename, type change, relation target/perspective change) migrate or clear row data on `is_a` edges; the UI confirms before applying.
+- **Destructive schema edits** (key rename, type change, relation association change) migrate or clear row data on `is_a` edges; the UI confirms before applying.
 - **`select` / `status`:** the editor can wire an **existing** `schema.json` enum via `enumId`. Creating new enum definitions remains a manual / script workflow (`bun scripts/seed-select-enums.ts`, edit `schema.json`).
 - **Manual:** edit `table-schemas.json` directly
 - **Sync:** `bun run content:sync` or editor API startup rebuilds the SQLite cache

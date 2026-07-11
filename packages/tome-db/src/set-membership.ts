@@ -1,7 +1,7 @@
 import type { GraphDatabase, Relationship } from "tome-sqlite";
 import {
   resolveContentPath,
-  loadRelationshipTypesFromContent,
+  loadAssociationsFromContent,
   archiveNodeId,
   hasTableSchemaEntry,
   isSetTraitComposite,
@@ -19,19 +19,19 @@ export type SetKind = "type_table" | "archive";
 
 export function membershipPerspectives(contentDir?: string): string[] {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
   return setTraitPerspectives(registry);
 }
 
 export function isSetMembershipStorageType(type: string, contentDir?: string): boolean {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
   return isSetTraitComposite(registry, type);
 }
 
 export function isMembershipPerspective(perspective: string, contentDir?: string): boolean {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
   return setTraitPerspectives(registry).includes(perspective);
 }
 
@@ -46,10 +46,10 @@ export function listSetMembership(
 
 export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: string): string[] {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.types[composite];
+    const def = registry.associations[composite];
     if (!def) continue;
     const { childIndex } = setRoleIndices(def);
     const memberPerspective = def.perspectives[childIndex]!;

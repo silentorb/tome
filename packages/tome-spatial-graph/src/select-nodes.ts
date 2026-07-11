@@ -22,7 +22,7 @@ export async function selectSpatialGraph(
     return { typeId, nodes: [], edges: [] };
   }
 
-  const relationshipTypes = [
+  const associations = [
     ...config.relationships.parentTypes,
     ...config.relationships.childTypes,
     ...config.relationships.neighborTypes,
@@ -31,7 +31,7 @@ export async function selectSpatialGraph(
   const edges = await Promise.resolve(
     graphQuery.listEdges({
       nodeIds,
-      types: relationshipTypes,
+      types: associations,
     }),
   );
 

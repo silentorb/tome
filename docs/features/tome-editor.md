@@ -24,7 +24,7 @@ For Graph Explorer LOD layers and clustering, read [`graph-explorer.md`](./graph
 - The editor **must** read and write node bodies via `tome-db` (`ContentStore` → `content/data/{shard}/{id}.md`).
 - Every node **must** render as a **universal page** with this block order: **page title** (standalone textarea) → collapsible **metadata** panel (timestamps, backlinks, and optional **Properties** when expanded) → **markdown body** (Milkdown) → optional relationship and database table sections derived from graph relationships.
 - Because the page title is rendered outside the markdown body, heading levels in stored markdown **must** render one level deeper in the page body (`h1` → rendered `h2`, `h2` → rendered `h3`, etc.).
-- Instance pages (nodes with `(page)-[:member_of]->(type)`) **must** show a **Properties** section inside the expanded metadata panel when the type defines one or more stored scalar fields and/or dynamic computed fields for that database. Stored scalars (e.g. Priority) are editable; computed dynamic fields are read-only. Properties **must** show singular stored scalars and computed fields on the `member_of` edge only — not relationship membership. When Properties is shown, a **Membership** relation table section (title from `perspectiveLabels` in `relationship-types.json`; Marloth default: **Membership**) **must** still appear below the markdown body with one row per parent type-table node; membership is edited there (Link / Remove), not in Properties.
+- Instance pages (nodes with `(page)-[:member_of]->(type)`) **must** show a **Properties** section inside the expanded metadata panel when the type defines one or more stored scalar fields and/or dynamic computed fields for that database. Stored scalars (e.g. Priority) are editable; computed dynamic fields are read-only. Properties **must** show singular stored scalars and computed fields on the `member_of` edge only — not relationship membership. When Properties is shown, a **Membership** relation table section (title from `perspectiveLabels` in `associations.json`; Marloth default: **Membership**) **must** still appear below the markdown body with one row per parent type-table node; membership is edited there (Link / Remove), not in Properties.
 - Relationship tables **must** group outgoing relationships by label; relationship properties (except import metadata like `ordinal`, `via_view`) **must** appear as table columns.
 - Database table sections **must** appear on type-table nodes, built from incoming `IS_A` relationships (Name from linked pages; scalar columns from `IS_A` properties; relation columns from linked targets on outgoing graph relationships — see [tome-db.md](./tome-db.md) `getDatabaseViewDetail`).
 - The API **must** load `content/` on startup (full cache rebuild if stale), watch `content/data/` and `content/model/` for changes, and sync into `TOME_DB_PATH (fallback: MARLOTH_DB_PATH)` (see tome-db).
@@ -102,13 +102,13 @@ Pointer handlers (click, context menu, drag affordances) **must** cover the **fu
 
 - **New page** (sidebar **New page** or `?view=create`) **must** immediately create a standalone node with default title `Untitled` (no relationships) and open the universal node edit page so the user can set title and body there.
 - **Database (IS_A) table add row** — type-table **Items** sections (`section.type === "database"`) **must** offer an inline **New row** control that creates a new type instance and links it via `is_a` (`POST /api/databases/:id/rows`). The new row **must** appear after reload.
-- **Associative relation table link** — many-to-many outgoing relation sections (`addMode: "link-existing"`, e.g. Features, Inspirations, Characters) **must** offer an inline **Link** control that picks an **existing** record (`POST /api/nodes/:id/connections`), scoped by `allowedTargetTypeIds` from `schema.json` when a rule matches. Structural one-to-many relation sections (`addMode: "none"`, e.g. Part) **must not** show a table-level add control; ordered-association tables are unchanged.
-- Relation table sections appear when the page has at least one outgoing edge for that label **or** when the instance's type table defines a matching `type: relation` column in `table-schemas.json` (editor only; the static site still omits empty relation sections). Every non-protected node page **must** offer **Relate** in the page actions menu (⋯ to the right of the page title) to open a dialog linking the current page to an **existing** target: searchable relationship type (`GET /api/relationship-types`, all types present in data) and searchable target node (`GET /api/nodes/search`, optionally filtered via `GET /api/nodes/:id/relationship-link-options?type=…` from `schema.json`). Linking uses `POST /api/nodes/:id/connections`; the page reloads so new relation sections appear when applicable.
+- **Associative relation table link** — many-to-many outgoing relation sections (`addMode: "link-existing"`, e.g. Features, Inspirations, Characters) **must** offer an inline **Link** control that picks an **existing** record (`POST /api/nodes/:id/connections`), scoped by `allowedTargetTypeIds` from `schema.json` when a rule matches. Structural one-to-many relation sections (`addMode: "none"`, e.g. Part) **must not** show a table-level add control; ordered-collection tables are unchanged.
+- Relation table sections appear when the page has at least one outgoing edge for that label **or** when the instance's type table defines a matching `type: relation` column in `table-schemas.json` (editor only; the static site still omits empty relation sections). Every non-protected node page **must** offer **Relate** in the page actions menu (⋯ to the right of the page title) to open a dialog linking the current page to an **existing** target: searchable relationship type (`GET /api/associations`, all types present in data) and searchable target node (`GET /api/nodes/search`, optionally filtered via `GET /api/nodes/:id/relationship-link-options?type=…` from `schema.json`). Linking uses `POST /api/nodes/:id/connections`; the page reloads so new relation sections appear when applicable.
 - Database table **relation columns** (`type: relation` in the table schema) **must** be editable in the UI (link/unlink existing rows via the same connections API).
 
 ### Out of scope (v0.1)
 
-- Editing relationships from the UI beyond: ordered-association reorder/part moves (see [ordered-associations.md](./ordered-associations.md)), stored type-membership scalars in the Properties section, type-membership link/unlink in the `IS_A` relation table section, **create** flows that mint new IS_A type instances (database add row), **link existing targets** (Relate dialog, associative relation table **Link**, database relation columns), and enum/scalar patches on existing edges
+- Editing relationships from the UI beyond: ordered-collection reorder/part moves (see [ordered-collections.md](./ordered-collections.md)), stored type-membership scalars in the Properties section, type-membership link/unlink in the `IS_A` relation table section, **create** flows that mint new IS_A type instances (database add row), **link existing targets** (Relate dialog, includes relation table **Link**, database relation columns), and enum/scalar patches on existing edges
 - Weighted relationships or typed link metadata in the editor
 
 ## Design rationale
@@ -184,7 +184,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 | Requirement | Primary tests |
 | --- | --- |
 | Database table assembly (`getDatabaseViewDetail`) | `packages/tome-db/tests/database-view.test.ts`, `database-view-relations.test.ts` |
-| Ordered-association part tables | `packages/tome-db/tests/ordered-associations.test.ts` |
+| Ordered-association part tables | `packages/tome-db/tests/ordered-collections.test.ts` |
 | Dynamic computed columns | `packages/tome-db/tests/dynamic-fields/dynamic-fields.test.ts` |
 | Composite relationship traversal | `packages/tome-db/tests/relationship-traverse.test.ts` |
 | Database table UI | `packages/tome-editor/tests/webview/components/DatabaseTableView.test.tsx` |
@@ -203,7 +203,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 - Manual: sidebar **Recent** lists latest edited nodes below static database links; edit a title/body and confirm the node moves to the top after save
 - Manual: sidebar **New page** or `?view=create` → lands on new node page titled Untitled; `content/data/{shard}/{id}.md` exists
 - Manual: on an IS_A database table section, **+ New row** → new row appears after reload
-- Manual: on an associative relation table section (e.g. Features), **Link** / **+ Link …** → pick existing record; row appears after reload
+- Manual: on an includes / link-existing relation table section (e.g. Features), **Link** / **+ Link …** → pick existing record; row appears after reload
 - Manual: on a database table with relation columns (e.g. Features → Parents), click link labels to navigate; hover the cell and use the edit control to open the popup for add/remove; confirm `content/data/relationships.json` updates
 
 ## Implementation pointers
@@ -230,6 +230,6 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 
 - [tome-db.md](./tome-db.md)
 - [graph-explorer.md](./graph-explorer.md)
-- [ordered-associations.md](./ordered-associations.md)
+- [ordered-collections.md](./ordered-collections.md)
 - [`../ontology.md`](../ontology.md)
 - [`packages/tome-editor/AGENTS.md`](../../packages/tome-editor/AGENTS.md)

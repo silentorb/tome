@@ -42,10 +42,10 @@ describe("buildElkGraph", () => {
     expect(result.graph.layoutOptions["elk.direction"]).toBe("DOWN");
   });
 
-  test("filters by typeIds and relationshipTypes", () => {
+  test("filters by typeIds and perspectives", () => {
     const config = parseSchemaDiagramConfig({
       typeIds: ["AAAAAAAAAAAAAAAAAAAAAAAAAA", "BBBBBBBBBBBBBBBBBBBBBBBBBB"],
-      relationshipTypes: ["features"],
+      perspectives: ["features"],
     });
     const result = buildElkGraph(SNAPSHOT, config);
     expect(result.entityCount).toBe(2);

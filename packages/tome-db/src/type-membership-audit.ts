@@ -7,7 +7,7 @@ import { findSetMembershipRelationship, listSetMemberRowConnections } from "./se
 import { findTypeNodeByTitle, isTypeTableNode } from "./node-capabilities";
 import { legacyExportPathPrefix } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { loadAssociationsFromContent } from "tome-flatfile";
 import { setTraitPerspectives } from "tome-flatfile";
 
 /** Node properties that are not database row scalars. */
@@ -195,7 +195,7 @@ export function findNestedPageSpuriousTypeMembership(
     if (!instanceRoot) continue;
 
     const dir = contentDir ?? resolveContentPath();
-    const registry = loadRelationshipTypesFromContent(dir);
+    const registry = loadAssociationsFromContent(dir);
     for (const label of setTraitPerspectives(registry)) {
       for (const connection of db.listRelationshipsToTarget(databaseId, label)) {
         const pageId = connection.sourceNodeId;
@@ -261,7 +261,7 @@ export function scalarPropertiesFromNode(
 export function findSpuriousTypeMembershipRelationships(db: GraphDatabase, contentDir?: string): SpuriousTypeMembership[] {
   const spurious: SpuriousTypeMembership[] = [];
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadRelationshipTypesFromContent(dir);
+  const registry = loadAssociationsFromContent(dir);
 
   for (const node of db.listNodesForGraphExport()) {
     if (isTypeTableNode(db, node.id)) continue;

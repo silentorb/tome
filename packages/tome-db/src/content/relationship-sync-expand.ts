@@ -2,7 +2,7 @@ import type { Properties, Relationship } from "tome-sqlite";
 import { relationshipId } from "tome-sqlite";
 import type { RelationshipEntry } from "tome-flatfile";
 import { relationshipRecordId } from "tome-flatfile";
-import type { RelationshipTypeDefinition, RelationshipTypesFile } from "tome-flatfile";
+import type { AssociationDefinition, AssociationsFile } from "tome-flatfile";
 import { perspectiveCountForExpansion } from "tome-flatfile";
 
 export interface RelationshipRecordRow {
@@ -24,7 +24,7 @@ export interface RelationshipProjectionRow {
 
 export function expandRelationshipEntry(
   entry: RelationshipEntry,
-  registry: RelationshipTypesFile,
+  registry: AssociationsFile,
 ): { record: RelationshipRecordRow; projections: RelationshipProjectionRow[] } {
   const properties = entry.properties ?? {};
   const recordId = relationshipRecordId(entry.a, entry.b, entry.type);
@@ -36,7 +36,7 @@ export function expandRelationshipEntry(
     properties,
   };
 
-  const typeDef = registry.types[entry.type];
+  const typeDef = registry.associations[entry.type];
   const projections = expandProjections(recordId, entry, typeDef, properties);
 
   return { record, projections };
@@ -51,7 +51,7 @@ export function expandRelationshipEntry(
 function expandProjections(
   recordId: string,
   entry: RelationshipEntry,
-  typeDef: RelationshipTypeDefinition | undefined,
+  typeDef: AssociationDefinition | undefined,
   properties: Properties,
 ): RelationshipProjectionRow[] {
   const perspectives = typeDef?.perspectives ?? [entry.type];
@@ -88,7 +88,7 @@ function projectionRow(
 
 export function expandAllRelationships(
   entries: RelationshipEntry[],
-  registry: RelationshipTypesFile,
+  registry: AssociationsFile,
 ): { records: RelationshipRecordRow[]; projections: RelationshipProjectionRow[] } {
   const records: RelationshipRecordRow[] = [];
   const projections: RelationshipProjectionRow[] = [];

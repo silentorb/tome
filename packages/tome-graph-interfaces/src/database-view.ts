@@ -24,7 +24,7 @@ export interface DatabaseColumnDef {
   defaultOrder?: "asc" | "desc";
   /** Graph relationship perspective when type is `relation`. */
   relationType?: string;
-  /** Storage composite from relationship-types.json when type is `relation`. */
+  /** Storage composite from associations.json when type is `relation`. */
   relationshipCompositeType?: string;
   /** @deprecated Use relationshipCompositeType + registry endpoints. */
   targetDatabaseId?: string;
@@ -38,8 +38,8 @@ export interface DatabaseViewDetail {
   /** @deprecated Use tabs.items */
   views: string[];
   tabs: TableTabsDetail;
-  /** Set-side perspective = views.json relationshipType / section key. */
-  viewRelationshipType: string;
+  /** Set-side perspective = views.json association / section key. */
+  viewAssociation: string;
   /** Member-side perspective for unlink/move against this set. */
   memberSidePerspective: string;
   /** Ordered data column keys before per-view visibility filtering. */

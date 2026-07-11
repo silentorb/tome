@@ -31,29 +31,29 @@ export function makeMockEditorApi(): EditorApi {
       void tabId;
       return makeDatabaseViewDetail();
     },
-    createRelationshipView: async (nodeId, relationshipType, input) => ({
+    createRelationshipView: async (nodeId, association, input) => ({
       id: "new-view",
       nodeId,
-      relationshipType,
+      association,
       name: input.name,
       sorts: input.sorts ?? [{ column: "name", direction: "asc" as const }],
     }),
-    updateRelationshipView: async (nodeId, relationshipType, viewId, input) => ({
+    updateRelationshipView: async (nodeId, association, viewId, input) => ({
       id: viewId,
       nodeId,
-      relationshipType,
+      association,
       name: input.name ?? viewId,
       sorts: input.sorts ?? [{ column: "name", direction: "asc" as const }],
       ...(input.hiddenColumns ? { hiddenColumns: input.hiddenColumns } : {}),
     }),
     deleteRelationshipView: async () => {},
-    patchRelationshipViews: async (nodeId, relationshipType, input) => {
+    patchRelationshipViews: async (nodeId, association, input) => {
       if (input.viewOrder) {
         return {
           views: input.viewOrder.map((id) => ({
             id,
             nodeId,
-            relationshipType,
+            association,
             name: id,
             sorts: [{ column: "name", direction: "asc" as const }],
           })),
@@ -121,7 +121,7 @@ export function makeMockEditorApi(): EditorApi {
     getRelationshipLinkOptions: async () => ({ allowedTargetTypeIds: null }),
     getUserSettings: async () => emptyUserSettings(),
     patchUserSettings: async () => emptyUserSettings(),
-    moveOrderedAssociation: async () => {
+    moveOrderedCollection: async () => {
       throw new Error("not implemented in mock");
     },
     getExtensionsManifest: async () => ({ components: [], editorBundles: [] }),

@@ -28,14 +28,14 @@ import {
   serializeRelationshipsFile,
 } from "./relationships-file";
 import {
-  type RelationshipTypesFile,
-  emptyRelationshipTypesFile,
+  type AssociationsFile,
+  emptyAssociationsFile,
   isBidirectionalComposite,
   localTypesForComposite,
-  parseRelationshipTypesFile,
-  serializeRelationshipTypesFile,
-} from "./relationship-types-file";
-import { LinkResolutionError, resolveCompositeTypeForLink } from "./resolve-composite-for-link";
+  parseAssociationsFile,
+  serializeAssociationsFile,
+} from "./associations-file";
+import { LinkResolutionError, resolveAssociationIdForLink } from "./resolve-composite-for-link";
 import {
   type DynamicFieldsFile,
   emptyDynamicFieldsFile,
@@ -63,18 +63,18 @@ import {
 import { bodyFromNode, nodeFromFile, serializeNodeFile } from "./node-file";
 import {
   RELATIONSHIPS_FILENAME,
-  RELATIONSHIP_TYPES_FILENAME,
+  ASSOCIATIONS_FILENAME,
   DYNAMIC_FIELDS_FILENAME,
   SCHEMA_FILENAME,
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
-  ORDERED_ASSOCIATIONS_FILENAME,
+  ORDERED_COLLECTIONS_FILENAME,
   EXTENSIONS_FILENAME,
   contentDataDir,
   contentModelDir,
   relationshipsFilePath,
-  relationshipTypesFilePath,
+  associationsFilePath,
   dynamicFieldsFilePath,
   viewsFilePath,
   tableSchemasFilePath,
@@ -88,7 +88,7 @@ import {
 const DEBOUNCE_MS = 200;
 
 function entryMatchesLocalType(
-  registry: RelationshipTypesFile,
+  registry: AssociationsFile,
   entry: RelationshipEntry,
   localType: string,
 ): boolean {
@@ -105,7 +105,7 @@ function entryMatchesLocalType(
  * at index 0. This is the sole authority for a new entry's node order.
  */
 function orderedEndpointsForLocalType(
-  registry: RelationshipTypesFile,
+  registry: AssociationsFile,
   composite: string,
   source: string,
   target: string,
@@ -130,13 +130,13 @@ function storeChangeKindForFilename(filename: string): StoreChangeKind {
   const base = basename(filename);
   if (NODE_FILE_PATTERN.test(base)) return "node";
   if (base === RELATIONSHIPS_FILENAME) return "relationships";
-  if (base === RELATIONSHIP_TYPES_FILENAME) return "relationship-types";
+  if (base === ASSOCIATIONS_FILENAME) return "associations";
   if (base === SCHEMA_FILENAME) return "schema";
   if (base === DYNAMIC_FIELDS_FILENAME) return "dynamic-fields";
   if (base === VIEWS_FILENAME) return "views";
   if (base === TABLE_SCHEMAS_FILENAME) return "table-schemas";
   if (base === WORKSPACE_FILENAME) return "workspace";
-  if (base === ORDERED_ASSOCIATIONS_FILENAME) return "ordered-associations";
+  if (base === ORDERED_COLLECTIONS_FILENAME) return "ordered-collections";
   if (base === EXTENSIONS_FILENAME) return "extensions";
   return "unknown";
 }
@@ -233,13 +233,13 @@ export class ContentStore implements TomeDataStore {
   private isRelevantModelFile(name: string): boolean {
     const base = basename(name);
     return (
-      base === RELATIONSHIP_TYPES_FILENAME ||
+      base === ASSOCIATIONS_FILENAME ||
       base === SCHEMA_FILENAME ||
       base === DYNAMIC_FIELDS_FILENAME ||
       base === VIEWS_FILENAME ||
       base === TABLE_SCHEMAS_FILENAME ||
       base === WORKSPACE_FILENAME ||
-      base === ORDERED_ASSOCIATIONS_FILENAME ||
+      base === ORDERED_COLLECTIONS_FILENAME ||
       base === EXTENSIONS_FILENAME
     );
   }
@@ -330,20 +330,20 @@ export class ContentStore implements TomeDataStore {
     atomicWrite(relationshipsFilePath(this.contentDir), serializeRelationshipsFile(file));
   }
 
-  readRelationshipTypesFile(): RelationshipTypesFile {
-    const path = relationshipTypesFilePath(this.contentDir);
+  readAssociationsFile(): AssociationsFile {
+    const path = associationsFilePath(this.contentDir);
     try {
-      return parseRelationshipTypesFile(readFileSync(path, "utf-8"));
+      return parseAssociationsFile(readFileSync(path, "utf-8"));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        return emptyRelationshipTypesFile();
+        return emptyAssociationsFile();
       }
       throw err;
     }
   }
 
-  writeRelationshipTypesFile(file: RelationshipTypesFile): void {
-    atomicWrite(relationshipTypesFilePath(this.contentDir), serializeRelationshipTypesFile(file));
+  writeAssociationsFile(file: AssociationsFile): void {
+    atomicWrite(associationsFilePath(this.contentDir), serializeAssociationsFile(file));
   }
 
   findContentEntry(
@@ -351,7 +351,7 @@ export class ContentStore implements TomeDataStore {
     target: string,
     localType: string,
   ): RelationshipEntry | null {
-    const registry = this.readRelationshipTypesFile();
+    const registry = this.readAssociationsFile();
     const normalized = normalizeRelationshipType(localType);
 
     for (const entry of this.readRelationshipsFile().relationships) {
@@ -382,11 +382,11 @@ export class ContentStore implements TomeDataStore {
     localType: string,
     properties: Properties = {},
   ): void {
-    const registry = this.readRelationshipTypesFile();
+    const registry = this.readAssociationsFile();
     const file = this.readRelationshipsFile();
     const normalized = normalizeRelationshipType(localType);
 
-    let composite = resolveCompositeTypeForLink(
+    let composite = resolveAssociationIdForLink(
       registry,
       file.relationships,
       this.contentDir,
@@ -395,7 +395,7 @@ export class ContentStore implements TomeDataStore {
       normalized,
     );
 
-    if (!registry.types[composite]) {
+    if (!registry.associations[composite]) {
       throw new LinkResolutionError(normalized);
     }
 
@@ -461,11 +461,11 @@ export class ContentStore implements TomeDataStore {
     localType: string,
     properties: Properties,
   ): boolean {
-    const registry = this.readRelationshipTypesFile();
+    const registry = this.readAssociationsFile();
     const file = this.readRelationshipsFile();
     const normalized = normalizeRelationshipType(localType);
 
-    const composite = resolveCompositeTypeForLink(
+    const composite = resolveAssociationIdForLink(
       registry,
       file.relationships,
       this.contentDir,
@@ -500,7 +500,7 @@ export class ContentStore implements TomeDataStore {
   }
 
   deleteRelationship(source: string, target: string, localType: string): boolean {
-    const registry = this.readRelationshipTypesFile();
+    const registry = this.readAssociationsFile();
     const file = this.readRelationshipsFile();
     const normalized = normalizeRelationshipType(localType);
     const before = file.relationships.length;

@@ -13,32 +13,32 @@ Table view configuration for type-table member relationships lives in [`content/
     {
       "id": "weighted",
       "nodeId": "2eea538996934ce8abafc27132e576c1",
-      "relationshipType": "members",
+      "perspective": "members",
       "name": "Weighted",
       "sorts": [{ "column": "weighted_use", "direction": "desc" }],
       "properties": { "columnOrder": ["type", "features", "weighted_use"] }
     },
     {
       "nodeId": "204dba198db74611b0b49a98dd53e8f5",
-      "relationshipType": "members",
+      "perspective": "members",
       "generator": "scenes-by-book"
     }
   ]
 }
 ```
 
-- **`relationshipType`**: graph relationship from the set node (usually `"members"`).
+- **`perspective`**: graph relationship perspective from the set node (usually `"members"`).
 - **Custom views**: require `id`, `name`, `sorts` (array, may be empty).
-- **Generated views**: use `generator` (e.g. `scenes-by-book`); computed at runtime from ordered-associations config.
-- **`properties.columnOrder`**: optional column key order, duplicated on each view for the same `(nodeId, relationshipType)` pair.
+- **Generated views**: use `generator` (e.g. `scenes-by-book`); computed at runtime from ordered-collections config.
+- **`properties.columnOrder`**: optional column key order, duplicated on each view for the same `(nodeId, perspective)` pair.
 - **`hiddenColumns`**: optional column keys hidden in that view only (not synced across sibling views).
 - **Tab order**: array order of views sharing the same pair; the UI derives tabs when more than one view exists.
 
 ## Editor behavior
 
 - Active tab is selected via `?tab=` (standalone) or node GET `?tab=` when present; otherwise the editor restores the last tab from `.marloth/user-settings.json` (`tableTabs`).
-- Custom views support in-editor CRUD via `/api/views/nodes/:id/relationships/:relationshipType/views`.
-- View order is updated via `PATCH /api/views/nodes/:id/relationships/:relationshipType` with `{ viewOrder: string[] }`.
+- Custom views support in-editor CRUD via `/api/views/nodes/:id/perspectives/:perspective/views`.
+- View order is updated via `PATCH /api/views/nodes/:id/perspectives/:perspective` with `{ viewOrder: string[] }`.
 - Column order is updated via the same PATCH with `{ properties: { columnOrder: string[] } }` (syncs all sibling views).
 - Column visibility is updated per view via `PATCH .../views/:viewId` with `{ hiddenColumns: string[] }`.
 - Generated views (Scenes) switch scope only; no CRUD chrome.

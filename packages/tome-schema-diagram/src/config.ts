@@ -24,14 +24,14 @@ export interface SchemaDiagramWorkspaceOptions {
 
 export interface SchemaDiagramBlockData {
   typeIds?: string[];
-  relationshipTypes?: string[];
+  perspectives?: string[];
   theme?: SchemaDiagramTheme;
   direction?: SchemaDiagramDirection;
 }
 
 export interface SchemaDiagramConfig {
   typeIds: string[] | null;
-  relationshipTypes: string[] | null;
+  perspectives: string[] | null;
   theme: SchemaDiagramTheme;
   direction: SchemaDiagramDirection;
   memberBadgePosition: SchemaDiagramMemberBadgePosition;
@@ -79,7 +79,7 @@ export function parseSchemaDiagramConfig(
 
   return {
     typeIds: stringArray(root.typeIds),
-    relationshipTypes: stringArray(root.relationshipTypes),
+    perspectives: stringArray(root.perspectives),
     theme: THEMES.has(themeRaw as SchemaDiagramTheme) ? (themeRaw as SchemaDiagramTheme) : "default",
     direction: DIRECTIONS.has(directionRaw as SchemaDiagramDirection)
       ? (directionRaw as SchemaDiagramDirection)
