@@ -5,8 +5,9 @@ import { GraphDatabase } from "../../src/graph";
 import { ORDERED_MEMBER_OF_TYPE } from "../../src/labels";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { schemaFilePath } from "../../src/content/paths";
+import { relationshipTypeRuleContext } from "../../src/relationship-type-endpoints";
+import { loadRelationshipTypesFromContent } from "../../src/relationship-types/load";
 import { loadSchemaFromContent, invalidateSchemaCache } from "../../src/schema-rules/load";
-import { relationshipRuleContextForType, resolveRelationshipRule } from "../../src/schema-rules/resolve";
 import { parseSchemaFile } from "../../src/schema-rules/schema-file";
 
 function marlothContentPathForIntegrationTest(): string | null {
@@ -51,7 +52,7 @@ describe("schema rules", () => {
     expect(file.relationshipRules).toEqual([]);
   });
 
-  test("resolveRelationshipRule reads allowed targets from relationship-types endpoints", () => {
+  test("relationshipTypeRuleContext reads allowed targets from relationship-types endpoints", () => {
     const previousContentPath = process.env.TOME_CONTENT_PATH;
     process.env.TOME_CONTENT_PATH = "/workspaces/marloth-story/content";
 
@@ -65,25 +66,15 @@ describe("schema rules", () => {
     db.upsertNode(featureRow, { title: "Test feature" });
     db.upsertRelationship(featureRow, featuresType, ORDERED_MEMBER_OF_TYPE, {});
 
-    const schema = parseSchemaFile(JSON.stringify({ version: 1, enums: {} }));
-
-    const rule = resolveRelationshipRule(
-      schema,
+    const registry = loadRelationshipTypesFromContent("/workspaces/marloth-story/content");
+    const context = relationshipTypeRuleContext(
+      registry,
       db,
       featureRow,
       "features_test",
       "/workspaces/marloth-story/content",
     );
-    expect(rule?.id).toBe("scenes_features_test");
-    expect(rule?.allowedTargetTypeIds).toEqual([scenesType]);
-
-    const context = relationshipRuleContextForType(
-      schema,
-      db,
-      featureRow,
-      "features_test",
-      "/workspaces/marloth-story/content",
-    );
+    expect(context?.compositeType).toBe("scenes_features_test");
     expect(context?.allowedTargetTypeIds).toEqual([scenesType]);
 
     if (previousContentPath === undefined) {

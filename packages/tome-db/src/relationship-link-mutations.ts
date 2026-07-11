@@ -4,8 +4,8 @@ import { syncAfterRelationshipsWrite } from "./content/write-context";
 import { LinkResolutionError } from "./content/resolve-composite-for-link";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
 import { normalizeRelationshipType } from "./relation-type";
-import { relationshipRuleContextForType } from "./schema-rules/resolve";
-import type { SchemaFile } from "./schema-rules/schema-file";
+import { relationshipTypeRuleContext } from "./relationship-type-endpoints";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { stampOrderIfMissing } from "./ordered-relationships";
 import { membershipPerspectivesForSet } from "./relationship-type-traits";
 
@@ -48,14 +48,13 @@ export interface LinkOutgoingRelationshipInput {
   targetId: string;
   type: string;
   properties?: Properties;
-  schema?: SchemaFile | null;
 }
 
 export function linkOutgoingRelationship(
   ctx: TomeWriteContext,
   input: LinkOutgoingRelationshipInput,
 ): LinkOutgoingRelationshipError | null {
-  const { sourceId, targetId, type, properties = {}, schema } = input;
+  const { sourceId, targetId, type, properties = {} } = input;
   const normalizedType = normalizeRelationshipType(type);
 
   if (!ctx.store.readNode(sourceId)) return "source_not_found";
@@ -65,15 +64,20 @@ export function linkOutgoingRelationship(
     return "duplicate";
   }
 
-  if (schema) {
-    const ruleContext = relationshipRuleContextForType(schema, ctx.db, sourceId, normalizedType);
-    if (
-      ruleContext &&
-      ruleContext.allowedTargetTypeIds.length > 0 &&
-      !nodeMatchesTargetTypes(ctx.db, targetId, ruleContext.allowedTargetTypeIds)
-    ) {
-      return "target_type_not_allowed";
-    }
+  const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
+  const ruleContext = relationshipTypeRuleContext(
+    registry,
+    ctx.db,
+    sourceId,
+    normalizedType,
+    ctx.store.contentDir,
+  );
+  if (
+    ruleContext &&
+    ruleContext.allowedTargetTypeIds.length > 0 &&
+    !nodeMatchesTargetTypes(ctx.db, targetId, ruleContext.allowedTargetTypeIds, ctx.store.contentDir)
+  ) {
+    return "target_type_not_allowed";
   }
 
   let relProps: Properties = { ...properties };
@@ -120,14 +124,13 @@ export interface MoveRelationshipConnectionInput {
   oldTargetId: string;
   newSourceId: string;
   newTargetId: string;
-  schema?: SchemaFile | null;
 }
 
 export function moveRelationshipConnection(
   ctx: TomeWriteContext,
   input: MoveRelationshipConnectionInput,
 ): MoveRelationshipConnectionError | null {
-  const { type, oldSourceId, oldTargetId, newSourceId, newTargetId, schema } = input;
+  const { type, oldSourceId, oldTargetId, newSourceId, newTargetId } = input;
   const normalizedType = normalizeRelationshipType(type);
 
   const existing = ctx.store.findRelationship(oldSourceId, oldTargetId, normalizedType);
@@ -138,7 +141,6 @@ export function moveRelationshipConnection(
     targetId: newTargetId,
     type: normalizedType,
     properties: { ...existing.properties },
-    schema,
   });
   if (linkError) return linkError;
 

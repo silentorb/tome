@@ -204,7 +204,15 @@ export type {
   RelationTableAddMode,
   RelationTableSection,
 } from "./node-page-sections";
-export { relationSectionSupportsLinkExisting } from "./relationship-type-endpoints";
+export {
+  relationSectionSupportsLinkExisting,
+  relationshipTypeRuleContext,
+  relationshipTypeRulesFromRegistry,
+} from "./relationship-type-endpoints";
+export type {
+  RelationshipTypeRuleContext,
+  RelationshipTypeRuleEntry,
+} from "./relationship-type-endpoints";
 export {
   applyOrderedAssociationMove,
   getConfigByProvider,
@@ -239,15 +247,9 @@ export {
 export type { DynamicColumnSetRecord, DynamicFieldRecord } from "./dynamic-fields";
 export {
   MEMBER_OF_TYPE,
-  IS_A_TYPE,
-  IS_A_LABEL,
   MEMBERS_TYPE,
   ORDERED_MEMBER_OF_TYPE,
   ORDERED_MEMBERS_TYPE,
-  TYPE_MEMBERSHIP_TYPES,
-  TYPE_MEMBERSHIP_LABELS,
-  isTypeMembershipType,
-  isTypeMembershipLabel,
 } from "./labels";
 export {
   membershipPerspectives,
@@ -408,13 +410,6 @@ export {
   getSectionColumnOrder,
   reorderColumnDefs,
 } from "./views/column-order";
-export {
-  allowedTargetTypeIdsForRule,
-  relationshipRuleContextForType,
-  resolveRelationshipRule,
-  resolveRelationshipRulesForSource,
-} from "./schema-rules/resolve";
-export type { RelationshipRuleContext } from "./schema-rules/resolve";
 export {
   emptySchemaFile,
   parseSchemaFile,

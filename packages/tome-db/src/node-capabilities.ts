@@ -137,8 +137,9 @@ export function nodeMatchesTargetTypes(
   db: GraphDatabase,
   targetNodeId: string,
   allowedTypeIds: readonly string[],
+  contentDir?: string,
 ): boolean {
   if (allowedTypeIds.length === 0) return true;
-  const targetTypes = typeIdsForInstance(db, targetNodeId);
+  const targetTypes = typeIdsForInstance(db, targetNodeId, contentDir);
   return targetTypes.some((id) => allowedTypeIds.includes(id));
 }

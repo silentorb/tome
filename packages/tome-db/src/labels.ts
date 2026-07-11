@@ -9,30 +9,3 @@ export const ORDERED_MEMBER_OF_TYPE = "ordered_member_of";
 
 /** (set)-[:ordered_members]->(member) — inverse perspective for ordered set membership. */
 export const ORDERED_MEMBERS_TYPE = "ordered_members";
-
-/** @deprecated Use MEMBER_OF_TYPE */
-export const IS_A_TYPE = MEMBER_OF_TYPE;
-
-/** @deprecated Use MEMBER_OF_TYPE */
-export const IS_A_LABEL = MEMBER_OF_TYPE;
-
-/** Perspectives used when querying set membership (outgoing from each endpoint). */
-export const TYPE_MEMBERSHIP_TYPES = [
-  MEMBER_OF_TYPE,
-  MEMBERS_TYPE,
-  ORDERED_MEMBER_OF_TYPE,
-  ORDERED_MEMBERS_TYPE,
-] as const;
-
-/** @deprecated Use MEMBERS_TYPE when querying from a set node. */
-export const TYPE_MEMBERSHIP_FROM_SET_TYPES = [MEMBERS_TYPE] as const;
-
-/** @deprecated Use TYPE_MEMBERSHIP_TYPES */
-export const TYPE_MEMBERSHIP_LABELS = TYPE_MEMBERSHIP_TYPES;
-
-export function isTypeMembershipType(type: string): boolean {
-  return (TYPE_MEMBERSHIP_TYPES as readonly string[]).includes(type);
-}
-
-/** @deprecated Use isTypeMembershipType */
-export const isTypeMembershipLabel = isTypeMembershipType;

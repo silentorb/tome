@@ -117,14 +117,7 @@ describe("createExtensionSchemaQueryServices", () => {
     schemaFilePath(fixture.ctx.store.contentDir),
     serializeSchemaFile({
       version: 1,
-      relationshipRules: [
-        {
-          id: "scene-features",
-          sourceTypeId: sceneTypeId,
-          type: "includes",
-          allowedTargetTypeIds: [featureTypeId],
-        },
-      ],
+      relationshipRules: [],
       enums: {},
     }),
     "utf-8",
@@ -161,14 +154,32 @@ describe("createExtensionSchemaQueryServices", () => {
     expect(tables.find((table) => table.id === featureTypeId)?.memberCount).toBe(0);
   });
 
-  test("listRelationshipRules returns schema rules", () => {
+  test("listRelationshipRules returns rules from relationship-types endpoints", () => {
     const rules = services.listRelationshipRules();
-    expect(rules).toHaveLength(1);
-    expect(rules[0]).toEqual({
-      id: "scene-features",
+    expect(rules).toHaveLength(6);
+    expect(rules).toContainEqual({
+      id: "scene_features",
+      sourceTypeId: featureTypeId,
+      type: "features",
+      allowedTargetTypeIds: [sceneTypeId],
+    });
+    expect(rules).toContainEqual({
+      id: "scene_features",
       sourceTypeId: sceneTypeId,
-      type: "includes",
+      type: "scenes",
       allowedTargetTypeIds: [featureTypeId],
+    });
+    expect(rules).toContainEqual({
+      id: "scene_inspirations",
+      sourceTypeId: inspirationTypeId,
+      type: "inspirations",
+      allowedTargetTypeIds: [sceneTypeId],
+    });
+    expect(rules).toContainEqual({
+      id: "inspirations_features",
+      sourceTypeId: featureTypeId,
+      type: "features",
+      allowedTargetTypeIds: [inspirationTypeId],
     });
   });
 

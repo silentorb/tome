@@ -3,7 +3,6 @@
  */
 import type { GraphDatabase, Relationship, Properties } from "./graph";
 import { NODE_ID_RE_SRC } from "./node-id";
-import { MEMBER_OF_TYPE } from "./labels";
 import { findSetMembershipRelationship, listSetMemberRowConnections } from "./set-membership";
 import { findTypeNodeByTitle, isTypeTableNode } from "./node-capabilities";
 import { legacyExportPathPrefix } from "./workspace/resolve";
@@ -370,5 +369,3 @@ export function nodePropertiesWithoutScalars(properties: Properties): Properties
 export function setNodeProperties(db: GraphDatabase, nodeId: string, properties: Properties): void {
   db.runExec("UPDATE nodes SET properties = ? WHERE id = ?", JSON.stringify(properties), nodeId);
 }
-
-export { MEMBER_OF_TYPE };

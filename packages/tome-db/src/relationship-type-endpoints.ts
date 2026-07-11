@@ -84,6 +84,34 @@ export interface RelationshipTypeRuleContext {
   allowedTargetTypeIds: string[];
 }
 
+export interface RelationshipTypeRuleEntry {
+  id: string;
+  sourceTypeId: string;
+  type: string;
+  allowedTargetTypeIds: string[];
+}
+
+/** All relationship rules implied by registry endpoint definitions. */
+export function relationshipTypeRulesFromRegistry(
+  registry: RelationshipTypesFile,
+): RelationshipTypeRuleEntry[] {
+  const rules: RelationshipTypeRuleEntry[] = [];
+  for (const [composite, def] of Object.entries(registry.types)) {
+    if (!def.endpoints) continue;
+    for (const hostIndex of [0, 1] as const) {
+      const sourceTypeId = def.endpoints[hostIndex].typeId;
+      const perspective = def.perspectives[hostIndex];
+      rules.push({
+        id: composite,
+        sourceTypeId,
+        type: perspective,
+        allowedTargetTypeIds: allowedTargetTypeIdsForPerspective(registry, composite, perspective),
+      });
+    }
+  }
+  return rules;
+}
+
 export function relationshipTypeRuleContext(
   registry: RelationshipTypesFile,
   db: GraphDatabase,

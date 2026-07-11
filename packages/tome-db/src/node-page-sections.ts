@@ -11,13 +11,10 @@ import { getNodePageMetadata, type NodePageMetadata } from "./node-metadata";
 import { buildPropertiesSection, type PropertiesSection } from "./node-type-properties";
 import {
   relationSectionSupportsLinkExisting,
+  relationshipTypeRuleContext,
 } from "./relationship-type-endpoints";
 import { findTypeNodeByTitle, typeIdsForInstance } from "./node-capabilities";
 import { normalizeRelationshipType } from "./relation-type";
-import {
-  relationshipRuleContextForType,
-} from "./schema-rules/resolve";
-import type { SchemaFile } from "./schema-rules/schema-file";
 import { resolveContentPath } from "./content/paths";
 import { resolveCompositeType } from "./content/relationship-types-file";
 import {
@@ -81,7 +78,7 @@ export interface RelationTableSection {
   title: string;
   /** When set, the section title links to this type node. */
   typeNodeId: string | null;
-  /** UI hint: allowed member_of target type ids for link-existing picker (from table-schemas / schema.json). */
+  /** UI hint: allowed target type ids for link-existing picker (from table-schemas or registry endpoints). */
   allowedTargetTypeIds?: string[];
   /** Inline table add control: link existing record vs none (registry linkExisting presentation). */
   addMode: RelationTableAddMode;
@@ -132,7 +129,7 @@ function relationTypeSortKey(
   type: string,
   registry: ReturnType<typeof loadRelationshipTypesFromContent>,
 ): string {
-  if (isSetTraitPerspective(registry, type)) return "z:member_of";
+  if (isSetTraitPerspective(registry, type)) return "z:set";
   return `a:${type}`;
 }
 
@@ -236,12 +233,10 @@ function buildRelationSections(
   db: GraphDatabase,
   nodeId: string,
   options?: {
-    schema?: SchemaFile;
     contentDir?: string;
     includeSchemaEmptySections?: boolean;
   },
 ): RelationTableSection[] {
-  const schema = options?.schema;
   const contentDir = options?.contentDir ?? resolveContentPath();
   const typeTableIds = typeTableIdsFromContent(contentDir);
   const relationshipTypes = loadRelationshipTypesFromContent(contentDir);
@@ -297,18 +292,18 @@ function buildRelationSections(
       return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     });
 
-    const isTypeMembership = isSetTraitPerspective(relationshipTypes, perspective);
-    const typeNodeId = isTypeMembership
+    const isSetMembership = isSetTraitPerspective(relationshipTypes, perspective);
+    const typeNodeId = isSetMembership
       ? null
       : resolveTypeNodeId(db, perspective, connections, relationshipTypes);
     const tableRelation = tableRelationByGroupKey.get(perspective);
     const hostTypeId = typeIdsForInstance(db, nodeId, contentDir)[0];
     const ruleContext =
-      schema && !isTypeMembership && !tableRelation
-        ? relationshipRuleContextForType(schema, db, nodeId, perspective, contentDir)
+      !isSetMembership && !tableRelation
+        ? relationshipTypeRuleContext(relationshipTypes, db, nodeId, perspective, contentDir)
         : null;
     let columns = [...columnSet].sort((a, b) => a.localeCompare(b));
-    if (isTypeMembership) {
+    if (isSetMembership) {
       for (const row of rows) {
         row.cells = {};
       }
@@ -318,7 +313,7 @@ function buildRelationSections(
         row.cells.priority = coalescePriorityValue(row.cells.priority);
       }
     }
-    const columnDefs = isTypeMembership
+    const columnDefs = isSetMembership
       ? []
       : enrichColumnDefs(
           columns.map((key) => ({
@@ -336,11 +331,11 @@ function buildRelationSections(
 
     const membershipCompositeKey =
       membershipCompositeForPerspective(relationshipTypes, perspective) ?? perspective;
-    const sectionTitle = isTypeMembership
+    const sectionTitle = isSetMembership
       ? perspectiveDisplayLabel(relationshipTypes, perspective, membershipCompositeKey)
       : sectionTitleForType(db, perspective, typeNodeId);
     const linkAddLabel =
-      isTypeMembership && isMemberSidePerspective(relationshipTypes, perspective)
+      isSetMembership && isMemberSidePerspective(relationshipTypes, perspective)
         ? perspectiveLinkAddLabel(
             relationshipTypes,
             perspective,
@@ -362,14 +357,14 @@ function buildRelationSections(
       label: perspective,
       title: sectionTitle,
       typeNodeId,
-      allowedTargetTypeIds: isTypeMembership
+      allowedTargetTypeIds: isSetMembership
         ? typeTableIds
         : tableRelation && hostTypeId
           ? (targetTypeIdForRelationColumn(relationshipTypes, hostTypeId, tableRelation)
               ? [targetTypeIdForRelationColumn(relationshipTypes, hostTypeId, tableRelation)!]
               : undefined)
           : ruleContext?.allowedTargetTypeIds,
-      addMode: isTypeMembership
+      addMode: isSetMembership
         ? "link-existing"
         : relationSectionSupportsLinkExisting(relationshipTypes, perspective, compositeType)
           ? "link-existing"
@@ -395,7 +390,6 @@ export function getNodePageDetail(
     databaseView?: string;
     /** @deprecated Use tabId */
     scopeId?: string;
-    schema?: SchemaFile;
     contentDir?: string;
     /** Editor only: emit empty relation sections for type-table relation columns with no outgoing edges yet. */
     includeSchemaEmptySections?: boolean;
@@ -436,7 +430,6 @@ export function getNodePageDetail(
 
   sections.push(
     ...buildRelationSections(db, id, {
-      schema: options?.schema,
       contentDir,
       includeSchemaEmptySections: options?.includeSchemaEmptySections,
     }),

@@ -136,7 +136,7 @@ export function buildSiteNode(
   contentDir: string,
   schema: SchemaFile,
 ): SiteNode | null {
-  const detail = getNodePageDetail(db, id, { contentDir, schema });
+  const detail = getNodePageDetail(db, id, { contentDir });
   if (!detail) return null;
 
   const itemsSection = findItemsSection(detail.sections);

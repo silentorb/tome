@@ -14,7 +14,8 @@ import {
   getDatabaseViewDetail,
   getNodePageDetail,
   loadSchemaFromContent,
-  relationshipRuleContextForType,
+  loadRelationshipTypesFromContent,
+  relationshipTypeRuleContext,
   searchNodes,
   listRecentNodesByModifiedAt,
   updateNodeBody,
@@ -210,7 +211,7 @@ export function openEditorDatabase(
   return {
     getWorkspace(): WorkspacePublic {
       const ws = loadWorkspaceFromContent(contentPath);
-      const archivePage = getNodePageDetail(writeCtx.db, ws.archiveNodeId, { schema: schema() });
+      const archivePage = getNodePageDetail(writeCtx.db, ws.archiveNodeId, { contentDir: contentPath });
       return {
         ...ws,
         archiveNodeTitle: archivePage?.title ?? "Archive",
@@ -218,7 +219,7 @@ export function openEditorDatabase(
     },
     getHomeId(): string {
       const homeId = loadWorkspaceFromContent(contentPath).homeNodeId;
-      const home = getNodePageDetail(writeCtx.db, homeId, { schema: schema() });
+      const home = getNodePageDetail(writeCtx.db, homeId, { contentDir: contentPath });
       if (home) return homeId;
       const recent = searchNodes(writeCtx.db, "", 1);
       return recent[0]?.id ?? homeId;
@@ -227,7 +228,6 @@ export function openEditorDatabase(
       const tabId = options?.tabId ?? options?.scopeId ?? options?.databaseView;
       return getNodePageDetail(writeCtx.db, id, {
         tabId,
-        schema: schema(),
         contentDir: contentPath,
         includeSchemaEmptySections: true,
       });
@@ -299,7 +299,8 @@ export function openEditorDatabase(
       return writeCtx.db.listDistinctRelationshipTypes();
     },
     getRelationshipLinkOptions(sourceId: string, type: string) {
-      const rule = relationshipRuleContextForType(schema(), writeCtx.db, sourceId, type, contentPath);
+      const registry = loadRelationshipTypesFromContent(contentPath);
+      const rule = relationshipTypeRuleContext(registry, writeCtx.db, sourceId, type, contentPath);
       return {
         allowedTargetTypeIds: rule ? [...rule.allowedTargetTypeIds] : null,
       };
@@ -379,7 +380,14 @@ export function openEditorDatabase(
       sourceId: string,
       input: { type: string; title: string; properties?: Record<string, string> },
     ): CreateNodeResult | CreateNodeError {
-      const rule = relationshipRuleContextForType(schema(), writeCtx.db, sourceId, input.type);
+      const registry = loadRelationshipTypesFromContent(contentPath);
+      const rule = relationshipTypeRuleContext(
+        registry,
+        writeCtx.db,
+        sourceId,
+        input.type,
+        contentPath,
+      );
       const membershipTypeId =
         rule && rule.allowedTargetTypeIds.length === 1
           ? rule.allowedTargetTypeIds[0]
@@ -403,7 +411,6 @@ export function openEditorDatabase(
         sourceId,
         targetId: input.targetId,
         type: input.type,
-        schema: schema(),
       });
     },
     unlinkOutgoingRelationship(
@@ -422,7 +429,6 @@ export function openEditorDatabase(
     }): MoveRelationshipConnectionError | null {
       return moveRelationshipConnection(writeCtx, {
         ...input,
-        schema: schema(),
       });
     },
     getGraphFull(): GraphSnapshot {

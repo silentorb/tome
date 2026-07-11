@@ -5,10 +5,10 @@ import type {
   SchemaQueryTypeTable,
 } from "tome-interfaces/extension-services/schema-query";
 import type { GraphDatabase, Node } from "./graph";
-import { loadSchemaFromContent } from "./schema-rules/load";
 import { setMemberIds } from "./set-membership";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import { relationshipTypeRulesFromRegistry } from "./relationship-type-endpoints";
 import {
   perspectiveForRelationColumn,
   targetTypeIdForRelationColumn,
@@ -45,8 +45,8 @@ export function createExtensionSchemaQueryServices(
     },
 
     listRelationshipRules(): SchemaQueryRelationshipRule[] {
-      const schema = loadSchemaFromContent(contentDir);
-      return schema.relationshipRules.map((rule) => ({
+      const registry = loadRelationshipTypesFromContent(contentDir);
+      return relationshipTypeRulesFromRegistry(registry).map((rule) => ({
         id: rule.id,
         sourceTypeId: rule.sourceTypeId,
         type: rule.type,
