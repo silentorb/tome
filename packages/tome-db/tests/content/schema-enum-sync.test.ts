@@ -1,14 +1,14 @@
 import { describe, expect, test, afterAll, beforeAll } from "bun:test";
 import { Database } from "bun:sqlite";
 import { writeFileSync } from "node:fs";
-import { serializeSchemaFile } from "tome-store-flatfile";
+import { serializeSchemaFile } from "tome-flatfile";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestNode,
   seedTestRelationships,
 } from "../../src/content/test-helpers";
-import { SCHEMA_FILENAME, schemaFilePath } from "tome-store-flatfile";
+import { SCHEMA_FILENAME, schemaFilePath } from "tome-flatfile";
 import { enumConfigFingerprint } from "../../src/enum-config-fingerprint";
 
 const SCHEMA_V1 = {

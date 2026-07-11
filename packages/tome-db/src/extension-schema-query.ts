@@ -4,15 +4,15 @@ import type {
   SchemaQueryRelationshipRule,
   SchemaQueryTypeTable,
 } from "tome-interfaces/extension-services/schema-query";
-import type { GraphDatabase, Node } from "tome-cache-sqlite";
+import type { GraphDatabase, Node } from "tome-sqlite";
 import { setMemberIds } from "./set-membership";
-import { loadTableSchemasFromContent } from "tome-store-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
+import { loadTableSchemasFromContent } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import { relationshipTypeRulesFromRegistry } from "./relationship-type-endpoints";
 import {
   perspectiveForRelationColumn,
   targetTypeIdForRelationColumn,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 
 function titleFromNode(node: Node | null): string {
   if (!node) return "Untitled";

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { isArchivedNode, isLegacyArchivedPath } from "../src/archive-status";
-import { GraphDatabase } from "tome-cache-sqlite";
+import { GraphDatabase } from "tome-sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";

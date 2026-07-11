@@ -5,7 +5,7 @@ import { replaceRange } from "@milkdown/kit/utils";
 import { commonmark } from "@milkdown/preset-commonmark";
 import type { EditorView } from "@milkdown/prose/view";
 import { TextSelection } from "@milkdown/prose/state";
-import { editorDynamicNodeHref } from "tome-store-flatfile/dynamic-node-links";
+import { editorDynamicNodeHref } from "tome-flatfile/dynamic-node-links";
 import { formatNodeMarkdownLink, nodeMarkdownHref } from "../../src/shared/types";
 import { installDynamicLinkDemote } from "../../src/webview/dynamic-node-link-demote";
 import { installLinkCursor } from "../../src/webview/link-cursor";

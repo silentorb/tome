@@ -58,7 +58,7 @@ export {
   resolveContentPath,
   ContentStore,
   LinkResolutionError,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 export type {
   RelationshipEntry,
   RelationshipsFile,
@@ -73,7 +73,7 @@ export type {
   DynamicFieldFileEntry,
   DynamicFieldsFile,
   ParsedNodeFile,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 
 export { expandAllRelationships } from "./relationship-sync-expand";
 export {

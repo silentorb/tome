@@ -1,6 +1,6 @@
 import { collapsePageBlockEmbedsForStorage } from "tome-interfaces/page-block";
-import { canonicalizeMarkdownBodyLinks } from "tome-store-flatfile/markdown-links";
-import { collapseDynamicEditorLinks } from "tome-store-flatfile/dynamic-node-links";
+import { canonicalizeMarkdownBodyLinks } from "tome-flatfile/markdown-links";
+import { collapseDynamicEditorLinks } from "tome-flatfile/dynamic-node-links";
 import { stripLeadingTitleHeading } from "./markdown-body";
 
 /** Normalize markdown for comparing editor output against the last saved body. */

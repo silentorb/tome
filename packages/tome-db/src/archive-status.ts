@@ -1,11 +1,11 @@
-import type { GraphDatabase } from "tome-cache-sqlite";
+import type { GraphDatabase } from "tome-sqlite";
 import {
   loadRelationshipTypesFromContent,
   resolveContentPath,
   setTraitPerspectives,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 import { findSetMembershipRelationship, setMemberIds } from "./set-membership";
-import { archiveNodeId, legacyArchivePathPrefix } from "tome-store-flatfile";
+import { archiveNodeId, legacyArchivePathPrefix } from "tome-flatfile";
 
 export function isLegacyArchivedPath(path: string | null, contentDir?: string): boolean {
   if (!path) return false;

@@ -6,12 +6,12 @@ import {
 } from "./database-column-data";
 import { loadDynamicFields } from "./dynamic-fields";
 import { isTypeTableNode } from "./node-capabilities";
-import { normalizeRelationshipType } from "tome-store-flatfile";
+import { normalizeRelationshipType } from "tome-flatfile";
 import { resolvePropertyEnumFromContent } from "./property-enums";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { TABLE_SCHEMAS_FILENAME } from "tome-store-flatfile";
-import { isNodeId } from "tome-store-flatfile";
+import { TABLE_SCHEMAS_FILENAME } from "tome-flatfile";
+import { isNodeId } from "tome-flatfile";
 import type {
   TableColumnDef,
   TableColumnScalarType,
@@ -19,14 +19,14 @@ import type {
   TableRelationColumn,
   TableScalarColumn,
   TableSchemasFile,
-} from "tome-store-flatfile";
-import { findColumnByKey, slugifyPropertyKey } from "tome-store-flatfile";
-import { invalidateTableSchemasCache } from "tome-store-flatfile";
+} from "tome-flatfile";
+import { findColumnByKey, slugifyPropertyKey } from "tome-flatfile";
+import { invalidateTableSchemasCache } from "tome-flatfile";
 import {
   appendColumnToViewsOrder,
   renameColumnInViews,
 } from "./views/mutations";
-import { viewSectionKeyForSet } from "tome-store-flatfile";
+import { viewSectionKeyForSet } from "tome-flatfile";
 import type {
   CreateDatabaseColumnInput,
   DatabaseColumnMutationError,

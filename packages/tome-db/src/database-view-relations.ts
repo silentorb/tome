@@ -1,7 +1,7 @@
-import type { GraphDatabase, Relationship } from "tome-cache-sqlite";
+import type { GraphDatabase, Relationship } from "tome-sqlite";
 import type { DatabaseColumnDef } from "./database-view";
 import type { RelationLink } from "./relation-link";
-import { relationType } from "tome-store-flatfile";
+import { relationType } from "tome-flatfile";
 import type { EvalRow } from "./row-sort";
 import {
   filterRelationshipsByRowDatabaseContext,
@@ -9,7 +9,7 @@ import {
   otherEndpoint,
   rowBelongsToDatabase,
 } from "./relationship-traverse";
-import { normalizeRelationshipType } from "tome-store-flatfile";
+import { normalizeRelationshipType } from "tome-flatfile";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;

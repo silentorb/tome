@@ -1,4 +1,4 @@
-import { relationshipId } from "tome-cache-sqlite";
+import { relationshipId } from "tome-sqlite";
 import type {
   GraphRelationship,
   GraphNode,

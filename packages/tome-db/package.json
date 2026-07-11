@@ -17,11 +17,11 @@
     "test": "bun test tests"
   },
   "dependencies": {
-    "tome-cache-sqlite": "workspace:*",
+    "tome-sqlite": "workspace:*",
     "tome-graph-interfaces": "workspace:*",
     "tome-interfaces": "workspace:*",
     "tome-service-interfaces": "workspace:*",
-    "tome-store-flatfile": "workspace:*"
+    "tome-flatfile": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",

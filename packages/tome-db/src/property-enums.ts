@@ -1,7 +1,7 @@
-import { resolveContentPath } from "tome-store-flatfile";
+import { resolveContentPath } from "tome-flatfile";
 import type { DatabaseColumnDef } from "./database-view";
-import { loadSchemaFromContent } from "tome-store-flatfile";
-import type { EnumDefinition, SchemaFile } from "tome-store-flatfile/schema-file";
+import { loadSchemaFromContent } from "tome-flatfile";
+import type { EnumDefinition, SchemaFile } from "tome-flatfile/schema-file";
 import {
   FALLBACK_PRIORITY,
   isPriorityColumnKey,
@@ -10,7 +10,7 @@ import {
   resolvePriorityEnum,
   resolvePropertyEnum,
   type PriorityValue,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 
 export {
   FALLBACK_PRIORITY,
@@ -20,7 +20,7 @@ export {
   resolvePriorityEnum,
   resolvePropertyEnum,
   type PriorityValue,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 
 /** @deprecated Use getPriorityOptions() */
 export const PRIORITY_OPTIONS = FALLBACK_PRIORITY.options;

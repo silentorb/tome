@@ -1,11 +1,11 @@
-import { isDynamicEditorHref } from "tome-store-flatfile/dynamic-node-links";
-import { resolveMarkdownHrefTarget } from "tome-store-flatfile/markdown-links";
+import { isDynamicEditorHref } from "tome-flatfile/dynamic-node-links";
+import { resolveMarkdownHrefTarget } from "tome-flatfile/markdown-links";
 import type { Node as ProseNode } from "@milkdown/prose/model";
 import { Plugin, PluginKey } from "@milkdown/prose/state";
 import { Decoration, DecorationSet, type EditorView } from "@milkdown/prose/view";
 import { createNodeLinkIconElement } from "./node-link-icon";
 
-export { isDynamicEditorHref } from "tome-store-flatfile/dynamic-node-links";
+export { isDynamicEditorHref } from "tome-flatfile/dynamic-node-links";
 
 export const dynamicTitleRefreshMetaKey = "tomeDynamicTitleRefresh";
 

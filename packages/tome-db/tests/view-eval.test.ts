@@ -2,22 +2,22 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { GraphDatabase } from "tome-cache-sqlite";
+import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { sortEvalRows, type EvalRow } from "../src/row-sort";
-import { serializeViewsFile, VIEWS_FILE_VERSION } from "tome-store-flatfile";
-import { serializeDynamicFieldsFile, emptyDynamicFieldsFile } from "tome-store-flatfile";
+import { serializeViewsFile, VIEWS_FILE_VERSION } from "tome-flatfile";
+import { serializeDynamicFieldsFile, emptyDynamicFieldsFile } from "tome-flatfile";
 import {
   contentModelDir,
   viewsFilePath,
   dynamicFieldsFilePath,
   relationshipTypesFilePath,
   tableSchemasFilePath,
-} from "tome-store-flatfile";
-import { serializeTableSchemasFile } from "tome-store-flatfile";
-import { serializeRelationshipTypesFile } from "tome-store-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
+} from "tome-flatfile";
+import { serializeTableSchemasFile } from "tome-flatfile";
+import { serializeRelationshipTypesFile } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 import { writeSetMembershipTypes } from "../src/content/test-helpers";
 
 describe("row-sort", () => {

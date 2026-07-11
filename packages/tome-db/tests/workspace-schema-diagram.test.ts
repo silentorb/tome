@@ -3,7 +3,7 @@ import {
   parseWorkspaceFile,
   schemaDiagramMemberBadgePosition,
   schemaDiagramPageBlockServices,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 
 const BASE_WORKSPACE = {
   version: 1,

@@ -22,4 +22,4 @@ Plugin contracts for capabilities the **tome-server host** loads from config.
 
 - May depend on `tome-graph-interfaces` for DTOs / `TomeGraphServices`
 - Must **not** encode HTTP paths, verbs, or fetch clients
-- Must **not** depend on `tome-db`, `tome-http`, `tome-server`, `tome-editor`, `tome-store-flatfile`, or `tome-cache-sqlite`
+- Must **not** depend on `tome-db`, `tome-http`, `tome-server`, `tome-editor`, `tome-flatfile`, or `tome-sqlite`

@@ -1,4 +1,4 @@
-import type { ContentStore } from "tome-store-flatfile";
+import type { ContentStore } from "tome-flatfile";
 import {
   emptyViewsFile,
   isViewDefinition,
@@ -9,7 +9,7 @@ import {
   type ViewProperties,
   type ViewSortSpec,
   type ViewsFile,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 import {
   generatedViewForRelationship,
   indicesForRelationship,

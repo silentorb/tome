@@ -11,13 +11,13 @@ import {
   relationshipTypesFilePath,
   schemaFilePath,
   tableSchemasFilePath,
-} from "tome-store-flatfile";
-import { serializeSchemaFile } from "tome-store-flatfile";
-import { serializeTableSchemasFile } from "tome-store-flatfile";
-import { serializeRelationshipTypesFile } from "tome-store-flatfile";
-import { invalidateSchemaCache } from "tome-store-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
-import { invalidateTableSchemasCache } from "tome-store-flatfile";
+} from "tome-flatfile";
+import { serializeSchemaFile } from "tome-flatfile";
+import { serializeTableSchemasFile } from "tome-flatfile";
+import { serializeRelationshipTypesFile } from "tome-flatfile";
+import { invalidateSchemaCache } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { invalidateTableSchemasCache } from "tome-flatfile";
 import { createExtensionSchemaQueryServices } from "../src/extension-schema-query";
 
 describe("createExtensionSchemaQueryServices", () => {

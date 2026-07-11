@@ -19,7 +19,7 @@ describe("GraphDatabase", () => {
   });
 
   test("upserts nodes and relationships", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "test.sqlite");
     const db = new GraphDatabase(dbPath);
     db.upsertNode("abc123", { title: "Hello" });
@@ -38,7 +38,7 @@ describe("GraphDatabase", () => {
   });
 
   test("merges node properties on upsert", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "merge.sqlite");
     const db = new GraphDatabase(dbPath);
     db.upsertNode("page1", { title: "A" });
@@ -49,7 +49,7 @@ describe("GraphDatabase", () => {
   });
 
   test("deleteRelationship removes an edge", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "delete.sqlite");
     const db = new GraphDatabase(dbPath);
     db.upsertNode("a", { title: "A" });
@@ -62,7 +62,7 @@ describe("GraphDatabase", () => {
   });
 
   test("deleteNode removes a vertex and its edges", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "delete-vertex.sqlite");
     const db = new GraphDatabase(dbPath);
     db.upsertNode("a", { title: "A" });
@@ -74,7 +74,7 @@ describe("GraphDatabase", () => {
   });
 
   test("listArchiveMemberIds finds members via injected set-trait perspectives", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "archive.sqlite");
     const hub = "01ARCHIVEHUB00000000000000";
     const member = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
@@ -96,7 +96,7 @@ describe("GraphDatabase", () => {
   });
 
   test("listArchiveMemberIds accepts explicit perspectives override", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "archive-override.sqlite");
     const hub = "01ARCHIVEHUB00000000000000";
     const member = "EEEEEEEEEEEEEEEEEEEEEEEEEE";

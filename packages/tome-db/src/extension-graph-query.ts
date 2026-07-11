@@ -3,7 +3,7 @@ import type {
   GraphQueryEdge,
   GraphQueryNode,
 } from "tome-interfaces/extension-services/graph-query";
-import type { GraphDatabase, Node } from "tome-cache-sqlite";
+import type { GraphDatabase, Node } from "tome-sqlite";
 import { setMemberIds } from "./set-membership";
 
 function titleFromNode(node: Node | null): string {

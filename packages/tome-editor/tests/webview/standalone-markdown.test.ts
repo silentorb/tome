@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   editorDynamicNodeHref,
   formatDynamicNodeLink,
-} from "tome-store-flatfile/dynamic-node-links";
+} from "tome-flatfile/dynamic-node-links";
 import {
   formatEditorDynamicNodeLink,
   formatEditorNodeMarkdownLink,

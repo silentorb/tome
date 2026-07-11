@@ -1,7 +1,7 @@
-import type { ContentStore } from "tome-store-flatfile";
-import type { RelationshipEntry } from "tome-store-flatfile";
+import type { ContentStore } from "tome-flatfile";
+import type { RelationshipEntry } from "tome-flatfile";
 import { isSetMembershipStorageType } from "./set-membership";
-import { archiveNodeId } from "tome-store-flatfile";
+import { archiveNodeId } from "tome-flatfile";
 
 export function isArchiveMembershipEntry(
   entry: RelationshipEntry,

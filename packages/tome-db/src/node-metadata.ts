@@ -1,5 +1,5 @@
-import type { GraphDatabase } from "tome-cache-sqlite";
-import { findMarkdownLinksToTarget } from "tome-store-flatfile/markdown-links";
+import type { GraphDatabase } from "tome-sqlite";
+import { findMarkdownLinksToTarget } from "tome-flatfile/markdown-links";
 import { getNodeDetail } from "./queries";
 import type { NodeBacklink, NodePageMetadata } from "tome-graph-interfaces";
 

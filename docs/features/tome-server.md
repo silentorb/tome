@@ -16,14 +16,14 @@
 | --- | --- |
 | `tome-graph-interfaces` | Domain DTOs + `TomeGraphServices` |
 | `tome-service-interfaces` | Store/cache/service module contracts |
-| `tome-store-flatfile` | Flatfile `TomeDataStore` (owns change watching) |
-| `tome-cache-sqlite` | SQLite `TomeQueryCache` |
+| `tome-flatfile` | Flatfile `TomeDataStore` (owns change watching) |
+| `tome-sqlite` | SQLite `TomeQueryCache` |
 | `tome-db` | Domain queries/mutations + content↔cache sync |
 | `tome-http` | Implements `TomeServiceModule`; HTTP routes + client SDK |
 | `tome-server` | Config loader, infrastructure + graph wiring, starts services |
 | `tome-editor` | Browser UI only |
 
-**Do not** import `tome-http`, `tome-store-flatfile`, or `tome-cache-sqlite` from `tome-server` production sources — load them via config `dynamic import`. Tests may use `devDependency` entries.
+**Do not** import `tome-http`, `tome-flatfile`, or `tome-sqlite` from `tome-server` production sources — load them via config `dynamic import`. Tests may use `devDependency` entries.
 
 ## Config
 
@@ -34,14 +34,14 @@ File: `packages/tome-server/config/tome-server.json` (override with `TOME_SERVER
   "version": 1,
   "store": {
     "id": "flatfile",
-    "module": "tome-store-flatfile",
-    "export": "createFlatfileStoreModule",
+    "module": "tome-flatfile",
+    "export": "createFlatfileModule",
     "options": {}
   },
   "cache": {
     "id": "sqlite",
-    "module": "tome-cache-sqlite",
-    "export": "createSqliteCacheModule",
+    "module": "tome-sqlite",
+    "export": "createSqliteModule",
     "options": {}
   },
   "services": [

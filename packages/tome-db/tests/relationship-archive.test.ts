@@ -6,7 +6,7 @@ import {
   markIncidentRelationshipsArchived,
   unmarkIncidentRelationshipsArchived,
 } from "../src/relationship-archive";
-import type { RelationshipEntry } from "tome-store-flatfile";
+import type { RelationshipEntry } from "tome-flatfile";
 import {
   createTestContentFixture,
   destroyTestContentFixture,

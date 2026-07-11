@@ -1,9 +1,9 @@
-import type { GraphDatabase, Relationship } from "tome-cache-sqlite";
-import { resolveContentPath } from "tome-store-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
-import { setTraitPerspectives } from "tome-store-flatfile";
+import type { GraphDatabase, Relationship } from "tome-sqlite";
+import { resolveContentPath } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { setTraitPerspectives } from "tome-flatfile";
 import { priorityWeight } from "../../property-enums";
-import { normalizeRelationshipType } from "tome-store-flatfile";
+import { normalizeRelationshipType } from "tome-flatfile";
 import type { DynamicResolverContext } from "../registry";
 import {
   listRelationshipsForComposite,

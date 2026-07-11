@@ -6,7 +6,7 @@ import {
 } from "@milkdown/kit/preset/commonmark";
 import { replaceRange } from "@milkdown/kit/utils";
 import type { BlockEditFeatureConfig } from "@milkdown/crepe/feature/block-edit";
-import { DEFAULT_CALLOUT_PREFIX } from "tome-store-flatfile/callout";
+import { DEFAULT_CALLOUT_PREFIX } from "tome-flatfile/callout";
 import { TextSelection } from "@milkdown/prose/state";
 import {
   calloutBlockquoteTypes,

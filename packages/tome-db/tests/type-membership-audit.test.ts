@@ -1,6 +1,6 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import { resolve } from "node:path";
-import { GraphDatabase } from "tome-cache-sqlite";
+import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import {
   createTestContentFixture,

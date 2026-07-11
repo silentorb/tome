@@ -1,5 +1,5 @@
 {
-  "name": "tome-cache-sqlite",
+  "name": "tome-sqlite",
   "version": "0.1.0",
   "private": true,
   "type": "module",

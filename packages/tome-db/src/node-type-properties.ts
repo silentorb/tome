@@ -1,13 +1,13 @@
 import type { DatabaseColumnDef } from "./database-view";
 import { applyDynamicFields } from "./dynamic-fields";
-import type { GraphDatabase } from "tome-cache-sqlite";
+import type { GraphDatabase } from "tome-sqlite";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
 import { loadTableSchemaForDatabase } from "./database-column-defs";
-import { storedScalarColumns } from "tome-store-flatfile";
-import { resolveContentPath } from "tome-store-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
-import { memberSidePerspectives } from "tome-store-flatfile";
+import { storedScalarColumns } from "tome-flatfile";
+import { resolveContentPath } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { memberSidePerspectives } from "tome-flatfile";
 import {
   coalescePriorityValue,
   enrichColumnDef,

@@ -6,7 +6,7 @@ Git-tracked [`content/model/schema.json`](../../content/model/schema.json) decla
 
 This is separate from:
 
-- SQLite DDL (`SCHEMA_VERSION` in `packages/tome-cache-sqlite/src/schema.ts`)
+- SQLite DDL (`SCHEMA_VERSION` in `packages/tome-sqlite/src/schema.ts`)
 - Per-type-table column definitions in [`table-schemas.json`](./table-schemas.md)
 - UI tab configuration in [`views.json`](./views.md)
 - Composite storage types in [`content/model/relationship-types.json`](../../content/model/relationship-types.json)

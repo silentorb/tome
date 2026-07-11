@@ -16,7 +16,7 @@ import {
   seedTestDynamicFields,
   seedTestTableSchema,
 } from "../src/content/test-helpers";
-import { VIEWS_FILE_VERSION } from "tome-store-flatfile";
+import { VIEWS_FILE_VERSION } from "tome-flatfile";
 import { firstRelatedNodeId } from "../src/relationship-traverse";
 
 const SCENES_DB = "0000000000000000000000000D";

@@ -2,11 +2,11 @@ import { describe, expect, test, afterAll, beforeAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { ContentStore } from "tome-store-flatfile";
-import { fileFromSeedInputs } from "tome-store-flatfile";
+import { ContentStore } from "tome-flatfile";
+import { fileFromSeedInputs } from "tome-flatfile";
 import { invalidateDynamicFieldsCache } from "../../src/content/sync";
-import { invalidateSchemaCache } from "tome-store-flatfile";
-import { GraphDatabase } from "tome-cache-sqlite";
+import { invalidateSchemaCache } from "tome-flatfile";
+import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { getDatabaseViewDetail } from "../../src/database-view";
 import {

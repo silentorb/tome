@@ -1,30 +1,30 @@
-import type { GraphDatabase, Relationship, Properties } from "tome-cache-sqlite";
+import type { GraphDatabase, Relationship, Properties } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { relationshipId } from "tome-cache-sqlite";
+import { relationshipId } from "tome-sqlite";
 import { applyDynamicFields } from "./dynamic-fields";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import type { EvalRow } from "./row-sort";
 import { resolveGeneratedTabsFromScopes } from "./views/resolve-tabs";
-import { loadViewsFromContent } from "tome-store-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
-import { resolveContentPath } from "tome-store-flatfile";
+import { loadViewsFromContent } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { resolveContentPath } from "tome-flatfile";
 import { perspectiveForHostTable } from "./relationship-type-endpoints";
-import { normalizeRelationshipType } from "tome-store-flatfile";
-import { getTableSchema, relationColumns } from "tome-store-flatfile";
-import { loadTableSchemasFromContent } from "tome-store-flatfile";
+import { normalizeRelationshipType } from "tome-flatfile";
+import { getTableSchema, relationColumns } from "tome-flatfile";
+import { loadTableSchemasFromContent } from "tome-flatfile";
 import {
   perspectiveForRelationColumn,
   relationColumnCompositeType,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 import { applySectionColumnOrder } from "./views/column-order";
 import {
   firstRelatedNodeId,
   listRelationshipsForComposite,
   relatedNodeIds,
 } from "./relationship-traverse";
-import { loadOrderedAssociationsFromContent } from "tome-store-flatfile";
+import { loadOrderedAssociationsFromContent } from "tome-flatfile";
 import { listSetMemberRowConnections } from "./set-membership";
 import { ORDERED_PROPERTY_DEFAULT,
   isOrderedTraitComposite,
@@ -33,7 +33,7 @@ import { ORDERED_PROPERTY_DEFAULT,
   setRoleIndices,
   typesWithTrait,
   SET_TRAIT,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 import { ORDER_META_KEYS, applySparseOrderRewrite } from "./ordered-relationships";
 import type {
   OrderedAssociationConfig,

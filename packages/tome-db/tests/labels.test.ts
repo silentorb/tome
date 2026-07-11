@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { emptyRelationshipTypesFile } from "tome-store-flatfile";
-import { isSetTraitPerspective } from "tome-store-flatfile";
+import { emptyRelationshipTypesFile } from "tome-flatfile";
+import { isSetTraitPerspective } from "tome-flatfile";
 
 describe("isSetTraitPerspective", () => {
   test("recognizes perspectives from set-trait registry entries", () => {

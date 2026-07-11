@@ -1,5 +1,5 @@
 import type { EditorApi } from "../../../src/webview/api/client";
-import { emptySchemaFile } from "tome-store-flatfile/schema-file";
+import { emptySchemaFile } from "tome-flatfile/schema-file";
 import { emptyUserSettings } from "../../../src/shared/user-settings";
 import { defaultTestWorkspaceFile } from "tome-db/content/test-helpers";
 import { makeGraphLodSnapshot } from "./graph-lod";

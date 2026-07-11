@@ -5,7 +5,7 @@ import {
   loadSchemaFromContent,
   typeTableMarkerProperties,
 } from "tome-db";
-import { GraphDatabase } from "tome-cache-sqlite";
+import { GraphDatabase } from "tome-sqlite";
 import {
   createTestContentFixture,
   destroyTestContentFixture,

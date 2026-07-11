@@ -1,9 +1,9 @@
-import type { Properties, Relationship } from "tome-cache-sqlite";
-import { relationshipId } from "tome-cache-sqlite";
-import type { RelationshipEntry } from "tome-store-flatfile";
-import { relationshipRecordId } from "tome-store-flatfile";
-import type { RelationshipTypeDefinition, RelationshipTypesFile } from "tome-store-flatfile";
-import { perspectiveCountForExpansion } from "tome-store-flatfile";
+import type { Properties, Relationship } from "tome-sqlite";
+import { relationshipId } from "tome-sqlite";
+import type { RelationshipEntry } from "tome-flatfile";
+import { relationshipRecordId } from "tome-flatfile";
+import type { RelationshipTypeDefinition, RelationshipTypesFile } from "tome-flatfile";
+import { perspectiveCountForExpansion } from "tome-flatfile";
 
 export interface RelationshipRecordRow {
   id: string;

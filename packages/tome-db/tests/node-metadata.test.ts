@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { GraphDatabase } from "tome-cache-sqlite";
+import { GraphDatabase } from "tome-sqlite";
 import { getNodePageMetadata } from "../src/node-metadata";
 import { getNodePageDetail } from "../src/node-page-sections";
 import { updateNodeBody } from "../src/queries";

@@ -5,7 +5,7 @@ import {
   type ViewDefinition,
   type ViewProperties,
   type ViewsFile,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 
 export function relationshipKey(nodeId: string, relationshipType: string): string {
   return `${nodeId}:${relationshipType}`;

@@ -2,11 +2,11 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { contentModelDir, dynamicFieldsFilePath, relationshipTypesFilePath, tableSchemasFilePath } from "tome-store-flatfile";
-import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "tome-store-flatfile";
-import { serializeTableSchemasFile } from "tome-store-flatfile";
-import { invalidateTableSchemasCache } from "tome-store-flatfile";
-import { GraphDatabase } from "tome-cache-sqlite";
+import { contentModelDir, dynamicFieldsFilePath, relationshipTypesFilePath, tableSchemasFilePath } from "tome-flatfile";
+import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "tome-flatfile";
+import { serializeTableSchemasFile } from "tome-flatfile";
+import { invalidateTableSchemasCache } from "tome-flatfile";
+import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { listRelationConnectionsForRow } from "../src/database-view-relations";
@@ -15,14 +15,14 @@ import {
   destroyTestContentFixture,
   seedTestNode,
 } from "../src/content/test-helpers";
-import { RELATIONSHIPS_FILE_VERSION } from "tome-store-flatfile";
+import { RELATIONSHIPS_FILE_VERSION } from "tome-flatfile";
 import {
   emptyRelationshipTypesFile,
   registerSetMembershipType,
   registerTypeDefinition,
   serializeRelationshipTypesFile,
-} from "tome-store-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
+} from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 
 describe("database-view-relations", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-view-rel-"));

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { SchemaFile } from "tome-store-flatfile";
+import type { SchemaFile } from "tome-flatfile";
 import {
   comparePriorityLabels,
   getPriorityOptions,

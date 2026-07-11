@@ -6,8 +6,8 @@
 
 | Package | Role |
 | ------- | ---- |
-| `packages/tome-store-flatfile/` | Flatfile content store (canonical git-tracked data + change watching) |
-| `packages/tome-cache-sqlite/` | SQLite query cache |
+| `packages/tome-flatfile/` | Flatfile content store (canonical git-tracked data + change watching) |
+| `packages/tome-sqlite/` | SQLite graph database (query cache today) |
 | `packages/tome-db/` | Domain queries/mutations + content↔cache sync |
 | `packages/tome-graph-interfaces/` | Domain DTOs + `TomeGraphServices` |
 | `packages/tome-service-interfaces/` | Store/cache/service module contracts |

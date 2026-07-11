@@ -1,4 +1,4 @@
-import type { GraphDatabase, Relationship } from "tome-cache-sqlite";
+import type { GraphDatabase, Relationship } from "tome-sqlite";
 import {
   resolveContentPath,
   loadRelationshipTypesFromContent,
@@ -11,9 +11,9 @@ import {
   typesWithTrait,
   SET_TRAIT,
   collectSetNodeIds,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 
-export { collectSetNodeIds } from "tome-store-flatfile";
+export { collectSetNodeIds } from "tome-flatfile";
 
 export type SetKind = "type_table" | "archive";
 

@@ -1,13 +1,13 @@
 import type { TomeCacheModule } from "tome-service-interfaces";
 import { GraphDatabase } from "./graph";
 
-export function createSqliteCacheModule(): TomeCacheModule {
+export function createSqliteModule(): TomeCacheModule {
   return {
-    id: "tome-cache-sqlite",
+    id: "tome-sqlite",
     open(options) {
       const dbPath = options?.dbPath;
       if (!dbPath) {
-        throw new Error("tome-cache-sqlite open() requires options.dbPath");
+        throw new Error("tome-sqlite open() requires options.dbPath");
       }
       return new GraphDatabase(dbPath, {
         clean: options?.clean,

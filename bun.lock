@@ -5,27 +5,15 @@
     "": {
       "name": "tome",
     },
-    "packages/tome-cache-sqlite": {
-      "name": "tome-cache-sqlite",
-      "version": "0.1.0",
-      "dependencies": {
-        "tome-graph-interfaces": "workspace:*",
-        "tome-service-interfaces": "workspace:*",
-      },
-      "devDependencies": {
-        "@types/bun": "1.2.23",
-        "typescript": "5.8.2",
-      },
-    },
     "packages/tome-db": {
       "name": "tome-db",
       "version": "0.1.0",
       "dependencies": {
-        "tome-cache-sqlite": "workspace:*",
+        "tome-flatfile": "workspace:*",
         "tome-graph-interfaces": "workspace:*",
         "tome-interfaces": "workspace:*",
         "tome-service-interfaces": "workspace:*",
-        "tome-store-flatfile": "workspace:*",
+        "tome-sqlite": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -45,6 +33,7 @@
         "react-force-graph-2d": "^1.29.1",
         "svg-pan-zoom": "^3.6.2",
         "tome-db": "workspace:*",
+        "tome-flatfile": "workspace:*",
         "tome-graph-interfaces": "workspace:*",
         "tome-http": "workspace:*",
         "tome-interfaces": "workspace:*",
@@ -73,6 +62,20 @@
       },
       "devDependencies": {
         "@types/react": "19.0.12",
+        "typescript": "5.8.2",
+      },
+    },
+    "packages/tome-flatfile": {
+      "name": "tome-flatfile",
+      "version": "0.1.0",
+      "dependencies": {
+        "tome-graph-interfaces": "workspace:*",
+        "tome-service-interfaces": "workspace:*",
+        "ulid": "^3.0.2",
+        "yaml": "2.8.0",
+      },
+      "devDependencies": {
+        "@types/bun": "1.2.23",
         "typescript": "5.8.2",
       },
     },
@@ -129,7 +132,9 @@
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
+        "tome-flatfile": "workspace:*",
         "tome-http": "workspace:*",
+        "tome-sqlite": "workspace:*",
         "typescript": "5.8.2",
       },
     },
@@ -161,6 +166,18 @@
         "typescript": "5.8.2",
       },
     },
+    "packages/tome-sqlite": {
+      "name": "tome-sqlite",
+      "version": "0.1.0",
+      "dependencies": {
+        "tome-graph-interfaces": "workspace:*",
+        "tome-service-interfaces": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.2.23",
+        "typescript": "5.8.2",
+      },
+    },
     "packages/tome-static-site": {
       "name": "tome-static-site",
       "version": "0.1.0",
@@ -169,24 +186,11 @@
         "marked": "15.0.12",
         "tome-db": "workspace:*",
         "tome-extension-fixture": "workspace:*",
+        "tome-flatfile": "workspace:*",
         "tome-interfaces": "workspace:*",
         "tome-schema-diagram": "workspace:*",
         "tome-spatial-graph": "workspace:*",
         "tome-theme-midnight": "workspace:*",
-      },
-      "devDependencies": {
-        "@types/bun": "1.2.23",
-        "typescript": "5.8.2",
-      },
-    },
-    "packages/tome-store-flatfile": {
-      "name": "tome-store-flatfile",
-      "version": "0.1.0",
-      "dependencies": {
-        "tome-graph-interfaces": "workspace:*",
-        "tome-service-interfaces": "workspace:*",
-        "ulid": "^3.0.2",
-        "yaml": "2.8.0",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -1348,13 +1352,13 @@
 
     "tldts-core": ["tldts-core@6.1.86", "", {}, "sha512-Je6p7pkk+KMzMv2XXKmAE3McmolOQFdxkKw0R8EYNr7sELW46JqnNeTX8ybPiQgvg1ymCoF8LXs5fzFaZvJPTA=="],
 
-    "tome-cache-sqlite": ["tome-cache-sqlite@workspace:packages/tome-cache-sqlite"],
-
     "tome-db": ["tome-db@workspace:packages/tome-db"],
 
     "tome-editor": ["tome-editor@workspace:packages/tome-editor"],
 
     "tome-extension-fixture": ["tome-extension-fixture@workspace:packages/tome-extension-fixture"],
+
+    "tome-flatfile": ["tome-flatfile@workspace:packages/tome-flatfile"],
 
     "tome-graph-interfaces": ["tome-graph-interfaces@workspace:packages/tome-graph-interfaces"],
 
@@ -1370,9 +1374,9 @@
 
     "tome-spatial-graph": ["tome-spatial-graph@workspace:packages/tome-spatial-graph"],
 
-    "tome-static-site": ["tome-static-site@workspace:packages/tome-static-site"],
+    "tome-sqlite": ["tome-sqlite@workspace:packages/tome-sqlite"],
 
-    "tome-store-flatfile": ["tome-store-flatfile@workspace:packages/tome-store-flatfile"],
+    "tome-static-site": ["tome-static-site@workspace:packages/tome-static-site"],
 
     "tome-theme-midnight": ["tome-theme-midnight@workspace:packages/tome-theme-midnight"],
 

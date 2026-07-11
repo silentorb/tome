@@ -1,8 +1,8 @@
-import { generateNodeId } from "tome-store-flatfile/node-id";
-import type { Properties } from "tome-cache-sqlite";
-import { normalizeRelationshipType } from "tome-store-flatfile";
-import { resolveCompositeType } from "tome-store-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
+import { generateNodeId } from "tome-flatfile/node-id";
+import type { Properties } from "tome-sqlite";
+import { normalizeRelationshipType } from "tome-flatfile";
+import { resolveCompositeType } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
@@ -10,7 +10,7 @@ import { stampOrderIfMissing } from "./ordered-relationships";
 import {
   membershipCompositeForSet,
   membershipPerspectivesForSet,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 import type {
   CreateNodeError,
   CreateNodeInput,

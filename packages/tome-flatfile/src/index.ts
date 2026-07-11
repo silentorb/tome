@@ -1,5 +1,5 @@
 export { ContentStore } from "./content/store";
-export { createFlatfileStoreModule } from "./module";
+export { createFlatfileModule } from "./module";
 export { relationshipId } from "./relationship-id";
 export { collectSetNodeIds } from "./set-nodes";
 export { LinkResolutionError, resolveCompositeTypeForLink } from "./content/resolve-composite-for-link";

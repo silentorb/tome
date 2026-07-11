@@ -1,11 +1,11 @@
 import { listRelationConnectionsForRow } from "./database-view-relations";
 import { unlinkOutgoingRelationship } from "./relationship-link-mutations";
 import { otherEndpoint } from "./relationship-traverse";
-import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
-import { setTraitPerspectives } from "tome-store-flatfile";
-import { perspectiveForRelationColumn, relationColumnCompositeType } from "tome-store-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { setTraitPerspectives } from "tome-flatfile";
+import { perspectiveForRelationColumn, relationColumnCompositeType } from "tome-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
-import type { TableColumnDef } from "tome-store-flatfile";
+import type { TableColumnDef } from "tome-flatfile";
 
 export const ROW_META_KEYS = new Set(["view", "row_name", "order", "row_index", "number"]);
 

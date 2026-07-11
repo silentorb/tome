@@ -1,5 +1,5 @@
 import { nodeIdFromPageHref, type NodeUrlResolver } from "./node-urls";
-import { NODE_ID_RE_SRC } from "tome-store-flatfile/node-id";
+import { NODE_ID_RE_SRC } from "tome-flatfile/node-id";
 
 const NODE_LINK_ICON =
   '<span class="tome-node-link-icon" aria-hidden="true">' +

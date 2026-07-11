@@ -1,16 +1,16 @@
-import type { GraphDatabase, Properties, Relationship } from "tome-cache-sqlite";
+import type { GraphDatabase, Properties, Relationship } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
-import { relationshipId } from "tome-cache-sqlite";
-import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
+import { relationshipId } from "tome-sqlite";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import {
   defaultOrderedSetMembershipComposite,
   isOrderedTraitComposite,
   membershipCompositeForSet,
   membershipPerspectivesForSet,
   orderedPropertyName,
-} from "tome-store-flatfile";
-import { resolveContentPath } from "tome-store-flatfile";
-import type { RelationshipTypesFile } from "tome-store-flatfile";
+} from "tome-flatfile";
+import { resolveContentPath } from "tome-flatfile";
+import type { RelationshipTypesFile } from "tome-flatfile";
 import { listSetMemberRowConnections } from "./set-membership";
 
 export const ORDER_META_KEYS = new Set([

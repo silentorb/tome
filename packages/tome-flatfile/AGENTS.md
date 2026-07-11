@@ -1,8 +1,8 @@
-# tome-store-flatfile — agent notes
+# tome-flatfile — agent notes
 
 ## What it is
 
-- **Store module:** `createFlatfileStoreModule()` → `TomeStoreModule` (`open` → `ContentStore`)
+- **Store module:** `createFlatfileModule()` → `TomeStoreModule` (`open` → `ContentStore`)
 - Flatfile canonical store: `content/data/` (nodes + relationships) and `content/model/` (workspace JSON)
 - Implements `TomeDataStore` from `tome-service-interfaces`, including change notifications via `subscribe` / `startWatching`
 

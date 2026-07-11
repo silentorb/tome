@@ -1,4 +1,4 @@
-# tome-store-flatfile
+# tome-flatfile
 
 Flatfile **data store** for `tome-server`: git-tracked markdown nodes and model JSON under `content/`.
 

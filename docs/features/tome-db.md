@@ -6,8 +6,8 @@ The design corpus is a **git-tracked content store** under `content/` (`content/
 
 | Package | Role |
 | --- | --- |
-| `tome-store-flatfile` | Flatfile `ContentStore` / `TomeDataStore` (codecs, model loaders, change watching) |
-| `tome-cache-sqlite` | SQLite `GraphDatabase` / `TomeQueryCache` |
+| `tome-flatfile` | Flatfile `ContentStore` / `TomeDataStore` (codecs, model loaders, change watching) |
+| `tome-sqlite` | SQLite `GraphDatabase` / `TomeQueryCache` |
 | `tome-db` | Domain queries/mutations + `CacheSync` / `TomeWriteContext` bridge |
 
 `tome-server` loads store + cache as singular config modules and injects them into `tome-db`.
@@ -17,7 +17,7 @@ The design corpus is a **git-tracked content store** under `content/` (`content/
 Read this doc when your task involves:
 
 - `data/tome.sqlite` (or legacy `data/marloth.sqlite`) or the `./data/` directory
-- `packages/tome-store-flatfile/`, `packages/tome-cache-sqlite/`, or `packages/tome-db/`
+- `packages/tome-flatfile/`, `packages/tome-sqlite/`, or `packages/tome-db/`
 - Modeling nodes, relationships, types, or properties
 - Editing or migrating graph data in place (not via full re-import)
 - Extending the graph schema or API
@@ -46,7 +46,7 @@ API names: `ContentStore`, `openContentGraph`, `TomeWriteContext` (`{ store, syn
 - Commit changes under `content/`; do not commit `data/tome.sqlite` or legacy `data/marloth.sqlite`.
 - Run `bun run content:sync` after bulk file edits if the editor API is not running (otherwise the store watcher emits changes and `CacheSync` updates SQLite).
 
-**Schema changes:** bump `SCHEMA_VERSION` in `tome-cache-sqlite` `schema.ts`, migrate existing rows in place, document steps here or in commit notes.
+**Schema changes:** bump `SCHEMA_VERSION` in `tome-sqlite` `schema.ts`, migrate existing rows in place, document steps here or in commit notes.
 
 ## Requirements
 
@@ -77,9 +77,9 @@ Non-breaking read support for Marloth-era names. Do not remove without a migrati
 
 | Surface | Policy | Location |
 | --- | --- | --- |
-| `marloth:` / `marloth://node/` URLs | Supported indefinitely | [`packages/tome-store-flatfile/src/markdown-links.ts`](../../packages/tome-store-flatfile/src/markdown-links.ts) |
-| `MARLOTH_*` environment variables | Deprecated aliases for `TOME_*` | [`packages/tome-store-flatfile/src/content/paths.ts`](../../packages/tome-store-flatfile/src/content/paths.ts); server [`packages/tome-server/src/paths.ts`](../../packages/tome-server/src/paths.ts); static-site config |
-| `data/marloth.sqlite` | Legacy cache path; used when `data/tome.sqlite` is absent | [`packages/tome-store-flatfile/src/content/paths.ts`](../../packages/tome-store-flatfile/src/content/paths.ts) |
+| `marloth:` / `marloth://node/` URLs | Supported indefinitely | [`packages/tome-flatfile/src/markdown-links.ts`](../../packages/tome-flatfile/src/markdown-links.ts) |
+| `MARLOTH_*` environment variables | Deprecated aliases for `TOME_*` | [`packages/tome-flatfile/src/content/paths.ts`](../../packages/tome-flatfile/src/content/paths.ts); server [`packages/tome-server/src/paths.ts`](../../packages/tome-server/src/paths.ts); static-site config |
+| `data/marloth.sqlite` | Legacy cache path; used when `data/tome.sqlite` is absent | [`packages/tome-flatfile/src/content/paths.ts`](../../packages/tome-flatfile/src/content/paths.ts) |
 | `.marloth/user-settings.json` | Legacy settings directory | [`packages/tome-server/src/paths.ts`](../../packages/tome-server/src/paths.ts) |
 | `marloth.graph.*` browser `localStorage` | Dual-read for Graph Explorer prefs; writes use `tome.graph.*` | [`packages/tome-editor/src/webview/graph-preferences.ts`](../../packages/tome-editor/src/webview/graph-preferences.ts) |
 
@@ -127,7 +127,7 @@ Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTa
 
 ### Markdown body links
 
-Node cross-references in markdown `body` use two storage forms (see `tome-store-flatfile` markdown-links and dynamic-node-links):
+Node cross-references in markdown `body` use two storage forms (see `tome-flatfile` markdown-links and dynamic-node-links):
 
 | Form | Example | Title source |
 | --- | --- | --- |
@@ -151,12 +151,12 @@ Consolidate legacy dual directed edges with `bun scripts/consolidate-relationshi
 
 ### Schema versioning
 
-- `meta.schema_version` **must** record the graph DDL version (`packages/tome-cache-sqlite/src/schema.ts`).
+- `meta.schema_version` **must** record the graph DDL version (`packages/tome-sqlite/src/schema.ts`).
 - Breaking schema changes **must** bump `SCHEMA_VERSION` and document migration steps.
 
 ## Behavior / API
 
-`GraphDatabase` (`packages/tome-cache-sqlite/src/graph.ts`):
+`GraphDatabase` (`packages/tome-sqlite/src/graph.ts`):
 
 - `upsertNode(id, properties)` — create or merge node
 - `listRelationshipsFromSource` / `listRelationshipsToTarget` — query projection table by local perspective type
@@ -208,12 +208,12 @@ db.close();
 
 | Module | Responsibility |
 | --- | --- |
-| `packages/tome-cache-sqlite/src/schema.ts` | DDL and version |
-| `packages/tome-cache-sqlite/src/graph.ts` | GraphDatabase API (reads projections) |
-| `packages/tome-store-flatfile/src/content/relationships-file.ts` | v3 `relationships.json` parse/serialize (ordered `(a, b)` tuples) |
-| `packages/tome-store-flatfile/src/migrations/relationship-order.ts` | Reorder tuples into meaningful `(index0, index1)` order; bump v2→v3 |
-| `packages/tome-store-flatfile/src/content/relationship-types-file.ts` | `relationship-types.json` parse/serialize + composite helpers |
-| `packages/tome-store-flatfile/src/relationship-types/load.ts` | Cached `relationship-types.json` loader |
+| `packages/tome-sqlite/src/schema.ts` | DDL and version |
+| `packages/tome-sqlite/src/graph.ts` | GraphDatabase API (reads projections) |
+| `packages/tome-flatfile/src/content/relationships-file.ts` | v3 `relationships.json` parse/serialize (ordered `(a, b)` tuples) |
+| `packages/tome-flatfile/src/migrations/relationship-order.ts` | Reorder tuples into meaningful `(index0, index1)` order; bump v2→v3 |
+| `packages/tome-flatfile/src/content/relationship-types-file.ts` | `relationship-types.json` parse/serialize + composite helpers |
+| `packages/tome-flatfile/src/relationship-types/load.ts` | Cached `relationship-types.json` loader |
 | `packages/tome-db/src/relationship-type-label.ts` | `perspectiveDisplayLabel`, `perspectiveLinkAddLabel` |
 | `packages/tome-db/src/content/relationship-sync-expand.ts` | Content → SQLite projection expansion |
 | `packages/tome-db/src/content/sync.ts` | Cache rebuild; subscribes to store change events |
@@ -221,7 +221,7 @@ db.close();
 | `packages/tome-db/src/node-page-sections.ts` | Universal page sections |
 | `packages/tome-db/src/database-view-relations.ts` | Relation-column hydration |
 | `packages/tome-db/src/ordered-associations.ts` | Ordered association config, view query, move mutation |
-| `packages/tome-store-flatfile/src/table-schemas/load.ts` | `table-schemas.json` loader |
+| `packages/tome-flatfile/src/table-schemas/load.ts` | `table-schemas.json` loader |
 
 ## See also
 

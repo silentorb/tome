@@ -9,8 +9,8 @@ import {
   seedTestTableSchema,
   type TestContentFixture,
 } from "../src/content/test-helpers";
-import { registerBidirectionalType } from "tome-store-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
+import { registerBidirectionalType } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 
 describe("createNode", () => {
   let fixture: TestContentFixture;

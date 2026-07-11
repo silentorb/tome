@@ -1,15 +1,15 @@
-import type { GraphDatabase } from "tome-cache-sqlite";
+import type { GraphDatabase } from "tome-sqlite";
 import {
   DEFAULT_CUSTOM_TAB,
   type ViewDefinition,
   type ViewsFile,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 import {
   generatedViewForRelationship,
   viewDefinitionsForTabs,
   viewsForRelationship,
 } from "./index";
-import { loadViewsFromContent } from "tome-store-flatfile";
+import { loadViewsFromContent } from "tome-flatfile";
 import type { ResolvedTab, TableTabsDetail } from "./tabs";
 
 type TabDefinitionSummary = Pick<ViewDefinition, "id" | "name" | "sorts" | "hiddenColumns">;

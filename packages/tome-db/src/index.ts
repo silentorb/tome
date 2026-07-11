@@ -1,5 +1,5 @@
-export { GraphDatabase, relationshipId, DDL, DYNAMIC_FIELDS_DDL, SCHEMA_VERSION } from "tome-cache-sqlite";
-export type { Relationship, GraphCounts, Node, Properties, PropertyValue } from "tome-cache-sqlite";
+export { GraphDatabase, relationshipId, DDL, DYNAMIC_FIELDS_DDL, SCHEMA_VERSION } from "tome-sqlite";
+export type { Relationship, GraphCounts, Node, Properties, PropertyValue } from "tome-sqlite";
 export {
   isArchivedNode,
   isLegacyArchivedPath,
@@ -51,7 +51,7 @@ export {
 } from "./relationship-archive";
 export { getDatabaseViewDetail } from "./database-view";
 export { hydrateRelationCellsForRows } from "./database-view-relations";
-export { relationType, normalizeRelationshipType, stripEmojis } from "tome-store-flatfile";
+export { relationType, normalizeRelationshipType, stripEmojis } from "tome-flatfile";
 export { formatRelationshipTypeLabel } from "./relationship-type-label";
 export type {
   DatabaseColumnDef,
@@ -122,7 +122,7 @@ export type {
   DatabaseColumnMutationResult,
   UpdateDatabaseColumnInput,
 } from "./database-column-mutations";
-export { slugifyPropertyKey } from "tome-store-flatfile";
+export { slugifyPropertyKey } from "tome-flatfile";
 export {
   isRelationColumnSort,
   relationLinkCount,
@@ -133,8 +133,8 @@ export {
   loadTableSchemasFromContent,
   hasTableSchemaEntry,
   invalidateTableSchemasCache,
-} from "tome-store-flatfile";
-export type { TableColumnDef, TableSchemasFile } from "tome-store-flatfile";
+} from "tome-flatfile";
+export type { TableColumnDef, TableSchemasFile } from "tome-flatfile";
 export { getNodePageMetadata } from "./node-metadata";
 export type { NodeBacklink, NodePageMetadata } from "./node-metadata";
 export { buildPropertiesSection } from "./node-type-properties";
@@ -233,8 +233,8 @@ export {
 export {
   registerSetMembershipType,
   registerOrderedSetMembershipType,
-} from "tome-store-flatfile";
-export type { TraitEntry, TraitObjectEntry } from "tome-store-flatfile";
+} from "tome-flatfile";
+export type { TraitEntry, TraitObjectEntry } from "tome-flatfile";
 export {
   SET_TRAIT,
   ORDERED_TRAIT,
@@ -267,7 +267,7 @@ export {
   traitMap,
   typesWithTrait,
   viewSectionKeyForSet,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 export {
   ORDER_META_KEYS,
   applySparseOrderRewrite,
@@ -291,7 +291,7 @@ export {
   resolveWorkspace,
   archiveNodeId,
   protectedNodeIds,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 export type {
   WorkspaceFile,
   WorkspaceBranding,
@@ -304,7 +304,7 @@ export type {
   WorkspaceSchemaDiagramMemberBadgePosition,
   WorkspaceQuickLink,
   SidebarLink,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 export {
   parseWorkspaceFile,
   serializeWorkspaceFile,
@@ -314,7 +314,7 @@ export {
   schemaDiagramMemberBadgePosition,
   schemaDiagramPageBlockServices,
   WORKSPACE_FILE_VERSION,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 export {
   addWorkspaceQuickLink,
   removeWorkspaceQuickLink,
@@ -327,8 +327,8 @@ export {
   serializeOrderedAssociationsFile,
   emptyOrderedAssociationsFile,
   ORDERED_ASSOCIATIONS_FILE_VERSION,
-} from "tome-store-flatfile";
-export type { OrderedAssociationsFile } from "tome-store-flatfile";
+} from "tome-flatfile";
+export type { OrderedAssociationsFile } from "tome-flatfile";
 export {
   resolveCustomTabs,
   resolveCustomTabsForNode,
@@ -359,7 +359,7 @@ export {
   VIEWS_FILE_VERSION,
   isGeneratedViewRecord,
   isViewDefinition,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 export type {
   CustomTabDefinition,
   GeneratedViewRecord,
@@ -369,7 +369,7 @@ export type {
   ViewSortSpec,
   ViewRecord,
   ViewsFile,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 export type { ResolvedTab, TableTabsDetail, TabKind } from "./views/tabs";
 export { sortEvalRowsFromViewSorts } from "./views/sort-spec";
 export {
@@ -383,8 +383,8 @@ export {
   parseSchemaFile,
   serializeSchemaFile,
   SCHEMA_FILE_VERSION,
-} from "tome-store-flatfile";
-export type { RelationshipRuleEntry, SchemaFile, EnumDefinition } from "tome-store-flatfile";
+} from "tome-flatfile";
+export type { RelationshipRuleEntry, SchemaFile, EnumDefinition } from "tome-flatfile";
 export {
   EXTENSIONS_FILE_VERSION,
   emptyExtensionsFile,
@@ -394,7 +394,7 @@ export {
   loadExtensionsFromContent,
   resolveExtensionsManifest,
   findComponentById,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 export { createExtensionGraphQueryServices } from "./extension-graph-query";
 export { createExtensionSchemaQueryServices } from "./extension-schema-query";
 export type {
@@ -404,4 +404,4 @@ export type {
   ExtensionsFile,
   ExtensionsManifest,
   ResolvedExtensionComponent,
-} from "tome-store-flatfile";
+} from "tome-flatfile";

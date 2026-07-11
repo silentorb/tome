@@ -2,14 +2,14 @@
   "version": 1,
   "store": {
     "id": "flatfile",
-    "module": "tome-store-flatfile",
-    "export": "createFlatfileStoreModule",
+    "module": "tome-flatfile",
+    "export": "createFlatfileModule",
     "options": {}
   },
   "cache": {
     "id": "sqlite",
-    "module": "tome-cache-sqlite",
-    "export": "createSqliteCacheModule",
+    "module": "tome-sqlite",
+    "export": "createSqliteModule",
     "options": {}
   },
   "services": [

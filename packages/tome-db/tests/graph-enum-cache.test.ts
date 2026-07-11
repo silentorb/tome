@@ -8,9 +8,9 @@ import {
   encodeEnumProperties,
   labelToEnumIndex,
 } from "../src/enum-codec";
-import { GraphDatabase } from "tome-cache-sqlite";
-import { loadWorkspaceSchema } from "tome-store-flatfile";
-import { resolvePropertyEnum } from "tome-store-flatfile";
+import { GraphDatabase } from "tome-sqlite";
+import { loadWorkspaceSchema } from "tome-flatfile";
+import { resolvePropertyEnum } from "tome-flatfile";
 
 describe("GraphDatabase enum cache encoding", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-enum-cache-"));

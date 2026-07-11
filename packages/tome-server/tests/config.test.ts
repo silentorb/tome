@@ -8,15 +8,15 @@ import type { TomeServerModuleConfigEntry } from "tome-service-interfaces";
 
 const STORE_ENTRY: TomeServerModuleConfigEntry = {
   id: "flatfile",
-  module: "tome-store-flatfile",
-  export: "createFlatfileStoreModule",
+  module: "tome-flatfile",
+  export: "createFlatfileModule",
   options: {},
 };
 
 const CACHE_ENTRY: TomeServerModuleConfigEntry = {
   id: "sqlite",
-  module: "tome-cache-sqlite",
-  export: "createSqliteCacheModule",
+  module: "tome-sqlite",
+  export: "createSqliteModule",
   options: {},
 };
 
@@ -35,8 +35,8 @@ describe("tome-server config", () => {
       services: [],
     });
     expect(config.services).toEqual([]);
-    expect(config.store.module).toBe("tome-store-flatfile");
-    expect(config.cache.module).toBe("tome-cache-sqlite");
+    expect(config.store.module).toBe("tome-flatfile");
+    expect(config.cache.module).toBe("tome-sqlite");
   });
 
   test("requires store and cache", () => {

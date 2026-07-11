@@ -7,12 +7,12 @@ import {
 import { isTypeTableNode } from "./node-capabilities";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { TABLE_SCHEMAS_FILENAME } from "tome-store-flatfile";
-import type { TableSchemasFile } from "tome-store-flatfile";
-import { findColumnByKey } from "tome-store-flatfile";
-import { invalidateTableSchemasCache } from "tome-store-flatfile";
+import { TABLE_SCHEMAS_FILENAME } from "tome-flatfile";
+import type { TableSchemasFile } from "tome-flatfile";
+import { findColumnByKey } from "tome-flatfile";
+import { invalidateTableSchemasCache } from "tome-flatfile";
 import { purgeColumnFromViews } from "./views/mutations";
-import { viewSectionKeyForSet } from "tome-store-flatfile";
+import { viewSectionKeyForSet } from "tome-flatfile";
 import type {
   DeleteDatabaseColumnError,
   DeleteDatabaseColumnResult,

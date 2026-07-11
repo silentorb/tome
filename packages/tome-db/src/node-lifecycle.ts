@@ -6,8 +6,8 @@ import {
   markIncidentRelationshipsArchived,
   unmarkIncidentRelationshipsArchived,
 } from "./relationship-archive";
-import { membershipPerspectivesForSet } from "tome-store-flatfile";
-import { archiveNodeId, protectedNodeIds } from "tome-store-flatfile";
+import { membershipPerspectivesForSet } from "tome-flatfile";
+import { archiveNodeId, protectedNodeIds } from "tome-flatfile";
 import type { NodeLifecycleError } from "tome-graph-interfaces";
 
 export type { NodeLifecycleError } from "tome-graph-interfaces";

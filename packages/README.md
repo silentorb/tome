@@ -4,8 +4,8 @@ Each subdirectory is a **workspace package** in the Tome monorepo. Packages are 
 
 | Package | Role |
 | --- | --- |
-| [`tome-store-flatfile`](./tome-store-flatfile/) | Flatfile content store + change watching |
-| [`tome-cache-sqlite`](./tome-cache-sqlite/) | SQLite query cache |
+| [`tome-flatfile`](./tome-flatfile/) | Flatfile content store + change watching |
+| [`tome-sqlite`](./tome-sqlite/) | SQLite graph database (query cache today) |
 | [`tome-db`](./tome-db/) | Domain queries/mutations + content↔cache sync |
 | [`tome-graph-interfaces`](./tome-graph-interfaces/) | Domain DTOs and `TomeGraphServices` contract |
 | [`tome-service-interfaces`](./tome-service-interfaces/) | Store/cache/service module contracts |

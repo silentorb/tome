@@ -1,4 +1,4 @@
-import type { GraphDatabase, Relationship } from "tome-cache-sqlite";
+import type { GraphDatabase, Relationship } from "tome-sqlite";
 import { getDatabaseViewDetail } from "./database-view";
 import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./property-enums";
 import {
@@ -13,32 +13,32 @@ import {
   relationshipTypeRuleContext,
 } from "./relationship-type-endpoints";
 import { findTypeNodeByTitle, typeIdsForInstance } from "./node-capabilities";
-import { normalizeRelationshipType } from "tome-store-flatfile";
-import { resolveContentPath } from "tome-store-flatfile";
-import { resolveCompositeType } from "tome-store-flatfile";
+import { normalizeRelationshipType } from "tome-flatfile";
+import { resolveContentPath } from "tome-flatfile";
+import { resolveCompositeType } from "tome-flatfile";
 import {
   formatRelationshipTypeLabel,
   perspectiveDisplayLabel,
   perspectiveLinkAddLabel,
 } from "./relationship-type-label";
-import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import {
   isMemberSidePerspective,
   isSetSidePerspective,
   isSetTraitPerspective,
   membershipCompositeForPerspective,
   viewSectionKeyForSet,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 import { generatedProviderId } from "./views/resolve-tabs";
-import { loadViewsFromContent } from "tome-store-flatfile";
-import { loadTableSchemasFromContent } from "tome-store-flatfile";
-import type { TableRelationColumn } from "tome-store-flatfile";
-import { getTableSchema, relationColumns } from "tome-store-flatfile";
+import { loadViewsFromContent } from "tome-flatfile";
+import { loadTableSchemasFromContent } from "tome-flatfile";
+import type { TableRelationColumn } from "tome-flatfile";
+import { getTableSchema, relationColumns } from "tome-flatfile";
 import {
   perspectiveForRelationColumn,
   relationColumnCompositeType,
   targetTypeIdForRelationColumn,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 import type {
   NodePageDetail,
   NodeSection,

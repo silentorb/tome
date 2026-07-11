@@ -1,4 +1,4 @@
-import { expandDynamicNodeLinks, parseDynamicNodeLinkIds } from "tome-store-flatfile/dynamic-node-links";
+import { expandDynamicNodeLinks, parseDynamicNodeLinkIds } from "tome-flatfile/dynamic-node-links";
 import { decorateCalloutHtml } from "./callout-html";
 import { decorateDynamicLinkHtml } from "./dynamic-link-html";
 import { createNodeUrlResolver, type NodeUrlResolver } from "./node-urls";

@@ -4,7 +4,7 @@ import {
   loadWorkspaceFromContent,
   type WorkspaceFile,
   type WorkspaceQuickLink,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 import type { QuickLinkError } from "tome-graph-interfaces";
 
 export type { QuickLinkError } from "tome-graph-interfaces";

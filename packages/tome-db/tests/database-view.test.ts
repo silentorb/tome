@@ -2,7 +2,7 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { GraphDatabase } from "tome-cache-sqlite";
+import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import {
@@ -11,14 +11,14 @@ import {
   relationshipTypesFilePath,
   schemaFilePath,
   tableSchemasFilePath,
-} from "tome-store-flatfile";
-import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "tome-store-flatfile";
-import { serializeTableSchemasFile } from "tome-store-flatfile";
-import { serializeSchemaFile } from "tome-store-flatfile";
-import { serializeRelationshipTypesFile } from "tome-store-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
-import { invalidateSchemaCache } from "tome-store-flatfile";
-import { invalidateTableSchemasCache } from "tome-store-flatfile";
+} from "tome-flatfile";
+import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "tome-flatfile";
+import { serializeTableSchemasFile } from "tome-flatfile";
+import { serializeSchemaFile } from "tome-flatfile";
+import { serializeRelationshipTypesFile } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { invalidateSchemaCache } from "tome-flatfile";
+import { invalidateTableSchemasCache } from "tome-flatfile";
 
 describe("database-view", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-view-"));

@@ -1,13 +1,13 @@
-import type { Properties } from "tome-cache-sqlite";
+import type { Properties } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { LinkResolutionError } from "tome-store-flatfile";
+import { LinkResolutionError } from "tome-flatfile";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
-import { normalizeRelationshipType } from "tome-store-flatfile";
+import { normalizeRelationshipType } from "tome-flatfile";
 import { relationshipTypeRuleContext } from "./relationship-type-endpoints";
-import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import { stampOrderIfMissing } from "./ordered-relationships";
-import { membershipPerspectivesForSet } from "tome-store-flatfile";
+import { membershipPerspectivesForSet } from "tome-flatfile";
 import type {
   LinkOutgoingRelationshipError,
   LinkOutgoingRelationshipInput,

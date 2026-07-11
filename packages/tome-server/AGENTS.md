@@ -18,7 +18,7 @@ Required slots: `store`, `cache` (singular module entries). `services` may be em
 ## Dependency rules
 
 - Production: `tome-graph-interfaces`, `tome-service-interfaces`, `tome-db`, `tome-interfaces`
-- DevDependencies (config-loaded / tests): `tome-http`, `tome-store-flatfile`, `tome-cache-sqlite`
+- DevDependencies (config-loaded / tests): `tome-http`, `tome-flatfile`, `tome-sqlite`
 - **Do not** statically import plugin packages from `src/` (resolve them via config `dynamic import`)
 
 ## Run

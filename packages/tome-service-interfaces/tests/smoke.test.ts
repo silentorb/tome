@@ -12,8 +12,8 @@ describe("tome-service-interfaces", () => {
   test("config shape requires store and cache", () => {
     const config: TomeServerConfig = {
       version: 1,
-      store: { id: "flatfile", module: "tome-store-flatfile", export: "createFlatfileStoreModule" },
-      cache: { id: "sqlite", module: "tome-cache-sqlite", export: "createSqliteCacheModule" },
+      store: { id: "flatfile", module: "tome-flatfile", export: "createFlatfileModule" },
+      cache: { id: "sqlite", module: "tome-sqlite", export: "createSqliteModule" },
       services: [],
     };
     expect(config.services).toEqual([]);

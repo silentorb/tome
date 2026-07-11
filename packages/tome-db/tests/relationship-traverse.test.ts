@@ -14,9 +14,9 @@ import {
   relatedNodeIds,
   rowBelongsToDatabase,
 } from "../src/relationship-traverse";
-import type { RelationshipEntry } from "tome-store-flatfile";
-import { RELATIONSHIPS_FILE_VERSION } from "tome-store-flatfile";
-import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
+import type { RelationshipEntry } from "tome-flatfile";
+import { RELATIONSHIPS_FILE_VERSION } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 
 describe("relationship-traverse", () => {
   const fixture = createTestContentFixture("tome-rel-traverse-");

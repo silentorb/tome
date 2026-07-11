@@ -1,7 +1,7 @@
-import type { ContentStore } from "tome-store-flatfile";
-import { nodeRelativePath } from "tome-store-flatfile";
+import type { ContentStore } from "tome-flatfile";
+import { nodeRelativePath } from "tome-flatfile";
 import type { TomeQueryCache } from "tome-service-interfaces";
-import type { Properties } from "tome-cache-sqlite";
+import type { Properties } from "tome-sqlite";
 import { CacheSync, subscribeStoreToCacheSync } from "./sync";
 
 export interface TomeWriteContext {

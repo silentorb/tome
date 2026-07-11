@@ -1,6 +1,6 @@
 import type { Properties } from "tome-db";
-import { resolveMarkdownHrefTarget } from "tome-store-flatfile/markdown-links";
-import { NODE_ID_PATTERN, NODE_ID_RE_SRC } from "tome-store-flatfile/node-id";
+import { resolveMarkdownHrefTarget } from "tome-flatfile/markdown-links";
+import { NODE_ID_PATTERN, NODE_ID_RE_SRC } from "tome-flatfile/node-id";
 
 export const URL_ALIAS_PROPERTY = "url_alias";
 

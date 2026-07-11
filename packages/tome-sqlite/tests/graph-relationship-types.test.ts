@@ -5,7 +5,7 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { GraphDatabase } from "../src/graph";
 
 describe("listDistinctRelationshipTypes", () => {
-  const tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-types-"));
+  const tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-types-"));
   const db = new GraphDatabase(join(tempDir, "types.sqlite"));
   const nodeA = "0000000000000000000000001C";
   const nodeB = "0000000000000000000000001W";

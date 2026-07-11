@@ -2,8 +2,8 @@ import {
   canonicalNodeMarkdownHref,
   resolveMarkdownHrefTarget,
   TOME_LINK_SCHEME,
-} from "tome-store-flatfile/markdown-links";
-import { NODE_ID_RE_SRC } from "tome-store-flatfile/node-id";
+} from "tome-flatfile/markdown-links";
+import { NODE_ID_RE_SRC } from "tome-flatfile/node-id";
 
 export { TOME_LINK_SCHEME };
 

@@ -6,9 +6,9 @@ import {
   removeWorkspaceQuickLink,
   reorderWorkspaceQuickLinks,
 } from "../../src/workspace/quick-links";
-import { loadWorkspaceFromContent } from "tome-store-flatfile";
-import { parseWorkspaceFile } from "tome-store-flatfile";
-import { workspaceFilePath } from "tome-store-flatfile";
+import { loadWorkspaceFromContent } from "tome-flatfile";
+import { parseWorkspaceFile } from "tome-flatfile";
+import { workspaceFilePath } from "tome-flatfile";
 import {
   createTestContentFixture,
   destroyTestContentFixture,

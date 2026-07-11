@@ -7,7 +7,7 @@ import {
 } from "../src/database-column-mutations";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
-import { invalidateSchemaCache } from "tome-store-flatfile";
+import { invalidateSchemaCache } from "tome-flatfile";
 import {
   createTestContentFixture,
   destroyTestContentFixture,

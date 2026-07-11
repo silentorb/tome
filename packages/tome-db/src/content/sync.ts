@@ -34,8 +34,8 @@ import {
   nodeFilePath,
   type DynamicColumnSetRecord,
   type DynamicFieldRecord,
-} from "tome-store-flatfile";
-import { GraphDatabase, type TomeQueryCache } from "tome-cache-sqlite";
+} from "tome-flatfile";
+import { GraphDatabase, type TomeQueryCache } from "tome-sqlite";
 import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum-config-fingerprint";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
 import { expandAllRelationships } from "./relationship-sync-expand";

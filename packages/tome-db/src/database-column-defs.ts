@@ -1,18 +1,18 @@
-import type { GraphDatabase } from "tome-cache-sqlite";
+import type { GraphDatabase } from "tome-sqlite";
 import type { DatabaseColumnDef } from "./database-view";
-import { resolveContentPath } from "tome-store-flatfile";
-import type { TableColumnDef, TableSchema } from "tome-store-flatfile";
-import { getTableSchema } from "tome-store-flatfile";
-import { loadTableSchemasFromContent } from "tome-store-flatfile";
-import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
+import { resolveContentPath } from "tome-flatfile";
+import type { TableColumnDef, TableSchema } from "tome-flatfile";
+import { getTableSchema } from "tome-flatfile";
+import { loadTableSchemasFromContent } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import {
   perspectiveForRelationColumn,
   relationColumnCompositeType,
   targetTypeIdForRelationColumn,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 import { enrichColumnDef, enrichColumnDefs, coalescePriorityValue, isPriorityColumnKey } from "./property-enums";
-import { loadSchemaFromContent } from "tome-store-flatfile";
-import type { SchemaFile } from "tome-store-flatfile/schema-file";
+import { loadSchemaFromContent } from "tome-flatfile";
+import type { SchemaFile } from "tome-flatfile/schema-file";
 
 export interface BuildDatabaseColumnDefsOptions {
   excludeKeys?: Set<string>;

@@ -4,7 +4,7 @@ import {
   destroyTestContentFixture,
   seedTestViews,
 } from "../../src/content/test-helpers";
-import { VIEWS_FILE_VERSION } from "tome-store-flatfile";
+import { VIEWS_FILE_VERSION } from "tome-flatfile";
 import {
   createView,
   deleteView,

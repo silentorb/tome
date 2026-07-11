@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import type { GraphDatabase } from "tome-cache-sqlite";
+import type { GraphDatabase } from "tome-sqlite";
 import {
   loadDynamicColumnSetsFromContent,
   loadDynamicFieldsFromContent,
@@ -12,14 +12,14 @@ import {
   type DynamicFieldRecord,
   type SeedDynamicColumnSetInput,
   type SeedDynamicFieldInput,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 
 export type {
   DynamicColumnSetRecord,
   DynamicFieldRecord,
   SeedDynamicColumnSetInput,
   SeedDynamicFieldInput,
-} from "tome-store-flatfile";
+} from "tome-flatfile";
 
 function parseParams(rows: { param_key: string; param_value: string }[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
