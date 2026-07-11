@@ -3,7 +3,6 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GraphDatabase } from "../src/graph";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import {
@@ -34,6 +33,14 @@ describe("database-view", () => {
     serializeRelationshipTypesFile({
       version: 1,
       types: {
+        member_of: {
+          perspectives: ["members", "member_of"],
+          traits: ["set"],
+        },
+        ordered_member_of: {
+          perspectives: ["ordered_members", "ordered_member_of"],
+          traits: ["set", "ordered"],
+        },
         parents_children: {
           perspectives: ["children", "parents"],
         },
@@ -69,12 +76,18 @@ describe("database-view", () => {
   function writeTableSchema(
     databaseId: string,
     columns: Parameters<typeof serializeTableSchemasFile>[0]["tables"][string]["columns"],
+    membershipComposite?: string,
   ): void {
     writeFileSync(
       tableSchemasFilePath(contentDir),
       serializeTableSchemasFile({
         version: 1,
-        tables: { [databaseId]: { columns } },
+        tables: {
+          [databaseId]: {
+            ...(membershipComposite ? { membershipComposite } : {}),
+            columns,
+          },
+        },
       }),
     );
     invalidateTableSchemasCache();
@@ -92,7 +105,7 @@ describe("database-view", () => {
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page1", { title: "Desperation" });
-    db.upsertRelationship("page1", databaseId, MEMBER_OF_TYPE, {
+    db.upsertRelationship("page1", databaseId, "member_of", {
       view: "all",
       priority: "High",
     });
@@ -129,7 +142,7 @@ describe("database-view", () => {
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page2", { title: "Peace in the eye of the storm" });
-    db.upsertRelationship("page2", databaseId, MEMBER_OF_TYPE, {
+    db.upsertRelationship("page2", databaseId, "member_of", {
       view: "default",
       row_index: 0,
       row_name: "Stale CSV label",
@@ -153,7 +166,7 @@ describe("database-view", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page3", { title: "Child feature" });
     db.upsertNode(parentId, { title: "Parent feature" });
-    db.upsertRelationship("page3", databaseId, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship("page3", databaseId, "member_of", { row_index: 0 });
     db.upsertRelationship("page3", parentId, "parents", { ordinal: 0 });
 
     const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
@@ -182,7 +195,7 @@ describe("database-view", () => {
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Inspirations") });
     db.upsertNode("insp1", { title: "Example inspiration" });
-    db.upsertRelationship("insp1", databaseId, MEMBER_OF_TYPE, {
+    db.upsertRelationship("insp1", databaseId, "member_of", {
       row_index: 0,
       plot_is_driven_by_mc_desire: "True",
     });
@@ -196,6 +209,59 @@ describe("database-view", () => {
       defaultValue: "False",
     });
     expect(detail?.rows[0]?.cells.plot_is_driven_by_mc_desire).toBe("True");
+  });
+
+  test("exposes set membership perspectives from a non-conventional composite", () => {
+    const databaseId = "FFFFFFFFFFFFFFFFFFFFFFFFFF";
+    writeFileSync(
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile({
+        version: 1,
+        types: {
+          custom_set: {
+            perspectives: ["cohort", "belongs_to_cohort"],
+            traits: ["set"],
+          },
+          parents_children: {
+            perspectives: ["children", "parents"],
+          },
+        },
+      }),
+    );
+    invalidateRelationshipTypesCache();
+    writeTableSchema(databaseId, [], "custom_set");
+    db.upsertNode(databaseId, { ...typeTableMarkerProperties("Cohorts") });
+    db.upsertNode("member1", { title: "Member one" });
+    db.upsertRelationship("member1", databaseId, "belongs_to_cohort", { row_index: 0 });
+
+    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
+    expect(detail).toMatchObject({
+      viewRelationshipType: "cohort",
+      memberSidePerspective: "belongs_to_cohort",
+      rows: [{ nodeId: "member1", name: "Member one" }],
+    });
+
+    // Restore conventional set types for later tests in this file.
+    writeFileSync(
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile({
+        version: 1,
+        types: {
+          member_of: {
+            perspectives: ["members", "member_of"],
+            traits: ["set"],
+          },
+          ordered_member_of: {
+            perspectives: ["ordered_members", "ordered_member_of"],
+            traits: ["set", "ordered"],
+          },
+          parents_children: {
+            perspectives: ["children", "parents"],
+          },
+        },
+      }),
+    );
+    invalidateRelationshipTypesCache();
   });
 
   test("ignores orphan_row properties on the database vertex", () => {

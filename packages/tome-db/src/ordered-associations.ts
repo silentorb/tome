@@ -8,10 +8,18 @@ import { applyDynamicFields } from "./dynamic-fields";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import type { EvalRow } from "./row-sort";
-import { resolveGeneratedTabsFromScopes, ORDERED_MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
+import { resolveGeneratedTabsFromScopes } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { resolveContentPath } from "./content/paths";
+import { perspectiveForHostTable } from "./relationship-type-endpoints";
+import { normalizeRelationshipType } from "./relation-type";
+import { getTableSchema, relationColumns } from "./table-schema";
+import { loadTableSchemasFromContent } from "./table-schemas/load";
+import {
+  perspectiveForRelationColumn,
+  relationColumnCompositeType,
+} from "./table-relation-column";
 import { applySectionColumnOrder } from "./views/column-order";
 import type { TableTabsDetail } from "./views/tabs";
 import {
@@ -66,6 +74,10 @@ export interface OrderedAssociationViewDetail {
   configId: string;
   typeDatabaseId: string;
   typeDatabaseTitle: string;
+  /** Set-side perspective = views.json relationshipType / section key. */
+  viewRelationshipType: string;
+  /** Member-side perspective for unlink/move against this set. */
+  memberSidePerspective: string;
   tabs: TableTabsDetail;
   groups: OrderedAssociationGroup[];
   columns: string[];
@@ -124,6 +136,35 @@ function cellsFromMembershipRelationship(
 
 function getConfig(configId: string, contentDir?: string): OrderedAssociationConfig | null {
   return loadConfigs(contentDir).find((config) => config.id === configId) ?? null;
+}
+
+function groupLinkLocalPerspective(
+  config: OrderedAssociationConfig,
+  contentDir: string,
+): string {
+  const registry = loadRelationshipTypesFromContent(contentDir);
+  const groupComposite = normalizeRelationshipType(config.groupCompositeType);
+  const schema = getTableSchema(loadTableSchemasFromContent(contentDir), config.typeDatabaseId);
+  if (schema) {
+    for (const col of relationColumns(schema)) {
+      if (col.type !== "relation") continue;
+      if (relationColumnCompositeType(col) !== groupComposite) continue;
+      return perspectiveForRelationColumn(registry, config.typeDatabaseId, col);
+    }
+  }
+  const def = registry.types[groupComposite];
+  if (!def) {
+    throw new Error(
+      `ordered-associations config "${config.id}": unknown groupCompositeType "${config.groupCompositeType}"`,
+    );
+  }
+  const perspective = perspectiveForHostTable(def, config.typeDatabaseId);
+  if (!perspective) {
+    throw new Error(
+      `ordered-associations config "${config.id}": groupCompositeType "${config.groupCompositeType}" has no endpoint for type database`,
+    );
+  }
+  return perspective;
 }
 
 export function getConfigByProvider(
@@ -264,7 +305,6 @@ function resolveScenePartId(
       if (canonicalId) return canonicalId;
     }
   }
-
 
   return null;
 }
@@ -457,18 +497,24 @@ export function getOrderedAssociationView(
       : collectColumns(members);
 
   const views = loadViewsFromContent(dir);
+  const [viewRelationshipType, memberSidePerspective] = membershipPerspectivesForSet(
+    config.typeDatabaseId,
+    dir,
+  );
   const { columns, columnDefs } = applySectionColumnOrder(
     defaultColumns,
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     config.typeDatabaseId,
-    ORDERED_MEMBERS_SECTION_KEY,
+    viewRelationshipType,
   );
 
   return {
     configId: config.id,
     typeDatabaseId: config.typeDatabaseId,
     typeDatabaseTitle: titleFromProperties(database.properties),
+    viewRelationshipType,
+    memberSidePerspective,
     tabs,
     groups: enrichedGroups,
     columns,
@@ -592,7 +638,12 @@ export function applyOrderedAssociationMove(
         if (key === "ordinal") continue;
         partProps[key] = value;
       }
-      ctx.store.upsertRelationship(params.sceneId, targetPartId, "part", partProps);
+      ctx.store.upsertRelationship(
+        params.sceneId,
+        targetPartId,
+        groupLinkLocalPerspective(config, contentDir),
+        partProps,
+      );
     }
   }
 

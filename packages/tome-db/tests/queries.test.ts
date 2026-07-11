@@ -6,7 +6,6 @@ import {
   searchNodes,
   updateNodeBody,
 } from "../src/queries";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -282,7 +281,7 @@ describe("queries", () => {
       },
     });
     seedTestRelationships(fixture, [
-      { source: archivedId, target: TEST_ARCHIVE_NODE_ID, type: MEMBER_OF_TYPE },
+      { source: archivedId, target: TEST_ARCHIVE_NODE_ID, type: "member_of" },
     ]);
 
     const recent = listRecentNodesByModifiedAt(fixture.ctx.db, 100);

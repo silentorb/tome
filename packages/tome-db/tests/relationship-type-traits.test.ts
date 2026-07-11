@@ -132,14 +132,16 @@ describe("relationship-type-traits membership perspectives", () => {
     expect(defaultOrderedSetMembershipComposite(registry)).toBe("ordered_member_of");
   });
 
-  test("empty registry falls back to conventional membership names", () => {
+  test("empty registry returns no set perspectives and throws for defaults", () => {
     const registry = emptyRelationshipTypesFile();
-    expect(defaultPlainSetMembershipComposite(registry)).toBe("member_of");
-    expect(setTraitPerspectives(registry)).toEqual([
-      "members",
-      "member_of",
-      "ordered_members",
-      "ordered_member_of",
-    ]);
+    expect(defaultPlainSetMembershipComposite.bind(null, registry)).toThrow(
+      /No plain set-trait membership composite/,
+    );
+    expect(defaultOrderedSetMembershipComposite.bind(null, registry)).toThrow(
+      /No ordered set-trait membership composite/,
+    );
+    expect(setTraitPerspectives(registry)).toEqual([]);
+    expect(setSidePerspectives(registry)).toEqual([]);
+    expect(memberSidePerspectives(registry)).toEqual([]);
   });
 });

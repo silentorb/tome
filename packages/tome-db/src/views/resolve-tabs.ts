@@ -12,16 +12,6 @@ import {
 import { loadViewsFromContent } from "./load";
 import type { ResolvedTab, TableTabsDetail } from "./tabs";
 
-export const ORDERED_MEMBERS_SECTION_KEY = "ordered_members";
-
-export const MEMBERS_RELATIONSHIP_TYPE = "members";
-
-/** @deprecated Use MEMBERS_RELATIONSHIP_TYPE */
-export const MEMBERS_SECTION_KEY = MEMBERS_RELATIONSHIP_TYPE;
-
-/** @deprecated Use MEMBERS_RELATIONSHIP_TYPE */
-export const ITEMS_SECTION_KEY = MEMBERS_RELATIONSHIP_TYPE;
-
 type TabDefinitionSummary = Pick<ViewDefinition, "id" | "name" | "sorts" | "hiddenColumns">;
 
 export interface ResolvedCustomTabs {
@@ -102,7 +92,7 @@ export function resolveGeneratedTabsFromScopes(
 export function isGeneratedSection(
   views: ViewsFile,
   nodeId: string,
-  relationshipType: string = MEMBERS_RELATIONSHIP_TYPE,
+  relationshipType: string,
 ): boolean {
   return generatedViewForRelationship(views, nodeId, relationshipType) !== null;
 }
@@ -110,7 +100,7 @@ export function isGeneratedSection(
 export function generatedProviderId(
   views: ViewsFile,
   nodeId: string,
-  relationshipType: string = MEMBERS_RELATIONSHIP_TYPE,
+  relationshipType: string,
 ): string | null {
   return generatedViewForRelationship(views, nodeId, relationshipType)?.generator ?? null;
 }
@@ -118,7 +108,7 @@ export function generatedProviderId(
 export function loadSectionTabsConfig(
   contentDir: string,
   nodeId: string,
-  relationshipType: string = MEMBERS_RELATIONSHIP_TYPE,
+  relationshipType: string,
 ): ReturnType<typeof getSectionTabsConfig> {
   const views = loadViewsFromContent(contentDir);
   return getSectionTabsConfig(views, nodeId, relationshipType);
@@ -127,8 +117,8 @@ export function loadSectionTabsConfig(
 export function resolveCustomTabsForNode(
   contentDir: string,
   nodeId: string,
-  requestedTabId?: string,
-  relationshipType: string = MEMBERS_RELATIONSHIP_TYPE,
+  requestedTabId: string | undefined,
+  relationshipType: string,
 ): ResolvedCustomTabs {
   const views = loadViewsFromContent(contentDir);
   return resolveCustomTabs(views, nodeId, relationshipType, requestedTabId);
@@ -163,7 +153,7 @@ export function sectionUsesGeneratedTabs(
   db: GraphDatabase,
   contentDir: string,
   nodeId: string,
-  relationshipType: string = MEMBERS_RELATIONSHIP_TYPE,
+  relationshipType: string,
 ): { provider: string } | null {
   const views = loadViewsFromContent(contentDir);
   const generated = generatedViewForRelationship(views, nodeId, relationshipType);

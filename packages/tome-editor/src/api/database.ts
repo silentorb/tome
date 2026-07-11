@@ -195,7 +195,7 @@ export function openEditorDatabase(
   const writeCtx: TomeWriteContext = openTomeWriteContext(contentPath, dbPath);
   const extensions = new ExtensionServerRuntime(
     contentPath,
-    () => createExtensionGraphQueryServices(writeCtx.db),
+    () => createExtensionGraphQueryServices(writeCtx.db, contentPath),
     () => createExtensionSchemaQueryServices(writeCtx.db, contentPath),
   );
   const extensionsReady = extensions.ensureLoaded().catch((err: unknown) => {

@@ -17,7 +17,6 @@ import {
   viewsForNode,
   viewsForRelationship,
 } from "./index";
-import { MEMBERS_RELATIONSHIP_TYPE } from "./resolve-tabs";
 
 export type ViewsMutationError =
   | "node_not_found"
@@ -289,13 +288,6 @@ export function ensureCustomViewsForRelationship(
   writeViews(store, file);
 }
 
-/** @deprecated Use ensureCustomViewsForRelationship */
-export const ensureCustomItemsSection = (
-  store: ContentStore,
-  nodeId: string,
-  definitions: Pick<ViewDefinition, "id" | "name" | "sorts">[],
-) => ensureCustomViewsForRelationship(store, nodeId, MEMBERS_RELATIONSHIP_TYPE, definitions);
-
 export function ensureGeneratedView(
   store: ContentStore,
   nodeId: string,
@@ -310,13 +302,6 @@ export function ensureGeneratedView(
   file.views.push({ nodeId: normalized, relationshipType, generator });
   writeViews(store, file);
 }
-
-/** @deprecated Use ensureGeneratedView */
-export const ensureGeneratedItemsSection = (
-  store: ContentStore,
-  nodeId: string,
-  generator: string,
-) => ensureGeneratedView(store, nodeId, MEMBERS_RELATIONSHIP_TYPE, generator);
 
 export function replaceViewsFile(store: ContentStore, file: ViewsFile): void {
   writeViews(store, file);

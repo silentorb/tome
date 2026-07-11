@@ -350,7 +350,7 @@ export function openContentGraph(contentDir: string, dbPath: string): {
   db: GraphDatabase;
 } {
   const store = new ContentStore(contentDir);
-  const db = new GraphDatabase(dbPath);
+  const db = new GraphDatabase(dbPath, { contentDir });
   const sync = new CacheSync(store, db);
   sync.ensureReady();
   return { store, sync, db };

@@ -7,7 +7,6 @@ import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "../src/conte
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
 import { invalidateTableSchemasCache } from "../src/table-schemas/load";
 import { GraphDatabase } from "../src/graph";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { listRelationConnectionsForRow } from "../src/database-view-relations";
@@ -19,6 +18,7 @@ import {
 import { RELATIONSHIPS_FILE_VERSION } from "../src/content/relationships-file";
 import {
   emptyRelationshipTypesFile,
+  registerSetMembershipType,
   registerTypeDefinition,
   serializeRelationshipTypesFile,
 } from "../src/content/relationship-types-file";
@@ -34,6 +34,7 @@ describe("database-view-relations", () => {
   );
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
+  process.env.TOME_CONTENT_PATH = contentDir;
 
   const inspirationsDb = "0000000000000000000000000K";
   const inspirationTypesDb = "00000000000000000000000018";
@@ -45,40 +46,38 @@ describe("database-view-relations", () => {
   const partId = "0000000000000000000000000M";
   const featuresDb = "0000000000000000000000002P";
 
+  const relationTypes = emptyRelationshipTypesFile();
+  registerSetMembershipType(relationTypes);
+  registerTypeDefinition(relationTypes, "prop_type_inspirations", {
+    perspectives: ["prop_type", "inspirations"],
+    endpoints: {
+      0: { typeId: inspirationsDb },
+      1: { typeId: inspirationTypesDb },
+    },
+  });
+  registerTypeDefinition(relationTypes, "parents_children", {
+    perspectives: ["children", "parents"],
+  });
+  registerTypeDefinition(relationTypes, "scenes_part", {
+    perspectives: ["scenes", "part"],
+    endpoints: {
+      0: { typeId: scenesDb },
+      1: { typeId: partsDb },
+    },
+  });
+  registerTypeDefinition(relationTypes, "inspirations_features", {
+    perspectives: ["features", "inspirations"],
+    endpoints: {
+      0: { typeId: featuresDb },
+      1: { typeId: inspirationsDb },
+    },
+  });
+  registerTypeDefinition(relationTypes, "story_scale_inspirations", {
+    perspectives: ["story_scale", "inspirations"],
+  });
   writeFileSync(
     relationshipTypesFilePath(contentDir),
-    serializeRelationshipTypesFile({
-      version: 1,
-      types: {
-        prop_type_inspirations: {
-          perspectives: ["prop_type", "inspirations"],
-          endpoints: {
-            0: { typeId: inspirationsDb },
-            1: { typeId: inspirationTypesDb },
-          },
-        },
-        parents_children: {
-          perspectives: ["children", "parents"],
-        },
-        scenes_part: {
-          perspectives: ["scenes", "part"],
-          endpoints: {
-            0: { typeId: scenesDb },
-            1: { typeId: partsDb },
-          },
-        },
-        inspirations_features: {
-          perspectives: ["features", "inspirations"],
-          endpoints: {
-            0: { typeId: featuresDb },
-            1: { typeId: inspirationsDb },
-          },
-        },
-        story_scale_inspirations: {
-          perspectives: ["story_scale", "inspirations"],
-        },
-      },
-    }),
+    serializeRelationshipTypesFile(relationTypes),
   );
   invalidateRelationshipTypesCache();
 
@@ -109,8 +108,8 @@ describe("database-view-relations", () => {
     db.upsertNode(inspirationTypesDb, { ...typeTableMarkerProperties("Inspiration types") });
     db.upsertNode(inspirationId, { title: "Ash vs. the Evil Dead" });
     db.upsertNode(tvSeriesTypeId, { title: "TV series" });
-    db.upsertRelationship(inspirationId, inspirationsDb, MEMBER_OF_TYPE, { row_index: 0 });
-    db.upsertRelationship(tvSeriesTypeId, inspirationTypesDb, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship(inspirationId, inspirationsDb, "member_of", { row_index: 0 });
+    db.upsertRelationship(tvSeriesTypeId, inspirationTypesDb, "member_of", { row_index: 0 });
     db.upsertRelationship(inspirationId, tvSeriesTypeId, "prop_type", {
       ordinal: 0,
       via_view: "default",
@@ -122,6 +121,7 @@ describe("database-view-relations", () => {
       "prop_type",
       inspirationsDb,
       "prop_type_inspirations",
+      contentDir,
     );
 
     expect(connections).toHaveLength(1);
@@ -171,8 +171,8 @@ describe("database-view-relations", () => {
     db.upsertNode(locationsDb, { ...typeTableMarkerProperties("Locations") });
     db.upsertNode(parentLocationId, { title: "Marloth" });
     db.upsertNode(childLocationId, { title: "Dark forest" });
-    db.upsertRelationship(parentLocationId, locationsDb, MEMBER_OF_TYPE, { row_index: 0 });
-    db.upsertRelationship(childLocationId, locationsDb, MEMBER_OF_TYPE, { row_index: 1 });
+    db.upsertRelationship(parentLocationId, locationsDb, "member_of", { row_index: 0 });
+    db.upsertRelationship(childLocationId, locationsDb, "member_of", { row_index: 1 });
     db.upsertRelationship(parentLocationId, childLocationId, "children", { ordinal: 0 });
     db.upsertRelationship(childLocationId, parentLocationId, "parents", { ordinal: 0 });
 
@@ -181,14 +181,16 @@ describe("database-view-relations", () => {
       parentLocationId,
       "parents",
       locationsDb,
-      locationsDb,
+      "parents_children",
+      contentDir,
     );
     const childConnections = listRelationConnectionsForRow(
       db,
       childLocationId,
       "children",
       locationsDb,
-      locationsDb,
+      "parents_children",
+      contentDir,
     );
     expect(parentConnections).toHaveLength(0);
     expect(childConnections).toHaveLength(0);
@@ -198,14 +200,16 @@ describe("database-view-relations", () => {
       parentLocationId,
       "children",
       locationsDb,
-      locationsDb,
+      "parents_children",
+      contentDir,
     );
     const childParents = listRelationConnectionsForRow(
       db,
       childLocationId,
       "parents",
       locationsDb,
-      locationsDb,
+      "parents_children",
+      contentDir,
     );
     expect(parentChildren).toHaveLength(1);
     expect(childParents).toHaveLength(1);
@@ -231,6 +235,7 @@ describe("database-view-relations", () => {
     seedTestNode(fixture, { id: locationA, properties: { title: "North grove" } });
     seedTestNode(fixture, { id: locationB, properties: { title: "South grove" } });
     const registry = emptyRelationshipTypesFile();
+    registerSetMembershipType(registry);
     registerTypeDefinition(registry, "neighbor", {
       perspectives: ["neighbor", "neighbor"],
     });
@@ -239,15 +244,15 @@ describe("database-view-relations", () => {
       version: RELATIONSHIPS_FILE_VERSION,
       relationships: [
         {
-          a: locationA,
-          b: locationsDb,
-          type: MEMBER_OF_TYPE,
+          a: locationsDb,
+          b: locationA,
+          type: "member_of",
           properties: { row_index: 0 },
         },
         {
-          a: locationB,
-          b: locationsDb,
-          type: MEMBER_OF_TYPE,
+          a: locationsDb,
+          b: locationB,
+          type: "member_of",
           properties: { row_index: 1 },
         },
         {
@@ -260,19 +265,22 @@ describe("database-view-relations", () => {
     });
     fixture.ctx.sync.syncRelationships();
 
+    const neighborContentDir = fixture.ctx.store.contentDir;
     const fromA = listRelationConnectionsForRow(
       fixture.ctx.db,
       locationA,
       "neighbor",
       locationsDb,
-      locationsDb,
+      "neighbor",
+      neighborContentDir,
     );
     const fromB = listRelationConnectionsForRow(
       fixture.ctx.db,
       locationB,
       "neighbor",
       locationsDb,
-      locationsDb,
+      "neighbor",
+      neighborContentDir,
     );
 
     expect(fromA).toHaveLength(1);
@@ -307,8 +315,8 @@ describe("database-view-relations", () => {
     db.upsertNode(partsDb, { ...typeTableMarkerProperties("Parts") });
     db.upsertNode(sceneId, { title: "Intro scene" });
     db.upsertNode(partId, { title: "Part 1" });
-    db.upsertRelationship(sceneId, scenesDb, MEMBER_OF_TYPE, { row_index: 0, order: "1005" });
-    db.upsertRelationship(partId, partsDb, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship(sceneId, scenesDb, "member_of", { row_index: 0, order: "1005" });
+    db.upsertRelationship(partId, partsDb, "member_of", { row_index: 0 });
     db.upsertRelationship(sceneId, partId, "scenes", { ordinal: 0 });
 
     const detail = getDatabaseViewDetail(db, scenesDb, undefined, contentDir);
@@ -330,11 +338,11 @@ describe("database-view-relations", () => {
     db.upsertNode(chaoticWorldId, { title: "Chaotic world" });
     db.upsertNode(adventureId, { title: "Adventure" });
     db.upsertNode(darkForestId, { title: "Dark forest" });
-    db.upsertRelationship(inspirationWithMixedFeatures, inspirationsDb, MEMBER_OF_TYPE, {
+    db.upsertRelationship(inspirationWithMixedFeatures, inspirationsDb, "member_of", {
       row_index: 0,
     });
     for (const featureId of [cozyHorrorId, chaoticWorldId, adventureId, darkForestId]) {
-      db.upsertRelationship(featureId, featuresDb, MEMBER_OF_TYPE, { row_index: 0 });
+      db.upsertRelationship(featureId, featuresDb, "member_of", { row_index: 0 });
     }
     db.upsertRelationship(inspirationWithMixedFeatures, cozyHorrorId, "inspirations");
     db.upsertRelationship(inspirationWithMixedFeatures, chaoticWorldId, "inspirations");
@@ -347,6 +355,7 @@ describe("database-view-relations", () => {
       "inspirations",
       inspirationsDb,
       "inspirations_features",
+      contentDir,
     );
     expect(connections).toHaveLength(4);
     const linkedTitles = connections
@@ -368,7 +377,7 @@ describe("database-view-relations", () => {
 
   test("story_scale relation column hydrates from relationships, not a stale scalar member_of property", () => {
     // Regression guard for the legacy-import cleanup: the corpus historically stored
-    // a scalar `story_scale` (and `traversal_types`) on the member_of edge holding a
+    // a scalar `story_scale` (and `traversal_types`) on the "member_of" edge holding a
     // comma-joined URL string. Relation columns must hydrate from the
     // `{perspective}_inspirations` composite relationships and never surface the
     // stale scalar (which used to leak a raw URL into the cell).
@@ -401,11 +410,11 @@ describe("database-view-relations", () => {
     db.upsertNode(storyScaleDb, { ...typeTableMarkerProperties("Story scale") });
     db.upsertNode(storyScaleRowId, { title: "Mission-based" });
     db.upsertNode(extendedScaleId, { title: "Extended" });
-    db.upsertRelationship(storyScaleRowId, storyScaleRowsDb, MEMBER_OF_TYPE, {
+    db.upsertRelationship(storyScaleRowId, storyScaleRowsDb, "member_of", {
       row_index: 0,
       story_scale: "https://legacy.example/00000000000000000000000019",
     });
-    db.upsertRelationship(extendedScaleId, storyScaleDb, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship(extendedScaleId, storyScaleDb, "member_of", { row_index: 0 });
     db.upsertRelationship(storyScaleRowId, extendedScaleId, "story_scale", {
       ordinal: 0,
       via_view: "default",

@@ -15,8 +15,12 @@ function titleFromNode(node: Node | null): string {
   return "Untitled";
 }
 
-function databaseMemberIds(db: GraphDatabase, databaseId: string): Set<string> {
-  return new Set(setMemberIds(db, databaseId));
+function databaseMemberIds(
+  db: GraphDatabase,
+  databaseId: string,
+  contentDir?: string,
+): Set<string> {
+  return new Set(setMemberIds(db, databaseId, contentDir));
 }
 
 function listIncidentEdges(
@@ -52,11 +56,14 @@ function listIncidentEdges(
   return edges;
 }
 
-export function createExtensionGraphQueryServices(db: GraphDatabase): ExtensionGraphQueryServices {
+export function createExtensionGraphQueryServices(
+  db: GraphDatabase,
+  contentDir?: string,
+): ExtensionGraphQueryServices {
   return {
     listTypeMembers(typeId: string): GraphQueryNode[] {
       const members: GraphQueryNode[] = [];
-      for (const memberId of databaseMemberIds(db, typeId)) {
+      for (const memberId of databaseMemberIds(db, typeId, contentDir)) {
         if (db.isNodeArchived(memberId)) continue;
         members.push({
           id: memberId,

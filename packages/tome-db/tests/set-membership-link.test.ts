@@ -1,5 +1,4 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import { linkOutgoingRelationship } from "../src/relationship-link-mutations";
 import {
   createTestContentFixture,
@@ -30,12 +29,12 @@ describe("linkOutgoingRelationship member_of row metadata", () => {
     const err = linkOutgoingRelationship(ctx, {
       sourceId: MEMBER_A,
       targetId: TYPE_ID,
-      type: MEMBER_OF_TYPE,
+      type: "member_of",
     });
     expect(err).toBeNull();
 
     const db = ctx.db;
-    const membership = db.listRelationshipsFromSource(MEMBER_A, MEMBER_OF_TYPE)[0];
+    const membership = db.listRelationshipsFromSource(MEMBER_A, "member_of")[0];
     expect(membership?.properties.view).toBeUndefined();
     expect(membership?.properties.row_index).toBeUndefined();
 
@@ -44,7 +43,7 @@ describe("linkOutgoingRelationship member_of row metadata", () => {
 
     const view = getDatabaseViewDetail(db, TYPE_ID, undefined, store.contentDir);
     expect(view?.rows.some((r) => r.nodeId === MEMBER_A)).toBe(true);
-    expect(listSetMemberRowConnections(db, TYPE_ID).some((r) => r.sourceNodeId === MEMBER_A)).toBe(
+    expect(listSetMemberRowConnections(db, TYPE_ID, store.contentDir).some((r) => r.sourceNodeId === MEMBER_A)).toBe(
       true,
     );
   });

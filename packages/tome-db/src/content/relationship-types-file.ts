@@ -33,7 +33,7 @@ export interface RelationshipTypeEndpoints {
 export interface RelationshipTypeDefinition {
   /** Local type names projected from each endpoint. Always a pair — every relationship is bidirectional. */
   perspectives: PerspectivePair;
-  /** UI labels keyed by perspective slug (e.g. member_of → "Membership"). */
+  /** UI labels keyed by perspective slug (e.g. "member_of" → "Membership"). */
   perspectiveLabels?: Record<string, PerspectiveLabelConfig>;
   /** When false, relation sections default to omitting the inline link-existing control. */
   linkExisting?: boolean;

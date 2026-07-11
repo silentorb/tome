@@ -35,7 +35,7 @@ export function createExtensionSchemaQueryServices(
         entries.push({
           id,
           title: titleFromNode(db.getNode(id)),
-          memberCount: setMemberIds(db, id).length,
+          memberCount: setMemberIds(db, id, contentDir).length,
         });
       }
       entries.sort((a, b) =>

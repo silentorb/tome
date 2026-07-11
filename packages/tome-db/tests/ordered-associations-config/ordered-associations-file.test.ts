@@ -8,8 +8,15 @@ import {
   parseOrderedAssociationsFile,
   serializeOrderedAssociationsFile,
 } from "../../src/ordered-associations-config/ordered-associations-file";
-import { contentModelDir, tableSchemasFilePath } from "../../src/content/paths";
+import { contentModelDir, relationshipTypesFilePath, tableSchemasFilePath } from "../../src/content/paths";
+import {
+  emptyRelationshipTypesFile,
+  registerOrderedSetMembershipType,
+  registerSetMembershipType,
+  serializeRelationshipTypesFile,
+} from "../../src/content/relationship-types-file";
 import { serializeTableSchemasFile } from "../../src/content/table-schemas-file";
+import { invalidateRelationshipTypesCache } from "../../src/relationship-types/load";
 import { invalidateTableSchemasCache } from "../../src/table-schemas/load";
 
 const SCENES_DB = "0000000000000000000000000D";
@@ -27,17 +34,40 @@ const VALID_CONFIG = {
   excludedColumnKeys: ["order", "product", "part", "status"],
 };
 
-function testContentDir(): string {
+function testContentDir(options?: {
+  scenesMembershipComposite?: string;
+  partsMembershipComposite?: string;
+}): string {
   const dir = mkdtempSync(join(tmpdir(), "tome-oa-config-"));
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
+
+  const registry = emptyRelationshipTypesFile();
+  registerSetMembershipType(registry);
+  registerOrderedSetMembershipType(registry);
+  registry.types.custom_ordered_set = {
+    perspectives: ["custom_sets", "custom_ordered_members"],
+    traits: ["set", "ordered"],
+  };
+  writeFileSync(
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile(registry),
+  );
+  invalidateRelationshipTypesCache();
+
   writeFileSync(
     tableSchemasFilePath(contentDir),
     serializeTableSchemasFile({
       version: 1,
       tables: {
-        [SCENES_DB]: { membershipComposite: "ordered_member_of", columns: [] },
-        [PARTS_DB]: { membershipComposite: "ordered_member_of", columns: [] },
+        [SCENES_DB]: {
+          membershipComposite: options?.scenesMembershipComposite ?? "ordered_member_of",
+          columns: [],
+        },
+        [PARTS_DB]: {
+          membershipComposite: options?.partsMembershipComposite ?? "ordered_member_of",
+          columns: [],
+        },
       },
     }),
   );
@@ -94,9 +124,7 @@ describe("parseOrderedAssociationsFile", () => {
   });
 
   test("rejects table without ordered membershipComposite", () => {
-    const dir = mkdtempSync(join(tmpdir(), "tome-oa-config-plain-"));
-    const contentDir = join(dir, "content");
-    mkdirSync(contentModelDir(contentDir), { recursive: true });
+    const contentDir = testContentDir();
     writeFileSync(
       tableSchemasFilePath(contentDir),
       serializeTableSchemasFile({
@@ -110,5 +138,27 @@ describe("parseOrderedAssociationsFile", () => {
       configs: [VALID_CONFIG],
     });
     expect(() => parseOrderedAssociationsFile(raw, contentDir)).toThrow(/membershipComposite/);
+  });
+
+  test("rejects plain set membershipComposite without ordered trait", () => {
+    const contentDir = testContentDir({ scenesMembershipComposite: "member_of" });
+    const raw = serializeOrderedAssociationsFile({
+      version: ORDERED_ASSOCIATIONS_FILE_VERSION,
+      configs: [VALID_CONFIG],
+    });
+    expect(() => parseOrderedAssociationsFile(raw, contentDir)).toThrow(/ordered trait/);
+  });
+
+  test("accepts custom ordered membershipComposite name", () => {
+    const contentDir = testContentDir({
+      scenesMembershipComposite: "custom_ordered_set",
+      partsMembershipComposite: "custom_ordered_set",
+    });
+    const raw = serializeOrderedAssociationsFile({
+      version: ORDERED_ASSOCIATIONS_FILE_VERSION,
+      configs: [VALID_CONFIG],
+    });
+    const file = parseOrderedAssociationsFile(raw, contentDir);
+    expect(file.configs).toHaveLength(1);
   });
 });

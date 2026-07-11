@@ -3,7 +3,6 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GraphDatabase } from "../src/graph";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { sortEvalRows, type EvalRow } from "../src/row-sort";
@@ -19,6 +18,7 @@ import {
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
 import { serializeRelationshipTypesFile } from "../src/content/relationship-types-file";
 import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
+import { writeSetMembershipTypes } from "../src/content/test-helpers";
 
 describe("row-sort", () => {
   const rows: EvalRow[] = [
@@ -101,6 +101,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-tabs-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
+    writeSetMembershipTypes(contentDir);
+    process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
@@ -138,8 +140,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Zebra" });
     db.upsertNode("page2", { title: "Alpha" });
-    db.upsertRelationship("page1", databaseId, MEMBER_OF_TYPE, { status: "Done", row_index: 0 });
-    db.upsertRelationship("page2", databaseId, MEMBER_OF_TYPE, { status: "Todo", row_index: 1 });
+    db.upsertRelationship("page1", databaseId, "member_of", { status: "Done", row_index: 0 });
+    db.upsertRelationship("page2", databaseId, "member_of", { status: "Todo", row_index: 1 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.tabs.items.map((tab) => tab.label)).toEqual(["Done only"]);
@@ -155,6 +157,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-cols-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
+    writeSetMembershipTypes(contentDir);
+    process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
@@ -195,7 +199,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     );
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Row" });
-    db.upsertRelationship("page1", databaseId, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship("page1", databaseId, "member_of", { row_index: 0 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.columns).toEqual(["status", "priority"]);
@@ -208,6 +212,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-hidden-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
+    writeSetMembershipTypes(contentDir);
+    process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
@@ -248,7 +254,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     );
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Row" });
-    db.upsertRelationship("page1", databaseId, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship("page1", databaseId, "member_of", { row_index: 0 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.allColumns).toEqual(["status", "priority"]);
@@ -263,6 +269,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-rel-sort-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
+    writeSetMembershipTypes(contentDir);
+    process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const featuresDb = "0000000000000000000000002P";
     const inspirationsDb = "0000000000000000000000000K";
@@ -272,6 +280,10 @@ describe("getDatabaseViewDetail with custom tabs", () => {
       serializeRelationshipTypesFile({
         version: 1,
         types: {
+          member_of: {
+            perspectives: ["members", "member_of"],
+            traits: ["set"],
+          },
           inspirations_features: {
             perspectives: ["features", "inspirations"],
             endpoints: {
@@ -330,12 +342,12 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertNode("insp-b", { title: "Insp B" });
     db.upsertNode("insp-c", { title: "Insp C" });
 
-    db.upsertRelationship("feature-few", featuresDb, MEMBER_OF_TYPE, { row_index: 0 });
-    db.upsertRelationship("feature-many", featuresDb, MEMBER_OF_TYPE, { row_index: 1 });
-    db.upsertRelationship("feature-none", featuresDb, MEMBER_OF_TYPE, { row_index: 2 });
-    db.upsertRelationship("insp-a", inspirationsDb, MEMBER_OF_TYPE, { row_index: 0 });
-    db.upsertRelationship("insp-b", inspirationsDb, MEMBER_OF_TYPE, { row_index: 1 });
-    db.upsertRelationship("insp-c", inspirationsDb, MEMBER_OF_TYPE, { row_index: 2 });
+    db.upsertRelationship("feature-few", featuresDb, "member_of", { row_index: 0 });
+    db.upsertRelationship("feature-many", featuresDb, "member_of", { row_index: 1 });
+    db.upsertRelationship("feature-none", featuresDb, "member_of", { row_index: 2 });
+    db.upsertRelationship("insp-a", inspirationsDb, "member_of", { row_index: 0 });
+    db.upsertRelationship("insp-b", inspirationsDb, "member_of", { row_index: 1 });
+    db.upsertRelationship("insp-c", inspirationsDb, "member_of", { row_index: 2 });
     db.upsertRelationship("feature-few", "insp-a", "features");
     db.upsertRelationship("feature-few", "insp-b", "features");
     db.upsertRelationship("feature-many", "insp-a", "features");

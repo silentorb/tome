@@ -36,7 +36,7 @@ import {
  * tuple order, so the authored order must carry the intent.
  *
  * Orientation source of truth (in priority):
- *   - **member_of**: parent (set) at index 0, child (member) at index 1.
+ *   - **"member_of"**: parent (set) at index 0, child (member) at index 1.
  *   - **asymmetric cross-type**: place the endpoint whose node type owns the
  *     `perspectives[0]` relation column (targeting the other endpoint's type) at
  *     index 0, derived from `table-schemas.json`.
@@ -49,7 +49,7 @@ const TRIPLE_SEP = "\u0000";
 
 export interface RelationshipOrderContext {
   registry: RelationshipTypesFile;
-  /** node id -> type-table ids it is a member of (derived from member_of edges). */
+  /** node id -> type-table ids it is a member of (derived from "member_of" edges). */
   nodeTypes: Map<string, Set<string>>;
   /** Type-table ids plus the archive hub id. */
   setNodeIds: Set<string>;
@@ -151,7 +151,7 @@ export function reorderRelationshipsFile(
         : orientAsymmetric(entry, perspectives, ctx);
 
     if (!oriented) {
-      // member_of with both/neither endpoint a set: keep current order, flag it.
+      // "member_of" with both/neither endpoint a set: keep current order, flag it.
       report.ambiguous.push({
         type: entry.type,
         a: entry.a,
@@ -192,7 +192,7 @@ function safeReadJson(path: string): string | null {
   }
 }
 
-/** Build orientation context from a content corpus's model config + member_of edges. */
+/** Build orientation context from a content corpus's model config + "member_of" edges. */
 export function buildRelationshipOrderContext(
   contentDir: string,
   relationships: readonly RelationshipEntry[],

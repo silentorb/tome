@@ -31,8 +31,6 @@ import { SortableDataColumnHeaders, columnLabelFor, moveColumnOrderItem } from "
 import "./ordered-association-view.css";
 import "./section-data-table.css";
 
-const MEMBERS_RELATIONSHIP_TYPE = "members";
-
 interface OrderedAssociationViewProps {
   api: EditorApi;
   nodeId: string;
@@ -288,12 +286,12 @@ export function OrderedAssociationView({
   const handleColumnsReorder = useCallback(
     async (columnOrder: string[]) => {
       setDisplayColumns(columnOrder);
-      await api.patchRelationshipViews(view.typeDatabaseId, MEMBERS_RELATIONSHIP_TYPE, {
+      await api.patchRelationshipViews(view.typeDatabaseId, view.viewRelationshipType, {
         properties: { columnOrder },
       });
       onCellUpdated?.();
     },
-    [api, onCellUpdated, view.typeDatabaseId],
+    [api, onCellUpdated, view.typeDatabaseId, view.viewRelationshipType],
   );
 
   const canManageColumn = useCallback(
@@ -339,7 +337,11 @@ export function OrderedAssociationView({
         ? {
             onArchiveNode,
             onRemoveNode: async (rowId: string) => {
-              await api.unlinkOutgoingRelationship(rowId, "member_of", view.typeDatabaseId);
+              await api.unlinkOutgoingRelationship(
+                rowId,
+                view.memberSidePerspective,
+                view.typeDatabaseId,
+              );
               onCellUpdated?.();
             },
             onDeleteNode,
@@ -348,7 +350,7 @@ export function OrderedAssociationView({
               excludedIds: [nodeId, rowNodeId],
               onMove: async (selectedId: string) => {
                 await api.moveRelationshipConnection({
-                  type: "member_of",
+                  type: view.memberSidePerspective,
                   oldSourceId: rowNodeId,
                   oldTargetId: view.typeDatabaseId,
                   newSourceId: rowNodeId,
@@ -359,7 +361,15 @@ export function OrderedAssociationView({
             }),
           }
         : undefined,
-    [api, nodeId, onArchiveNode, onCellUpdated, onDeleteNode, view.typeDatabaseId],
+    [
+      api,
+      nodeId,
+      onArchiveNode,
+      onCellUpdated,
+      onDeleteNode,
+      view.memberSidePerspective,
+      view.typeDatabaseId,
+    ],
   );
 
   const activeRow = useMemo(() => {

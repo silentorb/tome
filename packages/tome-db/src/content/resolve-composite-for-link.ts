@@ -56,7 +56,7 @@ function schemaIdForNode(
  * Resolve the storage composite type for a new link.
  *
  * Resolution order:
- *  0. set-trait composites (e.g. member_of)
+ *  0. set-trait composites (e.g. "member_of")
  *  1. table-schema relation column on source type → column's relationshipType
  *  2. direct registry lookup for dual-perspective composite containing the perspective
  *  3. throw LinkResolutionError

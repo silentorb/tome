@@ -1,5 +1,4 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import { archiveNode, unarchiveNode } from "../src/node-lifecycle";
 import {
   createTestContentFixture,
@@ -23,7 +22,7 @@ describe("shared archived edge unarchive", () => {
   seedTestNode(fixture, { id: NODE_A, properties: { title: "A" } });
   seedTestNode(fixture, { id: NODE_B, properties: { title: "B" } });
 
-  seedTestIncludes(fixture, [{ a: NODE_A, b: NODE_B }]);
+  seedTestIncludes(fixture, [{ a: NODE_A, b: NODE_B, compositeType: "related" }]);
 
   test("unarchiving one endpoint keeps shared edge archived while other remains archived", () => {
     expect(archiveNode(fixture.ctx, NODE_A)).toBeNull();
@@ -33,13 +32,13 @@ describe("shared archived edge unarchive", () => {
 
     const file = fixture.ctx.store.readRelationshipsFile();
     const shared = file.relationships.find(
-      (e) => e.type === "includes" && e.a !== HUB && e.b !== HUB,
+      (e) => e.type === "related" && e.a !== HUB && e.b !== HUB,
     );
     expect(shared?.archived).toBe(true);
     expect(fixture.ctx.db.listRelationshipsFromSource(NODE_A)).toHaveLength(0);
     const nodeBOutgoing = fixture.ctx.db.listRelationshipsFromSource(NODE_B);
     expect(nodeBOutgoing).toHaveLength(1);
-    expect(nodeBOutgoing[0]?.type).toBe(MEMBER_OF_TYPE);
+    expect(nodeBOutgoing[0]?.type).toBe("member_of");
   });
 
   afterAll(() => {

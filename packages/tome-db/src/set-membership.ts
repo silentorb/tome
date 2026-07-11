@@ -43,7 +43,7 @@ export function listSetMembership(
 }
 
 export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: string): string[] {
-  const dir = contentDir ?? resolveContentPath();
+  const dir = contentDir ?? db.contentDir ?? resolveContentPath();
   const registry = loadRelationshipTypesFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
@@ -59,7 +59,7 @@ export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: s
 }
 
 export function setMemberIds(db: GraphDatabase, setId: string, contentDir?: string): string[] {
-  const dir = contentDir ?? resolveContentPath();
+  const dir = contentDir ?? db.contentDir ?? resolveContentPath();
   const [setPerspective, memberPerspective] = membershipPerspectivesForSet(setId, dir);
   const viaSet = listSetMembership(db, setId, setPerspective).map((r) => r.targetNodeId);
   if (viaSet.length > 0) return viaSet;
@@ -84,7 +84,7 @@ export function setKindForNode(
   nodeId: string,
   contentDir?: string,
 ): SetKind | null {
-  const dir = contentDir ?? resolveContentPath();
+  const dir = contentDir ?? db.contentDir ?? resolveContentPath();
   const archiveId = archiveNodeId(dir);
   if (archiveId && nodeId === archiveId) return "archive";
   if (hasTableSchemaEntry(dir, nodeId)) return "type_table";
@@ -104,7 +104,7 @@ export function findSetMembershipRelationship(
   setId: string,
   contentDir?: string,
 ): Relationship | null {
-  const dir = contentDir ?? resolveContentPath();
+  const dir = contentDir ?? db.contentDir ?? resolveContentPath();
   const [, memberPerspective] = membershipPerspectivesForSet(setId, dir);
   return (
     listSetMembership(db, memberId, memberPerspective).find((r) => r.targetNodeId === setId) ??
@@ -118,7 +118,7 @@ export function listSetMemberRowConnections(
   setId: string,
   contentDir?: string,
 ): Relationship[] {
-  const dir = contentDir ?? resolveContentPath();
+  const dir = contentDir ?? db.contentDir ?? resolveContentPath();
   const [setPerspective, memberPerspective] = membershipPerspectivesForSet(setId, dir);
   const viaMembers = listSetMembership(db, setId, setPerspective);
   if (viaMembers.length > 0) {

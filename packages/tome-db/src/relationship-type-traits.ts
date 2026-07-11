@@ -160,15 +160,6 @@ export function resolveOrderedSetTraitComposite(
   return null;
 }
 
-const CONVENTIONAL_PLAIN_SET_COMPOSITE = "member_of";
-const CONVENTIONAL_ORDERED_SET_COMPOSITE = "ordered_member_of";
-const CONVENTIONAL_SET_TRAIT_PERSPECTIVES = [
-  "members",
-  "member_of",
-  "ordered_members",
-  "ordered_member_of",
-] as const;
-
 export function isSetTraitEntry(
   registry: RelationshipTypesFile,
   entry: RelationshipEntry,
@@ -187,9 +178,7 @@ export function setTraitPerspectives(registry: RelationshipTypesFile): string[] 
     if (!def) continue;
     perspectives.push(def.perspectives[0], def.perspectives[1]);
   }
-  const unique = uniquePerspectives(perspectives);
-  if (unique.length > 0) return unique;
-  return [...CONVENTIONAL_SET_TRAIT_PERSPECTIVES];
+  return uniquePerspectives(perspectives);
 }
 
 export function setSidePerspectives(registry: RelationshipTypesFile): string[] {
@@ -200,9 +189,7 @@ export function setSidePerspectives(registry: RelationshipTypesFile): string[] {
     const { parentIndex } = setRoleIndices(def);
     perspectives.push(def.perspectives[parentIndex]!);
   }
-  const unique = uniquePerspectives(perspectives);
-  if (unique.length > 0) return unique;
-  return ["members", "ordered_members"];
+  return uniquePerspectives(perspectives);
 }
 
 export function memberSidePerspectives(registry: RelationshipTypesFile): string[] {
@@ -213,9 +200,7 @@ export function memberSidePerspectives(registry: RelationshipTypesFile): string[
     const { childIndex } = setRoleIndices(def);
     perspectives.push(def.perspectives[childIndex]!);
   }
-  const unique = uniquePerspectives(perspectives);
-  if (unique.length > 0) return unique;
-  return ["member_of", "ordered_member_of"];
+  return uniquePerspectives(perspectives);
 }
 
 export function isSetTraitPerspective(
@@ -254,7 +239,7 @@ export function defaultPlainSetMembershipComposite(registry: RelationshipTypesFi
     const def = registry.types[composite];
     if (def && !isOrderedTraitType(def)) return composite;
   }
-  return CONVENTIONAL_PLAIN_SET_COMPOSITE;
+  throw new Error("No plain set-trait membership composite in relationship-types registry");
 }
 
 export function defaultOrderedSetMembershipComposite(registry: RelationshipTypesFile): string {
@@ -262,7 +247,7 @@ export function defaultOrderedSetMembershipComposite(registry: RelationshipTypes
     const def = registry.types[composite];
     if (def && isOrderedTraitType(def)) return composite;
   }
-  return CONVENTIONAL_ORDERED_SET_COMPOSITE;
+  throw new Error("No ordered set-trait membership composite in relationship-types registry");
 }
 
 export function membershipCompositeForSet(setId: string, contentDir?: string): string {
@@ -273,7 +258,16 @@ export function membershipCompositeForSet(setId: string, contentDir?: string): s
   if (typeof composite === "string" && composite.trim()) {
     return normalizeRelationshipType(composite);
   }
-  return defaultPlainSetMembershipComposite(registry);
+  for (const candidate of typesWithTrait(registry, SET_TRAIT)) {
+    const def = registry.types[candidate];
+    if (def && !isOrderedTraitType(def)) return candidate;
+  }
+  for (const candidate of typesWithTrait(registry, SET_TRAIT)) {
+    if (registry.types[candidate]) return candidate;
+  }
+  throw new Error(
+    `No set-trait membership composite in relationship-types registry for set ${setId}`,
+  );
 }
 
 export function membershipPerspectivesForSet(
@@ -285,9 +279,22 @@ export function membershipPerspectivesForSet(
   const composite = membershipCompositeForSet(setId, dir);
   const def = registry.types[composite];
   if (!def) {
-    return ["members", "member_of"] as [string, string];
+    throw new Error(
+      `Unknown membership composite "${composite}" for set ${setId}`,
+    );
   }
-  return [def.perspectives[0]!, def.perspectives[1]!];
+  const { parentIndex, childIndex } = setRoleIndices(def);
+  return [def.perspectives[parentIndex]!, def.perspectives[childIndex]!];
+}
+
+/** Set-side perspective used as views.json relationshipType / section key. */
+export function viewSectionKeyForSet(setId: string, contentDir?: string): string {
+  return membershipPerspectivesForSet(setId, contentDir)[0];
+}
+
+/** Member-side perspective for unlink/move against a set. */
+export function memberSidePerspectiveForSet(setId: string, contentDir?: string): string {
+  return membershipPerspectivesForSet(setId, contentDir)[1];
 }
 
 export function isOrderedMembershipSet(setId: string, contentDir?: string): boolean {

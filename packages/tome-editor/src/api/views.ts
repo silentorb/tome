@@ -10,7 +10,6 @@ import {
   type ViewSortSpec,
 } from "tome-db";
 import { invalidateViewsCache } from "tome-db";
-import { MEMBERS_RELATIONSHIP_TYPE } from "tome-db";
 
 export interface ViewMutationInput {
   name?: string;
@@ -83,5 +82,3 @@ export function patchRelationshipViews(
   }
   return response;
 }
-
-export { MEMBERS_RELATIONSHIP_TYPE };

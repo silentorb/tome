@@ -1,5 +1,4 @@
 import { describe, expect, test, afterEach } from "bun:test";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodeDetail } from "../src/queries";
 import { createNode } from "../src/node-create";
@@ -82,7 +81,7 @@ describe("createNode", () => {
       id: "0000000000000000000000002K",
       properties: { title: "Old row" },
     });
-    fixture.ctx.store.upsertRelationship("0000000000000000000000002K", databaseId, MEMBER_OF_TYPE, {});
+    fixture.ctx.store.upsertRelationship("0000000000000000000000002K", databaseId, "member_of", {});
     fixture.ctx.sync.syncRelationships();
 
     const result = createNode(fixture.ctx, {
@@ -91,7 +90,7 @@ describe("createNode", () => {
     });
     if (typeof result === "string") throw new Error(result);
 
-    const rel = fixture.ctx.store.findRelationship(result.id, databaseId, MEMBER_OF_TYPE);
+    const rel = fixture.ctx.store.findRelationship(result.id, databaseId, "member_of");
     expect(rel?.properties.row_index).toBeUndefined();
     expect(rel?.properties.view).toBeUndefined();
   });

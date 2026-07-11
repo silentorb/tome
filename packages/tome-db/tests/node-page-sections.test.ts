@@ -3,7 +3,6 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GraphDatabase } from "../src/graph";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodePageDetail } from "../src/node-page-sections";
 import { contentModelDir, relationshipTypesFilePath, tableSchemasFilePath } from "../src/content/paths";
@@ -213,7 +212,7 @@ describe("node-sections", () => {
     const databaseId = "db42345678901234567890123456789012";
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features DB"), body: "# About" });
     db.upsertNode("page4", { title: "Guest consultant" });
-    db.upsertRelationship("page4", databaseId, MEMBER_OF_TYPE, {
+    db.upsertRelationship("page4", databaseId, "member_of", {
       status: "Partial",
     });
 
@@ -241,19 +240,19 @@ describe("node-sections", () => {
     db.upsertNode(databaseId, {
       ...typeTableMarkerProperties("Scene Archive"),
     });
-    db.upsertRelationship("page5", databaseId, MEMBER_OF_TYPE, {
+    db.upsertRelationship("page5", databaseId, "member_of", {
       view: "default",
       priority: "High",
     });
 
     const detail = getNodePageDetail(db, "page5", { contentDir });
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
+      (section) => section.type === "relations" && section.label === "member_of",
     );
 
     expect(membership).toMatchObject({
       type: "relations",
-      label: MEMBER_OF_TYPE,
+      label: "member_of",
       title: "Membership",
       typeNodeId: null,
       linkAddLabel: "Link type table",
@@ -284,16 +283,16 @@ describe("node-sections", () => {
     db.upsertNode(databaseId, {
       ...typeTableMarkerProperties("Legacy Features"),
     });
-    db.upsertRelationship("page6", databaseId, MEMBER_OF_TYPE, { status: "Unresolved" });
+    db.upsertRelationship("page6", databaseId, "member_of", { status: "Unresolved" });
 
     const detail = getNodePageDetail(db, "page6", { contentDir });
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
+      (section) => section.type === "relations" && section.label === "member_of",
     );
 
     expect(membership).toMatchObject({
       type: "relations",
-      label: MEMBER_OF_TYPE,
+      label: "member_of",
       title: "Membership",
       typeNodeId: null,
       linkAddLabel: "Link type table",
@@ -311,7 +310,7 @@ describe("node-sections", () => {
     const featuresTypeId = "f72345678901234567890123456789012";
     db.upsertNode("scene2", { title: "Chase" });
     db.upsertNode(featuresTypeId, { ...typeTableMarkerProperties("Features") });
-    db.upsertRelationship("scene2", featuresTypeId, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship("scene2", featuresTypeId, "member_of", { row_index: 0 });
     db.upsertNode("feat2", { title: "Desperation" });
     db.upsertRelationship("scene2", "feat2", "features", { ordinal: 0 });
 
@@ -330,7 +329,7 @@ describe("node-sections", () => {
     const inspTypeId = "f82345678901234567890123456789012";
     db.upsertNode("scene3", { title: "Ball" });
     db.upsertNode(inspTypeId, { ...typeTableMarkerProperties("Inspirations") });
-    db.upsertRelationship("scene3", inspTypeId, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship("scene3", inspTypeId, "member_of", { row_index: 0 });
     db.upsertNode("insp2", { title: "Emma" });
     db.upsertRelationship("scene3", "insp2", "inspirations", { ordinal: 0 });
 
@@ -349,12 +348,12 @@ describe("node-sections", () => {
     db.upsertNode("multi-member", { title: "Shared row", body: "" });
     db.upsertNode(typeA, { ...typeTableMarkerProperties("Type A") });
     db.upsertNode(typeB, { ...typeTableMarkerProperties("Type B") });
-    db.upsertRelationship("multi-member", typeA, MEMBER_OF_TYPE, { row_index: 0 });
-    db.upsertRelationship("multi-member", typeB, MEMBER_OF_TYPE, { row_index: 1 });
+    db.upsertRelationship("multi-member", typeA, "member_of", { row_index: 0 });
+    db.upsertRelationship("multi-member", typeB, "member_of", { row_index: 1 });
 
     const detail = getNodePageDetail(db, "multi-member", { contentDir });
     const membership = detail?.sections.filter(
-      (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
+      (section) => section.type === "relations" && section.label === "member_of",
     );
 
     expect(membership).toHaveLength(1);
@@ -412,7 +411,7 @@ describe("node-sections table-schema empty relation placeholders", () => {
   db.upsertNode(inspirationsTypeId, { ...typeTableMarkerProperties("Inspirations") });
   db.upsertNode(featuresTypeId, { ...typeTableMarkerProperties("Features") });
   db.upsertNode(inspirationId, { title: "Dishonored", body: "" });
-  db.upsertRelationship(inspirationId, inspirationsTypeId, MEMBER_OF_TYPE, { row_index: 71 });
+  db.upsertRelationship(inspirationId, inspirationsTypeId, "member_of", { row_index: 71 });
 
   test("includes empty relation section from table-schemas when includeSchemaEmptySections is true", () => {
     const detail = getNodePageDetail(db, inspirationId, {
@@ -445,7 +444,7 @@ describe("node-sections table-schema empty relation placeholders", () => {
 
   test("does not duplicate section when features link already exists", () => {
     db.upsertNode(featId, { title: "Desperation" });
-    db.upsertRelationship(featId, featuresTypeId, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship(featId, featuresTypeId, "member_of", { row_index: 0 });
     db.upsertRelationship(inspirationId, featId, "inspirations", { ordinal: 0 });
 
     const detail = getNodePageDetail(db, inspirationId, {
@@ -533,7 +532,7 @@ describe("node-sections children_children addMode", () => {
     db.upsertNode(groupsTypeId, { ...typeTableMarkerProperties("Groups") });
     db.upsertNode("group1", { title: "Alpha Squad" });
     db.upsertNode("group2", { title: "Beta Squad" });
-    db.upsertRelationship("group1", groupsTypeId, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship("group1", groupsTypeId, "member_of", { row_index: 0 });
     db.upsertRelationship("group1", "group2", "children", { ordinal: 0 });
 
     const detail = getNodePageDetail(db, "group1", {
@@ -547,6 +546,101 @@ describe("node-sections children_children addMode", () => {
     expect(childrenSection).toMatchObject({
       label: "children",
       addMode: "link-existing",
+    });
+  });
+
+  afterAll(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+});
+
+describe("node-sections trait-based set presentation", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tome-db-sections-set-trait-"));
+  const contentDir = join(dir, "content");
+  mkdirSync(contentModelDir(contentDir), { recursive: true });
+  const dbPath = join(dir, "test.sqlite");
+  const db = new GraphDatabase(dbPath);
+
+  const customSetDb = "0000000000000000000000000C";
+  const rowId = "0000000000000000000000000R";
+  const featId = "0000000000000000000000000F";
+
+  writeFileSync(
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        custom_ordered_set: {
+          perspectives: ["custom_sets", "custom_members"],
+          traits: ["set", "ordered"],
+        },
+        inspirations_features: {
+          perspectives: ["features", "inspirations"],
+        },
+      },
+    }),
+  );
+  invalidateRelationshipTypesCache();
+  process.env.TOME_CONTENT_PATH = contentDir;
+
+  db.upsertNode(customSetDb, { ...typeTableMarkerProperties("Custom Archive") });
+  db.upsertNode(rowId, { title: "Custom row", body: "" });
+  db.upsertNode(featId, { title: "Feature A" });
+  db.upsertRelationship(rowId, customSetDb, "custom_members", { order: "10" });
+  db.upsertRelationship(rowId, featId, "features", { ordinal: 0 });
+  db.upsertRelationship(rowId, customSetDb, "custom_sets", { order: "10" });
+
+  test("hides set-side perspectives from instance pages", () => {
+    const detail = getNodePageDetail(db, rowId, { contentDir });
+    const labels = detail?.sections
+      .filter((section) => section.type === "relations")
+      .map((section) => section.label);
+
+    expect(labels).not.toContain("custom_sets");
+    expect(labels).toContain("custom_members");
+  });
+
+  test("sorts set-trait member perspectives after other relation sections", () => {
+    const detail = getNodePageDetail(db, rowId, { contentDir });
+    const labels = detail?.sections
+      .filter((section) => section.type === "relations")
+      .map((section) => section.label);
+
+    expect(labels).toEqual(["features", "custom_members"]);
+  });
+
+  test("uses registry linkExisting false for addMode on structural perspectives", () => {
+    writeFileSync(
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile({
+        version: 1,
+        types: {
+          custom_ordered_set: {
+            perspectives: ["custom_sets", "custom_members"],
+            traits: ["set", "ordered"],
+          },
+          parents_children: {
+            perspectives: ["children", "parents"],
+            linkExisting: false,
+          },
+        },
+      }),
+    );
+    invalidateRelationshipTypesCache();
+
+    db.upsertNode("child1", { title: "Child row" });
+    db.upsertNode("parent1", { title: "Parent row" });
+    db.upsertRelationship("child1", "parent1", "parents", { ordinal: 0 });
+
+    const detail = getNodePageDetail(db, "child1", { contentDir });
+    const parentsSection = detail?.sections.find(
+      (section) => section.type === "relations" && section.label === "parents",
+    );
+
+    expect(parentsSection).toMatchObject({
+      label: "parents",
+      addMode: "none",
     });
   });
 
@@ -594,7 +688,7 @@ describe("node-sections bible passages regression", () => {
   test("member row shows Verses in Properties and Bible passages in member_of section", () => {
     db.upsertNode(biblePassagesId, { ...typeTableMarkerProperties("Bible passages") });
     db.upsertNode(memberId, { title: "Men gather to David", body: "> 1 Samuel 22:2" });
-    db.upsertRelationship(memberId, biblePassagesId, MEMBER_OF_TYPE, {
+    db.upsertRelationship(memberId, biblePassagesId, "member_of", {
       view: "Untitled",
       row_index: 20,
     });
@@ -610,11 +704,11 @@ describe("node-sections bible passages regression", () => {
     });
 
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
+      (section) => section.type === "relations" && section.label === "member_of",
     );
     expect(membership).toMatchObject({
       type: "relations",
-      label: MEMBER_OF_TYPE,
+      label: "member_of",
       title: "Membership",
       typeNodeId: null,
       linkAddLabel: "Link type table",

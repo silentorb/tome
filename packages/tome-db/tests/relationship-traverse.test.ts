@@ -6,7 +6,6 @@ import {
   seedTestTableSchema,
 } from "../src/content/test-helpers";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import {
   filterRelationshipsByRowDatabaseContext,
   firstRelatedNodeId,
@@ -17,9 +16,11 @@ import {
 } from "../src/relationship-traverse";
 import type { RelationshipEntry } from "../src/content/relationships-file";
 import { RELATIONSHIPS_FILE_VERSION } from "../src/content/relationships-file";
+import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
 
 describe("relationship-traverse", () => {
   const fixture = createTestContentFixture("tome-rel-traverse-");
+  const contentDir = fixture.ctx.store.contentDir;
   const scene = "11111111111111111111111111";
   const product = "22222222222222222222222222";
   const part = "33333333333333333333333333";
@@ -41,13 +42,14 @@ describe("relationship-traverse", () => {
       scenes_product: { perspectives: ["scenes", "product"] },
       scenes_part: { perspectives: ["scenes", "part"] },
       scenes_location: { perspectives: ["location", "scenes"] },
-      member_of: { perspectives: ["member_of", "members"] },
+      member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
     },
   };
   fixture.ctx.store.writeRelationshipTypesFile(typesFile);
+  invalidateRelationshipTypesCache();
 
-  // Authored tuple order carries the semantics: for member_of the member is at
-  // index 0 and the set (type table) at index 1; asymmetric composites place
+  // Authored tuple order carries the semantics: for "member_of" the set is at
+  // index 0 and the member at index 1; asymmetric composites place
   // each endpoint at the index whose perspective matches its role.
   const relationships: RelationshipEntry[] = [
     { a: product, b: scene, type: "scenes_product", properties: { ordinal: 0 } },
@@ -58,8 +60,8 @@ describe("relationship-traverse", () => {
       type: "scenes_location",
       properties: { ordinal: 0 },
     },
-    { a: scene, b: scenesDb, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
-    { a: location, b: locationsDb, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
+    { a: scenesDb, b: scene, type: "member_of", properties: { row_index: 0 } },
+    { a: locationsDb, b: location, type: "member_of", properties: { row_index: 0 } },
   ];
   fixture.ctx.store.writeRelationshipsFile({
     version: RELATIONSHIPS_FILE_VERSION,
@@ -81,23 +83,34 @@ describe("relationship-traverse", () => {
     expect(rels.some((rel) => rel.sourceNodeId === location || rel.targetNodeId === location)).toBe(
       true,
     );
-    const members = listRelationshipsToDatabaseMembers(fixture.ctx.db, location, scenesDb);
+    const members = listRelationshipsToDatabaseMembers(
+      fixture.ctx.db,
+      location,
+      scenesDb,
+      contentDir,
+    );
     expect(members.some((rel) => otherEndpointFrom(location, rel) === scene)).toBe(true);
   });
 
   test("rowBelongsToDatabase reflects is_a membership", () => {
-    expect(rowBelongsToDatabase(fixture.ctx.db, scene, scenesDb)).toBe(true);
-    expect(rowBelongsToDatabase(fixture.ctx.db, scene, locationsDb)).toBe(false);
-    expect(rowBelongsToDatabase(fixture.ctx.db, product, scenesDb)).toBe(false);
+    expect(rowBelongsToDatabase(fixture.ctx.db, scene, scenesDb, contentDir)).toBe(true);
+    expect(rowBelongsToDatabase(fixture.ctx.db, scene, locationsDb, contentDir)).toBe(false);
+    expect(rowBelongsToDatabase(fixture.ctx.db, product, scenesDb, contentDir)).toBe(false);
   });
 
   test("filterRelationshipsByRowDatabaseContext keeps edges for row members", () => {
-    const rels = listRelationshipsToDatabaseMembers(fixture.ctx.db, location, scenesDb);
+    const rels = listRelationshipsToDatabaseMembers(
+      fixture.ctx.db,
+      location,
+      scenesDb,
+      contentDir,
+    );
     const filtered = filterRelationshipsByRowDatabaseContext(
       fixture.ctx.db,
       location,
       locationsDb,
       rels,
+      contentDir,
     );
     expect(filtered).toHaveLength(1);
     expect(otherEndpointFrom(location, filtered[0]!)).toBe(scene);
@@ -127,6 +140,7 @@ describe("relationship-traverse", () => {
       location,
       scenesDb,
       relationships,
+      contentDir,
     );
     expect(filtered).toHaveLength(0);
   });

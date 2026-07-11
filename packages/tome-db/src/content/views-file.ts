@@ -266,7 +266,7 @@ export function uniqueTabId(base: string, existingIds: Set<string>): string {
 export const DEFAULT_VIEW: ViewDefinition = {
   id: "all",
   nodeId: "",
-  relationshipType: "members",
+  relationshipType: "",
   name: "All",
   sorts: [{ column: "name", direction: "asc" }],
 };

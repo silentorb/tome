@@ -48,6 +48,10 @@ describe("createExtensionSchemaQueryServices", () => {
     serializeRelationshipTypesFile({
       version: 1,
       types: {
+        member_of: {
+          perspectives: ["members", "member_of"],
+          traits: ["set"],
+        },
         scene_features: {
           perspectives: ["features", "scenes"],
           endpoints: {

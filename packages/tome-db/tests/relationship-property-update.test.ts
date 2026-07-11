@@ -1,5 +1,4 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { updateDatabaseRowProperty, updateOutgoingRelationshipProperty } from "../src/relationship-property-update";
 import {
@@ -24,14 +23,14 @@ describe("relationship-property-update", () => {
       properties: { title: "Feature A" },
     });
     seedTestRelationships(fixture, [
-      { source: pageId, target: databaseId, type: MEMBER_OF_TYPE, properties: { priority: "Low" } },
+      { source: pageId, target: databaseId, type: "member_of", properties: { priority: "Low" } },
     ]);
 
     expect(
       updateDatabaseRowProperty(fixture.ctx, databaseId, pageId, "priority", "High"),
     ).toBeNull();
 
-    const edge = fixture.ctx.db.listRelationshipsFromSource(pageId, MEMBER_OF_TYPE)[0];
+    const edge = fixture.ctx.db.listRelationshipsFromSource(pageId, "member_of")[0];
     expect(edge?.properties.priority).toBe("High");
   });
 

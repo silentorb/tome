@@ -16,8 +16,6 @@ import { ColumnVisibilityMenu } from "./ColumnVisibilityMenu";
 import { ColumnEditorDialog, type ColumnEditorState } from "./ColumnEditorDialog";
 import "./database-table-view.css";
 
-const MEMBERS_RELATIONSHIP_TYPE = "members";
-
 interface DatabaseTableViewProps {
   api: EditorApi;
   nodeId: string;
@@ -84,12 +82,19 @@ export function DatabaseTableView({
         hidden.add(columnKey);
       }
 
-      await api.updateRelationshipView(nodeId, MEMBERS_RELATIONSHIP_TYPE, activeTabId, {
+      await api.updateRelationshipView(nodeId, databaseView.viewRelationshipType, activeTabId, {
         hiddenColumns: [...hidden],
       });
       onTabsUpdated?.();
     },
-    [api, databaseView.tabs.activeTabId, hiddenColumns, nodeId, onTabsUpdated],
+    [
+      api,
+      databaseView.tabs.activeTabId,
+      databaseView.viewRelationshipType,
+      hiddenColumns,
+      nodeId,
+      onTabsUpdated,
+    ],
   );
 
   const canManageColumn = useCallback(
@@ -212,7 +217,11 @@ export function DatabaseTableView({
         ? {
             onArchiveNode,
             onRemoveNode: async (rowNodeId: string) => {
-              await api.unlinkOutgoingRelationship(rowNodeId, "member_of", databaseView.id);
+              await api.unlinkOutgoingRelationship(
+                rowNodeId,
+                databaseView.memberSidePerspective,
+                databaseView.id,
+              );
               onCellUpdated?.();
             },
             onDeleteNode,
@@ -221,7 +230,7 @@ export function DatabaseTableView({
               excludedIds: [nodeId, rowNodeId],
               onMove: async (selectedId: string) => {
                 await api.moveRelationshipConnection({
-                  type: "member_of",
+                  type: databaseView.memberSidePerspective,
                   oldSourceId: rowNodeId,
                   oldTargetId: databaseView.id,
                   newSourceId: rowNodeId,
@@ -232,7 +241,15 @@ export function DatabaseTableView({
             }),
           }
         : undefined,
-    [api, databaseView.id, nodeId, onArchiveNode, onCellUpdated, onDeleteNode],
+    [
+      api,
+      databaseView.id,
+      databaseView.memberSidePerspective,
+      nodeId,
+      onArchiveNode,
+      onCellUpdated,
+      onDeleteNode,
+    ],
   );
 
   return (
@@ -279,20 +296,33 @@ export function DatabaseTableView({
             addRow={<TableAddRowTrigger />}
             onTabSelect={onTabSelect}
             onCreateTab={async (input) => {
-              const view = await api.createRelationshipView(nodeId, MEMBERS_RELATIONSHIP_TYPE, input);
+              const view = await api.createRelationshipView(
+                nodeId,
+                databaseView.viewRelationshipType,
+                input,
+              );
               onTabSelect(view.id);
               onTabsUpdated?.();
             }}
             onUpdateTab={async (tabId, input) => {
-              await api.updateRelationshipView(nodeId, MEMBERS_RELATIONSHIP_TYPE, tabId, input);
+              await api.updateRelationshipView(
+                nodeId,
+                databaseView.viewRelationshipType,
+                tabId,
+                input,
+              );
               onTabsUpdated?.();
             }}
             onDeleteTab={async (tabId) => {
-              await api.deleteRelationshipView(nodeId, MEMBERS_RELATIONSHIP_TYPE, tabId);
+              await api.deleteRelationshipView(
+                nodeId,
+                databaseView.viewRelationshipType,
+                tabId,
+              );
               onTabsUpdated?.();
             }}
             onTabsReorder={async (tabOrder) => {
-              await api.patchRelationshipViews(nodeId, MEMBERS_RELATIONSHIP_TYPE, {
+              await api.patchRelationshipViews(nodeId, databaseView.viewRelationshipType, {
                 viewOrder: tabOrder,
               });
               onTabsUpdated?.();
@@ -315,7 +345,7 @@ export function DatabaseTableView({
             renderCell={renderCell}
             rowPageActions={rowPageActions}
             onColumnsReorder={async (columnOrder) => {
-              await api.patchRelationshipViews(nodeId, MEMBERS_RELATIONSHIP_TYPE, {
+              await api.patchRelationshipViews(nodeId, databaseView.viewRelationshipType, {
                 properties: { columnOrder },
               });
               onTabsUpdated?.();

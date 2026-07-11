@@ -1,5 +1,4 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { ORDERED_MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import {
   applySparseOrderRewrite,
@@ -30,8 +29,8 @@ describe("ordered-relationships", () => {
   seedTestNode(fixture, { id: scene3, properties: { title: "Three" } });
 
   seedTestRelationships(fixture, [
-    { source: scene1, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "10" } },
-    { source: scene2, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "30" } },
+    { source: scene1, target: SCENES_DB, type: "ordered_member_of", properties: { order: "10" } },
+    { source: scene2, target: SCENES_DB, type: "ordered_member_of", properties: { order: "30" } },
   ]);
 
   const { ctx } = fixture;
@@ -61,10 +60,10 @@ describe("ordered-relationships", () => {
     applySparseOrderRewrite(ctx, SCENES_DB, edges, [scene2, scene1]);
     ctx.sync.syncRelationships();
 
-    expect(ctx.db.getRelationship(`${scene1}:${ORDERED_MEMBER_OF_TYPE}:${SCENES_DB}`)?.properties.order).toBe(
+    expect(ctx.db.getRelationship(`${scene1}:${"ordered_member_of"}:${SCENES_DB}`)?.properties.order).toBe(
       "20",
     );
-    expect(ctx.db.getRelationship(`${scene2}:${ORDERED_MEMBER_OF_TYPE}:${SCENES_DB}`)?.properties.order).toBe(
+    expect(ctx.db.getRelationship(`${scene2}:${"ordered_member_of"}:${SCENES_DB}`)?.properties.order).toBe(
       "10",
     );
   });

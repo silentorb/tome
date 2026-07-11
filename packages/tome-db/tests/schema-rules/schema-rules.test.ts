@@ -2,7 +2,6 @@ import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { GraphDatabase } from "../../src/graph";
-import { ORDERED_MEMBER_OF_TYPE } from "../../src/labels";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { schemaFilePath } from "../../src/content/paths";
 import { relationshipTypeRuleContext } from "../../src/relationship-type-endpoints";
@@ -64,7 +63,7 @@ describe("schema rules", () => {
     db.upsertNode(scenesType, typeTableMarkerProperties("Scenes"));
     db.upsertNode(featuresType, typeTableMarkerProperties("Features test"));
     db.upsertNode(featureRow, { title: "Test feature" });
-    db.upsertRelationship(featureRow, featuresType, ORDERED_MEMBER_OF_TYPE, {});
+    db.upsertRelationship(featureRow, featuresType, "ordered_member_of", {});
 
     const registry = loadRelationshipTypesFromContent("/workspaces/marloth-story/content");
     const context = relationshipTypeRuleContext(

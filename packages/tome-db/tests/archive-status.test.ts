@@ -21,16 +21,17 @@ describe("archive-status", () => {
     expect(isLegacyArchivedPath(null, contentDir)).toBe(false);
   });
 
-  test("isArchivedNode uses is_a membership on Archive hub", () => {
+  test("isArchivedNode uses member_of membership on Archive hub", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "tome-archive-status-"));
     const dbPath = join(tempDir, "test.sqlite");
     const db = new GraphDatabase(dbPath);
+    const contentDir = fixture.ctx.store.contentDir;
 
     db.upsertNode("active", { title: "Active" });
     db.upsertNode("archived", { title: "Archived member" });
     db.upsertNode(TEST_ARCHIVE_NODE_ID, { title: "Archive" });
     db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "member_of");
-    db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID);
+    db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID, contentDir);
 
     expect(isArchivedNode(db, "archived")).toBe(true);
     expect(isArchivedNode(db, "active")).toBe(false);

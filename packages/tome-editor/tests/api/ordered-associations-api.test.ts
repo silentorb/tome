@@ -1,5 +1,5 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { ORDERED_MEMBER_OF_TYPE, typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
+import { typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -34,10 +34,10 @@ describe("ordered-associations API", () => {
   seedTestNode(fixture, { id: scene1, properties: { title: "Scene One" } });
   seedTestNode(fixture, { id: scene2, properties: { title: "Scene Two" } });
   seedTestRelationships(fixture, [
-    { source: book, target: PRODUCTS_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "1" } },
-    { source: part, target: PARTS_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "1" } },
-    { source: scene1, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "10" } },
-    { source: scene2, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE, properties: { order: "20" } },
+    { source: book, target: PRODUCTS_DB, type: "ordered_member_of", properties: { order: "1" } },
+    { source: part, target: PARTS_DB, type: "ordered_member_of", properties: { order: "1" } },
+    { source: scene1, target: SCENES_DB, type: "ordered_member_of", properties: { order: "10" } },
+    { source: scene2, target: SCENES_DB, type: "ordered_member_of", properties: { order: "20" } },
   ]);
   seedTestCompositeRelationships(fixture, [
     { a: scene1, b: book, typeFromA: "scenes", typeFromB: "product", properties: { ordinal: 0 } },

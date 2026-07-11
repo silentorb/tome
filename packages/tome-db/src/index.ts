@@ -246,12 +246,6 @@ export {
 } from "./dynamic-fields";
 export type { DynamicColumnSetRecord, DynamicFieldRecord } from "./dynamic-fields";
 export {
-  MEMBER_OF_TYPE,
-  MEMBERS_TYPE,
-  ORDERED_MEMBER_OF_TYPE,
-  ORDERED_MEMBERS_TYPE,
-} from "./labels";
-export {
   membershipPerspectives,
   listSetMembership,
   listSetMemberRowConnections,
@@ -284,6 +278,7 @@ export {
   isSetTraitEntry,
   isSetTraitPerspective,
   isSetTraitType,
+  memberSidePerspectiveForSet,
   memberSidePerspectives,
   membershipCompositeForPerspective,
   membershipCompositeForSet,
@@ -298,6 +293,7 @@ export {
   traitConfig,
   traitMap,
   typesWithTrait,
+  viewSectionKeyForSet,
 } from "./relationship-type-traits";
 export {
   ORDER_META_KEYS,
@@ -360,8 +356,6 @@ export {
 } from "./ordered-associations-config/ordered-associations-file";
 export type { OrderedAssociationsFile } from "./ordered-associations-config/ordered-associations-file";
 export {
-  MEMBERS_RELATIONSHIP_TYPE,
-  MEMBERS_SECTION_KEY,
   resolveCustomTabs,
   resolveCustomTabsForNode,
   resolveGeneratedTabsFromScopes,

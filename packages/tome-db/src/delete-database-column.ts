@@ -11,8 +11,8 @@ import { TABLE_SCHEMAS_FILENAME } from "./content/paths";
 import type { TableSchemasFile } from "./content/table-schemas-file";
 import { findColumnByKey } from "./table-schema";
 import { invalidateTableSchemasCache } from "./table-schemas/load";
-import { MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
 import { purgeColumnFromViews } from "./views/mutations";
+import { viewSectionKeyForSet } from "./relationship-type-traits";
 
 export type DeleteDatabaseColumnError =
   | "database_not_found"
@@ -82,7 +82,12 @@ export function deleteDatabaseColumn(
 
   ctx.store.writeTableSchemasFile(schemasFile);
   invalidateTableSchemasCache();
-  purgeColumnFromViews(ctx.store, databaseId, MEMBERS_SECTION_KEY, normalizedKey);
+  purgeColumnFromViews(
+    ctx.store,
+    databaseId,
+    viewSectionKeyForSet(databaseId, ctx.store.contentDir),
+    normalizedKey,
+  );
 
   syncAfterRelationshipsWrite(ctx);
   ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);

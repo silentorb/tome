@@ -23,7 +23,27 @@ import {
 } from "../ordered-associations-config/ordered-associations-file";
 import { openTomeWriteContext, type TomeWriteContext } from "./write-context";
 import { writeFileSync } from "node:fs";
-import { contentModelDir, nodeFilePath, orderedAssociationsFilePath, workspaceFilePath } from "./paths";
+import {
+  emptyRelationshipTypesFile,
+  registerBidirectionalType,
+  registerOrderedSetMembershipType,
+  registerSetMembershipType,
+  serializeRelationshipTypesFile,
+} from "./relationship-types-file";
+import { invalidateRelationshipTypesCache } from "../relationship-types/load";
+import { normalizeRelationshipType } from "../relation-type";
+import {
+  serializeWorkspaceFile,
+  type WorkspaceFile,
+  WORKSPACE_FILE_VERSION,
+} from "../workspace/workspace-file";
+import {
+  contentModelDir,
+  nodeFilePath,
+  orderedAssociationsFilePath,
+  relationshipTypesFilePath,
+  workspaceFilePath,
+} from "./paths";
 import {
   connectsEndpoints,
   entryFromRelationship,
@@ -31,17 +51,6 @@ import {
   type RelationshipEntry,
 } from "./relationships-file";
 import { relationshipId } from "../graph";
-import {
-  registerBidirectionalType,
-  registerOrderedSetMembershipType,
-  registerSetMembershipType,
-} from "./relationship-types-file";
-import { normalizeRelationshipType } from "../relation-type";
-import {
-  serializeWorkspaceFile,
-  type WorkspaceFile,
-  WORKSPACE_FILE_VERSION,
-} from "../workspace/workspace-file";
 
 /** Test workspace ids — match committed content/model/workspace.json. */
 export const TEST_HOME_NODE_ID = "00000000000000000000000005";
@@ -107,6 +116,20 @@ export function seedDefaultRelationshipTypes(fixture: TestContentFixture): void 
   fixture.ctx.store.writeRelationshipTypesFile(registry);
 }
 
+/** Write conventional set-membership types into an ad-hoc content dir (non-fixture tests). */
+export function writeSetMembershipTypes(contentDir: string): void {
+  const registry = emptyRelationshipTypesFile();
+  registerSetMembershipType(registry);
+  registerOrderedSetMembershipType(registry);
+  mkdirSync(contentModelDir(contentDir), { recursive: true });
+  writeFileSync(
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile(registry),
+    "utf-8",
+  );
+  invalidateRelationshipTypesCache();
+}
+
 export function seedDefaultOrderedAssociationTableSchemas(fixture: TestContentFixture): void {
   const scenesDb = "0000000000000000000000000D";
   const partsDb = "0000000000000000000000000Z";
@@ -146,7 +169,7 @@ export function createTestContentFixture(prefix = "tome-content-test-"): TestCon
   invalidateWorkspaceCache();
   const dbPath = join(tempDir, "test.sqlite");
   const ctx = openTomeWriteContext(contentDir, dbPath);
-  const fixture = { tempDir, ctx };
+  const fixture: TestContentFixture = { tempDir, ctx };
   ctx.store.writeDynamicFieldsFile(fileFromSeedInputs([], []));
   invalidateDynamicFieldsCache();
   seedDefaultRelationshipTypes(fixture);

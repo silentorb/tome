@@ -1,13 +1,18 @@
-import { describe, expect, test } from "bun:test";
-import { fireEvent, render } from "@testing-library/react";
+import { describe, expect, mock, test } from "bun:test";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { OrderedAssociationView } from "../../../src/webview/components/OrderedAssociationView";
 import { makeMockEditorApi } from "../test-fixtures/mock-api";
 import type { OrderedAssociationViewDetail } from "../../../src/shared/types";
 
+const TYPE_DB = "0000000000000000000000000D";
+const SCENE_ID = "scene111111111111111111111111111";
+
 const view: OrderedAssociationViewDetail = {
   configId: "scenes-by-book",
-  typeDatabaseId: "0000000000000000000000000D",
+  typeDatabaseId: TYPE_DB,
   typeDatabaseTitle: "Scenes",
+  viewRelationshipType: "ordered_members",
+  memberSidePerspective: "ordered_member_of",
   tabs: {
     kind: "generated",
     items: [
@@ -22,7 +27,7 @@ const view: OrderedAssociationViewDetail = {
       title: "Part 1",
       rows: [
         {
-          sceneId: "scene111111111111111111111111111",
+          sceneId: SCENE_ID,
           name: "Opening",
           cells: { characters: "Hero" },
           relationCells: {
@@ -49,7 +54,7 @@ describe("OrderedAssociationView", () => {
   test("renders book tabs and schema-driven column headers", () => {
     const api = makeMockEditorApi();
 
-    const { getByRole, getAllByRole, getAllByText, queryByRole } = render(
+    const { getByRole, getAllByText, queryByRole } = render(
       <OrderedAssociationView
         api={api}
         nodeId="bookaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -75,7 +80,7 @@ describe("OrderedAssociationView", () => {
     window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=abc");
     const api = makeMockEditorApi();
 
-    const { getByRole, queryByRole, getByText } = render(
+    const { getByRole, queryByRole } = render(
       <OrderedAssociationView
         api={api}
         nodeId="bookaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -114,5 +119,41 @@ describe("OrderedAssociationView", () => {
     );
 
     expect(getByText('No rows match “missing”.')).toBeTruthy();
+  });
+
+  test("unlinks rows with memberSidePerspective from the view payload", async () => {
+    const unlinkOutgoingRelationship = mock(async () => {});
+    const api = {
+      ...makeMockEditorApi(),
+      unlinkOutgoingRelationship,
+    };
+    const customView: OrderedAssociationViewDetail = {
+      ...view,
+      viewRelationshipType: "sequence",
+      memberSidePerspective: "belongs_to_sequence",
+    };
+
+    render(
+      <OrderedAssociationView
+        api={api}
+        nodeId="bookaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        configId="scenes-by-book"
+        view={customView}
+        onTabSelect={() => {}}
+        onViewChange={() => {}}
+        onArchiveNode={async () => {}}
+        onDeleteNode={async () => {}}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Page actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Remove" }));
+    await waitFor(() =>
+      expect(unlinkOutgoingRelationship).toHaveBeenCalledWith(
+        SCENE_ID,
+        "belongs_to_sequence",
+        TYPE_DB,
+      ),
+    );
   });
 });

@@ -6,12 +6,11 @@ import { ContentStore } from "../src/content/store";
 import { fileFromSeedInputs } from "../src/content/dynamic-fields-file";
 import { invalidateDynamicFieldsCache } from "../src/content/sync";
 import { contentModelDir, workspaceFilePath } from "../src/content/paths";
-import { defaultTestWorkspaceFile } from "../src/content/test-helpers";
+import { defaultTestWorkspaceFile, writeSetMembershipTypes } from "../src/content/test-helpers";
 import { serializeWorkspaceFile } from "../src/workspace/workspace-file";
 import { invalidateWorkspaceCache } from "../src/workspace/load";
 import { writeFileSync } from "node:fs";
 import { GraphDatabase } from "../src/graph";
-import { MEMBER_OF_TYPE } from "../src/labels";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { buildPropertiesSection } from "../src/node-type-properties";
 import { getNodePageDetail } from "../src/node-page-sections";
@@ -29,6 +28,7 @@ describe("node-type-properties", () => {
     "utf-8",
   );
   invalidateWorkspaceCache();
+  writeSetMembershipTypes(contentDir);
   process.env.TOME_CONTENT_PATH = contentDir;
 
   const CHAR_DB = "00000000000000000000000035";
@@ -58,7 +58,7 @@ describe("node-type-properties", () => {
       ...typeTableMarkerProperties("Characters"),
     });
     db.upsertNode(character, { title: "James" });
-    db.upsertRelationship(character, CHAR_DB, MEMBER_OF_TYPE, { row_index: 0, priority: "High" });
+    db.upsertRelationship(character, CHAR_DB, "member_of", { row_index: 0, priority: "High" });
 
     db.upsertNode(scene1, { title: "Scene A" });
     db.upsertNode(scene2, { title: "Scene B" });
@@ -100,7 +100,7 @@ describe("node-type-properties", () => {
     const detail = getNodePageDetail(db, character, { contentDir });
     expect(detail?.properties?.cells.all_scene_count).toBe("2");
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === MEMBER_OF_TYPE,
+      (section) => section.type === "relations" && section.label === "member_of",
     );
     expect(membership?.rows).toEqual([
       { targetId: CHAR_DB, name: "Characters", cells: {} },

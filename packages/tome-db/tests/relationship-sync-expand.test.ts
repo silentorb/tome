@@ -9,7 +9,7 @@ import type { RelationshipTypesFile } from "../src/content/relationship-types-fi
 const legacyRegistry: RelationshipTypesFile = {
   version: 1,
   types: {
-    member_of: { perspectives: ["member_of", "members"] },
+    member_of: { perspectives: ["member_of", "members"] , traits: ["set"]},
     includes: { perspectives: ["includes", "includes"] },
     scenes_product: { perspectives: ["scenes", "product"] },
     parents_children: { perspectives: ["children", "parents"] },

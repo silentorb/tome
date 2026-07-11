@@ -85,7 +85,6 @@ describe("node create API", () => {
     expect(rel).not.toBeNull();
   });
 
-
   afterAll(() => {
     api.handler.close();
     destroyTestContentFixture(fixture);

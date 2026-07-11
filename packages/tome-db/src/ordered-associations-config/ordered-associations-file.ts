@@ -1,5 +1,7 @@
 import { isNodeId, resolveContentPath } from "../content/paths";
-import { ORDERED_MEMBER_OF_TYPE } from "../labels";
+import { loadRelationshipTypesFromContent } from "../relationship-types/load";
+import { isOrderedTraitComposite } from "../relationship-type-traits";
+import { normalizeRelationshipType } from "../relation-type";
 import { getTableSchema } from "../table-schema";
 import { loadTableSchemasFromContent } from "../table-schemas/load";
 
@@ -52,9 +54,16 @@ function parseStringArray(value: unknown, path: string): string[] | undefined {
 function assertOrderedMembershipTable(nodeId: string, path: string, contentDir?: string): void {
   const dir = contentDir ?? resolveContentPath();
   const schema = getTableSchema(loadTableSchemasFromContent(dir), nodeId);
-  if (schema?.membershipComposite !== ORDERED_MEMBER_OF_TYPE) {
+  const composite = schema?.membershipComposite;
+  if (typeof composite !== "string" || !composite.trim()) {
     throw new Error(
-      `${path}: table must declare membershipComposite "${ORDERED_MEMBER_OF_TYPE}" in table-schemas.json`,
+      `${path}: table must declare membershipComposite in table-schemas.json with the ordered trait`,
+    );
+  }
+  const registry = loadRelationshipTypesFromContent(dir);
+  if (!isOrderedTraitComposite(registry, normalizeRelationshipType(composite))) {
+    throw new Error(
+      `${path}: table membershipComposite "${composite.trim()}" must have the ordered trait in relationship-types.json`,
     );
   }
 }

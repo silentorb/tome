@@ -36,14 +36,20 @@ describe("createExtensionGraphQueryServices", () => {
   });
 
   test("listTypeMembers returns is_a instances", () => {
-    const services = createExtensionGraphQueryServices(fixture.ctx.db);
+    const services = createExtensionGraphQueryServices(
+      fixture.ctx.db,
+      fixture.ctx.store.contentDir,
+    );
     const members = services.listTypeMembers(typeId);
     expect(members.map((node) => node.id).sort()).toEqual([cityA, cityB, house].sort());
     expect(members.find((node) => node.id === house)?.title).toBe("House");
   });
 
   test("listEdges filters by node set and types", () => {
-    const services = createExtensionGraphQueryServices(fixture.ctx.db);
+    const services = createExtensionGraphQueryServices(
+      fixture.ctx.db,
+      fixture.ctx.store.contentDir,
+    );
     const nodeIds = [cityA, cityB, house];
     const edges = services.listEdges({
       nodeIds,

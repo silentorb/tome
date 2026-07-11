@@ -25,6 +25,10 @@ import {
   type RelationshipEntry,
 } from "../src/content/relationships-file";
 
+function isUlidCompositeKey(type: string): boolean {
+  return /^[a-z0-9]{4}_[a-z_]+_[a-z0-9]{4}$/.test(normalizeRelationshipType(type));
+}
+
 function resolveExpectedComposite(
   entry: RelationshipEntry,
   registry: RelationshipTypesFile,
@@ -38,6 +42,10 @@ function resolveExpectedComposite(
 
   if (type === "includes") {
     return { target: "BLOCKER", rule: "legacy-includes-storage" };
+  }
+
+  if (isUlidCompositeKey(type)) {
+    return { target: "BLOCKER", rule: "ulid-suffixed-composite" };
   }
 
   if (typeDef) {

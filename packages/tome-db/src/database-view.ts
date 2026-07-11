@@ -11,8 +11,6 @@ import {
   resolveCustomTabsForNode,
   activeTabName,
   getSectionTabsConfig,
-  MEMBERS_SECTION_KEY,
-  ORDERED_MEMBERS_SECTION_KEY,
 } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
@@ -24,6 +22,7 @@ import {
   isOrderedMembershipSet,
   membershipPerspectivesForSet,
   ORDERED_PROPERTY_DEFAULT,
+  viewSectionKeyForSet,
 } from "./relationship-type-traits";
 
 const ROW_META_KEYS = ORDER_META_KEYS;
@@ -68,6 +67,10 @@ export interface DatabaseViewDetail {
   /** @deprecated Use tabs.items */
   views: string[];
   tabs: TableTabsDetail;
+  /** Set-side perspective = views.json relationshipType / section key. */
+  viewRelationshipType: string;
+  /** Member-side perspective for unlink/move against this set. */
+  memberSidePerspective: string;
   /** Ordered data column keys before per-view visibility filtering. */
   allColumns: string[];
   columns: string[];
@@ -137,10 +140,15 @@ function rowSort(a: DatabaseRow, b: DatabaseRow): number {
   return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 }
 
-function membersSectionKey(databaseId: string, contentDir: string): string {
-  return isOrderedMembershipSet(databaseId, contentDir)
-    ? ORDERED_MEMBERS_SECTION_KEY
-    : MEMBERS_SECTION_KEY;
+function membershipPerspectives(
+  databaseId: string,
+  contentDir: string,
+): { viewRelationshipType: string; memberSidePerspective: string } {
+  const [viewRelationshipType, memberSidePerspective] = membershipPerspectivesForSet(
+    databaseId,
+    contentDir,
+  );
+  return { viewRelationshipType, memberSidePerspective };
 }
 
 function buildCustomViewDetail(
@@ -151,7 +159,16 @@ function buildCustomViewDetail(
   contentDir: string,
   requestedTabId?: string,
 ): DatabaseViewDetail {
-  const resolved = resolveCustomTabsForNode(contentDir, databaseId, requestedTabId);
+  const { viewRelationshipType, memberSidePerspective } = membershipPerspectives(
+    databaseId,
+    contentDir,
+  );
+  const resolved = resolveCustomTabsForNode(
+    contentDir,
+    databaseId,
+    requestedTabId,
+    viewRelationshipType,
+  );
   const tabName = activeTabName(resolved);
   const ordered = isOrderedMembershipSet(databaseId, contentDir);
 
@@ -201,13 +218,12 @@ function buildCustomViewDetail(
         );
 
   const views = loadViewsFromContent(contentDir);
-  const sectionKey = membersSectionKey(databaseId, contentDir);
   const { columns: allColumns, columnDefs: orderedColumnDefs } = applySectionColumnOrder(
     defaultColumns,
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     databaseId,
-    sectionKey,
+    viewRelationshipType,
   );
 
   const { visibleColumns } = applyHiddenColumns(
@@ -238,6 +254,8 @@ function buildCustomViewDetail(
     views: resolved.items.map((tab) => tab.label),
     view: tabName,
     tabs,
+    viewRelationshipType,
+    memberSidePerspective,
     allColumns,
     columns: visibleColumns,
     rows,
@@ -292,6 +310,10 @@ function buildLegacyViewDetail(
   }));
 
   const dir = contentDir ?? resolveContentPath();
+  const { viewRelationshipType, memberSidePerspective } = membershipPerspectives(
+    databaseId,
+    dir,
+  );
   const { rows: enrichedEvalRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicFields(
     db,
     databaseId,
@@ -338,6 +360,8 @@ function buildLegacyViewDetail(
     views,
     view,
     tabs: { kind: "custom", items: tabItems, activeTabId },
+    viewRelationshipType,
+    memberSidePerspective,
     allColumns: columns,
     columns,
     rows,
@@ -361,7 +385,7 @@ export function getDatabaseViewDetail(
 
   const title = titleFromProperties(database.properties);
   const views = loadViewsFromContent(dir);
-  const sectionKey = membersSectionKey(databaseId, dir);
+  const sectionKey = viewSectionKeyForSet(databaseId, dir);
   const sectionConfig = getSectionTabsConfig(views, databaseId, sectionKey);
 
   if (sectionConfig?.kind === "generated") {

@@ -28,8 +28,9 @@ import {
   isSetSidePerspective,
   isSetTraitPerspective,
   membershipCompositeForPerspective,
+  viewSectionKeyForSet,
 } from "./relationship-type-traits";
-import { generatedProviderId, MEMBERS_SECTION_KEY, ORDERED_MEMBERS_SECTION_KEY } from "./views/resolve-tabs";
+import { generatedProviderId } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "./views/load";
 import { loadTableSchemasFromContent } from "./table-schemas/load";
 import type { TableRelationColumn } from "./content/table-schemas-file";
@@ -405,9 +406,8 @@ export function getNodePageDetail(
   const sections: NodeSection[] = [{ type: "markdown", body: node.body }];
 
   if (node.isTypeTable) {
-    const provider =
-      generatedProviderId(views, id, ORDERED_MEMBERS_SECTION_KEY) ??
-      generatedProviderId(views, id, MEMBERS_SECTION_KEY);
+    const sectionKey = viewSectionKeyForSet(id, contentDir);
+    const provider = generatedProviderId(views, id, sectionKey);
     if (provider) {
       const config = getConfigByProvider(provider, contentDir);
       if (config) {

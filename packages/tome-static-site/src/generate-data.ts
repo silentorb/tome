@@ -39,7 +39,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
 
   const htmlRuntime = new ExtensionHtmlRuntime(config.contentDir);
   await htmlRuntime.ensureLoaded();
-  const graphQuery = createExtensionGraphQueryServices(db);
+  const graphQuery = createExtensionGraphQueryServices(db, config.contentDir);
   const schemaQuery = createExtensionSchemaQueryServices(db, config.contentDir);
   const spatialGraphScale = spatialGraphNodeDimensionScale(workspace);
   const spatialGraphServices = spatialGraphScale

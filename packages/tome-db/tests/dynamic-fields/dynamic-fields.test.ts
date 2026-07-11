@@ -8,7 +8,6 @@ import { invalidateDynamicFieldsCache } from "../../src/content/sync";
 import { invalidateSchemaCache } from "../../src/schema-rules/load";
 import { GraphDatabase } from "../../src/graph";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
-import { MEMBER_OF_TYPE, ORDERED_MEMBER_OF_TYPE } from "../../src/labels";
 import { getDatabaseViewDetail } from "../../src/database-view";
 import {
   createTestContentFixture,
@@ -18,6 +17,7 @@ import {
   seedTestIncludes,
   seedTestNode,
   seedTestRelationships,
+  writeSetMembershipTypes,
 } from "../../src/content/test-helpers";
 import {
   buildAllSceneCountPrefetch,
@@ -75,6 +75,7 @@ describe("dynamic-fields resolvers", () => {
     const contentDir = join(dir, "content");
     mkdirSync(contentDir, { recursive: true });
     process.env.TOME_CONTENT_PATH = contentDir;
+    writeSetMembershipTypes(contentDir);
     const store = new ContentStore(contentDir);
     store.writeDynamicFieldsFile(
       fileFromSeedInputs(
@@ -129,7 +130,7 @@ describe("dynamic-fields resolvers", () => {
     db.upsertNode(WONDERLAND, { title: "Wonderland" });
 
     db.upsertNode(character, { title: "James" });
-    db.upsertRelationship(character, CHAR_DB, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship(character, CHAR_DB, "member_of", { row_index: 0 });
 
     db.upsertNode(scene1, { title: "Scene A" });
     db.upsertNode(scene2, { title: "Scene B" });
@@ -142,12 +143,12 @@ describe("dynamic-fields resolvers", () => {
     db.upsertRelationship(scene3, OTHER_PRODUCT, "product", {});
 
     db.upsertNode(inspiration, { title: "Test Inspiration" });
-    db.upsertRelationship(inspiration, INSP_DB, MEMBER_OF_TYPE, { row_index: 0 });
+    db.upsertRelationship(inspiration, INSP_DB, "member_of", { row_index: 0 });
 
     db.upsertNode(featureWonder, { title: "Adventure" });
     db.upsertNode(featurePlain, { title: "Plain" });
-    db.upsertRelationship(featureWonder, FEAT_DB, MEMBER_OF_TYPE, { priority: "Medium" });
-    db.upsertRelationship(featurePlain, FEAT_DB, MEMBER_OF_TYPE, { priority: "High" });
+    db.upsertRelationship(featureWonder, FEAT_DB, "member_of", { priority: "Medium" });
+    db.upsertRelationship(featurePlain, FEAT_DB, "member_of", { priority: "High" });
     db.upsertRelationship(inspiration, featureWonder, "features", {});
     db.upsertRelationship(inspiration, featurePlain, "features", {});
     db.upsertRelationship(featureWonder, WONDERLAND, "THEME", {});
@@ -286,9 +287,9 @@ describe("dynamic-fields with composite relationships", () => {
     seedTestNode(fixture, { id: featureWonder, properties: { title: "Adventure" } });
     seedTestNode(fixture, { id: featurePlain, properties: { title: "Plain" } });
     seedTestRelationships(fixture, [
-      { source: inspiration, target: INSP_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
-      { source: featureWonder, target: FEAT_DB, type: MEMBER_OF_TYPE, properties: { priority: "Medium" } },
-      { source: featurePlain, target: FEAT_DB, type: MEMBER_OF_TYPE, properties: { priority: "High" } },
+      { source: inspiration, target: INSP_DB, type: "member_of", properties: { row_index: 0 } },
+      { source: featureWonder, target: FEAT_DB, type: "member_of", properties: { priority: "Medium" } },
+      { source: featurePlain, target: FEAT_DB, type: "member_of", properties: { priority: "High" } },
     ]);
     seedTestCompositeRelationships(fixture, [
       { a: inspiration, b: featureWonder, typeFromA: "inspirations", typeFromB: "features", properties: {} },
@@ -401,11 +402,11 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
     seedTestNode(fixture, { id: scene1, properties: { title: "Scene A" } });
     seedTestNode(fixture, { id: scene2, properties: { title: "Scene B" } });
     seedTestRelationships(fixture, [
-      { source: character, target: CHAR_DB, type: MEMBER_OF_TYPE },
-      { source: scene1, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE },
-      { source: scene2, target: SCENES_DB, type: ORDERED_MEMBER_OF_TYPE },
-      { source: TWOLD, target: PRODUCTS_DB, type: ORDERED_MEMBER_OF_TYPE },
-      { source: OTHER_PRODUCT, target: PRODUCTS_DB, type: ORDERED_MEMBER_OF_TYPE },
+      { source: character, target: CHAR_DB, type: "member_of" },
+      { source: scene1, target: SCENES_DB, type: "ordered_member_of" },
+      { source: scene2, target: SCENES_DB, type: "ordered_member_of" },
+      { source: TWOLD, target: PRODUCTS_DB, type: "ordered_member_of" },
+      { source: OTHER_PRODUCT, target: PRODUCTS_DB, type: "ordered_member_of" },
     ]);
     seedTestCompositeRelationships(fixture, [
       { a: scene1, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
@@ -519,7 +520,7 @@ describe("dynamic-fields character composite relationships", () => {
     seedTestNode(fixture, { id: scene2, properties: { title: "Scene B" } });
     seedTestNode(fixture, { id: scene3, properties: { title: "Scene C" } });
     seedTestRelationships(fixture, [
-      { source: character, target: CHAR_DB, type: MEMBER_OF_TYPE, properties: { row_index: 0 } },
+      { source: character, target: CHAR_DB, type: "member_of", properties: { row_index: 0 } },
     ]);
     seedTestCompositeRelationships(fixture, [
       { a: character, b: scene1, typeFromA: "characters", typeFromB: "scenes", properties: {} },

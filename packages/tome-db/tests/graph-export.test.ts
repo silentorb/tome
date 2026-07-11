@@ -5,7 +5,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { exportExplorerLodGraph, exportFullGraph } from "../src/graph-export";
 import { DEFAULT_EXPLORER_LOD_LAYER_COUNT } from "../src/graph-lod-cluster";
 import { GraphDatabase } from "../src/graph";
-import { TEST_ARCHIVE_NODE_ID } from "../src/content/test-helpers";
+import {
+  createTestContentFixture,
+  destroyTestContentFixture,
+  TEST_ARCHIVE_NODE_ID,
+} from "../src/content/test-helpers";
 
 describe("graph export", () => {
   let tempDir: string;
@@ -42,23 +46,23 @@ describe("graph export", () => {
   });
 
   test("exportFullGraph excludes archived pages and their links", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-graph-export-"));
-    dbPath = join(tempDir, "archive.sqlite");
-    const db = new GraphDatabase(dbPath);
+    const fixture = createTestContentFixture("tome-graph-export-arch-");
+    const db = fixture.ctx.db;
+    const contentDir = fixture.ctx.store.contentDir;
 
     db.upsertNode("active", { title: "Active scene" });
     db.upsertNode("archived", { title: "Old foil" });
     db.upsertNode(TEST_ARCHIVE_NODE_ID, { title: "Archive" });
     db.upsertRelationship("active", "archived", "inspirations");
     db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "member_of");
-    db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID);
+    db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID, contentDir);
 
     expect(db.isNodeArchived("archived")).toBe(true);
     const snapshot = exportFullGraph(db);
     expect(snapshot.nodes.some((node) => node.id === "archived")).toBe(false);
     expect(snapshot.nodes.some((node) => node.id === "active")).toBe(true);
     expect(snapshot.relationships).toHaveLength(0);
-    db.close();
+    destroyTestContentFixture(fixture);
   });
 
   test("exportExplorerLodGraph builds heuristic layers", () => {

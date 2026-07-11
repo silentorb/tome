@@ -83,6 +83,7 @@ export function unlinkRelationColumnFromAllRows(
       connectionType,
       databaseId,
       compositeType,
+      ctx.store.contentDir,
     );
     for (const relationship of relationships) {
       toUnlink.push({ rowId, targetId: otherEndpoint(relationship, rowId) });

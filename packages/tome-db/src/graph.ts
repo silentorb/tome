@@ -86,6 +86,8 @@ function mapProjectionRow(row: {
 
 export class GraphDatabase {
   readonly path: string;
+  /** Content root used for registry-backed queries when callers omit contentDir. */
+  contentDir?: string;
   private db: Database;
 
   private insertNode!: ReturnType<Database["prepare"]>;
@@ -95,8 +97,9 @@ export class GraphDatabase {
   private insertProjection!: ReturnType<Database["prepare"]>;
   private updateProjectionProps!: ReturnType<Database["prepare"]>;
 
-  constructor(path: string, options?: { clean?: boolean }) {
+  constructor(path: string, options?: { clean?: boolean; contentDir?: string }) {
     this.path = path;
+    this.contentDir = options?.contentDir;
     if (options?.clean) {
       try {
         rmSync(path, { force: true });
@@ -286,7 +289,7 @@ export class GraphDatabase {
   }
 
   listArchiveMemberIds(archiveId: string, contentDir?: string): string[] {
-    const dir = contentDir ?? resolveContentPath();
+    const dir = contentDir ?? this.contentDir ?? resolveContentPath();
     const registry = loadRelationshipTypesFromContent(dir);
     const types = setTraitPerspectives(registry);
     if (types.length === 0) return [];
@@ -478,7 +481,7 @@ export class GraphDatabase {
     allowedTypeIds: readonly string[],
     contentDir?: string,
   ): boolean {
-    const dir = contentDir ?? resolveContentPath();
+    const dir = contentDir ?? this.contentDir ?? resolveContentPath();
     const registry = loadRelationshipTypesFromContent(dir);
     for (const type of memberSidePerspectives(registry)) {
       for (const connection of this.listRelationshipsFromSource(nodeId, type)) {

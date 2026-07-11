@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, mock, test } from "bun:test";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { DatabaseTableView } from "../../../src/webview/components/DatabaseTableView";
 import { UserSettingsProvider } from "../../../src/webview/hooks/useUserSettings";
 import {
@@ -283,5 +283,86 @@ describe("DatabaseTableView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Column visibility" }));
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Show Priority" }));
     expect(updateInput?.hiddenColumns).toEqual([]);
+  });
+
+  test("unlinks rows with memberSidePerspective from the view payload", async () => {
+    const unlinkOutgoingRelationship = mock(async () => {});
+    const api = {
+      ...makeMockEditorApi(),
+      unlinkOutgoingRelationship,
+    };
+    const databaseView = makeDatabaseViewDetail({
+      viewRelationshipType: "cohort",
+      memberSidePerspective: "belongs_to_cohort",
+    });
+
+    render(
+      <UserSettingsProvider api={api}>
+        <DatabaseTableView
+          api={api}
+          nodeId={FIXTURE_DATABASE_ID}
+          databaseView={databaseView}
+          onTabSelect={() => {}}
+          onTabsUpdated={() => {}}
+          onArchiveNode={async () => {}}
+          onDeleteNode={async () => {}}
+        />
+      </UserSettingsProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Page actions" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Remove" }));
+    await waitFor(() =>
+      expect(unlinkOutgoingRelationship).toHaveBeenCalledWith(
+        FIXTURE_TARGET_ID,
+        "belongs_to_cohort",
+        FIXTURE_DATABASE_ID,
+      ),
+    );
+  });
+
+  test("creates tabs with viewRelationshipType from the view payload", async () => {
+    const createRelationshipView = mock(
+      async (_nodeId: string, relationshipType: string, input: { name: string }) => ({
+        id: "new-tab",
+        nodeId: FIXTURE_DATABASE_ID,
+        relationshipType,
+        name: input.name,
+        sorts: [{ column: "name", direction: "asc" as const }],
+      }),
+    );
+    const api = {
+      ...makeMockEditorApi(),
+      createRelationshipView,
+    };
+    const databaseView = makeDatabaseViewDetail({
+      viewRelationshipType: "cohort",
+      memberSidePerspective: "belongs_to_cohort",
+    });
+    let selectedTab = "";
+
+    render(
+      <UserSettingsProvider api={api}>
+        <DatabaseTableView
+          api={api}
+          nodeId={FIXTURE_DATABASE_ID}
+          databaseView={databaseView}
+          onTabSelect={(tabId) => {
+            selectedTab = tabId;
+          }}
+          onTabsUpdated={() => {}}
+        />
+      </UserSettingsProvider>,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Add tab" }));
+    fireEvent.change(screen.getByLabelText("Tab name"), { target: { value: "Custom cohort" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(createRelationshipView).toHaveBeenCalledTimes(1));
+    expect(createRelationshipView.mock.calls[0]?.[0]).toBe(FIXTURE_DATABASE_ID);
+    expect(createRelationshipView.mock.calls[0]?.[1]).toBe("cohort");
+    expect(createRelationshipView.mock.calls[0]?.[2]).toMatchObject({ name: "Custom cohort" });
+    expect(selectedTab).toBe("new-tab");
   });
 });
