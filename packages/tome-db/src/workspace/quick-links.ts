@@ -1,6 +1,10 @@
 import type { TomeWriteContext } from "../content/write-context";
-import { invalidateWorkspaceCache, loadWorkspaceFromContent } from "./load";
-import type { WorkspaceFile, WorkspaceQuickLink } from "./workspace-file";
+import {
+  invalidateWorkspaceCache,
+  loadWorkspaceFromContent,
+  type WorkspaceFile,
+  type WorkspaceQuickLink,
+} from "tome-store-flatfile";
 import type { QuickLinkError } from "tome-graph-interfaces";
 
 export type { QuickLinkError } from "tome-graph-interfaces";

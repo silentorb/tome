@@ -3,7 +3,7 @@ import { defaultValueCtx, Editor, rootCtx } from "@milkdown/core";
 import { getMarkdown } from "@milkdown/kit/utils";
 import { gfm } from "@milkdown/preset-gfm";
 import { commonmark } from "@milkdown/preset-commonmark";
-import { editorDynamicNodeHref } from "tome-db/dynamic-node-links";
+import { editorDynamicNodeHref } from "tome-store-flatfile/dynamic-node-links";
 import { formatEditorDynamicNodeLink } from "../../src/webview/standalone-markdown";
 import { normalizeEditorBody } from "../../src/webview/editor-save";
 

@@ -1,5 +1,5 @@
 import type { DatabaseColumnDef } from "../database-view";
-import type { GraphDatabase } from "../graph";
+import type { GraphDatabase } from "tome-cache-sqlite";
 import type { EvalRow } from "../row-sort";
 import { applyDynamicFields as enrichEvalRows, type DynamicEnrichmentResult } from "./enrich";
 import {

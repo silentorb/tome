@@ -1,10 +1,10 @@
-import { type GraphDatabase } from "./graph";
+import { type GraphDatabase } from "tome-cache-sqlite";
 import { graphGroupForNode, graphLabelsForNode } from "./node-capabilities";
 import {
   buildHeuristicLodLevels,
   normalizeExplorerLayerCount,
 } from "./graph-lod-cluster";
-import { archiveNodeId, resolveWorkspace } from "./workspace/resolve";
+import { archiveNodeId, resolveWorkspace } from "tome-store-flatfile";
 
 import type {
   GraphLodSnapshot,

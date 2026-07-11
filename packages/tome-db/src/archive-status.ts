@@ -1,7 +1,11 @@
-import type { GraphDatabase } from "./graph";
-import { resolveContentPath } from "./content/paths";
+import type { GraphDatabase } from "tome-cache-sqlite";
+import {
+  loadRelationshipTypesFromContent,
+  resolveContentPath,
+  setTraitPerspectives,
+} from "tome-store-flatfile";
 import { findSetMembershipRelationship, setMemberIds } from "./set-membership";
-import { archiveNodeId, legacyArchivePathPrefix } from "./workspace/resolve";
+import { archiveNodeId, legacyArchivePathPrefix } from "tome-store-flatfile";
 
 export function isLegacyArchivedPath(path: string | null, contentDir?: string): boolean {
   if (!path) return false;
@@ -29,6 +33,9 @@ export function isArchivedNode(
   if (archiveId && nodeId === archiveId) return false;
   if (db.isNodeArchived(nodeId)) return true;
   if (!archiveId) return false;
+
+  const registry = loadRelationshipTypesFromContent(dir);
+  if (setTraitPerspectives(registry).length === 0) return false;
 
   return findSetMembershipRelationship(db, nodeId, archiveId, dir) !== null;
 }

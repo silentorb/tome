@@ -2,8 +2,8 @@ import {
   canonicalNodeMarkdownHref,
   resolveMarkdownHrefTarget,
   TOME_LINK_SCHEME,
-} from "tome-db/markdown-links";
-import { NODE_ID_RE_SRC } from "tome-db/node-id";
+} from "tome-store-flatfile/markdown-links";
+import { NODE_ID_RE_SRC } from "tome-store-flatfile/node-id";
 
 export { TOME_LINK_SCHEME };
 
@@ -19,11 +19,9 @@ export type {
   DatabaseTableSection,
   MarkdownSection,
   NodeBacklink,
-  NodeDetail,
   NodePageDetail,
   NodePageMetadata,
   NodeSection,
-  NodeSummary,
   OrderedAssociationSection,
   PropertiesSection,
   RelationRow,
@@ -31,12 +29,22 @@ export type {
 } from "tome-db";
 
 export type {
+  NodeDetail,
+  NodeSummary,
   OrderedAssociationGroup,
   OrderedAssociationRow,
   OrderedAssociationViewDetail,
   TableTabsDetail,
   ViewSortSpec,
-} from "tome-db";
+  GraphRelationship,
+  GraphNode,
+  GraphSnapshot,
+  GraphLodSnapshot,
+  DatabaseColumnDef,
+  DatabaseRow,
+  DatabaseViewDetail,
+  RelationLink,
+} from "tome-graph-interfaces";
 
 export type AppView = "node-page" | "graph-explorer";
 
@@ -93,14 +101,3 @@ export function standaloneNodeUrl(nodeId: string, base?: string | URL): string {
   stripTableSearchParams(url);
   return url.toString();
 }
-
-export type {
-  GraphRelationship,
-  GraphNode,
-  GraphSnapshot,
-  GraphLodSnapshot,
-  DatabaseColumnDef,
-  DatabaseRow,
-  DatabaseViewDetail,
-  RelationLink,
-} from "tome-db";

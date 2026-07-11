@@ -1,5 +1,5 @@
-import type { GraphLodSnapshot } from "tome-db";
-import { NODE_ID_PATTERN } from "tome-db/node-id";
+import type { GraphLodSnapshot } from "tome-graph-interfaces";
+import { NODE_ID_PATTERN } from "tome-store-flatfile/node-id";
 import type { GraphExplorerMode } from "./graph-preferences";
 
 export function defaultExplorerLayerIndex(_layerCount: number): number {

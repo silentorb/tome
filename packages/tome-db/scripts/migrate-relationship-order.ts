@@ -37,22 +37,22 @@ if (report.ambiguous.length > 0) {
 }
 
 const dbPath = process.env.TOME_DB_PATH ?? defaultDbPathForContent(contentDir);
-const { store, sync, db } = openContentGraph(contentDir, dbPath);
+const { store, sync, cache } = openContentGraph(contentDir, dbPath);
 sync.fullRebuild();
 
 const rels = store.readRelationshipsFile().relationships;
 if (rels.length !== report.total) {
   console.error(`  ERROR: relationship count changed: ${report.total} -> ${rels.length}`);
-  db.close();
+  cache.close();
   process.exit(1);
 }
 if (store.readRelationshipsFile().version !== 3) {
   console.error("  ERROR: relationships.json version was not bumped to 3");
-  db.close();
+  cache.close();
   process.exit(1);
 }
-const counts = db.counts();
-db.close();
+const counts = cache.counts();
+cache.close();
 console.log(
   `  OK: ${rels.length} relationships (version 3); cache rebuilt at ${dbPath} (${counts.relationships} projections)`,
 );

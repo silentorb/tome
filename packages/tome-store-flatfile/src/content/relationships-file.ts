@@ -1,5 +1,5 @@
-import type { Properties, Relationship } from "../graph";
-import { relationshipId } from "../graph";
+import type { Properties, Relationship } from "tome-graph-interfaces";
+import { relationshipId } from "../relationship-id";
 import { normalizeRelationshipType } from "../relation-type";
 
 export const RELATIONSHIPS_FILE_VERSION = 3;

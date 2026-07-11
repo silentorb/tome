@@ -35,8 +35,8 @@ describe("shared archived edge unarchive", () => {
       (e) => e.type === "related" && e.a !== HUB && e.b !== HUB,
     );
     expect(shared?.archived).toBe(true);
-    expect(fixture.ctx.db.listRelationshipsFromSource(NODE_A)).toHaveLength(0);
-    const nodeBOutgoing = fixture.ctx.db.listRelationshipsFromSource(NODE_B);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(NODE_A)).toHaveLength(0);
+    const nodeBOutgoing = fixture.ctx.cache.listRelationshipsFromSource(NODE_B);
     expect(nodeBOutgoing).toHaveLength(1);
     expect(nodeBOutgoing[0]?.type).toBe("member_of");
   });

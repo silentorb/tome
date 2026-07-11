@@ -131,7 +131,7 @@ cd packages/tome-db && bun test tests/dynamic-fields
 
 | Component | Path |
 | --- | --- |
-| Schema / overlay DDL | `packages/tome-db/src/schema.ts` |
+| Schema / overlay DDL | `packages/tome-cache-sqlite/src/schema.ts` |
 | Overlay read API | `packages/tome-db/src/dynamic-fields/overlay.ts` |
 | Enrichment hook | `packages/tome-db/src/dynamic-fields/enrich.ts` |
 | View integration | `packages/tome-db/src/database-view.ts` |

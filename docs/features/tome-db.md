@@ -2,14 +2,22 @@
 
 ## Summary
 
-The Marloth design corpus is a **git-tracked content store** under `content/` (`content/data/` for nodes and relationship instances; `content/model/` for workspace JSON). Implementation lives in `packages/tome-db`. **`content/` is the canonical root**; `data/tome.sqlite` is the **local, gitignored query cache** rebuilt from content (legacy `data/marloth.sqlite` is still read when present). Use `bun run content:export` to migrate an old SQLite file into `content/`.
+The design corpus is a **git-tracked content store** under `content/` (`content/data/` for nodes and relationship instances; `content/model/` for workspace JSON). **`content/` is the canonical root**; `data/tome.sqlite` is the **local, gitignored query cache** rebuilt from content (legacy `data/marloth.sqlite` is still read when present).
+
+| Package | Role |
+| --- | --- |
+| `tome-store-flatfile` | Flatfile `ContentStore` / `TomeDataStore` (codecs, model loaders, change watching) |
+| `tome-cache-sqlite` | SQLite `GraphDatabase` / `TomeQueryCache` |
+| `tome-db` | Domain queries/mutations + `CacheSync` / `TomeWriteContext` bridge |
+
+`tome-server` loads store + cache as singular config modules and injects them into `tome-db`.
 
 ## When to read this
 
 Read this doc when your task involves:
 
 - `data/tome.sqlite` (or legacy `data/marloth.sqlite`) or the `./data/` directory
-- `packages/tome-db/` schema, graph API, or queries
+- `packages/tome-store-flatfile/`, `packages/tome-cache-sqlite/`, or `packages/tome-db/`
 - Modeling nodes, relationships, types, or properties
 - Editing or migrating graph data in place (not via full re-import)
 - Extending the graph schema or API
@@ -28,17 +36,17 @@ For **what design nodes mean** (features, inspirations, products, traceability),
 | **Type table** | Node listed in [`table-schemas.json`](./table-schemas.md) and/or receiving `is_a` rows. |
 | **Schema** | Workspace model config in `content/model/schema.json` (relationship rules, enums) — see [schema.md](./schema.md). |
 
-API names: `ContentStore`, `openTomeWriteContext`, `getNodeDetail`, `getNodePageDetail`, `GET /api/nodes`, `?node=`. Cache tables: `nodes`, `relationship_records`, `relationship_projections` (`SCHEMA_VERSION` **11**).
+API names: `ContentStore`, `openContentGraph`, `TomeWriteContext` (`{ store, sync, cache }`), `getNodeDetail`, `getNodePageDetail`, `GET /api/nodes`, `?node=`. Cache tables: `nodes`, `relationship_records`, `relationship_projections` (`SCHEMA_VERSION` **11**).
 
 ## Editing the graph (agent workflow)
 
 **Default:** change files under `content/`.
 
-- Use `ContentStore` / `TomeWriteContext` (via editor API or `openTomeWriteContext`), or edit `content/data/{shard}/{id}.md`, `content/data/relationships.json`, and `content/model/relationship-types.json` directly.
+- Use `ContentStore` / `TomeWriteContext` (via editor API or `openContentGraph`), or edit `content/data/{shard}/{id}.md`, `content/data/relationships.json`, and `content/model/relationship-types.json` directly.
 - Commit changes under `content/`; do not commit `data/tome.sqlite` or legacy `data/marloth.sqlite`.
-- Run `bun run content:sync` after bulk file edits if the editor API is not running (otherwise the file watcher syncs automatically).
+- Run `bun run content:sync` after bulk file edits if the editor API is not running (otherwise the store watcher emits changes and `CacheSync` updates SQLite).
 
-**Schema changes:** bump `SCHEMA_VERSION` in `schema.ts`, migrate existing rows in place, document steps here or in commit notes.
+**Schema changes:** bump `SCHEMA_VERSION` in `tome-cache-sqlite` `schema.ts`, migrate existing rows in place, document steps here or in commit notes.
 
 ## Requirements
 
@@ -69,9 +77,9 @@ Non-breaking read support for Marloth-era names. Do not remove without a migrati
 
 | Surface | Policy | Location |
 | --- | --- | --- |
-| `marloth:` / `marloth://node/` URLs | Supported indefinitely | [`packages/tome-db/src/markdown-links.ts`](../../packages/tome-db/src/markdown-links.ts) |
-| `MARLOTH_*` environment variables | Deprecated aliases for `TOME_*` | [`packages/tome-db/src/content/paths.ts`](../../packages/tome-db/src/content/paths.ts); server [`packages/tome-server/src/paths.ts`](../../packages/tome-server/src/paths.ts); static-site config |
-| `data/marloth.sqlite` | Legacy cache path; used when `data/tome.sqlite` is absent | [`packages/tome-db/src/content/paths.ts`](../../packages/tome-db/src/content/paths.ts) |
+| `marloth:` / `marloth://node/` URLs | Supported indefinitely | [`packages/tome-store-flatfile/src/markdown-links.ts`](../../packages/tome-store-flatfile/src/markdown-links.ts) |
+| `MARLOTH_*` environment variables | Deprecated aliases for `TOME_*` | [`packages/tome-store-flatfile/src/content/paths.ts`](../../packages/tome-store-flatfile/src/content/paths.ts); server [`packages/tome-server/src/paths.ts`](../../packages/tome-server/src/paths.ts); static-site config |
+| `data/marloth.sqlite` | Legacy cache path; used when `data/tome.sqlite` is absent | [`packages/tome-store-flatfile/src/content/paths.ts`](../../packages/tome-store-flatfile/src/content/paths.ts) |
 | `.marloth/user-settings.json` | Legacy settings directory | [`packages/tome-server/src/paths.ts`](../../packages/tome-server/src/paths.ts) |
 | `marloth.graph.*` browser `localStorage` | Dual-read for Graph Explorer prefs; writes use `tome.graph.*` | [`packages/tome-editor/src/webview/graph-preferences.ts`](../../packages/tome-editor/src/webview/graph-preferences.ts) |
 
@@ -109,7 +117,7 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 
 One-time backfill for existing archive members: `bun scripts/migrate-archive-relationship-flags.ts`.
 
-**Enum properties in cache:** keys declared in [`content/model/schema.json`](../../content/model/schema.json) `enums` (e.g. `priority`) are stored in SQLite relationship `properties` JSON as **0-based indices** into the enum’s `options` array. Git-tracked [`content/data/relationships.json`](../../content/data/relationships.json) keeps **string labels**. Encode on cache write and decode on cache read (`packages/tome-db/src/enum-codec.ts`, `graph.ts`). Changing enum `options` order in `schema.json` triggers a relationship cache re-sync (file watcher + `enum_config_fingerprint` meta check). After pulling enum-cache changes or a `SCHEMA_VERSION` bump, run `bun run content:sync` (or restart the editor API) to rebuild the cache from content.
+**Enum properties in cache:** keys declared in [`content/model/schema.json`](../../content/model/schema.json) `enums` (e.g. `priority`) are stored in SQLite relationship `properties` JSON as **0-based indices** into the enum’s `options` array. Git-tracked [`content/data/relationships.json`](../../content/data/relationships.json) keeps **string labels**. Encode on cache write and decode on cache read (`packages/tome-db/src/enum-codec.ts` injected as the cache `propertyCodec`). Changing enum `options` order in `schema.json` triggers a relationship cache re-sync (store change events + `enum_config_fingerprint` meta check). After pulling enum-cache changes or a `SCHEMA_VERSION` bump, run `bun run content:sync` (or restart the editor API) to rebuild the cache from content.
 
 Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTableNode` in `node-capabilities.ts`).
 
@@ -119,7 +127,7 @@ Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTa
 
 ### Markdown body links
 
-Node cross-references in markdown `body` use two storage forms (see `packages/tome-db/src/markdown-links.ts` and `dynamic-node-links.ts`):
+Node cross-references in markdown `body` use two storage forms (see `tome-store-flatfile` markdown-links and dynamic-node-links):
 
 | Form | Example | Title source |
 | --- | --- | --- |
@@ -143,12 +151,12 @@ Consolidate legacy dual directed edges with `bun scripts/consolidate-relationshi
 
 ### Schema versioning
 
-- `meta.schema_version` **must** record the graph DDL version (`packages/tome-db/src/schema.ts`).
+- `meta.schema_version` **must** record the graph DDL version (`packages/tome-cache-sqlite/src/schema.ts`).
 - Breaking schema changes **must** bump `SCHEMA_VERSION` and document migration steps.
 
 ## Behavior / API
 
-`GraphDatabase` (`packages/tome-db/src/graph.ts`):
+`GraphDatabase` (`packages/tome-cache-sqlite/src/graph.ts`):
 
 - `upsertNode(id, properties)` — create or merge node
 - `listRelationshipsFromSource` / `listRelationshipsToTarget` — query projection table by local perspective type
@@ -200,20 +208,20 @@ db.close();
 
 | Module | Responsibility |
 | --- | --- |
-| `packages/tome-db/src/schema.ts` | DDL and version |
-| `packages/tome-db/src/graph.ts` | GraphDatabase API (reads projections) |
-| `packages/tome-db/src/content/relationships-file.ts` | v3 `relationships.json` parse/serialize (ordered `(a, b)` tuples) |
-| `packages/tome-db/src/migrations/relationship-order.ts` | Reorder tuples into meaningful `(index0, index1)` order (member→set, typed asymmetric via node types); drop legacy `directedFrom`; bump v2→v3 |
-| `packages/tome-db/src/content/relationship-types-file.ts` | `relationship-types.json` parse/serialize + composite helpers |
-| `packages/tome-db/src/relationship-types/load.ts` | Cached `relationship-types.json` loader |
+| `packages/tome-cache-sqlite/src/schema.ts` | DDL and version |
+| `packages/tome-cache-sqlite/src/graph.ts` | GraphDatabase API (reads projections) |
+| `packages/tome-store-flatfile/src/content/relationships-file.ts` | v3 `relationships.json` parse/serialize (ordered `(a, b)` tuples) |
+| `packages/tome-store-flatfile/src/migrations/relationship-order.ts` | Reorder tuples into meaningful `(index0, index1)` order; bump v2→v3 |
+| `packages/tome-store-flatfile/src/content/relationship-types-file.ts` | `relationship-types.json` parse/serialize + composite helpers |
+| `packages/tome-store-flatfile/src/relationship-types/load.ts` | Cached `relationship-types.json` loader |
 | `packages/tome-db/src/relationship-type-label.ts` | `perspectiveDisplayLabel`, `perspectiveLinkAddLabel` |
 | `packages/tome-db/src/content/relationship-sync-expand.ts` | Content → SQLite projection expansion |
-| `packages/tome-db/src/content/sync.ts` | Cache rebuild; `content/data` + `content/model` file watchers |
+| `packages/tome-db/src/content/sync.ts` | Cache rebuild; subscribes to store change events |
 | `packages/tome-db/src/graph-export.ts` | Full graph and Graph Explorer LOD export |
 | `packages/tome-db/src/node-page-sections.ts` | Universal page sections |
 | `packages/tome-db/src/database-view-relations.ts` | Relation-column hydration |
 | `packages/tome-db/src/ordered-associations.ts` | Ordered association config, view query, move mutation |
-| `packages/tome-db/src/table-schemas/load.ts` | `table-schemas.json` loader |
+| `packages/tome-store-flatfile/src/table-schemas/load.ts` | `table-schemas.json` loader |
 
 ## See also
 

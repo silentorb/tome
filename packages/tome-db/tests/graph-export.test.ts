@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import { exportExplorerLodGraph, exportFullGraph } from "../src/graph-export";
 import { DEFAULT_EXPLORER_LOD_LAYER_COUNT } from "../src/graph-lod-cluster";
-import { GraphDatabase } from "../src/graph";
+import { GraphDatabase } from "tome-cache-sqlite";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -47,15 +47,14 @@ describe("graph export", () => {
 
   test("exportFullGraph excludes archived pages and their links", () => {
     const fixture = createTestContentFixture("tome-graph-export-arch-");
-    const db = fixture.ctx.db;
-    const contentDir = fixture.ctx.store.contentDir;
+    const db = fixture.ctx.cache;
 
     db.upsertNode("active", { title: "Active scene" });
     db.upsertNode("archived", { title: "Old foil" });
     db.upsertNode(TEST_ARCHIVE_NODE_ID, { title: "Archive" });
     db.upsertRelationship("active", "archived", "inspirations");
     db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "member_of");
-    db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID, contentDir);
+    db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID);
 
     expect(db.isNodeArchived("archived")).toBe(true);
     const snapshot = exportFullGraph(db);

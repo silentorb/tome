@@ -24,16 +24,14 @@ import {
   deleteDatabaseColumn as deleteDatabaseColumnInDb,
   createDatabaseColumn as createDatabaseColumnInDb,
   updateDatabaseColumn as updateDatabaseColumnInDb,
-  loadTableSchemasFromContent,
-  type CreateDatabaseColumnInput,
-  type UpdateDatabaseColumnInput,
-  type DatabaseColumnMutationError,
-  type DatabaseColumnMutationResult,
   updateDatabaseRowProperty,
   updateOutgoingRelationshipProperty,
   linkOutgoingRelationship,
   moveRelationshipConnection,
   unlinkOutgoingRelationship,
+  loadTableSchemasFromContent,
+  type CreateDatabaseColumnInput,
+  type UpdateDatabaseColumnInput,
   type CreateNodeError,
   type LinkOutgoingRelationshipError,
   type MoveRelationshipConnectionError,
@@ -45,20 +43,19 @@ import {
   type OrderedAssociationMoveParams,
   type OrderedAssociationViewDetail,
   type NodeLifecycleError,
-  type NodePageDetail,
-  type DatabaseViewDetail,
-  type TomeWriteContext,
   type SchemaFile,
   type ViewSortSpec,
-  type ViewDefinition,
   type ViewProperties,
-  type WorkspaceFile,
+  type TomeWriteContext,
+  type GraphDatabase,
   loadWorkspaceFromContent,
 } from "tome-db";
 import {
-  ContentWatcher,
+  openContentGraph,
   openTomeWriteContext,
+  type ContentStore,
 } from "tome-db/content";
+import type { TomeDataStore, TomeQueryCache } from "tome-service-interfaces";
 import { resolveContentPath, resolveDbPath } from "./paths";
 import {
   createRelationshipView,
@@ -82,30 +79,33 @@ export type { PublicExtensionsManifest, WorkspacePublic, TomeGraphServices };
 /** @deprecated Use TomeGraphServices */
 export type EditorDatabase = TomeGraphServices;
 
-export function openTomeGraphServices(
-  dbPath = resolveDbPath(),
-  contentPath = resolveContentPath(),
+export type OpenTomeGraphServicesArgs = {
+  store: TomeDataStore | ContentStore;
+  cache: TomeQueryCache;
+};
+
+function buildGraphServices(
+  writeCtx: TomeWriteContext,
+  contentPath: string,
 ): TomeGraphServices {
-  const writeCtx: TomeWriteContext = openTomeWriteContext(contentPath, dbPath);
+  writeCtx.store.startWatching();
+  const cache = writeCtx.cache as GraphDatabase;
+
   const extensions = new ExtensionServerRuntime(
     contentPath,
-    () => createExtensionGraphQueryServices(writeCtx.db, contentPath),
-    () => createExtensionSchemaQueryServices(writeCtx.db, contentPath),
+    () => createExtensionGraphQueryServices(cache, contentPath),
+    () => createExtensionSchemaQueryServices(cache, contentPath),
   );
   const extensionsReady = extensions.ensureLoaded().catch((err: unknown) => {
     console.error("[tome-extensions] failed to load:", err);
   });
-  const watcher = new ContentWatcher(writeCtx.sync, (err) => {
-    console.error("[tome-content] sync error:", err.message);
-  });
-  watcher.start();
 
   const schema = () => loadSchemaFromContent(contentPath);
 
   return {
     getWorkspace(): WorkspacePublic {
       const ws = loadWorkspaceFromContent(contentPath);
-      const archivePage = getNodePageDetail(writeCtx.db, ws.archiveNodeId, { contentDir: contentPath });
+      const archivePage = getNodePageDetail(cache, ws.archiveNodeId, { contentDir: contentPath });
       return {
         ...ws,
         archiveNodeTitle: archivePage?.title ?? "Archive",
@@ -113,21 +113,21 @@ export function openTomeGraphServices(
     },
     getHomeId(): string {
       const homeId = loadWorkspaceFromContent(contentPath).homeNodeId;
-      const home = getNodePageDetail(writeCtx.db, homeId, { contentDir: contentPath });
+      const home = getNodePageDetail(cache, homeId, { contentDir: contentPath });
       if (home) return homeId;
-      const recent = searchNodes(writeCtx.db, "", 1);
+      const recent = searchNodes(cache, "", 1);
       return recent[0]?.id ?? homeId;
     },
-    getNode(id: string, options?: { tabId?: string; databaseView?: string; scopeId?: string }): NodePageDetail | null {
+    getNode(id: string, options?: { tabId?: string; databaseView?: string; scopeId?: string }) {
       const tabId = options?.tabId ?? options?.scopeId ?? options?.databaseView;
-      return getNodePageDetail(writeCtx.db, id, {
+      return getNodePageDetail(cache, id, {
         tabId,
         contentDir: contentPath,
         includeSchemaEmptySections: true,
       });
     },
     getDatabaseView(id: string, tabId?: string) {
-      return getDatabaseViewDetail(writeCtx.db, id, tabId, contentPath);
+      return getDatabaseViewDetail(cache, id, tabId, contentPath);
     },
     getNodeViews(nodeId: string) {
       return readNodeViews(writeCtx, nodeId);
@@ -174,7 +174,7 @@ export function openTomeGraphServices(
       const schemas = loadTableSchemasFromContent(writeCtx.store.contentDir);
       const entries: { id: string; title: string }[] = [];
       for (const id of Object.keys(schemas.tables)) {
-        const node = writeCtx.db.getNode(id);
+        const node = writeCtx.cache.getNode(id);
         const title =
           typeof node?.properties.title === "string" && node.properties.title.trim()
             ? node.properties.title.trim()
@@ -190,11 +190,11 @@ export function openTomeGraphServices(
       return schema();
     },
     listRelationshipTypes(): string[] {
-      return writeCtx.db.listDistinctRelationshipTypes();
+      return writeCtx.cache.listDistinctRelationshipTypes();
     },
     getRelationshipLinkOptions(sourceId: string, type: string) {
       const registry = loadRelationshipTypesFromContent(contentPath);
-      const rule = relationshipTypeRuleContext(registry, writeCtx.db, sourceId, type, contentPath);
+      const rule = relationshipTypeRuleContext(registry, cache, sourceId, type, contentPath);
       return {
         allowedTargetTypeIds: rule ? [...rule.allowedTargetTypeIds] : null,
       };
@@ -211,10 +211,10 @@ export function openTomeGraphServices(
       allowedTypeIds?: string[],
       options?: { includeBody?: boolean },
     ): NodeSummary[] {
-      return searchNodes(writeCtx.db, query, limit, allowedTypeIds, options);
+      return searchNodes(cache, query, limit, allowedTypeIds, options);
     },
     listRecent(limit?: number): NodeSummary[] {
-      return listRecentNodesByModifiedAt(writeCtx.db, limit);
+      return listRecentNodesByModifiedAt(cache, limit);
     },
     saveBody(id: string, body: string): boolean {
       return updateNodeBody(writeCtx, id, body);
@@ -277,7 +277,7 @@ export function openTomeGraphServices(
       const registry = loadRelationshipTypesFromContent(contentPath);
       const rule = relationshipTypeRuleContext(
         registry,
-        writeCtx.db,
+        cache,
         sourceId,
         input.type,
         contentPath,
@@ -326,10 +326,10 @@ export function openTomeGraphServices(
       });
     },
     getGraphFull(): GraphSnapshot {
-      return exportFullGraph(writeCtx.db);
+      return exportFullGraph(cache);
     },
     getGraphExplorerLod(options?: { anchorId?: string; layerCount?: number }): GraphLodSnapshot {
-      return exportExplorerLodGraph(writeCtx.db, options);
+      return exportExplorerLodGraph(cache, options);
     },
     async getExtensionsManifest(): Promise<PublicExtensionsManifest> {
       await extensionsReady;
@@ -337,7 +337,7 @@ export function openTomeGraphServices(
       return extensions.getPublicManifest();
     },
     async prepareEditorBody(nodeId: string, markdown: string): Promise<string | null> {
-      if (!writeCtx.db.getNode(nodeId)) return null;
+      if (!writeCtx.cache.getNode(nodeId)) return null;
       await extensionsReady;
       await extensions.ensureLoaded();
       return extensions.prepareEditorBody(nodeId, markdown);
@@ -351,12 +351,30 @@ export function openTomeGraphServices(
       return extensionsReady.then(() => extensions.bundleEditorModule(extensionId));
     },
     close(): void {
-      watcher.close();
-      writeCtx.db.close();
+      writeCtx.store.stopWatching();
+      writeCtx.store.close();
+      writeCtx.cache.close();
     },
   };
 }
 
+/**
+ * Open graph services from injected store + cache, or from db/content paths (tests).
+ *
+ * - `openTomeGraphServices({ store, cache })` — host DI path
+ * - `openTomeGraphServices(dbPath, contentPath)` — test convenience via `openContentGraph`
+ */
+export function openTomeGraphServices(
+  args: OpenTomeGraphServicesArgs | string = resolveDbPath(),
+  contentPath = resolveContentPath(),
+): TomeGraphServices {
+  if (typeof args === "object" && args !== null && "store" in args && "cache" in args) {
+    const writeCtx = openTomeWriteContext(args.store as ContentStore, args.cache);
+    return buildGraphServices(writeCtx, args.store.contentDir);
+  }
+  const writeCtx = openContentGraph(contentPath, args);
+  return buildGraphServices(writeCtx, contentPath);
+}
 
 /** @deprecated Use openTomeGraphServices */
 export const openEditorDatabase = openTomeGraphServices;

@@ -13,7 +13,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { WorkspaceQuickLink } from "tome-db";
+import type { WorkspaceQuickLink } from "tome-graph-interfaces";
 import type { AppView } from "../../shared/types";
 import { isProtectedEditorNode } from "../../shared/types";
 import type { EditorApi } from "../api/client";

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { emptyRelationshipTypesFile } from "../src/content/relationship-types-file";
+import { emptyRelationshipTypesFile } from "tome-store-flatfile";
 import {
   formatRelationshipTypeLabel,
   perspectiveDisplayLabel,

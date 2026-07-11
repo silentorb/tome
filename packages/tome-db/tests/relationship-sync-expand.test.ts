@@ -3,8 +3,8 @@ import {
   expandAllRelationships,
   expandRelationshipEntry,
 } from "../src/content/relationship-sync-expand";
-import type { RelationshipEntry } from "../src/content/relationships-file";
-import type { RelationshipTypesFile } from "../src/content/relationship-types-file";
+import type { RelationshipEntry } from "tome-store-flatfile";
+import type { RelationshipTypesFile } from "tome-store-flatfile";
 
 const legacyRegistry: RelationshipTypesFile = {
   version: 1,

@@ -33,7 +33,7 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 
 ### Reload
 
-- `extensions.json` changes **must** invalidate the tome-db loader cache (`ContentWatcher` + `invalidateExtensionsCache`).
+- `extensions.json` changes **must** invalidate the loader cache (store change events → `CacheSync` + `invalidateExtensionsCache`).
 - Editor API reloads extension modules when config mtime changes (`ExtensionServerRuntime.ensureLoaded()`).
 
 ### Out of scope (v1)

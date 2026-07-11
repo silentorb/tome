@@ -33,7 +33,7 @@ describe("linkOutgoingRelationship member_of row metadata", () => {
     });
     expect(err).toBeNull();
 
-    const db = ctx.db;
+    const db = ctx.cache;
     const membership = db.listRelationshipsFromSource(MEMBER_A, "member_of")[0];
     expect(membership?.properties.view).toBeUndefined();
     expect(membership?.properties.row_index).toBeUndefined();
@@ -49,7 +49,7 @@ describe("linkOutgoingRelationship member_of row metadata", () => {
   });
 
   test("type-table page has database section only without duplicate members relation section", () => {
-    const detail = getNodePageDetail(ctx.db, TYPE_ID, { contentDir: store.contentDir });
+    const detail = getNodePageDetail(ctx.cache, TYPE_ID, { contentDir: store.contentDir });
     const sectionTypes = detail?.sections.map((s) => s.type) ?? [];
     expect(sectionTypes).toContain("database");
     expect(sectionTypes.filter((t) => t === "relations")).toHaveLength(0);

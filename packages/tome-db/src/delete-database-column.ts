@@ -7,12 +7,12 @@ import {
 import { isTypeTableNode } from "./node-capabilities";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { TABLE_SCHEMAS_FILENAME } from "./content/paths";
-import type { TableSchemasFile } from "./content/table-schemas-file";
-import { findColumnByKey } from "./table-schema";
-import { invalidateTableSchemasCache } from "./table-schemas/load";
+import { TABLE_SCHEMAS_FILENAME } from "tome-store-flatfile";
+import type { TableSchemasFile } from "tome-store-flatfile";
+import { findColumnByKey } from "tome-store-flatfile";
+import { invalidateTableSchemasCache } from "tome-store-flatfile";
 import { purgeColumnFromViews } from "./views/mutations";
-import { viewSectionKeyForSet } from "./relationship-type-traits";
+import { viewSectionKeyForSet } from "tome-store-flatfile";
 import type {
   DeleteDatabaseColumnError,
   DeleteDatabaseColumnResult,
@@ -47,11 +47,11 @@ export function deleteDatabaseColumn(
     return "column_not_deletable";
   }
 
-  if (!isTypeTableNode(ctx.db, databaseId, ctx.store.contentDir)) {
+  if (!isTypeTableNode(ctx.cache, databaseId, ctx.store.contentDir)) {
     return "database_not_found";
   }
 
-  const dynamicFields = loadDynamicFields(ctx.db, databaseId, ctx.store.contentDir);
+  const dynamicFields = loadDynamicFields(ctx.cache, databaseId, ctx.store.contentDir);
   if (dynamicFields.some((field) => field.enabled && field.columnKey === normalizedKey)) {
     return "column_not_deletable";
   }

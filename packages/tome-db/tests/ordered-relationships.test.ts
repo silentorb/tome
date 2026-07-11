@@ -37,12 +37,12 @@ describe("ordered-relationships", () => {
   const contentDir = ctx.store.contentDir;
 
   test("listOrderedMemberConnections returns ordered_member_of edges only", () => {
-    const connections = listOrderedMemberConnections(ctx.db, SCENES_DB, contentDir);
+    const connections = listOrderedMemberConnections(ctx.cache, SCENES_DB, contentDir);
     expect(connections.map((c) => c.sourceNodeId).sort()).toEqual([scene1, scene2].sort());
   });
 
   test("maxOrderAtSet reads highest order property", () => {
-    expect(maxOrderAtSet(ctx.db, SCENES_DB, contentDir)).toBe(30);
+    expect(maxOrderAtSet(ctx.cache, SCENES_DB, contentDir)).toBe(30);
   });
 
   test("stampOrderIfMissing fills order when absent", () => {
@@ -51,7 +51,7 @@ describe("ordered-relationships", () => {
   });
 
   test("applySparseOrderRewrite renumbers to sparse tens", () => {
-    const edges = listOrderedMemberConnections(ctx.db, SCENES_DB, contentDir).map((edge) => ({
+    const edges = listOrderedMemberConnections(ctx.cache, SCENES_DB, contentDir).map((edge) => ({
       sourceNodeId: edge.sourceNodeId,
       targetNodeId: edge.targetNodeId,
       type: edge.type,
@@ -60,10 +60,10 @@ describe("ordered-relationships", () => {
     applySparseOrderRewrite(ctx, SCENES_DB, edges, [scene2, scene1]);
     ctx.sync.syncRelationships();
 
-    expect(ctx.db.getRelationship(`${scene1}:${"ordered_member_of"}:${SCENES_DB}`)?.properties.order).toBe(
+    expect(ctx.cache.getRelationship(`${scene1}:${"ordered_member_of"}:${SCENES_DB}`)?.properties.order).toBe(
       "20",
     );
-    expect(ctx.db.getRelationship(`${scene2}:${"ordered_member_of"}:${SCENES_DB}`)?.properties.order).toBe(
+    expect(ctx.cache.getRelationship(`${scene2}:${"ordered_member_of"}:${SCENES_DB}`)?.properties.order).toBe(
       "10",
     );
   });

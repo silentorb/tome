@@ -60,22 +60,22 @@ describe("archive relationship flags", () => {
   });
 
   test("archived incident relationships are excluded from SQLite cache", () => {
-    const outgoing = fixture.ctx.db.listRelationshipsFromSource(PAGE);
+    const outgoing = fixture.ctx.cache.listRelationshipsFromSource(PAGE);
     expect(outgoing).toHaveLength(1);
     expect(outgoing[0]?.targetNodeId).toBe(HUB);
     expect(outgoing[0]?.type).toBe("member_of");
-    expect(fixture.ctx.db.listRelationshipsFromSource(PAGE, "member_of")).toHaveLength(1);
-    expect(fixture.ctx.db.listRelationshipsFromSource(HUB, "members").length).toBeGreaterThan(0);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, "member_of")).toHaveLength(1);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(HUB, "members").length).toBeGreaterThan(0);
   });
 
   test("archived member is absent from database table rows", () => {
-    const detail = getDatabaseViewDetail(fixture.ctx.db, TYPE_DB, "all", fixture.ctx.store.contentDir);
+    const detail = getDatabaseViewDetail(fixture.ctx.cache, TYPE_DB, "all", fixture.ctx.store.contentDir);
     expect(detail?.rows.some((row) => row.nodeId === PAGE)).toBe(false);
   });
 
   test("unarchiveNode restores relationships and archived status", () => {
     expect(unarchiveNode(fixture.ctx, PAGE)).toBeNull();
-    expect(getNodeDetail(fixture.ctx.db, PAGE)?.archived).toBe(false);
+    expect(getNodeDetail(fixture.ctx.cache, PAGE)?.archived).toBe(false);
 
     const file = fixture.ctx.store.readRelationshipsFile();
     for (const entry of file.relationships) {
@@ -85,9 +85,9 @@ describe("archive relationship flags", () => {
       }
     }
 
-    expect(fixture.ctx.db.listRelationshipsFromSource(PAGE, "member_of")).toHaveLength(1);
-    expect(fixture.ctx.db.listRelationshipsFromSource(PAGE, "related")).toHaveLength(1);
-    const detail = getDatabaseViewDetail(fixture.ctx.db, TYPE_DB, "all", fixture.ctx.store.contentDir);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, "member_of")).toHaveLength(1);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, "related")).toHaveLength(1);
+    const detail = getDatabaseViewDetail(fixture.ctx.cache, TYPE_DB, "all", fixture.ctx.store.contentDir);
     expect(detail?.rows.some((row) => row.nodeId === PAGE)).toBe(true);
   });
 

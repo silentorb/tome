@@ -25,7 +25,7 @@ describe("queries", () => {
         body: "# Hello",
       },
     });
-    const detail = getNodeDetail(fixture.ctx.db, "00000000000000000000000001");
+    const detail = getNodeDetail(fixture.ctx.cache, "00000000000000000000000001");
     expect(detail?.id).toBe("00000000000000000000000001");
     expect(detail?.title).toBe("Alpha");
     expect(detail?.body.trimEnd()).toBe("# Hello");
@@ -37,7 +37,7 @@ describe("queries", () => {
       id: "00000000000000000000000004",
       properties: { title: "Beta Record" },
     });
-    const hits = searchNodes(fixture.ctx.db, "Beta", 10);
+    const hits = searchNodes(fixture.ctx.cache, "Beta", 10);
     expect(hits.some((h) => h.id === "00000000000000000000000004")).toBe(true);
   });
 
@@ -53,7 +53,7 @@ describe("queries", () => {
       properties: { title: "Applied Surrealism" },
     });
 
-    const hits = searchNodes(fixture.ctx.db, "Surreal", 10);
+    const hits = searchNodes(fixture.ctx.cache, "Surreal", 10);
     expect(hits.map((row) => row.id)).toEqual([exactId, longerId]);
   });
 
@@ -75,7 +75,7 @@ describe("queries", () => {
       },
     });
 
-    const hits = searchNodes(fixture.ctx.db, "surreal", 10, undefined, {
+    const hits = searchNodes(fixture.ctx.cache, "surreal", 10, undefined, {
       includeBody: true,
     });
     expect(hits.map((row) => row.id).indexOf(titleMatchId)).toBeLessThan(
@@ -92,10 +92,10 @@ describe("queries", () => {
         body: "unique-body-marker-xyz",
       },
     });
-    const titleOnly = searchNodes(fixture.ctx.db, "unique-body-marker", 10);
+    const titleOnly = searchNodes(fixture.ctx.cache, "unique-body-marker", 10);
     expect(titleOnly.some((h) => h.id === bodyOnlyId)).toBe(false);
 
-    const withBody = searchNodes(fixture.ctx.db, "unique-body-marker", 10, undefined, {
+    const withBody = searchNodes(fixture.ctx.cache, "unique-body-marker", 10, undefined, {
       includeBody: true,
     });
     expect(withBody.some((h) => h.id === bodyOnlyId)).toBe(true);
@@ -110,7 +110,7 @@ describe("queries", () => {
         body: "prefix unique-preview-marker suffix",
       },
     });
-    const hits = searchNodes(fixture.ctx.db, "unique-preview-marker", 10, undefined, {
+    const hits = searchNodes(fixture.ctx.cache, "unique-preview-marker", 10, undefined, {
       includeBody: true,
     });
     const hit = hits.find((h) => h.id === bodyOnlyId);
@@ -130,7 +130,7 @@ describe("queries", () => {
         body: "body without the search term",
       },
     });
-    const hits = searchNodes(fixture.ctx.db, "title-only-marker", 10, undefined, {
+    const hits = searchNodes(fixture.ctx.cache, "title-only-marker", 10, undefined, {
       includeBody: true,
     });
     const hit = hits.find((h) => h.id === titleOnlyId);
@@ -156,7 +156,7 @@ describe("queries", () => {
       { source: zetaId, target: featuresDbId, type: "member_of" },
     ]);
 
-    const hits = searchNodes(fixture.ctx.db, "", 2, [featuresDbId]);
+    const hits = searchNodes(fixture.ctx.cache, "", 2, [featuresDbId]);
     expect(hits.map((row) => row.title)).toEqual(["Alpha Feature", "Beta Feature"]);
   });
 
@@ -166,7 +166,7 @@ describe("queries", () => {
       properties: { title: "Gamma", body: "old" },
     });
     expect(updateNodeBody(fixture.ctx, "0000000000000000000000000E", "new body")).toBe(true);
-    expect(getNodeDetail(fixture.ctx.db, "0000000000000000000000000E")?.body.trimEnd()).toBe(
+    expect(getNodeDetail(fixture.ctx.cache, "0000000000000000000000000E")?.body.trimEnd()).toBe(
       "new body",
     );
   });
@@ -189,7 +189,7 @@ describe("queries", () => {
       },
     });
 
-    const recent = listRecentNodesByModifiedAt(fixture.ctx.db, 10);
+    const recent = listRecentNodesByModifiedAt(fixture.ctx.cache, 10);
     const olderIndex = recent.findIndex((row) => row.id === olderId);
     const newerIndex = recent.findIndex((row) => row.id === newerId);
     expect(newerIndex).toBeGreaterThanOrEqual(0);
@@ -212,7 +212,7 @@ describe("queries", () => {
       properties: { title: "No Timestamp" },
     });
 
-    const recent = listRecentNodesByModifiedAt(fixture.ctx.db, 100);
+    const recent = listRecentNodesByModifiedAt(fixture.ctx.cache, 100);
     expect(recent.some((row) => row.id === withTimestamp)).toBe(true);
     expect(recent.some((row) => row.id === withoutTimestamp)).toBe(false);
   });
@@ -238,7 +238,7 @@ describe("queries", () => {
       { source: pageId, target: targetId, type: "related", properties: { priority: "Low" } },
     ]);
 
-    const before = listRecentNodesByModifiedAt(fixture.ctx.db, 10);
+    const before = listRecentNodesByModifiedAt(fixture.ctx.cache, 10);
     const pageIndexBefore = before.findIndex((row) => row.id === pageId);
     const targetIndexBefore = before.findIndex((row) => row.id === targetId);
     expect(pageIndexBefore).toBeGreaterThan(targetIndexBefore);
@@ -254,7 +254,7 @@ describe("queries", () => {
       ),
     ).toBeNull();
 
-    const after = listRecentNodesByModifiedAt(fixture.ctx.db, 10);
+    const after = listRecentNodesByModifiedAt(fixture.ctx.cache, 10);
     expect(after.findIndex((row) => row.id === pageId)).toBe(pageIndexBefore);
     expect(after.findIndex((row) => row.id === targetId)).toBe(targetIndexBefore);
   });
@@ -284,7 +284,7 @@ describe("queries", () => {
       { source: archivedId, target: TEST_ARCHIVE_NODE_ID, type: "member_of" },
     ]);
 
-    const recent = listRecentNodesByModifiedAt(fixture.ctx.db, 100);
+    const recent = listRecentNodesByModifiedAt(fixture.ctx.cache, 100);
     expect(recent.some((row) => row.id === activeId)).toBe(true);
     expect(recent.some((row) => row.id === archivedId)).toBe(false);
   });

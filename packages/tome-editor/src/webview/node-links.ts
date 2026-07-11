@@ -5,9 +5,9 @@ import {
   standaloneNodeUrl,
   type AppView,
 } from "../shared/types";
-import { DYNAMIC_NODE_EDITOR_QUERY_PARAM } from "tome-db/dynamic-node-links";
-import { resolveMarkdownHrefTarget } from "tome-db/markdown-links";
-import { NODE_ID_PATTERN } from "tome-db/node-id";
+import { DYNAMIC_NODE_EDITOR_QUERY_PARAM } from "tome-store-flatfile/dynamic-node-links";
+import { resolveMarkdownHrefTarget } from "tome-store-flatfile/markdown-links";
+import { NODE_ID_PATTERN } from "tome-store-flatfile/node-id";
 
 export function isNodeId(value: string): boolean {
   return NODE_ID_PATTERN.test(value);

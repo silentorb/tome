@@ -113,11 +113,11 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       relationshipType: string,
       input: {
         name: string;
-        sorts?: import("tome-db").ViewSortSpec[];
-        properties?: import("tome-db").ViewProperties;
+        sorts?: import("tome-graph-interfaces").ViewSortSpec[];
+        properties?: import("tome-graph-interfaces").ViewProperties;
       },
     ) {
-      const data = await fetchJson<{ view: import("tome-db").ViewDefinition }>(
+      const data = await fetchJson<{ view: import("tome-graph-interfaces").ViewDefinition }>(
         `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}/views`,
         {
           method: "POST",
@@ -133,12 +133,12 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       viewId: string,
       input: {
         name?: string;
-        sorts?: import("tome-db").ViewSortSpec[];
-        properties?: import("tome-db").ViewProperties;
+        sorts?: import("tome-graph-interfaces").ViewSortSpec[];
+        properties?: import("tome-graph-interfaces").ViewProperties;
         hiddenColumns?: string[];
       },
     ) {
-      const data = await fetchJson<{ view: import("tome-db").ViewDefinition }>(
+      const data = await fetchJson<{ view: import("tome-graph-interfaces").ViewDefinition }>(
         `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}/views/${encodeURIComponent(viewId)}`,
         {
           method: "PATCH",
@@ -163,12 +163,12 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       relationshipType: string,
       input: {
         viewOrder?: string[];
-        properties?: import("tome-db").ViewProperties;
+        properties?: import("tome-graph-interfaces").ViewProperties;
       },
     ) {
       return fetchJson<{
-        views?: import("tome-db").ViewDefinition[];
-        properties?: import("tome-db").ViewProperties;
+        views?: import("tome-graph-interfaces").ViewDefinition[];
+        properties?: import("tome-graph-interfaces").ViewProperties;
       }>(
         `/api/views/nodes/${nodeId}/relationships/${encodeURIComponent(relationshipType)}`,
         {
@@ -197,7 +197,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         relationshipType?: string;
       },
     ): Promise<{
-      column: import("tome-db").TableColumnDef;
+      column: import("tome-graph-interfaces").TableColumnDef;
       rowsMigrated: number;
       relationsUnlinked: number;
       valuesCleared: number;
@@ -219,7 +219,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         relationshipType?: string;
       },
     ): Promise<{
-      column: import("tome-db").TableColumnDef;
+      column: import("tome-graph-interfaces").TableColumnDef;
       rowsMigrated: number;
       relationsUnlinked: number;
       valuesCleared: number;

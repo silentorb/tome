@@ -1,23 +1,23 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { basename, join } from "node:path";
-import type { DynamicColumnSetRecord, DynamicFieldRecord } from "../dynamic-fields/overlay";
-import { GraphDatabase } from "../graph";
 import {
+  ContentStore,
+  bodyFromNode,
   columnSetRecordFromEntry,
   emptyDynamicFieldsFile,
   fieldRecordFromEntry,
   parseDynamicFieldsFile,
-} from "./dynamic-fields-file";
-import { bodyFromNode } from "./node-file";
-import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum-config-fingerprint";
-import { invalidateSchemaCache, loadSchemaFromContent } from "../schema-rules/load";
-import { invalidateViewsCache } from "../views/load";
-import { invalidateTableSchemasCache } from "../table-schemas/load";
-import { invalidateRelationshipTypesCache } from "../relationship-types/load";
-import { invalidateWorkspaceCache, loadWorkspaceFromContent } from "../workspace/load";
-import { invalidateOrderedAssociationsCache } from "../ordered-associations-config/load";
-import { invalidateExtensionsCache } from "../extensions/load";
-import {
+  invalidateSchemaCache,
+  loadSchemaFromContent,
+  invalidateViewsCache,
+  invalidateTableSchemasCache,
+  invalidateRelationshipTypesCache,
+  invalidateWorkspaceCache,
+  loadWorkspaceFromContent,
+  invalidateOrderedAssociationsCache,
+  invalidateExtensionsCache,
+  loadRelationshipTypesFromContent,
+  setTraitPerspectives,
   RELATIONSHIPS_FILENAME,
   RELATIONSHIP_TYPES_FILENAME,
   DYNAMIC_FIELDS_FILENAME,
@@ -32,10 +32,27 @@ import {
   contentDataDir,
   contentModelDir,
   nodeFilePath,
-} from "./paths";
-import { ContentStore } from "./store";
+  type DynamicColumnSetRecord,
+  type DynamicFieldRecord,
+} from "tome-store-flatfile";
+import { GraphDatabase, type TomeQueryCache } from "tome-cache-sqlite";
+import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum-config-fingerprint";
+import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
 import { expandAllRelationships } from "./relationship-sync-expand";
 import { filterEntriesForCacheSync } from "../relationship-archive";
+import type { TomeDataStore } from "tome-service-interfaces";
+import type { TomeWriteContext } from "./write-context";
+
+/** Wire store change notifications into cache sync (file watching / external edits). */
+export function subscribeStoreToCacheSync(
+  store: TomeDataStore,
+  sync: CacheSync,
+): () => void {
+  return store.subscribe((event) => {
+    if (sync.isApplying()) return;
+    sync.syncFile(event.path);
+  });
+}
 
 let cachedDynamicConfig: {
   mtimeMs: number;
@@ -117,7 +134,7 @@ export class CacheSync {
 
   constructor(
     readonly store: ContentStore,
-    readonly db: GraphDatabase,
+    readonly cache: TomeQueryCache,
   ) {}
 
   get contentDir(): string {
@@ -156,19 +173,19 @@ export class CacheSync {
   }
 
   cacheNeedsRebuild(): boolean {
-    if (!existsSync(this.db.path)) return true;
-    const cacheMarker = this.db.getMeta("content_mtime_ms");
+    if (!existsSync(this.cache.path)) return true;
+    const cacheMarker = this.cache.getMeta("content_mtime_ms");
     const contentMtime = String(this.contentSnapshotMtime());
     if (cacheMarker !== contentMtime) return true;
     const schema = loadSchemaFromContent(this.contentDir);
-    const storedFingerprint = this.db.getMeta(ENUM_CONFIG_FINGERPRINT_META_KEY) ?? "";
+    const storedFingerprint = this.cache.getMeta(ENUM_CONFIG_FINGERPRINT_META_KEY) ?? "";
     return enumConfigFingerprint(schema) !== storedFingerprint;
   }
 
   private updateCacheMarkers(): void {
-    this.db.setMeta("content_mtime_ms", String(this.contentSnapshotMtime()));
+    this.cache.setMeta("content_mtime_ms", String(this.contentSnapshotMtime()));
     const schema = loadSchemaFromContent(this.contentDir);
-    this.db.setMeta(ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint(schema));
+    this.cache.setMeta(ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint(schema));
   }
 
   private expandRelationshipsToCache(): void {
@@ -177,39 +194,39 @@ export class CacheSync {
     const registry = this.store.readRelationshipTypesFile();
     const { records, projections } = expandAllRelationships(entries, registry);
 
-    this.db.runExec("BEGIN");
+    this.cache.runExec("BEGIN");
     try {
-      this.db.clearRelationshipCache();
+      this.cache.clearRelationshipCache();
       for (const record of records) {
-        this.db.upsertRelationshipRecord(record);
+        this.cache.upsertRelationshipRecord(record);
       }
       for (const projection of projections) {
-        this.db.upsertRelationshipProjection(projection);
+        this.cache.upsertRelationshipProjection(projection);
       }
       this.recomputeArchivedFlags();
-      this.db.runExec("COMMIT");
+      this.cache.runExec("COMMIT");
     } catch (err) {
-      this.db.runExec("ROLLBACK");
+      this.cache.runExec("ROLLBACK");
       throw err;
     }
   }
 
   recomputeArchivedFlags(): void {
     const archiveId = loadWorkspaceFromContent(this.contentDir).archiveNodeId;
-    this.db.recomputeArchivedFlags(archiveId, this.contentDir);
+    this.cache.recomputeArchivedFlags(archiveId);
   }
 
   fullRebuild(): void {
     this.applying = true;
     try {
-      this.db.runExec("DELETE FROM nodes");
+      this.cache.runExec("DELETE FROM nodes");
 
       for (const id of this.store.listNodeIds()) {
         const node = this.store.readNode(id);
         if (!node) continue;
         const body = bodyFromNode(node);
         const props = { ...node.properties, body };
-        this.db.upsertNode(node.id, props);
+        this.cache.upsertNode(node.id, props);
       }
 
       this.expandRelationshipsToCache();
@@ -235,10 +252,10 @@ export class CacheSync {
       const fileNode = this.store.readNode(id);
       if (!fileNode) continue;
       const fileBody = bodyFromNode(fileNode);
-      const dbNode = this.db.getNode(id);
-      const dbBody =
-        typeof dbNode?.properties.body === "string" ? dbNode.properties.body : "";
-      if (fileBody !== dbBody) {
+      const cacheNode = this.cache.getNode(id);
+      const cacheBody =
+        typeof cacheNode?.properties.body === "string" ? cacheNode.properties.body : "";
+      if (fileBody !== cacheBody) {
         this.syncNode(id);
       }
     }
@@ -250,11 +267,11 @@ export class CacheSync {
     try {
       const node = this.store.readNode(id);
       if (!node) {
-        this.db.deleteNode(id);
+        this.cache.deleteNode(id);
         return;
       }
       const body = bodyFromNode(node);
-      this.db.upsertNode(node.id, { ...node.properties, body });
+      this.cache.upsertNode(node.id, { ...node.properties, body });
     } finally {
       this.applying = false;
     }
@@ -344,14 +361,22 @@ export class CacheSync {
   }
 }
 
-export function openContentGraph(contentDir: string, dbPath: string): {
-  store: ContentStore;
-  sync: CacheSync;
-  db: GraphDatabase;
-} {
+/**
+ * Open flatfile ContentStore + sqlite GraphDatabase with enum codec and set-membership
+ * perspectives, ensure the cache is ready, and wire store→sync subscriptions.
+ */
+export function openContentGraph(contentDir: string, dbPath: string): TomeWriteContext {
   const store = new ContentStore(contentDir);
-  const db = new GraphDatabase(dbPath, { contentDir });
-  const sync = new CacheSync(store, db);
+  const cache = new GraphDatabase(dbPath, {
+    propertyCodec: {
+      encode: (properties) => encodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
+      decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
+    },
+    memberPerspectives: () =>
+      setTraitPerspectives(loadRelationshipTypesFromContent(contentDir)),
+  });
+  const sync = new CacheSync(store, cache);
   sync.ensureReady();
-  return { store, sync, db };
+  subscribeStoreToCacheSync(store, sync);
+  return { store, sync, cache };
 }

@@ -1,8 +1,8 @@
-import type { GraphDatabase } from "./graph";
+import type { GraphDatabase } from "tome-cache-sqlite";
 import { isArchivedNode } from "./archive-status";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite } from "./content/write-context";
-import { bodyFromNode } from "./content/node-file";
+import { bodyFromNode } from "tome-store-flatfile";
 import { isTypeTableNode, primaryTypeTitleForInstance } from "./node-capabilities";
 import { buildSearchMatchPreview } from "./search-match-preview";
 import { sortBySearchRelevance } from "./search-relevance";

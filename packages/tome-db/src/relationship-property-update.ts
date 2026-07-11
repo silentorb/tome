@@ -1,4 +1,4 @@
-import type { Properties } from "./graph";
+import type { Properties } from "tome-cache-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
 import {
@@ -8,7 +8,7 @@ import {
   isPriorityValue,
   isUnsetPriority,
 } from "./property-enums";
-import { membershipPerspectivesForSet } from "./relationship-type-traits";
+import { membershipPerspectivesForSet } from "tome-store-flatfile";
 import type { RelationshipPropertyUpdateError } from "tome-graph-interfaces";
 
 export type { RelationshipPropertyUpdateError } from "tome-graph-interfaces";

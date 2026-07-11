@@ -162,7 +162,7 @@ export function reorderRelationshipsFile(
       return entry;
     }
 
-    if ("reason" in oriented && oriented.reason) {
+    if ("reason" in oriented && typeof oriented.reason === "string" && oriented.reason) {
       report.ambiguous.push({ type: entry.type, a: entry.a, b: entry.b, reason: oriented.reason });
       report.unchanged += 1;
       return entry;

@@ -1,38 +1,25 @@
 import { existsSync } from "node:fs";
-import type { GraphDatabase } from "../graph";
+import type { GraphDatabase } from "tome-cache-sqlite";
 import {
   loadDynamicColumnSetsFromContent,
   loadDynamicFieldsFromContent,
 } from "../content/sync";
-import { dynamicFieldsFilePath, readEnv, resolveContentPath } from "../content/paths";
+import {
+  dynamicFieldsFilePath,
+  readEnv,
+  resolveContentPath,
+  type DynamicColumnSetRecord,
+  type DynamicFieldRecord,
+  type SeedDynamicColumnSetInput,
+  type SeedDynamicFieldInput,
+} from "tome-store-flatfile";
 
-export interface DynamicFieldRecord {
-  id: string;
-  databaseId: string;
-  columnKey: string;
-  columnName: string;
-  columnType: string;
-  resolverId: string;
-  docsPath: string;
-  enabled: boolean;
-  params: Record<string, unknown>;
-  viewNames: string[];
-}
-
-export interface DynamicColumnSetRecord {
-  id: string;
-  databaseId: string;
-  columnKeyPattern: string;
-  columnNamePattern: string;
-  columnType: string;
-  resolverId: string;
-  docsPath: string;
-  enabled: boolean;
-  params: Record<string, unknown>;
-  viewNames: string[];
-  /** Keys of legacy columns to hide when this set is active. */
-  hideLegacyKeys: string[];
-}
+export type {
+  DynamicColumnSetRecord,
+  DynamicFieldRecord,
+  SeedDynamicColumnSetInput,
+  SeedDynamicFieldInput,
+} from "tome-store-flatfile";
 
 function parseParams(rows: { param_key: string; param_value: string }[]): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -170,30 +157,6 @@ export function loadDynamicColumnSets(
   } catch {
     return [];
   }
-}
-
-export interface SeedDynamicFieldInput {
-  id: string;
-  databaseId: string;
-  columnKey: string;
-  columnName: string;
-  columnType?: string;
-  resolverId: string;
-  docsPath: string;
-  params?: Record<string, unknown>;
-  viewNames?: string[];
-}
-
-export interface SeedDynamicColumnSetInput {
-  id: string;
-  databaseId: string;
-  columnKeyPattern: string;
-  columnNamePattern: string;
-  columnType?: string;
-  resolverId: string;
-  docsPath: string;
-  params?: Record<string, unknown>;
-  viewNames?: string[];
 }
 
 export function seedDynamicField(db: GraphDatabase, input: SeedDynamicFieldInput): void {

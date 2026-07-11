@@ -1,0 +1,30 @@
+{
+  "name": "tome-store-flatfile",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node-id": "./src/node-id.ts",
+    "./markdown-links": "./src/markdown-links.ts",
+    "./dynamic-node-links": "./src/dynamic-node-links.ts",
+    "./callout": "./src/callout.ts",
+    "./schema-file": "./src/schema-rules/schema-file.ts",
+    "./relation-type": "./src/relation-type.ts",
+    "./property-enums-core": "./src/property-enums-core.ts",
+    "./content": "./src/content/index.ts"
+  },
+  "scripts": {
+    "test": "bun test tests"
+  },
+  "dependencies": {
+    "tome-graph-interfaces": "workspace:*",
+    "tome-service-interfaces": "workspace:*",
+    "ulid": "^3.0.2",
+    "yaml": "2.8.0"
+  },
+  "devDependencies": {
+    "@types/bun": "1.2.23",
+    "typescript": "5.8.2"
+  }
+}

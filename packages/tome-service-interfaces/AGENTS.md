@@ -2,20 +2,24 @@
 
 ## What it is
 
-Plugin contracts for capabilities the **tome-server host** starts from config.
+Plugin contracts for capabilities the **tome-server host** loads from config.
 
 | Symbol | Meaning |
 | --- | --- |
-| `TomeServiceModule` | Pluggable hosted module (`start` / `stop`) |
+| `TomeServiceModule` | Pluggable hosted service (`start` / `stop`), zero-or-more in `services[]` |
 | `TomeServiceHost` | Host context: `services` (`TomeGraphServices`) + per-entry `options` |
+| `TomeStoreModule` / `TomeCacheModule` | Singular infrastructure modules (`open(options)`) |
+| `TomeDataStore` / `TomeQueryCache` | Runtime store and query-cache contracts |
+| `StoreChangeEvent` | Store-owned change notifications (domain syncs the cache) |
 
 ## Do not confuse
 
 - **`TomeGraphServices`** (in `tome-graph-interfaces`) — domain operations facade
-- **`TomeServiceModule`** — a hosted plugin (e.g. HTTP), not the graph facade
+- **`TomeServiceModule`** — a hosted protocol adapter (e.g. HTTP), not the graph facade
+- **`TomeDataStore` / `TomeQueryCache`** — infrastructure behind the host (singular each)
 
 ## Dependency rules
 
-- May depend on `tome-graph-interfaces` for `TomeGraphServices`
+- May depend on `tome-graph-interfaces` for DTOs / `TomeGraphServices`
 - Must **not** encode HTTP paths, verbs, or fetch clients
-- Must **not** depend on `tome-db`, `tome-http`, `tome-server`, or `tome-editor`
+- Must **not** depend on `tome-db`, `tome-http`, `tome-server`, `tome-editor`, `tome-store-flatfile`, or `tome-cache-sqlite`

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Node } from "../../src/graph";
+import type { Node } from "tome-graph-interfaces";
 import {
   relationshipFromEntry,
   entryFromRelationship,

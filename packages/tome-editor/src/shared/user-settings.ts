@@ -4,7 +4,8 @@ import {
   relationLinkCount,
   type RelationSortRow,
 } from "tome-db/row-sort-helpers";
-import { emptySchemaFile, type SchemaFile } from "tome-db/schema-file";
+import { emptySchemaFile } from "tome-store-flatfile/schema-file";
+import type { SchemaFile } from "tome-graph-interfaces";
 
 /** Local user preferences persisted outside git (see `.tome/user-settings.json`). */
 

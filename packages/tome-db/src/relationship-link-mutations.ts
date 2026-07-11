@@ -1,13 +1,13 @@
-import type { Properties } from "./graph";
+import type { Properties } from "tome-cache-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { LinkResolutionError } from "./content/resolve-composite-for-link";
+import { LinkResolutionError } from "tome-store-flatfile";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
-import { normalizeRelationshipType } from "./relation-type";
+import { normalizeRelationshipType } from "tome-store-flatfile";
 import { relationshipTypeRuleContext } from "./relationship-type-endpoints";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
 import { stampOrderIfMissing } from "./ordered-relationships";
-import { membershipPerspectivesForSet } from "./relationship-type-traits";
+import { membershipPerspectivesForSet } from "tome-store-flatfile";
 import type {
   LinkOutgoingRelationshipError,
   LinkOutgoingRelationshipInput,
@@ -37,7 +37,7 @@ function nextOutgoingOrdinal(
   sourceId: string,
   type: string,
 ): number | undefined {
-  const outgoing = ctx.db.listRelationshipsFromSource(sourceId).filter((c) => c.type === type);
+  const outgoing = ctx.cache.listRelationshipsFromSource(sourceId).filter((c) => c.type === type);
   if (outgoing.length === 0) return undefined;
   const ordinals = outgoing
     .map((c) => ordinalFromProperties(c.properties))
@@ -63,7 +63,7 @@ export function linkOutgoingRelationship(
   const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
   const ruleContext = relationshipTypeRuleContext(
     registry,
-    ctx.db,
+    ctx.cache,
     sourceId,
     normalizedType,
     ctx.store.contentDir,
@@ -71,7 +71,7 @@ export function linkOutgoingRelationship(
   if (
     ruleContext &&
     ruleContext.allowedTargetTypeIds.length > 0 &&
-    !nodeMatchesTargetTypes(ctx.db, targetId, ruleContext.allowedTargetTypeIds, ctx.store.contentDir)
+    !nodeMatchesTargetTypes(ctx.cache, targetId, ruleContext.allowedTargetTypeIds, ctx.store.contentDir)
   ) {
     return "target_type_not_allowed";
   }
@@ -82,7 +82,7 @@ export function linkOutgoingRelationship(
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
   }
 
-  if (isTypeTableNode(ctx.db, targetId, ctx.store.contentDir)) {
+  if (isTypeTableNode(ctx.cache, targetId, ctx.store.contentDir)) {
     const [, memberPerspective] = membershipPerspectivesForSet(targetId, ctx.store.contentDir);
     if (normalizedType === memberPerspective) {
       relProps = stampOrderIfMissing(ctx, targetId, sourceId, relProps);

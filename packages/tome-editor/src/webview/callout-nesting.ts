@@ -4,7 +4,7 @@ import type { ResolvedPos } from "@milkdown/prose/model";
 import type { EditorState } from "@milkdown/prose/state";
 import type { EditorView } from "@milkdown/prose/view";
 import { blockquoteSchema, paragraphSchema } from "@milkdown/kit/preset/commonmark";
-import { DEFAULT_CALLOUT_PREFIX } from "tome-db/callout";
+import { DEFAULT_CALLOUT_PREFIX } from "tome-store-flatfile/callout";
 import { isCalloutBlockquoteNode } from "./callout-decoration";
 
 /** Innermost blockquote ancestor depth, or -1 when not inside a blockquote. */

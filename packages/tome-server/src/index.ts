@@ -7,6 +7,8 @@ export {
   type PublicExtensionsManifest,
 } from "./graph-services";
 export {
+  loadConfiguredCache,
+  loadConfiguredStore,
   loadServerConfig,
   parseServerConfig,
   resolveServerConfigPath,

@@ -19,7 +19,9 @@
   },
   "devDependencies": {
     "@types/bun": "1.2.23",
+    "tome-cache-sqlite": "workspace:*",
     "tome-http": "workspace:*",
+    "tome-store-flatfile": "workspace:*",
     "typescript": "5.8.2"
   }
 }

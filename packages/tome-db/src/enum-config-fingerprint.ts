@@ -1,4 +1,4 @@
-import type { SchemaFile } from "./schema-rules/schema-file";
+import type { SchemaFile } from "tome-store-flatfile/schema-file";
 
 export const ENUM_CONFIG_FINGERPRINT_META_KEY = "enum_config_fingerprint";
 

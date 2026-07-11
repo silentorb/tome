@@ -1,5 +1,5 @@
 import { normalizeRelationshipType } from "../relation-type";
-import { collectSetNodeIds } from "../set-membership";
+import { collectSetNodeIds } from "../set-nodes";
 import {
   childNodeId,
   isSetTraitType,

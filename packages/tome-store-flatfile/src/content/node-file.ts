@@ -1,5 +1,5 @@
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import type { Node, Properties, PropertyValue } from "../graph";
+import type { Node, Properties, PropertyValue } from "tome-graph-interfaces";
 
 const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/;
 

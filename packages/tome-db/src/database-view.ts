@@ -1,4 +1,4 @@
-import type { GraphDatabase } from "./graph";
+import type { GraphDatabase } from "tome-cache-sqlite";
 import { listSetMemberRowConnections } from "./set-membership";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
@@ -6,13 +6,13 @@ import { applyDynamicFields } from "./dynamic-fields";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import { enrichColumnDefs } from "./property-enums";
-import { resolveContentPath } from "./content/paths";
+import { resolveContentPath } from "tome-store-flatfile";
 import {
   resolveCustomTabsForNode,
   activeTabName,
   getSectionTabsConfig,
 } from "./views/resolve-tabs";
-import { loadViewsFromContent } from "./views/load";
+import { loadViewsFromContent } from "tome-store-flatfile";
 import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
 import { applySectionColumnOrder } from "./views/column-order";
 import { applyHiddenColumns } from "./views/column-visibility";
@@ -23,7 +23,7 @@ import {
   membershipPerspectivesForSet,
   ORDERED_PROPERTY_DEFAULT,
   viewSectionKeyForSet,
-} from "./relationship-type-traits";
+} from "tome-store-flatfile";
 
 const ROW_META_KEYS = ORDER_META_KEYS;
 

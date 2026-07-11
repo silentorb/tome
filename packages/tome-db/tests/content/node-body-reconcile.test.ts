@@ -25,15 +25,15 @@ describe("CacheSync node body reconciliation", () => {
   );
 
   test("repairs SQLite body when it drifted from the node file", () => {
-    fixture.ctx.db.upsertNode(nodeId, { title: "Locations", body: "" });
-    expect(getNodeDetail(fixture.ctx.db, nodeId)?.body).toBe("");
+    fixture.ctx.cache.upsertNode(nodeId, { title: "Locations", body: "" });
+    expect(getNodeDetail(fixture.ctx.cache, nodeId)?.body).toBe("");
 
     const reopened = openContentGraph(
       fixture.ctx.store.contentDir,
-      fixture.ctx.db.path,
+      fixture.ctx.cache.path,
     );
-    expect(getNodeDetail(reopened.db, nodeId)?.body.trimEnd()).toBe(pageBlockBody.trimEnd());
-    reopened.db.close();
+    expect(getNodeDetail(reopened.cache, nodeId)?.body.trimEnd()).toBe(pageBlockBody.trimEnd());
+    reopened.cache.close();
   });
 
   afterAll(() => {

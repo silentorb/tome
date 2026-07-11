@@ -52,7 +52,7 @@ Applies to: sidebar nav, **Recent**, global search result rows, database relatio
 Keyboard shortcuts in combobox-style pickers (global search, Relate, record link picker) may simulate anchor clicks on **Enter** when focus is in the search field; result rows themselves remain anchors for pointer navigation.
 
 - Internal links **must** be stored in git-tracked markdown in one of two forms:
-  - **Static title:** `[Custom text](./{nodeId}.md)` (see `canonicalNodeMarkdownHref` in `tome-db/markdown-links.ts`) when the author overrides the displayed label.
+  - **Static title:** `[Custom text](./{nodeId}.md)` (see `canonicalNodeMarkdownHref` in `tome-store-flatfile` markdown-links) when the author overrides the displayed label.
   - **Dynamic title:** `[[{nodeId}]]` — no title stored; the displayed label is resolved from the target node’s `title` property at render time.
 - **Load/save transforms happen outside Milkdown** (same as static links): `prepareEditorMarkdown` expands storage to editor display markdown; `normalizeEditorBody` collapses back before `PUT`. Milkdown only sees standard `[text](href)` links. Dynamic links use an ephemeral `?node={id}&dynamic=1` href in the live editor (not stored).
 - On load, `prepareEditorMarkdown` expands `./{nodeId}.md` → `?node=` and `[[{nodeId}]]` → `[title](?node={id}&dynamic=1)` (titles fetched via the API). On save, `normalizeEditorBody` collapses `dynamic=1` links → `[[{nodeId}]]` and other node links → `./{nodeId}.md`. `tome://node/{id}`, `marloth://node/{id}`, `tome:{id}`, and `?node=` / `?record=` absolute URLs also resolve at read time.

@@ -37,7 +37,7 @@ describe("createExtensionGraphQueryServices", () => {
 
   test("listTypeMembers returns is_a instances", () => {
     const services = createExtensionGraphQueryServices(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       fixture.ctx.store.contentDir,
     );
     const members = services.listTypeMembers(typeId);
@@ -47,7 +47,7 @@ describe("createExtensionGraphQueryServices", () => {
 
   test("listEdges filters by node set and types", () => {
     const services = createExtensionGraphQueryServices(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       fixture.ctx.store.contentDir,
     );
     const nodeIds = [cityA, cityB, house];

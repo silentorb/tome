@@ -8,10 +8,10 @@ cd "$ROOT"
 source "$(dirname "$0")/ensure-node-modules.sh"
 
 exec bun -e "
-import { openTomeWriteContext, resolveContentPath, defaultDbPathForContent } from 'tome-db/content';
+import { openContentGraph, resolveContentPath, defaultDbPathForContent } from 'tome-db/content';
 const c = resolveContentPath();
-const ctx = openTomeWriteContext(c, defaultDbPathForContent(c));
+const ctx = openContentGraph(c, defaultDbPathForContent(c));
 ctx.sync.fullRebuild();
-ctx.db.close();
+ctx.cache.close();
 console.log('Synced', c);
 "

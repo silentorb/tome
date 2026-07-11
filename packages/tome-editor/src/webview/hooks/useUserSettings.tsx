@@ -8,8 +8,8 @@ import {
   type ReactNode,
 } from "react";
 import type { EditorApiClient } from "../../shared/http-client";
-import type { SchemaFile } from "tome-db/schema-file";
-import { emptySchemaFile } from "tome-db/schema-file";
+import type { SchemaFile } from "tome-graph-interfaces";
+import { emptySchemaFile } from "tome-store-flatfile/schema-file";
 import {
   applyUserSettingsPatch,
   emptyUserSettings,

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { isArchivedNode, isLegacyArchivedPath } from "../src/archive-status";
-import { GraphDatabase } from "../src/graph";
+import { GraphDatabase } from "tome-cache-sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,18 +24,20 @@ describe("archive-status", () => {
   test("isArchivedNode uses member_of membership on Archive hub", () => {
     const tempDir = mkdtempSync(join(tmpdir(), "tome-archive-status-"));
     const dbPath = join(tempDir, "test.sqlite");
-    const db = new GraphDatabase(dbPath);
     const contentDir = fixture.ctx.store.contentDir;
+    const db = new GraphDatabase(dbPath, {
+      memberPerspectives: () => ["member_of", "members"],
+    });
 
     db.upsertNode("active", { title: "Active" });
     db.upsertNode("archived", { title: "Archived member" });
     db.upsertNode(TEST_ARCHIVE_NODE_ID, { title: "Archive" });
     db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "member_of");
-    db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID, contentDir);
+    db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID);
 
-    expect(isArchivedNode(db, "archived")).toBe(true);
-    expect(isArchivedNode(db, "active")).toBe(false);
-    expect(isArchivedNode(db, TEST_ARCHIVE_NODE_ID)).toBe(false);
+    expect(isArchivedNode(db, "archived", contentDir)).toBe(true);
+    expect(isArchivedNode(db, "active", contentDir)).toBe(false);
+    expect(isArchivedNode(db, TEST_ARCHIVE_NODE_ID, contentDir)).toBe(false);
 
     db.close();
     rmSync(tempDir, { recursive: true, force: true });

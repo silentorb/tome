@@ -1,30 +1,30 @@
-import type { GraphDatabase, Relationship, Properties } from "./graph";
+import type { GraphDatabase, Relationship, Properties } from "tome-cache-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { relationshipId } from "./graph";
+import { relationshipId } from "tome-cache-sqlite";
 import { applyDynamicFields } from "./dynamic-fields";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import type { EvalRow } from "./row-sort";
 import { resolveGeneratedTabsFromScopes } from "./views/resolve-tabs";
-import { loadViewsFromContent } from "./views/load";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
-import { resolveContentPath } from "./content/paths";
+import { loadViewsFromContent } from "tome-store-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
+import { resolveContentPath } from "tome-store-flatfile";
 import { perspectiveForHostTable } from "./relationship-type-endpoints";
-import { normalizeRelationshipType } from "./relation-type";
-import { getTableSchema, relationColumns } from "./table-schema";
-import { loadTableSchemasFromContent } from "./table-schemas/load";
+import { normalizeRelationshipType } from "tome-store-flatfile";
+import { getTableSchema, relationColumns } from "tome-store-flatfile";
+import { loadTableSchemasFromContent } from "tome-store-flatfile";
 import {
   perspectiveForRelationColumn,
   relationColumnCompositeType,
-} from "./table-relation-column";
+} from "tome-store-flatfile";
 import { applySectionColumnOrder } from "./views/column-order";
 import {
   firstRelatedNodeId,
   listRelationshipsForComposite,
   relatedNodeIds,
 } from "./relationship-traverse";
-import { loadOrderedAssociationsFromContent } from "./ordered-associations-config/load";
+import { loadOrderedAssociationsFromContent } from "tome-store-flatfile";
 import { listSetMemberRowConnections } from "./set-membership";
 import { ORDERED_PROPERTY_DEFAULT,
   isOrderedTraitComposite,
@@ -33,7 +33,7 @@ import { ORDERED_PROPERTY_DEFAULT,
   setRoleIndices,
   typesWithTrait,
   SET_TRAIT,
-} from "./relationship-type-traits";
+} from "tome-store-flatfile";
 import { ORDER_META_KEYS, applySparseOrderRewrite } from "./ordered-relationships";
 import type {
   OrderedAssociationConfig,
@@ -550,7 +550,7 @@ export function applyOrderedAssociationMove(
   configId: string,
   params: OrderedAssociationMoveParams,
 ): OrderedAssociationViewDetail | null {
-  const db = ctx.db;
+  const db = ctx.cache;
   const contentDir = ctx.store.contentDir;
   const config = getConfig(configId, contentDir);
   if (!config) return null;

@@ -11,12 +11,12 @@ import {
   destroyTestContentFixture,
   seedTestNode,
 } from "../src/content/test-helpers";
-import { relationshipTypesFilePath } from "../src/content/paths";
+import { relationshipTypesFilePath } from "tome-store-flatfile";
 import {
   registerBidirectionalType,
   serializeRelationshipTypesFile,
-} from "../src/content/relationship-types-file";
-import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
+} from "tome-store-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
 
 describe("relationship-link-mutations", () => {
   const fixture = createTestContentFixture("tome-link-");

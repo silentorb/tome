@@ -3,10 +3,14 @@ import { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { labelToEnumIndex } from "../src/enum-codec";
-import { GraphDatabase } from "../src/graph";
-import { loadWorkspaceSchema } from "../src/schema-rules/load";
-import { resolvePropertyEnum } from "../src/property-enums-core";
+import {
+  decodeEnumProperties,
+  encodeEnumProperties,
+  labelToEnumIndex,
+} from "../src/enum-codec";
+import { GraphDatabase } from "tome-cache-sqlite";
+import { loadWorkspaceSchema } from "tome-store-flatfile";
+import { resolvePropertyEnum } from "tome-store-flatfile";
 
 describe("GraphDatabase enum cache encoding", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-enum-cache-"));
@@ -17,19 +21,22 @@ describe("GraphDatabase enum cache encoding", () => {
     const priorityEnum = resolvePropertyEnum("priority", schema);
     expect(priorityEnum).not.toBeNull();
 
-    const db = new GraphDatabase(dbPath, { clean: true });
+    const db = new GraphDatabase(dbPath, {
+      clean: true,
+      propertyCodec: {
+        encode: (properties) => encodeEnumProperties(properties, schema),
+        decode: (properties) => decodeEnumProperties(properties, schema),
+      },
+    });
     const recordId = "AAAAAAAAAAAAAAAAAAAAAAAAAA:BBBBBBBBBBBBBBBBBBBBBBBBBB:is_a";
 
-    db.upsertRelationshipRecord(
-      {
-        id: recordId,
-        nodeA: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
-        nodeB: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
-        compositeType: "member_of",
-        properties: { priority: "High", row_index: 4 },
-      },
-      "AAAAAAAAAAAAAAAAAAAAAAAAAA",
-    );
+    db.upsertRelationshipRecord({
+      id: recordId,
+      nodeA: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+      nodeB: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+      compositeType: "member_of",
+      properties: { priority: "High", row_index: 4 },
+    });
 
     const record = db.getRelationshipRecord(recordId);
     expect(record?.properties.priority).toBe("High");

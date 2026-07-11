@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { GraphDatabase } from "../src/graph";
+import { GraphDatabase } from "tome-cache-sqlite";
 import { getNodePageMetadata } from "../src/node-metadata";
 import { getNodePageDetail } from "../src/node-page-sections";
 import { updateNodeBody } from "../src/queries";
@@ -83,7 +83,7 @@ describe("node-metadata", () => {
     });
 
     updateNodeBody(fixture.ctx, PAGE_A, "New");
-    const vertex = fixture.ctx.db.getNode(PAGE_A);
+    const vertex = fixture.ctx.cache.getNode(PAGE_A);
     expect(typeof vertex?.properties.modified_at).toBe("string");
     expect(typeof vertex?.properties.created_at).toBe("string");
 

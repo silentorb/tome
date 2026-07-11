@@ -49,12 +49,12 @@ describe("deleteDatabaseColumn", () => {
     const tableSchema = fixture.ctx.store.readTableSchemasFile().tables[databaseId];
     expect(tableSchema?.columns.some((col) => col.key === "priority")).toBe(false);
 
-    const edge1 = fixture.ctx.db.listRelationshipsFromSource(page1, "member_of")[0];
+    const edge1 = fixture.ctx.cache.listRelationshipsFromSource(page1, "member_of")[0];
     expect(edge1?.properties.priority).toBeUndefined();
     expect(edge1?.properties.task_state).toBe("Open");
     expect(edge1?.properties.row_index).toBe(0);
 
-    const detail = getDatabaseViewDetail(fixture.ctx.db, databaseId, undefined, fixture.ctx.store.contentDir);
+    const detail = getDatabaseViewDetail(fixture.ctx.cache, databaseId, undefined, fixture.ctx.store.contentDir);
     expect(detail?.columns).not.toContain("priority");
     expect(detail?.columns).toContain("task_state");
   });
@@ -101,9 +101,9 @@ describe("deleteDatabaseColumn", () => {
 
     const tableSchema = fixture.ctx.store.readTableSchemasFile().tables[databaseId];
     expect(tableSchema?.columns.some((col) => col.key === "parents")).toBe(false);
-    expect(fixture.ctx.db.listRelationshipsFromSource(pageId, "children")).toHaveLength(0);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(pageId, "children")).toHaveLength(0);
 
-    const detail = getDatabaseViewDetail(fixture.ctx.db, databaseId, undefined, fixture.ctx.store.contentDir);
+    const detail = getDatabaseViewDetail(fixture.ctx.cache, databaseId, undefined, fixture.ctx.store.contentDir);
     expect(detail?.columns).not.toContain("parents");
   });
 

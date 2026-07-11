@@ -308,7 +308,7 @@ export function createApiHandler(
         const relationshipType = viewsRelationshipMatch[2]!;
         const payload = (await req.json()) as {
           viewOrder?: string[];
-          properties?: import("tome-db").ViewProperties;
+          properties?: import("tome-graph-interfaces").ViewProperties;
         };
         const hasViewOrder = Array.isArray(payload.viewOrder);
         const hasProperties = payload.properties !== undefined;
@@ -334,7 +334,7 @@ export function createApiHandler(
         const payload = (await req.json()) as {
           name?: string;
           sorts?: ViewSortSpec[];
-          properties?: import("tome-db").ViewProperties;
+          properties?: import("tome-graph-interfaces").ViewProperties;
         };
         if (typeof payload.name !== "string" || !payload.name.trim()) {
           return json({ error: "name required" }, 400);
@@ -363,7 +363,7 @@ export function createApiHandler(
           const payload = (await req.json()) as {
             name?: string;
             sorts?: ViewSortSpec[];
-            properties?: import("tome-db").ViewProperties;
+            properties?: import("tome-graph-interfaces").ViewProperties;
             hiddenColumns?: string[];
           };
           try {
@@ -462,7 +462,7 @@ export function createApiHandler(
         const result = db.createDatabaseColumn(databaseId, {
           key: payload.key,
           name: payload.name,
-          type: payload.type as import("tome-db").TableColumnDef["type"],
+          type: payload.type as import("tome-graph-interfaces").TableColumnDef["type"],
           enumId: payload.enumId,
           relationshipType: payload.relationshipType,
         });
@@ -495,7 +495,7 @@ export function createApiHandler(
         const result = db.updateDatabaseColumn(databaseId, columnKey, {
           name: payload.name,
           newKey: payload.newKey,
-          type: payload.type as import("tome-db").TableColumnDef["type"] | undefined,
+          type: payload.type as import("tome-graph-interfaces").TableColumnDef["type"] | undefined,
           enumId: payload.enumId,
           relationshipType: payload.relationshipType,
         });

@@ -1,16 +1,16 @@
-import type { GraphDatabase, Properties, Relationship } from "./graph";
+import type { GraphDatabase, Properties, Relationship } from "tome-cache-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
-import { relationshipId } from "./graph";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import { relationshipId } from "tome-cache-sqlite";
+import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
 import {
   defaultOrderedSetMembershipComposite,
   isOrderedTraitComposite,
   membershipCompositeForSet,
   membershipPerspectivesForSet,
   orderedPropertyName,
-} from "./relationship-type-traits";
-import { resolveContentPath } from "./content/paths";
-import type { RelationshipTypesFile } from "./content/relationship-types-file";
+} from "tome-store-flatfile";
+import { resolveContentPath } from "tome-store-flatfile";
+import type { RelationshipTypesFile } from "tome-store-flatfile";
 import { listSetMemberRowConnections } from "./set-membership";
 
 export const ORDER_META_KEYS = new Set([
@@ -77,7 +77,7 @@ export function stampOrderIfMissing(
   if (!isOrderedTraitComposite(registry, composite)) return props;
   const property = orderedPropertyName(registry.types[composite]);
   if (property in props) return props;
-  return { ...props, [property]: maxOrderAtSet(ctx.db, setId, dir) + 1 };
+  return { ...props, [property]: maxOrderAtSet(ctx.cache, setId, dir) + 1 };
 }
 
 export interface SparseOrderRewriteEdge {

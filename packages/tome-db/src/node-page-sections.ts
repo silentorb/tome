@@ -1,4 +1,4 @@
-import type { GraphDatabase, Relationship } from "./graph";
+import type { GraphDatabase, Relationship } from "tome-cache-sqlite";
 import { getDatabaseViewDetail } from "./database-view";
 import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./property-enums";
 import {
@@ -13,32 +13,32 @@ import {
   relationshipTypeRuleContext,
 } from "./relationship-type-endpoints";
 import { findTypeNodeByTitle, typeIdsForInstance } from "./node-capabilities";
-import { normalizeRelationshipType } from "./relation-type";
-import { resolveContentPath } from "./content/paths";
-import { resolveCompositeType } from "./content/relationship-types-file";
+import { normalizeRelationshipType } from "tome-store-flatfile";
+import { resolveContentPath } from "tome-store-flatfile";
+import { resolveCompositeType } from "tome-store-flatfile";
 import {
   formatRelationshipTypeLabel,
   perspectiveDisplayLabel,
   perspectiveLinkAddLabel,
 } from "./relationship-type-label";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
 import {
   isMemberSidePerspective,
   isSetSidePerspective,
   isSetTraitPerspective,
   membershipCompositeForPerspective,
   viewSectionKeyForSet,
-} from "./relationship-type-traits";
+} from "tome-store-flatfile";
 import { generatedProviderId } from "./views/resolve-tabs";
-import { loadViewsFromContent } from "./views/load";
-import { loadTableSchemasFromContent } from "./table-schemas/load";
-import type { TableRelationColumn } from "./content/table-schemas-file";
-import { getTableSchema, relationColumns } from "./table-schema";
+import { loadViewsFromContent } from "tome-store-flatfile";
+import { loadTableSchemasFromContent } from "tome-store-flatfile";
+import type { TableRelationColumn } from "tome-store-flatfile";
+import { getTableSchema, relationColumns } from "tome-store-flatfile";
 import {
   perspectiveForRelationColumn,
   relationColumnCompositeType,
   targetTypeIdForRelationColumn,
-} from "./table-relation-column";
+} from "tome-store-flatfile";
 import type {
   NodePageDetail,
   NodeSection,

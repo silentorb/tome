@@ -6,11 +6,13 @@
 
 | Package | Role |
 | ------- | ---- |
-| `packages/tome-db/` | SQLite cache, content sync, schema/model loaders |
+| `packages/tome-store-flatfile/` | Flatfile content store (canonical git-tracked data + change watching) |
+| `packages/tome-cache-sqlite/` | SQLite query cache |
+| `packages/tome-db/` | Domain queries/mutations + content↔cache sync |
 | `packages/tome-graph-interfaces/` | Domain DTOs + `TomeGraphServices` |
-| `packages/tome-service-interfaces/` | `TomeServiceModule` contracts |
+| `packages/tome-service-interfaces/` | Store/cache/service module contracts |
 | `packages/tome-http/` | HTTP service module + client SDK |
-| `packages/tome-server/` | Config-driven host (wires db + services) |
+| `packages/tome-server/` | Config-driven host (store, cache, services) |
 | `packages/tome-editor/` | Vite/React editor webview (client only) |
 | `packages/tome-static-site/` | Astro static export |
 | `packages/tome-interfaces/` | Extension / page-block integration contracts |

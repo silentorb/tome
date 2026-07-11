@@ -42,9 +42,9 @@ describe("record lifecycle", () => {
 
   test("archiveNode links page to Archive via set membership", () => {
     expect(archiveNode(fixture.ctx, PAGE_ACTIVE)).toBeNull();
-    const detail = getNodeDetail(fixture.ctx.db, PAGE_ACTIVE);
+    const detail = getNodeDetail(fixture.ctx.cache, PAGE_ACTIVE);
     expect(detail?.archived).toBe(true);
-    expect(isArchivedNode(fixture.ctx.db, PAGE_ACTIVE, contentDir)).toBe(true);
+    expect(isArchivedNode(fixture.ctx.cache, PAGE_ACTIVE, contentDir)).toBe(true);
   });
 
   test("archiveNode rejects protected and already archived pages", () => {
@@ -58,12 +58,12 @@ describe("record lifecycle", () => {
       properties: { title: "Disposable" },
     });
     expect(deleteNode(fixture.ctx, PAGE_DELETE)).toBeNull();
-    expect(getNodeDetail(fixture.ctx.db, PAGE_DELETE)).toBeNull();
+    expect(getNodeDetail(fixture.ctx.cache, PAGE_DELETE)).toBeNull();
     expect(deleteNode(fixture.ctx, TEST_HOME_NODE_ID)).toBe("protected");
   });
 
   test("searchNodes excludes archived pages", () => {
-    const hits = searchNodes(fixture.ctx.db, "Scene", 20);
+    const hits = searchNodes(fixture.ctx.cache, "Scene", 20);
     expect(hits.some((hit) => hit.id === PAGE_ACTIVE)).toBe(false);
     expect(hits.some((hit) => hit.id === PAGE_ARCHIVED)).toBe(false);
   });

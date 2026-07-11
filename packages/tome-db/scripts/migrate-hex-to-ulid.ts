@@ -48,18 +48,18 @@ if (bodyResidual.size > 0) {
 }
 
 const dbPath = process.env.TOME_DB_PATH ?? defaultDbPathForContent(contentDir);
-const { store, sync, db } = openContentGraph(contentDir, dbPath);
+const { store, sync, cache } = openContentGraph(contentDir, dbPath);
 sync.fullRebuild();
 const nodeIds = store.listNodeIds();
 if (nodeIds.length !== report.fileBackedCount) {
   console.error(`  ERROR: node count changed: ${report.fileBackedCount} -> ${nodeIds.length}`);
-  db.close();
+  cache.close();
   process.exit(1);
 }
 const known = new Set(nodeIds);
 const rels = store.readRelationshipsFile().relationships;
 const dangling = rels.filter((r) => !known.has(r.a) || !known.has(r.b));
-db.close();
+cache.close();
 console.log(
   `  OK: ${nodeIds.length} nodes, ${rels.length} relationships, cache rebuilt at ${dbPath}` +
     (dangling.length > 0 ? ` (${dangling.length} pre-existing dangling relationship endpoints)` : ""),

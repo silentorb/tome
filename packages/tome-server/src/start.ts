@@ -1,5 +1,18 @@
+import {
+  decodeEnumProperties,
+  encodeEnumProperties,
+  loadRelationshipTypesFromContent,
+  loadSchemaFromContent,
+  setTraitPerspectives,
+} from "tome-db";
 import { openTomeGraphServices } from "./graph-services";
-import { loadServerConfig, resolveServerConfigPath, startConfiguredServices } from "./load-services";
+import {
+  loadConfiguredCache,
+  loadConfiguredStore,
+  loadServerConfig,
+  resolveServerConfigPath,
+  startConfiguredServices,
+} from "./load-services";
 import { resolveContentPath, resolveDbPath } from "./paths";
 
 export async function startTomeServer(options?: {
@@ -16,7 +29,22 @@ export async function startTomeServer(options?: {
   console.log(`[tome-server] db=${dbPath}`);
   console.log(`[tome-server] config=${configPath}`);
 
-  const graph = openTomeGraphServices(dbPath, contentPath);
+  const store = await loadConfiguredStore(config.store, contentPath);
+  const contentDir = store.contentDir;
+  const propertyCodec = {
+    encode: (properties: Parameters<typeof encodeEnumProperties>[0]) =>
+      encodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
+    decode: (properties: Parameters<typeof decodeEnumProperties>[0]) =>
+      decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
+  };
+  const memberPerspectives = () =>
+    setTraitPerspectives(loadRelationshipTypesFromContent(contentDir));
+  const cache = await loadConfiguredCache(config.cache, dbPath, {
+    propertyCodec,
+    memberPerspectives,
+  });
+
+  const graph = openTomeGraphServices({ store, cache });
   const started = await startConfiguredServices(graph, config);
 
   return {

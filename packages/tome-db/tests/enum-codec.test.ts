@@ -6,7 +6,7 @@ import {
   indexToEnumLabel,
   labelToEnumIndex,
 } from "../src/enum-codec";
-import type { SchemaFile } from "../src/schema-rules/schema-file";
+import type { SchemaFile } from "tome-store-flatfile";
 
 const TEST_SCHEMA: SchemaFile = {
   version: 1,

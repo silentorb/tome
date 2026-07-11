@@ -1,13 +1,13 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import { resolve } from "node:path";
-import { GraphDatabase } from "../src/graph";
+import { GraphDatabase } from "tome-cache-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestTableSchema,
 } from "../src/content/test-helpers";
-import { openTomeWriteContext } from "../src/content/write-context";
+import { openContentGraph } from "../src/content/sync";
 import {
   expectedTypeDatabaseForPage,
   findMissingTypeMembershipRelationships,
@@ -26,7 +26,7 @@ const EXPORT_PREFIX =
 
 describe("type-membership-audit path matching", () => {
   const fixture = createTestContentFixture("tome-type-audit-path-");
-  const db = fixture.ctx.db;
+  const db = fixture.ctx.cache;
 
   seedTestTableSchema(fixture, "0000000000000000000000000K", []);
   seedTestTableSchema(fixture, "00000000000000000000000030", []);
@@ -132,7 +132,7 @@ describe("nested page type membership", () => {
 
   test("findNestedPageSpuriousTypeMembership scans type tables with export paths", () => {
     const fixture = createTestContentFixture("nested-page-audit-");
-    const db = fixture.ctx.db;
+    const db = fixture.ctx.cache;
     const contentDir = fixture.ctx.store.contentDir;
 
     seedTestTableSchema(fixture, FEATURES_DB, []);
@@ -199,32 +199,32 @@ const productionDbPath = resolve(import.meta.dir, "../../../repos/marloth-story/
 /** Run manually with marloth content synced: un-skip this block. */
 describe.skip("type-membership-audit (production graph)", () => {
   test("every typed page has an IS_A edge to its expected database", () => {
-    const ctx = openTomeWriteContext(productionContentDir, productionDbPath);
+    const ctx = openContentGraph(productionContentDir, productionDbPath);
     try {
-      const missing = findMissingTypeMembershipRelationships(ctx.db);
+      const missing = findMissingTypeMembershipRelationships(ctx.cache);
       expect(missing).toEqual([]);
     } finally {
-      ctx.db.close();
+      ctx.cache.close();
     }
   });
 
   test("typed pages do not have spurious IS_A edges to other databases", () => {
-    const ctx = openTomeWriteContext(productionContentDir, productionDbPath);
+    const ctx = openContentGraph(productionContentDir, productionDbPath);
     try {
-      const spurious = findSpuriousTypeMembershipRelationships(ctx.db);
+      const spurious = findSpuriousTypeMembershipRelationships(ctx.cache);
       expect(spurious).toEqual([]);
     } finally {
-      ctx.db.close();
+      ctx.cache.close();
     }
   });
 
   test("typed pages do not store row scalars on the vertex", () => {
-    const ctx = openTomeWriteContext(productionContentDir, productionDbPath);
+    const ctx = openContentGraph(productionContentDir, productionDbPath);
     try {
-      const violations = findNodeScalarsOnTypedNodes(ctx.db);
+      const violations = findNodeScalarsOnTypedNodes(ctx.cache);
       expect(violations).toEqual([]);
     } finally {
-      ctx.db.close();
+      ctx.cache.close();
     }
   });
 });

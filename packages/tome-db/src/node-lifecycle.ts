@@ -6,8 +6,8 @@ import {
   markIncidentRelationshipsArchived,
   unmarkIncidentRelationshipsArchived,
 } from "./relationship-archive";
-import { membershipPerspectivesForSet } from "./relationship-type-traits";
-import { archiveNodeId, protectedNodeIds } from "./workspace/resolve";
+import { membershipPerspectivesForSet } from "tome-store-flatfile";
+import { archiveNodeId, protectedNodeIds } from "tome-store-flatfile";
 import type { NodeLifecycleError } from "tome-graph-interfaces";
 
 export type { NodeLifecycleError } from "tome-graph-interfaces";
@@ -33,7 +33,7 @@ export function archiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleErr
   const hubId = archiveNodeId(contentDir);
   if (isProtectedNodeId(id, contentDir)) return "protected";
   if (!ctx.store.readNode(id)) return "not_found";
-  if (isArchivedNode(ctx.db, id, contentDir)) return "already_archived";
+  if (isArchivedNode(ctx.cache, id, contentDir)) return "already_archived";
 
   markIncidentRelationshipsArchived(ctx.store, id, hubId);
   const [, memberPerspective] = membershipPerspectivesForSet(hubId, contentDir);
@@ -47,7 +47,7 @@ export function unarchiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleE
   const hubId = archiveNodeId(contentDir);
   if (isProtectedNodeId(id, contentDir)) return "protected";
   if (!ctx.store.readNode(id)) return "not_found";
-  if (!isArchivedNode(ctx.db, id, contentDir)) return "not_archived";
+  if (!isArchivedNode(ctx.cache, id, contentDir)) return "not_archived";
 
   const [, memberPerspective] = membershipPerspectivesForSet(hubId, contentDir);
   ctx.store.deleteRelationship(id, hubId, memberPerspective);

@@ -1,4 +1,4 @@
-import { hasLeadingCalloutEmoji } from "tome-db/callout";
+import { hasLeadingCalloutEmoji } from "tome-store-flatfile/callout";
 
 function isCalloutBlockquoteInner(inner: string): boolean {
   const firstParagraph = /<p>([^<]*)<\/p>/i.exec(inner);

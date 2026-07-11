@@ -4,18 +4,22 @@
 
 Composition root / host:
 
-1. Open content + SQLite via `tome-db`
-2. Expose `TomeGraphServices`
-3. Load service modules from JSON config (`dynamic import`) — **no production dependency on `tome-http`**
+1. Load singular **store** + **cache** modules from JSON config (`dynamic import`)
+2. Open store, build enum codec / set-membership perspectives via `tome-db`, open cache
+3. Expose `TomeGraphServices` (`openTomeGraphServices({ store, cache })`)
+4. Start service modules from the same config — **no production dependency on `tome-http` / store / cache packages**
 
 ## Config
 
-`TOME_SERVER_CONFIG` or default `config/tome-server.json` in this package. `services` may be empty (warn + stay up).
+`TOME_SERVER_CONFIG` or default `config/tome-server.json` in this package.
+
+Required slots: `store`, `cache` (singular module entries). `services` may be empty (warn + stay up).
 
 ## Dependency rules
 
 - Production: `tome-graph-interfaces`, `tome-service-interfaces`, `tome-db`, `tome-interfaces`
-- **Do not** import `tome-http` from `src/` (devDependency for tests only)
+- DevDependencies (config-loaded / tests): `tome-http`, `tome-store-flatfile`, `tome-cache-sqlite`
+- **Do not** statically import plugin packages from `src/` (resolve them via config `dynamic import`)
 
 ## Run
 

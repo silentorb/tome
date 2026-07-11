@@ -1,6 +1,6 @@
-import type { GraphDatabase, Properties, Relationship } from "./graph";
+import type { GraphDatabase, Properties, Relationship } from "tome-cache-sqlite";
 import { findSetMembershipRelationship, setMemberIds } from "./set-membership";
-import { normalizeRelationshipType } from "./relation-type";
+import { normalizeRelationshipType } from "tome-store-flatfile";
 
 export function rowBelongsToDatabase(
   db: GraphDatabase,

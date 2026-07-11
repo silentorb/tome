@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   emptyRelationshipTypesFile,
   registerTypeDefinition,
-} from "../src/content/relationship-types-file";
+} from "tome-store-flatfile";
 import { relationSectionSupportsLinkExisting } from "../src/relationship-type-endpoints";
 
 function registryWithTypes(

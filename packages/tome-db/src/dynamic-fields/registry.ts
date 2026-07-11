@@ -1,4 +1,4 @@
-import type { GraphDatabase } from "../graph";
+import type { GraphDatabase } from "tome-cache-sqlite";
 import type { EvalRow } from "../row-sort";
 
 export type DynamicFieldParams = Record<string, unknown>;

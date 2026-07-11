@@ -1,8 +1,8 @@
-import { generateNodeId } from "./node-id";
-import type { Properties } from "./graph";
-import { normalizeRelationshipType } from "./relation-type";
-import { resolveCompositeType } from "./content/relationship-types-file";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import { generateNodeId } from "tome-store-flatfile/node-id";
+import type { Properties } from "tome-cache-sqlite";
+import { normalizeRelationshipType } from "tome-store-flatfile";
+import { resolveCompositeType } from "tome-store-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
@@ -10,7 +10,7 @@ import { stampOrderIfMissing } from "./ordered-relationships";
 import {
   membershipCompositeForSet,
   membershipPerspectivesForSet,
-} from "./relationship-type-traits";
+} from "tome-store-flatfile";
 import type {
   CreateNodeError,
   CreateNodeInput,
@@ -49,7 +49,7 @@ function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: stri
   const normalized = normalizeRelationshipType(type);
   const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
   const composite = resolveCompositeType(registry, normalized);
-  const outgoing = ctx.db.listRelationshipsFromSource(sourceId).filter((c) => {
+  const outgoing = ctx.cache.listRelationshipsFromSource(sourceId).filter((c) => {
     const edgeType = normalizeRelationshipType(c.type);
     return edgeType === composite || edgeType === normalized;
   });
@@ -75,7 +75,7 @@ export function createNode(
     const database = ctx.store.readNode(input.link.databaseId);
     if (
       !database ||
-      !isTypeTableNode(ctx.db, input.link.databaseId, ctx.store.contentDir)
+      !isTypeTableNode(ctx.cache, input.link.databaseId, ctx.store.contentDir)
     ) {
       return "database_not_found";
     }

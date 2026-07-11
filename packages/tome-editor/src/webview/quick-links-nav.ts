@@ -1,4 +1,4 @@
-import type { WorkspaceQuickLink } from "tome-db";
+import type { WorkspaceQuickLink } from "tome-graph-interfaces";
 import type { AppView } from "../shared/types";
 import { navigateStandaloneNode, openStandaloneNodeInNewTab } from "./node-links";
 

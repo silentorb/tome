@@ -3,9 +3,16 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
   TomeServerConfig,
-  TomeServerServiceConfigEntry,
+  TomeServerModuleConfigEntry,
   TomeServiceModule,
   TomeServiceModuleFactory,
+  TomeStoreModule,
+  TomeStoreModuleFactory,
+  TomeCacheModule,
+  TomeCacheModuleFactory,
+  TomeDataStore,
+  TomeQueryCache,
+  TomeQueryCacheOpenOptions,
 } from "tome-service-interfaces";
 import type { TomeGraphServices } from "tome-graph-interfaces";
 
@@ -22,6 +29,35 @@ export function resolveServerConfigPath(): string {
   return DEFAULT_CONFIG_PATH;
 }
 
+function parseModuleEntry(entry: unknown, label: string): TomeServerModuleConfigEntry {
+  if (!entry || typeof entry !== "object") {
+    throw new Error(`tome-server config: ${label} must be an object`);
+  }
+  const e = entry as Record<string, unknown>;
+  if (typeof e.id !== "string" || !e.id.trim()) {
+    throw new Error(`tome-server config: ${label}.id required`);
+  }
+  if (typeof e.module !== "string" || !e.module.trim()) {
+    throw new Error(`tome-server config: ${label}.module required`);
+  }
+  if (typeof e.export !== "string" || !e.export.trim()) {
+    throw new Error(`tome-server config: ${label}.export required`);
+  }
+  return {
+    id: e.id.trim(),
+    module: e.module.trim(),
+    export: e.export.trim(),
+    options: e.options,
+  };
+}
+
+function optionsRecord(options: unknown): Record<string, unknown> {
+  if (options && typeof options === "object" && !Array.isArray(options)) {
+    return options as Record<string, unknown>;
+  }
+  return {};
+}
+
 export function parseServerConfig(raw: unknown): TomeServerConfig {
   if (!raw || typeof raw !== "object") {
     throw new Error("tome-server config: root must be an object");
@@ -31,32 +67,16 @@ export function parseServerConfig(raw: unknown): TomeServerConfig {
   if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
     throw new Error("tome-server config: version must be a positive integer");
   }
+  const store = parseModuleEntry(obj.store, "store");
+  const cache = parseModuleEntry(obj.cache, "cache");
   const servicesRaw = obj.services;
   if (!Array.isArray(servicesRaw)) {
     throw new Error("tome-server config: services must be an array");
   }
-  const services: TomeServerServiceConfigEntry[] = servicesRaw.map((entry, index) => {
-    if (!entry || typeof entry !== "object") {
-      throw new Error(`tome-server config: services[${index}] must be an object`);
-    }
-    const e = entry as Record<string, unknown>;
-    if (typeof e.id !== "string" || !e.id.trim()) {
-      throw new Error(`tome-server config: services[${index}].id required`);
-    }
-    if (typeof e.module !== "string" || !e.module.trim()) {
-      throw new Error(`tome-server config: services[${index}].module required`);
-    }
-    if (typeof e.export !== "string" || !e.export.trim()) {
-      throw new Error(`tome-server config: services[${index}].export required`);
-    }
-    return {
-      id: e.id.trim(),
-      module: e.module.trim(),
-      export: e.export.trim(),
-      options: e.options,
-    };
-  });
-  return { version, services };
+  const services: TomeServerModuleConfigEntry[] = servicesRaw.map((entry, index) =>
+    parseModuleEntry(entry, `services[${index}]`),
+  );
+  return { version, store, cache, services };
 }
 
 export function loadServerConfig(path = resolveServerConfigPath()): TomeServerConfig {
@@ -67,7 +87,7 @@ export function loadServerConfig(path = resolveServerConfigPath()): TomeServerCo
   return parseServerConfig(raw);
 }
 
-async function loadServiceModule(entry: TomeServerServiceConfigEntry): Promise<TomeServiceModule> {
+async function loadServiceModule(entry: TomeServerModuleConfigEntry): Promise<TomeServiceModule> {
   const mod = (await import(entry.module)) as Record<string, unknown>;
   const factory = mod[entry.export];
   if (typeof factory !== "function") {
@@ -81,8 +101,64 @@ async function loadServiceModule(entry: TomeServerServiceConfigEntry): Promise<T
       `tome-server: ${entry.module}.${entry.export}() did not return a TomeServiceModule`,
     );
   }
-  // Prefer config id when provided
   return { ...created, id: entry.id || created.id };
+}
+
+export async function loadConfiguredStore(
+  entry: TomeServerModuleConfigEntry,
+  defaultContentPath: string,
+): Promise<TomeDataStore> {
+  const mod = (await import(entry.module)) as Record<string, unknown>;
+  const factory = mod[entry.export];
+  if (typeof factory !== "function") {
+    throw new Error(
+      `tome-server: ${entry.module} export "${entry.export}" is not a function`,
+    );
+  }
+  const created = (factory as TomeStoreModuleFactory)();
+  if (!created || typeof created.open !== "function") {
+    throw new Error(
+      `tome-server: ${entry.module}.${entry.export}() did not return a TomeStoreModule`,
+    );
+  }
+  const storeModule: TomeStoreModule = { ...created, id: entry.id || created.id };
+  const opts = optionsRecord(entry.options);
+  const contentPath =
+    typeof opts.contentPath === "string" && opts.contentPath.trim()
+      ? opts.contentPath.trim()
+      : defaultContentPath;
+  return storeModule.open({ contentPath });
+}
+
+export async function loadConfiguredCache(
+  entry: TomeServerModuleConfigEntry,
+  defaultDbPath: string,
+  extras?: Pick<TomeQueryCacheOpenOptions, "propertyCodec" | "memberPerspectives">,
+): Promise<TomeQueryCache> {
+  const mod = (await import(entry.module)) as Record<string, unknown>;
+  const factory = mod[entry.export];
+  if (typeof factory !== "function") {
+    throw new Error(
+      `tome-server: ${entry.module} export "${entry.export}" is not a function`,
+    );
+  }
+  const created = (factory as TomeCacheModuleFactory)();
+  if (!created || typeof created.open !== "function") {
+    throw new Error(
+      `tome-server: ${entry.module}.${entry.export}() did not return a TomeCacheModule`,
+    );
+  }
+  const cacheModule: TomeCacheModule = { ...created, id: entry.id || created.id };
+  const opts = optionsRecord(entry.options);
+  const dbPath =
+    typeof opts.dbPath === "string" && opts.dbPath.trim()
+      ? opts.dbPath.trim()
+      : defaultDbPath;
+  return cacheModule.open({
+    dbPath,
+    propertyCodec: extras?.propertyCodec,
+    memberPerspectives: extras?.memberPerspectives,
+  });
 }
 
 export interface StartedServices {

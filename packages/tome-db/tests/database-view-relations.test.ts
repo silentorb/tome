@@ -2,11 +2,11 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { contentModelDir, dynamicFieldsFilePath, relationshipTypesFilePath, tableSchemasFilePath } from "../src/content/paths";
-import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "../src/content/dynamic-fields-file";
-import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
-import { invalidateTableSchemasCache } from "../src/table-schemas/load";
-import { GraphDatabase } from "../src/graph";
+import { contentModelDir, dynamicFieldsFilePath, relationshipTypesFilePath, tableSchemasFilePath } from "tome-store-flatfile";
+import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "tome-store-flatfile";
+import { serializeTableSchemasFile } from "tome-store-flatfile";
+import { invalidateTableSchemasCache } from "tome-store-flatfile";
+import { GraphDatabase } from "tome-cache-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { listRelationConnectionsForRow } from "../src/database-view-relations";
@@ -15,14 +15,14 @@ import {
   destroyTestContentFixture,
   seedTestNode,
 } from "../src/content/test-helpers";
-import { RELATIONSHIPS_FILE_VERSION } from "../src/content/relationships-file";
+import { RELATIONSHIPS_FILE_VERSION } from "tome-store-flatfile";
 import {
   emptyRelationshipTypesFile,
   registerSetMembershipType,
   registerTypeDefinition,
   serializeRelationshipTypesFile,
-} from "../src/content/relationship-types-file";
-import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
+} from "tome-store-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
 
 describe("database-view-relations", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-view-rel-"));
@@ -267,7 +267,7 @@ describe("database-view-relations", () => {
 
     const neighborContentDir = fixture.ctx.store.contentDir;
     const fromA = listRelationConnectionsForRow(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       locationA,
       "neighbor",
       locationsDb,
@@ -275,7 +275,7 @@ describe("database-view-relations", () => {
       neighborContentDir,
     );
     const fromB = listRelationConnectionsForRow(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       locationB,
       "neighbor",
       locationsDb,

@@ -1,13 +1,13 @@
-import type { GraphDatabase } from "./graph";
+import type { GraphDatabase } from "tome-cache-sqlite";
 import { typeIdsForInstance } from "./node-capabilities";
-import { normalizeRelationshipType } from "./relation-type";
+import { normalizeRelationshipType } from "tome-store-flatfile";
 import type {
   PerspectiveLabelConfig,
   RelationshipTypeDefinition,
   RelationshipTypeEndpoints,
   RelationshipTypesFile,
-} from "./content/relationship-types-file";
-import { resolveCompositeType } from "./content/relationship-types-file";
+} from "tome-store-flatfile";
+import { resolveCompositeType } from "tome-store-flatfile";
 
 function linkExistingFromPerspectiveLabel(
   config: PerspectiveLabelConfig | undefined,

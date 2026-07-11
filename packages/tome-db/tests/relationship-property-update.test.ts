@@ -30,7 +30,7 @@ describe("relationship-property-update", () => {
       updateDatabaseRowProperty(fixture.ctx, databaseId, pageId, "priority", "High"),
     ).toBeNull();
 
-    const edge = fixture.ctx.db.listRelationshipsFromSource(pageId, "member_of")[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, "member_of")[0];
     expect(edge?.properties.priority).toBe("High");
   });
 
@@ -46,7 +46,7 @@ describe("relationship-property-update", () => {
     expect(
       updateOutgoingRelationshipProperty(fixture.ctx, pageId, targetId, "related", "priority", ""),
     ).toBeNull();
-    const edge = fixture.ctx.db.listRelationshipsFromSource(pageId, "related")[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, "related")[0];
     expect(edge?.properties.priority).toBe("Low");
   });
 

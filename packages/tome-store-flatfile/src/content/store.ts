@@ -4,11 +4,19 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  watch,
   writeFileSync,
+  type FSWatcher,
 } from "node:fs";
-import { dirname, resolve } from "node:path";
-import type { Node, Properties } from "../graph";
-import { relationshipId } from "../graph";
+import { basename, dirname, resolve } from "node:path";
+import type { Node, Properties } from "tome-graph-interfaces";
+import type {
+  StoreChangeEvent,
+  StoreChangeKind,
+  StoreChangeListener,
+  TomeDataStore,
+} from "tome-service-interfaces";
+import { relationshipId } from "../relationship-id";
 import { normalizeRelationshipType } from "../relation-type";
 import {
   type RelationshipEntry,
@@ -21,7 +29,6 @@ import {
 } from "./relationships-file";
 import {
   type RelationshipTypesFile,
-  RELATIONSHIP_TYPES_FILE_VERSION,
   emptyRelationshipTypesFile,
   isBidirectionalComposite,
   localTypesForComposite,
@@ -29,6 +36,56 @@ import {
   serializeRelationshipTypesFile,
 } from "./relationship-types-file";
 import { LinkResolutionError, resolveCompositeTypeForLink } from "./resolve-composite-for-link";
+import {
+  type DynamicFieldsFile,
+  emptyDynamicFieldsFile,
+  parseDynamicFieldsFile,
+  serializeDynamicFieldsFile,
+} from "./dynamic-fields-file";
+import {
+  type ViewsFile,
+  emptyViewsFile,
+  parseViewsFile,
+  serializeViewsFile,
+} from "./views-file";
+import {
+  type TableSchemasFile,
+  emptyTableSchemasFile,
+  parseTableSchemasFile,
+  serializeTableSchemasFile,
+} from "./table-schemas-file";
+import {
+  emptyWorkspaceFile,
+  parseWorkspaceFile,
+  serializeWorkspaceFile,
+  type WorkspaceFile,
+} from "../workspace/workspace-file";
+import { bodyFromNode, nodeFromFile, serializeNodeFile } from "./node-file";
+import {
+  RELATIONSHIPS_FILENAME,
+  RELATIONSHIP_TYPES_FILENAME,
+  DYNAMIC_FIELDS_FILENAME,
+  SCHEMA_FILENAME,
+  VIEWS_FILENAME,
+  TABLE_SCHEMAS_FILENAME,
+  WORKSPACE_FILENAME,
+  ORDERED_ASSOCIATIONS_FILENAME,
+  EXTENSIONS_FILENAME,
+  contentDataDir,
+  contentModelDir,
+  relationshipsFilePath,
+  relationshipTypesFilePath,
+  dynamicFieldsFilePath,
+  viewsFilePath,
+  tableSchemasFilePath,
+  workspaceFilePath,
+  isNodeId,
+  nodeFilePath,
+  NODE_FILE_PATTERN,
+  legacyConnectionsFilePath,
+} from "./paths";
+
+const DEBOUNCE_MS = 200;
 
 function entryMatchesLocalType(
   registry: RelationshipTypesFile,
@@ -61,45 +118,6 @@ function orderedEndpointsForLocalType(
   }
   return { a: source, b: target };
 }
-import {
-  type DynamicFieldsFile,
-  emptyDynamicFieldsFile,
-  parseDynamicFieldsFile,
-  serializeDynamicFieldsFile,
-} from "./dynamic-fields-file";
-import {
-  type ViewsFile,
-  emptyViewsFile,
-  parseViewsFile,
-  serializeViewsFile,
-} from "./views-file";
-import {
-  type TableSchemasFile,
-  emptyTableSchemasFile,
-  parseTableSchemasFile,
-  serializeTableSchemasFile,
-} from "./table-schemas-file";
-import {
-  emptyWorkspaceFile,
-  parseWorkspaceFile,
-  serializeWorkspaceFile,
-  type WorkspaceFile,
-} from "../workspace/workspace-file";
-import { bodyFromNode, nodeFromFile, serializeNodeFile } from "./node-file";
-import {
-  contentDataDir,
-  contentModelDir,
-  relationshipsFilePath,
-  relationshipTypesFilePath,
-  dynamicFieldsFilePath,
-  viewsFilePath,
-  tableSchemasFilePath,
-  workspaceFilePath,
-  isNodeId,
-  nodeFilePath,
-  NODE_FILE_PATTERN,
-  legacyConnectionsFilePath,
-} from "./paths";
 
 function atomicWrite(filePath: string, content: string): void {
   mkdirSync(dirname(filePath), { recursive: true });
@@ -108,14 +126,138 @@ function atomicWrite(filePath: string, content: string): void {
   renameSync(tempPath, filePath);
 }
 
-export class ContentStore {
+function storeChangeKindForFilename(filename: string): StoreChangeKind {
+  const base = basename(filename);
+  if (NODE_FILE_PATTERN.test(base)) return "node";
+  if (base === RELATIONSHIPS_FILENAME) return "relationships";
+  if (base === RELATIONSHIP_TYPES_FILENAME) return "relationship-types";
+  if (base === SCHEMA_FILENAME) return "schema";
+  if (base === DYNAMIC_FIELDS_FILENAME) return "dynamic-fields";
+  if (base === VIEWS_FILENAME) return "views";
+  if (base === TABLE_SCHEMAS_FILENAME) return "table-schemas";
+  if (base === WORKSPACE_FILENAME) return "workspace";
+  if (base === ORDERED_ASSOCIATIONS_FILENAME) return "ordered-associations";
+  if (base === EXTENSIONS_FILENAME) return "extensions";
+  return "unknown";
+}
+
+/**
+ * Flatfile canonical store. Implements `TomeDataStore` including change notifications.
+ */
+export class ContentStore implements TomeDataStore {
   /** Content root (`content/`), not `content/data`. */
   readonly contentDir: string;
 
-  constructor(contentDir: string) {
+  private dataWatcher: FSWatcher | null = null;
+  private modelWatcher: FSWatcher | null = null;
+  private pending = new Map<string, ReturnType<typeof setTimeout>>();
+  private closed = false;
+  private readonly listeners = new Set<StoreChangeListener>();
+  private readonly onWatchError?: (err: Error) => void;
+
+  constructor(contentDir: string, options?: { onWatchError?: (err: Error) => void }) {
     this.contentDir = contentDir;
+    this.onWatchError = options?.onWatchError;
     mkdirSync(contentDataDir(contentDir), { recursive: true });
     mkdirSync(contentModelDir(contentDir), { recursive: true });
+  }
+
+  subscribe(listener: StoreChangeListener): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  startWatching(): void {
+    if (this.closed || this.dataWatcher || this.modelWatcher) return;
+    this.dataWatcher = this.watchDir(contentDataDir(this.contentDir), (name) => this.isRelevantDataFile(name), {
+      recursive: true,
+    });
+    this.modelWatcher = this.watchDir(contentModelDir(this.contentDir), (name) =>
+      this.isRelevantModelFile(name),
+    );
+  }
+
+  stopWatching(): void {
+    for (const timer of this.pending.values()) clearTimeout(timer);
+    this.pending.clear();
+    this.dataWatcher?.close();
+    this.modelWatcher?.close();
+    this.dataWatcher = null;
+    this.modelWatcher = null;
+  }
+
+  close(): void {
+    this.closed = true;
+    this.stopWatching();
+    this.listeners.clear();
+  }
+
+  private emit(event: StoreChangeEvent): void {
+    for (const listener of this.listeners) {
+      try {
+        listener(event);
+      } catch (err) {
+        this.onWatchError?.(err instanceof Error ? err : new Error(String(err)));
+      }
+    }
+  }
+
+  private watchDir(
+    dir: string,
+    isRelevant: (name: string) => boolean,
+    options?: { recursive?: boolean },
+  ): FSWatcher | null {
+    try {
+      const watcher = watch(dir, { recursive: options?.recursive ?? false }, (event, filename) => {
+        if (this.closed || !filename || typeof filename !== "string") return;
+        if (!isRelevant(filename)) return;
+        this.schedule(filename);
+      });
+      watcher.on("error", (err) => {
+        this.onWatchError?.(err instanceof Error ? err : new Error(String(err)));
+      });
+      return watcher;
+    } catch (err) {
+      this.onWatchError?.(err instanceof Error ? err : new Error(String(err)));
+      return null;
+    }
+  }
+
+  private isRelevantDataFile(name: string): boolean {
+    const base = basename(name);
+    return base === RELATIONSHIPS_FILENAME || NODE_FILE_PATTERN.test(base);
+  }
+
+  private isRelevantModelFile(name: string): boolean {
+    const base = basename(name);
+    return (
+      base === RELATIONSHIP_TYPES_FILENAME ||
+      base === SCHEMA_FILENAME ||
+      base === DYNAMIC_FIELDS_FILENAME ||
+      base === VIEWS_FILENAME ||
+      base === TABLE_SCHEMAS_FILENAME ||
+      base === WORKSPACE_FILENAME ||
+      base === ORDERED_ASSOCIATIONS_FILENAME ||
+      base === EXTENSIONS_FILENAME
+    );
+  }
+
+  private schedule(filename: string): void {
+    const existing = this.pending.get(filename);
+    if (existing) clearTimeout(existing);
+    this.pending.set(
+      filename,
+      setTimeout(() => {
+        this.pending.delete(filename);
+        if (this.closed) return;
+        this.emit({
+          path: basename(filename),
+          kind: storeChangeKindForFilename(filename),
+        });
+      }, DEBOUNCE_MS),
+    );
   }
 
   listNodeIds(): string[] {

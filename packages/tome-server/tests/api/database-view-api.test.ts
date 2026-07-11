@@ -53,7 +53,7 @@ describe("database view API", () => {
       join(fixture.tempDir, "api.sqlite"),
     );
     apiCtx.sync.fullRebuild();
-    apiCtx.db.close();
+    apiCtx.cache.close();
 
     const createRes = await api.handler(
       new Request(`http://127.0.0.1/api/databases/${dbWithSchema}/columns`, {
@@ -85,7 +85,7 @@ describe("database view API", () => {
       join(fixture.tempDir, "api.sqlite"),
     );
     apiCtx.sync.fullRebuild();
-    apiCtx.db.close();
+    apiCtx.cache.close();
 
     const patchRes = await api.handler(
       new Request(`http://127.0.0.1/api/databases/${dbWithSchema}/columns/notes`, {
@@ -118,7 +118,7 @@ describe("database view API", () => {
       join(fixture.tempDir, "api.sqlite"),
     );
     apiCtx.sync.fullRebuild();
-    apiCtx.db.close();
+    apiCtx.cache.close();
 
     const deleteRes = await api.handler(
       new Request(`http://127.0.0.1/api/databases/${dbWithSchema}/columns/status`, {

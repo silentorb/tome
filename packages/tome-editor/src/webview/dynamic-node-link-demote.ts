@@ -1,4 +1,4 @@
-import { resolveMarkdownHrefTarget } from "tome-db/markdown-links";
+import { resolveMarkdownHrefTarget } from "tome-store-flatfile/markdown-links";
 import { Plugin, PluginKey } from "@milkdown/prose/state";
 import type { EditorView } from "@milkdown/prose/view";
 import { isDynamicEditorHref, transactionHasDynamicTitleRefresh } from "./dynamic-node-link-decoration";

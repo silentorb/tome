@@ -1,17 +1,19 @@
-import type { GraphDatabase, Relationship } from "./graph";
-import { resolveContentPath } from "./content/paths";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
-import { archiveNodeId } from "./workspace/resolve";
-import { hasTableSchemaEntry, loadTableSchemasFromContent } from "./table-schemas/load";
+import type { GraphDatabase, Relationship } from "tome-cache-sqlite";
 import {
+  resolveContentPath,
+  loadRelationshipTypesFromContent,
+  archiveNodeId,
+  hasTableSchemaEntry,
   isSetTraitComposite,
-  membershipCompositeForSet,
   membershipPerspectivesForSet,
   setRoleIndices,
   setTraitPerspectives,
   typesWithTrait,
   SET_TRAIT,
-} from "./relationship-type-traits";
+  collectSetNodeIds,
+} from "tome-store-flatfile";
+
+export { collectSetNodeIds } from "tome-store-flatfile";
 
 export type SetKind = "type_table" | "archive";
 
@@ -43,7 +45,7 @@ export function listSetMembership(
 }
 
 export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: string): string[] {
-  const dir = contentDir ?? db.contentDir ?? resolveContentPath();
+  const dir = contentDir ?? resolveContentPath();
   const registry = loadRelationshipTypesFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
@@ -59,24 +61,11 @@ export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: s
 }
 
 export function setMemberIds(db: GraphDatabase, setId: string, contentDir?: string): string[] {
-  const dir = contentDir ?? db.contentDir ?? resolveContentPath();
+  const dir = contentDir ?? resolveContentPath();
   const [setPerspective, memberPerspective] = membershipPerspectivesForSet(setId, dir);
   const viaSet = listSetMembership(db, setId, setPerspective).map((r) => r.targetNodeId);
   if (viaSet.length > 0) return viaSet;
   return db.listRelationshipsToTarget(setId, memberPerspective).map((r) => r.sourceNodeId);
-}
-
-export function collectSetNodeIds(contentDir?: string): Set<string> {
-  const dir = contentDir ?? resolveContentPath();
-  const ids = new Set<string>();
-  const schemas = loadTableSchemasFromContent(dir);
-  for (const id of Object.keys(schemas.tables)) ids.add(id);
-  try {
-    ids.add(archiveNodeId(dir));
-  } catch {
-    /* workspace.json optional in tests */
-  }
-  return ids;
 }
 
 export function setKindForNode(
@@ -84,7 +73,7 @@ export function setKindForNode(
   nodeId: string,
   contentDir?: string,
 ): SetKind | null {
-  const dir = contentDir ?? db.contentDir ?? resolveContentPath();
+  const dir = contentDir ?? resolveContentPath();
   const archiveId = archiveNodeId(dir);
   if (archiveId && nodeId === archiveId) return "archive";
   if (hasTableSchemaEntry(dir, nodeId)) return "type_table";
@@ -104,7 +93,7 @@ export function findSetMembershipRelationship(
   setId: string,
   contentDir?: string,
 ): Relationship | null {
-  const dir = contentDir ?? db.contentDir ?? resolveContentPath();
+  const dir = contentDir ?? resolveContentPath();
   const [, memberPerspective] = membershipPerspectivesForSet(setId, dir);
   return (
     listSetMembership(db, memberId, memberPerspective).find((r) => r.targetNodeId === setId) ??
@@ -118,7 +107,7 @@ export function listSetMemberRowConnections(
   setId: string,
   contentDir?: string,
 ): Relationship[] {
-  const dir = contentDir ?? db.contentDir ?? resolveContentPath();
+  const dir = contentDir ?? resolveContentPath();
   const [setPerspective, memberPerspective] = membershipPerspectivesForSet(setId, dir);
   const viaMembers = listSetMembership(db, setId, setPerspective);
   if (viaMembers.length > 0) {

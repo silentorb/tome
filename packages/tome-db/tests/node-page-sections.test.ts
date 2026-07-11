@@ -2,16 +2,16 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { GraphDatabase } from "../src/graph";
+import { GraphDatabase } from "tome-cache-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodePageDetail } from "../src/node-page-sections";
-import { contentModelDir, relationshipTypesFilePath, tableSchemasFilePath } from "../src/content/paths";
+import { contentModelDir, relationshipTypesFilePath, tableSchemasFilePath } from "tome-store-flatfile";
 import {
   serializeRelationshipTypesFile,
-} from "../src/content/relationship-types-file";
-import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
-import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
-import { invalidateTableSchemasCache } from "../src/table-schemas/load";
+} from "tome-store-flatfile";
+import { serializeTableSchemasFile } from "tome-store-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
+import { invalidateTableSchemasCache } from "tome-store-flatfile";
 
 function writeMembershipRelationshipTypes(contentDir: string): void {
   writeFileSync(

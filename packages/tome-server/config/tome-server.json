@@ -1,13 +1,23 @@
 {
   "version": 1,
+  "store": {
+    "id": "flatfile",
+    "module": "tome-store-flatfile",
+    "export": "createFlatfileStoreModule",
+    "options": {}
+  },
+  "cache": {
+    "id": "sqlite",
+    "module": "tome-cache-sqlite",
+    "export": "createSqliteCacheModule",
+    "options": {}
+  },
   "services": [
     {
       "id": "http",
       "module": "tome-http",
       "export": "createTomeHttpService",
-      "options": {
-        "port": 3847
-      }
+      "options": { "port": 3847 }
     }
   ]
 }

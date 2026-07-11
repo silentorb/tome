@@ -6,12 +6,12 @@ import {
 } from "./database-column-data";
 import { loadDynamicFields } from "./dynamic-fields";
 import { isTypeTableNode } from "./node-capabilities";
-import { normalizeRelationshipType } from "./relation-type";
+import { normalizeRelationshipType } from "tome-store-flatfile";
 import { resolvePropertyEnumFromContent } from "./property-enums";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { TABLE_SCHEMAS_FILENAME } from "./content/paths";
-import { isNodeId } from "./content/paths";
+import { TABLE_SCHEMAS_FILENAME } from "tome-store-flatfile";
+import { isNodeId } from "tome-store-flatfile";
 import type {
   TableColumnDef,
   TableColumnScalarType,
@@ -19,14 +19,14 @@ import type {
   TableRelationColumn,
   TableScalarColumn,
   TableSchemasFile,
-} from "./content/table-schemas-file";
-import { findColumnByKey, slugifyPropertyKey } from "./table-schema";
-import { invalidateTableSchemasCache } from "./table-schemas/load";
+} from "tome-store-flatfile";
+import { findColumnByKey, slugifyPropertyKey } from "tome-store-flatfile";
+import { invalidateTableSchemasCache } from "tome-store-flatfile";
 import {
   appendColumnToViewsOrder,
   renameColumnInViews,
 } from "./views/mutations";
-import { viewSectionKeyForSet } from "./relationship-type-traits";
+import { viewSectionKeyForSet } from "tome-store-flatfile";
 import type {
   CreateDatabaseColumnInput,
   DatabaseColumnMutationError,
@@ -69,7 +69,7 @@ function isDynamicColumnKey(
   databaseId: string,
   columnKey: string,
 ): boolean {
-  const dynamicFields = loadDynamicFields(ctx.db, databaseId, ctx.store.contentDir);
+  const dynamicFields = loadDynamicFields(ctx.cache, databaseId, ctx.store.contentDir);
   return dynamicFields.some((field) => field.enabled && field.columnKey === columnKey);
 }
 
@@ -133,7 +133,7 @@ export function createDatabaseColumn(
   databaseId: string,
   input: CreateDatabaseColumnInput,
 ): DatabaseColumnMutationError | DatabaseColumnMutationResult {
-  if (!isTypeTableNode(ctx.db, databaseId, ctx.store.contentDir)) {
+  if (!isTypeTableNode(ctx.cache, databaseId, ctx.store.contentDir)) {
     return "database_not_found";
   }
 
@@ -253,7 +253,7 @@ export function updateDatabaseColumn(
     return "column_not_deletable";
   }
 
-  if (!isTypeTableNode(ctx.db, databaseId, ctx.store.contentDir)) {
+  if (!isTypeTableNode(ctx.cache, databaseId, ctx.store.contentDir)) {
     return "database_not_found";
   }
 

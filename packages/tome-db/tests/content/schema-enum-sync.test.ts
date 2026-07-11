@@ -1,14 +1,14 @@
 import { describe, expect, test, afterAll, beforeAll } from "bun:test";
 import { Database } from "bun:sqlite";
 import { writeFileSync } from "node:fs";
-import { serializeSchemaFile } from "../../src/schema-rules/schema-file";
+import { serializeSchemaFile } from "tome-store-flatfile";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestNode,
   seedTestRelationships,
 } from "../../src/content/test-helpers";
-import { SCHEMA_FILENAME, schemaFilePath } from "../../src/content/paths";
+import { SCHEMA_FILENAME, schemaFilePath } from "tome-store-flatfile";
 import { enumConfigFingerprint } from "../../src/enum-config-fingerprint";
 
 const SCHEMA_V1 = {
@@ -52,16 +52,16 @@ describe("CacheSync schema enum causality", () => {
     seedTestRelationships(fixture, [
       { source: pageId, target: databaseId, type: "member_of", properties: { priority: "High" } },
     ]);
-    const edge = fixture.ctx.db.listRelationshipsFromSource(pageId, "member_of")[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, "member_of")[0];
     recordId = edge!.recordId!;
   });
 
   test("stores priority index for initial schema option order", () => {
-    expect(fixture.ctx.db.listRelationshipsFromSource(pageId, "member_of")[0]?.properties.priority).toBe(
+    expect(fixture.ctx.cache.listRelationshipsFromSource(pageId, "member_of")[0]?.properties.priority).toBe(
       "High",
     );
 
-    const rawDb = new Database(fixture.ctx.db.path);
+    const rawDb = new Database(fixture.ctx.cache.path);
     const raw = rawDb
       .prepare("SELECT properties FROM relationship_records WHERE id = ?")
       .get(recordId) as { properties: string };
@@ -77,24 +77,24 @@ describe("CacheSync schema enum causality", () => {
     );
     fixture.ctx.sync.syncFile(SCHEMA_FILENAME);
 
-    expect(fixture.ctx.db.listRelationshipsFromSource(pageId, "member_of")[0]?.properties.priority).toBe(
+    expect(fixture.ctx.cache.listRelationshipsFromSource(pageId, "member_of")[0]?.properties.priority).toBe(
       "High",
     );
 
-    const rawDb = new Database(fixture.ctx.db.path);
+    const rawDb = new Database(fixture.ctx.cache.path);
     const raw = rawDb
       .prepare("SELECT properties FROM relationship_records WHERE id = ?")
       .get(recordId) as { properties: string };
     rawDb.close();
     expect(JSON.parse(raw.properties).priority).toBe(3);
 
-    expect(fixture.ctx.db.getMeta("enum_config_fingerprint")).toBe(
+    expect(fixture.ctx.cache.getMeta("enum_config_fingerprint")).toBe(
       enumConfigFingerprint(SCHEMA_V2),
     );
   });
 
   test("cacheNeedsRebuild detects stale enum fingerprint without content mtime change", () => {
-    fixture.ctx.db.setMeta("enum_config_fingerprint", "stale");
+    fixture.ctx.cache.setMeta("enum_config_fingerprint", "stale");
     expect(fixture.ctx.sync.cacheNeedsRebuild()).toBe(true);
   });
 

@@ -5,7 +5,7 @@ import { commonmark } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
 import { getMarkdown } from "@milkdown/kit/utils";
 import { TextSelection } from "@milkdown/prose/state";
-import { DEFAULT_CALLOUT_PREFIX, hasLeadingCalloutEmoji } from "tome-db/callout";
+import { DEFAULT_CALLOUT_PREFIX, hasLeadingCalloutEmoji } from "tome-store-flatfile/callout";
 import { insertCalloutBlock } from "../../src/webview/callout-block";
 import { installCalloutDecoration } from "../../src/webview/callout-decoration";
 

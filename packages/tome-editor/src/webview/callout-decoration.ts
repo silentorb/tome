@@ -4,14 +4,14 @@ import { Decoration, DecorationSet, type EditorView } from "@milkdown/prose/view
 import {
   extractLeadingCalloutEmoji,
   hasLeadingCalloutEmoji,
-} from "tome-db/callout";
+} from "tome-store-flatfile/callout";
 
 export {
   DEFAULT_CALLOUT_EMOJI,
   DEFAULT_CALLOUT_PREFIX,
   extractLeadingCalloutEmoji,
   hasLeadingCalloutEmoji,
-} from "tome-db/callout";
+} from "tome-store-flatfile/callout";
 
 const calloutDecorationKey = new PluginKey("tome-callout-decoration");
 

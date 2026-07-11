@@ -2,11 +2,11 @@ import { describe, expect, test, afterAll, beforeAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { ContentStore } from "../../src/content/store";
-import { fileFromSeedInputs } from "../../src/content/dynamic-fields-file";
+import { ContentStore } from "tome-store-flatfile";
+import { fileFromSeedInputs } from "tome-store-flatfile";
 import { invalidateDynamicFieldsCache } from "../../src/content/sync";
-import { invalidateSchemaCache } from "../../src/schema-rules/load";
-import { GraphDatabase } from "../../src/graph";
+import { invalidateSchemaCache } from "tome-store-flatfile";
+import { GraphDatabase } from "tome-cache-sqlite";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { getDatabaseViewDetail } from "../../src/database-view";
 import {
@@ -307,7 +307,7 @@ describe("dynamic-fields with composite relationships", () => {
 
   test("weighted_use and wonder with production params and composite edges", () => {
     const detail = getDatabaseViewDetail(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       INSP_DB,
       undefined,
       fixture.ctx.store.contentDir,
@@ -319,7 +319,7 @@ describe("dynamic-fields with composite relationships", () => {
 
   test("weighted_use returns zero when inspiration_feature_composite omitted", () => {
     const ctx = {
-      db: fixture.ctx.db,
+      db: fixture.ctx.cache,
       databaseId: INSP_DB,
       viewName: "Weighted",
       rowNodeIds: [inspiration],
@@ -419,7 +419,7 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
   });
 
   test("scopes includes to scenes only and emits product dimensions only", () => {
-    const ctx = { db: fixture.ctx.db, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const ctx = { db: fixture.ctx.cache, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
     const allScenePrefetch = buildAllSceneCountPrefetch(ctx, {
       characters_scene_composite: "scenes_characters",
       scenes_edge_label: "SCENES",
@@ -439,7 +439,7 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
 
   test("database view has per-product columns only, not per-scene columns", () => {
     const detail = getDatabaseViewDetail(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       CHAR_DB,
       undefined,
       fixture.ctx.store.contentDir,
@@ -533,7 +533,7 @@ describe("dynamic-fields character composite relationships", () => {
   });
 
   test("all scene count and per-product columns via composite edges", () => {
-    const ctx = { db: fixture.ctx.db, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const ctx = { db: fixture.ctx.cache, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
     const allScenePrefetch = buildAllSceneCountPrefetch(ctx, {
       characters_scene_composite: "scenes_characters",
       scenes_edge_label: "SCENES",
@@ -547,7 +547,7 @@ describe("dynamic-fields character composite relationships", () => {
 
   test("database view integration with composite character edges", () => {
     const detail = getDatabaseViewDetail(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       CHAR_DB,
       undefined,
       fixture.ctx.store.contentDir,

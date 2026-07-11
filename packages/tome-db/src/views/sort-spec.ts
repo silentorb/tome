@@ -1,5 +1,5 @@
 import { sortEvalRows, type EvalRow } from "../row-sort";
-import type { ViewSortSpec } from "../content/views-file";
+import type { ViewSortSpec } from "tome-store-flatfile";
 
 function viewSortsToRowSorts(sorts: ViewSortSpec[]): unknown[] {
   return sorts.map((sort) => ({

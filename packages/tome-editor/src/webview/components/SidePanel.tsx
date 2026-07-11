@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { WorkspaceQuickLink } from "tome-db";
+import type { WorkspaceQuickLink } from "tome-graph-interfaces";
 import type { AppView } from "../../shared/types";
 import type { EditorApi } from "../api/client";
 import { nodePageHref } from "../node-links";

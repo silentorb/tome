@@ -6,7 +6,7 @@ Git-tracked [`content/model/schema.json`](../../content/model/schema.json) decla
 
 This is separate from:
 
-- SQLite DDL (`SCHEMA_VERSION` in `packages/tome-db/src/schema.ts`)
+- SQLite DDL (`SCHEMA_VERSION` in `packages/tome-cache-sqlite/src/schema.ts`)
 - Per-type-table column definitions in [`table-schemas.json`](./table-schemas.md)
 - UI tab configuration in [`views.json`](./views.md)
 - Composite storage types in [`content/model/relationship-types.json`](../../content/model/relationship-types.json)
@@ -83,7 +83,7 @@ For `priority`, `values` are interpreted as numeric **weights** by `priorityWeig
 | --- | --- |
 | `packages/tome-db/src/schema-rules/schema-file.ts` | Parse/serialize `schema.json` |
 | `packages/tome-db/src/schema-rules/resolve.ts` | Match rules to source node + type |
-| `packages/tome-db/src/enum-codec.ts` | Label ↔ index encode/decode for SQLite cache |
+| `packages/tome-db/src/enum-codec.ts` | Label ↔ index encode/decode (injected as cache `propertyCodec`) |
 | `packages/tome-db/src/enum-config-fingerprint.ts` | Detect enum option-order changes for cache invalidation |
 | `packages/tome-db/src/property-enums.ts` | Resolve enums from schema; priority helpers |
 | `packages/tome-db/src/node-page-sections.ts` | Embeds `allowedTargetTypeIds` on relation sections |

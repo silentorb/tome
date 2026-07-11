@@ -4,11 +4,13 @@ Each subdirectory is a **workspace package** in the Tome monorepo. Packages are 
 
 | Package | Role |
 | --- | --- |
-| [`tome-db`](./tome-db/) | Graph storage, SQLite cache, content sync |
+| [`tome-store-flatfile`](./tome-store-flatfile/) | Flatfile content store + change watching |
+| [`tome-cache-sqlite`](./tome-cache-sqlite/) | SQLite query cache |
+| [`tome-db`](./tome-db/) | Domain queries/mutations + content↔cache sync |
 | [`tome-graph-interfaces`](./tome-graph-interfaces/) | Domain DTOs and `TomeGraphServices` contract |
-| [`tome-service-interfaces`](./tome-service-interfaces/) | `TomeServiceModule` host/plugin contracts |
+| [`tome-service-interfaces`](./tome-service-interfaces/) | Store/cache/service module contracts |
 | [`tome-http`](./tome-http/) | HTTP service module + typed HTTP client |
-| [`tome-server`](./tome-server/) | Config-driven host (wires db + service modules) |
+| [`tome-server`](./tome-server/) | Config-driven host (store, cache, service modules) |
 | [`tome-editor`](./tome-editor/) | Browser editor (client UI only) |
 | [`tome-static-site`](./tome-static-site/) | Static HTML export |
 | [`tome-theme-midnight`](./tome-theme-midnight/) | Midnight theme tokens and shared cross-surface CSS |

@@ -2,7 +2,7 @@ import {
   compareEnumLabels,
   resolveEnumIdForPropertyName,
 } from "./enum-codec";
-import { loadWorkspaceSchema } from "./schema-rules/load";
+import { loadWorkspaceSchema } from "tome-store-flatfile";
 import { resolvePropertyEnum } from "./property-enums";
 import type { RelationLink } from "./relation-link";
 import { isRelationColumnSort, relationLinkCount } from "./row-sort-helpers";

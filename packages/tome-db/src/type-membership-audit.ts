@@ -1,14 +1,14 @@
 /**
  * Validation/migration tooling for legacy export layout — not used by editor runtime.
  */
-import type { GraphDatabase, Relationship, Properties } from "./graph";
-import { NODE_ID_RE_SRC } from "./node-id";
+import type { GraphDatabase, Relationship, Properties } from "tome-cache-sqlite";
+import { NODE_ID_RE_SRC } from "tome-store-flatfile/node-id";
 import { findSetMembershipRelationship, listSetMemberRowConnections } from "./set-membership";
 import { findTypeNodeByTitle, isTypeTableNode } from "./node-capabilities";
-import { legacyExportPathPrefix } from "./workspace/resolve";
-import { resolveContentPath } from "./content/paths";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
-import { setTraitPerspectives } from "./relationship-type-traits";
+import { legacyExportPathPrefix } from "tome-store-flatfile";
+import { resolveContentPath } from "tome-store-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
+import { setTraitPerspectives } from "tome-store-flatfile";
 
 /** Node properties that are not database row scalars. */
 export const NODE_META_KEYS = new Set(["title", "body", "alias", "url_alias"]);

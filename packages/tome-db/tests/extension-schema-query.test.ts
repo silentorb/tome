@@ -11,13 +11,13 @@ import {
   relationshipTypesFilePath,
   schemaFilePath,
   tableSchemasFilePath,
-} from "../src/content/paths";
-import { serializeSchemaFile } from "../src/schema-rules/schema-file";
-import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
-import { serializeRelationshipTypesFile } from "../src/content/relationship-types-file";
-import { invalidateSchemaCache } from "../src/schema-rules/load";
-import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
-import { invalidateTableSchemasCache } from "../src/table-schemas/load";
+} from "tome-store-flatfile";
+import { serializeSchemaFile } from "tome-store-flatfile";
+import { serializeTableSchemasFile } from "tome-store-flatfile";
+import { serializeRelationshipTypesFile } from "tome-store-flatfile";
+import { invalidateSchemaCache } from "tome-store-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
+import { invalidateTableSchemasCache } from "tome-store-flatfile";
 import { createExtensionSchemaQueryServices } from "../src/extension-schema-query";
 
 describe("createExtensionSchemaQueryServices", () => {
@@ -131,7 +131,7 @@ describe("createExtensionSchemaQueryServices", () => {
   fixture.ctx.sync.fullRebuild();
 
   const services = createExtensionSchemaQueryServices(
-    fixture.ctx.db,
+    fixture.ctx.cache,
     fixture.ctx.store.contentDir,
   );
 
@@ -149,8 +149,8 @@ describe("createExtensionSchemaQueryServices", () => {
     const member2 = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
     seedTestNode(fixture, { id: member1, properties: { title: "Scene A" } });
     seedTestNode(fixture, { id: member2, properties: { title: "Scene B" } });
-    fixture.ctx.db.upsertRelationship(member1, sceneTypeId, "member_of", { row_index: 0 });
-    fixture.ctx.db.upsertRelationship(member2, sceneTypeId, "member_of", { row_index: 1 });
+    fixture.ctx.cache.upsertRelationship(member1, sceneTypeId, "member_of", { row_index: 0 });
+    fixture.ctx.cache.upsertRelationship(member2, sceneTypeId, "member_of", { row_index: 1 });
 
     const tables = services.listTypeTables();
     const scene = tables.find((table) => table.id === sceneTypeId);

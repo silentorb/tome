@@ -1,11 +1,11 @@
 import { listRelationConnectionsForRow } from "./database-view-relations";
 import { unlinkOutgoingRelationship } from "./relationship-link-mutations";
 import { otherEndpoint } from "./relationship-traverse";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
-import { setTraitPerspectives } from "./relationship-type-traits";
-import { perspectiveForRelationColumn, relationColumnCompositeType } from "./table-relation-column";
+import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
+import { setTraitPerspectives } from "tome-store-flatfile";
+import { perspectiveForRelationColumn, relationColumnCompositeType } from "tome-store-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
-import type { TableColumnDef } from "./content/table-schemas-file";
+import type { TableColumnDef } from "tome-store-flatfile";
 
 export const ROW_META_KEYS = new Set(["view", "row_name", "order", "row_index", "number"]);
 
@@ -17,7 +17,7 @@ export function stripScalarFromMembershipEdges(
   const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
   let count = 0;
   for (const type of setTraitPerspectives(registry)) {
-    for (const connection of ctx.db.listRelationshipsToTarget(databaseId, type)) {
+    for (const connection of ctx.cache.listRelationshipsToTarget(databaseId, type)) {
       if (!(propertyKey in connection.properties)) continue;
       const props = { ...connection.properties };
       delete props[propertyKey];
@@ -42,7 +42,7 @@ export function renameScalarOnMembershipEdges(
   const registry = loadRelationshipTypesFromContent(ctx.store.contentDir);
   let count = 0;
   for (const type of setTraitPerspectives(registry)) {
-    for (const connection of ctx.db.listRelationshipsToTarget(databaseId, type)) {
+    for (const connection of ctx.cache.listRelationshipsToTarget(databaseId, type)) {
       if (!(oldKey in connection.properties)) continue;
       const props = { ...connection.properties };
       props[newKey] = props[oldKey];
@@ -70,7 +70,7 @@ export function unlinkRelationColumnFromAllRows(
 
   const rowIds = new Set<string>();
   for (const type of setTraitPerspectives(registry)) {
-    for (const connection of ctx.db.listRelationshipsToTarget(databaseId, type)) {
+    for (const connection of ctx.cache.listRelationshipsToTarget(databaseId, type)) {
       rowIds.add(connection.sourceNodeId);
     }
   }
@@ -78,7 +78,7 @@ export function unlinkRelationColumnFromAllRows(
   const toUnlink: Array<{ rowId: string; targetId: string }> = [];
   for (const rowId of rowIds) {
     const relationships = listRelationConnectionsForRow(
-      ctx.db,
+      ctx.cache,
       rowId,
       connectionType,
       databaseId,

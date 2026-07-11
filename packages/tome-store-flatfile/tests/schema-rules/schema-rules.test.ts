@@ -1,32 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync } from "node:fs";
-import { resolve } from "node:path";
-import { GraphDatabase } from "../../src/graph";
-import { typeTableMarkerProperties } from "../../src/node-capabilities";
-import { schemaFilePath } from "../../src/content/paths";
-import { relationshipTypeRuleContext } from "../../src/relationship-type-endpoints";
-import { loadRelationshipTypesFromContent } from "../../src/relationship-types/load";
 import { loadSchemaFromContent, invalidateSchemaCache } from "../../src/schema-rules/load";
 import { parseSchemaFile } from "../../src/schema-rules/schema-file";
-
-function marlothContentPathForIntegrationTest(): string | null {
-  if (process.env.TOME_CONTENT_PATH) {
-    return process.env.TOME_CONTENT_PATH;
-  }
-
-  let dir = resolve(import.meta.dir, "../..");
-  for (let depth = 0; depth < 8; depth += 1) {
-    const candidate = resolve(dir, "repos/marloth-story/content");
-    if (existsSync(schemaFilePath(candidate))) {
-      return candidate;
-    }
-    const parent = resolve(dir, "..");
-    if (parent === dir) break;
-    dir = parent;
-  }
-
-  return null;
-}
 
 describe("schema rules", () => {
   test("parseSchemaFile validates relationship rules", () => {
@@ -51,37 +25,6 @@ describe("schema rules", () => {
     expect(file.relationshipRules).toEqual([]);
   });
 
-  test("relationshipTypeRuleContext reads allowed targets from relationship-types endpoints", () => {
-    const previousContentPath = process.env.TOME_CONTENT_PATH;
-    process.env.TOME_CONTENT_PATH = "/workspaces/marloth-story/content";
-
-    const db = new GraphDatabase(":memory:", { clean: true });
-    const scenesType = "01KWN86X6NJZMP5ZESZTNDXY8C";
-    const featuresType = "01KWN86X6NJZMP5ZESZTNDXY4Q";
-    const featureRow = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
-
-    db.upsertNode(scenesType, typeTableMarkerProperties("Scenes"));
-    db.upsertNode(featuresType, typeTableMarkerProperties("Features test"));
-    db.upsertNode(featureRow, { title: "Test feature" });
-    db.upsertRelationship(featureRow, featuresType, "ordered_member_of", {});
-
-    const registry = loadRelationshipTypesFromContent("/workspaces/marloth-story/content");
-    const context = relationshipTypeRuleContext(
-      registry,
-      db,
-      featureRow,
-      "features_test",
-      "/workspaces/marloth-story/content",
-    );
-    expect(context?.compositeType).toBe("scenes_features_test");
-    expect(context?.allowedTargetTypeIds).toEqual([scenesType]);
-
-    if (previousContentPath === undefined) {
-      delete process.env.TOME_CONTENT_PATH;
-    } else {
-      process.env.TOME_CONTENT_PATH = previousContentPath;
-    }
-  });
 
   test("loadSchemaFromContent reads repo schema.json", () => {
     const previousContentPath = process.env.TOME_CONTENT_PATH;

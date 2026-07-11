@@ -10,7 +10,7 @@ import {
   syncMetadataExpandedParam,
 } from "../../src/webview/node-links";
 import { TEST_GRAPH_ANCHOR_NODE_ID } from "tome-db/content/test-helpers";
-import { editorDynamicNodeHref } from "tome-db/dynamic-node-links";
+import { editorDynamicNodeHref } from "tome-store-flatfile/dynamic-node-links";
 import { tomeHref, standaloneNodeUrl } from "../../src/shared/types";
 
 describe("node-links", () => {

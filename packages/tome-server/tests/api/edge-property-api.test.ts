@@ -1,5 +1,11 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { GraphDatabase, typeTableMarkerProperties } from "tome-db";
+import {
+  decodeEnumProperties,
+  encodeEnumProperties,
+  loadSchemaFromContent,
+  typeTableMarkerProperties,
+} from "tome-db";
+import { GraphDatabase } from "tome-cache-sqlite";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -21,6 +27,7 @@ describe("edge property API", () => {
   ]);
 
   const api = createTestApiFromContent(fixture);
+  const contentDir = fixture.ctx.store.contentDir;
 
   test("PATCH database row priority", async () => {
     const res = await api.handler(
@@ -32,7 +39,12 @@ describe("edge property API", () => {
     );
     expect(res.status).toBe(200);
 
-    const verifyDb = new GraphDatabase(api.dbPath);
+    const verifyDb = new GraphDatabase(api.dbPath, {
+      propertyCodec: {
+        encode: (properties) => encodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
+        decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
+      },
+    });
     const edge = verifyDb.listRelationshipsFromSource(nodeId, "member_of")[0];
     expect(edge?.properties.priority).toBe("High");
     verifyDb.close();

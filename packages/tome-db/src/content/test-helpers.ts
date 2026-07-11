@@ -1,55 +1,56 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
-import type { Node, Properties } from "../graph";
-import { bodyFromNode, serializeNodeFile } from "./node-file";
-import { fileFromSeedInputs } from "./dynamic-fields-file";
-import { serializeViewsFile, type ViewsFile } from "./views-file";
+import type { Node, Properties } from "tome-cache-sqlite";
+import { bodyFromNode, serializeNodeFile } from "tome-store-flatfile";
+import { fileFromSeedInputs } from "tome-store-flatfile";
+import { serializeViewsFile, type ViewsFile } from "tome-store-flatfile";
 import {
   serializeTableSchemasFile,
   type TableColumnDef,
   type TableSchemasFile,
-} from "./table-schemas-file";
-import { invalidateTableSchemasCache } from "../table-schemas/load";
-import type { SeedDynamicColumnSetInput, SeedDynamicFieldInput } from "../dynamic-fields/overlay";
+} from "tome-store-flatfile";
+import { invalidateTableSchemasCache } from "tome-store-flatfile";
+import type { SeedDynamicColumnSetInput, SeedDynamicFieldInput } from "tome-store-flatfile";
 import { invalidateDynamicFieldsCache } from "./sync";
-import { invalidateViewsCache } from "../views/load";
-import { invalidateWorkspaceCache } from "../workspace/load";
-import { invalidateOrderedAssociationsCache } from "../ordered-associations-config/load";
+import { invalidateViewsCache } from "tome-store-flatfile";
+import { invalidateWorkspaceCache } from "tome-store-flatfile";
+import { invalidateOrderedAssociationsCache } from "tome-store-flatfile";
 import {
   serializeOrderedAssociationsFile,
   type OrderedAssociationsFile,
   ORDERED_ASSOCIATIONS_FILE_VERSION,
-} from "../ordered-associations-config/ordered-associations-file";
-import { openTomeWriteContext, type TomeWriteContext } from "./write-context";
+} from "tome-store-flatfile";
+import { openContentGraph } from "./sync";
+import type { TomeWriteContext } from "./write-context";
 import {
   emptyRelationshipTypesFile,
   registerBidirectionalType,
   registerOrderedSetMembershipType,
   registerSetMembershipType,
   serializeRelationshipTypesFile,
-} from "./relationship-types-file";
-import { invalidateRelationshipTypesCache } from "../relationship-types/load";
-import { normalizeRelationshipType } from "../relation-type";
+} from "tome-store-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
+import { normalizeRelationshipType } from "tome-store-flatfile";
 import {
   serializeWorkspaceFile,
   type WorkspaceFile,
   WORKSPACE_FILE_VERSION,
-} from "../workspace/workspace-file";
+} from "tome-store-flatfile";
 import {
   contentModelDir,
   nodeFilePath,
   orderedAssociationsFilePath,
   relationshipTypesFilePath,
   workspaceFilePath,
-} from "./paths";
+} from "tome-store-flatfile";
 import {
   connectsEndpoints,
   entryFromRelationship,
   RELATIONSHIPS_FILE_VERSION,
   type RelationshipEntry,
-} from "./relationships-file";
-import { relationshipId } from "../graph";
+} from "tome-store-flatfile";
+import { relationshipId } from "tome-cache-sqlite";
 
 /** Test workspace ids — match committed content/model/workspace.json. */
 export const TEST_HOME_NODE_ID = "00000000000000000000000005";
@@ -167,7 +168,7 @@ export function createTestContentFixture(prefix = "tome-content-test-"): TestCon
   );
   invalidateWorkspaceCache();
   const dbPath = join(tempDir, "test.sqlite");
-  const ctx = openTomeWriteContext(contentDir, dbPath);
+  const ctx = openContentGraph(contentDir, dbPath);
   const fixture: TestContentFixture = { tempDir, ctx };
   ctx.store.writeDynamicFieldsFile(fileFromSeedInputs([], []));
   invalidateDynamicFieldsCache();
@@ -178,7 +179,7 @@ export function createTestContentFixture(prefix = "tome-content-test-"): TestCon
 }
 
 export function destroyTestContentFixture(fixture: TestContentFixture): void {
-  fixture.ctx.db.close();
+  fixture.ctx.cache.close();
   try {
     rmSync(fixture.tempDir, { recursive: true, force: true });
   } catch {

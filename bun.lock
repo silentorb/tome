@@ -5,14 +5,27 @@
     "": {
       "name": "tome",
     },
+    "packages/tome-cache-sqlite": {
+      "name": "tome-cache-sqlite",
+      "version": "0.1.0",
+      "dependencies": {
+        "tome-graph-interfaces": "workspace:*",
+        "tome-service-interfaces": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.2.23",
+        "typescript": "5.8.2",
+      },
+    },
     "packages/tome-db": {
       "name": "tome-db",
       "version": "0.1.0",
       "dependencies": {
+        "tome-cache-sqlite": "workspace:*",
         "tome-graph-interfaces": "workspace:*",
         "tome-interfaces": "workspace:*",
-        "ulid": "^3.0.2",
-        "yaml": "2.8.0",
+        "tome-service-interfaces": "workspace:*",
+        "tome-store-flatfile": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -160,6 +173,20 @@
         "tome-schema-diagram": "workspace:*",
         "tome-spatial-graph": "workspace:*",
         "tome-theme-midnight": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.2.23",
+        "typescript": "5.8.2",
+      },
+    },
+    "packages/tome-store-flatfile": {
+      "name": "tome-store-flatfile",
+      "version": "0.1.0",
+      "dependencies": {
+        "tome-graph-interfaces": "workspace:*",
+        "tome-service-interfaces": "workspace:*",
+        "ulid": "^3.0.2",
+        "yaml": "2.8.0",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -1321,6 +1348,8 @@
 
     "tldts-core": ["tldts-core@6.1.86", "", {}, "sha512-Je6p7pkk+KMzMv2XXKmAE3McmolOQFdxkKw0R8EYNr7sELW46JqnNeTX8ybPiQgvg1ymCoF8LXs5fzFaZvJPTA=="],
 
+    "tome-cache-sqlite": ["tome-cache-sqlite@workspace:packages/tome-cache-sqlite"],
+
     "tome-db": ["tome-db@workspace:packages/tome-db"],
 
     "tome-editor": ["tome-editor@workspace:packages/tome-editor"],
@@ -1342,6 +1371,8 @@
     "tome-spatial-graph": ["tome-spatial-graph@workspace:packages/tome-spatial-graph"],
 
     "tome-static-site": ["tome-static-site@workspace:packages/tome-static-site"],
+
+    "tome-store-flatfile": ["tome-store-flatfile@workspace:packages/tome-store-flatfile"],
 
     "tome-theme-midnight": ["tome-theme-midnight@workspace:packages/tome-theme-midnight"],
 

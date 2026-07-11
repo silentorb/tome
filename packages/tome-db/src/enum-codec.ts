@@ -1,6 +1,6 @@
-import type { Properties } from "./graph";
-import { resolvePropertyEnum } from "./property-enums-core";
-import type { EnumDefinition, SchemaFile } from "./schema-rules/schema-file";
+import type { Properties } from "tome-cache-sqlite";
+import { resolvePropertyEnum } from "tome-store-flatfile/property-enums-core";
+import type { EnumDefinition, SchemaFile } from "tome-store-flatfile/schema-file";
 
 function enumIdForPropertyKey(key: string, schema: SchemaFile): string | null {
   const normalized = key.trim().toLowerCase();

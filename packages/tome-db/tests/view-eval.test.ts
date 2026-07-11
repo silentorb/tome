@@ -2,22 +2,22 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { GraphDatabase } from "../src/graph";
+import { GraphDatabase } from "tome-cache-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { sortEvalRows, type EvalRow } from "../src/row-sort";
-import { serializeViewsFile, VIEWS_FILE_VERSION } from "../src/content/views-file";
-import { serializeDynamicFieldsFile, emptyDynamicFieldsFile } from "../src/content/dynamic-fields-file";
+import { serializeViewsFile, VIEWS_FILE_VERSION } from "tome-store-flatfile";
+import { serializeDynamicFieldsFile, emptyDynamicFieldsFile } from "tome-store-flatfile";
 import {
   contentModelDir,
   viewsFilePath,
   dynamicFieldsFilePath,
   relationshipTypesFilePath,
   tableSchemasFilePath,
-} from "../src/content/paths";
-import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
-import { serializeRelationshipTypesFile } from "../src/content/relationship-types-file";
-import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
+} from "tome-store-flatfile";
+import { serializeTableSchemasFile } from "tome-store-flatfile";
+import { serializeRelationshipTypesFile } from "tome-store-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
 import { writeSetMembershipTypes } from "../src/content/test-helpers";
 
 describe("row-sort", () => {

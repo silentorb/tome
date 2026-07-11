@@ -9,8 +9,8 @@ import {
   seedTestTableSchema,
   type TestContentFixture,
 } from "../src/content/test-helpers";
-import { registerBidirectionalType } from "../src/content/relationship-types-file";
-import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
+import { registerBidirectionalType } from "tome-store-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
 
 describe("createNode", () => {
   let fixture: TestContentFixture;
@@ -25,7 +25,7 @@ describe("createNode", () => {
     expect(result).toEqual({ id: expect.any(String), title: "New idea" });
     if (typeof result === "string") throw new Error("unexpected error");
 
-    const detail = getNodeDetail(fixture.ctx.db, result.id);
+    const detail = getNodeDetail(fixture.ctx.cache, result.id);
     expect(detail?.title).toBe("New idea");
     expect(detail?.body).toBe("Notes here\n");
     expect(detail?.isTypeTable).toBe(false);

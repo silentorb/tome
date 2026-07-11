@@ -1,23 +1,16 @@
 import { Database, type SQLQueryBindings } from "bun:sqlite";
 import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
+import type { Node, Properties, Relationship } from "tome-graph-interfaces";
+import type {
+  GraphCounts,
+  RelationshipProjectionRow,
+  RelationshipPropertyCodec,
+  RelationshipRecordRow,
+  TomeQueryCache,
+} from "tome-service-interfaces";
 import { migrateSchema } from "./schema-migrate";
 import { DDL, SCHEMA_VERSION } from "./schema";
-import type {
-  RelationshipProjectionRow,
-  RelationshipRecordRow,
-} from "./content/relationship-sync-expand";
-import { decodeEnumProperties, encodeEnumProperties } from "./enum-codec";
-import { loadWorkspaceSchema } from "./schema-rules/load";
-import { resolveContentPath } from "./content/paths";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
-import { memberSidePerspectives, setTraitPerspectives } from "./relationship-type-traits";
-
-import type {
-  Node,
-  Properties,
-  Relationship,
-} from "tome-graph-interfaces";
 
 export type {
   Node,
@@ -26,10 +19,12 @@ export type {
   Relationship,
 } from "tome-graph-interfaces";
 
-export interface GraphCounts {
-  nodes: number;
-  relationships: number;
-}
+export type { GraphCounts } from "tome-service-interfaces";
+
+const IDENTITY_CODEC: RelationshipPropertyCodec = {
+  encode: (properties) => properties,
+  decode: (properties) => properties,
+};
 
 function parseJsonObject(raw: string): Properties {
   try {
@@ -39,14 +34,6 @@ function parseJsonObject(raw: string): Properties {
     /* fall through */
   }
   return {};
-}
-
-function parseRelationshipProperties(raw: string): Properties {
-  return decodeEnumProperties(parseJsonObject(raw), loadWorkspaceSchema());
-}
-
-function stringifyRelationshipProperties(properties: Properties): string {
-  return JSON.stringify(encodeEnumProperties(properties, loadWorkspaceSchema()));
 }
 
 function mergeProperties(base: Properties, patch: Properties): Properties {
@@ -62,29 +49,11 @@ export function relationshipId(sourceNodeId: string, type: string, targetNodeId:
   return `${sourceNodeId}:${type}:${targetNodeId}`;
 }
 
-function mapProjectionRow(row: {
-  id: string;
-  record_id: string;
-  source_node_id: string;
-  target_node_id: string;
-  type: string;
-  properties: string;
-}): Relationship {
-  return {
-    id: row.id,
-    recordId: row.record_id,
-    sourceNodeId: row.source_node_id,
-    targetNodeId: row.target_node_id,
-    type: row.type,
-    properties: parseRelationshipProperties(row.properties),
-  };
-}
-
-export class GraphDatabase {
+export class GraphDatabase implements TomeQueryCache {
   readonly path: string;
-  /** Content root used for registry-backed queries when callers omit contentDir. */
-  contentDir?: string;
   private db: Database;
+  private readonly propertyCodec: RelationshipPropertyCodec;
+  private readonly memberPerspectives?: () => readonly string[];
 
   private insertNode!: ReturnType<Database["prepare"]>;
   private updateNodeProps!: ReturnType<Database["prepare"]>;
@@ -93,9 +62,17 @@ export class GraphDatabase {
   private insertProjection!: ReturnType<Database["prepare"]>;
   private updateProjectionProps!: ReturnType<Database["prepare"]>;
 
-  constructor(path: string, options?: { clean?: boolean; contentDir?: string }) {
+  constructor(
+    path: string,
+    options?: {
+      clean?: boolean;
+      propertyCodec?: RelationshipPropertyCodec;
+      memberPerspectives?: () => readonly string[];
+    },
+  ) {
     this.path = path;
-    this.contentDir = options?.contentDir;
+    this.propertyCodec = options?.propertyCodec ?? IDENTITY_CODEC;
+    this.memberPerspectives = options?.memberPerspectives;
     if (options?.clean) {
       try {
         rmSync(path, { force: true });
@@ -111,6 +88,32 @@ export class GraphDatabase {
     migrateSchema(this.db);
     this.prepareStatements();
     this.setMeta("schema_version", String(SCHEMA_VERSION));
+  }
+
+  private parseRelationshipProperties(raw: string): Properties {
+    return this.propertyCodec.decode(parseJsonObject(raw));
+  }
+
+  private stringifyRelationshipProperties(properties: Properties): string {
+    return JSON.stringify(this.propertyCodec.encode(properties));
+  }
+
+  private mapProjectionRow(row: {
+    id: string;
+    record_id: string;
+    source_node_id: string;
+    target_node_id: string;
+    type: string;
+    properties: string;
+  }): Relationship {
+    return {
+      id: row.id,
+      recordId: row.record_id,
+      sourceNodeId: row.source_node_id,
+      targetNodeId: row.target_node_id,
+      type: row.type,
+      properties: this.parseRelationshipProperties(row.properties),
+    };
   }
 
   private prepareStatements(): void {
@@ -181,12 +184,12 @@ export class GraphDatabase {
       record.nodeA,
       record.nodeB,
       record.compositeType,
-      stringifyRelationshipProperties(record.properties),
+      this.stringifyRelationshipProperties(record.properties),
     );
     const existing = this.getRelationshipRecord(record.id);
     if (existing && Object.keys(record.properties).length > 0) {
       const merged = mergeProperties(existing.properties, record.properties);
-      this.updateRecordProps.run(stringifyRelationshipProperties(merged), record.id);
+      this.updateRecordProps.run(this.stringifyRelationshipProperties(merged), record.id);
     }
   }
 
@@ -197,12 +200,12 @@ export class GraphDatabase {
       projection.sourceNodeId,
       projection.targetNodeId,
       projection.type,
-      stringifyRelationshipProperties(projection.properties),
+      this.stringifyRelationshipProperties(projection.properties),
     );
     const existing = this.getRelationship(projection.id);
     if (existing && Object.keys(projection.properties).length > 0) {
       const merged = mergeProperties(existing.properties, projection.properties);
-      this.updateProjectionProps.run(stringifyRelationshipProperties(merged), projection.id);
+      this.updateProjectionProps.run(this.stringifyRelationshipProperties(merged), projection.id);
     }
   }
 
@@ -219,7 +222,7 @@ export class GraphDatabase {
       sourceNodeId,
       targetNodeId,
       type,
-      stringifyRelationshipProperties(properties),
+      this.stringifyRelationshipProperties(properties),
     );
     this.insertProjection.run(
       id,
@@ -227,12 +230,12 @@ export class GraphDatabase {
       sourceNodeId,
       targetNodeId,
       type,
-      stringifyRelationshipProperties(properties),
+      this.stringifyRelationshipProperties(properties),
     );
     const existing = this.getRelationship(id);
     if (existing && Object.keys(properties).length > 0) {
       const merged = mergeProperties(existing.properties, properties);
-      this.updateProjectionProps.run(stringifyRelationshipProperties(merged), id);
+      this.updateProjectionProps.run(this.stringifyRelationshipProperties(merged), id);
     }
   }
 
@@ -240,9 +243,9 @@ export class GraphDatabase {
     const existing = this.getRelationship(id);
     if (!existing) return;
     const merged = mergeProperties(existing.properties, properties);
-    this.updateProjectionProps.run(stringifyRelationshipProperties(merged), id);
+    this.updateProjectionProps.run(this.stringifyRelationshipProperties(merged), id);
     if (existing.recordId) {
-      this.updateRecordProps.run(stringifyRelationshipProperties(merged), existing.recordId);
+      this.updateRecordProps.run(this.stringifyRelationshipProperties(merged), existing.recordId);
     }
   }
 
@@ -284,10 +287,8 @@ export class GraphDatabase {
     return row?.is_archived === 1;
   }
 
-  listArchiveMemberIds(archiveId: string, contentDir?: string): string[] {
-    const dir = contentDir ?? this.contentDir ?? resolveContentPath();
-    const registry = loadRelationshipTypesFromContent(dir);
-    const types = setTraitPerspectives(registry);
+  listArchiveMemberIds(archiveId: string, memberPerspectives?: readonly string[]): string[] {
+    const types = [...(memberPerspectives ?? this.memberPerspectives?.() ?? [])];
     if (types.length === 0) return [];
     const placeholders = types.map(() => "?").join(", ");
     const rows = this.db
@@ -304,13 +305,16 @@ export class GraphDatabase {
   }
 
   /** @deprecated Use listArchiveMemberIds */
-  listIncludesArchiveMemberIds(archiveId: string, contentDir?: string): string[] {
-    return this.listArchiveMemberIds(archiveId, contentDir);
+  listIncludesArchiveMemberIds(
+    archiveId: string,
+    memberPerspectives?: readonly string[],
+  ): string[] {
+    return this.listArchiveMemberIds(archiveId, memberPerspectives);
   }
 
-  recomputeArchivedFlags(archiveId: string, contentDir?: string): void {
+  recomputeArchivedFlags(archiveId: string, memberPerspectives?: readonly string[]): void {
     this.db.exec("UPDATE nodes SET is_archived = 0");
-    const memberIds = this.listArchiveMemberIds(archiveId, contentDir);
+    const memberIds = this.listArchiveMemberIds(archiveId, memberPerspectives);
     if (memberIds.length === 0) return;
     const placeholders = memberIds.map(() => "?").join(", ");
     this.db
@@ -338,7 +342,7 @@ export class GraphDatabase {
       nodeA: row.node_a,
       nodeB: row.node_b,
       compositeType: row.composite_type,
-      properties: parseRelationshipProperties(row.properties),
+      properties: this.parseRelationshipProperties(row.properties),
     };
   }
 
@@ -359,7 +363,7 @@ export class GraphDatabase {
         }
       | undefined;
     if (!row) return null;
-    return mapProjectionRow(row);
+    return this.mapProjectionRow(row);
   }
 
   counts(): GraphCounts {
@@ -475,11 +479,9 @@ export class GraphDatabase {
   private nodeMatchesAnyAllowedType(
     nodeId: string,
     allowedTypeIds: readonly string[],
-    contentDir?: string,
   ): boolean {
-    const dir = contentDir ?? this.contentDir ?? resolveContentPath();
-    const registry = loadRelationshipTypesFromContent(dir);
-    for (const type of memberSidePerspectives(registry)) {
+    const types = this.memberPerspectives?.() ?? [];
+    for (const type of types) {
       for (const connection of this.listRelationshipsFromSource(nodeId, type)) {
         if (allowedTypeIds.includes(connection.targetNodeId)) return true;
       }
@@ -602,7 +604,7 @@ export class GraphDatabase {
           properties: string;
         }[]);
 
-    return rows.map(mapProjectionRow);
+    return rows.map((row) => this.mapProjectionRow(row));
   }
 
   listRelationshipsToTarget(targetNodeId: string, type?: string): Relationship[] {
@@ -634,7 +636,7 @@ export class GraphDatabase {
           properties: string;
         }[]);
 
-    return rows.map(mapProjectionRow);
+    return rows.map((row) => this.mapProjectionRow(row));
   }
 
   countIncidentRelationships(nodeId: string): number {

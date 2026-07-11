@@ -1,9 +1,9 @@
-import type { GraphDatabase, Node, Properties } from "./graph";
+import type { GraphDatabase, Node, Properties } from "tome-cache-sqlite";
 import { memberSetIds } from "./set-membership";
-import { resolveContentPath } from "./content/paths";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
-import { hasTableSchemaEntry, loadTableSchemasFromContent } from "./table-schemas/load";
-import { memberSidePerspectives, setSidePerspectives } from "./relationship-type-traits";
+import { resolveContentPath } from "tome-store-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-store-flatfile";
+import { hasTableSchemaEntry, loadTableSchemasFromContent } from "tome-store-flatfile";
+import { memberSidePerspectives, setSidePerspectives } from "tome-store-flatfile";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;

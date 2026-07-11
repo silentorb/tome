@@ -1,11 +1,56 @@
-import type {
-  DynamicColumnSetRecord,
-  DynamicFieldRecord,
-  SeedDynamicColumnSetInput,
-  SeedDynamicFieldInput,
-} from "../dynamic-fields/overlay";
-
 export const DYNAMIC_FIELDS_FILE_VERSION = 1;
+
+export interface DynamicFieldRecord {
+  id: string;
+  databaseId: string;
+  columnKey: string;
+  columnName: string;
+  columnType: string;
+  resolverId: string;
+  docsPath: string;
+  enabled: boolean;
+  params: Record<string, unknown>;
+  viewNames: string[];
+}
+
+export interface DynamicColumnSetRecord {
+  id: string;
+  databaseId: string;
+  columnKeyPattern: string;
+  columnNamePattern: string;
+  columnType: string;
+  resolverId: string;
+  docsPath: string;
+  enabled: boolean;
+  params: Record<string, unknown>;
+  viewNames: string[];
+  /** Keys of legacy columns to hide when this set is active. */
+  hideLegacyKeys: string[];
+}
+
+export interface SeedDynamicFieldInput {
+  id: string;
+  databaseId: string;
+  columnKey: string;
+  columnName: string;
+  columnType?: string;
+  resolverId: string;
+  docsPath: string;
+  params?: Record<string, unknown>;
+  viewNames?: string[];
+}
+
+export interface SeedDynamicColumnSetInput {
+  id: string;
+  databaseId: string;
+  columnKeyPattern: string;
+  columnNamePattern: string;
+  columnType?: string;
+  resolverId: string;
+  docsPath: string;
+  params?: Record<string, unknown>;
+  viewNames?: string[];
+}
 
 export interface DynamicFieldFileEntry {
   id: string;

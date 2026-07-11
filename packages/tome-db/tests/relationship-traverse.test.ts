@@ -14,9 +14,9 @@ import {
   relatedNodeIds,
   rowBelongsToDatabase,
 } from "../src/relationship-traverse";
-import type { RelationshipEntry } from "../src/content/relationships-file";
-import { RELATIONSHIPS_FILE_VERSION } from "../src/content/relationships-file";
-import { invalidateRelationshipTypesCache } from "../src/relationship-types/load";
+import type { RelationshipEntry } from "tome-store-flatfile";
+import { RELATIONSHIPS_FILE_VERSION } from "tome-store-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-store-flatfile";
 
 describe("relationship-traverse", () => {
   const fixture = createTestContentFixture("tome-rel-traverse-");
@@ -70,21 +70,21 @@ describe("relationship-traverse", () => {
   fixture.ctx.sync.syncRelationships();
 
   test("finds product through scenes_product composite", () => {
-    expect(firstRelatedNodeId(fixture.ctx.db, scene, "scenes_product")).toBe(product);
-    expect(relatedNodeIds(fixture.ctx.db, scene, "scenes_product")).toEqual([product]);
+    expect(firstRelatedNodeId(fixture.ctx.cache, scene, "scenes_product")).toBe(product);
+    expect(relatedNodeIds(fixture.ctx.cache, scene, "scenes_product")).toEqual([product]);
   });
 
   test("finds part through scenes_part composite", () => {
-    expect(firstRelatedNodeId(fixture.ctx.db, scene, "scenes_part")).toBe(part);
+    expect(firstRelatedNodeId(fixture.ctx.cache, scene, "scenes_part")).toBe(part);
   });
 
   test("finds scene from location through scenes_location composite", () => {
-    const rels = listRelationshipsForComposite(fixture.ctx.db, location, "scenes_location");
+    const rels = listRelationshipsForComposite(fixture.ctx.cache, location, "scenes_location");
     expect(rels.some((rel) => rel.sourceNodeId === location || rel.targetNodeId === location)).toBe(
       true,
     );
     const members = listRelationshipsToDatabaseMembers(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       location,
       scenesDb,
       contentDir,
@@ -93,20 +93,20 @@ describe("relationship-traverse", () => {
   });
 
   test("rowBelongsToDatabase reflects is_a membership", () => {
-    expect(rowBelongsToDatabase(fixture.ctx.db, scene, scenesDb, contentDir)).toBe(true);
-    expect(rowBelongsToDatabase(fixture.ctx.db, scene, locationsDb, contentDir)).toBe(false);
-    expect(rowBelongsToDatabase(fixture.ctx.db, product, scenesDb, contentDir)).toBe(false);
+    expect(rowBelongsToDatabase(fixture.ctx.cache, scene, scenesDb, contentDir)).toBe(true);
+    expect(rowBelongsToDatabase(fixture.ctx.cache, scene, locationsDb, contentDir)).toBe(false);
+    expect(rowBelongsToDatabase(fixture.ctx.cache, product, scenesDb, contentDir)).toBe(false);
   });
 
   test("filterRelationshipsByRowDatabaseContext keeps edges for row members", () => {
     const rels = listRelationshipsToDatabaseMembers(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       location,
       scenesDb,
       contentDir,
     );
     const filtered = filterRelationshipsByRowDatabaseContext(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       location,
       locationsDb,
       rels,
@@ -136,7 +136,7 @@ describe("relationship-traverse", () => {
       },
     ];
     const filtered = filterRelationshipsByRowDatabaseContext(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       location,
       scenesDb,
       relationships,

@@ -1,5 +1,5 @@
 import { describe, expect, test, afterEach, beforeEach } from "bun:test";
-import type { WorkspaceQuickLink } from "tome-db";
+import type { WorkspaceQuickLink } from "tome-graph-interfaces";
 import {
   buildQuickLinkIconMaps,
   navigateQuickLinkKeyboard,

@@ -15,7 +15,7 @@ import {
  */
 describe("relationship tuple order carries relative semantics", () => {
   const fixture = createTestContentFixture("tome-tuple-order-");
-  const db = fixture.ctx.db;
+  const db = fixture.ctx.cache;
 
   const targets = (nodeId: string, type: string) =>
     db.listRelationshipsFromSource(nodeId, type).map((r) => r.targetNodeId).sort();

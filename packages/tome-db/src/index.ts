@@ -1,5 +1,5 @@
-export { GraphDatabase, relationshipId } from "./graph";
-export type { Relationship, GraphCounts, Node, Properties, PropertyValue } from "./graph";
+export { GraphDatabase, relationshipId, DDL, DYNAMIC_FIELDS_DDL, SCHEMA_VERSION } from "tome-cache-sqlite";
+export type { Relationship, GraphCounts, Node, Properties, PropertyValue } from "tome-cache-sqlite";
 export {
   isArchivedNode,
   isLegacyArchivedPath,
@@ -51,7 +51,7 @@ export {
 } from "./relationship-archive";
 export { getDatabaseViewDetail } from "./database-view";
 export { hydrateRelationCellsForRows } from "./database-view-relations";
-export { relationType, normalizeRelationshipType, stripEmojis } from "./relation-type";
+export { relationType, normalizeRelationshipType, stripEmojis } from "tome-store-flatfile";
 export { formatRelationshipTypeLabel } from "./relationship-type-label";
 export type {
   DatabaseColumnDef,
@@ -122,7 +122,7 @@ export type {
   DatabaseColumnMutationResult,
   UpdateDatabaseColumnInput,
 } from "./database-column-mutations";
-export { slugifyPropertyKey } from "./table-schema";
+export { slugifyPropertyKey } from "tome-store-flatfile";
 export {
   isRelationColumnSort,
   relationLinkCount,
@@ -133,36 +133,8 @@ export {
   loadTableSchemasFromContent,
   hasTableSchemaEntry,
   invalidateTableSchemasCache,
-} from "./table-schemas/load";
-export type { TableColumnDef, TableSchemasFile } from "./content/table-schemas-file";
-export {
-  canonicalNodeMarkdownHref,
-  canonicalizeMarkdownBodyLinks,
-  expandMarkdownBodyLinks,
-  findMarkdownLinksToTarget,
-  resolveMarkdownHrefTarget,
-} from "./markdown-links";
-export type { MarkdownLinkMatch } from "./markdown-links";
-export {
-  collapseDynamicEditorLinks,
-  DYNAMIC_NODE_EDITOR_QUERY_PARAM,
-  DYNAMIC_NODE_LINK_QUERY_PARAM,
-  DYNAMIC_NODE_LINK_QUERY_VALUE,
-  editorDynamicNodeHref,
-  isDynamicEditorHref,
-  expandDynamicNodeLinks,
-  expandDynamicNodeLinksForEditor,
-  formatDynamicNodeLink,
-  isValidNodeId,
-  linkTextMatchesAnyNodeName,
-  linkTextMatchesNodeTitle,
-  migrateStaticLinksInBodies,
-  migrateStaticLinksToDynamic,
-  normalizeLinkTextForTitleMatch,
-  parseDynamicNodeLinkIds,
-  prepareEditorMarkdownBody,
-  transformOutsideCodeFences,
-} from "./dynamic-node-links";
+} from "tome-store-flatfile";
+export type { TableColumnDef, TableSchemasFile } from "tome-store-flatfile";
 export { getNodePageMetadata } from "./node-metadata";
 export type { NodeBacklink, NodePageMetadata } from "./node-metadata";
 export { buildPropertiesSection } from "./node-type-properties";
@@ -228,7 +200,6 @@ export type {
   OrderedAssociationScope,
   OrderedAssociationViewDetail,
 } from "./ordered-associations";
-export { DDL, DYNAMIC_FIELDS_DDL, SCHEMA_VERSION } from "./schema";
 export type { TomeWriteContext } from "./content/write-context";
 export {
   mergeNodePropertiesOnContent,
@@ -236,6 +207,7 @@ export {
   syncAfterRelationshipsWrite,
   syncAfterNodeWrite,
 } from "./content/write-context";
+export { openContentGraph } from "./content/sync";
 export {
   applyDynamicFields,
   getDefaultResolverRegistry,
@@ -256,12 +228,13 @@ export {
   findSetMembershipRelationship,
   isSetMembershipStorageType,
   isMembershipPerspective,
+  collectSetNodeIds,
 } from "./set-membership";
 export {
   registerSetMembershipType,
   registerOrderedSetMembershipType,
-} from "./content/relationship-types-file";
-export type { TraitEntry, TraitObjectEntry } from "./content/relationship-types-file";
+} from "tome-store-flatfile";
+export type { TraitEntry, TraitObjectEntry } from "tome-store-flatfile";
 export {
   SET_TRAIT,
   ORDERED_TRAIT,
@@ -294,7 +267,7 @@ export {
   traitMap,
   typesWithTrait,
   viewSectionKeyForSet,
-} from "./relationship-type-traits";
+} from "tome-store-flatfile";
 export {
   ORDER_META_KEYS,
   applySparseOrderRewrite,
@@ -302,22 +275,23 @@ export {
   maxOrderAtSet,
   stampOrderIfMissing,
 } from "./ordered-relationships";
-export { loadSchemaFromContent, loadWorkspaceSchema, invalidateSchemaCache } from "./schema-rules/load";
 export {
+  loadSchemaFromContent,
+  loadWorkspaceSchema,
+  invalidateSchemaCache,
   loadRelationshipTypesFromContent,
   invalidateRelationshipTypesCache,
-} from "./relationship-types/load";
-export { loadViewsFromContent, invalidateViewsCache } from "./views/load";
-export {
+  loadViewsFromContent,
+  invalidateViewsCache,
   loadWorkspaceFromContent,
   loadWorkspace,
   invalidateWorkspaceCache,
-} from "./workspace/load";
-export {
   loadOrderedAssociationsFromContent,
   invalidateOrderedAssociationsCache,
-} from "./ordered-associations-config/load";
-export { resolveWorkspace, archiveNodeId, protectedNodeIds } from "./workspace/resolve";
+  resolveWorkspace,
+  archiveNodeId,
+  protectedNodeIds,
+} from "tome-store-flatfile";
 export type {
   WorkspaceFile,
   WorkspaceBranding,
@@ -330,7 +304,7 @@ export type {
   WorkspaceSchemaDiagramMemberBadgePosition,
   WorkspaceQuickLink,
   SidebarLink,
-} from "./workspace/workspace-file";
+} from "tome-store-flatfile";
 export {
   parseWorkspaceFile,
   serializeWorkspaceFile,
@@ -340,7 +314,7 @@ export {
   schemaDiagramMemberBadgePosition,
   schemaDiagramPageBlockServices,
   WORKSPACE_FILE_VERSION,
-} from "./workspace/workspace-file";
+} from "tome-store-flatfile";
 export {
   addWorkspaceQuickLink,
   removeWorkspaceQuickLink,
@@ -353,8 +327,8 @@ export {
   serializeOrderedAssociationsFile,
   emptyOrderedAssociationsFile,
   ORDERED_ASSOCIATIONS_FILE_VERSION,
-} from "./ordered-associations-config/ordered-associations-file";
-export type { OrderedAssociationsFile } from "./ordered-associations-config/ordered-associations-file";
+} from "tome-store-flatfile";
+export type { OrderedAssociationsFile } from "tome-store-flatfile";
 export {
   resolveCustomTabs,
   resolveCustomTabsForNode,
@@ -385,7 +359,7 @@ export {
   VIEWS_FILE_VERSION,
   isGeneratedViewRecord,
   isViewDefinition,
-} from "./content/views-file";
+} from "tome-store-flatfile";
 export type {
   CustomTabDefinition,
   GeneratedViewRecord,
@@ -395,7 +369,7 @@ export type {
   ViewSortSpec,
   ViewRecord,
   ViewsFile,
-} from "./content/views-file";
+} from "tome-store-flatfile";
 export type { ResolvedTab, TableTabsDetail, TabKind } from "./views/tabs";
 export { sortEvalRowsFromViewSorts } from "./views/sort-spec";
 export {
@@ -409,8 +383,8 @@ export {
   parseSchemaFile,
   serializeSchemaFile,
   SCHEMA_FILE_VERSION,
-} from "./schema-rules/schema-file";
-export type { RelationshipRuleEntry, SchemaFile, EnumDefinition } from "./schema-rules/schema-file";
+} from "tome-store-flatfile";
+export type { RelationshipRuleEntry, SchemaFile, EnumDefinition } from "tome-store-flatfile";
 export {
   EXTENSIONS_FILE_VERSION,
   emptyExtensionsFile,
@@ -420,7 +394,7 @@ export {
   loadExtensionsFromContent,
   resolveExtensionsManifest,
   findComponentById,
-} from "./extensions";
+} from "tome-store-flatfile";
 export { createExtensionGraphQueryServices } from "./extension-graph-query";
 export { createExtensionSchemaQueryServices } from "./extension-schema-query";
 export type {
@@ -430,4 +404,4 @@ export type {
   ExtensionsFile,
   ExtensionsManifest,
   ResolvedExtensionComponent,
-} from "./extensions";
+} from "tome-store-flatfile";

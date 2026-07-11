@@ -2,7 +2,7 @@ import {
   editorDynamicNodeHref,
   parseDynamicNodeLinkIds,
   prepareEditorMarkdownBody,
-} from "tome-db/dynamic-node-links";
+} from "tome-store-flatfile/dynamic-node-links";
 
 /** Markdown href for in-editor static node links (relative to current page URL). */
 export function standaloneEditorNodeHref(nodeId: string): string {

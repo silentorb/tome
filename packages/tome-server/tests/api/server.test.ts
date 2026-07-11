@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { GraphDatabase } from "tome-db";
+import { GraphDatabase } from "tome-cache-sqlite";
 import { pickExistingDbPath } from "../../src/paths";
 
 describe("pickExistingDbPath", () => {

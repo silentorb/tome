@@ -6,27 +6,12 @@ export {
   serializeRelationshipsFile,
   relationshipRecordId,
   connectsEndpoints,
-} from "./relationships-file";
-export type { RelationshipEntry, RelationshipsFile } from "./relationships-file";
-export {
   RELATIONSHIP_TYPES_FILE_VERSION,
   compositeTypeForPerspectives,
   emptyRelationshipTypesFile,
   parseRelationshipTypesFile,
   registerBidirectionalType,
   serializeRelationshipTypesFile,
-} from "./relationship-types-file";
-export type {
-  RelationshipTypeDefinition,
-  RelationshipTypesFile,
-  PerspectiveLabelConfig,
-  PerspectivePair,
-  TraitEntry,
-  RelationshipTypeEndpoints,
-  RelationshipEndpointConstraint,
-} from "./relationship-types-file";
-export { expandAllRelationships } from "./relationship-sync-expand";
-export {
   DYNAMIC_FIELDS_FILE_VERSION,
   columnSetRecordFromEntry,
   emptyDynamicFieldsFile,
@@ -36,20 +21,10 @@ export {
   fileFromSeedInputs,
   parseDynamicFieldsFile,
   serializeDynamicFieldsFile,
-} from "./dynamic-fields-file";
-export type {
-  DynamicColumnSetFileEntry,
-  DynamicFieldFileEntry,
-  DynamicFieldsFile,
-} from "./dynamic-fields-file";
-export {
   bodyFromNode,
   nodeFromFile,
   parseNodeFile,
   serializeNodeFile,
-} from "./node-file";
-export type { ParsedNodeFile } from "./node-file";
-export {
   CONTENT_DATA_SUBDIR,
   CONTENT_MODEL_SUBDIR,
   RELATIONSHIPS_FILENAME,
@@ -81,9 +56,26 @@ export {
   nodeRelativePath,
   nodeShardDir,
   resolveContentPath,
-} from "./paths";
-export { ContentStore } from "./store";
-export { LinkResolutionError } from "./resolve-composite-for-link";
+  ContentStore,
+  LinkResolutionError,
+} from "tome-store-flatfile";
+export type {
+  RelationshipEntry,
+  RelationshipsFile,
+  RelationshipTypeDefinition,
+  RelationshipTypesFile,
+  PerspectiveLabelConfig,
+  PerspectivePair,
+  TraitEntry,
+  RelationshipTypeEndpoints,
+  RelationshipEndpointConstraint,
+  DynamicColumnSetFileEntry,
+  DynamicFieldFileEntry,
+  DynamicFieldsFile,
+  ParsedNodeFile,
+} from "tome-store-flatfile";
+
+export { expandAllRelationships } from "./relationship-sync-expand";
 export {
   CacheSync,
   invalidateDynamicFieldsCache,
@@ -91,7 +83,6 @@ export {
   loadDynamicFieldsFromContent,
   openContentGraph,
 } from "./sync";
-export { ContentWatcher } from "./watcher";
 export {
   createTestContentFixture,
   destroyTestContentFixture,

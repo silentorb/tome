@@ -1,5 +1,5 @@
 import type { DatabaseColumnDef } from "../database-view";
-import type { ViewsFile } from "../content/views-file";
+import type { ViewsFile } from "tome-store-flatfile";
 import { columnOrderFromViews } from "./index";
 
 /** Apply optional section columnOrder override to default column keys. */

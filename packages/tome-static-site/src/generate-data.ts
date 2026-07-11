@@ -1,7 +1,15 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { openContentGraph } from "tome-db/content";
-import { createExtensionGraphQueryServices, createExtensionSchemaQueryServices, loadSchemaFromContent, loadWorkspaceFromContent, schemaDiagramPageBlockServices, spatialGraphNodeDimensionScale } from "tome-db";
+import {
+  createExtensionGraphQueryServices,
+  createExtensionSchemaQueryServices,
+  loadSchemaFromContent,
+  loadWorkspaceFromContent,
+  schemaDiagramPageBlockServices,
+  spatialGraphNodeDimensionScale,
+  type GraphDatabase,
+} from "tome-db";
 import type { ResolvedConfig } from "./config";
 import type { SiteData, SiteNode } from "./lib/site-types";
 import { buildExtraTabPayloadsAndRoutes, buildSiteNode } from "./lib/static-export";
@@ -13,18 +21,19 @@ import { resolveStaticSiteFooter } from "./lib/static-site-footer";
 export type { SiteData, SiteNode } from "./lib/site-types";
 
 export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteData> {
-  const { store, db } = openContentGraph(config.contentDir, config.dbPath);
+  const { store, cache: cacheRaw } = openContentGraph(config.contentDir, config.dbPath);
+  const cache = cacheRaw as GraphDatabase;
   const schema = loadSchemaFromContent(config.contentDir);
   const workspace = loadWorkspaceFromContent(config.contentDir);
   const nodes: SiteNode[] = [];
 
   for (const id of store.listNodeIds()) {
-    const node = buildSiteNode(db, id, config.contentDir, schema);
+    const node = buildSiteNode(cache, id, config.contentDir, schema);
     if (node) nodes.push(node);
   }
 
   const { tabItemsPayloads, tabRoutes } = buildExtraTabPayloadsAndRoutes(
-    db,
+    cache,
     nodes,
     config.contentDir,
   );
@@ -39,8 +48,8 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
 
   const htmlRuntime = new ExtensionHtmlRuntime(config.contentDir);
   await htmlRuntime.ensureLoaded();
-  const graphQuery = createExtensionGraphQueryServices(db, config.contentDir);
-  const schemaQuery = createExtensionSchemaQueryServices(db, config.contentDir);
+  const graphQuery = createExtensionGraphQueryServices(cache, config.contentDir);
+  const schemaQuery = createExtensionSchemaQueryServices(cache, config.contentDir);
   const spatialGraphScale = spatialGraphNodeDimensionScale(workspace);
   const spatialGraphServices = spatialGraphScale
     ? { nodeDimensionScale: spatialGraphScale }
@@ -68,7 +77,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
     }
   }
 
-  db.close();
+  cache.close();
 
   const staticSiteFooter = resolveStaticSiteFooter(workspace.branding);
 

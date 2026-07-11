@@ -1,8 +1,8 @@
 import type {
   PerspectiveLabelConfig,
   RelationshipTypesFile,
-} from "./content/relationship-types-file";
-import { normalizeRelationshipType } from "./relation-type";
+} from "tome-store-flatfile";
+import { normalizeRelationshipType } from "tome-store-flatfile/relation-type";
 
 /** Human-readable label for a local relationship type (e.g. `bible_passages` → `Bible Passages`). */
 export function formatRelationshipTypeLabel(type: string): string {

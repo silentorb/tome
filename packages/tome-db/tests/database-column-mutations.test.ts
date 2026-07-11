@@ -7,7 +7,7 @@ import {
 } from "../src/database-column-mutations";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
-import { invalidateSchemaCache } from "../src/schema-rules/load";
+import { invalidateSchemaCache } from "tome-store-flatfile";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -78,7 +78,7 @@ describe("database column mutations", () => {
     });
 
     const detail = getDatabaseViewDetail(
-      fixture.ctx.db,
+      fixture.ctx.cache,
       databaseId,
       undefined,
       fixture.ctx.store.contentDir,
@@ -156,7 +156,7 @@ describe("database column mutations", () => {
       rowsMigrated: 1,
     });
 
-    const edge = fixture.ctx.db.listRelationshipsFromSource(pageId, "member_of")[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, "member_of")[0];
     expect(edge?.properties.description).toBe("Alpha");
     expect(edge?.properties.notes).toBeUndefined();
 
@@ -190,7 +190,7 @@ describe("database column mutations", () => {
     });
     expect(result).toMatchObject({ valuesCleared: 1, relationsUnlinked: 0 });
 
-    const edge = fixture.ctx.db.listRelationshipsFromSource(rowId, "member_of")[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(rowId, "member_of")[0];
     expect(edge?.properties.label).toBeUndefined();
   });
 
@@ -224,7 +224,7 @@ describe("database column mutations", () => {
     });
     expect(result).toMatchObject({ relationsUnlinked: 1 });
 
-    expect(fixture.ctx.db.listRelationshipsFromSource(rowId, "children")).toHaveLength(0);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(rowId, "children")).toHaveLength(0);
   });
 
   test("updateDatabaseColumn relation target change unlinks old links", () => {
@@ -259,7 +259,7 @@ describe("database column mutations", () => {
       relationshipType: "other_parents_children",
     });
     expect(result).toMatchObject({ relationsUnlinked: 1 });
-    expect(fixture.ctx.db.listRelationshipsFromSource(rowId, "children")).toHaveLength(0);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(rowId, "children")).toHaveLength(0);
   });
 
   test("rejects duplicate and reserved keys", () => {

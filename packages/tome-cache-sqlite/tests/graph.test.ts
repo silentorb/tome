@@ -3,11 +3,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import { GraphDatabase } from "../src/graph";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  TEST_ARCHIVE_NODE_ID,
-} from "../src/content/test-helpers";
+
+const ARCHIVE_SET_PERSPECTIVES = ["archive_hosts", "archived_in"] as const;
 
 describe("GraphDatabase", () => {
   let tempDir: string;
@@ -22,7 +19,7 @@ describe("GraphDatabase", () => {
   });
 
   test("upserts nodes and relationships", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-db-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
     dbPath = join(tempDir, "test.sqlite");
     const db = new GraphDatabase(dbPath);
     db.upsertNode("abc123", { title: "Hello" });
@@ -41,7 +38,7 @@ describe("GraphDatabase", () => {
   });
 
   test("merges node properties on upsert", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-db-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
     dbPath = join(tempDir, "merge.sqlite");
     const db = new GraphDatabase(dbPath);
     db.upsertNode("page1", { title: "A" });
@@ -52,7 +49,7 @@ describe("GraphDatabase", () => {
   });
 
   test("deleteRelationship removes an edge", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-db-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
     dbPath = join(tempDir, "delete.sqlite");
     const db = new GraphDatabase(dbPath);
     db.upsertNode("a", { title: "A" });
@@ -65,7 +62,7 @@ describe("GraphDatabase", () => {
   });
 
   test("deleteNode removes a vertex and its edges", () => {
-    tempDir = mkdtempSync(join(tmpdir(), "tome-db-test-"));
+    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
     dbPath = join(tempDir, "delete-vertex.sqlite");
     const db = new GraphDatabase(dbPath);
     db.upsertNode("a", { title: "A" });
@@ -76,31 +73,41 @@ describe("GraphDatabase", () => {
     db.close();
   });
 
-  test("listArchiveMemberIds finds members via registry-derived set-trait perspectives", () => {
-    const fixture = createTestContentFixture("tome-graph-archive-");
-    const { db, store } = fixture.ctx;
-    const hub = TEST_ARCHIVE_NODE_ID;
+  test("listArchiveMemberIds finds members via injected set-trait perspectives", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
+    dbPath = join(tempDir, "archive.sqlite");
+    const hub = "01ARCHIVEHUB00000000000000";
     const member = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
 
-    fixture.ctx.store.writeRelationshipTypesFile({
-      version: 1,
-      types: {
-        archive_membership: {
-          perspectives: ["archive_hosts", "archived_in"],
-          traits: ["set"],
-        },
-      },
+    const db = new GraphDatabase(dbPath, {
+      memberPerspectives: () => ARCHIVE_SET_PERSPECTIVES,
     });
-
+    db.upsertNode(hub, { title: "Archive" });
     db.upsertNode(member, { title: "Archived page" });
     db.upsertRelationship(member, hub, "archived_in");
 
-    const ids = db.listArchiveMemberIds(hub, store.contentDir);
+    const ids = db.listArchiveMemberIds(hub);
     expect(ids).toEqual([member]);
 
-    db.recomputeArchivedFlags(hub, store.contentDir);
+    db.recomputeArchivedFlags(hub);
     expect(db.isNodeArchived(member)).toBe(true);
 
-    destroyTestContentFixture(fixture);
+    db.close();
+  });
+
+  test("listArchiveMemberIds accepts explicit perspectives override", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-cache-sqlite-test-"));
+    dbPath = join(tempDir, "archive-override.sqlite");
+    const hub = "01ARCHIVEHUB00000000000000";
+    const member = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
+
+    const db = new GraphDatabase(dbPath);
+    db.upsertNode(hub, { title: "Archive" });
+    db.upsertNode(member, { title: "Archived page" });
+    db.upsertRelationship(member, hub, "archived_in");
+
+    expect(db.listArchiveMemberIds(hub)).toEqual([]);
+    expect(db.listArchiveMemberIds(hub, ARCHIVE_SET_PERSPECTIVES)).toEqual([member]);
+    db.close();
   });
 });

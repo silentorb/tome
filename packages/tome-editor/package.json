@@ -26,6 +26,7 @@
     "tome-graph-interfaces": "workspace:*",
     "tome-http": "workspace:*",
     "tome-interfaces": "workspace:*",
+    "tome-store-flatfile": "workspace:*",
     "tome-theme-midnight": "workspace:*"
   },
   "devDependencies": {
