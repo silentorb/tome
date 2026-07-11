@@ -1,4 +1,1 @@
-export interface RelationLink {
-  targetId: string;
-  title: string;
-}
+export type { RelationLink } from "tome-graph-interfaces";

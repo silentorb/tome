@@ -4,30 +4,18 @@ import { isOrderedTraitComposite } from "../relationship-type-traits";
 import { normalizeRelationshipType } from "../relation-type";
 import { getTableSchema } from "../table-schema";
 import { loadTableSchemasFromContent } from "../table-schemas/load";
+import type {
+  OrderedAssociationConfig,
+  OrderedAssociationsFile,
+} from "tome-graph-interfaces";
+
+export type {
+  OrderedAssociationConfig,
+  OrderedAssociationsFile,
+} from "tome-graph-interfaces";
 
 export const ORDERED_ASSOCIATIONS_FILE_VERSION = 1;
 
-export interface OrderedAssociationConfig {
-  id: string;
-  typeDatabaseId: string;
-  /** Composite relationship type for member ↔ scope tabs (e.g. scenes_product). */
-  scopeCompositeType: string;
-  /** Composite relationship type for member ↔ group subsection (e.g. scenes_part). */
-  groupCompositeType: string;
-  /** Composite relationship type linking group nodes to scope (e.g. products_parts_database). */
-  partProductCompositeType: string;
-  groupTypeDatabaseId: string;
-  unassignedGroupTitle: string;
-  /** Reference view name used internally for column visibility (no view tabs in UI). */
-  columnViewName?: string;
-  /** Slugified column keys excluded from table columns (UI-redundant or deprecated). */
-  excludedColumnKeys?: string[];
-}
-
-export interface OrderedAssociationsFile {
-  version: number;
-  configs: OrderedAssociationConfig[];
-}
 
 function parseNodeId(value: unknown, path: string): string {
   if (typeof value !== "string" || !isNodeId(value)) {

@@ -116,7 +116,7 @@ GET /api/nodes/:scenesDbId?scope=:productId
 | `packages/tome-db/src/ordered-associations.ts` | View query, move mutation, schema-driven column defs |
 | `packages/tome-db/src/database-column-defs.ts` | Shared column-def builder used by database and ordered-association views |
 | `packages/tome-db/src/node-page-sections.ts` | Emits `ordered-association` section for configured databases |
-| `packages/tome-editor/src/api/server.ts` | PATCH move endpoint, `scope` query param |
+| `packages/tome-http/` (HTTP handler) | PATCH move endpoint, `scope` query param |
 | `packages/tome-editor/src/webview/components/OrderedAssociationView.tsx` | Book tabs + DnD part tables |
 
 ## See also

@@ -8,8 +8,9 @@ import {
 } from "./relationship-archive";
 import { membershipPerspectivesForSet } from "./relationship-type-traits";
 import { archiveNodeId, protectedNodeIds } from "./workspace/resolve";
+import type { NodeLifecycleError } from "tome-graph-interfaces";
 
-export type NodeLifecycleError = "not_found" | "protected" | "already_archived" | "not_archived";
+export type { NodeLifecycleError } from "tome-graph-interfaces";
 
 export function isProtectedNodeId(id: string, contentDir?: string): boolean {
   return protectedNodeIds(contentDir).has(id);

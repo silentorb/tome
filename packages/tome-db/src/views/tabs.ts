@@ -1,17 +1,13 @@
-import type { CustomTabDefinition } from "../content/views-file";
+import type {
+  CustomTabDefinition,
+  ResolvedTab,
+  TabKind,
+  TableTabsDetail,
+} from "tome-graph-interfaces";
 
-export type TabKind = "custom" | "generated";
-
-export interface ResolvedTab {
-  id: string;
-  label: string;
-  kind: TabKind;
-}
-
-export interface TableTabsDetail {
-  kind: TabKind;
-  items: ResolvedTab[];
-  activeTabId: string;
-  /** Custom tab definitions when kind is custom (for tab CRUD UI). */
-  customDefinitions?: CustomTabDefinition[];
-}
+export type {
+  CustomTabDefinition,
+  ResolvedTab,
+  TabKind,
+  TableTabsDetail,
+} from "tome-graph-interfaces";

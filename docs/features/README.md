@@ -17,7 +17,8 @@ Each file in this directory is the **authoritative design spec** for one major w
 | --- | --- |
 | SQLite property graph (`data/`) | [tome-db.md](./tome-db.md) |
 | Type table columns (`table-schemas.json`) | [table-schemas.md](./table-schemas.md) |
-| Web markdown editor (browser + graph API) | [tome-editor.md](./tome-editor.md) |
+| Web markdown editor (browser client) | [tome-editor.md](./tome-editor.md) |
+| Config-driven API host + service modules | [tome-server.md](./tome-server.md) |
 | Graph Explorer (LOD graph visualization) | [graph-explorer.md](./graph-explorer.md) |
 | Ordered associations (scene order, DnD) | [ordered-associations.md](./ordered-associations.md) |
 | Dynamic table fields (computed columns) | [dynamic-table-fields.md](./dynamic-table-fields.md) |

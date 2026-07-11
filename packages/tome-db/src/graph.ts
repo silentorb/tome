@@ -13,22 +13,18 @@ import { resolveContentPath } from "./content/paths";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { memberSidePerspectives, setTraitPerspectives } from "./relationship-type-traits";
 
-export type PropertyValue = string | number | boolean | null | PropertyValue[] | { [key: string]: PropertyValue };
-export type Properties = Record<string, PropertyValue>;
+import type {
+  Node,
+  Properties,
+  Relationship,
+} from "tome-graph-interfaces";
 
-export interface Node {
-  id: string;
-  properties: Properties;
-}
-
-export interface Relationship {
-  id: string;
-  sourceNodeId: string;
-  targetNodeId: string;
-  type: string;
-  properties: Properties;
-  recordId?: string;
-}
+export type {
+  Node,
+  Properties,
+  PropertyValue,
+  Relationship,
+} from "tome-graph-interfaces";
 
 export interface GraphCounts {
   nodes: number;

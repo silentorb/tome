@@ -8,19 +8,22 @@ import { relationshipTypeRuleContext } from "./relationship-type-endpoints";
 import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { stampOrderIfMissing } from "./ordered-relationships";
 import { membershipPerspectivesForSet } from "./relationship-type-traits";
+import type {
+  LinkOutgoingRelationshipError,
+  LinkOutgoingRelationshipInput,
+  MoveRelationshipConnectionError,
+  MoveRelationshipConnectionInput,
+  UnlinkOutgoingRelationshipError,
+} from "tome-graph-interfaces";
 
-export type LinkOutgoingRelationshipError =
-  | "source_not_found"
-  | "target_not_found"
-  | "duplicate"
-  | "target_type_not_allowed"
-  | "unresolvable_type";
+export type {
+  LinkOutgoingRelationshipError,
+  LinkOutgoingRelationshipInput,
+  MoveRelationshipConnectionError,
+  MoveRelationshipConnectionInput,
+  UnlinkOutgoingRelationshipError,
+} from "tome-graph-interfaces";
 
-export type UnlinkOutgoingRelationshipError = "not_found";
-
-export type MoveRelationshipConnectionError =
-  | "not_found"
-  | LinkOutgoingRelationshipError;
 
 function ordinalFromProperties(properties: Record<string, unknown>): number | null {
   const raw = properties.ordinal;
@@ -41,13 +44,6 @@ function nextOutgoingOrdinal(
     .filter((v): v is number => v !== null);
   if (ordinals.length === 0) return undefined;
   return Math.max(...ordinals) + 1;
-}
-
-export interface LinkOutgoingRelationshipInput {
-  sourceId: string;
-  targetId: string;
-  type: string;
-  properties?: Properties;
 }
 
 export function linkOutgoingRelationship(
@@ -116,14 +112,6 @@ export function unlinkOutgoingRelationship(
   ctx.store.deleteRelationship(sourceId, targetId, normalizedType);
   syncAfterRelationshipsWrite(ctx);
   return null;
-}
-
-export interface MoveRelationshipConnectionInput {
-  type: string;
-  oldSourceId: string;
-  oldTargetId: string;
-  newSourceId: string;
-  newTargetId: string;
 }
 
 export function moveRelationshipConnection(

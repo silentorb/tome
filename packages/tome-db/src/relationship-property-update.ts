@@ -9,8 +9,9 @@ import {
   isUnsetPriority,
 } from "./property-enums";
 import { membershipPerspectivesForSet } from "./relationship-type-traits";
+import type { RelationshipPropertyUpdateError } from "tome-graph-interfaces";
 
-export type RelationshipPropertyUpdateError = "not_found" | "invalid_value";
+export type { RelationshipPropertyUpdateError } from "tome-graph-interfaces";
 
 export function updateOutgoingRelationshipProperty(
   ctx: TomeWriteContext,

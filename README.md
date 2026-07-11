@@ -1,13 +1,17 @@
 # Tome
 
-Domain-agnostic tooling for git-tracked design graphs: SQLite query cache (`tome-db`), web editor (`tome-editor`), and static site export (`tome-static-site`).
+Domain-agnostic tooling for git-tracked design graphs: SQLite query cache (`tome-db`), config-driven server host (`tome-server` + `tome-http`), web editor (`tome-editor`), and static site export (`tome-static-site`).
 
 ## Packages
 
 | Package | Role |
 | ------- | ---- |
 | `packages/tome-db/` | Property graph storage, content sync, schema loaders |
-| `packages/tome-editor/` | Bun API + Vite/React markdown editor |
+| `packages/tome-graph-interfaces/` | Domain DTOs + `TomeGraphServices` |
+| `packages/tome-service-interfaces/` | `TomeServiceModule` contracts |
+| `packages/tome-http/` | HTTP service module + client SDK |
+| `packages/tome-server/` | Config-driven host (wires db + services) |
+| `packages/tome-editor/` | Vite/React markdown editor (client only) |
 | `packages/tome-static-site/` | Astro static site generator |
 
 ## Development

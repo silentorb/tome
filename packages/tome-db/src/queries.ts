@@ -4,26 +4,21 @@ import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite } from "./content/write-context";
 import { bodyFromNode } from "./content/node-file";
 import { isTypeTableNode, primaryTypeTitleForInstance } from "./node-capabilities";
-import {
-  buildSearchMatchPreview,
-  type SearchMatchPreview,
-} from "./search-match-preview";
+import { buildSearchMatchPreview } from "./search-match-preview";
 import { sortBySearchRelevance } from "./search-relevance";
+import type {
+  NodeDetail,
+  NodeSummary,
+  SearchNodesOptions,
+} from "tome-graph-interfaces";
 
-export type { SearchMatchPreview, SearchMatchPreviewPart } from "./search-match-preview";
-
-export interface NodeSummary {
-  id: string;
-  title: string;
-  primaryTypeTitle: string | null;
-  matchPreview?: SearchMatchPreview;
-}
-
-export interface NodeDetail extends NodeSummary {
-  body: string;
-  isTypeTable: boolean;
-  archived: boolean;
-}
+export type {
+  NodeDetail,
+  NodeSummary,
+  SearchMatchPreview,
+  SearchMatchPreviewPart,
+  SearchNodesOptions,
+} from "tome-graph-interfaces";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;
@@ -60,10 +55,6 @@ function toActiveNodeSummary(
     title: row.title,
     primaryTypeTitle: primaryTypeTitleForInstance(db, row.id),
   };
-}
-
-export interface SearchNodesOptions {
-  includeBody?: boolean;
 }
 
 export function searchNodes(

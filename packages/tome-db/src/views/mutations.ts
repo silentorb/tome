@@ -17,19 +17,9 @@ import {
   viewsForNode,
   viewsForRelationship,
 } from "./index";
+import type { ViewsMutationError } from "tome-graph-interfaces";
 
-export type ViewsMutationError =
-  | "node_not_found"
-  | "section_not_found"
-  | "tab_not_found"
-  | "view_not_found"
-  | "last_tab"
-  | "last_view"
-  | "invalid_name"
-  | "invalid_tab_order"
-  | "invalid_view_order"
-  | "not_custom_tabs"
-  | "not_custom_views";
+export type { ViewsMutationError } from "tome-graph-interfaces";
 
 function writeViews(store: ContentStore, file: ViewsFile): void {
   store.writeViewsFile(file);

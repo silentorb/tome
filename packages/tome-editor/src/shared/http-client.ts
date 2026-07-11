@@ -1,6 +1,6 @@
-export type * from "./http-client-types";
+export type * from "tome-http/client";
 export {
-  createHttpEditorClient,
+  createHttpClient as createHttpEditorClient,
   waitForApi,
   DEFAULT_API_BASE_URL,
-} from "./create-http-editor-client";
+} from "tome-http/client";

@@ -9,6 +9,7 @@
       "name": "tome-db",
       "version": "0.1.0",
       "dependencies": {
+        "tome-graph-interfaces": "workspace:*",
         "tome-interfaces": "workspace:*",
         "ulid": "^3.0.2",
         "yaml": "2.8.0",
@@ -31,6 +32,8 @@
         "react-force-graph-2d": "^1.29.1",
         "svg-pan-zoom": "^3.6.2",
         "tome-db": "workspace:*",
+        "tome-graph-interfaces": "workspace:*",
+        "tome-http": "workspace:*",
         "tome-interfaces": "workspace:*",
         "tome-theme-midnight": "workspace:*",
       },
@@ -60,6 +63,26 @@
         "typescript": "5.8.2",
       },
     },
+    "packages/tome-graph-interfaces": {
+      "name": "tome-graph-interfaces",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/bun": "1.2.23",
+        "typescript": "5.8.2",
+      },
+    },
+    "packages/tome-http": {
+      "name": "tome-http",
+      "version": "0.1.0",
+      "dependencies": {
+        "tome-graph-interfaces": "workspace:*",
+        "tome-service-interfaces": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.2.23",
+        "typescript": "5.8.2",
+      },
+    },
     "packages/tome-interfaces": {
       "name": "tome-interfaces",
       "version": "0.1.0",
@@ -79,6 +102,32 @@
       },
       "devDependencies": {
         "@types/react": "19.0.12",
+        "typescript": "5.8.2",
+      },
+    },
+    "packages/tome-server": {
+      "name": "tome-server",
+      "version": "0.1.0",
+      "dependencies": {
+        "tome-db": "workspace:*",
+        "tome-graph-interfaces": "workspace:*",
+        "tome-interfaces": "workspace:*",
+        "tome-service-interfaces": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.2.23",
+        "tome-http": "workspace:*",
+        "typescript": "5.8.2",
+      },
+    },
+    "packages/tome-service-interfaces": {
+      "name": "tome-service-interfaces",
+      "version": "0.1.0",
+      "dependencies": {
+        "tome-graph-interfaces": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.2.23",
         "typescript": "5.8.2",
       },
     },
@@ -1278,9 +1327,17 @@
 
     "tome-extension-fixture": ["tome-extension-fixture@workspace:packages/tome-extension-fixture"],
 
+    "tome-graph-interfaces": ["tome-graph-interfaces@workspace:packages/tome-graph-interfaces"],
+
+    "tome-http": ["tome-http@workspace:packages/tome-http"],
+
     "tome-interfaces": ["tome-interfaces@workspace:packages/tome-interfaces"],
 
     "tome-schema-diagram": ["tome-schema-diagram@workspace:packages/tome-schema-diagram"],
+
+    "tome-server": ["tome-server@workspace:packages/tome-server"],
+
+    "tome-service-interfaces": ["tome-service-interfaces@workspace:packages/tome-service-interfaces"],
 
     "tome-spatial-graph": ["tome-spatial-graph@workspace:packages/tome-spatial-graph"],
 

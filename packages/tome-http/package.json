@@ -1,0 +1,22 @@
+{
+  "name": "tome-http",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/http-client.ts",
+    "./user-settings": "./src/user-settings.ts"
+  },
+  "scripts": {
+    "test": "bun test tests"
+  },
+  "dependencies": {
+    "tome-graph-interfaces": "workspace:*",
+    "tome-service-interfaces": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "1.2.23",
+    "typescript": "5.8.2"
+  }
+}

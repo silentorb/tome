@@ -5,10 +5,14 @@ Each subdirectory is a **workspace package** in the Tome monorepo. Packages are 
 | Package | Role |
 | --- | --- |
 | [`tome-db`](./tome-db/) | Graph storage, SQLite cache, content sync |
-| [`tome-editor`](./tome-editor/) | Browser editor (API + webview) |
+| [`tome-graph-interfaces`](./tome-graph-interfaces/) | Domain DTOs and `TomeGraphServices` contract |
+| [`tome-service-interfaces`](./tome-service-interfaces/) | `TomeServiceModule` host/plugin contracts |
+| [`tome-http`](./tome-http/) | HTTP service module + typed HTTP client |
+| [`tome-server`](./tome-server/) | Config-driven host (wires db + service modules) |
+| [`tome-editor`](./tome-editor/) | Browser editor (client UI only) |
 | [`tome-static-site`](./tome-static-site/) | Static HTML export |
 | [`tome-theme-midnight`](./tome-theme-midnight/) | Midnight theme tokens and shared cross-surface CSS |
-| [`tome-interfaces`](./tome-interfaces/) | Integration contracts for external modules |
+| [`tome-interfaces`](./tome-interfaces/) | Extension / page-block integration contracts |
 | [`tome-extension-fixture`](./tome-extension-fixture/) | Reference/test extension (not production) |
 | [`tome-spatial-graph`](./tome-spatial-graph/) | Compound spatial graph page block (cytoscape SVG) |
 

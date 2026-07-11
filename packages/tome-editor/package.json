@@ -5,8 +5,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run dev:api & API_PID=$!; bun run dev:webview; EXIT=$?; kill $API_PID 2>/dev/null || true; wait $API_PID 2>/dev/null || true; exit $EXIT",
-    "dev:api": "bun --watch src/api/server.ts",
+    "dev": "bun run --filter tome-server dev & API_PID=$!; bun run dev:webview; EXIT=$?; kill $API_PID 2>/dev/null || true; wait $API_PID 2>/dev/null || true; exit $EXIT",
+    "dev:api": "bun run --filter tome-server dev",
     "dev:webview": "vite",
     "build": "bun run build:webview",
     "build:webview": "vite build",
@@ -23,6 +23,8 @@
     "react-force-graph-2d": "^1.29.1",
     "svg-pan-zoom": "^3.6.2",
     "tome-db": "workspace:*",
+    "tome-graph-interfaces": "workspace:*",
+    "tome-http": "workspace:*",
     "tome-interfaces": "workspace:*",
     "tome-theme-midnight": "workspace:*"
   },

@@ -14,16 +14,12 @@ import {
   enrichColumnDefs,
   isPriorityColumnKey,
 } from "./property-enums";
+import type { PropertiesSection } from "tome-graph-interfaces";
+
+export type { PropertiesSection } from "tome-graph-interfaces";
+
 const ROW_META_KEYS = new Set(["view", "row_name", "order", "row_index", "number"]);
 
-export interface PropertiesSection {
-  type: "properties";
-  databaseId: string;
-  typeTitle: string;
-  columns: string[];
-  columnDefs?: DatabaseColumnDef[];
-  cells: Record<string, string>;
-}
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;

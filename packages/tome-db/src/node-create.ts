@@ -11,30 +11,20 @@ import {
   membershipCompositeForSet,
   membershipPerspectivesForSet,
 } from "./relationship-type-traits";
+import type {
+  CreateNodeError,
+  CreateNodeInput,
+  CreateNodeLink,
+  CreateNodeResult,
+} from "tome-graph-interfaces";
 
-export type CreateNodeError = "invalid_title" | "source_not_found" | "database_not_found";
+export type {
+  CreateNodeError,
+  CreateNodeInput,
+  CreateNodeLink,
+  CreateNodeResult,
+} from "tome-graph-interfaces";
 
-export type CreateNodeLink =
-  | {
-      kind: "outgoing";
-      sourceId: string;
-      type: string;
-      properties?: Properties;
-      /** When set, also create membership on the new node to this type table. */
-      membershipTypeId?: string;
-    }
-  | { kind: "database-row"; databaseId: string; view?: string; properties?: Properties };
-
-export interface CreateNodeInput {
-  title: string;
-  body?: string;
-  link?: CreateNodeLink;
-}
-
-export interface CreateNodeResult {
-  id: string;
-  title: string;
-}
 
 function nowIso(): string {
   return new Date().toISOString();

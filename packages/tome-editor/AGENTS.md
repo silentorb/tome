@@ -2,7 +2,7 @@
 
 ## What it is
 
-Browser editor for design corpus nodes stored in `content/` with a SQLite query cache. Uses **Milkdown Crepe** for a modern block-based markdown experience with `@` cross-link autocomplete.
+Browser editor for design corpus nodes. **Client-only** — talks to `tome-server` / `tome-http` over HTTP. Uses **Milkdown Crepe** for block-based markdown with `@` cross-link autocomplete.
 
 ## Terminology
 
@@ -31,24 +31,23 @@ See [`docs/features/tome-editor.md`](../../../docs/features/tome-editor.md) § I
 
 ## Extensions
 
-Editor hosts **editor** and **server** page-block subsystems. See [`docs/features/extensions.md`](../../../docs/features/extensions.md).
+Editor hosts **editor** page-block UI. Server-side extension runtime lives in **`tome-server`**. See [`docs/features/extensions.md`](../../../docs/features/extensions.md).
 
 | Path | Role |
 | --- | --- |
-| `src/api/extensions/` | Server runtime, manifest, bundle route |
-| `src/webview/extensions/` | Client loader, slash menu, fence decoration |
+| `src/webview/extensions/` | Slash menu for page blocks |
 
 ## Architecture
 
 | Layer | Path | Runtime |
 | --- | --- | --- |
-| Graph queries | `tome-db` | Bun |
-| HTTP API | `src/api/server.ts` | Bun |
+| Graph + host | `tome-server` (+ `tome-db`) | Bun |
+| HTTP service | `tome-http` (loaded by server config) | Bun |
 | Webview UI | `src/webview/` | Browser (Vite) |
 
 The webview talks to the Bun REST API on `http://127.0.0.1:3847` (proxied as `/api` in dev).
 
-**Data transport:** webview → REST (`src/shared/http-client.ts`).
+**Data transport:** webview → REST (`tome-http` client via `src/shared/http-client.ts`).
 
 **Link/navigation convention (read [`docs/features/tome-editor.md`](../../../docs/features/tome-editor.md) § Cross-linking):** stored markdown bodies use `./{nodeId}.md`; markdown passed to Milkdown uses `?node=` display hrefs (`prepareEditorMarkdown` / `normalizeEditorBody`). **App chrome** (sidebar, tables, search rows, metadata backlinks, etc.) **must** use `<a href="…">` with native browser pointer navigation—no `onClick` / `onAuxClick` / `preventDefault` / imperative routing on those anchors. **Milkdown body** is exempt: use Crepe defaults (`LinkTooltip` on) and JS click handling via `editor-link-navigation.ts` (`navigateStandaloneNode` / `openStandaloneNodeInNewTab`). Other exceptions: Graph Explorer canvas (`api.navigate`), keyboard Enter in combobox pickers. Helpers: `nodePageHref()` in `src/webview/node-links.ts`.
 
@@ -57,11 +56,11 @@ The webview talks to the Bun REST API on `http://127.0.0.1:3847` (proxied as `/a
 From repo root:
 
 ```bash
-# API only (auto-started on devcontainer boot + workspace folder open outside devcontainer)
-bun run editor:api
+# API host (config-driven; includes tome-http by default)
+bun run server:dev
 # → http://127.0.0.1:3847
 
-# Browser UI + API (keep terminal open; for webview HMR)
+# Browser UI + API
 bun run editor:dev
 # → http://127.0.0.1:5173
 ```
@@ -72,6 +71,7 @@ Build webview: **Tasks: Run Task** → **Tome Editor: build**, or `bun run edito
 
 ```bash
 bun test packages/tome-editor/tests
+bun test packages/tome-server/tests
 bun test packages/tome-db/tests
 ```
 
@@ -84,6 +84,7 @@ When fixing table-view bugs, add a regression test in the same change. Prefer `s
 ## Repo-wide context
 
 - Feature spec: [`docs/features/tome-editor.md`](../../../docs/features/tome-editor.md)
+- Server hub: [`docs/features/tome-server.md`](../../../docs/features/tome-server.md)
 - Graph Explorer: [`docs/features/graph-explorer.md`](../../../docs/features/graph-explorer.md)
 - Graph storage: [`docs/features/tome-db.md`](../../../docs/features/tome-db.md)
 - Root [`AGENTS.md`](../../AGENTS.md)

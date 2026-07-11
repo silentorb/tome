@@ -2,8 +2,6 @@ import type { GraphDatabase, Relationship, Properties } from "./graph";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
 import { relationshipId } from "./graph";
-import type { DatabaseColumnDef } from "./database-view";
-import type { RelationLink } from "./relation-link";
 import { applyDynamicFields } from "./dynamic-fields";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
@@ -21,13 +19,11 @@ import {
   relationColumnCompositeType,
 } from "./table-relation-column";
 import { applySectionColumnOrder } from "./views/column-order";
-import type { TableTabsDetail } from "./views/tabs";
 import {
   firstRelatedNodeId,
   listRelationshipsForComposite,
   relatedNodeIds,
 } from "./relationship-traverse";
-import type { OrderedAssociationConfig } from "./ordered-associations-config/ordered-associations-file";
 import { loadOrderedAssociationsFromContent } from "./ordered-associations-config/load";
 import { listSetMemberRowConnections } from "./set-membership";
 import { ORDERED_PROPERTY_DEFAULT,
@@ -39,8 +35,23 @@ import { ORDERED_PROPERTY_DEFAULT,
   SET_TRAIT,
 } from "./relationship-type-traits";
 import { ORDER_META_KEYS, applySparseOrderRewrite } from "./ordered-relationships";
+import type {
+  OrderedAssociationConfig,
+  OrderedAssociationGroup,
+  OrderedAssociationMoveParams,
+  OrderedAssociationRow,
+  OrderedAssociationScope,
+  OrderedAssociationViewDetail,
+} from "tome-graph-interfaces";
 
-export type { OrderedAssociationConfig } from "./ordered-associations-config/ordered-associations-file";
+export type {
+  OrderedAssociationConfig,
+  OrderedAssociationGroup,
+  OrderedAssociationMoveParams,
+  OrderedAssociationRow,
+  OrderedAssociationScope,
+  OrderedAssociationViewDetail,
+} from "tome-graph-interfaces";
 
 /** Synthetic group id for members with no group association. */
 export const UNASSIGNED_GROUP_ID = "__unassigned__";
@@ -49,46 +60,6 @@ const ORDERED_ASSOCIATION_META_KEYS = ORDER_META_KEYS;
 
 function loadConfigs(contentDir?: string): OrderedAssociationConfig[] {
   return loadOrderedAssociationsFromContent(contentDir ?? resolveContentPath()).configs;
-}
-
-export interface OrderedAssociationScope {
-  id: string;
-  name: string;
-}
-
-export interface OrderedAssociationRow {
-  /** Member node id in the type database (e.g. a scene). */
-  sceneId: string;
-  name: string;
-  cells: Record<string, string>;
-  relationCells?: Record<string, RelationLink[]>;
-}
-
-export interface OrderedAssociationGroup {
-  groupId: string;
-  title: string;
-  rows: OrderedAssociationRow[];
-}
-
-export interface OrderedAssociationViewDetail {
-  configId: string;
-  typeDatabaseId: string;
-  typeDatabaseTitle: string;
-  /** Set-side perspective = views.json relationshipType / section key. */
-  viewRelationshipType: string;
-  /** Member-side perspective for unlink/move against this set. */
-  memberSidePerspective: string;
-  tabs: TableTabsDetail;
-  groups: OrderedAssociationGroup[];
-  columns: string[];
-  columnDefs?: DatabaseColumnDef[];
-}
-
-export interface OrderedAssociationMoveParams {
-  scopeId: string;
-  sceneId: string;
-  targetGroupId: string;
-  targetIndex: number;
 }
 
 interface MemberInfo {

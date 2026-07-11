@@ -73,7 +73,7 @@ extensions.json
 | --- | --- |
 | `content/model/extensions.json` | Extension + component registration |
 | `packages/tome-interfaces/` | Integration contracts + fence parse |
-| `packages/tome-editor/src/api/extensions/` | Server runtime, manifest, bundle route |
+| `packages/tome-server/src/extensions/` | Server runtime, manifest, bundle route |
 | `packages/tome-editor/src/webview/extensions/` | Slash menu for page blocks |
 | `packages/tome-static-site/src/extensions/` | HTML subsystem loader |
 | `packages/tome-extension-fixture/` | Test/reference extension |
@@ -128,7 +128,7 @@ bun test packages/tome-interfaces/tests
 bun test packages/tome-db/tests/extensions.test.ts
 bun test packages/tome-editor/tests/extensions
 bun test packages/tome-editor/tests/webview/page-block-menu.test.ts
-bun test packages/tome-editor/tests/api/prepare-editor-body-api.test.ts
+bun test packages/tome-server/tests/api/prepare-editor-body-api.test.ts
 bun test packages/tome-static-site/tests/extensions
 ```
 
@@ -137,7 +137,7 @@ bun test packages/tome-static-site/tests/extensions
 | Module | Responsibility |
 | --- | --- |
 | `tome-db/src/extensions/` | Parse/load `extensions.json`, resolve manifest |
-| `tome-editor/src/api/extensions/runtime.ts` | Server-side dynamic import + manifest + prepare-editor-body |
+| `tome-server/src/extensions/runtime.ts` | Server-side dynamic import + manifest + prepare-editor-body |
 | `tome-editor/src/webview/extensions/` | Slash menu for page blocks |
 | `tome-static-site/src/lib/page-block-html.ts` | HTML pipeline during generate |
 

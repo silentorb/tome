@@ -1,14 +1,13 @@
 import type { GraphDatabase, Relationship } from "./graph";
-import { getDatabaseViewDetail, type DatabaseColumnDef, type DatabaseViewDetail } from "./database-view";
+import { getDatabaseViewDetail } from "./database-view";
 import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./property-enums";
 import {
   getConfigByProvider,
   getOrderedAssociationView,
-  type OrderedAssociationViewDetail,
 } from "./ordered-associations";
-import { getNodeDetail, type NodeDetail } from "./queries";
-import { getNodePageMetadata, type NodePageMetadata } from "./node-metadata";
-import { buildPropertiesSection, type PropertiesSection } from "./node-type-properties";
+import { getNodeDetail } from "./queries";
+import { getNodePageMetadata } from "./node-metadata";
+import { buildPropertiesSection } from "./node-type-properties";
 import {
   relationSectionSupportsLinkExisting,
   relationshipTypeRuleContext,
@@ -40,6 +39,26 @@ import {
   relationColumnCompositeType,
   targetTypeIdForRelationColumn,
 } from "./table-relation-column";
+import type {
+  NodePageDetail,
+  NodeSection,
+  RelationRow,
+  RelationTableSection,
+} from "tome-graph-interfaces";
+
+export type {
+  DatabaseTableSection,
+  MarkdownSection,
+  NodeBacklink,
+  NodePageDetail,
+  NodePageMetadata,
+  NodeSection,
+  OrderedAssociationSection,
+  PropertiesSection,
+  RelationRow,
+  RelationTableAddMode,
+  RelationTableSection,
+} from "tome-graph-interfaces";
 
 const RELATION_META_KEYS = new Set([
   "ordinal",
@@ -48,59 +67,6 @@ const RELATION_META_KEYS = new Set([
   "row_name",
   "order",
 ]);
-
-export interface MarkdownSection {
-  type: "markdown";
-  body: string;
-}
-
-export interface DatabaseTableSection {
-  type: "database";
-  databaseView: DatabaseViewDetail;
-}
-
-export interface OrderedAssociationSection {
-  type: "ordered-association";
-  configId: string;
-  view: OrderedAssociationViewDetail;
-}
-
-export interface RelationRow {
-  targetId: string;
-  name: string;
-  cells: Record<string, string>;
-}
-
-export type RelationTableAddMode = "link-existing" | "none";
-
-export interface RelationTableSection {
-  type: "relations";
-  label: string;
-  title: string;
-  /** When set, the section title links to this type node. */
-  typeNodeId: string | null;
-  /** UI hint: allowed target type ids for link-existing picker (from table-schemas or registry endpoints). */
-  allowedTargetTypeIds?: string[];
-  /** Inline table add control: link existing record vs none (registry linkExisting presentation). */
-  addMode: RelationTableAddMode;
-  /** Optional link-existing button label from relationship-types perspectiveLabels. */
-  linkAddLabel?: string;
-  columns: string[];
-  columnDefs?: DatabaseColumnDef[];
-  rows: RelationRow[];
-}
-
-export type NodeSection = MarkdownSection | DatabaseTableSection | OrderedAssociationSection | RelationTableSection;
-
-export interface NodePageDetail extends NodeDetail {
-  metadata: NodePageMetadata;
-  properties: PropertiesSection | null;
-  sections: NodeSection[];
-}
-
-export type { PropertiesSection } from "./node-type-properties";
-
-export type { NodeBacklink, NodePageMetadata } from "./node-metadata";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;

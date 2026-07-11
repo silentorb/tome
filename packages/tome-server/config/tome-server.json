@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "services": [
+    {
+      "id": "http",
+      "module": "tome-http",
+      "export": "createTomeHttpService",
+      "options": {
+        "port": 3847
+      }
+    }
+  ]
+}

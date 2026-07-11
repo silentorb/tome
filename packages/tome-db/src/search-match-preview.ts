@@ -1,11 +1,6 @@
-export interface SearchMatchPreviewPart {
-  text: string;
-  highlight: boolean;
-}
+import type { SearchMatchPreview, SearchMatchPreviewPart } from "tome-graph-interfaces";
 
-export interface SearchMatchPreview {
-  parts: ReadonlyArray<SearchMatchPreviewPart>;
-}
+export type { SearchMatchPreview, SearchMatchPreviewPart } from "tome-graph-interfaces";
 
 const TARGET_WINDOW = 130;
 

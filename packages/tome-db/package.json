@@ -22,6 +22,7 @@
     "test": "bun test tests"
   },
   "dependencies": {
+    "tome-graph-interfaces": "workspace:*",
     "tome-interfaces": "workspace:*",
     "ulid": "^3.0.2",
     "yaml": "2.8.0"

@@ -197,7 +197,7 @@ The following describes how the server subdivides the scoped graph into detail l
 | --- | --- |
 | `packages/tome-db/src/graph-export.ts` | Export entry, anchor BFS, archive filter, `GraphRelationship` |
 | `packages/tome-db/src/graph-lod-cluster.ts` | Anchor-centric layer subdivision + relevance metadata |
-| `packages/tome-editor/src/api/server.ts` | `/api/graph/explorer-lod` route |
+| `packages/tome-http/` (HTTP handler) | `/api/graph/explorer-lod` route |
 | `packages/tome-editor/src/webview/components/GraphView.tsx` | Force graph UI + settings dropdown |
 | `packages/tome-editor/src/webview/graph-lod.ts` | Layer navigation helpers |
 | `packages/tome-editor/src/webview/graph-node-label.ts` | Hover label formatting |

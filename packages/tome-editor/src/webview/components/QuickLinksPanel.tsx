@@ -174,10 +174,22 @@ function SortableQuickLinkItem({
             archiveHubTitle={archiveHubTitle}
             onRelate={onRelate}
             isQuickLink
-            onRemoveQuickLink={() => onRemoveQuickLink(nodeId)}
-            onArchive={() => onArchiveNode(nodeId)}
-            onUnarchive={onUnarchiveNode ? () => onUnarchiveNode(nodeId) : undefined}
-            onDelete={() => onDeleteNode(nodeId)}
+            onRemoveQuickLink={async () => {
+              await onRemoveQuickLink(nodeId);
+            }}
+            onArchive={async () => {
+              await onArchiveNode(nodeId);
+            }}
+            onUnarchive={
+              onUnarchiveNode
+                ? async () => {
+                    await onUnarchiveNode(nodeId);
+                  }
+                : undefined
+            }
+            onDelete={async () => {
+              await onDeleteNode(nodeId);
+            }}
           />
         </div>
       ) : null}

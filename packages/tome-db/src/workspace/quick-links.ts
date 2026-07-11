@@ -1,8 +1,9 @@
 import type { TomeWriteContext } from "../content/write-context";
 import { invalidateWorkspaceCache, loadWorkspaceFromContent } from "./load";
 import type { WorkspaceFile, WorkspaceQuickLink } from "./workspace-file";
+import type { QuickLinkError } from "tome-graph-interfaces";
 
-export type QuickLinkError = "not_found" | "already_exists" | "not_a_quick_link" | "invalid_order";
+export type { QuickLinkError } from "tome-graph-interfaces";
 
 const FALLBACK_ICON = "M";
 

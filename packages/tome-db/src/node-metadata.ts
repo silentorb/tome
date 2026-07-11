@@ -1,19 +1,10 @@
 import type { GraphDatabase } from "./graph";
 import { findMarkdownLinksToTarget } from "./markdown-links";
 import { getNodeDetail } from "./queries";
+import type { NodeBacklink, NodePageMetadata } from "tome-graph-interfaces";
 
-export interface NodeBacklink {
-  sourceId: string;
-  title: string;
-  linkText: string | null;
-}
+export type { NodeBacklink, NodePageMetadata } from "tome-graph-interfaces";
 
-export interface NodePageMetadata {
-  createdAt: string | null;
-  modifiedAt: string | null;
-  relationshipCount: number;
-  backlinks: NodeBacklink[];
-}
 
 function isoTimestampFromProperties(
   properties: Record<string, unknown>,

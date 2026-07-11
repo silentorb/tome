@@ -13,16 +13,16 @@ import { findColumnByKey } from "./table-schema";
 import { invalidateTableSchemasCache } from "./table-schemas/load";
 import { purgeColumnFromViews } from "./views/mutations";
 import { viewSectionKeyForSet } from "./relationship-type-traits";
+import type {
+  DeleteDatabaseColumnError,
+  DeleteDatabaseColumnResult,
+} from "tome-graph-interfaces";
 
-export type DeleteDatabaseColumnError =
-  | "database_not_found"
-  | "column_not_found"
-  | "column_not_deletable";
+export type {
+  DeleteDatabaseColumnError,
+  DeleteDatabaseColumnResult,
+} from "tome-graph-interfaces";
 
-export interface DeleteDatabaseColumnResult {
-  rowsAffected: number;
-  relationsUnlinked: number;
-}
 
 function removeColumnFromTableSchemas(
   file: TableSchemasFile,

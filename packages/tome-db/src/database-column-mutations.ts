@@ -27,40 +27,20 @@ import {
   renameColumnInViews,
 } from "./views/mutations";
 import { viewSectionKeyForSet } from "./relationship-type-traits";
+import type {
+  CreateDatabaseColumnInput,
+  DatabaseColumnMutationError,
+  DatabaseColumnMutationResult,
+  UpdateDatabaseColumnInput,
+} from "tome-graph-interfaces";
 
-export type DatabaseColumnMutationError =
-  | "database_not_found"
-  | "column_not_found"
-  | "column_key_taken"
-  | "column_not_deletable"
-  | "invalid_name"
-  | "invalid_key"
-  | "invalid_type"
-  | "invalid_enum"
-  | "invalid_relation_target";
+export type {
+  CreateDatabaseColumnInput,
+  DatabaseColumnMutationError,
+  DatabaseColumnMutationResult,
+  UpdateDatabaseColumnInput,
+} from "tome-graph-interfaces";
 
-export interface CreateDatabaseColumnInput {
-  key?: string;
-  name: string;
-  type: TableColumnType;
-  enumId?: string;
-  relationshipType?: string;
-}
-
-export interface UpdateDatabaseColumnInput {
-  name?: string;
-  newKey?: string;
-  type?: TableColumnType;
-  enumId?: string | null;
-  relationshipType?: string;
-}
-
-export interface DatabaseColumnMutationResult {
-  column: TableColumnDef;
-  rowsMigrated: number;
-  relationsUnlinked: number;
-  valuesCleared: number;
-}
 
 const SCALAR_TYPES = new Set<string>([
   "checkbox",

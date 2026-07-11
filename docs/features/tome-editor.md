@@ -147,7 +147,7 @@ Global search (Ctrl/Cmd+K) → same endpoint; optional `includeBody=1`; empty qu
 
 | Path | Role |
 | --- | --- |
-| `packages/tome-editor/` | API + browser webview |
+| `packages/tome-editor/` | Browser webview (client only) |
 | `data/tome.sqlite (legacy: data/marloth.sqlite)` | Node bodies and metadata (query cache) |
 | `packages/tome-editor/dist-webview/` | Production webview bundle |
 
@@ -210,8 +210,9 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 
 | Module | Responsibility |
 | --- | --- |
-| `packages/tome-editor/src/api/server.ts` | Bun HTTP API |
-| `packages/tome-editor/src/api/user-settings-store.ts` | Local user settings file I/O |
+| `packages/tome-http/` | Bun HTTP service module (`/api/...`) |
+| `packages/tome-http/src/user-settings-store.ts` | Local user settings file I/O |
+| `packages/tome-server/` | Config-driven host (graph + service modules) |
 | `packages/tome-editor/src/shared/user-settings.ts` | User settings types and table sort helpers |
 | `packages/tome-editor/src/webview/` | React + Milkdown Crepe UI |
 | `packages/tome-editor/src/webview/components/NodePageView.tsx` | Universal page layout (title, metadata, properties, markdown, sections) |

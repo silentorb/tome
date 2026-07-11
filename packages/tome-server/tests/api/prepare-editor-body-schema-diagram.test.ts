@@ -1,0 +1,169 @@
+import { describe, expect, test, afterAll } from "bun:test";
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { serializePageBlock } from "tome-interfaces/page-block";
+import {
+  invalidateExtensionsCache,
+  invalidateSchemaCache,
+  invalidateTableSchemasCache,
+  serializeSchemaFile,
+} from "tome-db";
+import {
+  serializeRelationshipTypesFile,
+} from "tome-db/content";
+import {
+  createTestContentFixture,
+  destroyTestContentFixture,
+  seedTestNode,
+  seedTestWorkspace,
+  TEST_HOME_NODE_ID,
+} from "tome-db/content/test-helpers";
+import { contentModelDir, relationshipTypesFilePath, schemaFilePath } from "tome-db/content";
+import { createTestApiFromContent } from "./test-api-setup";
+
+const nodeId = "0000000000000000000000002M";
+const sceneTypeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const featureTypeId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
+
+describe("prepare-editor-body API — schema diagram", () => {
+  const fixture = createTestContentFixture("tome-prepare-schema-diagram-");
+
+  seedTestWorkspace(fixture);
+  seedTestNode(fixture, {
+    id: TEST_HOME_NODE_ID,
+    properties: { title: "Home" },
+  });
+  seedTestNode(fixture, {
+    id: sceneTypeId,
+    properties: { title: "Scene" },
+  });
+  seedTestNode(fixture, {
+    id: featureTypeId,
+    properties: { title: "Feature" },
+  });
+  seedTestNode(fixture, {
+    id: nodeId,
+    properties: { title: "Schema page" },
+    body: serializePageBlock("schema-diagram.block", {}),
+  });
+
+  const modelDir = contentModelDir(fixture.ctx.store.contentDir);
+  writeFileSync(
+    join(modelDir, "extensions.json"),
+    JSON.stringify(
+      {
+        version: 1,
+        extensions: [
+          {
+            id: "schema-diagram",
+            enabled: true,
+            htmlModule: "tome-schema-diagram/html",
+          },
+        ],
+        components: [
+          {
+            id: "schema-diagram.block",
+            extensionId: "schema-diagram",
+            kind: "page-block",
+            implementationId: "schema-diagram",
+            label: "Schema diagram",
+            enabled: true,
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+    "utf-8",
+  );
+
+  writeFileSync(
+    join(modelDir, "table-schemas.json"),
+    JSON.stringify(
+      {
+        version: 1,
+        tables: {
+          [sceneTypeId]: {
+            columns: [
+              {
+                key: "features",
+                name: "Features",
+                type: "relation",
+                relationshipType: "scenes_features",
+              },
+            ],
+          },
+          [featureTypeId]: { columns: [] },
+        },
+      },
+      null,
+      2,
+    ),
+    "utf-8",
+  );
+  invalidateTableSchemasCache();
+
+  writeFileSync(
+    relationshipTypesFilePath(fixture.ctx.store.contentDir),
+    serializeRelationshipTypesFile({
+      version: 1,
+      types: {
+        member_of: {
+          perspectives: ["members", "member_of"],
+          traits: ["set"],
+        },
+        ordered_member_of: {
+          perspectives: ["ordered_members", "ordered_member_of"],
+          traits: ["ordered", "set"],
+        },
+        scenes_features: {
+          perspectives: ["features", "scenes"],
+          endpoints: {
+            "0": { typeId: sceneTypeId },
+            "1": { typeId: featureTypeId },
+          },
+        },
+      },
+    }),
+    "utf-8",
+  );
+
+  writeFileSync(
+    schemaFilePath(fixture.ctx.store.contentDir),
+    serializeSchemaFile({
+      version: 1,
+      relationshipRules: [],
+      enums: {},
+    }),
+    "utf-8",
+  );
+  invalidateSchemaCache();
+
+  invalidateExtensionsCache();
+  const api = createTestApiFromContent(fixture);
+
+  test("POST /api/nodes/:id/prepare-editor-body expands schema diagram block", async () => {
+    const body = serializePageBlock("schema-diagram.block", {});
+    const res = await api.handler(
+      new Request(`http://127.0.0.1/api/nodes/${nodeId}/prepare-editor-body`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markdown: body }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const payload = (await res.json()) as { markdown: string };
+    expect(payload.markdown).toContain("<!-- tome-page-block ");
+    expect(payload.markdown).toContain('class="tome-schema-diagram"');
+    expect(payload.markdown).toContain('class="tome-schema-diagram-viewport"');
+    expect(payload.markdown).toContain("<svg");
+    expect(payload.markdown).toContain("Scene");
+    expect(payload.markdown).toContain("Feature");
+    expect(payload.markdown).toContain("features");
+    expect(payload.markdown).not.toContain("```tome-block");
+  });
+
+  afterAll(() => {
+    destroyTestContentFixture(fixture);
+  });
+});

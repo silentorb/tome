@@ -7,9 +7,13 @@
 | Package | Role |
 | ------- | ---- |
 | `packages/tome-db/` | SQLite cache, content sync, schema/model loaders |
-| `packages/tome-editor/` | Bun REST API + Vite/React editor webview |
+| `packages/tome-graph-interfaces/` | Domain DTOs + `TomeGraphServices` |
+| `packages/tome-service-interfaces/` | `TomeServiceModule` contracts |
+| `packages/tome-http/` | HTTP service module + client SDK |
+| `packages/tome-server/` | Config-driven host (wires db + services) |
+| `packages/tome-editor/` | Vite/React editor webview (client only) |
 | `packages/tome-static-site/` | Astro static export |
-| `packages/tome-interfaces/` | Integration contracts for external modules |
+| `packages/tome-interfaces/` | Extension / page-block integration contracts |
 | `packages/tome-extension-*/` | Optional extensions (e.g. `tome-extension-fixture` for tests) |
 
 Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to work in the package). See [`packages/README.md`](./packages/README.md).
@@ -27,8 +31,9 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 | -------- | ------- |
 | `TOME_CONTENT_PATH` | Content root (`content/`) |
 | `TOME_DB_PATH` | SQLite cache (default: `{content}/../data/tome.sqlite`) |
-| `TOME_EDITOR_API_PORT` | API port (default 3847) |
+| `TOME_EDITOR_API_PORT` | HTTP API port (default 3847; historical name) |
 | `TOME_EDITOR_DEV_HOST` | Vite bind host (default `127.0.0.1`; use `0.0.0.0` in containers) |
+| `TOME_SERVER_CONFIG` | Path to `tome-server.json` (service module list) |
 
 ## Workbench integration
 
