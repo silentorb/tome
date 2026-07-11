@@ -23,6 +23,20 @@ export function nodeFileName(id: string): string {
   return `${id}.md`;
 }
 
+/**
+ * Shard directory for a node file: first two entropy characters of the ULID
+ * (chars 10–11; skip the 10-char timestamp prefix).
+ */
+export function nodeShardDir(id: string): string {
+  if (!isNodeId(id)) throw new Error(`Invalid node id: ${id}`);
+  return id.slice(10, 12);
+}
+
+/** Path relative to `content/data/`: `{shard}/{id}.md`. */
+export function nodeRelativePath(id: string): string {
+  return `${nodeShardDir(id)}/${nodeFileName(id)}`;
+}
+
 /** Git-tracked node + relationship instance files. */
 export function contentDataDir(contentRoot: string): string {
   return resolve(contentRoot, CONTENT_DATA_SUBDIR);
@@ -34,7 +48,7 @@ export function contentModelDir(contentRoot: string): string {
 }
 
 export function nodeFilePath(contentRoot: string, id: string): string {
-  return resolve(contentDataDir(contentRoot), nodeFileName(id));
+  return resolve(contentDataDir(contentRoot), nodeRelativePath(id));
 }
 
 export function relationshipsFilePath(contentRoot: string): string {

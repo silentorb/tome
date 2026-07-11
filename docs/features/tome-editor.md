@@ -21,7 +21,7 @@ For Graph Explorer LOD layers and clustering, read [`graph-explorer.md`](./graph
 
 ### Editing model
 
-- The editor **must** read and write node bodies via `tome-db` (`ContentStore` → `content/data/{id}.md`).
+- The editor **must** read and write node bodies via `tome-db` (`ContentStore` → `content/data/{shard}/{id}.md`).
 - Every node **must** render as a **universal page** with this block order: **page title** (standalone textarea) → collapsible **metadata** panel (timestamps, backlinks, and optional **Properties** when expanded) → **markdown body** (Milkdown) → optional relationship and database table sections derived from graph relationships.
 - Because the page title is rendered outside the markdown body, heading levels in stored markdown **must** render one level deeper in the page body (`h1` → rendered `h2`, `h2` → rendered `h3`, etc.).
 - Instance pages (nodes with `(page)-[:member_of]->(type)`) **must** show a **Properties** section inside the expanded metadata panel when the type defines one or more stored scalar fields and/or dynamic computed fields for that database. Stored scalars (e.g. Priority) are editable; computed dynamic fields are read-only. Properties **must** show singular stored scalars and computed fields on the `member_of` edge only — not relationship membership. When Properties is shown, a **Membership** relation table section (title from `perspectiveLabels` in `relationship-types.json`; Marloth default: **Membership**) **must** still appear below the markdown body with one row per parent type-table node; membership is edited there (Link / Remove), not in Properties.
@@ -201,7 +201,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 - Manual: click a section table column header to sort; reload and confirm sort persists in `.tome/user-settings.json (legacy: .marloth/user-settings.json)`
 - Manual: switch a database table tab; navigate away and return (or reload without `?tab=`); confirm the same tab is active and `tableTabs` updated in `.tome/user-settings.json (legacy: .marloth/user-settings.json)`
 - Manual: sidebar **Recent** lists latest edited nodes below static database links; edit a title/body and confirm the node moves to the top after save
-- Manual: sidebar **New page** or `?view=create` → lands on new node page titled Untitled; `content/data/{id}.md` exists
+- Manual: sidebar **New page** or `?view=create` → lands on new node page titled Untitled; `content/data/{shard}/{id}.md` exists
 - Manual: on an IS_A database table section, **+ New row** → new row appears after reload
 - Manual: on an associative relation table section (e.g. Features), **Link** / **+ Link …** → pick existing record; row appears after reload
 - Manual: on a database table with relation columns (e.g. Features → Parents), click link labels to navigate; hover the cell and use the edit control to open the popup for add/remove; confirm `content/data/relationships.json` updates

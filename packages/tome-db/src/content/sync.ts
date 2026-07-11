@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, statSync } from "node:fs";
+import { basename, join } from "node:path";
 import type { DynamicColumnSetRecord, DynamicFieldRecord } from "../dynamic-fields/overlay";
 import { GraphDatabase } from "../graph";
 import {
@@ -31,6 +31,7 @@ import {
   NODE_FILE_PATTERN,
   contentDataDir,
   contentModelDir,
+  nodeFilePath,
 } from "./paths";
 import { ContentStore } from "./store";
 import { expandAllRelationships } from "./relationship-sync-expand";
@@ -145,10 +146,8 @@ export class CacheSync {
     scanFile(modelDir, ORDERED_ASSOCIATIONS_FILENAME);
     scanFile(modelDir, EXTENSIONS_FILENAME);
     try {
-      for (const name of readdirSync(dataDir)) {
-        if (NODE_FILE_PATTERN.test(name)) {
-          max = Math.max(max, statSync(join(dataDir, name)).mtimeMs);
-        }
+      for (const id of this.store.listNodeIds()) {
+        max = Math.max(max, statSync(nodeFilePath(this.contentDir, id)).mtimeMs);
       }
     } catch {
       /* empty dir */
@@ -331,9 +330,10 @@ export class CacheSync {
       return;
     }
 
-    const match = NODE_FILE_PATTERN.exec(relativeName);
+    const base = basename(relativeName);
+    const match = NODE_FILE_PATTERN.exec(base);
     if (match) {
-      const id = relativeName.slice(0, -3);
+      const id = base.slice(0, -3);
       this.syncNode(id);
       this.updateCacheMarkers();
     }

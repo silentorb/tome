@@ -1,7 +1,13 @@
-import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import { monotonicFactory } from "ulid";
-import { contentDataDir, contentModelDir, RELATIONSHIPS_FILENAME } from "../content/paths";
+import {
+  contentDataDir,
+  contentModelDir,
+  nodeFilePath,
+  RELATIONSHIPS_FILENAME,
+} from "../content/paths";
+import { NODE_FILE_PATTERN } from "../node-id";
 
 /**
  * One-time migration: rewrite legacy 32-char lowercase-hex node ids to
@@ -9,13 +15,15 @@ import { contentDataDir, contentModelDir, RELATIONSHIPS_FILENAME } from "../cont
  * and model config). The SQLite cache is rebuilt separately from content.
  *
  * Only *known* node ids are rewritten. The known set is the union of:
- *   - node `<id>.md` filenames in `content/data/`
+ *   - node `<id>.md` filenames in `content/data/` (flat legacy layout)
  *   - every id token in `relationships.json`
  *   - every id token in `content/model/*.json`
  * The last two catch dangling references to deleted nodes (still present in
  * config) so no hex leaks into the ULID-only config. Body text is rewritten
  * with the same map, so unrelated 32-hex strings (e.g. hashes inside external
  * URLs) are deliberately left untouched.
+ *
+ * Output node files use the entropy-sharded layout `data/{id[10:12]}/{id}.md`.
  */
 
 /** Legacy node id token, guarded so it is not matched inside a longer hex run. */
@@ -29,7 +37,7 @@ export interface HexToUlidReport {
   filesRewritten: number;
 }
 
-/** Old (32-hex) node ids that exist as `<id>.md` files in `content/data/`. */
+/** Old (32-hex) node ids that exist as flat `<id>.md` files in `content/data/`. */
 export function findFileBackedIds(dataDir: string): string[] {
   return readdirSync(dataDir)
     .filter((name) => OLD_NODE_FILE.test(name))
@@ -108,21 +116,38 @@ export function residualStructuralTokens(contentDir: string): string[] {
   return [...found];
 }
 
+/** Walk entropy-sharded node files under `content/data/{shard}/`. */
+function listShardedNodeFiles(dataDir: string): Array<{ relative: string; absolute: string }> {
+  const out: Array<{ relative: string; absolute: string }> = [];
+  for (const entry of readdirSync(dataDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const shardDir = resolve(dataDir, entry.name);
+    for (const name of readdirSync(shardDir)) {
+      if (!NODE_FILE_PATTERN.test(name)) continue;
+      out.push({
+        relative: `${entry.name}/${name}`,
+        absolute: resolve(shardDir, name),
+      });
+    }
+  }
+  return out;
+}
+
 /** Legacy id tokens remaining in node bodies (allowed: e.g. hashes in external URLs). */
 export function residualBodyTokens(contentDir: string): Map<string, string[]> {
   const dataDir = contentDataDir(contentDir);
   const byFile = new Map<string, string[]>();
-  for (const name of readdirSync(dataDir)) {
-    if (!name.endsWith(".md")) continue;
-    const toks = tokensInFile(resolve(dataDir, name));
-    if (toks.length > 0) byFile.set(name, [...new Set(toks)]);
+  for (const { relative, absolute } of listShardedNodeFiles(dataDir)) {
+    const toks = tokensInFile(absolute);
+    if (toks.length > 0) byFile.set(relative, [...new Set(toks)]);
   }
   return byFile;
 }
 
 /**
- * Migrate a content corpus in place. Rewrites node bodies + renames node files,
- * then rewrites `relationships.json` and every `content/model/*.json`.
+ * Migrate a content corpus in place. Rewrites node bodies + renames node files
+ * into entropy shards, then rewrites `relationships.json` and every
+ * `content/model/*.json`.
  */
 export function migrateHexToUlid(
   contentDir: string,
@@ -138,9 +163,10 @@ export function migrateHexToUlid(
   for (const oldId of fileBackedIds) {
     const newId = idMap.get(oldId)!;
     const oldPath = resolve(dataDir, `${oldId}.md`);
-    const newPath = resolve(dataDir, `${newId}.md`);
+    const newPath = nodeFilePath(contentDir, newId);
     const raw = readFileSync(oldPath, "utf-8");
     const next = remapText(raw, idMap);
+    mkdirSync(dirname(newPath), { recursive: true });
     writeFileSync(newPath, next, "utf-8");
     if (newPath !== oldPath) rmSync(oldPath, { force: true });
     filesRewritten += 1;

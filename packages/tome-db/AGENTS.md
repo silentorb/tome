@@ -7,7 +7,7 @@
 
 ## Terminology
 
-- **Node** — entity in `content/data/{id}.md` and cache `nodes`.
+- **Node** — entity in `content/data/{shard}/{id}.md` and cache `nodes`.
 - **Relationship** — link in `content/data/relationships.json` (v2: `{ a, b, type }`) with types in lower snake_case.
 - **Relationship type** — storage type (composite for bidirectional pairs, e.g. `inspirations_features`) or local perspective (e.g. `inspirations` in UI).
 - **Page** — editor view of a node (`getNodePageDetail`, `node-page-sections.ts`).

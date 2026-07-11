@@ -10,7 +10,7 @@ export const NODE_ID_RE_SRC = "[0-9A-HJKMNP-TV-Z]{26}";
 /** Matches a bare node id. */
 export const NODE_ID_PATTERN = new RegExp(`^${NODE_ID_RE_SRC}$`);
 
-/** Matches a node markdown filename (`<id>.md`) in `content/data/`. */
+/** Matches a node markdown basename (`<id>.md`) under a shard dir in `content/data/`. */
 export const NODE_FILE_PATTERN = new RegExp(`^${NODE_ID_RE_SRC}\\.md$`);
 
 /** True when `id` is a canonical node id (uppercase ULID). */

@@ -34,7 +34,7 @@ API names: `ContentStore`, `openTomeWriteContext`, `getNodeDetail`, `getNodePage
 
 **Default:** change files under `content/`.
 
-- Use `ContentStore` / `TomeWriteContext` (via editor API or `openTomeWriteContext`), or edit `content/data/{id}.md`, `content/data/relationships.json`, and `content/model/relationship-types.json` directly.
+- Use `ContentStore` / `TomeWriteContext` (via editor API or `openTomeWriteContext`), or edit `content/data/{shard}/{id}.md`, `content/data/relationships.json`, and `content/model/relationship-types.json` directly.
 - Commit changes under `content/`; do not commit `data/tome.sqlite` or legacy `data/marloth.sqlite`.
 - Run `bun run content:sync` after bulk file edits if the editor API is not running (otherwise the file watcher syncs automatically).
 
@@ -46,7 +46,7 @@ API names: `ContentStore`, `openTomeWriteContext`, `getNodeDetail`, `getNodePage
 
 | Path | Role |
 | --- | --- |
-| `content/data/{nodeId}.md` | Canonical node (YAML frontmatter + markdown body) |
+| `content/data/{shard}/{nodeId}.md` | Canonical node (YAML frontmatter + markdown body); `{shard}` is the first two ULID entropy characters (`id.slice(10, 12)`) |
 | `content/data/relationships.json` | Canonical bidirectional relationship records as ordered `(a, b)` tuples (v3) |
 | `content/model/relationship-types.json` | Composite type → ordered `perspectives` pair (`perspectives[0]` describes the node at tuple index 0, `perspectives[1]` the node at index 1); optional `perspectiveLabels` per perspective for relation-section titles and link-add copy |
 | `content/model/views.json` | UI table tab definitions (custom + generated providers) |
@@ -57,10 +57,10 @@ API names: `ContentStore`, `openTomeWriteContext`, `getNodeDetail`, `getNodePage
 | `content/model/ordered-associations.json` | Ordered-association configs (e.g. `scenes-by-book`) |
 | `data/marloth.sqlite` | Local query cache (gitignored; default path via `MARLOTH_DB_PATH`) |
 
-- `content/data/` holds only node markdown and `relationships.json` (flat within `data/`).
+- `content/data/` holds node markdown under entropy shard directories (`{id.slice(10,12)}/`) plus `relationships.json` at the data root.
 - `content/model/` holds workspace model JSON (flat within `model/`).
 - `MARLOTH_CONTENT_PATH` **must** point at the **content root** (`./content`), not `content/data`.
-- Node filenames **must** match `^[0-9a-f]{32}\.md$`.
+- Node basenames **must** match `^[0-9A-HJKMNP-TV-Z]{26}\.md$` (uppercase ULID); path is `content/data/{id.slice(10,12)}/{id}.md`.
 - SQLite WAL sidecar files (`*.sqlite-wal`, `*.sqlite-shm`) **must not** be committed.
 
 ### Legacy compatibility

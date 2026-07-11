@@ -1,5 +1,5 @@
 import type { GraphDatabase } from "../graph";
-import { nodeFileName } from "./paths";
+import { nodeRelativePath } from "./paths";
 import type { CacheSync } from "./sync";
 import type { ContentStore } from "./store";
 import { openContentGraph } from "./sync";
@@ -19,7 +19,7 @@ export function openTomeWriteContext(
 }
 
 export function syncAfterNodeWrite(ctx: TomeWriteContext, id: string): void {
-  ctx.sync.syncAfterWrite(nodeFileName(id));
+  ctx.sync.syncAfterWrite(nodeRelativePath(id));
 }
 
 export function syncAfterRelationshipsWrite(ctx: TomeWriteContext): void {

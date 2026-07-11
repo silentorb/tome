@@ -6,7 +6,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import type { Node, Properties } from "../graph";
 import { relationshipId } from "../graph";
 import { normalizeRelationshipType } from "../relation-type";
@@ -120,9 +120,18 @@ export class ContentStore {
 
   listNodeIds(): string[] {
     try {
-      return readdirSync(contentDataDir(this.contentDir))
-        .filter((name) => NODE_FILE_PATTERN.test(name))
-        .map((name) => name.slice(0, -3));
+      const dataDir = contentDataDir(this.contentDir);
+      const ids: string[] = [];
+      for (const entry of readdirSync(dataDir, { withFileTypes: true })) {
+        if (!entry.isDirectory()) continue;
+        const shardDir = resolve(dataDir, entry.name);
+        for (const name of readdirSync(shardDir)) {
+          if (NODE_FILE_PATTERN.test(name)) {
+            ids.push(name.slice(0, -3));
+          }
+        }
+      }
+      return ids;
     } catch {
       return [];
     }

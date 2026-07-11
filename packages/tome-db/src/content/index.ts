@@ -78,6 +78,8 @@ export {
   isNodeId,
   nodeFileName,
   nodeFilePath,
+  nodeRelativePath,
+  nodeShardDir,
   resolveContentPath,
 } from "./paths";
 export { ContentStore } from "./store";

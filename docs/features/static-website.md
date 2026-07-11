@@ -14,7 +14,7 @@ The `tome-static-site` package reads the git-tracked design corpus via `tome-db`
 
 ## Requirements
 
-- **Must** include every node returned by `ContentStore.listNodeIds()` (~all `content/data/*.md` files).
+- **Must** include every node returned by `ContentStore.listNodeIds()` (~all `content/data/{shard}/*.md` files).
 - **Must** render title, markdown body, metadata (including backlinks), type properties, relation tables, and type-table Items tables per node.
 - **Must** rewrite internal graph links (`./{id}.md`, `[[id]]`, and optional `url_alias` paths) to static node URLs.
 - **Must** use a dark theme consistent with the Marloth editor palette.
@@ -81,7 +81,7 @@ Editing, add-row/link-existing, row actions, drag-reorder, table search, tab/col
 
 | Input | Source |
 | --- | --- |
-| Nodes | `content/data/{id}.md` |
+| Nodes | `content/data/{shard}/{id}.md` |
 | Relationships | `content/data/relationships.json` via SQLite rebuild |
 | Workspace model | `content/model/` (`views.json`, `schema.json`, `table-schemas.json`, `dynamic-fields.json`, `extensions.json`) |
 

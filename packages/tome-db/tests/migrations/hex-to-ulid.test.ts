@@ -103,18 +103,23 @@ describe("migrateHexToUlid", () => {
     expect(report.fileBackedCount).toBe(2);
     expect(report.mappedCount).toBe(3);
 
-    const files = readdirSync(dataDir).filter((n) => n.endsWith(".md"));
-    for (const f of files) {
-      expect(NODE_ID_PATTERN.test(f.slice(0, -3))).toBe(true);
+    const sharded: string[] = [];
+    for (const entry of readdirSync(dataDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      for (const name of readdirSync(resolve(dataDir, entry.name))) {
+        if (!name.endsWith(".md")) continue;
+        expect(NODE_ID_PATTERN.test(name.slice(0, -3))).toBe(true);
+        expect(entry.name).toBe(name.slice(10, 12));
+        sharded.push(resolve(dataDir, entry.name, name));
+      }
     }
+    expect(sharded).toHaveLength(2);
 
     // No hex left in structural config.
     expect(residualStructuralTokens(root)).toEqual([]);
 
     // The external Notion URL hash is preserved in the body.
-    const body = files
-      .map((f) => readFileSync(resolve(dataDir, f), "utf-8"))
-      .join("\n");
+    const body = sharded.map((f) => readFileSync(f, "utf-8")).join("\n");
     expect(body).toContain("Page-0123456789abcdef0123456789abcdef");
 
     // Body residual is only the url hash.

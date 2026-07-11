@@ -1,5 +1,5 @@
-import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import type { Node, Properties } from "../graph";
 import { bodyFromNode, serializeNodeFile } from "./node-file";
@@ -22,7 +22,6 @@ import {
   ORDERED_ASSOCIATIONS_FILE_VERSION,
 } from "../ordered-associations-config/ordered-associations-file";
 import { openTomeWriteContext, type TomeWriteContext } from "./write-context";
-import { writeFileSync } from "node:fs";
 import {
   emptyRelationshipTypesFile,
   registerBidirectionalType,
@@ -190,8 +189,10 @@ export function destroyTestContentFixture(fixture: TestContentFixture): void {
 export function seedTestNode(fixture: TestContentFixture, node: Node, body?: string): void {
   const markdownBody = body ?? bodyFromNode(node);
   const { body: _b, ...properties } = node.properties;
+  const path = nodeFilePath(fixture.ctx.store.contentDir, node.id);
+  mkdirSync(dirname(path), { recursive: true });
   writeFileSync(
-    nodeFilePath(fixture.ctx.store.contentDir, node.id),
+    path,
     serializeNodeFile({ id: node.id, properties }, markdownBody),
     "utf-8",
   );

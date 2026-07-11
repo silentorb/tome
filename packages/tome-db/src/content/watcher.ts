@@ -1,4 +1,5 @@
 import { watch, type FSWatcher } from "node:fs";
+import { basename } from "node:path";
 import type { CacheSync } from "./sync";
 import {
   RELATIONSHIPS_FILENAME,
@@ -30,16 +31,19 @@ export class ContentWatcher {
   start(): void {
     if (this.dataWatcher || this.modelWatcher) return;
     const root = this.sync.contentDir;
-    this.dataWatcher = this.watchDir(contentDataDir(root), (name) => this.isRelevantDataFile(name));
+    this.dataWatcher = this.watchDir(contentDataDir(root), (name) => this.isRelevantDataFile(name), {
+      recursive: true,
+    });
     this.modelWatcher = this.watchDir(contentModelDir(root), (name) => this.isRelevantModelFile(name));
   }
 
   private watchDir(
     dir: string,
     isRelevant: (name: string) => boolean,
+    options?: { recursive?: boolean },
   ): FSWatcher | null {
     try {
-      const watcher = watch(dir, (event, filename) => {
+      const watcher = watch(dir, { recursive: options?.recursive ?? false }, (event, filename) => {
         if (this.closed || !filename || typeof filename !== "string") return;
         if (!isRelevant(filename)) return;
         this.schedule(filename);
@@ -55,7 +59,8 @@ export class ContentWatcher {
   }
 
   private isRelevantDataFile(name: string): boolean {
-    return name === RELATIONSHIPS_FILENAME || NODE_FILE_PATTERN.test(name);
+    const base = basename(name);
+    return base === RELATIONSHIPS_FILENAME || NODE_FILE_PATTERN.test(base);
   }
 
   private isRelevantModelFile(name: string): boolean {
