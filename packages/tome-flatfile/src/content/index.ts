@@ -10,8 +10,12 @@ export {
 export type { RelationshipEntry, RelationshipsFile } from "./relationships-file";
 export {
   ASSOCIATIONS_FILE_VERSION,
-  compositeTypeForPerspectives,
+  AmbiguousAssociationError,
+  UnknownPerspectiveError,
   emptyAssociationsFile,
+  generateAssociationId,
+  isAssociationId,
+  normalizeAssociationId,
   parseAssociationsFile,
   registerBidirectionalType,
   registerSetAssociation,
@@ -19,6 +23,9 @@ export {
   isBidirectionalComposite,
   isDualPerspectiveType,
   localTypesForComposite,
+  resolveAssociationId,
+  perspectiveCountForExpansion,
+  registerTypeDefinition,
 } from "./associations-file";
 export type {
   AssociationDefinition,

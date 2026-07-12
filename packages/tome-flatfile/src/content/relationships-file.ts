@@ -1,6 +1,6 @@
 import type { Properties, Relationship } from "tome-graph-interfaces";
 import { relationshipId } from "../relationship-id";
-import { normalizeRelationshipType } from "../relation-type";
+import { isAssociationId, normalizeAssociationId } from "./associations-file";
 
 export const RELATIONSHIPS_FILE_VERSION = 3;
 
@@ -30,7 +30,7 @@ export function connectsEndpoints(entry: RelationshipEntry, x: string, y: string
 }
 
 export function relationshipRecordId(a: string, b: string, type: string): string {
-  return `${a}:${b}:${normalizeRelationshipType(type)}`;
+  return `${a}:${b}:${normalizeAssociationId(type)}`;
 }
 
 export function parseRelationshipsFile(raw: string): RelationshipsFile {
@@ -61,10 +61,16 @@ export function parseRelationshipsFile(raw: string): RelationshipsFile {
     const archived = row.archived === true ? true : undefined;
 
     if (typeof row.a === "string" && typeof row.b === "string" && typeof row.type === "string") {
+      const type = normalizeAssociationId(row.type);
+      if (!isAssociationId(type)) {
+        throw new Error(
+          `relationships.json: relationship type "${row.type}" must be a ULID`,
+        );
+      }
       entries.push({
         a: row.a,
         b: row.b,
-        type: normalizeRelationshipType(row.type),
+        type,
         ...(archived ? { archived } : {}),
         ...(properties ? { properties } : {}),
       });

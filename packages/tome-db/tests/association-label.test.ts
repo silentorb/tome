@@ -13,7 +13,7 @@ describe("association-label", () => {
 
   test("perspectiveDisplayLabel uses configured title", () => {
     const registry = emptyAssociationsFile();
-    registry.associations.member_of = {
+    registry.associations["000000000000000000000000A1"] = {
       perspectives: ["member_of", "members"],
       perspectiveLabels: { member_of: "Membership" },
     };
@@ -26,10 +26,10 @@ describe("association-label", () => {
 
   test("perspectiveLinkAddLabel uses configured linkAdd", () => {
     const registry = emptyAssociationsFile();
-    registry.associations.member_of = {
+    registry.associations["000000000000000000000000A1"] = {
       perspectives: ["member_of", "members"],
       perspectiveLabels: {
-        member_of: { title: "Membership", linkAdd: "Link type table" },
+            member_of: { title: "Membership", linkAdd: "Link type table" },
       },
     };
     expect(perspectiveLinkAddLabel(registry, "member_of", "Membership")).toBe("Link type table");

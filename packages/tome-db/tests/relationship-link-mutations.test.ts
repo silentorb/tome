@@ -30,7 +30,7 @@ describe("relationship-link-mutations", () => {
     const registry = fixture.ctx.store.readAssociationsFile();
     registerBidirectionalType(registry, "parents", "children");
     registerBidirectionalType(registry, "features", "targets");
-    registerBidirectionalType(registry, "scenes", "rows");
+    registerBidirectionalType(registry, "page_rows", "row_pages");
     fixture.ctx.store.writeAssociationsFile(registry);
     invalidateAssociationsCache();
   });
@@ -81,13 +81,13 @@ describe("relationship-link-mutations", () => {
     linkOutgoingRelationship(ctx, {
       sourceId: pageId,
       targetId: rowId,
-      type: "scenes",
+      type: "page_rows",
       properties: { ordinal: 3, priority: "High" },
     });
 
     expect(
       moveRelationshipConnection(ctx, {
-        type: "scenes",
+        type: "page_rows",
         oldSourceId: pageId,
         oldTargetId: rowId,
         newSourceId: newPageId,
@@ -95,8 +95,8 @@ describe("relationship-link-mutations", () => {
       }),
     ).toBeNull();
 
-    expect(ctx.store.findRelationship(pageId, rowId, "scenes")).toBeNull();
-    const moved = ctx.store.findRelationship(newPageId, rowId, "scenes");
+    expect(ctx.store.findRelationship(pageId, rowId, "page_rows")).toBeNull();
+    const moved = ctx.store.findRelationship(newPageId, rowId, "page_rows");
     expect(moved?.properties.ordinal).toBe(3);
     expect(moved?.properties.priority).toBe("High");
   });

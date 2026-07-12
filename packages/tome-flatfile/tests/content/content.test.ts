@@ -41,6 +41,8 @@ describe("node-file", () => {
 });
 
 describe("relationships-file", () => {
+  const SCENES_PRODUCT = "000000000000000000000000A3";
+
   test("round-trips relationships preserving tuple order", () => {
     const raw = JSON.stringify({
       version: 3,
@@ -48,7 +50,7 @@ describe("relationships-file", () => {
         {
           a: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
           b: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
-          type: "scenes",
+          type: SCENES_PRODUCT,
           properties: { ordinal: 1 },
         },
       ],
@@ -57,13 +59,32 @@ describe("relationships-file", () => {
     expect(parsed.relationships).toHaveLength(1);
     const conn = relationshipFromEntry(parsed.relationships[0]!);
     // Directed view follows authored order: index 0 -> source, index 1 -> target.
-    expect(conn.id).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAA:scenes:BBBBBBBBBBBBBBBBBBBBBBBBBB");
+    expect(conn.id).toBe(
+      `AAAAAAAAAAAAAAAAAAAAAAAAAA:${SCENES_PRODUCT}:BBBBBBBBBBBBBBBBBBBBBBBBBB`,
+    );
     expect(conn.sourceNodeId).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAA");
     expect(conn.targetNodeId).toBe("BBBBBBBBBBBBBBBBBBBBBBBBBB");
     const entry = entryFromRelationship(conn);
-    expect(entry.type).toBe("scenes");
+    expect(entry.type).toBe(SCENES_PRODUCT);
     expect(entry.a).toBe("AAAAAAAAAAAAAAAAAAAAAAAAAA");
     expect(entry.b).toBe("BBBBBBBBBBBBBBBBBBBBBBBBBB");
+  });
+
+  test("rejects slug relationship types", () => {
+    expect(() =>
+      parseRelationshipsFile(
+        JSON.stringify({
+          version: 3,
+          relationships: [
+            {
+              a: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+              b: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+              type: "scenes_product",
+            },
+          ],
+        }),
+      ),
+    ).toThrow(/must be a ULID/);
   });
 });
 

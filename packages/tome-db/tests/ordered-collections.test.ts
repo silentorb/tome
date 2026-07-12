@@ -58,31 +58,31 @@ describe("ordered-collections", () => {
       key: "product",
       name: "Product",
       type: "relation",
-      association: "scenes_product",
+      association: "000000000000000000000000A3",
     },
     {
       key: "part",
       name: "Part",
       type: "relation",
-      association: "scenes_part",
+      association: "000000000000000000000000A4",
     },
     {
       key: "solutions",
       name: "Solutions",
       type: "relation",
-      association: "solutions_scenes",
+      association: "000000000000000000000000BB",
     },
     {
       key: "characters",
       name: "📁 Characters",
       type: "relation",
-      association: "scenes_characters",
+      association: "000000000000000000000000B9",
     },
     {
       key: "location",
       name: "📁 Location",
       type: "relation",
-      association: "scenes_location",
+      association: "000000000000000000000000BA",
     },
     { key: "order", name: "Order", type: "number" },
   ],
@@ -138,35 +138,35 @@ describe("ordered-collections", () => {
   ]);
 
   const registry = fixture.ctx.store.readAssociationsFile();
-  registry.associations.scenes_product = {
+  registry.associations["000000000000000000000000A3"] = {
     perspectives: ["scenes", "product"],
     endpoints: {
       0: { typeId: PRODUCTS_DB },
       1: { typeId: SCENES_DB },
     },
   };
-  registry.associations.scenes_part = {
+  registry.associations["000000000000000000000000A4"] = {
     perspectives: ["scenes", "part"],
     endpoints: {
       0: { typeId: SCENES_DB },
       1: { typeId: PARTS_DB },
     },
   };
-  registry.associations.solutions_scenes = {
+  registry.associations["000000000000000000000000BB"] = {
     perspectives: ["solutions", "scenes"],
     endpoints: {
       0: { typeId: "0000000000000000000000000T" },
       1: { typeId: SCENES_DB },
     },
   };
-  registry.associations.scenes_characters = {
+  registry.associations["000000000000000000000000B9"] = {
     perspectives: ["scenes", "characters"],
     endpoints: {
       0: { typeId: SCENES_DB },
       1: { typeId: CHARACTERS_DB },
     },
   };
-  registry.associations.scenes_location = {
+  registry.associations["000000000000000000000000BA"] = {
     perspectives: ["location", "scenes"],
     endpoints: {
       0: { typeId: "0000000000000000000000002T" },
@@ -272,13 +272,13 @@ describe("ordered-collections", () => {
 
     const part2Group = updated?.groups.find((group) => group.groupId === part2);
     expect(part2Group?.rows.some((row) => row.sceneId === scene1)).toBe(true);
-    expect(firstRelatedNodeId(db(), scene1, "scenes_part")).toBe(part2);
+    expect(firstRelatedNodeId(db(), scene1, "000000000000000000000000A4")).toBe(part2);
 
     const entry = fixture.ctx.store
       .readRelationshipsFile()
       .relationships.find(
         (row) =>
-          row.type === "scenes_part" &&
+          row.type === "000000000000000000000000A4" &&
           ((row.a === scene1 && row.b === part2) || (row.a === part2 && row.b === scene1)),
       );
     expect(entry).toBeDefined();
@@ -294,7 +294,7 @@ describe("ordered-collections", () => {
       targetIndex: 0,
     });
 
-    expect(firstRelatedNodeId(db(), scene2, "scenes_part")).toBeNull();
+    expect(firstRelatedNodeId(db(), scene2, "000000000000000000000000A4")).toBeNull();
   });
 
   test("Scenes database record page emits ordered-collection section", () => {

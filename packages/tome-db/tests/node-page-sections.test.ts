@@ -19,17 +19,17 @@ function writeMembershipAssociations(contentDir: string): void {
     serializeAssociationsFile({
       version: 1,
       associations: {
-        member_of: {
+        "000000000000000000000000A1": {
           perspectives: ["members", "member_of"],
           traits: ["set"],
           perspectiveLabels: {
             member_of: { title: "Membership", linkAdd: "Link type table" },
           },
         },
-        inspirations_features: {
+        "000000000000000000000000B2": {
           perspectives: ["features", "inspirations"],
         },
-        scenes_part: {
+        "000000000000000000000000A4": {
           perspectives: ["scenes", "part"],
         },
       },
@@ -48,14 +48,14 @@ function writeInspirationsFeaturesAssociations(
     serializeAssociationsFile({
       version: 1,
       associations: {
-        member_of: {
+        "000000000000000000000000A1": {
           perspectives: ["members", "member_of"],
           traits: ["set"],
           perspectiveLabels: {
             member_of: { title: "Membership", linkAdd: "Link type table" },
           },
         },
-        inspirations_features: {
+        "000000000000000000000000B2": {
           perspectives: ["features", "inspirations"],
           endpoints: {
             0: { typeId: featuresTypeId },
@@ -78,14 +78,14 @@ function writeFeaturesBiblePassagesAssociations(
     serializeAssociationsFile({
       version: 1,
       associations: {
-        member_of: {
+        "000000000000000000000000A1": {
           perspectives: ["members", "member_of"],
           traits: ["set"],
           perspectiveLabels: {
             member_of: { title: "Membership", linkAdd: "Link type table" },
           },
         },
-        features_bible_passages: {
+        "000000000000000000000000B5": {
           perspectives: ["features", "bible_passages"],
           endpoints: {
             0: { typeId: featuresTypeId },
@@ -172,17 +172,17 @@ describe("node-sections", () => {
       serializeAssociationsFile({
         version: 1,
         associations: {
-          member_of: {
+          "000000000000000000000000A1": {
             perspectives: ["members", "member_of"],
             traits: ["set"],
             perspectiveLabels: {
-              member_of: { title: "Membership", linkAdd: "Link type table" },
+            member_of: { title: "Membership", linkAdd: "Link type table" },
             },
           },
-          inspirations_features: {
+          "000000000000000000000000B2": {
             perspectives: ["features", "inspirations"],
           },
-          scenes_part: {
+          "000000000000000000000000A4": {
             perspectives: ["scenes", "part"],
             linkExisting: false,
           },
@@ -396,7 +396,7 @@ describe("node-sections table-schema empty relation placeholders", () => {
               key: "features",
               name: "Features",
               type: "relation",
-              association: "inspirations_features",
+              association: "000000000000000000000000B2",
             },
           ],
         },
@@ -482,15 +482,15 @@ describe("node-sections children_children addMode", () => {
     serializeAssociationsFile({
       version: 1,
       associations: {
-        member_of: {
+        "000000000000000000000000A1": {
           perspectives: ["members", "member_of"],
           traits: ["set"],
         },
-        parents_children: {
+        "000000000000000000000000B1": {
           perspectives: ["children", "parents"],
           linkExisting: false,
         },
-        children_children: {
+        "000000000000000000000000B4": {
           perspectives: ["children", "children"],
           endpoints: {
             0: { typeId: groupsTypeId },
@@ -512,13 +512,13 @@ describe("node-sections children_children addMode", () => {
               key: "children",
               name: "Children",
               type: "relation",
-              association: "children_children",
+              association: "000000000000000000000000B4",
             },
             {
               key: "parents",
               name: "Parents",
               type: "relation",
-              association: "parents_children",
+              association: "000000000000000000000000B1",
             },
           ],
         },
@@ -571,11 +571,11 @@ describe("node-sections trait-based set presentation", () => {
     serializeAssociationsFile({
       version: 1,
       associations: {
-        custom_ordered_set: {
+        "000000000000000000000000C1": {
           perspectives: ["custom_sets", "custom_members"],
           traits: ["set", "ordered"],
         },
-        inspirations_features: {
+        "000000000000000000000000B2": {
           perspectives: ["features", "inspirations"],
         },
       },
@@ -616,11 +616,11 @@ describe("node-sections trait-based set presentation", () => {
       serializeAssociationsFile({
         version: 1,
         associations: {
-          custom_ordered_set: {
+          "000000000000000000000000C1": {
             perspectives: ["custom_sets", "custom_members"],
             traits: ["set", "ordered"],
           },
-          parents_children: {
+          "000000000000000000000000B1": {
             perspectives: ["children", "parents"],
             linkExisting: false,
           },
@@ -673,7 +673,7 @@ describe("node-sections bible passages regression", () => {
               key: "features",
               name: "Features",
               type: "relation",
-              association: "features_bible_passages",
+              association: "000000000000000000000000B5",
             },
             { key: "verses", name: "Verses", type: "rich_text" },
           ],

@@ -1,4 +1,5 @@
 import { isNodeId, resolveContentPath } from "../content/paths";
+import { isAssociationId, normalizeAssociationId } from "../content/associations-file";
 import { loadAssociationsFromContent } from "../associations/load";
 import { isOrderedSetPerspective, setRolePerspectivesForNode } from "../association-traits";
 import type {
@@ -47,6 +48,17 @@ function assertOrderedSetTable(nodeId: string, path: string, contentDir?: string
   }
 }
 
+function parseAssociationId(value: unknown, path: string): string {
+  if (typeof value !== "string" || !value.trim()) {
+    throw new Error(`${path}: must be a non-empty string`);
+  }
+  const id = normalizeAssociationId(value);
+  if (!isAssociationId(id)) {
+    throw new Error(`${path}: must be an association id (ULID)`);
+  }
+  return id;
+}
+
 function parseConfig(raw: unknown, path: string, contentDir?: string): OrderedCollectionConfig {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`${path}: must be an object`);
@@ -61,9 +73,9 @@ function parseConfig(raw: unknown, path: string, contentDir?: string): OrderedCo
   const config: OrderedCollectionConfig = {
     id: parseRequiredString(obj.id, `${path}.id`),
     typeDatabaseId,
-    scopeCompositeType: parseRequiredString(obj.scopeCompositeType, `${path}.scopeCompositeType`),
-    groupCompositeType: parseRequiredString(obj.groupCompositeType, `${path}.groupCompositeType`),
-    partProductCompositeType: parseRequiredString(
+    scopeCompositeType: parseAssociationId(obj.scopeCompositeType, `${path}.scopeCompositeType`),
+    groupCompositeType: parseAssociationId(obj.groupCompositeType, `${path}.groupCompositeType`),
+    partProductCompositeType: parseAssociationId(
       obj.partProductCompositeType,
       `${path}.partProductCompositeType`,
     ),

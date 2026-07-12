@@ -19,7 +19,7 @@ describe("relationship types API", () => {
 
   const fixture = createTestContentFixture("tome-rel-types-api-");
   const registry = fixture.ctx.store.readAssociationsFile();
-  registry.associations.scenes_features = {
+  registry.associations["000000000000000000000000B7"] = {
     perspectives: ["features", "scenes"],
     endpoints: {
       "0": { typeId: sceneTypeId },

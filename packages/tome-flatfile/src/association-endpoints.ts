@@ -4,7 +4,10 @@ import type {
   AssociationDefinition,
   AssociationsFile,
 } from "./content/associations-file";
-import { resolveAssociationId } from "./content/associations-file";
+import {
+  normalizeAssociationId,
+  resolveAssociationId,
+} from "./content/associations-file";
 
 function linkExistingFromPerspectiveLabel(
   config: PerspectiveLabelConfig | undefined,
@@ -67,7 +70,7 @@ export function allowedTargetTypeIdsForPerspective(
   compositeType: string,
   perspective: string,
 ): string[] {
-  const def = registry.associations[normalizeRelationshipType(compositeType)];
+  const def = registry.associations[normalizeAssociationId(compositeType)];
   if (!def?.endpoints) return [];
   const normalized = normalizeRelationshipType(perspective);
   if (def.perspectives[0] === normalized) return [def.endpoints[1].typeId];
@@ -110,9 +113,14 @@ export function relationSectionSupportsLinkExisting(
   compositeType?: string,
 ): boolean {
   const normalized = normalizeRelationshipType(perspective);
-  const composite = compositeType
-    ? normalizeRelationshipType(compositeType)
-    : resolveAssociationId(registry, normalized);
+  let composite: string;
+  try {
+    composite = compositeType
+      ? normalizeAssociationId(compositeType)
+      : resolveAssociationId(registry, normalized);
+  } catch {
+    return false;
+  }
   const def = registry.associations[composite];
   if (!def) return false;
   if (!def.perspectives.includes(normalized)) return false;

@@ -48,25 +48,25 @@ describe("createExtensionSchemaQueryServices", () => {
     serializeAssociationsFile({
       version: 1,
       associations: {
-        member_of: {
+        "000000000000000000000000A1": {
           perspectives: ["members", "member_of"],
           traits: ["set"],
         },
-        scene_features: {
+        "000000000000000000000000B7": {
           perspectives: ["features", "scenes"],
           endpoints: {
             0: { typeId: featureTypeId },
             1: { typeId: sceneTypeId },
           },
         },
-        scene_inspirations: {
+        "000000000000000000000000B8": {
           perspectives: ["inspirations", "scenes"],
           endpoints: {
             0: { typeId: inspirationTypeId },
             1: { typeId: sceneTypeId },
           },
         },
-        inspirations_features: {
+        "000000000000000000000000B2": {
           perspectives: ["features", "inspirations"],
           endpoints: {
             0: { typeId: featureTypeId },
@@ -90,13 +90,13 @@ describe("createExtensionSchemaQueryServices", () => {
               key: "features",
               name: "Features",
               type: "relation",
-              association: "scene_features",
+              association: "000000000000000000000000B7",
             },
             {
               key: "inspirations",
               name: "Inspirations",
               type: "relation",
-              association: "scene_inspirations",
+              association: "000000000000000000000000B8",
             },
           ],
         },
@@ -106,7 +106,7 @@ describe("createExtensionSchemaQueryServices", () => {
               key: "inspirations",
               name: "Inspirations",
               type: "relation",
-              association: "inspirations_features",
+              association: "000000000000000000000000B2",
             },
           ],
         },
@@ -162,25 +162,25 @@ describe("createExtensionSchemaQueryServices", () => {
     const rules = services.listRelationshipRules();
     expect(rules).toHaveLength(6);
     expect(rules).toContainEqual({
-      id: "scene_features",
+      id: "000000000000000000000000B7",
       sourceTypeId: featureTypeId,
       type: "features",
       allowedTargetTypeIds: [sceneTypeId],
     });
     expect(rules).toContainEqual({
-      id: "scene_features",
+      id: "000000000000000000000000B7",
       sourceTypeId: sceneTypeId,
       type: "scenes",
       allowedTargetTypeIds: [featureTypeId],
     });
     expect(rules).toContainEqual({
-      id: "scene_inspirations",
+      id: "000000000000000000000000B8",
       sourceTypeId: inspirationTypeId,
       type: "inspirations",
       allowedTargetTypeIds: [sceneTypeId],
     });
     expect(rules).toContainEqual({
-      id: "inspirations_features",
+      id: "000000000000000000000000B2",
       sourceTypeId: featureTypeId,
       type: "features",
       allowedTargetTypeIds: [inspirationTypeId],

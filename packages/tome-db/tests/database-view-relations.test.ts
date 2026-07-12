@@ -48,34 +48,34 @@ describe("database-view-relations", () => {
 
   const relationTypes = emptyAssociationsFile();
   registerSetAssociation(relationTypes, {
-    id: "member_of",
+    id: "000000000000000000000000A1",
     perspectives: ["members", "member_of"],
   });
-  registerTypeDefinition(relationTypes, "prop_type_inspirations", {
+  registerTypeDefinition(relationTypes, "000000000000000000000000BD", {
     perspectives: ["prop_type", "inspirations"],
     endpoints: {
       0: { typeId: inspirationsDb },
       1: { typeId: inspirationTypesDb },
     },
   });
-  registerTypeDefinition(relationTypes, "parents_children", {
+  registerTypeDefinition(relationTypes, "000000000000000000000000B1", {
     perspectives: ["children", "parents"],
   });
-  registerTypeDefinition(relationTypes, "scenes_part", {
+  registerTypeDefinition(relationTypes, "000000000000000000000000A4", {
     perspectives: ["scenes", "part"],
     endpoints: {
       0: { typeId: scenesDb },
       1: { typeId: partsDb },
     },
   });
-  registerTypeDefinition(relationTypes, "inspirations_features", {
+  registerTypeDefinition(relationTypes, "000000000000000000000000B2", {
     perspectives: ["features", "inspirations"],
     endpoints: {
       0: { typeId: featuresDb },
       1: { typeId: inspirationsDb },
     },
   });
-  registerTypeDefinition(relationTypes, "story_scale_inspirations", {
+  registerTypeDefinition(relationTypes, "000000000000000000000000BC", {
     perspectives: ["story_scale", "inspirations"],
   });
   writeFileSync(
@@ -95,7 +95,7 @@ describe("database-view-relations", () => {
               key: "type",
               name: "Type",
               type: "relation",
-              association: "prop_type_inspirations",
+              association: "000000000000000000000000BD",
             },
           ],
         },
@@ -123,7 +123,7 @@ describe("database-view-relations", () => {
       inspirationId,
       "prop_type",
       inspirationsDb,
-      "prop_type_inspirations",
+      "000000000000000000000000BD",
       contentDir,
     );
 
@@ -157,13 +157,13 @@ describe("database-view-relations", () => {
                 key: "parents",
                 name: "Parents",
                 type: "relation",
-                association: "parents_children",
+                association: "000000000000000000000000B1",
               },
               {
                 key: "children",
                 name: "Children",
                 type: "relation",
-                association: "parents_children",
+                association: "000000000000000000000000B1",
               },
             ],
           },
@@ -184,7 +184,7 @@ describe("database-view-relations", () => {
       parentLocationId,
       "parents",
       locationsDb,
-      "parents_children",
+      "000000000000000000000000B1",
       contentDir,
     );
     const childConnections = listRelationConnectionsForRow(
@@ -192,7 +192,7 @@ describe("database-view-relations", () => {
       childLocationId,
       "children",
       locationsDb,
-      "parents_children",
+      "000000000000000000000000B1",
       contentDir,
     );
     expect(parentConnections).toHaveLength(0);
@@ -203,7 +203,7 @@ describe("database-view-relations", () => {
       parentLocationId,
       "children",
       locationsDb,
-      "parents_children",
+      "000000000000000000000000B1",
       contentDir,
     );
     const childParents = listRelationConnectionsForRow(
@@ -211,7 +211,7 @@ describe("database-view-relations", () => {
       childLocationId,
       "parents",
       locationsDb,
-      "parents_children",
+      "000000000000000000000000B1",
       contentDir,
     );
     expect(parentChildren).toHaveLength(1);
@@ -239,10 +239,10 @@ describe("database-view-relations", () => {
     seedTestNode(fixture, { id: locationB, properties: { title: "South grove" } });
     const registry = emptyAssociationsFile();
     registerSetAssociation(registry, {
-      id: "member_of",
+      id: "000000000000000000000000A1",
       perspectives: ["members", "member_of"],
     });
-    registerTypeDefinition(registry, "neighbor", {
+    registerTypeDefinition(registry, "000000000000000000000000C2", {
       perspectives: ["neighbor", "neighbor"],
     });
     fixture.ctx.store.writeAssociationsFile(registry);
@@ -252,19 +252,19 @@ describe("database-view-relations", () => {
         {
           a: locationsDb,
           b: locationA,
-          type: "member_of",
+          type: "000000000000000000000000A1",
           properties: { row_index: 0 },
         },
         {
           a: locationsDb,
           b: locationB,
-          type: "member_of",
+          type: "000000000000000000000000A1",
           properties: { row_index: 1 },
         },
         {
           a: locationA,
           b: locationB,
-          type: "neighbor",
+          type: "000000000000000000000000C2",
           properties: { ordinal: 0 },
         },
       ],
@@ -309,7 +309,7 @@ describe("database-view-relations", () => {
                 key: "part",
                 name: "Part",
                 type: "relation",
-                association: "scenes_part",
+                association: "000000000000000000000000A4",
               },
             ],
           },
@@ -360,7 +360,7 @@ describe("database-view-relations", () => {
       inspirationWithMixedFeatures,
       "inspirations",
       inspirationsDb,
-      "inspirations_features",
+      "000000000000000000000000B2",
       contentDir,
     );
     expect(connections).toHaveLength(4);
@@ -403,7 +403,7 @@ describe("database-view-relations", () => {
                 key: "story_scale",
                 name: "Story scale",
                 type: "relation",
-                association: "story_scale_inspirations",
+                association: "000000000000000000000000BC",
               },
             ],
           },

@@ -13,8 +13,12 @@ import {
   relationColumnCompositeType,
 } from "../table-relation-column";
 import type { RelationshipEntry } from "./relationships-file";
-import type { AssociationsFile } from "./associations-file";
-import { isDualPerspectiveType } from "./associations-file";
+import {
+  AmbiguousAssociationError,
+  isDualPerspectiveType,
+  normalizeAssociationId,
+  type AssociationsFile,
+} from "./associations-file";
 
 export class LinkResolutionError extends Error {
   constructor(public readonly localType: string) {
@@ -33,7 +37,7 @@ function memberDatabaseId(
   setNodeIds: Set<string>,
 ): string | null {
   for (const entry of relationships) {
-    const def = registry.associations[normalizeRelationshipType(entry.type)];
+    const def = registry.associations[normalizeAssociationId(entry.type)];
     if (!isSetTraitType(def)) continue;
     const child = childNodeId(def, entry);
     const parent = parentNodeId(def, entry);
@@ -53,13 +57,13 @@ function schemaIdForNode(
 }
 
 /**
- * Resolve the storage composite type for a new link.
+ * Resolve the storage association id for a new link.
  *
  * Resolution order:
- *  0. set-trait composites (e.g. "member_of")
+ *  0. set-trait composites
  *  1. table-schema relation column on source type → column's association
- *  2. direct registry lookup for dual-perspective composite containing the perspective
- *  3. throw LinkResolutionError
+ *  2. unique registry match for dual-perspective association containing the perspective
+ *  3. throw LinkResolutionError or AmbiguousAssociationError
  */
 export function resolveAssociationIdForLink(
   registry: AssociationsFile,
@@ -89,10 +93,15 @@ export function resolveAssociationIdForLink(
     }
   }
 
-  for (const [composite, def] of Object.entries(registry.associations)) {
+  const matches: string[] = [];
+  for (const [associationId, def] of Object.entries(registry.associations)) {
     if (isDualPerspectiveType(def) && def.perspectives.includes(normalized)) {
-      return composite;
+      matches.push(associationId);
     }
+  }
+  if (matches.length === 1) return matches[0]!;
+  if (matches.length > 1) {
+    throw new AmbiguousAssociationError(normalized, matches);
   }
 
   throw new LinkResolutionError(normalized);

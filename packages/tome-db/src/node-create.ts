@@ -50,7 +50,12 @@ function ordinalFromProperties(properties: Record<string, unknown>): number | nu
 function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: string): number | undefined {
   const normalized = normalizeRelationshipType(type);
   const registry = loadAssociationsFromContent(ctx.store.contentDir);
-  const composite = resolveAssociationId(registry, normalized);
+  let composite: string | null = null;
+  try {
+    composite = resolveAssociationId(registry, normalized);
+  } catch {
+    composite = null;
+  }
   const outgoing = ctx.cache.listRelationshipsFromSource(sourceId).filter((c) => {
     const edgeType = normalizeRelationshipType(c.type);
     return edgeType === composite || edgeType === normalized;

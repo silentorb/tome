@@ -6,10 +6,22 @@ import { ContentStore } from "tome-flatfile";
 import { fileFromSeedInputs } from "tome-flatfile";
 import { invalidateDynamicFieldsCache } from "../src/content/sync";
 import { contentModelDir, workspaceFilePath } from "tome-flatfile";
-import { defaultTestWorkspaceFile, writeTestSetAssociations } from "../src/content/test-helpers";
+import { defaultTestWorkspaceFile } from "../src/content/test-helpers";
 import { serializeWorkspaceFile } from "tome-flatfile";
 import { invalidateWorkspaceCache } from "tome-flatfile";
 import { writeFileSync } from "node:fs";
+import {
+  associationsFilePath,
+  emptyAssociationsFile,
+  registerBidirectionalType,
+  registerSetAssociation,
+  serializeAssociationsFile,
+  invalidateAssociationsCache,
+} from "tome-flatfile";
+import {
+  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+} from "../src/content/test-helpers";
 import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { buildPropertiesSection } from "../src/node-type-properties";
@@ -28,7 +40,22 @@ describe("node-type-properties", () => {
     "utf-8",
   );
   invalidateWorkspaceCache();
-  writeTestSetAssociations(contentDir);
+  {
+    const registry = emptyAssociationsFile();
+    registerSetAssociation(registry, {
+      id: TEST_MEMBER_OF_ASSOCIATION_ID,
+      perspectives: ["members", "member_of"],
+    });
+    registerSetAssociation(registry, {
+      id: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+      perspectives: ["ordered_members", "ordered_member_of"],
+      ordered: true,
+    });
+    // Direct cache edges use perspective "scenes"; register so page detail can resolve them.
+    registerBidirectionalType(registry, "scenes", "scenes", "000000000000000000000000C3");
+    writeFileSync(associationsFilePath(contentDir), serializeAssociationsFile(registry), "utf-8");
+    invalidateAssociationsCache();
+  }
   process.env.TOME_CONTENT_PATH = contentDir;
 
   const CHAR_DB = "00000000000000000000000035";

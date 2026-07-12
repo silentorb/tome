@@ -1,9 +1,10 @@
 import { normalizeRelationshipType } from "./relation-type";
 import type { RelationshipEntry } from "./content/relationships-file";
-import type {
-  AssociationDefinition,
-  AssociationsFile,
-  TraitEntry,
+import {
+  normalizeAssociationId,
+  type AssociationDefinition,
+  type AssociationsFile,
+  type TraitEntry,
 } from "./content/associations-file";
 import { resolveContentPath } from "./content/paths";
 import { loadAssociationsFromContent } from "./associations/load";
@@ -70,14 +71,14 @@ export function isSetTraitComposite(
   registry: AssociationsFile,
   compositeType: string,
 ): boolean {
-  return isSetTraitType(registry.associations[normalizeRelationshipType(compositeType)]);
+  return isSetTraitType(registry.associations[normalizeAssociationId(compositeType)]);
 }
 
 export function isOrderedTraitComposite(
   registry: AssociationsFile,
   compositeType: string,
 ): boolean {
-  return isOrderedTraitType(registry.associations[normalizeRelationshipType(compositeType)]);
+  return isOrderedTraitType(registry.associations[normalizeAssociationId(compositeType)]);
 }
 
 export function orderedPropertyName(def: AssociationDefinition | undefined): string {
@@ -231,7 +232,7 @@ export function setRolePerspectivesForComposite(
   registry: AssociationsFile,
   composite: string,
 ): [string, string] {
-  const normalized = normalizeRelationshipType(composite);
+  const normalized = normalizeAssociationId(composite);
   const def = registry.associations[normalized];
   if (!def || !isSetTraitType(def)) {
     throw new Error(`Unknown set-trait composite "${composite}"`);

@@ -1,5 +1,5 @@
 import { isNodeId } from "./paths";
-import { normalizeRelationshipType } from "../relation-type";
+import { isAssociationId, normalizeAssociationId } from "./associations-file";
 import type {
   TableColumnDef,
   TableColumnScalarType,
@@ -83,11 +83,15 @@ function parseRelationColumn(raw: unknown, path: string): TableRelationColumn {
   if (typeof obj.association !== "string" || !obj.association.trim()) {
     throw new Error(`${path}: relation column requires non-empty association`);
   }
+  const association = normalizeAssociationId(obj.association);
+  if (!isAssociationId(association)) {
+    throw new Error(`${path}: association must be a ULID`);
+  }
   return {
     key: obj.key.trim(),
     name: obj.name.trim(),
     type: "relation",
-    association: normalizeRelationshipType(obj.association),
+    association,
   };
 }
 

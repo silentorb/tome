@@ -1,13 +1,17 @@
 import type { GraphDatabase } from "tome-sqlite";
 import { typeIdsForInstance } from "./node-capabilities";
-import { normalizeRelationshipType } from "tome-flatfile";
+import {
+  AmbiguousAssociationError,
+  UnknownPerspectiveError,
+  normalizeAssociationId,
+  normalizeRelationshipType,
+  resolveAssociationId,
+} from "tome-flatfile";
 import type {
   PerspectiveLabelConfig,
   AssociationDefinition,
-  AssociationEndpoints,
   AssociationsFile,
 } from "tome-flatfile";
-import { resolveAssociationId } from "tome-flatfile";
 
 function linkExistingFromPerspectiveLabel(
   config: PerspectiveLabelConfig | undefined,
@@ -70,7 +74,7 @@ export function allowedTargetTypeIdsForPerspective(
   compositeType: string,
   perspective: string,
 ): string[] {
-  const def = registry.associations[normalizeRelationshipType(compositeType)];
+  const def = registry.associations[normalizeAssociationId(compositeType)];
   if (!def?.endpoints) return [];
   const normalized = normalizeRelationshipType(perspective);
   if (def.perspectives[0] === normalized) return [def.endpoints[1].typeId];
@@ -120,7 +124,18 @@ export function associationRuleContext(
   contentDir?: string,
 ): AssociationRuleContext | null {
   const normalized = normalizeRelationshipType(perspective);
-  const composite = resolveAssociationId(registry, normalized);
+  let composite: string;
+  try {
+    composite = resolveAssociationId(registry, normalized);
+  } catch (err) {
+    if (
+      err instanceof AmbiguousAssociationError ||
+      err instanceof UnknownPerspectiveError
+    ) {
+      return null;
+    }
+    throw err;
+  }
   const def = registry.associations[composite];
   if (!def?.endpoints) return null;
 
@@ -179,9 +194,14 @@ export function relationSectionSupportsLinkExisting(
   compositeType?: string,
 ): boolean {
   const normalized = normalizeRelationshipType(perspective);
-  const composite = compositeType
-    ? normalizeRelationshipType(compositeType)
-    : resolveAssociationId(registry, normalized);
+  let composite: string;
+  try {
+    composite = compositeType
+      ? normalizeAssociationId(compositeType)
+      : resolveAssociationId(registry, normalized);
+  } catch {
+    return false;
+  }
   const def = registry.associations[composite];
   if (!def) return false;
   if (!def.perspectives.includes(normalized)) return false;

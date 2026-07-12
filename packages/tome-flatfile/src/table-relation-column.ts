@@ -1,4 +1,5 @@
 import type { AssociationsFile } from "./content/associations-file";
+import { normalizeAssociationId } from "./content/associations-file";
 import type { TableRelationColumn } from "./content/table-schemas-file";
 import {
   perspectiveForHostTable,
@@ -8,7 +9,7 @@ import { normalizeRelationshipType } from "./relation-type";
 import { slugifyPropertyKey } from "./table-schema";
 
 export function relationColumnCompositeType(col: TableRelationColumn): string {
-  return normalizeRelationshipType(col.association);
+  return normalizeAssociationId(col.association);
 }
 
 export function perspectiveForRelationColumn(

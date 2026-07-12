@@ -27,13 +27,19 @@ import { invalidateViewsCache } from "../../src/views/load";
 
 const SCENES_DB = "0000000000000000000000000D";
 const PARTS_DB = "0000000000000000000000000Z";
+const MEMBER_OF = "000000000000000000000000A1";
+const ORDERED_MEMBER_OF = "000000000000000000000000A2";
+const SCENES_PRODUCT = "000000000000000000000000A3";
+const SCENES_PART = "000000000000000000000000A4";
+const PRODUCTS_PARTS = "000000000000000000000000A5";
+const CUSTOM_ORDERED_SET = "000000000000000000000000A6";
 
 const VALID_CONFIG = {
   id: "scenes-by-book",
   typeDatabaseId: SCENES_DB,
-  scopeCompositeType: "scenes_product",
-  groupCompositeType: "scenes_part",
-  partProductCompositeType: "products_parts_database",
+  scopeCompositeType: SCENES_PRODUCT,
+  groupCompositeType: SCENES_PART,
+  partProductCompositeType: PRODUCTS_PARTS,
   groupTypeDatabaseId: PARTS_DB,
   unassignedGroupTitle: "Unassigned",
   columnViewName: "TWOLD Active",
@@ -55,20 +61,20 @@ function testContentDir(options?: {
   const registry = emptyAssociationsFile();
   if (options?.registerPlain !== false) {
     registerSetAssociation(registry, {
-      id: "member_of",
+      id: MEMBER_OF,
       perspectives: ["members", "member_of"],
     });
   }
   if (options?.registerOrdered !== false) {
     registerSetAssociation(registry, {
-      id: "ordered_member_of",
+      id: ORDERED_MEMBER_OF,
       perspectives: ["ordered_members", "ordered_member_of"],
       ordered: true,
     });
   }
   if (options?.registerCustomOrdered) {
     registerSetAssociation(registry, {
-      id: "custom_ordered_set",
+      id: CUSTOM_ORDERED_SET,
       perspectives: ["custom_sets", "custom_ordered_members"],
       ordered: true,
     });

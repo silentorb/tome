@@ -22,7 +22,7 @@ describe("shared archived edge unarchive", () => {
   seedTestNode(fixture, { id: NODE_A, properties: { title: "A" } });
   seedTestNode(fixture, { id: NODE_B, properties: { title: "B" } });
 
-  seedTestIncludes(fixture, [{ a: NODE_A, b: NODE_B, compositeType: "related" }]);
+  seedTestIncludes(fixture, [{ a: NODE_A, b: NODE_B, compositeType: "000000000000000000000000BF" }]);
 
   test("unarchiving one endpoint keeps shared edge archived while other remains archived", () => {
     expect(archiveNode(fixture.ctx, NODE_A)).toBeNull();
@@ -32,7 +32,7 @@ describe("shared archived edge unarchive", () => {
 
     const file = fixture.ctx.store.readRelationshipsFile();
     const shared = file.relationships.find(
-      (e) => e.type === "related" && e.a !== HUB && e.b !== HUB,
+      (e) => e.type === "000000000000000000000000BF" && e.a !== HUB && e.b !== HUB,
     );
     expect(shared?.archived).toBe(true);
     expect(fixture.ctx.cache.listRelationshipsFromSource(NODE_A)).toHaveLength(0);

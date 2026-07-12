@@ -33,15 +33,15 @@ describe("database-view", () => {
     serializeAssociationsFile({
       version: 1,
       associations: {
-        member_of: {
+        "000000000000000000000000A1": {
           perspectives: ["members", "member_of"],
           traits: ["set"],
         },
-        ordered_member_of: {
+        "000000000000000000000000A2": {
           perspectives: ["ordered_members", "ordered_member_of"],
           traits: ["set", "ordered"],
         },
-        parents_children: {
+        "000000000000000000000000B1": {
           perspectives: ["children", "parents"],
         },
       },
@@ -158,7 +158,7 @@ describe("database-view", () => {
         key: "parents",
         name: "Parents",
         type: "relation",
-        association: "parents_children",
+        association: "000000000000000000000000B1",
       },
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
@@ -216,11 +216,11 @@ describe("database-view", () => {
       serializeAssociationsFile({
         version: 1,
         associations: {
-          custom_set: {
+          "000000000000000000000000B6": {
             perspectives: ["cohort", "belongs_to_cohort"],
             traits: ["set"],
           },
-          parents_children: {
+          "000000000000000000000000B1": {
             perspectives: ["children", "parents"],
           },
         },
@@ -245,15 +245,15 @@ describe("database-view", () => {
       serializeAssociationsFile({
         version: 1,
         associations: {
-          member_of: {
+          "000000000000000000000000A1": {
             perspectives: ["members", "member_of"],
             traits: ["set"],
           },
-          ordered_member_of: {
+          "000000000000000000000000A2": {
             perspectives: ["ordered_members", "ordered_member_of"],
             traits: ["set", "ordered"],
           },
-          parents_children: {
+          "000000000000000000000000B1": {
             perspectives: ["children", "parents"],
           },
         },

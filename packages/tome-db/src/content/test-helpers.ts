@@ -24,6 +24,8 @@ import { openContentGraph } from "./sync";
 import type { TomeWriteContext } from "./write-context";
 import {
   emptyAssociationsFile,
+  isAssociationId,
+  normalizeAssociationId,
   registerBidirectionalType,
   registerSetAssociation,
   serializeAssociationsFile,
@@ -55,6 +57,29 @@ export const TEST_HOME_NODE_ID = "00000000000000000000000005";
 export const TEST_ARCHIVE_NODE_ID = "00000000000000000000000002";
 export const TEST_GRAPH_ANCHOR_NODE_ID = "0000000000000000000000002V";
 export const TEST_STATIC_SITE_HOME_NODE_ID = "0000000000000000000000000Y";
+
+/** Stable ULID association ids for common test set associations. */
+export const TEST_MEMBER_OF_ASSOCIATION_ID = "000000000000000000000000A1";
+export const TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID = "000000000000000000000000A2";
+export const TEST_SCENES_PRODUCT_ASSOCIATION_ID = "000000000000000000000000A3";
+export const TEST_SCENES_PART_ASSOCIATION_ID = "000000000000000000000000A4";
+export const TEST_PRODUCTS_PARTS_ASSOCIATION_ID = "000000000000000000000000A5";
+/** Ad-hoc composites used across package tests. */
+export const TEST_PARENTS_CHILDREN_ASSOCIATION_ID = "000000000000000000000000B1";
+export const TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID = "000000000000000000000000B2";
+export const TEST_INCLUDES_ASSOCIATION_ID = "000000000000000000000000B3";
+export const TEST_CHILDREN_CHILDREN_ASSOCIATION_ID = "000000000000000000000000B4";
+export const TEST_FEATURES_BIBLE_PASSAGES_ASSOCIATION_ID = "000000000000000000000000B5";
+export const TEST_CUSTOM_SET_ASSOCIATION_ID = "000000000000000000000000B6";
+export const TEST_SCENES_FEATURES_ASSOCIATION_ID = "000000000000000000000000B7";
+export const TEST_SCENES_INSPIRATIONS_ASSOCIATION_ID = "000000000000000000000000B8";
+export const TEST_SCENES_CHARACTERS_ASSOCIATION_ID = "000000000000000000000000B9";
+export const TEST_SCENES_LOCATION_ASSOCIATION_ID = "000000000000000000000000BA";
+export const TEST_SOLUTIONS_SCENES_ASSOCIATION_ID = "000000000000000000000000BB";
+export const TEST_STORY_SCALE_INSPIRATIONS_ASSOCIATION_ID = "000000000000000000000000BC";
+export const TEST_PROP_TYPE_INSPIRATIONS_ASSOCIATION_ID = "000000000000000000000000BD";
+export const TEST_OTHER_PARENTS_CHILDREN_ASSOCIATION_ID = "000000000000000000000000BE";
+export const TEST_RELATED_ASSOCIATION_ID = "000000000000000000000000BF";
 
 export interface TestContentFixture {
   tempDir: string;
@@ -95,9 +120,9 @@ export function defaultTestOrderedCollectionsFile(): OrderedCollectionsFile {
       {
         id: "scenes-by-book",
         typeDatabaseId: "0000000000000000000000000D",
-        scopeCompositeType: "scenes_product",
-        groupCompositeType: "scenes_part",
-        partProductCompositeType: "products_parts_database",
+        scopeCompositeType: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        groupCompositeType: TEST_SCENES_PART_ASSOCIATION_ID,
+        partProductCompositeType: TEST_PRODUCTS_PARTS_ASSOCIATION_ID,
         groupTypeDatabaseId: "0000000000000000000000000Z",
         unassignedGroupTitle: "Unassigned",
         columnViewName: "TWOLD Active",
@@ -110,14 +135,28 @@ export function defaultTestOrderedCollectionsFile(): OrderedCollectionsFile {
 export function seedDefaultAssociations(fixture: TestContentFixture): void {
   const registry = fixture.ctx.store.readAssociationsFile();
   registerSetAssociation(registry, {
-    id: "member_of",
+    id: TEST_MEMBER_OF_ASSOCIATION_ID,
     perspectives: ["members", "member_of"],
   });
   registerSetAssociation(registry, {
-    id: "ordered_member_of",
+    id: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
     perspectives: ["ordered_members", "ordered_member_of"],
     ordered: true,
   });
+  registerBidirectionalType(registry, "scenes", "product", TEST_SCENES_PRODUCT_ASSOCIATION_ID);
+  registerBidirectionalType(registry, "scenes", "part", TEST_SCENES_PART_ASSOCIATION_ID);
+  registerBidirectionalType(
+    registry,
+    "products",
+    "parts_database",
+    TEST_PRODUCTS_PARTS_ASSOCIATION_ID,
+  );
+  registerBidirectionalType(
+    registry,
+    "scenes",
+    "characters",
+    TEST_SCENES_CHARACTERS_ASSOCIATION_ID,
+  );
   fixture.ctx.store.writeAssociationsFile(registry);
 }
 
@@ -125,11 +164,11 @@ export function seedDefaultAssociations(fixture: TestContentFixture): void {
 export function writeTestSetAssociations(contentDir: string): void {
   const registry = emptyAssociationsFile();
   registerSetAssociation(registry, {
-    id: "member_of",
+    id: TEST_MEMBER_OF_ASSOCIATION_ID,
     perspectives: ["members", "member_of"],
   });
   registerSetAssociation(registry, {
-    id: "ordered_member_of",
+    id: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
     perspectives: ["ordered_members", "ordered_member_of"],
     ordered: true,
   });
@@ -257,25 +296,101 @@ export function seedTestTableSchema(
   invalidateTableSchemasCache();
 }
 
+function resolveSeedAssociationId(typeOrId: string): string {
+  const trimmed = typeOrId.trim();
+  if (trimmed === "member_of") return TEST_MEMBER_OF_ASSOCIATION_ID;
+  if (trimmed === "ordered_member_of") return TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID;
+  return normalizeAssociationId(trimmed);
+}
+
+/** Find or mint a symmetric association for a perspective slug (test convenience). */
+function associationIdForPerspectiveSlug(
+  registry: ReturnType<typeof emptyAssociationsFile>,
+  slug: string,
+): string {
+  const perspective = normalizeRelationshipType(slug);
+  for (const [id, def] of Object.entries(registry.associations)) {
+    if (def.perspectives[0] === perspective && def.perspectives[1] === perspective) {
+      return id;
+    }
+  }
+  return registerBidirectionalType(registry, perspective, perspective);
+}
+
+function ensureSeedAssociation(
+  registry: ReturnType<typeof emptyAssociationsFile>,
+  typeOrId: string,
+): string {
+  const resolved = resolveSeedAssociationId(typeOrId);
+  if (resolved === TEST_MEMBER_OF_ASSOCIATION_ID) {
+    registerSetAssociation(registry, {
+      id: TEST_MEMBER_OF_ASSOCIATION_ID,
+      perspectives: ["members", "member_of"],
+    });
+    return TEST_MEMBER_OF_ASSOCIATION_ID;
+  }
+  if (resolved === TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID) {
+    registerSetAssociation(registry, {
+      id: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+      perspectives: ["ordered_members", "ordered_member_of"],
+      ordered: true,
+    });
+    return TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID;
+  }
+  const knownPairs: Record<string, [string, string]> = {
+    [TEST_SCENES_PRODUCT_ASSOCIATION_ID]: ["scenes", "product"],
+    [TEST_SCENES_PART_ASSOCIATION_ID]: ["scenes", "part"],
+    [TEST_PRODUCTS_PARTS_ASSOCIATION_ID]: ["products", "parts_database"],
+    [TEST_PARENTS_CHILDREN_ASSOCIATION_ID]: ["children", "parents"],
+    [TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID]: ["inspirations", "features"],
+    [TEST_INCLUDES_ASSOCIATION_ID]: ["includes", "includes"],
+    [TEST_CHILDREN_CHILDREN_ASSOCIATION_ID]: ["children", "children"],
+    [TEST_FEATURES_BIBLE_PASSAGES_ASSOCIATION_ID]: ["features", "bible_passages"],
+    [TEST_CUSTOM_SET_ASSOCIATION_ID]: ["custom_members", "custom_set"],
+    [TEST_SCENES_FEATURES_ASSOCIATION_ID]: ["scenes", "features"],
+    [TEST_SCENES_INSPIRATIONS_ASSOCIATION_ID]: ["scenes", "inspirations"],
+    [TEST_SCENES_CHARACTERS_ASSOCIATION_ID]: ["scenes", "characters"],
+    [TEST_SCENES_LOCATION_ASSOCIATION_ID]: ["scenes", "location"],
+    [TEST_SOLUTIONS_SCENES_ASSOCIATION_ID]: ["solutions", "scenes"],
+    [TEST_STORY_SCALE_INSPIRATIONS_ASSOCIATION_ID]: ["story_scale", "inspirations"],
+    [TEST_PROP_TYPE_INSPIRATIONS_ASSOCIATION_ID]: ["prop_type", "inspirations"],
+    [TEST_OTHER_PARENTS_CHILDREN_ASSOCIATION_ID]: ["children", "parents"],
+    [TEST_RELATED_ASSOCIATION_ID]: ["related", "related"],
+  };
+  if (isAssociationId(resolved)) {
+    if (!registry.associations[resolved]) {
+      const pair = knownPairs[resolved] ?? ["a", "b"];
+      registerBidirectionalType(registry, pair[0], pair[1], resolved);
+    }
+    return resolved;
+  }
+  return associationIdForPerspectiveSlug(registry, resolved);
+}
+
 function entryFromSeedConnection(connection: {
   source: string;
   target: string;
   type: string;
   properties?: Properties;
 }): RelationshipEntry {
-  if (connection.type === "member_of" || connection.type === "ordered_member_of") {
+  // Caller must pass a resolved ULID association id in `type`.
+  const associationId = normalizeAssociationId(connection.type);
+  if (
+    associationId === TEST_MEMBER_OF_ASSOCIATION_ID ||
+    associationId === TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID
+  ) {
     return {
       a: connection.target,
       b: connection.source,
-      type: connection.type,
+      type: associationId,
       properties: connection.properties ?? {},
     };
   }
   return entryFromRelationship({
-    id: relationshipId(connection.source, connection.type, connection.target),
+    id: relationshipId(connection.source, associationId, connection.target),
     sourceNodeId: connection.source,
     targetNodeId: connection.target,
-    type: connection.type,
+    type: associationId,
     properties: connection.properties ?? {},
   });
 }
@@ -298,10 +413,7 @@ export function seedTestIncludes(
     : fixture.ctx.store.readRelationshipsFile();
 
   for (const connection of connections) {
-    const compositeType = normalizeRelationshipType(connection.compositeType);
-    if (!registry.associations[compositeType]) {
-      registerBidirectionalType(registry, compositeType, compositeType);
-    }
+    const compositeType = ensureSeedAssociation(registry, connection.compositeType);
     const entry: RelationshipEntry = {
       a: connection.a,
       b: connection.b,
@@ -327,6 +439,7 @@ export function seedTestIncludes(
  * Seed composite relationships as ordered tuples. Node `a` occupies tuple index 0
  * (projecting `typeFromA`); node `b` occupies index 1 (projecting `typeFromB`).
  * Direction is carried by this authored order alone — there is no directedFrom.
+ * Returns the association id used for each connection (minted when not already registered).
  */
 export function seedTestCompositeRelationships(
   fixture: TestContentFixture,
@@ -335,10 +448,11 @@ export function seedTestCompositeRelationships(
     b: string;
     typeFromA: string;
     typeFromB: string;
+    associationId?: string;
     properties?: Properties;
   }>,
   options?: { replace?: boolean },
-): void {
+): string[] {
   const registry = options?.replace
     ? { version: 1 as const, associations: {} as Record<string, never> }
     : fixture.ctx.store.readAssociationsFile();
@@ -346,16 +460,31 @@ export function seedTestCompositeRelationships(
     ? { version: RELATIONSHIPS_FILE_VERSION, relationships: [] as RelationshipEntry[] }
     : fixture.ctx.store.readRelationshipsFile();
 
+  const associationIds: string[] = [];
   for (const connection of connections) {
-    const compositeType = registerBidirectionalType(
-      registry,
-      connection.typeFromA,
-      connection.typeFromB,
-    );
+    const p0 = normalizeRelationshipType(connection.typeFromA);
+    const p1 = normalizeRelationshipType(connection.typeFromB);
+    let associationId = connection.associationId
+      ? normalizeAssociationId(connection.associationId)
+      : undefined;
+    if (!associationId) {
+      for (const [id, def] of Object.entries(registry.associations)) {
+        if (def.perspectives[0] === p0 && def.perspectives[1] === p1) {
+          associationId = id;
+          break;
+        }
+      }
+    }
+    if (!associationId) {
+      associationId = registerBidirectionalType(registry, p0, p1);
+    } else if (!registry.associations[associationId]) {
+      registerBidirectionalType(registry, p0, p1, associationId);
+    }
+    associationIds.push(associationId);
     const entry: RelationshipEntry = {
       a: connection.a,
       b: connection.b,
-      type: compositeType,
+      type: associationId,
       properties: connection.properties ?? {},
     };
     const index = file.relationships.findIndex(
@@ -371,6 +500,7 @@ export function seedTestCompositeRelationships(
   fixture.ctx.store.writeAssociationsFile(registry);
   fixture.ctx.store.writeRelationshipsFile(file);
   fixture.ctx.sync.syncRelationships();
+  return associationIds;
 }
 
 export function seedTestRelationships(
@@ -391,24 +521,8 @@ export function seedTestRelationships(
     : fixture.ctx.store.readRelationshipsFile();
 
   for (const connection of connections) {
-    if (connection.type === "member_of") {
-      registerSetAssociation(registry, {
-        id: "member_of",
-        perspectives: ["members", "member_of"],
-      });
-    } else if (connection.type === "ordered_member_of") {
-      registerSetAssociation(registry, {
-        id: "ordered_member_of",
-        perspectives: ["ordered_members", "ordered_member_of"],
-        ordered: true,
-      });
-    } else {
-      const composite = normalizeRelationshipType(connection.type);
-      if (!registry.associations[composite]) {
-        registerBidirectionalType(registry, composite, composite);
-      }
-    }
-    const entry = entryFromSeedConnection(connection);
+    const associationId = ensureSeedAssociation(registry, connection.type);
+    const entry = entryFromSeedConnection({ ...connection, type: associationId });
     const index = file.relationships.findIndex(
       (existing) =>
         existing.a === entry.a &&

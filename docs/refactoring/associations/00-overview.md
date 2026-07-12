@@ -1,5 +1,10 @@
 # Relationship type behaviors — inventory overview
 
+> **Superseded inventory.** These docs describe an older includes-collapse / slug-keyed association era.
+> For current behavior, use [tome-db.md](../../features/tome-db.md), [sets.md](../../features/sets.md),
+> and [relationship-dehardcode-remaining.md](../relationship-dehardcode-remaining.md).
+> Association registry keys are now **opaque ULIDs**; perspectives remain snake_case slugs.
+
 ## Purpose
 
 This directory inventories **how relationship types behave in Tome today**—what special cases exist, which type names or perspective slugs trigger them, and where the logic lives in `tome-db`.

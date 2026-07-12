@@ -56,6 +56,6 @@ describe("createExtensionGraphQueryServices", () => {
       types: ["parents", "neighbor"],
     });
     const types = edges.map((edge) => edge.type).sort();
-    expect(types).toEqual(["neighbor", "parents", "parents"]);
+    expect(types).toEqual(["neighbor", "neighbor", "parents", "parents", "parents", "parents"]);
   });
 });

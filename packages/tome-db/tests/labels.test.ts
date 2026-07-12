@@ -5,7 +5,7 @@ import { isSetTraitPerspective } from "tome-flatfile";
 describe("isSetTraitPerspective", () => {
   test("recognizes perspectives from set-trait registry entries", () => {
     const registry = emptyAssociationsFile();
-    registry.associations.member_of = {
+    registry.associations["000000000000000000000000A1"] = {
       perspectives: ["members", "member_of"],
       traits: ["set"],
     };

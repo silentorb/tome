@@ -20,13 +20,13 @@ function registryWithTypes(
 describe("relationSectionSupportsLinkExisting", () => {
   test("defaults to true for a registered perspective", () => {
     const registry = registryWithTypes({
-      inspirations_features: {
+      "000000000000000000000000B2": {
         perspectives: ["features", "inspirations"],
       },
     });
     expect(relationSectionSupportsLinkExisting(registry, "features")).toBe(true);
     expect(
-      relationSectionSupportsLinkExisting(registry, "features", "inspirations_features"),
+      relationSectionSupportsLinkExisting(registry, "features", "000000000000000000000000B2"),
     ).toBe(true);
   });
 
@@ -37,22 +37,22 @@ describe("relationSectionSupportsLinkExisting", () => {
 
   test("honors composite-level linkExisting false", () => {
     const registry = registryWithTypes({
-      parents_children: {
+      "000000000000000000000000B1": {
         perspectives: ["children", "parents"],
         linkExisting: false,
       },
     });
     expect(
-      relationSectionSupportsLinkExisting(registry, "children", "parents_children"),
+      relationSectionSupportsLinkExisting(registry, "children", "000000000000000000000000B1"),
     ).toBe(false);
     expect(
-      relationSectionSupportsLinkExisting(registry, "parents", "parents_children"),
+      relationSectionSupportsLinkExisting(registry, "parents", "000000000000000000000000B1"),
     ).toBe(false);
   });
 
   test("honors per-perspective linkExisting override over composite default", () => {
     const registry = registryWithTypes({
-      parents_children: {
+      "000000000000000000000000B1": {
         perspectives: ["children", "parents"],
         linkExisting: false,
         perspectiveLabels: {
@@ -61,38 +61,38 @@ describe("relationSectionSupportsLinkExisting", () => {
       },
     });
     expect(
-      relationSectionSupportsLinkExisting(registry, "children", "parents_children"),
+      relationSectionSupportsLinkExisting(registry, "children", "000000000000000000000000B1"),
     ).toBe(false);
     expect(
-      relationSectionSupportsLinkExisting(registry, "parents", "parents_children"),
+      relationSectionSupportsLinkExisting(registry, "parents", "000000000000000000000000B1"),
     ).toBe(true);
   });
 
   test("disambiguates children across composites via compositeType", () => {
     const registry = registryWithTypes({
-      parents_children: {
+      "000000000000000000000000B1": {
         perspectives: ["children", "parents"],
         linkExisting: false,
       },
-      children_children: {
+      "000000000000000000000000B4": {
         perspectives: ["children", "children"],
       },
     });
     expect(
-      relationSectionSupportsLinkExisting(registry, "children", "parents_children"),
+      relationSectionSupportsLinkExisting(registry, "children", "000000000000000000000000B1"),
     ).toBe(false);
     expect(
-      relationSectionSupportsLinkExisting(registry, "children", "children_children"),
+      relationSectionSupportsLinkExisting(registry, "children", "000000000000000000000000B4"),
     ).toBe(true);
   });
 
   test("falls back to first registry match when compositeType is omitted", () => {
     const registry = registryWithTypes({
-      parents_children: {
+      "000000000000000000000000B1": {
         perspectives: ["children", "parents"],
         linkExisting: false,
       },
-      children_children: {
+      "000000000000000000000000B4": {
         perspectives: ["children", "children"],
       },
     });

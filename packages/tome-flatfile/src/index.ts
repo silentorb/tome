@@ -17,8 +17,12 @@ export type { RelationshipEntry, RelationshipsFile } from "./content/relationshi
 
 export {
   ASSOCIATIONS_FILE_VERSION,
-  compositeTypeForPerspectives,
+  AmbiguousAssociationError,
+  UnknownPerspectiveError,
   emptyAssociationsFile,
+  generateAssociationId,
+  isAssociationId,
+  normalizeAssociationId,
   parseAssociationsFile,
   registerBidirectionalType,
   registerSetAssociation,

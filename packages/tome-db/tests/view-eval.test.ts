@@ -280,11 +280,11 @@ describe("getDatabaseViewDetail with custom tabs", () => {
       serializeAssociationsFile({
         version: 1,
         associations: {
-          member_of: {
+          "000000000000000000000000A1": {
             perspectives: ["members", "member_of"],
             traits: ["set"],
           },
-          inspirations_features: {
+          "000000000000000000000000B2": {
             perspectives: ["features", "inspirations"],
             endpoints: {
               0: { typeId: featuresDb },
@@ -325,7 +325,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
                 key: "inspirations",
                 name: "Inspirations",
                 type: "relation",
-                association: "inspirations_features",
+                association: "000000000000000000000000B2",
               },
             ],
           },

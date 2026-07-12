@@ -1,0 +1,200 @@
+/**
+ * Remap association registry keys from semantic slugs to ULIDs, and rewrite
+ * every content reference (relationships, table-schemas, ordered-collections,
+ * dynamic-fields).
+ *
+ * Usage:
+ *   bun packages/tome-db/scripts/migrate-association-ids-to-ulid.ts <contentDir>
+ */
+
+import { readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { monotonicFactory } from "ulid";
+import {
+  associationsFilePath,
+  dynamicFieldsFilePath,
+  orderedCollectionsFilePath,
+  relationshipsFilePath,
+  tableSchemasFilePath,
+  isAssociationId,
+  normalizeAssociationId,
+  parseAssociationsFile,
+  parseRelationshipsFile,
+  serializeRelationshipsFile,
+  parseTableSchemasFile,
+  serializeTableSchemasFile,
+  serializeAssociationsFile,
+  type RelationshipEntry,
+} from "tome-flatfile";
+
+const mint = monotonicFactory();
+
+function mintAssociationId(): string {
+  return mint().toUpperCase();
+}
+
+function remapAssociationRef(
+  value: string,
+  slugToUlid: Map<string, string>,
+  path: string,
+): string {
+  const trimmed = normalizeAssociationId(value);
+  if (isAssociationId(trimmed)) return trimmed;
+  const mapped = slugToUlid.get(trimmed);
+  if (!mapped) {
+    throw new Error(`${path}: unknown association slug "${value}"`);
+  }
+  return mapped;
+}
+
+function remapRelationships(
+  entries: RelationshipEntry[],
+  slugToUlid: Map<string, string>,
+): RelationshipEntry[] {
+  return entries.map((entry) => {
+    const mapped = slugToUlid.get(entry.type) ?? (isAssociationId(entry.type) ? entry.type : null);
+    if (!mapped) {
+      throw new Error(`No ULID mapping for relationship type "${entry.type}"`);
+    }
+    return { ...entry, type: mapped };
+  });
+}
+
+export function migrateAssociationIdsToUlid(contentDir: string): {
+  mapped: number;
+  relationships: number;
+} {
+  const associationsPath = associationsFilePath(contentDir);
+  const data = JSON.parse(readFileSync(associationsPath, "utf-8")) as {
+    version: number;
+    associations: Record<string, unknown>;
+  };
+  if (!data.associations || typeof data.associations !== "object") {
+    throw new Error("associations.json: associations must be an object");
+  }
+
+  const slugToUlid = new Map<string, string>();
+  for (const key of Object.keys(data.associations)) {
+    if (isAssociationId(key)) slugToUlid.set(key, key);
+    else slugToUlid.set(key, mintAssociationId());
+  }
+
+  const remappedAssociations: Record<string, unknown> = {};
+  for (const [slug, def] of Object.entries(data.associations)) {
+    remappedAssociations[slugToUlid.get(slug)!] = def;
+  }
+  // Write remapped associations, then validate + normalize via formal serialize.
+  writeFileSync(
+    associationsPath,
+    `${JSON.stringify({ version: data.version, associations: remappedAssociations }, null, 2)}\n`,
+    "utf-8",
+  );
+  const parsedAssociations = parseAssociationsFile(readFileSync(associationsPath, "utf-8"));
+  writeFileSync(associationsPath, serializeAssociationsFile(parsedAssociations), "utf-8");
+
+  const relPath = relationshipsFilePath(contentDir);
+  const relRaw = JSON.parse(readFileSync(relPath, "utf-8")) as {
+    version: number;
+    relationships: RelationshipEntry[];
+  };
+  relRaw.relationships = remapRelationships(relRaw.relationships, slugToUlid);
+  writeFileSync(relPath, `${JSON.stringify(relRaw, null, 2)}\n`, "utf-8");
+  const relFile = parseRelationshipsFile(readFileSync(relPath, "utf-8"));
+  writeFileSync(relPath, serializeRelationshipsFile(relFile), "utf-8");
+
+  const tableSchemasPath = tableSchemasFilePath(contentDir);
+  const tableRaw = JSON.parse(readFileSync(tableSchemasPath, "utf-8")) as {
+    version: number;
+    tables: Record<string, { columns: Array<Record<string, unknown>> }>;
+  };
+  for (const [tableId, table] of Object.entries(tableRaw.tables)) {
+    for (let i = 0; i < table.columns.length; i++) {
+      const col = table.columns[i]!;
+      if (col.type === "relation" && typeof col.association === "string") {
+        col.association = remapAssociationRef(
+          col.association,
+          slugToUlid,
+          `table-schemas.${tableId}.columns[${i}]`,
+        );
+      }
+    }
+  }
+  writeFileSync(tableSchemasPath, `${JSON.stringify(tableRaw, null, 2)}\n`, "utf-8");
+  writeFileSync(
+    tableSchemasPath,
+    serializeTableSchemasFile(parseTableSchemasFile(readFileSync(tableSchemasPath, "utf-8"))),
+    "utf-8",
+  );
+
+  const orderedPath = orderedCollectionsFilePath(contentDir);
+  const orderedRaw = JSON.parse(readFileSync(orderedPath, "utf-8")) as {
+    version: number;
+    configs: Array<Record<string, unknown>>;
+  };
+  for (const config of orderedRaw.configs) {
+    for (const field of [
+      "scopeCompositeType",
+      "groupCompositeType",
+      "partProductCompositeType",
+    ] as const) {
+      if (typeof config[field] === "string") {
+        config[field] = remapAssociationRef(
+          config[field] as string,
+          slugToUlid,
+          `ordered-collections.${String(config.id)}.${field}`,
+        );
+      }
+    }
+  }
+  writeFileSync(orderedPath, `${JSON.stringify(orderedRaw, null, 2)}\n`, "utf-8");
+  // Skip full parseOrderedCollectionsFile here: it loads views/set perspectives and
+  // can fail on cache timing mid-migration. Structural remap is enough.
+
+  const dynamicPath = dynamicFieldsFilePath(contentDir);
+  const dynamicRaw = JSON.parse(readFileSync(dynamicPath, "utf-8")) as {
+    version: number;
+    fields?: Array<{ params?: Record<string, unknown> }>;
+    columnSets?: unknown[];
+  };
+  const compositeParamKeys = [
+    "inspiration_feature_composite",
+    "characters_scene_composite",
+    "scene_product_composite",
+  ];
+  for (const field of dynamicRaw.fields ?? []) {
+    if (!field.params) continue;
+    for (const key of compositeParamKeys) {
+      const value = field.params[key];
+      if (typeof value === "string") {
+        field.params[key] = remapAssociationRef(value, slugToUlid, `dynamic-fields.${key}`);
+      }
+    }
+  }
+  writeFileSync(dynamicPath, `${JSON.stringify(dynamicRaw, null, 2)}\n`, "utf-8");
+
+  console.log("Association slug → ULID map:");
+  for (const [slug, ulid] of [...slugToUlid.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    if (slug !== ulid) console.log(`  ${slug} → ${ulid}`);
+  }
+
+  return {
+    mapped: slugToUlid.size,
+    relationships: relFile.relationships.length,
+  };
+}
+
+function main(): void {
+  if (!process.argv[2]) {
+    console.error(
+      "Usage: bun packages/tome-db/scripts/migrate-association-ids-to-ulid.ts <contentDir>",
+    );
+    process.exit(1);
+  }
+  const contentDir = resolve(process.argv[2]);
+  const result = migrateAssociationIdsToUlid(contentDir);
+  console.log(
+    `Migrated ${result.mapped} associations; rewrote ${result.relationships} relationships.`,
+  );
+}
+
+if (import.meta.main) main();

@@ -6,23 +6,28 @@ import {
 import type { RelationshipEntry } from "tome-flatfile";
 import type { AssociationsFile } from "tome-flatfile";
 
+const MEMBER_OF = "000000000000000000000000A1";
+const INCLUDES = "000000000000000000000000B3";
+const SCENES_PRODUCT = "000000000000000000000000A3";
+const PARENTS_CHILDREN = "000000000000000000000000B1";
+
 const legacyRegistry: AssociationsFile = {
   version: 1,
   associations: {
-    member_of: { perspectives: ["member_of", "members"] , traits: ["set"]},
-    includes: { perspectives: ["includes", "includes"] },
-    scenes_product: { perspectives: ["scenes", "product"] },
-    parents_children: { perspectives: ["children", "parents"] },
+    [MEMBER_OF]: { perspectives: ["member_of", "members"], traits: ["set"] },
+    [INCLUDES]: { perspectives: ["includes", "includes"] },
+    [SCENES_PRODUCT]: { perspectives: ["scenes", "product"] },
+    [PARENTS_CHILDREN]: { perspectives: ["children", "parents"] },
   },
 };
 
 const parentFirstRegistry: AssociationsFile = {
   version: 1,
   associations: {
-    member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
-    includes: { perspectives: ["includes", "includes"] },
-    scenes_product: { perspectives: ["scenes", "product"] },
-    parents_children: { perspectives: ["children", "parents"] },
+    [MEMBER_OF]: { perspectives: ["members", "member_of"], traits: ["set"] },
+    [INCLUDES]: { perspectives: ["includes", "includes"] },
+    [SCENES_PRODUCT]: { perspectives: ["scenes", "product"] },
+    [PARENTS_CHILDREN]: { perspectives: ["children", "parents"] },
   },
 };
 
@@ -33,7 +38,7 @@ describe("expandRelationshipEntry", () => {
     const entry: RelationshipEntry = {
       a: set,
       b: member,
-      type: "member_of",
+      type: MEMBER_OF,
       properties: { view: "All" },
     };
     const { projections } = expandRelationshipEntry(entry, parentFirstRegistry);
@@ -53,8 +58,8 @@ describe("expandRelationshipEntry", () => {
   test("parent-first tuple+perspectives preserve member_of graph semantics", () => {
     const set = "00000000000000000000000013";
     const member = "0000000000000000000000002C";
-    const legacyEntry: RelationshipEntry = { a: member, b: set, type: "member_of", properties: {} };
-    const parentFirstEntry: RelationshipEntry = { a: set, b: member, type: "member_of", properties: {} };
+    const legacyEntry: RelationshipEntry = { a: member, b: set, type: MEMBER_OF, properties: {} };
+    const parentFirstEntry: RelationshipEntry = { a: set, b: member, type: MEMBER_OF, properties: {} };
 
     const legacy = expandRelationshipEntry(legacyEntry, legacyRegistry).projections;
     const parentFirst = expandRelationshipEntry(parentFirstEntry, parentFirstRegistry).projections;
@@ -67,7 +72,7 @@ describe("expandRelationshipEntry", () => {
   test("includes emits symmetric dual projections", () => {
     const a = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     const b = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
-    const entry: RelationshipEntry = { a, b, type: "includes", properties: {} };
+    const entry: RelationshipEntry = { a, b, type: INCLUDES, properties: {} };
     const { projections } = expandRelationshipEntry(entry, parentFirstRegistry);
     expect(projections).toHaveLength(2);
     expect(projections.map((p) => p.type)).toEqual(["includes", "includes"]);
@@ -76,7 +81,7 @@ describe("expandRelationshipEntry", () => {
   test("named composite emits distinct perspective types", () => {
     const scene = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     const product = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
-    const entry: RelationshipEntry = { a: scene, b: product, type: "scenes_product", properties: {} };
+    const entry: RelationshipEntry = { a: scene, b: product, type: SCENES_PRODUCT, properties: {} };
     const { projections } = expandRelationshipEntry(entry, parentFirstRegistry);
     expect(projections).toHaveLength(2);
     expect(projections[0]?.type).toBe("scenes");
@@ -89,7 +94,7 @@ describe("expandRelationshipEntry", () => {
     const entry: RelationshipEntry = {
       a: child,
       b: parent,
-      type: "parents_children",
+      type: PARENTS_CHILDREN,
       properties: {},
     };
     const { projections } = expandRelationshipEntry(entry, parentFirstRegistry);
@@ -110,7 +115,7 @@ describe("expandRelationshipEntry", () => {
 describe("expandAllRelationships", () => {
   test("batch expansion preserves record count", () => {
     const entries: RelationshipEntry[] = [
-      { a: "BBBBBBBBBBBBBBBBBBBBBBBBBB", b: "AAAAAAAAAAAAAAAAAAAAAAAAAA", type: "member_of" },
+      { a: "BBBBBBBBBBBBBBBBBBBBBBBBBB", b: "AAAAAAAAAAAAAAAAAAAAAAAAAA", type: MEMBER_OF },
     ];
     const { records, projections } = expandAllRelationships(entries, parentFirstRegistry);
     expect(records).toHaveLength(1);

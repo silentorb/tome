@@ -89,7 +89,7 @@ describe("prepare-editor-body API — schema diagram", () => {
                 key: "features",
                 name: "Features",
                 type: "relation",
-                association: "scenes_features",
+                association: "000000000000000000000000B7",
               },
             ],
           },
@@ -108,15 +108,15 @@ describe("prepare-editor-body API — schema diagram", () => {
     serializeAssociationsFile({
       version: 1,
       associations: {
-        member_of: {
+        "000000000000000000000000A1": {
           perspectives: ["members", "member_of"],
           traits: ["set"],
         },
-        ordered_member_of: {
+        "000000000000000000000000A2": {
           perspectives: ["ordered_members", "ordered_member_of"],
           traits: ["ordered", "set"],
         },
-        scenes_features: {
+        "000000000000000000000000B7": {
           perspectives: ["features", "scenes"],
           endpoints: {
             "0": { typeId: sceneTypeId },

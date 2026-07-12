@@ -2,7 +2,7 @@ import type {
   PerspectiveLabelConfig,
   AssociationsFile,
 } from "tome-flatfile";
-import { normalizeRelationshipType } from "tome-flatfile/relation-type";
+import { normalizeAssociationId, normalizeRelationshipType } from "tome-flatfile";
 
 /** Human-readable label for a local relationship type (e.g. `bible_passages` → `Bible Passages`). */
 export function formatAssociationLabel(type: string): string {
@@ -24,7 +24,7 @@ function perspectiveLabelConfig(
   // slug shared by several edge types (e.g. "inspirations") maps to the label
   // authored for THIS type + position, not the first arbitrary registry match.
   if (compositeType) {
-    const def = registry.associations[normalizeRelationshipType(compositeType)];
+    const def = registry.associations[normalizeAssociationId(compositeType)];
     return def?.perspectiveLabels?.[normalized] ?? null;
   }
   for (const def of Object.values(registry.associations)) {

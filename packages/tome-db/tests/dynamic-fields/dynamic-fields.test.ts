@@ -260,7 +260,7 @@ describe("dynamic-fields with composite relationships", () => {
         resolverId: "inspirations.weightedUse",
         docsPath: "docs/dynamic-fields/inspirations.weighted-use.md",
         params: {
-          inspiration_feature_composite: "inspirations_features",
+          inspiration_feature_composite: "000000000000000000000000B2",
           features_edge_label: "FEATURES",
           features_database_id: FEAT_DB,
         },
@@ -273,7 +273,7 @@ describe("dynamic-fields with composite relationships", () => {
         resolverId: "inspirations.wonder",
         docsPath: "docs/dynamic-fields/inspirations.wonder.md",
         params: {
-          inspiration_feature_composite: "inspirations_features",
+          inspiration_feature_composite: "000000000000000000000000B2",
           features_edge_label: "FEATURES",
           theme_edge_label: "THEME",
           theme_target_id: WONDERLAND,
@@ -292,8 +292,22 @@ describe("dynamic-fields with composite relationships", () => {
       { source: featurePlain, target: FEAT_DB, type: "member_of", properties: { priority: "High" } },
     ]);
     seedTestCompositeRelationships(fixture, [
-      { a: inspiration, b: featureWonder, typeFromA: "inspirations", typeFromB: "features", properties: {} },
-      { a: inspiration, b: featurePlain, typeFromA: "inspirations", typeFromB: "features", properties: {} },
+      {
+        a: inspiration,
+        b: featureWonder,
+        typeFromA: "inspirations",
+        typeFromB: "features",
+        associationId: "000000000000000000000000B2",
+        properties: {},
+      },
+      {
+        a: inspiration,
+        b: featurePlain,
+        typeFromA: "inspirations",
+        typeFromB: "features",
+        associationId: "000000000000000000000000B2",
+        properties: {},
+      },
     ]);
     seedTestRelationships(fixture, [
       {
@@ -353,8 +367,8 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
   const scene2 = "22222222222222222222222222";
 
   const productionParams = {
-    characters_scene_composite: "scenes_characters",
-    scene_product_composite: "scenes_product",
+    characters_scene_composite: "000000000000000000000000B9",
+    scene_product_composite: "000000000000000000000000A3",
     scenes_edge_label: "SCENES",
     product_edge_label: "PRODUCT",
     scenes_database_id: SCENES_DB,
@@ -374,7 +388,7 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
           resolverId: "characters.allSceneCount",
           docsPath: "docs/dynamic-fields/characters.all-scene-count.md",
           params: {
-            characters_scene_composite: "scenes_characters",
+            characters_scene_composite: "000000000000000000000000B9",
             scenes_edge_label: "SCENES",
             scenes_database_id: SCENES_DB,
           },
@@ -421,7 +435,7 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
   test("scopes includes to scenes only and emits product dimensions only", () => {
     const ctx = { db: fixture.ctx.cache, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
     const allScenePrefetch = buildAllSceneCountPrefetch(ctx, {
-      characters_scene_composite: "scenes_characters",
+      characters_scene_composite: "000000000000000000000000B9",
       scenes_edge_label: "SCENES",
       scenes_database_id: SCENES_DB,
     });
@@ -475,8 +489,8 @@ describe("dynamic-fields character composite relationships", () => {
   const scene3 = "33333333333333333333333333";
 
   const productionParams = {
-    characters_scene_composite: "scenes_characters",
-    scene_product_composite: "scenes_product",
+    characters_scene_composite: "000000000000000000000000B9",
+    scene_product_composite: "000000000000000000000000A3",
     scenes_edge_label: "SCENES",
     product_edge_label: "PRODUCT",
   };
@@ -494,7 +508,7 @@ describe("dynamic-fields character composite relationships", () => {
           resolverId: "characters.allSceneCount",
           docsPath: "docs/dynamic-fields/characters.all-scene-count.md",
           params: {
-            characters_scene_composite: "scenes_characters",
+            characters_scene_composite: "000000000000000000000000B9",
             scenes_edge_label: "SCENES",
           },
         },
@@ -523,9 +537,9 @@ describe("dynamic-fields character composite relationships", () => {
       { source: character, target: CHAR_DB, type: "member_of", properties: { row_index: 0 } },
     ]);
     seedTestCompositeRelationships(fixture, [
-      { a: character, b: scene1, typeFromA: "characters", typeFromB: "scenes", properties: {} },
-      { a: character, b: scene2, typeFromA: "characters", typeFromB: "scenes", properties: {} },
-      { a: character, b: scene3, typeFromA: "characters", typeFromB: "scenes", properties: {} },
+      { a: scene1, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
+      { a: scene2, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
+      { a: scene3, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
       { a: scene1, b: TWOLD, typeFromA: "scenes", typeFromB: "product", properties: {} },
       { a: scene2, b: TWOLD, typeFromA: "scenes", typeFromB: "product", properties: {} },
       { a: scene3, b: OTHER_PRODUCT, typeFromA: "scenes", typeFromB: "product", properties: {} },
@@ -535,7 +549,7 @@ describe("dynamic-fields character composite relationships", () => {
   test("all scene count and per-product columns via composite edges", () => {
     const ctx = { db: fixture.ctx.cache, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
     const allScenePrefetch = buildAllSceneCountPrefetch(ctx, {
-      characters_scene_composite: "scenes_characters",
+      characters_scene_composite: "000000000000000000000000B9",
       scenes_edge_label: "SCENES",
     });
     expect(resolveAllSceneCount(ctx, {}, character, allScenePrefetch)).toBe("3");

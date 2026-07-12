@@ -1,7 +1,25 @@
-import { isNodeId } from "./paths";
+import { generateNodeId, isNodeId } from "../node-id";
 import { normalizeRelationshipType } from "../relation-type";
 
 export const ASSOCIATIONS_FILE_VERSION = 1;
+
+/** Association ids use the same uppercase ULID alphabet as node ids. */
+export function isAssociationId(id: string): boolean {
+  return isNodeId(id);
+}
+
+/** Mint a new association id (ULID). */
+export function generateAssociationId(): string {
+  return generateNodeId();
+}
+
+/**
+ * Normalize an association registry key / relationship storage type.
+ * Trims only — never lowercases (ULIDs are case-sensitive).
+ */
+export function normalizeAssociationId(raw: string): string {
+  return raw.trim();
+}
 
 /** Shorthand title string, or title + optional presentation flags for relation sections. */
 export type PerspectiveLabelConfig =
@@ -226,7 +244,13 @@ export function parseAssociationsFile(raw: string): AssociationsFile {
   }
 
   const associations: Record<string, AssociationDefinition> = {};
-  for (const [key, value] of Object.entries(obj.associations as Record<string, unknown>)) {
+  for (const [rawKey, value] of Object.entries(obj.associations as Record<string, unknown>)) {
+    const key = normalizeAssociationId(rawKey);
+    if (!isAssociationId(key)) {
+      throw new Error(
+        `associations.json: association key "${rawKey}" must be a ULID`,
+      );
+    }
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       throw new Error(`associations.json: type ${key} must be an object`);
     }
@@ -246,7 +270,7 @@ export function parseAssociationsFile(raw: string): AssociationsFile {
     const linkExisting = parseLinkExisting(row.linkExisting, `type ${key}.linkExisting`);
     const traits = parseTraits(row.traits, key);
     const endpoints = parseEndpoints(row.endpoints, key);
-    associations[normalizeRelationshipType(key)] = {
+    associations[key] = {
       perspectives: [perspectives[0]!, perspectives[1]!],
       ...(perspectiveLabels ? { perspectiveLabels } : {}),
       ...(linkExisting !== undefined ? { linkExisting } : {}),
@@ -273,24 +297,17 @@ export function serializeAssociationsFile(file: AssociationsFile): string {
   return `${JSON.stringify({ version: file.version, associations: sortedAssociations }, null, 2)}\n`;
 }
 
-/** Composite type from two perspective names (reverse lexicographic sort). */
-export function compositeTypeForPerspectives(t1: string, t2: string): string {
-  const a = normalizeRelationshipType(t1);
-  const b = normalizeRelationshipType(t2);
-  const [first, second] = [a, b].sort((x, y) => y.localeCompare(x));
-  return `${first}_${second}`;
-}
-
 export function localTypesForComposite(
   registry: AssociationsFile,
-  compositeType: string,
+  associationId: string,
 ): string[] {
-  return registry.associations[normalizeRelationshipType(compositeType)]?.perspectives ?? [];
+  const id = normalizeAssociationId(associationId);
+  return registry.associations[id]?.perspectives ?? [];
 }
 
 export function perspectiveCountForExpansion(
   typeDef: AssociationDefinition | undefined,
-  compositeType: string,
+  _associationId: string,
 ): number {
   return typeDef ? 2 : 1;
 }
@@ -301,36 +318,79 @@ export function isDualPerspectiveType(typeDef: AssociationDefinition | undefined
 
 export function isBidirectionalComposite(
   registry: AssociationsFile,
-  compositeType: string,
+  associationId: string,
 ): boolean {
-  const def = registry.associations[normalizeRelationshipType(compositeType)];
+  const def = registry.associations[normalizeAssociationId(associationId)];
   return isDualPerspectiveType(def);
 }
 
-/** Find composite storage type for a local perspective (only returns dual-perspective composites). */
+export class AmbiguousAssociationError extends Error {
+  constructor(
+    public readonly perspective: string,
+    public readonly associationIds: string[],
+  ) {
+    super(
+      `Ambiguous association for perspective "${perspective}": ` +
+        `matches ${associationIds.join(", ")}. Pass an explicit association id.`,
+    );
+    this.name = "AmbiguousAssociationError";
+  }
+}
+
+export class UnknownPerspectiveError extends Error {
+  constructor(public readonly perspective: string) {
+    super(
+      `No association defines perspective "${perspective}".`,
+    );
+    this.name = "UnknownPerspectiveError";
+  }
+}
+
+/**
+ * Find the association id for a local perspective.
+ * Fails closed when the perspective is missing or shared by multiple associations
+ * (unless `otherLocalType` uniquely selects a matching perspective pair).
+ */
 export function resolveAssociationId(
   registry: AssociationsFile,
   localType: string,
   otherLocalType?: string,
 ): string {
   const normalized = normalizeRelationshipType(localType);
-  if (otherLocalType !== undefined) {
-    return compositeTypeForPerspectives(normalized, otherLocalType);
-  }
-  for (const [composite, def] of Object.entries(registry.associations)) {
-    if (isDualPerspectiveType(def) && def.perspectives.includes(normalized)) {
-      return composite;
+  const other =
+    otherLocalType !== undefined
+      ? normalizeRelationshipType(otherLocalType)
+      : undefined;
+
+  const matches: string[] = [];
+  for (const [associationId, def] of Object.entries(registry.associations)) {
+    if (!isDualPerspectiveType(def) || !def.perspectives.includes(normalized)) {
+      continue;
     }
+    if (other !== undefined) {
+      const [p0, p1] = def.perspectives;
+      const pairMatch =
+        (p0 === normalized && p1 === other) || (p1 === normalized && p0 === other);
+      if (!pairMatch) continue;
+    }
+    matches.push(associationId);
   }
-  return normalized;
+
+  if (matches.length === 1) return matches[0]!;
+  if (matches.length === 0) throw new UnknownPerspectiveError(normalized);
+  throw new AmbiguousAssociationError(normalized, matches);
 }
 
 export function registerTypeDefinition(
   file: AssociationsFile,
-  compositeType: string,
+  associationId: string,
   def: AssociationDefinition,
 ): void {
-  file.associations[normalizeRelationshipType(compositeType)] = {
+  const id = normalizeAssociationId(associationId);
+  if (!isAssociationId(id)) {
+    throw new Error(`Association id must be a ULID, got "${associationId}"`);
+  }
+  file.associations[id] = {
     perspectives: [
       normalizeRelationshipType(def.perspectives[0]),
       normalizeRelationshipType(def.perspectives[1]),
@@ -342,22 +402,27 @@ export function registerTypeDefinition(
   };
 }
 
+/**
+ * Register a dual-perspective association. Pass `id` or mint a ULID.
+ * Never derives identity from perspective names.
+ */
 export function registerBidirectionalType(
   file: AssociationsFile,
   typeFromA: string,
   typeFromB: string,
+  id?: string,
 ): string {
-  const composite = compositeTypeForPerspectives(typeFromA, typeFromB);
-  registerTypeDefinition(file, composite, {
+  const associationId = id !== undefined ? normalizeAssociationId(id) : generateAssociationId();
+  registerTypeDefinition(file, associationId, {
     perspectives: [
       normalizeRelationshipType(typeFromA),
       normalizeRelationshipType(typeFromB),
     ],
   });
-  return composite;
+  return associationId;
 }
 
-/** Register a set-trait association with explicit id and perspectives (tests/projects). */
+/** Register a set-trait association with explicit ULID id and perspectives (tests/projects). */
 export function registerSetAssociation(
   file: AssociationsFile,
   options: {

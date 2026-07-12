@@ -39,7 +39,7 @@ describe("archive relationship flags", () => {
       properties: { view: "all", row_index: 0 },
     },
   ]);
-  seedTestIncludes(fixture, [{ a: PAGE, b: OTHER, compositeType: "related" }]);
+  seedTestIncludes(fixture, [{ a: PAGE, b: OTHER, compositeType: "000000000000000000000000BF" }]);
 
   test("archiveNode marks incident relationships archived in JSON", () => {
     expect(archiveNode(fixture.ctx, PAGE)).toBeNull();

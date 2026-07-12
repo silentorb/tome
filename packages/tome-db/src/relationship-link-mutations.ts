@@ -1,7 +1,7 @@
 import type { Properties } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { LinkResolutionError } from "tome-flatfile";
+import { LinkResolutionError, AmbiguousAssociationError } from "tome-flatfile";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
 import { normalizeRelationshipType } from "tome-flatfile";
 import { associationRuleContext } from "./association-endpoints";
@@ -91,7 +91,9 @@ export function linkOutgoingRelationship(
   try {
     ctx.store.upsertRelationship(sourceId, targetId, normalizedType, relProps);
   } catch (err) {
-    if (err instanceof LinkResolutionError) return "unresolvable_type";
+    if (err instanceof LinkResolutionError || err instanceof AmbiguousAssociationError) {
+      return "unresolvable_type";
+    }
     throw err;
   }
   syncAfterRelationshipsWrite(ctx);

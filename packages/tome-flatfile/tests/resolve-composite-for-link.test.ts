@@ -8,6 +8,10 @@ import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
 import { invalidateTableSchemasCache } from "../src/table-schemas/load";
 import { resolveAssociationIdForLink } from "../src/content/resolve-composite-for-link";
 
+const MEMBER_OF = "000000000000000000000000A1";
+const SCENES_PRODUCT = "000000000000000000000000A3";
+const CHILDREN_CHILDREN = "000000000000000000000000B4";
+
 describe("resolveAssociationIdForLink", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-composite-link-"));
   const contentDir = join(dir, "content");
@@ -22,8 +26,9 @@ describe("resolveAssociationIdForLink", () => {
     JSON.stringify({
       version: 1,
       associations: {
-        scenes_product: { perspectives: ["scenes", "product"] },
-        children_children: { perspectives: ["children", "children"] },
+        [SCENES_PRODUCT]: { perspectives: ["scenes", "product"] },
+        [CHILDREN_CHILDREN]: { perspectives: ["children", "children"] },
+        [MEMBER_OF]: { perspectives: ["members", "member_of"], traits: ["set"] },
       },
     }),
   );
@@ -39,7 +44,7 @@ describe("resolveAssociationIdForLink", () => {
               key: "scenes",
               name: "Scenes",
               type: "relation",
-              association: "scenes_product",
+              association: SCENES_PRODUCT,
             },
           ],
         },
@@ -49,7 +54,7 @@ describe("resolveAssociationIdForLink", () => {
               key: "product",
               name: "Product",
               type: "relation",
-              association: "scenes_product",
+              association: SCENES_PRODUCT,
             },
           ],
         },
@@ -62,10 +67,10 @@ describe("resolveAssociationIdForLink", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("product→scene scenes link resolves to scenes_product", () => {
+  test("product→scene scenes link resolves to scenes_product association id", () => {
     const relationships = [
-      { a: productsDb, b: productId, type: "member_of", properties: {} },
-      { a: scenesDb, b: sceneId, type: "member_of", properties: {} },
+      { a: productsDb, b: productId, type: MEMBER_OF, properties: {} },
+      { a: scenesDb, b: sceneId, type: MEMBER_OF, properties: {} },
     ];
     expect(
       resolveAssociationIdForLink(
@@ -76,13 +81,13 @@ describe("resolveAssociationIdForLink", () => {
         sceneId,
         "scenes",
       ),
-    ).toBe("scenes_product");
+    ).toBe(SCENES_PRODUCT);
   });
 
-  test("scene→product product link resolves to scenes_product", () => {
+  test("scene→product product link resolves to scenes_product association id", () => {
     const relationships = [
-      { a: productsDb, b: productId, type: "member_of", properties: {} },
-      { a: scenesDb, b: sceneId, type: "member_of", properties: {} },
+      { a: productsDb, b: productId, type: MEMBER_OF, properties: {} },
+      { a: scenesDb, b: sceneId, type: MEMBER_OF, properties: {} },
     ];
     expect(
       resolveAssociationIdForLink(
@@ -93,24 +98,16 @@ describe("resolveAssociationIdForLink", () => {
         productId,
         "product",
       ),
-    ).toBe("scenes_product");
+    ).toBe(SCENES_PRODUCT);
   });
 
   test("routes member_of and members perspectives via set trait", () => {
-    const setRegistry = parseAssociationsFile(
-      JSON.stringify({
-        version: 1,
-        associations: {
-          member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
-        },
-      }),
-    );
     expect(
-      resolveAssociationIdForLink(setRegistry, [], contentDir, productId, productsDb, "member_of"),
-    ).toBe("member_of");
+      resolveAssociationIdForLink(registry, [], contentDir, productId, productsDb, "member_of"),
+    ).toBe(MEMBER_OF);
     expect(
-      resolveAssociationIdForLink(setRegistry, [], contentDir, productsDb, productId, "members"),
-    ).toBe("member_of");
+      resolveAssociationIdForLink(registry, [], contentDir, productsDb, productId, "members"),
+    ).toBe(MEMBER_OF);
   });
 
   test("children perspective from Groups member resolves to children_children via table-schema", () => {
@@ -130,7 +127,7 @@ describe("resolveAssociationIdForLink", () => {
                 key: "children",
                 name: "Children",
                 type: "relation",
-                association: "children_children",
+                association: CHILDREN_CHILDREN,
               },
             ],
           },
@@ -140,8 +137,8 @@ describe("resolveAssociationIdForLink", () => {
     invalidateTableSchemasCache();
 
     const relationships = [
-      { a: groupsDb, b: groupMemberId, type: "member_of", properties: {} },
-      { a: groupsDb, b: childGroupId, type: "member_of", properties: {} },
+      { a: groupsDb, b: groupMemberId, type: MEMBER_OF, properties: {} },
+      { a: groupsDb, b: childGroupId, type: MEMBER_OF, properties: {} },
     ];
     expect(
       resolveAssociationIdForLink(
@@ -152,7 +149,6 @@ describe("resolveAssociationIdForLink", () => {
         childGroupId,
         "children",
       ),
-    ).toBe("children_children");
+    ).toBe(CHILDREN_CHILDREN);
   });
 });
-

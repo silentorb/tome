@@ -6,7 +6,7 @@ import {
 } from "./database-column-data";
 import { loadDynamicFields } from "./dynamic-fields";
 import { isTypeTableNode } from "./node-capabilities";
-import { normalizeRelationshipType } from "tome-flatfile";
+import { normalizeAssociationId, isAssociationId } from "tome-flatfile";
 import { resolvePropertyEnumFromContent } from "./property-enums";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
@@ -88,7 +88,8 @@ function buildColumnDef(input: CreateDatabaseColumnInput, key: string): TableCol
 
   if (input.type === "relation") {
     if (!input.association?.trim()) return null;
-    const association = normalizeRelationshipType(input.association);
+    const association = normalizeAssociationId(input.association);
+    if (!isAssociationId(association)) return null;
     return {
       key,
       name,
@@ -202,11 +203,11 @@ function applyColumnPatch(
   const nextType = input.type ?? existing.type;
 
   if (nextType === "relation") {
-    const association = normalizeRelationshipType(
+    const associationRaw =
       input.association ??
-        (existing.type === "relation" ? existing.association : ""),
-    );
-    if (!association) return null;
+      (existing.type === "relation" ? existing.association : "");
+    const association = normalizeAssociationId(associationRaw);
+    if (!association || !isAssociationId(association)) return null;
     return {
       key: existing.key,
       name,

@@ -39,10 +39,10 @@ describe("relationship-traverse", () => {
   const typesFile = {
     version: 1 as const,
     associations: {
-      scenes_product: { perspectives: ["scenes", "product"] },
-      scenes_part: { perspectives: ["scenes", "part"] },
-      scenes_location: { perspectives: ["location", "scenes"] },
-      member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
+      "000000000000000000000000A3": { perspectives: ["scenes", "product"] },
+      "000000000000000000000000A4": { perspectives: ["scenes", "part"] },
+      "000000000000000000000000BA": { perspectives: ["location", "scenes"] },
+      "000000000000000000000000A1": { perspectives: ["members", "member_of"], traits: ["set"] },
     },
   };
   fixture.ctx.store.writeAssociationsFile(typesFile);
@@ -52,16 +52,16 @@ describe("relationship-traverse", () => {
   // index 0 and the member at index 1; asymmetric composites place
   // each endpoint at the index whose perspective matches its role.
   const relationships: RelationshipEntry[] = [
-    { a: product, b: scene, type: "scenes_product", properties: { ordinal: 0 } },
-    { a: part, b: scene, type: "scenes_part", properties: { ordinal: 0 } },
+    { a: product, b: scene, type: "000000000000000000000000A3", properties: { ordinal: 0 } },
+    { a: part, b: scene, type: "000000000000000000000000A4", properties: { ordinal: 0 } },
     {
       a: scene,
       b: location,
-      type: "scenes_location",
+      type: "000000000000000000000000BA",
       properties: { ordinal: 0 },
     },
-    { a: scenesDb, b: scene, type: "member_of", properties: { row_index: 0 } },
-    { a: locationsDb, b: location, type: "member_of", properties: { row_index: 0 } },
+    { a: scenesDb, b: scene, type: "000000000000000000000000A1", properties: { row_index: 0 } },
+    { a: locationsDb, b: location, type: "000000000000000000000000A1", properties: { row_index: 0 } },
   ];
   fixture.ctx.store.writeRelationshipsFile({
     version: RELATIONSHIPS_FILE_VERSION,
@@ -70,16 +70,16 @@ describe("relationship-traverse", () => {
   fixture.ctx.sync.syncRelationships();
 
   test("finds product through scenes_product composite", () => {
-    expect(firstRelatedNodeId(fixture.ctx.cache, scene, "scenes_product")).toBe(product);
-    expect(relatedNodeIds(fixture.ctx.cache, scene, "scenes_product")).toEqual([product]);
+    expect(firstRelatedNodeId(fixture.ctx.cache, scene, "000000000000000000000000A3")).toBe(product);
+    expect(relatedNodeIds(fixture.ctx.cache, scene, "000000000000000000000000A3")).toEqual([product]);
   });
 
   test("finds part through scenes_part composite", () => {
-    expect(firstRelatedNodeId(fixture.ctx.cache, scene, "scenes_part")).toBe(part);
+    expect(firstRelatedNodeId(fixture.ctx.cache, scene, "000000000000000000000000A4")).toBe(part);
   });
 
   test("finds scene from location through scenes_location composite", () => {
-    const rels = listRelationshipsForComposite(fixture.ctx.cache, location, "scenes_location");
+    const rels = listRelationshipsForComposite(fixture.ctx.cache, location, "000000000000000000000000BA");
     expect(rels.some((rel) => rel.sourceNodeId === location || rel.targetNodeId === location)).toBe(
       true,
     );

@@ -27,6 +27,7 @@ Tracks residual relationship-type hardcoding after the critical-path dehardcode 
 | Empty-workspace membership seeds | **Disallowed** — no `registerSetMembershipType` / conventional `member_of` seed into empty registries; tests use explicit `registerSetAssociation` |
 | `membershipComposite` on table schemas | **Removed** — perspectives come from views/caller context via `setRolePerspectivesForNode` |
 | `labels.ts` membership constants | Deleted |
+| Association registry keys | **ULID** — opaque association ids; perspectives remain snake_case slugs |
 
 ---
 
@@ -34,10 +35,9 @@ Tracks residual relationship-type hardcoding after the critical-path dehardcode 
 
 | Item | Notes |
 | --- | --- |
-| Tests / fixtures / one-time migrations | May use literal project association names (e.g. Marloth `member_of`) |
+| Tests / fixtures / one-time migrations | May use literal project **perspective** names (e.g. Marloth `member_of`); association **ids** are ULIDs |
 | tome-spatial-graph defaults | `parents` / `children` / `neighbor` as overridable extension config defaults |
-| Corpus cleanup (Step 6) | ULID-suffixed registry keys, residual `includes` rows — marloth-story content, not tome packages |
-| Feature doc wording | `tome-db.md` may still mention includes collapse — separate doc fix |
+| Feature doc wording | Keep docs aligned with ULID association ids (includes-collapse era wording is obsolete) |
 
 ---
 

@@ -1,9 +1,21 @@
 import { describe, expect, test } from "bun:test";
 import {
+  AmbiguousAssociationError,
   emptyAssociationsFile,
   parseAssociationsFile,
+  resolveAssociationId,
   serializeAssociationsFile,
+  UnknownPerspectiveError,
 } from "../src/content/associations-file";
+
+/** Stable ULID association ids for inline fixtures (match tome-db test helpers). */
+const MEMBER_OF = "000000000000000000000000A1";
+const ORDERED_MEMBER_OF = "000000000000000000000000A2";
+const SCENES_PART = "000000000000000000000000A4";
+const PARENTS_CHILDREN = "000000000000000000000000B1";
+const INSPIRATIONS_FEATURES = "000000000000000000000000B2";
+const INCLUDES = "000000000000000000000000B3";
+const CHILDREN_CHILDREN = "000000000000000000000000B4";
 
 describe("associations-file traits", () => {
   test("parses flag trait string", () => {
@@ -11,14 +23,14 @@ describe("associations-file traits", () => {
       JSON.stringify({
         version: 1,
         associations: {
-          member_of: {
+          [MEMBER_OF]: {
             perspectives: ["members", "member_of"],
             traits: ["set"],
           },
         },
       }),
     );
-    expect(file.associations.member_of?.traits).toEqual(["set"]);
+    expect(file.associations[MEMBER_OF]?.traits).toEqual(["set"]);
   });
 
   test("parses configured trait object with key", () => {
@@ -26,14 +38,14 @@ describe("associations-file traits", () => {
       JSON.stringify({
         version: 1,
         associations: {
-          member_of: {
+          [MEMBER_OF]: {
             perspectives: ["members", "member_of"],
             traits: [{ key: "set", parentIndex: 0, childIndex: 1 }],
           },
         },
       }),
     );
-    expect(file.associations.member_of?.traits).toEqual([{ key: "set", parentIndex: 0, childIndex: 1 }]);
+    expect(file.associations[MEMBER_OF]?.traits).toEqual([{ key: "set", parentIndex: 0, childIndex: 1 }]);
   });
 
   test("parses multiple traits", () => {
@@ -41,19 +53,19 @@ describe("associations-file traits", () => {
       JSON.stringify({
         version: 1,
         associations: {
-          ordered_member_of: {
+          [ORDERED_MEMBER_OF]: {
             perspectives: ["ordered_members", "ordered_member_of"],
             traits: ["set", "ordered"],
           },
         },
       }),
     );
-    expect(file.associations.ordered_member_of?.traits).toEqual(["set", "ordered"]);
+    expect(file.associations[ORDERED_MEMBER_OF]?.traits).toEqual(["set", "ordered"]);
   });
 
   test("round-trips traits through serialize", () => {
     const file = emptyAssociationsFile();
-    file.associations.member_of = {
+    file.associations[MEMBER_OF] = {
       perspectives: ["members", "member_of"],
       traits: ["set"],
       perspectiveLabels: {
@@ -61,7 +73,7 @@ describe("associations-file traits", () => {
       },
     };
     const roundTrip = parseAssociationsFile(serializeAssociationsFile(file));
-    expect(roundTrip.associations.member_of).toEqual(file.associations.member_of);
+    expect(roundTrip.associations[MEMBER_OF]).toEqual(file.associations[MEMBER_OF]);
   });
 
   test("rejects duplicate trait names", () => {
@@ -70,7 +82,7 @@ describe("associations-file traits", () => {
         JSON.stringify({
           version: 1,
           associations: {
-            member_of: { perspectives: ["members", "member_of"], traits: ["set", "set"] },
+            [MEMBER_OF]: { perspectives: ["members", "member_of"], traits: ["set", "set"] },
           },
         }),
       ),
@@ -83,7 +95,7 @@ describe("associations-file traits", () => {
         JSON.stringify({
           version: 1,
           associations: {
-            member_of: {
+            [MEMBER_OF]: {
               perspectives: ["members", "member_of"],
               traits: [{ parentIndex: 0 }],
             },
@@ -98,10 +110,25 @@ describe("associations-file traits", () => {
       parseAssociationsFile(
         JSON.stringify({
           version: 1,
-          associations: { member_of: { perspectives: ["members", "member_of"], traits: { set: true } } },
+          associations: {
+            [MEMBER_OF]: { perspectives: ["members", "member_of"], traits: { set: true } },
+          },
         }),
       ),
     ).toThrow(/must be an array/);
+  });
+
+  test("rejects slug association keys", () => {
+    expect(() =>
+      parseAssociationsFile(
+        JSON.stringify({
+          version: 1,
+          associations: {
+            member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
+          },
+        }),
+      ),
+    ).toThrow(/must be a ULID/);
   });
 });
 
@@ -111,14 +138,14 @@ describe("associations-file perspectiveLabels", () => {
       JSON.stringify({
         version: 1,
         associations: {
-          member_of: {
+          [MEMBER_OF]: {
             perspectives: ["members", "member_of"],
             perspectiveLabels: { member_of: "Membership" },
           },
         },
       }),
     );
-    expect(file.associations.member_of?.perspectiveLabels).toEqual({
+    expect(file.associations[MEMBER_OF]?.perspectiveLabels).toEqual({
       member_of: "Membership",
     });
   });
@@ -128,7 +155,7 @@ describe("associations-file perspectiveLabels", () => {
       JSON.stringify({
         version: 1,
         associations: {
-          member_of: {
+          [MEMBER_OF]: {
             perspectives: ["members", "member_of"],
             perspectiveLabels: {
               member_of: { title: "Membership", linkAdd: "Link type table" },
@@ -137,7 +164,7 @@ describe("associations-file perspectiveLabels", () => {
         },
       }),
     );
-    expect(file.associations.member_of?.perspectiveLabels?.member_of).toEqual({
+    expect(file.associations[MEMBER_OF]?.perspectiveLabels?.member_of).toEqual({
       title: "Membership",
       linkAdd: "Link type table",
     });
@@ -145,14 +172,14 @@ describe("associations-file perspectiveLabels", () => {
 
   test("round-trips perspectiveLabels through serialize", () => {
     const file = emptyAssociationsFile();
-    file.associations.member_of = {
+    file.associations[MEMBER_OF] = {
       perspectives: ["members", "member_of"],
       perspectiveLabels: {
         member_of: { title: "Membership", linkAdd: "Link type table" },
       },
     };
     const roundTrip = parseAssociationsFile(serializeAssociationsFile(file));
-    expect(roundTrip.associations.member_of).toEqual(file.associations.member_of);
+    expect(roundTrip.associations[MEMBER_OF]).toEqual(file.associations[MEMBER_OF]);
   });
 
   test("parses perspectiveLabels linkExisting", () => {
@@ -160,7 +187,7 @@ describe("associations-file perspectiveLabels", () => {
       JSON.stringify({
         version: 1,
         associations: {
-          scenes_part: {
+          [SCENES_PART]: {
             perspectives: ["scenes", "part"],
             perspectiveLabels: {
               part: { title: "Part", linkExisting: false },
@@ -169,7 +196,7 @@ describe("associations-file perspectiveLabels", () => {
         },
       }),
     );
-    expect(file.associations.scenes_part?.perspectiveLabels?.part).toEqual({
+    expect(file.associations[SCENES_PART]?.perspectiveLabels?.part).toEqual({
       title: "Part",
       linkExisting: false,
     });
@@ -181,7 +208,7 @@ describe("associations-file perspectiveLabels", () => {
         JSON.stringify({
           version: 1,
           associations: {
-            scenes_part: {
+            [SCENES_PART]: {
               perspectives: ["scenes", "part"],
               perspectiveLabels: { part: { title: "Part", linkExisting: "no" } },
             },
@@ -198,19 +225,19 @@ describe("associations-file linkExisting", () => {
       JSON.stringify({
         version: 1,
         associations: {
-          parents_children: {
+          [PARENTS_CHILDREN]: {
             perspectives: ["children", "parents"],
             linkExisting: false,
           },
         },
       }),
     );
-    expect(file.associations.parents_children?.linkExisting).toBe(false);
+    expect(file.associations[PARENTS_CHILDREN]?.linkExisting).toBe(false);
   });
 
   test("round-trips composite and perspective linkExisting through serialize", () => {
     const file = emptyAssociationsFile();
-    file.associations.parents_children = {
+    file.associations[PARENTS_CHILDREN] = {
       perspectives: ["children", "parents"],
       linkExisting: false,
       perspectiveLabels: {
@@ -218,7 +245,7 @@ describe("associations-file linkExisting", () => {
       },
     };
     const roundTrip = parseAssociationsFile(serializeAssociationsFile(file));
-    expect(roundTrip.associations.parents_children).toEqual(file.associations.parents_children);
+    expect(roundTrip.associations[PARENTS_CHILDREN]).toEqual(file.associations[PARENTS_CHILDREN]);
   });
 
   test("rejects non-boolean composite linkExisting", () => {
@@ -227,7 +254,7 @@ describe("associations-file linkExisting", () => {
         JSON.stringify({
           version: 1,
           associations: {
-            parents_children: {
+            [PARENTS_CHILDREN]: {
               perspectives: ["children", "parents"],
               linkExisting: 0,
             },
@@ -247,7 +274,7 @@ describe("associations-file endpoints", () => {
       JSON.stringify({
         version: 1,
         associations: {
-          inspirations_features: {
+          [INSPIRATIONS_FEATURES]: {
             perspectives: ["features", "inspirations"],
             endpoints: {
               0: { typeId: featuresTypeId },
@@ -257,7 +284,7 @@ describe("associations-file endpoints", () => {
         },
       }),
     );
-    expect(file.associations.inspirations_features?.endpoints).toEqual({
+    expect(file.associations[INSPIRATIONS_FEATURES]?.endpoints).toEqual({
       0: { typeId: featuresTypeId },
       1: { typeId: inspirationsTypeId },
     });
@@ -265,7 +292,7 @@ describe("associations-file endpoints", () => {
 
   test("round-trips endpoints through serialize", () => {
     const file = emptyAssociationsFile();
-    file.associations.inspirations_features = {
+    file.associations[INSPIRATIONS_FEATURES] = {
       perspectives: ["features", "inspirations"],
       endpoints: {
         0: { typeId: featuresTypeId },
@@ -273,8 +300,8 @@ describe("associations-file endpoints", () => {
       },
     };
     const roundTrip = parseAssociationsFile(serializeAssociationsFile(file));
-    expect(roundTrip.associations.inspirations_features?.endpoints).toEqual(
-      file.associations.inspirations_features.endpoints,
+    expect(roundTrip.associations[INSPIRATIONS_FEATURES]?.endpoints).toEqual(
+      file.associations[INSPIRATIONS_FEATURES].endpoints,
     );
   });
 
@@ -284,7 +311,7 @@ describe("associations-file endpoints", () => {
         JSON.stringify({
           version: 1,
           associations: {
-            bad: {
+            [PARENTS_CHILDREN]: {
               perspectives: ["a", "b"],
               endpoints: { 0: { typeId: "not-a-node-id" }, 1: { typeId: featuresTypeId } },
             },
@@ -298,7 +325,7 @@ describe("associations-file endpoints", () => {
 describe("associations-file bidirectional field removal", () => {
   test("serialization never emits a bidirectional field", () => {
     const file = emptyAssociationsFile();
-    file.associations.includes = { perspectives: ["includes", "includes"] };
+    file.associations[INCLUDES] = { perspectives: ["includes", "includes"] };
     const serialized = serializeAssociationsFile(file);
     expect(serialized).not.toContain("bidirectional");
   });
@@ -308,12 +335,12 @@ describe("associations-file bidirectional field removal", () => {
       JSON.stringify({
         version: 1,
         associations: {
-          includes: { bidirectional: false, perspectives: ["includes", "includes"] },
+          [INCLUDES]: { bidirectional: false, perspectives: ["includes", "includes"] },
         },
       }),
     );
-    expect(file.associations.includes).toEqual({ perspectives: ["includes", "includes"] });
-    expect("bidirectional" in (file.associations.includes ?? {})).toBe(false);
+    expect(file.associations[INCLUDES]).toEqual({ perspectives: ["includes", "includes"] });
+    expect("bidirectional" in (file.associations[INCLUDES] ?? {})).toBe(false);
   });
 
   test("rejects a type with fewer than two perspectives", () => {
@@ -321,7 +348,7 @@ describe("associations-file bidirectional field removal", () => {
       parseAssociationsFile(
         JSON.stringify({
           version: 1,
-          associations: { scenes: { perspectives: ["scenes"] } },
+          associations: { [SCENES_PART]: { perspectives: ["scenes"] } },
         }),
       ),
     ).toThrow(/exactly two perspectives/);
@@ -332,9 +359,56 @@ describe("associations-file bidirectional field removal", () => {
       parseAssociationsFile(
         JSON.stringify({
           version: 1,
-          associations: { trio: { perspectives: ["a", "b", "c"] } },
+          associations: { [PARENTS_CHILDREN]: { perspectives: ["a", "b", "c"] } },
         }),
       ),
     ).toThrow(/exactly two perspectives/);
+  });
+});
+
+describe("resolveAssociationId fail-closed", () => {
+  test("returns the sole association for a unique perspective", () => {
+    const file = parseAssociationsFile(
+      JSON.stringify({
+        version: 1,
+        associations: {
+          [MEMBER_OF]: { perspectives: ["members", "member_of"], traits: ["set"] },
+        },
+      }),
+    );
+    expect(resolveAssociationId(file, "member_of")).toBe(MEMBER_OF);
+    expect(resolveAssociationId(file, "members")).toBe(MEMBER_OF);
+  });
+
+  test("throws UnknownPerspectiveError when no association matches", () => {
+    const file = emptyAssociationsFile();
+    expect(() => resolveAssociationId(file, "member_of")).toThrow(UnknownPerspectiveError);
+  });
+
+  test("throws AmbiguousAssociationError when multiple associations share a perspective", () => {
+    const file = parseAssociationsFile(
+      JSON.stringify({
+        version: 1,
+        associations: {
+          [PARENTS_CHILDREN]: { perspectives: ["children", "parents"] },
+          [CHILDREN_CHILDREN]: { perspectives: ["children", "children"] },
+        },
+      }),
+    );
+    expect(() => resolveAssociationId(file, "children")).toThrow(AmbiguousAssociationError);
+  });
+
+  test("disambiguates with otherLocalType when the pair is unique", () => {
+    const file = parseAssociationsFile(
+      JSON.stringify({
+        version: 1,
+        associations: {
+          [PARENTS_CHILDREN]: { perspectives: ["children", "parents"] },
+          [CHILDREN_CHILDREN]: { perspectives: ["children", "children"] },
+        },
+      }),
+    );
+    expect(resolveAssociationId(file, "children", "parents")).toBe(PARENTS_CHILDREN);
+    expect(resolveAssociationId(file, "children", "children")).toBe(CHILDREN_CHILDREN);
   });
 });

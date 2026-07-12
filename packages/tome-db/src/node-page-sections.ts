@@ -13,7 +13,7 @@ import {
   associationRuleContext,
 } from "./association-endpoints";
 import { findTypeNodeByTitle, typeIdsForInstance } from "./node-capabilities";
-import { normalizeRelationshipType } from "tome-flatfile";
+import { normalizeAssociationId, normalizeRelationshipType } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
 import { resolveAssociationId } from "tome-flatfile";
 import {
@@ -186,7 +186,7 @@ function compositeTypeForRelationSection(
   if (first?.recordId) {
     const record = db.getRelationshipRecord(first.recordId);
     if (record?.compositeType) {
-      const fromRecord = normalizeRelationshipType(record.compositeType);
+      const fromRecord = normalizeAssociationId(record.compositeType);
       const def = registry.associations[fromRecord];
       if (def?.perspectives.includes(normalizeRelationshipType(perspective))) {
         return fromRecord;

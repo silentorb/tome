@@ -11,7 +11,7 @@ import { loadViewsFromContent } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
 import { perspectiveForHostTable } from "./association-endpoints";
-import { normalizeRelationshipType } from "tome-flatfile";
+import { normalizeAssociationId } from "tome-flatfile";
 import { getTableSchema, relationColumns } from "tome-flatfile";
 import { loadTableSchemasFromContent } from "tome-flatfile";
 import {
@@ -116,7 +116,7 @@ function groupLinkLocalPerspective(
   contentDir: string,
 ): string {
   const registry = loadAssociationsFromContent(contentDir);
-  const groupComposite = normalizeRelationshipType(config.groupCompositeType);
+  const groupComposite = normalizeAssociationId(config.groupCompositeType);
   const schema = getTableSchema(loadTableSchemasFromContent(contentDir), config.typeDatabaseId);
   if (schema) {
     for (const col of relationColumns(schema)) {

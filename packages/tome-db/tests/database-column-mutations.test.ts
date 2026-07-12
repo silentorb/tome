@@ -21,7 +21,7 @@ function seedParentsChildrenTypes(
   fixture: ReturnType<typeof createTestContentFixture>,
   childTypeId: string,
   parentTypeId: string,
-  compositeKey = "parents_children",
+  compositeKey = "000000000000000000000000B1",
 ): void {
   const file = fixture.ctx.store.readAssociationsFile();
   file.associations[compositeKey] = {
@@ -105,13 +105,13 @@ describe("database column mutations", () => {
     const result = createDatabaseColumn(fixture.ctx, databaseId, {
       name: "Parents",
       type: "relation",
-      association: "parents_children",
+      association: "000000000000000000000000B1",
     });
     expect(result).toMatchObject({
       column: {
         key: "parents",
         type: "relation",
-        association: "parents_children",
+        association: "000000000000000000000000B1",
       },
     });
   });
@@ -186,7 +186,7 @@ describe("database column mutations", () => {
 
     const result = updateDatabaseColumn(fixture.ctx, databaseId, "label", {
       type: "relation",
-      association: "parents_children",
+      association: "000000000000000000000000B1",
     });
     expect(result).toMatchObject({ valuesCleared: 1, relationsUnlinked: 0 });
 
@@ -207,7 +207,7 @@ describe("database column mutations", () => {
         key: "parents",
         name: "Parents",
         type: "relation",
-        association: "parents_children",
+        association: "000000000000000000000000B1",
       },
     ]);
     seedParentsChildrenTypes(fixture, databaseId, parentDbId);
@@ -243,11 +243,11 @@ describe("database column mutations", () => {
         key: "parents",
         name: "Parents",
         type: "relation",
-        association: "parents_children",
+        association: "000000000000000000000000B1",
       },
     ]);
     seedParentsChildrenTypes(fixture, databaseId, parentDbId);
-    seedParentsChildrenTypes(fixture, databaseId, otherParentDb, "other_parents_children");
+    seedParentsChildrenTypes(fixture, databaseId, otherParentDb, "000000000000000000000000BE");
     seedTestNode(fixture, { id: rowId, properties: { title: "Item" } });
     seedTestNode(fixture, { id: parentId, properties: { title: "Parent" } });
     seedTestRelationships(fixture, [
@@ -256,7 +256,7 @@ describe("database column mutations", () => {
     ]);
 
     const result = updateDatabaseColumn(fixture.ctx, databaseId, "parents", {
-      association: "other_parents_children",
+      association: "000000000000000000000000BE",
     });
     expect(result).toMatchObject({ relationsUnlinked: 1 });
     expect(fixture.ctx.cache.listRelationshipsFromSource(rowId, "children")).toHaveLength(0);

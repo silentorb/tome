@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 /**
  * Audit relationships in a content store: every stored edge should use a registered
- * dual-perspective composite type (no legacy includes bucket or unidirectional types).
+ * dual-perspective association id (ULID), with no legacy includes bucket.
  *
  * Usage: bun packages/tome-db/scripts/audit-relationship-resolution.ts [contentDir]
  *
@@ -10,33 +10,31 @@
 
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { normalizeRelationshipType } from "../src/relation-type";
 import {
-  relationshipsFilePath,
-  associationsFilePath,
-} from "../src/content/paths";
-import {
+  isAssociationId,
+  normalizeAssociationId,
   parseAssociationsFile,
   isDualPerspectiveType,
   type AssociationsFile,
-} from "../src/content/associations-file";
+} from "tome-flatfile";
 import {
+  relationshipsFilePath,
+  associationsFilePath,
   parseRelationshipsFile,
   type RelationshipEntry,
-} from "../src/content/relationships-file";
-
-function isUlidCompositeKey(type: string): boolean {
-  return /^[a-z0-9]{4}_[a-z_]+_[a-z0-9]{4}$/.test(normalizeRelationshipType(type));
-}
+} from "tome-flatfile";
 
 function resolveExpectedComposite(
   entry: RelationshipEntry,
   registry: AssociationsFile,
 ): { target: string; rule: string } | null {
-  const type = normalizeRelationshipType(entry.type);
+  const type = normalizeAssociationId(entry.type);
   const typeDef = registry.associations[type];
 
   if (typeDef && isDualPerspectiveType(typeDef)) {
+    if (!isAssociationId(type)) {
+      return { target: "BLOCKER", rule: "non-ulid-association-key" };
+    }
     return null;
   }
 
@@ -44,8 +42,8 @@ function resolveExpectedComposite(
     return { target: "BLOCKER", rule: "legacy-includes-storage" };
   }
 
-  if (isUlidCompositeKey(type)) {
-    return { target: "BLOCKER", rule: "ulid-suffixed-composite" };
+  if (!isAssociationId(type)) {
+    return { target: "BLOCKER", rule: "non-ulid-association-key" };
   }
 
   if (typeDef) {
@@ -78,43 +76,35 @@ export function auditRelationships(contentDir: string): {
     const key = `${entry.type} → ${result.target}`;
     const existing = migrations.get(key);
     if (existing) {
-      existing.count++;
+      existing.count += 1;
     } else {
       migrations.set(key, { target: result.target, rule: result.rule, count: 1 });
     }
-
-    if (result.target === "BLOCKER") {
-      blockers.push({ entry, reason: result.rule });
-    }
+    blockers.push({ entry, reason: result.rule });
   }
 
   return { migrations, directedFromCount, blockers };
 }
 
-if (import.meta.main) {
-  const contentDir = process.argv[2]
-    ? resolve(process.argv[2])
-    : resolve(import.meta.dir, "../../../../repos/marloth-story/content");
-
-  console.log(`Auditing: ${contentDir}\n`);
+function main(): void {
+  const contentDir = resolve(
+    process.argv[2] ?? process.env.TOME_CONTENT_PATH ?? ".",
+  );
   const { migrations, directedFromCount, blockers } = auditRelationships(contentDir);
 
-  console.log("Migration summary:");
-  for (const [key, value] of [...migrations.entries()].sort((a, b) => b[1].count - a[1].count)) {
-    const status = value.target === "BLOCKER" ? "  ** BLOCKER **" : "";
-    console.log(`  ${key} (${value.rule}) — ${value.count} records${status}`);
-  }
-  console.log(`\n  directedFrom entries: ${directedFromCount}`);
-  console.log(`  blockers: ${blockers.length}`);
-
-  if (blockers.length > 0) {
-    console.log("\nBlocker details:");
-    for (const b of blockers.slice(0, 20)) {
-      console.log(`  ${b.entry.a}:${b.entry.b}:${b.entry.type} — ${b.reason}`);
-    }
-    process.exit(1);
+  console.log(`Audited ${contentDir}`);
+  console.log(`directedFrom remnants: ${directedFromCount}`);
+  if (migrations.size === 0) {
+    console.log("No blockers.");
+    process.exit(0);
   }
 
-  console.log("\nAll entries resolvable. Migration is safe.");
-  process.exit(0);
+  console.log("Blockers:");
+  for (const [key, info] of [...migrations.entries()].sort()) {
+    console.log(`  ${key} (${info.rule} × ${info.count})`);
+  }
+  console.log(`Total blocker edges: ${blockers.length}`);
+  process.exit(1);
 }
+
+if (import.meta.main) main();

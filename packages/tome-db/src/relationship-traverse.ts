@@ -1,6 +1,6 @@
 import type { GraphDatabase, Properties, Relationship } from "tome-sqlite";
 import { findSetEdge, setMemberIds } from "./set-membership";
-import { normalizeRelationshipType } from "tome-flatfile";
+import { normalizeAssociationId } from "tome-flatfile";
 
 export function rowBelongsToDatabase(
   db: GraphDatabase,
@@ -60,7 +60,7 @@ export function listRelationshipsForComposite(
   nodeId: string,
   compositeType: string,
 ): Relationship[] {
-  const normalized = normalizeRelationshipType(compositeType);
+  const normalized = normalizeAssociationId(compositeType);
   const rows = db.queryAll<{
     id: string;
     record_id: string;

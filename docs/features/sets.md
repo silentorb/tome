@@ -14,14 +14,14 @@ A **set** is a node that contains other nodes via a relationship type that carri
 
 **Example (Marloth project associations — not Tome defaults):**
 
-| Association | Perspectives | Traits | Typical use |
+| Association id | Perspectives | Traits | Typical use |
 | --- | --- | --- | --- |
-| `member_of` | `members` / `member_of` | `set` | Plain type tables, Archive |
-| `ordered_member_of` | `ordered_members` / `ordered_member_of` | `set`, `ordered` | Scenes, Parts, Products (sequence on `order`) |
+| *(ULID)* | `members` / `member_of` | `set` | Plain type tables, Archive |
+| *(ULID)* | `ordered_members` / `ordered_member_of` | `set`, `ordered` | Scenes, Parts, Products (sequence on `order`) |
 
 There is **no `membershipComposite` field** on `table-schemas.json`. Which set association applies for a node comes from **views / caller context** via `setRolePerspectivesForNode` (view set-side perspectives for that node, else a sole set-trait registry fallback).
 
-Peer association (scene↔feature, etc.) remains on separate composites — see [tome-db.md](./tome-db.md).
+Peer association (scene↔feature, etc.) remains on separate association ids — see [tome-db.md](./tome-db.md).
 
 ## When to read this
 
@@ -44,18 +44,18 @@ Every relationship type in `associations.json` defines a `perspectives` **tuple 
 - Parent (set) and child (member) indices come from `setRoleIndices` (default parent index 0, child index 1).
 - Registry entries carry `traits` as an **array interpreted as a set** — e.g. `["set"]` or `["set", "ordered"]`. Configured traits use `{ "key": "ordered", "property": "rank" }`; when `property` is omitted, `order` is the default sequence key.
 
-**Example content record (Marloth `member_of`):**
+**Example content record (Marloth set association with perspectives `members` / `member_of`):**
 
 ```json
 {
   "a": "<set-id>",
   "b": "<member-id>",
-  "type": "member_of",
+  "type": "<association-ulid>",
   "properties": { "priority": "High" }
 }
 ```
 
-Ordered sets (e.g. Marloth `ordered_member_of`) use the same parent/child indices with an `order` property when the `ordered` trait applies.
+Ordered sets (perspectives `ordered_members` / `ordered_member_of`) use the same parent/child indices with an `order` property when the `ordered` trait applies.
 
 - Endpoints `a` / `b` are an **ordered tuple**: meaning of each index is defined by the type's `perspectives` pair. There is **no lexicographic sorting**.
 - **No `directedFrom` field exists** — direction is derived from tuple position + perspectives, not a stored flag.

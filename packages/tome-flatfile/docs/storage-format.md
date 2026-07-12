@@ -115,12 +115,12 @@ Path: `data/relationships.json`.
     {
       "a": "01EXAMPLESETNODEID000000001",
       "b": "01EXAMPLEMEMBERNODEID0000001",
-      "type": "member_of"
+      "type": "01EXAMPLEASSOCIATIONID00001"
     },
     {
       "a": "01EXAMPLENODEA00000000000001",
       "b": "01EXAMPLENODEB00000000000001",
-      "type": "scenes_parts",
+      "type": "01EXAMPLEASSOCIATIONID00002",
       "archived": true,
       "properties": { "ordinal": 0 }
     }
@@ -163,20 +163,20 @@ All model files live under `model/`. Unless noted, serialize as JSON indent 2 + 
 
 ### `associations.json` (version 1)
 
-Registry of composite storage types.
+Registry of associations keyed by **opaque ULID** ids. Perspectives remain snake_case slugs.
 
 ```json
 {
   "version": 1,
-  "types": {
-    "member_of": {
+  "associations": {
+    "01EXAMPLEASSOCIATIONID0001": {
       "perspectives": ["members", "member_of"],
       "perspectiveLabels": {
         "member_of": { "title": "Membership", "linkAdd": "Link type table" }
       },
       "traits": ["set"]
     },
-    "ordered_member_of": {
+    "01EXAMPLEASSOCIATIONID0002": {
       "perspectives": ["ordered_members", "ordered_member_of"],
       "traits": ["set", "ordered"]
     }
@@ -187,7 +187,7 @@ Registry of composite storage types.
 | Field | Notes |
 | --- | --- |
 | `version` | number, required |
-| `types` | object keyed by composite type slug |
+| `associations` | object keyed by association ULID |
 
 Each type definition:
 
@@ -199,7 +199,7 @@ Each type definition:
 | `traits` | no | Array of flag strings or `{ key, ...config }` objects; trait keys unique per type |
 | `endpoints` | no | `{ "0": { "typeId": "<ULID>" }, "1": { "typeId": "<ULID>" } }` — allowed `is_a` type node at each endpoint |
 
-**Set association orientation (example):** for a set-trait type with perspectives `["members", "member_of"]` — **set at `a` (index 0), member at `b` (index 1)**. An ordered set association uses the same parent/child indices with traits `set` and `ordered`. Project association slugs (e.g. Marloth `member_of` / `ordered_member_of`) are not Tome defaults.
+**Set association orientation (example):** for a set-trait type with perspectives `["members", "member_of"]` — **set at `a` (index 0), member at `b` (index 1)**. An ordered set association uses the same parent/child indices with traits `set` and `ordered`. Association **ids** are ULIDs; perspective slugs are project-defined and not Tome defaults.
 
 Serialize sorts type keys and sorts traits (string flags before object entries) for stable diffs.
 
@@ -259,7 +259,7 @@ Column definitions for type tables (keys are type-node ULIDs).
       "columns": [
         { "key": "name", "name": "Name", "type": "text" },
         { "key": "status", "name": "Status", "type": "select", "enumId": "priority" },
-        { "key": "related", "name": "Related", "type": "relation", "association": "related_to" }
+        { "key": "related", "name": "Related", "type": "relation", "association": "<association-ulid>" }
       ]
     }
   }
@@ -427,9 +427,9 @@ Configs for ordered part/group associations (e.g. scenes by book).
     {
       "id": "scenes-by-book",
       "typeDatabaseId": "01EXAMPLESCENETYPENODE000001",
-      "scopeCompositeType": "book_scenes",
-      "groupCompositeType": "chapter_scenes",
-      "partProductCompositeType": "scene_products",
+      "scopeCompositeType": "01EXAMPLEASSOCIATIONID00003",
+      "groupCompositeType": "01EXAMPLEASSOCIATIONID00004",
+      "partProductCompositeType": "01EXAMPLEASSOCIATIONID00005",
       "groupTypeDatabaseId": "01EXAMPLECHAPTERTYPENODE0001",
       "unassignedGroupTitle": "Unassigned",
       "columnViewName": "all",
@@ -491,7 +491,7 @@ Runtime extension registration. Version defaults to `1` if omitted on read.
 | --- | --- | --- |
 | `data/{shard}/{id}.md` | required | At least home, archive, and any referenced nodes |
 | `data/relationships.json` | required | May be `{ "version": 3, "relationships": [] }` |
-| `model/associations.json` | required | At least types you use (often include `member_of`) |
+| `model/associations.json` | required | At least associations you use (ids are ULIDs) |
 | `model/workspace.json` | required | Home, archive, anchors, quick links |
 | `model/schema.json` | optional | Needed when using enums / rules |
 | `model/table-schemas.json` | optional | Needed for type-table columns |
