@@ -62,20 +62,20 @@ function testContentDir(options?: {
   if (options?.registerPlain !== false) {
     registerSetAssociation(registry, {
       id: MEMBER_OF,
-      perspectives: ["members", "member_of"],
+      perspectives: ["Members", "Membership"],
     });
   }
   if (options?.registerOrdered !== false) {
     registerSetAssociation(registry, {
       id: ORDERED_MEMBER_OF,
-      perspectives: ["ordered_members", "ordered_member_of"],
+      perspectives: ["Ordered members", "Ordered membership"],
       ordered: true,
     });
   }
   if (options?.registerCustomOrdered) {
     registerSetAssociation(registry, {
       id: CUSTOM_ORDERED_SET,
-      perspectives: ["custom_sets", "custom_ordered_members"],
+      perspectives: ["Custom sets", "Custom ordered members"],
       ordered: true,
     });
   }
@@ -98,8 +98,8 @@ function testContentDir(options?: {
   invalidateTableSchemasCache();
 
   if (options?.seedViews !== false) {
-    const scenesPerspective = options?.scenesPerspective ?? "ordered_members";
-    const partsPerspective = options?.partsPerspective ?? "ordered_members";
+    const scenesPerspective = options?.scenesPerspective ?? ORDERED_MEMBER_OF;
+    const partsPerspective = options?.partsPerspective ?? ORDERED_MEMBER_OF;
     writeFileSync(
       viewsFilePath(contentDir),
       serializeViewsFile({
@@ -107,12 +107,12 @@ function testContentDir(options?: {
         views: [
           {
             nodeId: SCENES_DB,
-            perspective: scenesPerspective,
+            association: scenesPerspective,
             generator: "scenes-by-book",
           },
           {
             nodeId: PARTS_DB,
-            perspective: partsPerspective,
+            association: partsPerspective,
             generator: "scenes-by-book",
           },
         ],
@@ -184,8 +184,8 @@ describe("parseOrderedCollectionsFile", () => {
   test("rejects plain set without ordered trait", () => {
     const contentDir = testContentDir({
       registerOrdered: false,
-      scenesPerspective: "members",
-      partsPerspective: "members",
+      scenesPerspective: MEMBER_OF,
+      partsPerspective: MEMBER_OF,
     });
     const raw = serializeOrderedCollectionsFile({
       version: ORDERED_COLLECTIONS_FILE_VERSION,
@@ -197,8 +197,8 @@ describe("parseOrderedCollectionsFile", () => {
   test("accepts custom ordered set association via views", () => {
     const contentDir = testContentDir({
       registerCustomOrdered: true,
-      scenesPerspective: "custom_sets",
-      partsPerspective: "custom_sets",
+      scenesPerspective: CUSTOM_ORDERED_SET,
+      partsPerspective: CUSTOM_ORDERED_SET,
     });
     const raw = serializeOrderedCollectionsFile({
       version: ORDERED_COLLECTIONS_FILE_VERSION,

@@ -12,7 +12,8 @@
     "./schema-file": "./src/schema-rules/schema-file.ts",
     "./relation-type": "./src/relation-type.ts",
     "./property-enums-core": "./src/property-enums-core.ts",
-    "./content": "./src/content/index.ts"
+    "./content": "./src/content/index.ts",
+    "./associations-file": "./src/content/associations-file.ts"
   },
   "scripts": {
     "test": "bun test tests"

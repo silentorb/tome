@@ -3,10 +3,10 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { contentModelDir, tableSchemasFilePath } from "../src/content/paths";
-import { parseAssociationsFile } from "../src/content/associations-file";
+import { parseAssociationsFile, projectionTypeForEndpoint } from "../src/content/associations-file";
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
 import { invalidateTableSchemasCache } from "../src/table-schemas/load";
-import { resolveAssociationIdForLink } from "../src/content/resolve-composite-for-link";
+import { LinkResolutionError, resolveAssociationIdForLink } from "../src/content/resolve-composite-for-link";
 
 const MEMBER_OF = "000000000000000000000000A1";
 const SCENES_PRODUCT = "000000000000000000000000A3";
@@ -26,9 +26,15 @@ describe("resolveAssociationIdForLink", () => {
     JSON.stringify({
       version: 1,
       associations: {
-        [SCENES_PRODUCT]: { perspectives: ["scenes", "product"] },
-        [CHILDREN_CHILDREN]: { perspectives: ["children", "children"] },
-        [MEMBER_OF]: { perspectives: ["members", "member_of"], traits: ["set"] },
+        [SCENES_PRODUCT]: {
+          perspectives: ["Scenes", "Product"],
+          endpoints: {
+            0: { typeId: scenesDb },
+            1: { typeId: productsDb },
+          },
+        },
+        [CHILDREN_CHILDREN]: { perspectives: ["Children", "Children"] },
+        [MEMBER_OF]: { perspectives: ["Members", "Membership"], traits: ["set"] },
       },
     }),
   );
@@ -67,7 +73,7 @@ describe("resolveAssociationIdForLink", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("product→scene scenes link resolves to scenes_product association id", () => {
+  test("product→scene scenes projection resolves to scenes_product association id", () => {
     const relationships = [
       { a: productsDb, b: productId, type: MEMBER_OF, properties: {} },
       { a: scenesDb, b: sceneId, type: MEMBER_OF, properties: {} },
@@ -79,12 +85,12 @@ describe("resolveAssociationIdForLink", () => {
         contentDir,
         productId,
         sceneId,
-        "scenes",
+        projectionTypeForEndpoint(SCENES_PRODUCT, 1),
       ),
     ).toBe(SCENES_PRODUCT);
   });
 
-  test("scene→product product link resolves to scenes_product association id", () => {
+  test("scene→product product projection resolves to scenes_product association id", () => {
     const relationships = [
       { a: productsDb, b: productId, type: MEMBER_OF, properties: {} },
       { a: scenesDb, b: sceneId, type: MEMBER_OF, properties: {} },
@@ -96,21 +102,28 @@ describe("resolveAssociationIdForLink", () => {
         contentDir,
         sceneId,
         productId,
-        "product",
+        projectionTypeForEndpoint(SCENES_PRODUCT, 0),
       ),
     ).toBe(SCENES_PRODUCT);
   });
 
-  test("routes member_of and members perspectives via set trait", () => {
+  test("routes set association by ULID", () => {
     expect(
-      resolveAssociationIdForLink(registry, [], contentDir, productId, productsDb, "member_of"),
+      resolveAssociationIdForLink(registry, [], contentDir, productId, productsDb, MEMBER_OF),
     ).toBe(MEMBER_OF);
     expect(
-      resolveAssociationIdForLink(registry, [], contentDir, productsDb, productId, "members"),
+      resolveAssociationIdForLink(
+        registry,
+        [],
+        contentDir,
+        productsDb,
+        productId,
+        projectionTypeForEndpoint(MEMBER_OF, 0),
+      ),
     ).toBe(MEMBER_OF);
   });
 
-  test("children perspective from Groups member resolves to children_children via table-schema", () => {
+  test("children projection from Groups member resolves via table-schema", () => {
     const groupsDb = "01KWN86X6NJZMP5ZESZTNDXY3J";
     const groupMemberId = "000000000000000000000000AA";
     const childGroupId = "000000000000000000000000BB";
@@ -147,8 +160,14 @@ describe("resolveAssociationIdForLink", () => {
         groupsContentDir,
         groupMemberId,
         childGroupId,
-        "children",
+        projectionTypeForEndpoint(CHILDREN_CHILDREN, 0),
       ),
     ).toBe(CHILDREN_CHILDREN);
+  });
+
+  test("throws LinkResolutionError for unknown label", () => {
+    expect(() =>
+      resolveAssociationIdForLink(registry, [], contentDir, productId, productsDb, "member_of"),
+    ).toThrow(LinkResolutionError);
   });
 });

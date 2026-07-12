@@ -108,8 +108,8 @@ function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
   if (typeof obj.nodeId !== "string" || !isNodeId(obj.nodeId)) {
     throw new Error(`${path}: nodeId must be a node id (ULID)`);
   }
-  if (typeof obj.perspective !== "string" || !obj.perspective.trim()) {
-    throw new Error(`${path}: perspective is required`);
+  if (typeof obj.association !== "string" || !isNodeId(obj.association.trim())) {
+    throw new Error(`${path}: association must be an association id (ULID)`);
   }
   if (typeof obj.name !== "string" || !obj.name.trim()) {
     throw new Error(`${path}: name is required`);
@@ -122,7 +122,7 @@ function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
   return {
     id: obj.id.trim(),
     nodeId: obj.nodeId.trim(),
-    perspective: obj.perspective.trim(),
+    association: obj.association.trim(),
     name: obj.name.trim(),
     sorts: obj.sorts.map((sort, sortIndex) =>
       parseSortSpec(sort, `${path}.sorts[${sortIndex}]`),
@@ -141,8 +141,8 @@ function parseGeneratedViewRecord(raw: unknown, index: number): GeneratedViewRec
   if (typeof obj.nodeId !== "string" || !isNodeId(obj.nodeId)) {
     throw new Error(`${path}: nodeId must be a node id (ULID)`);
   }
-  if (typeof obj.perspective !== "string" || !obj.perspective.trim()) {
-    throw new Error(`${path}: perspective is required`);
+  if (typeof obj.association !== "string" || !isNodeId(obj.association.trim())) {
+    throw new Error(`${path}: association must be an association id (ULID)`);
   }
   if (typeof obj.generator !== "string" || !obj.generator.trim()) {
     throw new Error(`${path}: generator is required`);
@@ -152,7 +152,7 @@ function parseGeneratedViewRecord(raw: unknown, index: number): GeneratedViewRec
   }
   return {
     nodeId: obj.nodeId.trim(),
-    perspective: obj.perspective.trim(),
+    association: obj.association.trim(),
     generator: obj.generator.trim(),
   };
 }
@@ -193,16 +193,16 @@ export function parseViewsFile(raw: string): ViewsFile {
     const record = parseViewRecord(obj.views[index], index);
     views.push(record);
 
-    const pairKey = `${record.nodeId}:${record.perspective}`;
+    const pairKey = `${record.nodeId}:${record.association}`;
     if (isGeneratedViewRecord(record)) {
       if (customPairs.has(pairKey)) {
         throw new Error(
-          `views.json views[${index}]: cannot mix generated and custom views for ${record.nodeId}/${record.perspective}`,
+          `views.json views[${index}]: cannot mix generated and custom views for ${record.nodeId}/${record.association}`,
         );
       }
       if (generatedPairs.has(pairKey)) {
         throw new Error(
-          `views.json views[${index}]: duplicate generated view for ${record.nodeId}/${record.perspective}`,
+          `views.json views[${index}]: duplicate generated view for ${record.nodeId}/${record.association}`,
         );
       }
       generatedPairs.add(pairKey);
@@ -211,7 +211,7 @@ export function parseViewsFile(raw: string): ViewsFile {
 
     if (generatedPairs.has(pairKey)) {
       throw new Error(
-        `views.json views[${index}]: cannot mix generated and custom views for ${record.nodeId}/${record.perspective}`,
+        `views.json views[${index}]: cannot mix generated and custom views for ${record.nodeId}/${record.association}`,
       );
     }
     const viewKey = `${pairKey}:${record.id}`;
@@ -248,7 +248,7 @@ export function uniqueTabId(base: string, existingIds: Set<string>): string {
 export const DEFAULT_VIEW: ViewDefinition = {
   id: "all",
   nodeId: "",
-  perspective: "",
+  association: "",
   name: "All",
   sorts: [{ column: "name", direction: "asc" }],
 };

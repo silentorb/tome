@@ -2,6 +2,8 @@ import { normalizeRelationshipType } from "./relation-type";
 import type { RelationshipEntry } from "./content/relationships-file";
 import {
   normalizeAssociationId,
+  parseProjectionType,
+  projectionTypeForEndpoint,
   type AssociationDefinition,
   type AssociationsFile,
   type TraitEntry,
@@ -130,36 +132,6 @@ export function childNodeId(
   return nodeIdAtIndex(entry, childIndex);
 }
 
-export function resolveSetTraitComposite(
-  registry: AssociationsFile,
-  perspective: string,
-): string | null {
-  const normalized = normalizeRelationshipType(perspective);
-  for (const [composite, def] of Object.entries(registry.associations)) {
-    if (isSetTraitType(def) && def.perspectives.includes(normalized)) {
-      return composite;
-    }
-  }
-  return null;
-}
-
-export function resolveOrderedSetTraitComposite(
-  registry: AssociationsFile,
-  perspective: string,
-): string | null {
-  const normalized = normalizeRelationshipType(perspective);
-  for (const [composite, def] of Object.entries(registry.associations)) {
-    if (
-      isSetTraitType(def) &&
-      isOrderedTraitType(def) &&
-      def.perspectives.includes(normalized)
-    ) {
-      return composite;
-    }
-  }
-  return null;
-}
-
 export function isSetTraitEntry(
   registry: AssociationsFile,
   entry: RelationshipEntry,
@@ -167,82 +139,100 @@ export function isSetTraitEntry(
   return isSetTraitComposite(registry, entry.type);
 }
 
-function uniquePerspectives(values: Iterable<string>): string[] {
-  return [...new Set(values)];
+/** All set-trait association ids. */
+export function setTraitAssociationIds(registry: AssociationsFile): string[] {
+  return typesWithTrait(registry, SET_TRAIT);
 }
 
-export function setTraitPerspectives(registry: AssociationsFile): string[] {
-  const perspectives: string[] = [];
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.associations[composite];
-    if (!def) continue;
-    perspectives.push(def.perspectives[0], def.perspectives[1]);
-  }
-  return uniquePerspectives(perspectives);
-}
-
-export function setSidePerspectives(registry: AssociationsFile): string[] {
-  const perspectives: string[] = [];
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.associations[composite];
-    if (!def) continue;
-    const { parentIndex } = setRoleIndices(def);
-    perspectives.push(def.perspectives[parentIndex]!);
-  }
-  return uniquePerspectives(perspectives);
-}
-
-export function memberSidePerspectives(registry: AssociationsFile): string[] {
-  const perspectives: string[] = [];
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.associations[composite];
-    if (!def) continue;
-    const { childIndex } = setRoleIndices(def);
-    perspectives.push(def.perspectives[childIndex]!);
-  }
-  return uniquePerspectives(perspectives);
-}
-
-export function isSetTraitPerspective(
+export function setSideProjectionType(
   registry: AssociationsFile,
-  perspective: string,
-): boolean {
-  const normalized = normalizeRelationshipType(perspective);
-  return setTraitPerspectives(registry).includes(normalized);
+  associationId: string,
+): string {
+  const def = registry.associations[normalizeAssociationId(associationId)];
+  if (!def || !isSetTraitType(def)) {
+    throw new Error(`Unknown set-trait composite "${associationId}"`);
+  }
+  const { parentIndex } = setRoleIndices(def);
+  return projectionTypeForEndpoint(associationId, parentIndex);
 }
 
-export function isSetSidePerspective(
+export function memberSideProjectionType(
   registry: AssociationsFile,
-  perspective: string,
-): boolean {
-  const normalized = normalizeRelationshipType(perspective);
-  return setSidePerspectives(registry).includes(normalized);
+  associationId: string,
+): string {
+  const def = registry.associations[normalizeAssociationId(associationId)];
+  if (!def || !isSetTraitType(def)) {
+    throw new Error(`Unknown set-trait composite "${associationId}"`);
+  }
+  const { childIndex } = setRoleIndices(def);
+  return projectionTypeForEndpoint(associationId, childIndex);
 }
 
-export function isMemberSidePerspective(
+/** Directed projection types for every set-trait association (both endpoints). */
+export function setTraitProjectionTypes(registry: AssociationsFile): string[] {
+  const types: string[] = [];
+  for (const associationId of setTraitAssociationIds(registry)) {
+    types.push(setSideProjectionType(registry, associationId));
+    types.push(memberSideProjectionType(registry, associationId));
+  }
+  return types;
+}
+
+export function setSideProjectionTypes(registry: AssociationsFile): string[] {
+  return setTraitAssociationIds(registry).map((id) => setSideProjectionType(registry, id));
+}
+
+export function memberSideProjectionTypes(registry: AssociationsFile): string[] {
+  return setTraitAssociationIds(registry).map((id) =>
+    memberSideProjectionType(registry, id),
+  );
+}
+
+export function associationIdFromTypeOrProjection(
   registry: AssociationsFile,
-  perspective: string,
-): boolean {
-  const normalized = normalizeRelationshipType(perspective);
-  return memberSidePerspectives(registry).includes(normalized);
+  typeOrProjection: string,
+): string | null {
+  const parsed = parseProjectionType(typeOrProjection);
+  if (parsed) return parsed.associationId;
+  const id = normalizeAssociationId(typeOrProjection);
+  return registry.associations[id] ? id : null;
 }
 
-/** Parent/set and child/member perspectives for a set-trait composite. */
-export function setRolePerspectivesForComposite(
+export function isSetTraitProjectionType(
+  registry: AssociationsFile,
+  type: string,
+): boolean {
+  const associationId = associationIdFromTypeOrProjection(registry, type);
+  return associationId !== null && isSetTraitComposite(registry, associationId);
+}
+
+export function isSetSideProjectionType(
+  registry: AssociationsFile,
+  type: string,
+): boolean {
+  return setSideProjectionTypes(registry).includes(type);
+}
+
+export function isMemberSideProjectionType(
+  registry: AssociationsFile,
+  type: string,
+): boolean {
+  return memberSideProjectionTypes(registry).includes(type);
+}
+
+/** Parent/set and child/member directed projection types for a set-trait composite. */
+export function setRoleProjectionTypesForComposite(
   registry: AssociationsFile,
   composite: string,
 ): [string, string] {
-  const normalized = normalizeAssociationId(composite);
-  const def = registry.associations[normalized];
-  if (!def || !isSetTraitType(def)) {
-    throw new Error(`Unknown set-trait composite "${composite}"`);
-  }
-  const { parentIndex, childIndex } = setRoleIndices(def);
-  return [def.perspectives[parentIndex]!, def.perspectives[childIndex]!];
+  return [
+    setSideProjectionType(registry, composite),
+    memberSideProjectionType(registry, composite),
+  ];
 }
 
 /**
- * When a node has no views/edges declaring a set association, use the sole
+ * When a node has no views declaring a set association, use the sole
  * plain (non-ordered) set-trait composite, else the sole set-trait composite.
  */
 function soleSetCompositeFallback(registry: AssociationsFile): string {
@@ -254,44 +244,55 @@ function soleSetCompositeFallback(registry: AssociationsFile): string {
   if (plain.length === 1) return plain[0]!;
   if (setComposites.length === 1) return setComposites[0]!;
   throw new Error(
-    "No set association context: add a set-side perspective in views.json for this node, or register a single set-trait association",
+    "No set association context: add a set-side association in views.json for this node, or register a single set-trait association",
   );
 }
 
-/**
- * Resolve set/member perspectives for a set node from project context:
- * views.json set-side perspectives for the node, else sole set-trait fallback.
- * Does not pick among multiple project associations via table-schemas.
- */
-export function setRolePerspectivesForNode(
+/** Resolve the set-trait association id for a set node from views.json or sole fallback. */
+export function setRoleAssociationForNode(
+  nodeId: string,
+  contentDir?: string,
+): string {
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadAssociationsFromContent(dir);
+  const setIds = new Set(setTraitAssociationIds(registry));
+  const fromViews = new Set<string>();
+  for (const view of loadViewsFromContent(dir).views) {
+    const associationId = normalizeAssociationId(view.association);
+    if (view.nodeId === nodeId && setIds.has(associationId)) {
+      fromViews.add(associationId);
+    }
+  }
+  if (fromViews.size > 0) {
+    return [...fromViews][0]!;
+  }
+  return soleSetCompositeFallback(registry);
+}
+
+/** Parent/set and child/member projection types for a set node. */
+export function setRoleProjectionTypesForNode(
   nodeId: string,
   contentDir?: string,
 ): [string, string] {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
-  const setSide = new Set(setSidePerspectives(registry));
-  const fromViews = new Set<string>();
-  for (const view of loadViewsFromContent(dir).views) {
-    const perspective = normalizeRelationshipType(view.perspective);
-    if (view.nodeId === nodeId && setSide.has(perspective)) {
-      fromViews.add(perspective);
-    }
-  }
-  if (fromViews.size > 0) {
-    const setPerspective = [...fromViews][0]!;
-    const composite = resolveSetTraitComposite(registry, setPerspective);
-    if (!composite) {
-      throw new Error(`View perspective "${setPerspective}" is not a set-trait association`);
-    }
-    return setRolePerspectivesForComposite(registry, composite);
-  }
-  return setRolePerspectivesForComposite(registry, soleSetCompositeFallback(registry));
+  return setRoleProjectionTypesForComposite(registry, setRoleAssociationForNode(nodeId, dir));
 }
 
-export function isOrderedSetPerspective(
+export function isOrderedSetAssociation(
   registry: AssociationsFile,
-  perspective: string,
+  associationId: string,
 ): boolean {
-  const composite = resolveSetTraitComposite(registry, perspective);
-  return composite !== null && isOrderedTraitComposite(registry, composite);
+  return (
+    isSetTraitComposite(registry, associationId) &&
+    isOrderedTraitComposite(registry, associationId)
+  );
+}
+
+export function isOrderedSetProjectionType(
+  registry: AssociationsFile,
+  type: string,
+): boolean {
+  const associationId = associationIdFromTypeOrProjection(registry, type);
+  return associationId !== null && isOrderedSetAssociation(registry, associationId);
 }

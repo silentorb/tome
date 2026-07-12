@@ -17,7 +17,7 @@ import {
   invalidateOrderedCollectionsCache,
   invalidateExtensionsCache,
   loadAssociationsFromContent,
-  setTraitPerspectives,
+  setTraitProjectionTypes,
   RELATIONSHIPS_FILENAME,
   ASSOCIATIONS_FILENAME,
   DYNAMIC_FIELDS_FILENAME,
@@ -373,7 +373,7 @@ export function openContentGraph(contentDir: string, dbPath: string): TomeWriteC
       decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
     },
     memberPerspectives: () =>
-      setTraitPerspectives(loadAssociationsFromContent(contentDir)),
+      setTraitProjectionTypes(loadAssociationsFromContent(contentDir)),
   });
   const sync = new CacheSync(store, cache);
   sync.ensureReady();

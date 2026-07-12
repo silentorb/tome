@@ -1,13 +1,12 @@
 import { generateNodeId } from "tome-flatfile/node-id";
 import type { Properties } from "tome-sqlite";
-import { normalizeRelationshipType } from "tome-flatfile";
-import { resolveAssociationId } from "tome-flatfile";
-import { loadAssociationsFromContent } from "tome-flatfile";
 import {
-  isMemberSidePerspective,
-  resolveSetTraitComposite,
-  setRolePerspectivesForNode,
-  setRolePerspectivesForComposite,
+  associationIdFromTypeOrProjection,
+  isMemberSideProjectionType,
+  loadAssociationsFromContent,
+  parseProjectionType,
+  setRoleProjectionTypesForComposite,
+  setRoleProjectionTypesForNode,
 } from "tome-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
@@ -26,7 +25,6 @@ export type {
   CreateNodeLink,
   CreateNodeResult,
 } from "tome-graph-interfaces";
-
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -48,17 +46,17 @@ function ordinalFromProperties(properties: Record<string, unknown>): number | nu
 }
 
 function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: string): number | undefined {
-  const normalized = normalizeRelationshipType(type);
   const registry = loadAssociationsFromContent(ctx.store.contentDir);
-  let composite: string | null = null;
-  try {
-    composite = resolveAssociationId(registry, normalized);
-  } catch {
-    composite = null;
-  }
+  const composite = associationIdFromTypeOrProjection(registry, type);
+  const parsed = parseProjectionType(type);
   const outgoing = ctx.cache.listRelationshipsFromSource(sourceId).filter((c) => {
-    const edgeType = normalizeRelationshipType(c.type);
-    return edgeType === composite || edgeType === normalized;
+    if (c.type === type) return true;
+    if (composite && associationIdFromTypeOrProjection(registry, c.type) === composite) {
+      if (!parsed) return true;
+      const edgeParsed = parseProjectionType(c.type);
+      return edgeParsed?.endpointIndex === parsed.endpointIndex;
+    }
+    return false;
   });
   if (outgoing.length === 0) return undefined;
   const ordinals = outgoing
@@ -68,20 +66,19 @@ function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: stri
   return Math.max(...ordinals) + 1;
 }
 
-function memberPerspectiveForSetLink(
+function memberProjectionForSetLink(
   ctx: TomeWriteContext,
   setId: string,
-  perspective?: string,
+  typeOrProjection?: string,
 ): string {
   const dir = ctx.store.contentDir;
   const registry = loadAssociationsFromContent(dir);
-  if (perspective) {
-    const normalized = normalizeRelationshipType(perspective);
-    if (isMemberSidePerspective(registry, normalized)) return normalized;
-    const composite = resolveSetTraitComposite(registry, normalized);
-    if (composite) return setRolePerspectivesForComposite(registry, composite)[1];
+  if (typeOrProjection) {
+    if (isMemberSideProjectionType(registry, typeOrProjection)) return typeOrProjection;
+    const composite = associationIdFromTypeOrProjection(registry, typeOrProjection);
+    if (composite) return setRoleProjectionTypesForComposite(registry, composite)[1];
   }
-  return setRolePerspectivesForNode(setId, dir)[1];
+  return setRoleProjectionTypesForNode(setId, dir)[1];
 }
 
 export function createNode(
@@ -129,28 +126,28 @@ export function createNode(
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
     ctx.store.upsertRelationship(sourceId, id, type, relProps);
     if (typeTableId) {
-      const memberPerspective = memberPerspectiveForSetLink(
+      const memberProjection = memberProjectionForSetLink(
         ctx,
         typeTableId,
         typeTablePerspective,
       );
-      const setProps = stampOrderIfMissing(ctx, typeTableId, id, {}, memberPerspective);
-      ctx.store.upsertRelationship(id, typeTableId, memberPerspective, setProps);
+      const setProps = stampOrderIfMissing(ctx, typeTableId, id, {}, memberProjection);
+      ctx.store.upsertRelationship(id, typeTableId, memberProjection, setProps);
     }
     syncAfterRelationshipsWrite(ctx);
   }
 
   if (input.link?.kind === "database-row") {
     const { databaseId, properties: rowProps = {}, perspective } = input.link;
-    const memberPerspective = memberPerspectiveForSetLink(ctx, databaseId, perspective);
+    const memberProjection = memberProjectionForSetLink(ctx, databaseId, perspective);
     const relProps = stampOrderIfMissing(
       ctx,
       databaseId,
       id,
       { ...rowProps },
-      memberPerspective,
+      memberProjection,
     );
-    ctx.store.upsertRelationship(id, databaseId, memberPerspective, relProps);
+    ctx.store.upsertRelationship(id, databaseId, memberProjection, relProps);
     syncAfterRelationshipsWrite(ctx);
   }
 

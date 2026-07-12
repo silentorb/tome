@@ -12,7 +12,7 @@ import type { TableSchemasFile } from "tome-flatfile";
 import { findColumnByKey } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
 import { purgeColumnFromViews } from "./views/mutations";
-import { setRolePerspectivesForNode } from "tome-flatfile";
+import { setRoleAssociationForNode } from "tome-flatfile";
 import type {
   DeleteDatabaseColumnError,
   DeleteDatabaseColumnResult,
@@ -85,7 +85,7 @@ export function deleteDatabaseColumn(
   purgeColumnFromViews(
     ctx.store,
     databaseId,
-    setRolePerspectivesForNode(databaseId, ctx.store.contentDir)[0],
+    setRoleAssociationForNode(databaseId, ctx.store.contentDir),
     normalizedKey,
   );
 

@@ -2,11 +2,11 @@ import type { GraphDatabase, Properties, Relationship } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import {
+  associationIdFromTypeOrProjection,
   isOrderedTraitComposite,
-  isOrderedSetPerspective,
+  isOrderedSetProjectionType,
   orderedPropertyName,
-  resolveSetTraitComposite,
-  setRolePerspectivesForNode,
+  setRoleProjectionTypesForNode,
 } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
 import { listSetMemberRowConnections } from "./set-membership";
@@ -27,12 +27,12 @@ function numericOrderValue(raw: unknown, fallback = Number.NaN): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function orderPropertyForPerspective(
+function orderPropertyForProjection(
   contentDir: string,
-  perspective: string,
+  typeOrProjection: string,
 ): string | null {
   const registry = loadAssociationsFromContent(contentDir);
-  const composite = resolveSetTraitComposite(registry, perspective);
+  const composite = associationIdFromTypeOrProjection(registry, typeOrProjection);
   if (!composite || !isOrderedTraitComposite(registry, composite)) return null;
   return orderedPropertyName(registry.associations[composite]);
 }
@@ -46,7 +46,7 @@ export function listOrderedMemberConnections(
   const registry = loadAssociationsFromContent(dir);
   return listSetMemberRowConnections(db, setId, dir).filter((edge) => {
     const composite =
-      resolveSetTraitComposite(registry, edge.type) ??
+      associationIdFromTypeOrProjection(registry, edge.type) ??
       (isOrderedTraitComposite(registry, edge.type) ? edge.type : null);
     return composite !== null && isOrderedTraitComposite(registry, composite);
   });
@@ -62,7 +62,7 @@ export function maxOrderAtSet(
   for (const connection of listOrderedMemberConnections(db, setId, dir)) {
     const registry = loadAssociationsFromContent(dir);
     const composite =
-      resolveSetTraitComposite(registry, connection.type) ?? connection.type;
+      associationIdFromTypeOrProjection(registry, connection.type) ?? connection.type;
     const property = orderedPropertyName(registry.associations[composite]);
     const value = numericOrderValue(connection.properties[property], Number.NaN);
     if (Number.isFinite(value) && value > max) max = value;
@@ -75,13 +75,13 @@ export function stampOrderIfMissing(
   setId: string,
   memberId: string,
   props: Properties,
-  perspective?: string,
+  projectionType?: string,
 ): Properties {
   const dir = ctx.store.contentDir;
   const registry = loadAssociationsFromContent(dir);
-  const resolvedPerspective =
-    perspective ?? setRolePerspectivesForNode(setId, dir)[1];
-  const composite = resolveSetTraitComposite(registry, resolvedPerspective);
+  const resolvedProjection =
+    projectionType ?? setRoleProjectionTypesForNode(setId, dir)[1];
+  const composite = associationIdFromTypeOrProjection(registry, resolvedProjection);
   if (!composite || !isOrderedTraitComposite(registry, composite)) return props;
   const property = orderedPropertyName(registry.associations[composite]);
   if (property in props) return props;
@@ -102,8 +102,8 @@ export function applySparseOrderRewrite(
   orderedMemberIds: string[],
 ): void {
   const dir = ctx.store.contentDir;
-  const [, memberPerspective] = setRolePerspectivesForNode(setId, dir);
-  const property = orderPropertyForPerspective(dir, memberPerspective);
+  const [, memberProjection] = setRoleProjectionTypesForNode(setId, dir);
+  const property = orderPropertyForProjection(dir, memberProjection);
   if (!property) return;
   const edgeByMemberId = new Map(
     edges.map((edge) => [edge.sourceNodeId, edge]),
@@ -130,6 +130,6 @@ export function applySparseOrderRewrite(
 export function setUsesOrderedAssociation(setId: string, contentDir?: string): boolean {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
-  const [setPerspective] = setRolePerspectivesForNode(setId, dir);
-  return isOrderedSetPerspective(registry, setPerspective);
+  const [setProjection] = setRoleProjectionTypesForNode(setId, dir);
+  return isOrderedSetProjectionType(registry, setProjection);
 }

@@ -26,7 +26,7 @@ import {
   appendColumnToViewsOrder,
   renameColumnInViews,
 } from "./views/mutations";
-import { setRolePerspectivesForNode } from "tome-flatfile";
+import { setRoleAssociationForNode } from "tome-flatfile";
 import type {
   CreateDatabaseColumnInput,
   DatabaseColumnMutationError,
@@ -178,7 +178,7 @@ export function createDatabaseColumn(
   appendColumnToViewsOrder(
     ctx.store,
     databaseId,
-    setRolePerspectivesForNode(databaseId, ctx.store.contentDir)[0],
+    setRoleAssociationForNode(databaseId, ctx.store.contentDir),
     key,
   );
 
@@ -333,7 +333,7 @@ export function updateDatabaseColumn(
     renameColumnInViews(
       ctx.store,
       databaseId,
-      setRolePerspectivesForNode(databaseId, ctx.store.contentDir)[0],
+      setRoleAssociationForNode(databaseId, ctx.store.contentDir),
       normalizedKey,
       finalKey,
     );

@@ -1,7 +1,7 @@
 import { isNodeId, resolveContentPath } from "../content/paths";
 import { isAssociationId, normalizeAssociationId } from "../content/associations-file";
 import { loadAssociationsFromContent } from "../associations/load";
-import { isOrderedSetPerspective, setRolePerspectivesForNode } from "../association-traits";
+import { isOrderedSetProjectionType, setRoleProjectionTypesForNode } from "../association-traits";
 import type {
   OrderedCollectionConfig,
   OrderedCollectionsFile,
@@ -40,10 +40,10 @@ function parseStringArray(value: unknown, path: string): string[] | undefined {
 function assertOrderedSetTable(nodeId: string, path: string, contentDir?: string): void {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
-  const [setPerspective] = setRolePerspectivesForNode(nodeId, dir);
-  if (!isOrderedSetPerspective(registry, setPerspective)) {
+  const [setProjection] = setRoleProjectionTypesForNode(nodeId, dir);
+  if (!isOrderedSetProjectionType(registry, setProjection)) {
     throw new Error(
-      `${path}: table ${nodeId} must use an ordered set-trait association (views.json set-side perspective or sole ordered set association)`,
+      `${path}: table ${nodeId} must use an ordered set-trait association (views.json set association or sole ordered set association)`,
     );
   }
 }

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
 import { GraphDatabase } from "../src/graph";
 
-const ARCHIVE_SET_PERSPECTIVES = ["archive_hosts", "archived_in"] as const;
+const ARCHIVE_SET_PERSPECTIVES = ["000000000000000000000000A9:1"] as const;
 
 describe("GraphDatabase", () => {
   let tempDir: string;
@@ -84,7 +84,7 @@ describe("GraphDatabase", () => {
     });
     db.upsertNode(hub, { title: "Archive" });
     db.upsertNode(member, { title: "Archived page" });
-    db.upsertRelationship(member, hub, "archived_in");
+    db.upsertRelationship(member, hub, ARCHIVE_SET_PERSPECTIVES[0]);
 
     const ids = db.listArchiveMemberIds(hub);
     expect(ids).toEqual([member]);
@@ -104,10 +104,10 @@ describe("GraphDatabase", () => {
     const db = new GraphDatabase(dbPath);
     db.upsertNode(hub, { title: "Archive" });
     db.upsertNode(member, { title: "Archived page" });
-    db.upsertRelationship(member, hub, "archived_in");
+    db.upsertRelationship(member, hub, ARCHIVE_SET_PERSPECTIVES[0]);
 
-    expect(db.listArchiveMemberIds(hub)).toEqual([]);
-    expect(db.listArchiveMemberIds(hub, ARCHIVE_SET_PERSPECTIVES)).toEqual([member]);
+    const ids = db.listArchiveMemberIds(hub, ARCHIVE_SET_PERSPECTIVES);
+    expect(ids).toEqual([member]);
     db.close();
   });
 });

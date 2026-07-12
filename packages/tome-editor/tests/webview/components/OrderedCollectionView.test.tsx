@@ -11,8 +11,8 @@ const view: OrderedCollectionViewDetail = {
   configId: "scenes-by-book",
   typeDatabaseId: TYPE_DB,
   typeDatabaseTitle: "Scenes",
-  viewAssociation: "ordered_members",
-  memberSidePerspective: "ordered_member_of",
+  viewAssociation: "000000000000000000000000A2",
+  memberSidePerspective: "000000000000000000000000A2:1",
   tabs: {
     kind: "generated",
     items: [
@@ -129,8 +129,8 @@ describe("OrderedCollectionView", () => {
     };
     const customView: OrderedCollectionViewDetail = {
       ...view,
-      viewAssociation: "sequence",
-      memberSidePerspective: "belongs_to_sequence",
+      viewAssociation: "000000000000000000000000B6",
+      memberSidePerspective: "000000000000000000000000B6:1",
     };
 
     render(
@@ -151,7 +151,7 @@ describe("OrderedCollectionView", () => {
     await waitFor(() =>
       expect(unlinkOutgoingRelationship).toHaveBeenCalledWith(
         SCENE_ID,
-        "belongs_to_sequence",
+        "000000000000000000000000B6:1",
         TYPE_DB,
       ),
     );

@@ -55,9 +55,9 @@ export function reorderColumnDefs<T extends { key: string }>(
 export function getSectionColumnOrder(
   views: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
 ): string[] | undefined {
-  return columnOrderFromViews(views, nodeId, perspective);
+  return columnOrderFromViews(views, nodeId, association);
 }
 
 export function applySectionColumnOrder(
@@ -65,9 +65,9 @@ export function applySectionColumnOrder(
   columnDefs: DatabaseColumnDef[] | undefined,
   views: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
 ): { columns: string[]; columnDefs: DatabaseColumnDef[] | undefined } {
-  const columnOrder = getSectionColumnOrder(views, nodeId, perspective);
+  const columnOrder = getSectionColumnOrder(views, nodeId, association);
   const columns = applyColumnOrder(defaultOrder, columnOrder);
   if (!columnDefs?.length) {
     return { columns, columnDefs };

@@ -42,7 +42,7 @@ describe("relationship-traverse", () => {
       "000000000000000000000000A3": { perspectives: ["scenes", "product"] },
       "000000000000000000000000A4": { perspectives: ["scenes", "part"] },
       "000000000000000000000000BA": { perspectives: ["location", "scenes"] },
-      "000000000000000000000000A1": { perspectives: ["members", "member_of"], traits: ["set"] },
+      "000000000000000000000000A1": { perspectives: ["Members", "Membership"], traits: ["set"] },
     },
   };
   fixture.ctx.store.writeAssociationsFile(typesFile);

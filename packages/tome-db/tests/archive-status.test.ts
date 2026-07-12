@@ -1,14 +1,11 @@
+import { projectionTypeForEndpoint } from "tome-flatfile";
 import { describe, expect, test } from "bun:test";
 import { isArchivedNode, isLegacyArchivedPath } from "../src/archive-status";
 import { GraphDatabase } from "tome-sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  TEST_ARCHIVE_NODE_ID,
-} from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, TEST_ARCHIVE_NODE_ID, TEST_MEMBER_OF_ASSOCIATION_ID } from "../src/content/test-helpers";
 
 describe("archive-status", () => {
   const fixture = createTestContentFixture("tome-archive-status-fixture-");
@@ -26,13 +23,13 @@ describe("archive-status", () => {
     const dbPath = join(tempDir, "test.sqlite");
     const contentDir = fixture.ctx.store.contentDir;
     const db = new GraphDatabase(dbPath, {
-      memberPerspectives: () => ["member_of", "members"],
+      memberPerspectives: () => [projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 0)],
     });
 
     db.upsertNode("active", { title: "Active" });
     db.upsertNode("archived", { title: "Archived member" });
     db.upsertNode(TEST_ARCHIVE_NODE_ID, { title: "Archive" });
-    db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "member_of");
+    db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1));
     db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID);
 
     expect(isArchivedNode(db, "archived", contentDir)).toBe(true);

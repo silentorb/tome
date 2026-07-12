@@ -3,7 +3,7 @@ import {
   encodeEnumProperties,
   loadAssociationsFromContent,
   loadSchemaFromContent,
-  setTraitPerspectives,
+  setTraitProjectionTypes,
 } from "tome-db";
 import { openTomeGraphServices } from "./graph-services";
 import {
@@ -38,7 +38,7 @@ export async function startTomeServer(options?: {
       decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
   };
   const memberPerspectives = () =>
-    setTraitPerspectives(loadAssociationsFromContent(contentDir));
+    setTraitProjectionTypes(loadAssociationsFromContent(contentDir));
   const cache = await loadConfiguredCache(config.cache, dbPath, {
     propertyCodec,
     memberPerspectives,

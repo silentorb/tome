@@ -2,8 +2,8 @@ import { listRelationConnectionsForRow } from "./database-view-relations";
 import { unlinkOutgoingRelationship } from "./relationship-link-mutations";
 import { otherEndpoint } from "./relationship-traverse";
 import { loadAssociationsFromContent } from "tome-flatfile";
-import { setTraitPerspectives } from "tome-flatfile";
-import { perspectiveForRelationColumn, relationColumnCompositeType } from "tome-flatfile";
+import { setTraitProjectionTypes } from "tome-flatfile";
+import { projectionTypeForRelationColumn, relationColumnCompositeType } from "tome-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
 import type { TableColumnDef } from "tome-flatfile";
 
@@ -16,7 +16,7 @@ export function stripScalarFromSetEdges(
 ): number {
   const registry = loadAssociationsFromContent(ctx.store.contentDir);
   let count = 0;
-  for (const type of setTraitPerspectives(registry)) {
+  for (const type of setTraitProjectionTypes(registry)) {
     for (const connection of ctx.cache.listRelationshipsToTarget(databaseId, type)) {
       if (!(propertyKey in connection.properties)) continue;
       const props = { ...connection.properties };
@@ -41,7 +41,7 @@ export function renameScalarOnSetEdges(
 ): number {
   const registry = loadAssociationsFromContent(ctx.store.contentDir);
   let count = 0;
-  for (const type of setTraitPerspectives(registry)) {
+  for (const type of setTraitProjectionTypes(registry)) {
     for (const connection of ctx.cache.listRelationshipsToTarget(databaseId, type)) {
       if (!(oldKey in connection.properties)) continue;
       const props = { ...connection.properties };
@@ -65,11 +65,11 @@ export function unlinkRelationColumnFromAllRows(
   column: TableColumnDef & { type: "relation" },
 ): number {
   const registry = loadAssociationsFromContent(ctx.store.contentDir);
-  const connectionType = perspectiveForRelationColumn(registry, databaseId, column);
+  const connectionType = projectionTypeForRelationColumn(registry, databaseId, column);
   const compositeType = relationColumnCompositeType(column);
 
   const rowIds = new Set<string>();
-  for (const type of setTraitPerspectives(registry)) {
+  for (const type of setTraitProjectionTypes(registry)) {
     for (const connection of ctx.cache.listRelationshipsToTarget(databaseId, type)) {
       rowIds.add(connection.sourceNodeId);
     }

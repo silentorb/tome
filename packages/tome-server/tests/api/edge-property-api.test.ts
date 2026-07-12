@@ -11,6 +11,8 @@ import {
   destroyTestContentFixture,
   seedTestRelationships,
   seedTestNode,
+  TEST_MEMBER_OF_ASSOCIATION_ID,
+  projectionTypeForEndpoint,
 } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
 
@@ -45,7 +47,10 @@ describe("edge property API", () => {
         decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
       },
     });
-    const edge = verifyDb.listRelationshipsFromSource(nodeId, "member_of")[0];
+    const edge = verifyDb.listRelationshipsFromSource(
+      nodeId,
+      projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
+    )[0];
     expect(edge?.properties.priority).toBe("High");
     verifyDb.close();
   });

@@ -6,7 +6,7 @@ import { getTableSchema } from "tome-flatfile";
 import { loadTableSchemasFromContent } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import {
-  perspectiveForRelationColumn,
+  projectionTypeForRelationColumn,
   relationColumnCompositeType,
   targetTypeIdForRelationColumn,
 } from "tome-flatfile";
@@ -31,7 +31,7 @@ function databaseColumnFromTableColumn(
       key: col.key,
       name: col.name,
       type: col.type,
-      relationType: perspectiveForRelationColumn(registry, databaseId, col),
+      relationType: projectionTypeForRelationColumn(registry, databaseId, col),
       relationshipCompositeType: relationColumnCompositeType(col),
       targetDatabaseId: targetTypeIdForRelationColumn(registry, databaseId, col) ?? undefined,
     };

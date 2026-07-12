@@ -2,14 +2,8 @@ import { describe, expect, test, afterEach } from "bun:test";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodeDetail } from "../src/queries";
 import { createNode } from "../src/node-create";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  seedTestNode,
-  seedTestTableSchema,
-  type TestContentFixture,
-} from "../src/content/test-helpers";
-import { registerBidirectionalType } from "tome-flatfile";
+import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestTableSchema, type TestContentFixture, TEST_MEMBER_OF_ASSOCIATION_ID, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID } from "../src/content/test-helpers";
+import { registerBidirectionalType, projectionTypeForEndpoint } from "tome-flatfile";
 import { invalidateAssociationsCache } from "tome-flatfile";
 
 describe("createNode", () => {
@@ -40,11 +34,12 @@ describe("createNode", () => {
   test("creates outgoing relation row", () => {
     fixture = createTestContentFixture("tome-create-");
     const registry = fixture.ctx.store.readAssociationsFile();
-    registerBidirectionalType(registry, "features", "targets");
+    const featuresAssociationId = registerBidirectionalType(registry, "Features", "Targets");
     fixture.ctx.store.writeAssociationsFile(registry);
     invalidateAssociationsCache();
 
     const sourceId = "0000000000000000000000001C";
+    const featuresType = projectionTypeForEndpoint(featuresAssociationId, 0);
     seedTestNode(fixture, {
       id: sourceId,
       properties: { title: "Scene" },
@@ -53,18 +48,18 @@ describe("createNode", () => {
       id: "0000000000000000000000001W",
       properties: { title: "Existing feat" },
     });
-    fixture.ctx.store.upsertRelationship(sourceId, "0000000000000000000000001W", "features", {
+    fixture.ctx.store.upsertRelationship(sourceId, "0000000000000000000000001W", featuresType, {
       ordinal: 2,
     });
     fixture.ctx.sync.syncRelationships();
 
     const result = createNode(fixture.ctx, {
       title: "New feature",
-      link: { kind: "outgoing", sourceId, type: "features" },
+      link: { kind: "outgoing", sourceId, type: featuresType },
     });
     if (typeof result === "string") throw new Error(result);
 
-    const rel = fixture.ctx.store.findRelationship(sourceId, result.id, "features");
+    const rel = fixture.ctx.store.findRelationship(sourceId, result.id, featuresType);
     expect(rel).not.toBeNull();
     expect(rel?.properties.ordinal).toBe(3);
   });
@@ -81,7 +76,7 @@ describe("createNode", () => {
       id: "0000000000000000000000002K",
       properties: { title: "Old row" },
     });
-    fixture.ctx.store.upsertRelationship("0000000000000000000000002K", databaseId, "member_of", {});
+    fixture.ctx.store.upsertRelationship("0000000000000000000000002K", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {});
     fixture.ctx.sync.syncRelationships();
 
     const result = createNode(fixture.ctx, {

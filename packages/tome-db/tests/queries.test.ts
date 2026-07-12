@@ -11,7 +11,10 @@ import {
   destroyTestContentFixture,
   seedTestNode,
   seedTestRelationships,
+  seedTestCompositeRelationships,
   TEST_ARCHIVE_NODE_ID,
+  TEST_RELATED_ASSOCIATION_ID,
+  projectionTypeForEndpoint,
 } from "../src/content/test-helpers";
 
 describe("queries", () => {
@@ -234,8 +237,15 @@ describe("queries", () => {
         modified_at: "2024-06-01T00:00:00.000Z",
       },
     });
-    seedTestRelationships(fixture, [
-      { source: pageId, target: targetId, type: "related", properties: { priority: "Low" } },
+    seedTestCompositeRelationships(fixture, [
+      {
+        a: pageId,
+        b: targetId,
+        typeFromA: "Related",
+        typeFromB: "Related",
+        associationId: TEST_RELATED_ASSOCIATION_ID,
+        properties: { priority: "Low" },
+      },
     ]);
 
     const before = listRecentNodesByModifiedAt(fixture.ctx.cache, 10);
@@ -248,7 +258,7 @@ describe("queries", () => {
         fixture.ctx,
         pageId,
         targetId,
-        "related",
+        projectionTypeForEndpoint(TEST_RELATED_ASSOCIATION_ID, 0),
         "priority",
         "High",
       ),

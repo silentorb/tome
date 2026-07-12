@@ -4,16 +4,7 @@ import { isArchiveSetEntry } from "../src/relationship-archive";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { getNodeDetail } from "../src/queries";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  seedTestIncludes,
-  seedTestNode,
-  seedTestRelationships,
-  seedTestTableSchema,
-  TEST_ARCHIVE_NODE_ID,
-  TEST_HOME_NODE_ID,
-} from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestIncludes, seedTestNode, seedTestRelationships, seedTestTableSchema, TEST_ARCHIVE_NODE_ID, TEST_HOME_NODE_ID, projectionTypeForEndpoint, TEST_MEMBER_OF_ASSOCIATION_ID, TEST_RELATED_ASSOCIATION_ID } from "../src/content/test-helpers";
 
 const HUB = TEST_ARCHIVE_NODE_ID;
 const HOME = TEST_HOME_NODE_ID;
@@ -46,7 +37,7 @@ describe("archive relationship flags", () => {
 
     const file = fixture.ctx.store.readRelationshipsFile();
     const membership = file.relationships.find(
-      (e) => e.type === "member_of" && (e.a === HUB || e.b === HUB) && (e.a === PAGE || e.b === PAGE),
+      (e) => e.type === TEST_MEMBER_OF_ASSOCIATION_ID && (e.a === HUB || e.b === HUB) && (e.a === PAGE || e.b === PAGE),
     );
     expect(membership?.archived).toBeUndefined();
 
@@ -63,9 +54,9 @@ describe("archive relationship flags", () => {
     const outgoing = fixture.ctx.cache.listRelationshipsFromSource(PAGE);
     expect(outgoing).toHaveLength(1);
     expect(outgoing[0]?.targetNodeId).toBe(HUB);
-    expect(outgoing[0]?.type).toBe("member_of");
-    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, "member_of")).toHaveLength(1);
-    expect(fixture.ctx.cache.listRelationshipsFromSource(HUB, "members").length).toBeGreaterThan(0);
+    expect(outgoing[0]?.type).toBe(projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1));
+    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1))).toHaveLength(1);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(HUB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 0)).length).toBeGreaterThan(0);
   });
 
   test("archived member is absent from database table rows", () => {
@@ -85,8 +76,8 @@ describe("archive relationship flags", () => {
       }
     }
 
-    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, "member_of")).toHaveLength(1);
-    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, "related")).toHaveLength(1);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1))).toHaveLength(1);
+    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_RELATED_ASSOCIATION_ID, 0))).toHaveLength(1);
     const detail = getDatabaseViewDetail(fixture.ctx.cache, TYPE_DB, "all", fixture.ctx.store.contentDir);
     expect(detail?.rows.some((row) => row.nodeId === PAGE)).toBe(true);
   });

@@ -6,7 +6,7 @@ import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { sortEvalRows, type EvalRow } from "../src/row-sort";
-import { serializeViewsFile, VIEWS_FILE_VERSION } from "tome-flatfile";
+import { serializeViewsFile, VIEWS_FILE_VERSION, projectionTypeForEndpoint } from "tome-flatfile";
 import { serializeDynamicFieldsFile, emptyDynamicFieldsFile } from "tome-flatfile";
 import {
   contentModelDir,
@@ -18,7 +18,7 @@ import {
 import { serializeTableSchemasFile } from "tome-flatfile";
 import { serializeAssociationsFile } from "tome-flatfile";
 import { invalidateAssociationsCache } from "tome-flatfile";
-import { writeTestSetAssociations } from "../src/content/test-helpers";
+import { writeTestSetAssociations, TEST_MEMBER_OF_ASSOCIATION_ID, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID } from "../src/content/test-helpers";
 
 describe("row-sort", () => {
   const rows: EvalRow[] = [
@@ -114,7 +114,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "done-only",
             nodeId: databaseId,
-            perspective: "members",
+            association: TEST_MEMBER_OF_ASSOCIATION_ID,
             name: "Done only",
             sorts: [{ column: "name", direction: "asc" }],
           },
@@ -140,8 +140,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Zebra" });
     db.upsertNode("page2", { title: "Alpha" });
-    db.upsertRelationship("page1", databaseId, "member_of", { status: "Done", row_index: 0 });
-    db.upsertRelationship("page2", databaseId, "member_of", { status: "Todo", row_index: 1 });
+    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { status: "Done", row_index: 0 });
+    db.upsertRelationship("page2", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { status: "Todo", row_index: 1 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.tabs.items.map((tab) => tab.label)).toEqual(["Done only"]);
@@ -170,7 +170,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "all",
             nodeId: databaseId,
-            perspective: "members",
+            association: TEST_MEMBER_OF_ASSOCIATION_ID,
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
             properties: { columnOrder: ["status"] },
@@ -199,7 +199,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     );
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Row" });
-    db.upsertRelationship("page1", databaseId, "member_of", { row_index: 0 });
+    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.columns).toEqual(["status", "priority"]);
@@ -225,7 +225,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "all",
             nodeId: databaseId,
-            perspective: "members",
+            association: TEST_MEMBER_OF_ASSOCIATION_ID,
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
             hiddenColumns: ["priority"],
@@ -254,7 +254,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     );
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Row" });
-    db.upsertRelationship("page1", databaseId, "member_of", { row_index: 0 });
+    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.allColumns).toEqual(["status", "priority"]);
@@ -281,11 +281,11 @@ describe("getDatabaseViewDetail with custom tabs", () => {
         version: 1,
         associations: {
           "000000000000000000000000A1": {
-            perspectives: ["members", "member_of"],
+            perspectives: ["Members", "Membership"],
             traits: ["set"],
           },
           "000000000000000000000000B2": {
-            perspectives: ["features", "inspirations"],
+            perspectives: ["Features", "Inspirations"],
             endpoints: {
               0: { typeId: featuresDb },
               1: { typeId: inspirationsDb },
@@ -303,7 +303,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "by-inspirations",
             nodeId: featuresDb,
-            perspective: "members",
+            association: TEST_MEMBER_OF_ASSOCIATION_ID,
             name: "By inspirations",
             sorts: [{ column: "inspirations", direction: "desc" }],
           },
@@ -342,17 +342,17 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertNode("insp-b", { title: "Insp B" });
     db.upsertNode("insp-c", { title: "Insp C" });
 
-    db.upsertRelationship("feature-few", featuresDb, "member_of", { row_index: 0 });
-    db.upsertRelationship("feature-many", featuresDb, "member_of", { row_index: 1 });
-    db.upsertRelationship("feature-none", featuresDb, "member_of", { row_index: 2 });
-    db.upsertRelationship("insp-a", inspirationsDb, "member_of", { row_index: 0 });
-    db.upsertRelationship("insp-b", inspirationsDb, "member_of", { row_index: 1 });
-    db.upsertRelationship("insp-c", inspirationsDb, "member_of", { row_index: 2 });
-    db.upsertRelationship("feature-few", "insp-a", "features");
-    db.upsertRelationship("feature-few", "insp-b", "features");
-    db.upsertRelationship("feature-many", "insp-a", "features");
-    db.upsertRelationship("feature-many", "insp-b", "features");
-    db.upsertRelationship("feature-many", "insp-c", "features");
+    db.upsertRelationship("feature-few", featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship("feature-many", featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 1 });
+    db.upsertRelationship("feature-none", featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 2 });
+    db.upsertRelationship("insp-a", inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship("insp-b", inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 1 });
+    db.upsertRelationship("insp-c", inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 2 });
+    db.upsertRelationship("feature-few", "insp-a", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
+    db.upsertRelationship("feature-few", "insp-b", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
+    db.upsertRelationship("feature-many", "insp-a", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
+    db.upsertRelationship("feature-many", "insp-b", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
+    db.upsertRelationship("feature-many", "insp-c", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
 
     const view = getDatabaseViewDetail(db, featuresDb, "by-inspirations", contentDir);
     expect(view?.rows.map((row) => row.name)).toEqual([

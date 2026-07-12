@@ -7,8 +7,8 @@ import {
   type ViewsFile,
 } from "tome-flatfile";
 
-export function relationshipKey(nodeId: string, perspective: string): string {
-  return `${nodeId}:${perspective}`;
+export function relationshipKey(nodeId: string, association: string): string {
+  return `${nodeId}:${association}`;
 }
 
 export function viewsForNode(file: ViewsFile, nodeId: string): ViewsFile["views"] {
@@ -18,26 +18,26 @@ export function viewsForNode(file: ViewsFile, nodeId: string): ViewsFile["views"
 export function viewsForRelationship(
   file: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
 ): ViewDefinition[] {
   return file.views.filter(
     (view): view is ViewDefinition =>
       isViewDefinition(view) &&
       view.nodeId === nodeId &&
-      view.perspective === perspective,
+      view.association === association,
   );
 }
 
 export function generatedViewForRelationship(
   file: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
 ): GeneratedViewRecord | null {
   const match = file.views.find(
     (view): view is GeneratedViewRecord =>
       isGeneratedViewRecord(view) &&
       view.nodeId === nodeId &&
-      view.perspective === perspective,
+      view.association === association,
   );
   return match ?? null;
 }
@@ -45,17 +45,17 @@ export function generatedViewForRelationship(
 export function hasGeneratedViews(
   file: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
 ): boolean {
-  return generatedViewForRelationship(file, nodeId, perspective) !== null;
+  return generatedViewForRelationship(file, nodeId, association) !== null;
 }
 
 export function columnOrderFromViews(
   file: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
 ): string[] | undefined {
-  const views = viewsForRelationship(file, nodeId, perspective);
+  const views = viewsForRelationship(file, nodeId, association);
   for (const view of views) {
     const order = view.properties?.columnOrder;
     if (order?.length) return order;
@@ -77,9 +77,9 @@ export function viewDefinitionsForTabs(
 export function siblingViewProperties(
   file: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
 ): ViewProperties | undefined {
-  const views = viewsForRelationship(file, nodeId, perspective);
+  const views = viewsForRelationship(file, nodeId, association);
   for (const view of views) {
     if (view.properties) return { ...view.properties };
   }
@@ -89,12 +89,12 @@ export function siblingViewProperties(
 export function indicesForRelationship(
   file: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
 ): number[] {
   const indices: number[] = [];
   for (let index = 0; index < file.views.length; index += 1) {
     const view = file.views[index]!;
-    if (view.nodeId === nodeId && view.perspective === perspective) {
+    if (view.nodeId === nodeId && view.association === association) {
       indices.push(index);
     }
   }

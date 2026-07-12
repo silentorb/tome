@@ -1,10 +1,16 @@
 import type {
   PerspectiveLabelConfig,
   AssociationsFile,
-} from "tome-flatfile";
-import { normalizeAssociationId, normalizeRelationshipType } from "tome-flatfile";
+} from "tome-flatfile/associations-file";
+import {
+  normalizeAssociationId,
+  parseProjectionType,
+  perspectiveConfigAt,
+  perspectiveLinkAdd,
+  perspectiveTitle,
+} from "tome-flatfile/associations-file";
 
-/** Human-readable label for a local relationship type (e.g. `bible_passages` → `Bible Passages`). */
+/** Title-case an arbitrary underscore/slug-like string (legacy helpers / fallbacks). */
 export function formatAssociationLabel(type: string): string {
   return type
     .toLowerCase()
@@ -14,48 +20,34 @@ export function formatAssociationLabel(type: string): string {
     .join(" ");
 }
 
-function perspectiveLabelConfig(
+function configForEndpoint(
   registry: AssociationsFile,
-  perspective: string,
-  compositeType?: string,
+  associationId: string,
+  endpointIndex: 0 | 1,
 ): PerspectiveLabelConfig | null {
-  const normalized = normalizeRelationshipType(perspective);
-  // Preferred: resolve the label from the specific composite so a perspective
-  // slug shared by several edge types (e.g. "inspirations") maps to the label
-  // authored for THIS type + position, not the first arbitrary registry match.
-  if (compositeType) {
-    const def = registry.associations[normalizeAssociationId(compositeType)];
-    return def?.perspectiveLabels?.[normalized] ?? null;
-  }
-  for (const def of Object.values(registry.associations)) {
-    if (!def.perspectives.includes(normalized)) continue;
-    const label = def.perspectiveLabels?.[normalized];
-    if (label !== undefined) return label;
-  }
-  return null;
-}
-
-function titleFromPerspectiveLabelConfig(config: PerspectiveLabelConfig): string {
-  return typeof config === "string" ? config : config.title;
-}
-
-function linkAddFromPerspectiveLabelConfig(config: PerspectiveLabelConfig): string | null {
-  return typeof config === "string" ? null : (config.linkAdd ?? null);
+  const def = registry.associations[normalizeAssociationId(associationId)];
+  if (!def) return null;
+  return perspectiveConfigAt(def, endpointIndex);
 }
 
 /**
- * Section heading for a perspective; falls back to formatAssociationLabel.
- * Pass `compositeType` to resolve the label from that specific edge type (tuple
- * position), avoiding ambiguity when a slug is shared across composites.
+ * Section heading for an association endpoint.
+ * `typeOrProjection` may be an association ULID (defaults to endpoint 0) or
+ * a directed projection type (`ULID:0` / `ULID:1`).
  */
 export function perspectiveDisplayLabel(
   registry: AssociationsFile,
-  perspective: string,
-  compositeType?: string,
+  typeOrProjection: string,
+  associationId?: string,
 ): string {
-  const config = perspectiveLabelConfig(registry, perspective, compositeType);
-  if (config) return titleFromPerspectiveLabelConfig(config);
-  return formatAssociationLabel(perspective);
+  const parsed = parseProjectionType(typeOrProjection);
+  const id = normalizeAssociationId(
+    associationId ?? parsed?.associationId ?? typeOrProjection,
+  );
+  const index = parsed?.endpointIndex ?? 0;
+  const config = configForEndpoint(registry, id, index);
+  if (config) return perspectiveTitle(config);
+  return formatAssociationLabel(typeOrProjection);
 }
 
 function defaultLinkAddLabel(sectionTitle: string): string {
@@ -66,13 +58,18 @@ function defaultLinkAddLabel(sectionTitle: string): string {
 /** Inline link-existing control label for a relation section. */
 export function perspectiveLinkAddLabel(
   registry: AssociationsFile,
-  perspective: string,
+  typeOrProjection: string,
   sectionTitle: string,
-  compositeType?: string,
+  associationId?: string,
 ): string {
-  const config = perspectiveLabelConfig(registry, perspective, compositeType);
+  const parsed = parseProjectionType(typeOrProjection);
+  const id = normalizeAssociationId(
+    associationId ?? parsed?.associationId ?? typeOrProjection,
+  );
+  const index = parsed?.endpointIndex ?? 0;
+  const config = configForEndpoint(registry, id, index);
   if (config) {
-    const linkAdd = linkAddFromPerspectiveLabelConfig(config);
+    const linkAdd = perspectiveLinkAdd(config);
     if (linkAdd) return linkAdd;
   }
   return defaultLinkAddLabel(sectionTitle);

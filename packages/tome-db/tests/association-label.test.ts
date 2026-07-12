@@ -1,23 +1,26 @@
 import { describe, expect, test } from "bun:test";
-import { emptyAssociationsFile } from "tome-flatfile";
+import { emptyAssociationsFile, projectionTypeForEndpoint } from "tome-flatfile";
 import {
   formatAssociationLabel,
   perspectiveDisplayLabel,
   perspectiveLinkAddLabel,
 } from "../src/association-label";
 
+const MEMBER_OF = "000000000000000000000000A1";
+
 describe("association-label", () => {
   test("formatAssociationLabel title-cases underscore slugs", () => {
     expect(formatAssociationLabel("member_of")).toBe("Member Of");
   });
 
-  test("perspectiveDisplayLabel uses configured title", () => {
+  test("perspectiveDisplayLabel uses configured title for projection type", () => {
     const registry = emptyAssociationsFile();
-    registry.associations["000000000000000000000000A1"] = {
-      perspectives: ["member_of", "members"],
-      perspectiveLabels: { member_of: "Membership" },
+    registry.associations[MEMBER_OF] = {
+      perspectives: [{ title: "Membership", linkAdd: "Link type table" }, "Members"],
     };
-    expect(perspectiveDisplayLabel(registry, "member_of")).toBe("Membership");
+    expect(
+      perspectiveDisplayLabel(registry, projectionTypeForEndpoint(MEMBER_OF, 0)),
+    ).toBe("Membership");
   });
 
   test("perspectiveDisplayLabel falls back when unconfigured", () => {
@@ -26,13 +29,16 @@ describe("association-label", () => {
 
   test("perspectiveLinkAddLabel uses configured linkAdd", () => {
     const registry = emptyAssociationsFile();
-    registry.associations["000000000000000000000000A1"] = {
-      perspectives: ["member_of", "members"],
-      perspectiveLabels: {
-            member_of: { title: "Membership", linkAdd: "Link type table" },
-      },
+    registry.associations[MEMBER_OF] = {
+      perspectives: [{ title: "Membership", linkAdd: "Link type table" }, "Members"],
     };
-    expect(perspectiveLinkAddLabel(registry, "member_of", "Membership")).toBe("Link type table");
+    expect(
+      perspectiveLinkAddLabel(
+        registry,
+        projectionTypeForEndpoint(MEMBER_OF, 0),
+        "Membership",
+      ),
+    ).toBe("Link type table");
   });
 
   test("perspectiveLinkAddLabel falls back to singularized section title", () => {

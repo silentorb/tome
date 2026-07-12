@@ -4,11 +4,11 @@ import {
   loadAssociationsFromContent,
   archiveNodeId,
   hasTableSchemaEntry,
-  setRoleIndices,
   typesWithTrait,
   SET_TRAIT,
   collectSetNodeIds,
-  setRolePerspectivesForNode,
+  setSideProjectionType,
+  memberSideProjectionType,
 } from "tome-flatfile";
 
 export { collectSetNodeIds } from "tome-flatfile";
@@ -20,11 +20,8 @@ export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: s
   const registry = loadAssociationsFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.associations[composite];
-    if (!def) continue;
-    const { childIndex } = setRoleIndices(def);
-    const memberPerspective = def.perspectives[childIndex]!;
-    for (const rel of db.listRelationshipsFromSource(memberId, memberPerspective)) {
+    const memberProjection = memberSideProjectionType(registry, composite);
+    for (const rel of db.listRelationshipsFromSource(memberId, memberProjection)) {
       ids.add(rel.targetNodeId);
     }
   }
@@ -36,15 +33,12 @@ export function setMemberIds(db: GraphDatabase, setId: string, contentDir?: stri
   const registry = loadAssociationsFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.associations[composite];
-    if (!def) continue;
-    const { parentIndex, childIndex } = setRoleIndices(def);
-    const setPerspective = def.perspectives[parentIndex]!;
-    const memberPerspective = def.perspectives[childIndex]!;
-    for (const rel of db.listRelationshipsFromSource(setId, setPerspective)) {
+    const setProjection = setSideProjectionType(registry, composite);
+    const memberProjection = memberSideProjectionType(registry, composite);
+    for (const rel of db.listRelationshipsFromSource(setId, setProjection)) {
       ids.add(rel.targetNodeId);
     }
-    for (const rel of db.listRelationshipsToTarget(setId, memberPerspective)) {
+    for (const rel of db.listRelationshipsToTarget(setId, memberProjection)) {
       ids.add(rel.sourceNodeId);
     }
   }
@@ -79,12 +73,9 @@ export function findSetEdge(
   const dir = contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.associations[composite];
-    if (!def) continue;
-    const { childIndex } = setRoleIndices(def);
-    const memberPerspective = def.perspectives[childIndex]!;
+    const memberProjection = memberSideProjectionType(registry, composite);
     const edge = db
-      .listRelationshipsFromSource(memberId, memberPerspective)
+      .listRelationshipsFromSource(memberId, memberProjection)
       .find((r) => r.targetNodeId === setId);
     if (edge) return edge;
   }
@@ -101,26 +92,18 @@ export function listSetMemberRowConnections(
   const registry = loadAssociationsFromContent(dir);
   const byMember = new Map<string, Relationship>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.associations[composite];
-    if (!def) continue;
-    const { parentIndex, childIndex } = setRoleIndices(def);
-    const setPerspective = def.perspectives[parentIndex]!;
-    const memberPerspective = def.perspectives[childIndex]!;
-    for (const r of db.listRelationshipsFromSource(setId, setPerspective)) {
+    const setProjection = setSideProjectionType(registry, composite);
+    const memberProjection = memberSideProjectionType(registry, composite);
+    for (const r of db.listRelationshipsFromSource(setId, setProjection)) {
       byMember.set(r.targetNodeId, {
         ...r,
         sourceNodeId: r.targetNodeId,
         targetNodeId: setId,
       });
     }
-    for (const r of db.listRelationshipsToTarget(setId, memberPerspective)) {
+    for (const r of db.listRelationshipsToTarget(setId, memberProjection)) {
       if (!byMember.has(r.sourceNodeId)) byMember.set(r.sourceNodeId, r);
     }
   }
   return [...byMember.values()];
-}
-
-/** Set/member perspectives for a set node from views (or sole set-trait fallback). */
-export function setRolePerspectives(setId: string, contentDir?: string): [string, string] {
-  return setRolePerspectivesForNode(setId, contentDir);
 }

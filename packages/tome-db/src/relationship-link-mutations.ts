@@ -1,13 +1,13 @@
 import type { Properties } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { LinkResolutionError, AmbiguousAssociationError } from "tome-flatfile";
+import { LinkResolutionError, UnknownAssociationError } from "tome-flatfile";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
-import { normalizeRelationshipType } from "tome-flatfile";
+import { isAssociationId, parseProjectionType } from "tome-flatfile";
 import { associationRuleContext } from "./association-endpoints";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import { stampOrderIfMissing } from "./ordered-relationships";
-import { isMemberSidePerspective } from "tome-flatfile";
+import { isMemberSideProjectionType } from "tome-flatfile";
 import type {
   LinkOutgoingRelationshipError,
   LinkOutgoingRelationshipInput,
@@ -23,6 +23,13 @@ export type {
   MoveRelationshipConnectionInput,
   UnlinkOutgoingRelationshipError,
 } from "tome-graph-interfaces";
+
+/** Preserve ULID / projection type case; only trim. */
+function normalizeLinkType(type: string): string {
+  const trimmed = type.trim();
+  if (parseProjectionType(trimmed) || isAssociationId(trimmed)) return trimmed;
+  return trimmed;
+}
 
 
 function ordinalFromProperties(properties: Record<string, unknown>): number | null {
@@ -51,7 +58,7 @@ export function linkOutgoingRelationship(
   input: LinkOutgoingRelationshipInput,
 ): LinkOutgoingRelationshipError | null {
   const { sourceId, targetId, type, properties = {} } = input;
-  const normalizedType = normalizeRelationshipType(type);
+  const normalizedType = normalizeLinkType(type);
 
   if (!ctx.store.readNode(sourceId)) return "source_not_found";
   if (!ctx.store.readNode(targetId)) return "target_not_found";
@@ -83,7 +90,7 @@ export function linkOutgoingRelationship(
   }
 
   if (isTypeTableNode(ctx.cache, targetId, ctx.store.contentDir)) {
-    if (isMemberSidePerspective(registry, normalizedType)) {
+    if (isMemberSideProjectionType(registry, normalizedType)) {
       relProps = stampOrderIfMissing(ctx, targetId, sourceId, relProps, normalizedType);
     }
   }
@@ -91,7 +98,7 @@ export function linkOutgoingRelationship(
   try {
     ctx.store.upsertRelationship(sourceId, targetId, normalizedType, relProps);
   } catch (err) {
-    if (err instanceof LinkResolutionError || err instanceof AmbiguousAssociationError) {
+    if (err instanceof LinkResolutionError || err instanceof UnknownAssociationError) {
       return "unresolvable_type";
     }
     throw err;
@@ -106,7 +113,7 @@ export function unlinkOutgoingRelationship(
   targetId: string,
   type: string,
 ): UnlinkOutgoingRelationshipError | null {
-  const normalizedType = normalizeRelationshipType(type);
+  const normalizedType = normalizeLinkType(type);
   if (!ctx.store.findRelationship(sourceId, targetId, normalizedType)) {
     return "not_found";
   }
@@ -120,7 +127,7 @@ export function moveRelationshipConnection(
   input: MoveRelationshipConnectionInput,
 ): MoveRelationshipConnectionError | null {
   const { type, oldSourceId, oldTargetId, newSourceId, newTargetId } = input;
-  const normalizedType = normalizeRelationshipType(type);
+  const normalizedType = normalizeLinkType(type);
 
   const existing = ctx.store.findRelationship(oldSourceId, oldTargetId, normalizedType);
   if (!existing) return "not_found";

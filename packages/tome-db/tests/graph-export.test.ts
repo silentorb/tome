@@ -1,3 +1,4 @@
+import { projectionTypeForEndpoint } from "tome-flatfile";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -5,11 +6,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { exportExplorerLodGraph, exportFullGraph } from "../src/graph-export";
 import { DEFAULT_EXPLORER_LOD_LAYER_COUNT } from "../src/graph-lod-cluster";
 import { GraphDatabase } from "tome-sqlite";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  TEST_ARCHIVE_NODE_ID,
-} from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, TEST_ARCHIVE_NODE_ID, TEST_MEMBER_OF_ASSOCIATION_ID, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID } from "../src/content/test-helpers";
 
 describe("graph export", () => {
   let tempDir: string;
@@ -30,7 +27,7 @@ describe("graph export", () => {
 
     db.upsertNode("page1", { title: "Scene A" });
     db.upsertNode("page2", { title: "Feature B" });
-    db.upsertRelationship("page1", "page2", "features");
+    db.upsertRelationship("page1", "page2", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
 
     const snapshot = exportFullGraph(db);
     db.close();
@@ -41,7 +38,7 @@ describe("graph export", () => {
     expect(snapshot.relationships[0]).toMatchObject({
       source: "page1",
       target: "page2",
-      type: "features",
+      type: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
     });
   });
 
@@ -52,8 +49,8 @@ describe("graph export", () => {
     db.upsertNode("active", { title: "Active scene" });
     db.upsertNode("archived", { title: "Old foil" });
     db.upsertNode(TEST_ARCHIVE_NODE_ID, { title: "Archive" });
-    db.upsertRelationship("active", "archived", "inspirations");
-    db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, "member_of");
+    db.upsertRelationship("active", "archived", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1));
+    db.upsertRelationship("archived", TEST_ARCHIVE_NODE_ID, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1));
     db.recomputeArchivedFlags(TEST_ARCHIVE_NODE_ID);
 
     expect(db.isNodeArchived("archived")).toBe(true);
@@ -73,7 +70,7 @@ describe("graph export", () => {
     db.upsertNode("page2", { title: "Scene 2" });
     db.upsertNode("page3", { title: "Feature 1" });
     db.upsertRelationship("page1", "page2", "blocks");
-    db.upsertRelationship("page2", "page3", "features");
+    db.upsertRelationship("page2", "page3", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
 
     const lod = exportExplorerLodGraph(db);
     db.close();

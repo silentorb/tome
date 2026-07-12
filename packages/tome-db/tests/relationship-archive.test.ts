@@ -42,7 +42,7 @@ describe("relationship-archive helpers", () => {
     fixture.ctx.store.writeAssociationsFile({
       version: 1,
       associations: {
-        [MEMBER_OF]: { perspectives: ["members", "member_of"], traits: ["set"] },
+        [MEMBER_OF]: { perspectives: ["Members", "Membership"], traits: ["set"] },
       },
     });
     expect(isArchiveSetEntry(entry(HUB, NODE_A, MEMBER_OF), HUB, contentDir)).toBe(true);
@@ -54,7 +54,7 @@ describe("relationship-archive helpers", () => {
     fixture.ctx.store.writeAssociationsFile({
       version: 1,
       associations: {
-        [MEMBER_OF]: { perspectives: ["members", "member_of"], traits: ["set"] },
+        [MEMBER_OF]: { perspectives: ["Members", "Membership"], traits: ["set"] },
       },
     });
     const ids = listArchiveMemberIds(
@@ -86,8 +86,8 @@ describe("relationship-archive store mutations", () => {
   store.writeAssociationsFile({
     version: 1,
     associations: {
-      [MEMBER_OF]: { perspectives: ["members", "member_of"], traits: ["set"] },
-      [INCLUDES]: { perspectives: ["includes", "includes"] },
+      [MEMBER_OF]: { perspectives: ["Members", "Membership"], traits: ["set"] },
+      [INCLUDES]: { perspectives: ["Includes", "Includes"] },
     },
   });
 

@@ -302,7 +302,7 @@ export function createApiHandler(
       }
 
       const viewsRelationshipMatch =
-        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/perspectives\/([a-z0-9_-]+)$/i.exec(path);
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/associations\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (viewsRelationshipMatch && req.method === "PATCH") {
         const nodeId = viewsRelationshipMatch[1]!;
         const association = viewsRelationshipMatch[2]!;
@@ -327,7 +327,7 @@ export function createApiHandler(
       }
 
       const viewsCollectionMatch =
-        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/perspectives\/([a-z0-9_-]+)\/views$/i.exec(path);
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/associations\/([0-9A-HJKMNP-TV-Z]{26})\/views$/i.exec(path);
       if (viewsCollectionMatch && req.method === "POST") {
         const nodeId = viewsCollectionMatch[1]!;
         const association = viewsCollectionMatch[2]!;
@@ -352,7 +352,7 @@ export function createApiHandler(
       }
 
       const viewsItemMatch =
-        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/perspectives\/([a-z0-9_-]+)\/views\/([a-z0-9-]+)$/i.exec(
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/associations\/([0-9A-HJKMNP-TV-Z]{26})\/views\/([a-z0-9-]+)$/i.exec(
           path,
         );
       if (viewsItemMatch) {

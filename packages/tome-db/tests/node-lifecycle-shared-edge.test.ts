@@ -7,6 +7,8 @@ import {
   seedTestNode,
   TEST_ARCHIVE_NODE_ID,
   TEST_HOME_NODE_ID,
+  TEST_MEMBER_OF_ASSOCIATION_ID,
+  projectionTypeForEndpoint,
 } from "../src/content/test-helpers";
 
 const HUB = TEST_ARCHIVE_NODE_ID;
@@ -38,7 +40,7 @@ describe("shared archived edge unarchive", () => {
     expect(fixture.ctx.cache.listRelationshipsFromSource(NODE_A)).toHaveLength(0);
     const nodeBOutgoing = fixture.ctx.cache.listRelationshipsFromSource(NODE_B);
     expect(nodeBOutgoing).toHaveLength(1);
-    expect(nodeBOutgoing[0]?.type).toBe("member_of");
+    expect(nodeBOutgoing[0]?.type).toBe(projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1));
   });
 
   afterAll(() => {

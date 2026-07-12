@@ -31,7 +31,8 @@ For **what design nodes mean** (features, inspirations, products, traceability),
 | **Node** | Entity in `nodes` (replaces *vertex* / *record* in API and docs). |
 | **Relationship** | Link between two nodes with a **relationship type** (association id) and JSON properties. |
 | **Association id** / **Relationship type** | Opaque uppercase ULID key in `associations.json` and on each relationship record's `type` field. Identity is not derived from perspective names. |
-| **Perspective type** | Local snake_case slug used in UI/API from one endpoint (e.g. `inspirations` on a Feature page). Meaning of each tuple position comes from the association's `perspectives` pair. |
+| **Perspective** | User-facing label config for one endpoint of an association (`perspectives[0|1]`). Not a machine id. |
+| **Projection type** | Directed cache/query identity `{associationId}:{0\|1}` on `relationship_projections.type`. |
 | **Page** | Editor-facing node view (`getNodePageDetail`, `NodePageView`)—not a filesystem export file. |
 | **Type table** | Node listed in [`table-schemas.json`](./table-schemas.md) and/or receiving set-membership rows. |
 | **Schema** | Workspace model config in `content/model/schema.json` (relationship rules, enums) — see [schema.md](./schema.md). |
@@ -87,12 +88,12 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 ```
 
 - Endpoints `a` / `b` are an **ordered tuple**. Positions 0 (`a`) and 1 (`b`) carry **no inherent source/target meaning** — each position's meaning is defined entirely by the relationship type's ordered `perspectives` pair in `associations.json` (`perspectives[0]` describes the node at `a`, `perspectives[1]` the node at `b`). Authored order is preserved verbatim: there is **no lexicographic endpoint sorting** and no `directedFrom` field.
-- **Relative semantics come from tuple position + the type's per-position perspective** — never from slug comparison, endpoint sorting, or a stored direction flag.
-- **Association ids are opaque ULIDs.** Perspective slugs (e.g. Marloth `members` / `member_of`) carry local meaning; storage keys do not encode what they connect.
-- **Set-trait** associations expand to dual projections from the type's perspectives. Parent/child indices and which association applies come from the `set` trait and view/caller context — see [sets.md](./sets.md).
-- **Symmetric** types (perspectives equal, e.g. `neighbor` / `neighbor`) carry no directional meaning, so tuple order is irrelevant for them; UI resolves association context via the relation column's target database.
+- **Relative semantics come from tuple position + the type's per-endpoint display labels** — never from slug comparison, endpoint sorting, or a stored direction flag.
+- **Association ids are opaque ULIDs.** Perspective entries are display labels only (string title or `{ title, linkAdd?, linkExisting? }`); machine identity for directed edges is `associationId:endpointIndex`.
+- **Set-trait** associations expand to dual projections (`ULID:0` / `ULID:1`). Parent/child indices and which association applies come from the `set` trait and view/caller context — see [sets.md](./sets.md).
+- **Symmetric** types (same label on both endpoints) carry no directional meaning, so tuple order is irrelevant for them; UI resolves association context via the relation column's target database.
 - **Peer / structural / taxonomy links** each have their own association id with a two-perspective definition and optional `endpoints`.
-- **Single-perspective (unidirectional) types are forbidden.** Every entry in `associations.json` defines a `perspectives` **tuple of exactly two** slugs (typed `PerspectivePair`); there is no `bidirectional` field, and the parser rejects any type that does not have exactly two perspectives. All relationships are bidirectional by construction. The write path (`resolveAssociationIdForLink`) resolves via set-trait → table-schema `association` → unique registry match, and throws `LinkResolutionError` or `AmbiguousAssociationError` otherwise. See `packages/tome-db/scripts/audit-relationship-resolution.ts` to verify a content directory has no unresolvable entries.
+- **Single-endpoint (unidirectional) types are forbidden.** Every entry in `associations.json` defines a `perspectives` **tuple of exactly two** label configs (typed `PerspectivePair`); there is no `bidirectional` field, and the parser rejects any type that does not have exactly two perspectives. All relationships are bidirectional by construction. The write path (`resolveAssociationIdForLink`) resolves via association ULID, directed projection type, or table-schema relation column, and throws `LinkResolutionError` or `UnknownAssociationError` otherwise. See `packages/tome-db/scripts/audit-relationship-resolution.ts` to verify a content directory has no unresolvable entries.
 - Record id: `{a}:{b}:{type}` (keyed on authored tuple order, so it is order-sensitive).
 
 **SQLite cache (denormalized):** expanded on sync for fast directed queries:
@@ -115,8 +116,9 @@ One-time backfill for existing archive members: `bun scripts/migrate-archive-rel
 Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTableNode` in `node-capabilities.ts`).
 
 - Node ids **must** be canonical uppercase 26-char ULIDs (`[0-9A-HJKMNP-TV-Z]{26}`), minted by `generateNodeId()` in `node-create.ts`. They are compared as exact strings — no case/dash normalization.
-- Association ids **must** use the same ULID alphabet (never lowercased). Perspective slugs **must** be lower snake_case.
-- Projection ids **must** be deterministic: `{source_id}:{type}:{target_id}` (local perspective type).
+- Association ids **must** use the same ULID alphabet (never lowercased). Perspective entries are display labels only (not machine ids).
+- Directed projection types **must** be `{associationId}:{0|1}`.
+- Projection ids **must** be deterministic: `{source_id}:{type}:{target_id}` (local projection type).
 
 ### Markdown body links
 

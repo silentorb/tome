@@ -1,9 +1,5 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  seedTestViews,
-} from "../../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestViews, TEST_MEMBER_OF_ASSOCIATION_ID } from "../../src/content/test-helpers";
 import { VIEWS_FILE_VERSION } from "tome-flatfile";
 import {
   createView,
@@ -23,7 +19,7 @@ describe("views mutations", () => {
       {
         id: "all",
         nodeId,
-        perspective: "members",
+        association: TEST_MEMBER_OF_ASSOCIATION_ID,
         name: "All",
         sorts: [{ column: "name", direction: "asc" }],
       },
@@ -31,20 +27,20 @@ describe("views mutations", () => {
   });
 
   test("creates and updates views", () => {
-    const created = createView(fixture.ctx.store, nodeId, "members", {
+    const created = createView(fixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, {
       name: "Sorted",
       sorts: [{ column: "priority", direction: "desc" }],
     });
     expect(created.name).toBe("Sorted");
 
-    const updated = updateView(fixture.ctx.store, nodeId, "members", created.id, {
+    const updated = updateView(fixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, created.id, {
       name: "Renamed",
     });
     expect(updated.name).toBe("Renamed");
   });
 
   test("updates relationship view properties column order on all sibling views", () => {
-    const properties = updateRelationshipViewProperties(fixture.ctx.store, nodeId, "members", {
+    const properties = updateRelationshipViewProperties(fixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, {
       columnOrder: ["status", "priority"],
     });
     expect(properties.columnOrder).toEqual(["status", "priority"]);
@@ -64,28 +60,28 @@ describe("views mutations", () => {
         {
           id: "first",
           nodeId,
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "First",
           sorts: [{ column: "name", direction: "asc" }],
         },
         {
           id: "second",
           nodeId,
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "Second",
           sorts: [{ column: "name", direction: "asc" }],
         },
         {
           id: "third",
           nodeId,
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "Third",
           sorts: [{ column: "name", direction: "asc" }],
         },
       ],
     });
     try {
-      const reordered = reorderViews(reorderFixture.ctx.store, nodeId, "members", [
+      const reordered = reorderViews(reorderFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, [
         "third",
         "first",
         "second",
@@ -104,24 +100,24 @@ describe("views mutations", () => {
         {
           id: "all",
           nodeId,
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "All",
           sorts: [{ column: "name", direction: "asc" }],
         },
         {
           id: "extra",
           nodeId,
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "Extra",
           sorts: [{ column: "name", direction: "asc" }],
         },
       ],
     });
     try {
-      updateView(hiddenFixture.ctx.store, nodeId, "members", "all", {
+      updateView(hiddenFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "all", {
         hiddenColumns: ["status"],
       });
-      updateView(hiddenFixture.ctx.store, nodeId, "members", "extra", {
+      updateView(hiddenFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "extra", {
         hiddenColumns: ["priority"],
       });
       const file = hiddenFixture.ctx.store.readViewsFile();
@@ -146,14 +142,14 @@ describe("views mutations", () => {
         {
           id: "all",
           nodeId,
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "All",
           sorts: [{ column: "name", direction: "asc" }],
         },
       ],
     });
     try {
-      expect(() => deleteView(soloFixture.ctx.store, nodeId, "members", "all")).toThrow(
+      expect(() => deleteView(soloFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "all")).toThrow(
         "last_view",
       );
     } finally {

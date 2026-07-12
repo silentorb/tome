@@ -47,11 +47,11 @@ export interface OrderedCollectionViewDetail {
   configId: string;
   typeDatabaseId: string;
   typeDatabaseTitle: string;
-  /** Set-side perspective = views.json association / section key. */
+  /** Set-trait association ULID from views.json. */
   viewAssociation: string;
-  /** Member-side perspective for unlink/move against this set. */
+  /** Member-side projection type for unlink/move against this set. */
   memberSidePerspective: string;
-  /** Section heading from perspectiveLabels, else "Contents". */
+  /** Section heading from association perspective labels, else "Contents". */
   sectionTitle: string;
   tabs: TableTabsDetail;
   groups: OrderedCollectionGroup[];

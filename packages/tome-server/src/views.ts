@@ -26,41 +26,41 @@ export function readNodeViews(ctx: TomeWriteContext, nodeId: string) {
 export function createRelationshipView(
   ctx: TomeWriteContext,
   nodeId: string,
-  perspective: string,
+  association: string,
   input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
-  return createView(ctx.store, nodeId, perspective, input);
+  return createView(ctx.store, nodeId, association, input);
 }
 
 export function updateRelationshipView(
   ctx: TomeWriteContext,
   nodeId: string,
-  perspective: string,
+  association: string,
   viewId: string,
   input: ViewMutationInput,
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
-  return updateView(ctx.store, nodeId, perspective, viewId, input);
+  return updateView(ctx.store, nodeId, association, viewId, input);
 }
 
 export function deleteRelationshipView(
   ctx: TomeWriteContext,
   nodeId: string,
-  perspective: string,
+  association: string,
   viewId: string,
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
-  deleteView(ctx.store, nodeId, perspective, viewId);
+  deleteView(ctx.store, nodeId, association, viewId);
 }
 
 export function patchRelationshipViews(
   ctx: TomeWriteContext,
   nodeId: string,
-  perspective: string,
+  association: string,
   input: { viewOrder?: string[]; properties?: ViewProperties },
 ) {
   invalidateViewsCache();
@@ -70,13 +70,13 @@ export function patchRelationshipViews(
     properties?: ViewProperties;
   } = {};
   if (input.viewOrder) {
-    response.views = reorderViews(ctx.store, nodeId, perspective, input.viewOrder);
+    response.views = reorderViews(ctx.store, nodeId, association, input.viewOrder);
   }
   if (input.properties) {
     response.properties = updateRelationshipViewProperties(
       ctx.store,
       nodeId,
-      perspective,
+      association,
       input.properties,
     );
   }

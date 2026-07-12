@@ -118,7 +118,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       },
     ) {
       const data = await fetchJson<{ view: import("tome-graph-interfaces").ViewDefinition }>(
-        `/api/views/nodes/${nodeId}/perspectives/${encodeURIComponent(association)}/views`,
+        `/api/views/nodes/${nodeId}/associations/${encodeURIComponent(association)}/views`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -139,7 +139,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       },
     ) {
       const data = await fetchJson<{ view: import("tome-graph-interfaces").ViewDefinition }>(
-        `/api/views/nodes/${nodeId}/perspectives/${encodeURIComponent(association)}/views/${encodeURIComponent(viewId)}`,
+        `/api/views/nodes/${nodeId}/associations/${encodeURIComponent(association)}/views/${encodeURIComponent(viewId)}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -154,7 +154,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       viewId: string,
     ): Promise<void> {
       await fetchJson(
-        `/api/views/nodes/${nodeId}/perspectives/${encodeURIComponent(association)}/views/${encodeURIComponent(viewId)}`,
+        `/api/views/nodes/${nodeId}/associations/${encodeURIComponent(association)}/views/${encodeURIComponent(viewId)}`,
         { method: "DELETE" },
       );
     },
@@ -170,7 +170,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         views?: import("tome-graph-interfaces").ViewDefinition[];
         properties?: import("tome-graph-interfaces").ViewProperties;
       }>(
-        `/api/views/nodes/${nodeId}/perspectives/${encodeURIComponent(association)}`,
+        `/api/views/nodes/${nodeId}/associations/${encodeURIComponent(association)}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

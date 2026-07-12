@@ -6,9 +6,13 @@ import {
   seedTestNode,
   seedTestRelationships,
   seedTestTableSchema,
+  TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+  TEST_MEMBER_OF_ASSOCIATION_ID,
+  projectionTypeForEndpoint,
 } from "tome-db/content/test-helpers";
 import { invalidateAssociationsCache, invalidateSchemaCache } from "tome-db";
 import { schemaFilePath } from "tome-db/content";
+import { registerBidirectionalType } from "tome-flatfile";
 import { createTestApiFromContent } from "./test-api-setup";
 
 describe("relationship types API", () => {
@@ -19,13 +23,20 @@ describe("relationship types API", () => {
 
   const fixture = createTestContentFixture("tome-rel-types-api-");
   const registry = fixture.ctx.store.readAssociationsFile();
+  registerBidirectionalType(registry, "Features", "Scenes", "000000000000000000000000B7");
   registry.associations["000000000000000000000000B7"] = {
-    perspectives: ["features", "scenes"],
+    perspectives: ["Features", "Scenes"],
     endpoints: {
       "0": { typeId: sceneTypeId },
       "1": { typeId: featureTypeId },
     },
   };
+  registerBidirectionalType(
+    registry,
+    "Inspirations",
+    "Features",
+    TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+  );
   fixture.ctx.store.writeAssociationsFile(registry);
   invalidateAssociationsCache();
 
@@ -36,7 +47,11 @@ describe("relationship types API", () => {
     { source: sourceId, target: sceneTypeId, type: "member_of" },
     { source: targetId, target: featureTypeId, type: "member_of" },
   ]);
-  fixture.ctx.store.upsertRelationship(sourceId, targetId, "features");
+  fixture.ctx.store.upsertRelationship(
+    sourceId,
+    targetId,
+    projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
+  );
   fixture.ctx.sync.syncRelationships();
 
   writeFileSync(
@@ -47,19 +62,22 @@ describe("relationship types API", () => {
   invalidateSchemaCache();
 
   const api = createTestApiFromContent(fixture);
+  const featuresProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0);
+  const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+  const b7Features = projectionTypeForEndpoint("000000000000000000000000B7", 0);
 
   test("GET /api/relationships/types lists distinct types in data", async () => {
     const res = await api.handler(new Request("http://127.0.0.1/api/relationships/types"));
     expect(res.status).toBe(200);
     const payload = (await res.json()) as { types: string[] };
-    expect(payload.types).toContain("features");
-    expect(payload.types).toContain("member_of");
+    expect(payload.types).toContain(featuresProjection);
+    expect(payload.types).toContain(memberProjection);
   });
 
   test("GET relationship-link-options returns registry endpoint allowed targets", async () => {
     const res = await api.handler(
       new Request(
-        `http://127.0.0.1/api/nodes/${sourceId}/relationship-link-options?type=features`,
+        `http://127.0.0.1/api/nodes/${sourceId}/relationship-link-options?type=${encodeURIComponent(b7Features)}`,
       ),
     );
     expect(res.status).toBe(200);

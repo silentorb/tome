@@ -6,6 +6,8 @@ import {
   seedTestNode,
   seedTestTableSchema,
   TEST_HOME_NODE_ID,
+  TEST_MEMBER_OF_ASSOCIATION_ID,
+  projectionTypeForEndpoint,
 } from "tome-db/content/test-helpers";
 import { registerBidirectionalType } from "tome-db/content";
 import { createTestApiFromContent } from "./test-api-setup";
@@ -15,10 +17,13 @@ const databaseId = "0000000000000000000000001X";
 
 describe("node create API", () => {
   const fixture = createTestContentFixture("tome-create-api-");
+  let featuresAssociationId = "";
+  let featuresType = "";
 
   beforeAll(() => {
     const registry = fixture.ctx.store.readAssociationsFile();
-    registerBidirectionalType(registry, "features", "targets");
+    featuresAssociationId = registerBidirectionalType(registry, "Features", "Targets");
+    featuresType = projectionTypeForEndpoint(featuresAssociationId, 0);
     fixture.ctx.store.writeAssociationsFile(registry);
   });
 
@@ -62,12 +67,12 @@ describe("node create API", () => {
       new Request(`http://127.0.0.1/api/nodes/${sourceId}/relation-rows`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "features", title: "Linked feature" }),
+        body: JSON.stringify({ type: featuresType, title: "Linked feature" }),
       }),
     );
     expect(res.status).toBe(200);
     const payload = (await res.json()) as { node: { id: string } };
-    const rel = fixture.ctx.store.findRelationship(sourceId, payload.node.id, "features");
+    const rel = fixture.ctx.store.findRelationship(sourceId, payload.node.id, featuresType);
     expect(rel).not.toBeNull();
   });
 
@@ -81,7 +86,11 @@ describe("node create API", () => {
     );
     expect(res.status).toBe(200);
     const payload = (await res.json()) as { node: { id: string } };
-    const rel = fixture.ctx.store.findRelationship(payload.node.id, databaseId, "member_of");
+    const rel = fixture.ctx.store.findRelationship(
+      payload.node.id,
+      databaseId,
+      TEST_MEMBER_OF_ASSOCIATION_ID,
+    );
     expect(rel).not.toBeNull();
   });
 
@@ -95,10 +104,12 @@ describe("connections API", () => {
   const linkSourceId = "00000000000000000000000032";
   const linkTargetId = "00000000000000000000000033";
   const fixture = createTestContentFixture("tome-conn-api-");
+  let featuresType = "";
 
   beforeAll(() => {
     const registry = fixture.ctx.store.readAssociationsFile();
-    registerBidirectionalType(registry, "features", "targets");
+    const featuresAssociationId = registerBidirectionalType(registry, "Features", "Targets");
+    featuresType = projectionTypeForEndpoint(featuresAssociationId, 0);
     fixture.ctx.store.writeAssociationsFile(registry);
   });
 
@@ -111,29 +122,29 @@ describe("connections API", () => {
       new Request(`http://127.0.0.1/api/nodes/${linkSourceId}/connections`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "features", targetId: linkTargetId }),
+        body: JSON.stringify({ type: featuresType, targetId: linkTargetId }),
       }),
     );
     expect(linkRes.status).toBe(200);
-    expect(fixture.ctx.store.findRelationship(linkSourceId, linkTargetId, "features")).not.toBeNull();
+    expect(fixture.ctx.store.findRelationship(linkSourceId, linkTargetId, featuresType)).not.toBeNull();
 
     const dupRes = await api.handler(
       new Request(`http://127.0.0.1/api/nodes/${linkSourceId}/connections`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "features", targetId: linkTargetId }),
+        body: JSON.stringify({ type: featuresType, targetId: linkTargetId }),
       }),
     );
     expect(dupRes.status).toBe(409);
 
     const unlinkRes = await api.handler(
       new Request(
-        `http://127.0.0.1/api/nodes/${linkSourceId}/connections/${encodeURIComponent("features")}/${linkTargetId}`,
+        `http://127.0.0.1/api/nodes/${linkSourceId}/connections/${encodeURIComponent(featuresType)}/${linkTargetId}`,
         { method: "DELETE" },
       ),
     );
     expect(unlinkRes.status).toBe(200);
-    expect(fixture.ctx.store.findRelationship(linkSourceId, linkTargetId, "features")).toBeNull();
+    expect(fixture.ctx.store.findRelationship(linkSourceId, linkTargetId, featuresType)).toBeNull();
   });
 
   afterAll(() => {

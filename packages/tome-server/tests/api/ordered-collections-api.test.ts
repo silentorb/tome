@@ -1,14 +1,6 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import { typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  seedTestCompositeRelationships,
-  seedTestRelationships,
-  seedTestNode,
-  seedTestTableSchema,
-  seedTestViews,
-} from "tome-db/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestRelationships, seedTestNode, seedTestTableSchema, seedTestViews, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
 
 const SCENES_DB = "0000000000000000000000000D";
@@ -40,28 +32,28 @@ describe("ordered-collections API", () => {
     { source: scene2, target: SCENES_DB, type: "ordered_member_of", properties: { order: "20" } },
   ]);
   seedTestCompositeRelationships(fixture, [
-    { a: scene1, b: book, typeFromA: "scenes", typeFromB: "product", properties: { ordinal: 0 } },
-    { a: scene2, b: book, typeFromA: "scenes", typeFromB: "product", properties: { ordinal: 0 } },
-    { a: scene1, b: part, typeFromA: "scenes", typeFromB: "part", properties: { ordinal: 0 } },
-    { a: scene2, b: part, typeFromA: "scenes", typeFromB: "part", properties: { ordinal: 1 } },
-    { a: part, b: book, typeFromA: "products", typeFromB: "parts_database", properties: { ordinal: 0 } },
+    { a: scene1, b: book, typeFromA: "Scenes", typeFromB: "Product", associationId: "000000000000000000000000A3", properties: { ordinal: 0 } },
+    { a: scene2, b: book, typeFromA: "Scenes", typeFromB: "Product", associationId: "000000000000000000000000A3", properties: { ordinal: 0 } },
+    { a: scene1, b: part, typeFromA: "Scenes", typeFromB: "Part", associationId: "000000000000000000000000A4", properties: { ordinal: 0 } },
+    { a: scene2, b: part, typeFromA: "Scenes", typeFromB: "Part", associationId: "000000000000000000000000A4", properties: { ordinal: 1 } },
+    { a: part, b: book, typeFromA: "Products", typeFromB: "Parts database", associationId: "000000000000000000000000A5", properties: { ordinal: 0 } },
   ]);
   seedTestViews(fixture, {
     version: VIEWS_FILE_VERSION,
     views: [
       {
         nodeId: SCENES_DB,
-        perspective: "ordered_members",
+        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
         generator: "scenes-by-book",
       },
       {
         nodeId: PARTS_DB,
-        perspective: "ordered_members",
+        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
         generator: "scenes-by-book",
       },
       {
         nodeId: PRODUCTS_DB,
-        perspective: "ordered_members",
+        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
         generator: "scenes-by-book",
       },
     ],

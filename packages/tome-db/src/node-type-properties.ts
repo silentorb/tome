@@ -7,7 +7,7 @@ import { loadTableSchemaForDatabase } from "./database-column-defs";
 import { storedScalarColumns } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
-import { memberSidePerspectives } from "tome-flatfile";
+import { memberSideProjectionTypes } from "tome-flatfile";
 import {
   coalescePriorityValue,
   enrichColumnDef,
@@ -124,7 +124,7 @@ export function buildPropertiesSection(
   const registry = loadAssociationsFromContent(dir);
   // v1: first type membership connection when a node belongs to multiple types.
   let setRowEdge = null as ReturnType<GraphDatabase["listRelationshipsFromSource"]>[number] | null;
-  for (const type of memberSidePerspectives(registry)) {
+  for (const type of memberSideProjectionTypes(registry)) {
     const connections = db.listRelationshipsFromSource(nodeId, type);
     if (connections.length > 0) {
       setRowEdge = connections[0]!;

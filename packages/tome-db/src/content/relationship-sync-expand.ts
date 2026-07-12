@@ -3,7 +3,10 @@ import { relationshipId } from "tome-sqlite";
 import type { RelationshipEntry } from "tome-flatfile";
 import { relationshipRecordId } from "tome-flatfile";
 import type { AssociationDefinition, AssociationsFile } from "tome-flatfile";
-import { perspectiveCountForExpansion } from "tome-flatfile";
+import {
+  perspectiveCountForExpansion,
+  projectionTypeForEndpoint,
+} from "tome-flatfile";
 
 export interface RelationshipRecordRow {
   id: string;
@@ -43,10 +46,9 @@ export function expandRelationshipEntry(
 }
 
 /**
- * Projections bind strictly by tuple position: index 0 (`entry.a`) carries the
- * type's `perspectives[0]` value, index 1 (`entry.b`) carries `perspectives[1]`.
- * Direction comes from the authored tuple order alone — never from node-id
- * ordering, set membership, or a directedFrom hint.
+ * Projections bind strictly by tuple position: index 0 (`entry.a`) carries
+ * `associationId:0`, index 1 (`entry.b`) carries `associationId:1`.
+ * Direction comes from the authored tuple order alone.
  */
 function expandProjections(
   recordId: string,
@@ -54,19 +56,37 @@ function expandProjections(
   typeDef: AssociationDefinition | undefined,
   properties: Properties,
 ): RelationshipProjectionRow[] {
-  const perspectives = typeDef?.perspectives ?? [entry.type];
-  const projectionCount = perspectiveCountForExpansion(typeDef, entry.type);
+  const associationId = entry.type;
+  const projectionCount = perspectiveCountForExpansion(typeDef, associationId);
 
   if (projectionCount >= 2) {
-    const [typeFromA, typeFromB] = perspectives;
     return [
-      projectionRow(recordId, entry.a, entry.b, typeFromA ?? entry.type, properties),
-      projectionRow(recordId, entry.b, entry.a, typeFromB ?? entry.type, properties),
+      projectionRow(
+        recordId,
+        entry.a,
+        entry.b,
+        projectionTypeForEndpoint(associationId, 0),
+        properties,
+      ),
+      projectionRow(
+        recordId,
+        entry.b,
+        entry.a,
+        projectionTypeForEndpoint(associationId, 1),
+        properties,
+      ),
     ];
   }
 
-  const localType = perspectives[0] ?? entry.type;
-  return [projectionRow(recordId, entry.a, entry.b, localType, properties)];
+  return [
+    projectionRow(
+      recordId,
+      entry.a,
+      entry.b,
+      projectionTypeForEndpoint(associationId, 0),
+      properties,
+    ),
+  ];
 }
 
 function projectionRow(
@@ -86,6 +106,17 @@ function projectionRow(
   };
 }
 
+export function toDomainRelationship(row: RelationshipProjectionRow): Relationship {
+  return {
+    id: row.id,
+    sourceNodeId: row.sourceNodeId,
+    targetNodeId: row.targetNodeId,
+    type: row.type,
+    properties: row.properties,
+    recordId: row.recordId,
+  };
+}
+
 export function expandAllRelationships(
   entries: RelationshipEntry[],
   registry: AssociationsFile,
@@ -98,14 +129,4 @@ export function expandAllRelationships(
     projections.push(...expanded.projections);
   }
   return { records, projections };
-}
-
-export function projectionToRelationship(row: RelationshipProjectionRow): Relationship {
-  return {
-    id: row.id,
-    sourceNodeId: row.sourceNodeId,
-    targetNodeId: row.targetNodeId,
-    type: row.type,
-    properties: row.properties,
-  };
 }

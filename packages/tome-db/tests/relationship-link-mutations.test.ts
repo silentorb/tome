@@ -1,5 +1,4 @@
 import { describe, expect, test, beforeAll, afterAll } from "bun:test";
-import { writeFileSync } from "node:fs";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import {
   linkOutgoingRelationship,
@@ -11,10 +10,8 @@ import {
   destroyTestContentFixture,
   seedTestNode,
 } from "../src/content/test-helpers";
-import { associationsFilePath } from "tome-flatfile";
 import {
   registerBidirectionalType,
-  serializeAssociationsFile,
 } from "tome-flatfile";
 import { invalidateAssociationsCache } from "tome-flatfile";
 
@@ -26,11 +23,15 @@ describe("relationship-link-mutations", () => {
   const targetId = "0000000000000000000000001X";
   const databaseId = "0000000000000000000000002K";
 
+  let parentsAssoc = "";
+  let featuresAssoc = "";
+  let pageRowsAssoc = "";
+
   beforeAll(() => {
     const registry = fixture.ctx.store.readAssociationsFile();
-    registerBidirectionalType(registry, "parents", "children");
-    registerBidirectionalType(registry, "features", "targets");
-    registerBidirectionalType(registry, "page_rows", "row_pages");
+    parentsAssoc = registerBidirectionalType(registry, "Parents", "Children");
+    featuresAssoc = registerBidirectionalType(registry, "Features", "Targets");
+    pageRowsAssoc = registerBidirectionalType(registry, "Page rows", "Row pages");
     fixture.ctx.store.writeAssociationsFile(registry);
     invalidateAssociationsCache();
   });
@@ -47,15 +48,15 @@ describe("relationship-link-mutations", () => {
       linkOutgoingRelationship(ctx, {
         sourceId,
         targetId,
-        type: "parents",
+        type: parentsAssoc,
       }),
     ).toBeNull();
 
-    const edge = ctx.store.findRelationship(sourceId, targetId, "parents");
+    const edge = ctx.store.findRelationship(sourceId, targetId, parentsAssoc);
     expect(edge?.properties.via_database).toBeUndefined();
 
-    expect(unlinkOutgoingRelationship(ctx, sourceId, targetId, "parents")).toBeNull();
-    expect(ctx.store.findRelationship(sourceId, targetId, "parents")).toBeNull();
+    expect(unlinkOutgoingRelationship(ctx, sourceId, targetId, parentsAssoc)).toBeNull();
+    expect(ctx.store.findRelationship(sourceId, targetId, parentsAssoc)).toBeNull();
   });
 
   test("rejects duplicate links", () => {
@@ -64,9 +65,9 @@ describe("relationship-link-mutations", () => {
     seedTestNode(fixture, { id: source2, properties: { title: "Source 2" } });
     seedTestNode(fixture, { id: target2, properties: { title: "Target 2" } });
 
-    linkOutgoingRelationship(ctx, { sourceId: source2, targetId: target2, type: "features" });
+    linkOutgoingRelationship(ctx, { sourceId: source2, targetId: target2, type: featuresAssoc });
     expect(
-      linkOutgoingRelationship(ctx, { sourceId: source2, targetId: target2, type: "features" }),
+      linkOutgoingRelationship(ctx, { sourceId: source2, targetId: target2, type: featuresAssoc }),
     ).toBe("duplicate");
   });
 
@@ -81,13 +82,13 @@ describe("relationship-link-mutations", () => {
     linkOutgoingRelationship(ctx, {
       sourceId: pageId,
       targetId: rowId,
-      type: "page_rows",
+      type: pageRowsAssoc,
       properties: { ordinal: 3, priority: "High" },
     });
 
     expect(
       moveRelationshipConnection(ctx, {
-        type: "page_rows",
+        type: pageRowsAssoc,
         oldSourceId: pageId,
         oldTargetId: rowId,
         newSourceId: newPageId,
@@ -95,8 +96,8 @@ describe("relationship-link-mutations", () => {
       }),
     ).toBeNull();
 
-    expect(ctx.store.findRelationship(pageId, rowId, "page_rows")).toBeNull();
-    const moved = ctx.store.findRelationship(newPageId, rowId, "page_rows");
+    expect(ctx.store.findRelationship(pageId, rowId, pageRowsAssoc)).toBeNull();
+    const moved = ctx.store.findRelationship(newPageId, rowId, pageRowsAssoc);
     expect(moved?.properties.ordinal).toBe(3);
     expect(moved?.properties.priority).toBe("High");
   });
@@ -112,17 +113,17 @@ describe("relationship-link-mutations", () => {
     linkOutgoingRelationship(ctx, {
       sourceId: source3,
       targetId: target3a,
-      type: "features",
+      type: featuresAssoc,
       properties: { ordinal: 1 },
     });
     linkOutgoingRelationship(ctx, {
       sourceId: source3,
       targetId: target3b,
-      type: "features",
+      type: featuresAssoc,
       properties: { ordinal: 7 },
     });
 
-    const edge = ctx.store.findRelationship(source3, target3b, "features");
+    const edge = ctx.store.findRelationship(source3, target3b, featuresAssoc);
     expect(edge?.properties.ordinal).toBe(7);
   });
 

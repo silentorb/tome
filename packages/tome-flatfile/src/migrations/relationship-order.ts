@@ -12,7 +12,7 @@ import {
 } from "../content/associations-file";
 import { parseTableSchemasFile } from "../content/table-schemas-file";
 import {
-  perspectiveForRelationColumn,
+  projectionTypeForRelationColumn,
   targetTypeIdForRelationColumn,
 } from "../table-relation-column";
 import { parseWorkspaceFile } from "../workspace/workspace-file";
@@ -219,7 +219,7 @@ export function buildRelationshipOrderContext(
   for (const [owner, schema] of Object.entries(schemas.tables)) {
     for (const col of schema.columns) {
       if (col.type !== "relation") continue;
-      const perspective = perspectiveForRelationColumn(registry, owner, col);
+      const perspective = projectionTypeForRelationColumn(registry, owner, col);
       const target = targetTypeIdForRelationColumn(registry, owner, col);
       if (!target) continue;
       relationTriples.add(`${owner}${TRIPLE_SEP}${perspective}${TRIPLE_SEP}${target}`);

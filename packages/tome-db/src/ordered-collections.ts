@@ -10,12 +10,12 @@ import { resolveGeneratedTabsFromScopes } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
-import { perspectiveForHostTable } from "./association-endpoints";
+import { projectionTypeForHostTable } from "./association-endpoints";
 import { normalizeAssociationId } from "tome-flatfile";
 import { getTableSchema, relationColumns } from "tome-flatfile";
 import { loadTableSchemasFromContent } from "tome-flatfile";
 import {
-  perspectiveForRelationColumn,
+  projectionTypeForRelationColumn,
   relationColumnCompositeType,
 } from "tome-flatfile";
 import { applySectionColumnOrder } from "./views/column-order";
@@ -29,9 +29,10 @@ import { listSetMemberRowConnections } from "./set-membership";
 import { ORDERED_PROPERTY_DEFAULT,
   isOrderedTraitComposite,
   orderedPropertyName,
-  resolveSetTraitComposite,
-  setRoleIndices,
-  setRolePerspectivesForNode,
+  memberSideProjectionType,
+  setRoleAssociationForNode,
+  setRoleProjectionTypesForComposite,
+  setRoleProjectionTypesForNode,
   typesWithTrait,
   SET_TRAIT,
 } from "tome-flatfile";
@@ -122,7 +123,7 @@ function groupLinkLocalPerspective(
     for (const col of relationColumns(schema)) {
       if (col.type !== "relation") continue;
       if (relationColumnCompositeType(col) !== groupComposite) continue;
-      return perspectiveForRelationColumn(registry, config.typeDatabaseId, col);
+      return projectionTypeForRelationColumn(registry, config.typeDatabaseId, col);
     }
   }
   const def = registry.associations[groupComposite];
@@ -131,7 +132,7 @@ function groupLinkLocalPerspective(
       `ordered-collections config "${config.id}": unknown groupCompositeType "${config.groupCompositeType}"`,
     );
   }
-  const perspective = perspectiveForHostTable(def, config.typeDatabaseId);
+  const perspective = projectionTypeForHostTable(def, groupComposite, config.typeDatabaseId);
   if (!perspective) {
     throw new Error(
       `ordered-collections config "${config.id}": groupCompositeType "${config.groupCompositeType}" has no endpoint for type database`,
@@ -189,10 +190,9 @@ function scopeMembershipSortKey(
     if (!isOrderedTraitComposite(registry, composite)) continue;
     const def = registry.associations[composite];
     if (!def) continue;
-    const { childIndex } = setRoleIndices(def);
-    const memberPerspective = def.perspectives[childIndex]!;
+    const memberProjection = memberSideProjectionType(registry, composite);
     const property = orderedPropertyName(def);
-    for (const edge of db.listRelationshipsFromSource(scopeNodeId, memberPerspective)) {
+    for (const edge of db.listRelationshipsFromSource(scopeNodeId, memberProjection)) {
       return numericSortKey(edge.properties[property], 999);
     }
   }
@@ -205,7 +205,7 @@ function partSortKey(
   groupTypeDatabaseId: string,
   contentDir: string,
 ): number {
-  const [, memberPerspective] = setRolePerspectivesForNode(groupTypeDatabaseId, contentDir);
+  const [, memberPerspective] = setRoleProjectionTypesForNode(groupTypeDatabaseId, contentDir);
   const edge = db.getRelationship(relationshipId(partId, memberPerspective, groupTypeDatabaseId));
   if (edge) {
     return numericSortKey(edge.properties[ORDERED_PROPERTY_DEFAULT], 999);
@@ -220,7 +220,7 @@ function partsForScope(
   contentDir: string,
 ): { id: string; title: string; sortKey: number }[] {
   const parts: { id: string; title: string; sortKey: number }[] = [];
-  const [, memberPerspective] = setRolePerspectivesForNode(config.groupTypeDatabaseId, contentDir);
+  const [, memberPerspective] = setRoleProjectionTypesForNode(config.groupTypeDatabaseId, contentDir);
 
   for (const connection of db.listRelationshipsToTarget(
     config.groupTypeDatabaseId,
@@ -470,27 +470,27 @@ export function getOrderedCollectionView(
       : collectColumns(members);
 
   const views = loadViewsFromContent(dir);
-  const [viewAssociation, memberSidePerspective] = setRolePerspectivesForNode(
-    config.typeDatabaseId,
-    dir,
+  const associationId = setRoleAssociationForNode(config.typeDatabaseId, dir);
+  const associations = loadAssociationsFromContent(dir);
+  const [setSideProjection, memberSidePerspective] = setRoleProjectionTypesForComposite(
+    associations,
+    associationId,
   );
   const { columns, columnDefs } = applySectionColumnOrder(
     defaultColumns,
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     config.typeDatabaseId,
-    viewAssociation,
+    associationId,
   );
 
-  const associations = loadAssociationsFromContent(dir);
-  const composite = resolveSetTraitComposite(associations, viewAssociation) ?? viewAssociation;
-  const sectionLabel = perspectiveDisplayLabel(associations, viewAssociation, composite);
+  const sectionLabel = perspectiveDisplayLabel(associations, setSideProjection, associationId);
 
   return {
     configId: config.id,
     typeDatabaseId: config.typeDatabaseId,
     typeDatabaseTitle: titleFromProperties(database.properties),
-    viewAssociation,
+    viewAssociation: associationId,
     memberSidePerspective,
     sectionTitle: sectionLabel.trim() ? sectionLabel : "Contents",
     tabs,

@@ -6,13 +6,7 @@ import {
   maxOrderAtSet,
   stampOrderIfMissing,
 } from "../src/ordered-relationships";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  seedTestNode,
-  seedTestRelationships,
-  seedTestTableSchema,
-} from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, seedTestTableSchema, projectionTypeForEndpoint, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID } from "../src/content/test-helpers";
 
 const SCENES_DB = "0000000000000000000000000D";
 const scene1 = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -60,10 +54,10 @@ describe("ordered-relationships", () => {
     applySparseOrderRewrite(ctx, SCENES_DB, edges, [scene2, scene1]);
     ctx.sync.syncRelationships();
 
-    expect(ctx.cache.getRelationship(`${scene1}:${"ordered_member_of"}:${SCENES_DB}`)?.properties.order).toBe(
+    expect(ctx.cache.getRelationship(`${scene1}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1)}:${SCENES_DB}`)?.properties.order).toBe(
       "20",
     );
-    expect(ctx.cache.getRelationship(`${scene2}:${"ordered_member_of"}:${SCENES_DB}`)?.properties.order).toBe(
+    expect(ctx.cache.getRelationship(`${scene2}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1)}:${SCENES_DB}`)?.properties.order).toBe(
       "10",
     );
   });

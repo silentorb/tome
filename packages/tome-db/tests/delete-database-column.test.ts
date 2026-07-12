@@ -2,15 +2,7 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { deleteDatabaseColumn } from "../src/delete-database-column";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  seedTestDynamicFields,
-  seedTestNode,
-  seedTestRelationships,
-  seedTestTableSchema,
-  seedTestViews,
-} from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestDynamicFields, seedTestNode, seedTestRelationships, seedTestCompositeRelationships, seedTestTableSchema, seedTestViews, TEST_MEMBER_OF_ASSOCIATION_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
 describe("deleteDatabaseColumn", () => {
   const fixture = createTestContentFixture("tome-db-delete-col-");
 
@@ -49,7 +41,7 @@ describe("deleteDatabaseColumn", () => {
     const tableSchema = fixture.ctx.store.readTableSchemasFile().tables[databaseId];
     expect(tableSchema?.columns.some((col) => col.key === "priority")).toBe(false);
 
-    const edge1 = fixture.ctx.cache.listRelationshipsFromSource(page1, "member_of")[0];
+    const edge1 = fixture.ctx.cache.listRelationshipsFromSource(page1, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1))[0];
     expect(edge1?.properties.priority).toBeUndefined();
     expect(edge1?.properties.task_state).toBe("Open");
     expect(edge1?.properties.row_index).toBe(0);
@@ -77,7 +69,7 @@ describe("deleteDatabaseColumn", () => {
     ]);
     const registry = fixture.ctx.store.readAssociationsFile();
     registry.associations["000000000000000000000000B1"] = {
-      perspectives: ["children", "parents"],
+      perspectives: ["Children", "Parents"],
       endpoints: {
         0: { typeId: databaseId },
         1: { typeId: parentId },
@@ -88,10 +80,14 @@ describe("deleteDatabaseColumn", () => {
     seedTestNode(fixture, { id: parentId, properties: { title: "Parent feature" } });
     seedTestRelationships(fixture, [
       { source: pageId, target: databaseId, type: "member_of", properties: { row_index: 0 } },
+    ]);
+    seedTestCompositeRelationships(fixture, [
       {
-        source: pageId,
-        target: parentId,
-        type: "children",
+        a: pageId,
+        b: parentId,
+        typeFromA: "Children",
+        typeFromB: "Parents",
+        associationId: "000000000000000000000000B1",
         properties: { ordinal: 0 },
       },
     ]);
@@ -101,7 +97,12 @@ describe("deleteDatabaseColumn", () => {
 
     const tableSchema = fixture.ctx.store.readTableSchemasFile().tables[databaseId];
     expect(tableSchema?.columns.some((col) => col.key === "parents")).toBe(false);
-    expect(fixture.ctx.cache.listRelationshipsFromSource(pageId, "children")).toHaveLength(0);
+    expect(
+      fixture.ctx.cache.listRelationshipsFromSource(
+        pageId,
+        projectionTypeForEndpoint("000000000000000000000000B1", 0),
+      ),
+    ).toHaveLength(0);
 
     const detail = getDatabaseViewDetail(fixture.ctx.cache, databaseId, undefined, fixture.ctx.store.contentDir);
     expect(detail?.columns).not.toContain("parents");
@@ -127,7 +128,7 @@ describe("deleteDatabaseColumn", () => {
         {
           id: "by-task-state",
           nodeId: databaseId,
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "By task state",
           sorts: [{ column: "task_state", direction: "asc" }],
           properties: { columnOrder: ["task_state"] },

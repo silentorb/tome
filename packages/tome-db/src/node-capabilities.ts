@@ -3,7 +3,7 @@ import { memberSetIds } from "./set-membership";
 import { resolveContentPath } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import { hasTableSchemaEntry, loadTableSchemasFromContent } from "tome-flatfile";
-import { memberSidePerspectives, setSidePerspectives } from "tome-flatfile";
+import { memberSideProjectionTypes, setSideProjectionTypes } from "tome-flatfile";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;
@@ -16,11 +16,11 @@ function titleFromProperties(properties: Record<string, unknown>): string {
 export function hasIncomingIsA(db: GraphDatabase, nodeId: string, contentDir?: string): boolean {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
-  for (const perspective of memberSidePerspectives(registry)) {
-    if (db.listRelationshipsToTarget(nodeId, perspective).length > 0) return true;
+  for (const projection of memberSideProjectionTypes(registry)) {
+    if (db.listRelationshipsToTarget(nodeId, projection).length > 0) return true;
   }
-  for (const perspective of setSidePerspectives(registry)) {
-    if (db.listRelationshipsFromSource(nodeId, perspective).length > 0) return true;
+  for (const projection of setSideProjectionTypes(registry)) {
+    if (db.listRelationshipsFromSource(nodeId, projection).length > 0) return true;
   }
   return false;
 }

@@ -2,23 +2,14 @@ import { describe, expect, test, afterAll, beforeAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { ContentStore } from "tome-flatfile";
+import { ContentStore, projectionTypeForEndpoint } from "tome-flatfile";
 import { fileFromSeedInputs } from "tome-flatfile";
 import { invalidateDynamicFieldsCache } from "../../src/content/sync";
 import { invalidateSchemaCache } from "tome-flatfile";
 import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { getDatabaseViewDetail } from "../../src/database-view";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  seedTestCompositeRelationships,
-  seedTestDynamicFields,
-  seedTestIncludes,
-  seedTestNode,
-  seedTestRelationships,
-  writeTestSetAssociations,
-} from "../../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestDynamicFields, seedTestIncludes, seedTestNode, seedTestRelationships, writeTestSetAssociations, TEST_MEMBER_OF_ASSOCIATION_ID, TEST_SCENES_PRODUCT_ASSOCIATION_ID, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID } from "../../src/content/test-helpers";
 import {
   buildAllSceneCountPrefetch,
   buildSceneCountByProductPrefetch,
@@ -30,24 +21,30 @@ import {
   resolveWonder,
 } from "../../src/dynamic-fields/resolvers/index";
 
+const THEME_ASSOCIATION_ID = "000000000000000000000000TH";
+const SCENES_EDGE = "SCENES";
+const PRODUCT_EDGE = projectionTypeForEndpoint(TEST_SCENES_PRODUCT_ASSOCIATION_ID, 0);
+const FEATURES_EDGE = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0);
+const THEME_EDGE = projectionTypeForEndpoint(THEME_ASSOCIATION_ID, 0);
+
 const LEGACY_CHARACTER_SCENE_PARAMS = {
-  scenes_edge_label: "SCENES",
+  scenes_edge_label: SCENES_EDGE,
 };
 
 const LEGACY_CHARACTER_PRODUCT_PARAMS = {
-  scenes_edge_label: "SCENES",
-  product_edge_label: "product",
+  scenes_edge_label: SCENES_EDGE,
+  product_edge_label: PRODUCT_EDGE,
   hide_legacy_keys: ["twold_scene_count"],
 };
 
 const LEGACY_INSPIRATION_WEIGHTED_PARAMS = {
-  features_edge_label: "features",
+  features_edge_label: FEATURES_EDGE,
   features_database_id: "0000000000000000000000002P",
 };
 
 const LEGACY_INSPIRATION_WONDER_PARAMS = {
-  features_edge_label: "features",
-  theme_edge_label: "THEME",
+  features_edge_label: FEATURES_EDGE,
+  theme_edge_label: THEME_EDGE,
   theme_target_id: "0000000000000000000000000P",
 };
 
@@ -130,7 +127,7 @@ describe("dynamic-fields resolvers", () => {
     db.upsertNode(WONDERLAND, { title: "Wonderland" });
 
     db.upsertNode(character, { title: "James" });
-    db.upsertRelationship(character, CHAR_DB, "member_of", { row_index: 0 });
+    db.upsertRelationship(character, CHAR_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
 
     db.upsertNode(scene1, { title: "Scene A" });
     db.upsertNode(scene2, { title: "Scene B" });
@@ -138,20 +135,20 @@ describe("dynamic-fields resolvers", () => {
     db.upsertRelationship(character, scene1, "SCENES", {});
     db.upsertRelationship(character, scene2, "SCENES", {});
     db.upsertRelationship(character, scene3, "SCENES", {});
-    db.upsertRelationship(scene1, TWOLD, "product", {});
-    db.upsertRelationship(scene2, TWOLD, "product", {});
-    db.upsertRelationship(scene3, OTHER_PRODUCT, "product", {});
+    db.upsertRelationship(scene1, TWOLD, PRODUCT_EDGE, {});
+    db.upsertRelationship(scene2, TWOLD, PRODUCT_EDGE, {});
+    db.upsertRelationship(scene3, OTHER_PRODUCT, PRODUCT_EDGE, {});
 
     db.upsertNode(inspiration, { title: "Test Inspiration" });
-    db.upsertRelationship(inspiration, INSP_DB, "member_of", { row_index: 0 });
+    db.upsertRelationship(inspiration, INSP_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
 
     db.upsertNode(featureWonder, { title: "Adventure" });
     db.upsertNode(featurePlain, { title: "Plain" });
-    db.upsertRelationship(featureWonder, FEAT_DB, "member_of", { priority: "Medium" });
-    db.upsertRelationship(featurePlain, FEAT_DB, "member_of", { priority: "High" });
-    db.upsertRelationship(inspiration, featureWonder, "features", {});
-    db.upsertRelationship(inspiration, featurePlain, "features", {});
-    db.upsertRelationship(featureWonder, WONDERLAND, "THEME", {});
+    db.upsertRelationship(featureWonder, FEAT_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { priority: "Medium" });
+    db.upsertRelationship(featurePlain, FEAT_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { priority: "High" });
+    db.upsertRelationship(inspiration, featureWonder, FEATURES_EDGE, {});
+    db.upsertRelationship(inspiration, featurePlain, FEATURES_EDGE, {});
+    db.upsertRelationship(featureWonder, WONDERLAND, THEME_EDGE, {});
   });
 
   test("all scene count", () => {
@@ -275,7 +272,7 @@ describe("dynamic-fields with composite relationships", () => {
         params: {
           inspiration_feature_composite: "000000000000000000000000B2",
           features_edge_label: "FEATURES",
-          theme_edge_label: "THEME",
+          theme_edge_label: projectionTypeForEndpoint(THEME_ASSOCIATION_ID, 0),
           theme_target_id: WONDERLAND,
         },
       },
@@ -295,25 +292,27 @@ describe("dynamic-fields with composite relationships", () => {
       {
         a: inspiration,
         b: featureWonder,
-        typeFromA: "inspirations",
-        typeFromB: "features",
-        associationId: "000000000000000000000000B2",
+        typeFromA: "Inspirations",
+        typeFromB: "Features",
+        associationId: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
         properties: {},
       },
       {
         a: inspiration,
         b: featurePlain,
-        typeFromA: "inspirations",
-        typeFromB: "features",
-        associationId: "000000000000000000000000B2",
+        typeFromA: "Inspirations",
+        typeFromB: "Features",
+        associationId: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
         properties: {},
       },
     ]);
-    seedTestRelationships(fixture, [
+    seedTestCompositeRelationships(fixture, [
       {
-        source: featureWonder,
-        target: WONDERLAND,
-        type: "theme",
+        a: featureWonder,
+        b: WONDERLAND,
+        typeFromA: "Theme",
+        typeFromB: "Theme",
+        associationId: THEME_ASSOCIATION_ID,
         properties: {},
       },
     ]);
@@ -423,12 +422,12 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
       { source: OTHER_PRODUCT, target: PRODUCTS_DB, type: "ordered_member_of" },
     ]);
     seedTestCompositeRelationships(fixture, [
-      { a: scene1, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
-      { a: scene2, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
-      { a: TWOLD, b: character, typeFromA: "products", typeFromB: "characters", properties: {} },
-      { a: scene1, b: TWOLD, typeFromA: "scenes", typeFromB: "product", properties: {} },
-      { a: scene2, b: TWOLD, typeFromA: "scenes", typeFromB: "product", properties: {} },
-      { a: scene2, b: OTHER_PRODUCT, typeFromA: "scenes", typeFromB: "product", properties: {} },
+      { a: scene1, b: character, typeFromA: "Scenes", typeFromB: "Characters", associationId: "000000000000000000000000B9", properties: {} },
+      { a: scene2, b: character, typeFromA: "Scenes", typeFromB: "Characters", associationId: "000000000000000000000000B9", properties: {} },
+      { a: TWOLD, b: character, typeFromA: "Products", typeFromB: "Characters", properties: {} },
+      { a: scene1, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
+      { a: scene2, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
+      { a: scene2, b: OTHER_PRODUCT, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
     ]);
   });
 
@@ -537,12 +536,12 @@ describe("dynamic-fields character composite relationships", () => {
       { source: character, target: CHAR_DB, type: "member_of", properties: { row_index: 0 } },
     ]);
     seedTestCompositeRelationships(fixture, [
-      { a: scene1, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
-      { a: scene2, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
-      { a: scene3, b: character, typeFromA: "scenes", typeFromB: "characters", properties: {} },
-      { a: scene1, b: TWOLD, typeFromA: "scenes", typeFromB: "product", properties: {} },
-      { a: scene2, b: TWOLD, typeFromA: "scenes", typeFromB: "product", properties: {} },
-      { a: scene3, b: OTHER_PRODUCT, typeFromA: "scenes", typeFromB: "product", properties: {} },
+      { a: scene1, b: character, typeFromA: "Scenes", typeFromB: "Characters", associationId: "000000000000000000000000B9", properties: {} },
+      { a: scene2, b: character, typeFromA: "Scenes", typeFromB: "Characters", associationId: "000000000000000000000000B9", properties: {} },
+      { a: scene3, b: character, typeFromA: "Scenes", typeFromB: "Characters", associationId: "000000000000000000000000B9", properties: {} },
+      { a: scene1, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
+      { a: scene2, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
+      { a: scene3, b: OTHER_PRODUCT, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
     ]);
   });
 

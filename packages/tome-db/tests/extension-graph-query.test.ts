@@ -4,9 +4,14 @@ import {
   destroyTestContentFixture,
   seedTestNode,
   seedTestRelationships,
+  seedTestCompositeRelationships,
   type TestContentFixture,
+  TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
 } from "tome-db/content/test-helpers";
+import { projectionTypeForEndpoint } from "tome-flatfile";
 import { createExtensionGraphQueryServices } from "../src/extension-graph-query";
+
+const NEIGHBOR_ASSOCIATION_ID = "000000000000000000000000C2";
 
 describe("createExtensionGraphQueryServices", () => {
   let fixture: TestContentFixture;
@@ -25,9 +30,29 @@ describe("createExtensionGraphQueryServices", () => {
       { source: house, target: typeId, type: "member_of" },
       { source: cityA, target: typeId, type: "member_of" },
       { source: cityB, target: typeId, type: "member_of" },
-      { source: house, target: cityA, type: "parents" },
-      { source: house, target: cityB, type: "parents" },
-      { source: cityA, target: cityB, type: "neighbor" },
+    ]);
+    seedTestCompositeRelationships(fixture, [
+      {
+        a: house,
+        b: cityA,
+        typeFromA: "Children",
+        typeFromB: "Parents",
+        associationId: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
+      },
+      {
+        a: house,
+        b: cityB,
+        typeFromA: "Children",
+        typeFromB: "Parents",
+        associationId: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
+      },
+      {
+        a: cityA,
+        b: cityB,
+        typeFromA: "Neighbor",
+        typeFromB: "Neighbor",
+        associationId: NEIGHBOR_ASSOCIATION_ID,
+      },
     ]);
   });
 
@@ -51,11 +76,17 @@ describe("createExtensionGraphQueryServices", () => {
       fixture.ctx.store.contentDir,
     );
     const nodeIds = [cityA, cityB, house];
+    const parents0 = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 0);
+    const parents1 = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1);
+    const neighbor0 = projectionTypeForEndpoint(NEIGHBOR_ASSOCIATION_ID, 0);
+    const neighbor1 = projectionTypeForEndpoint(NEIGHBOR_ASSOCIATION_ID, 1);
     const edges = services.listEdges({
       nodeIds,
-      types: ["parents", "neighbor"],
+      types: [parents0, parents1, neighbor0, neighbor1],
     });
     const types = edges.map((edge) => edge.type).sort();
-    expect(types).toEqual(["neighbor", "neighbor", "parents", "parents", "parents", "parents"]);
+    expect(types).toEqual(
+      [neighbor0, neighbor1, parents0, parents0, parents1, parents1].sort(),
+    );
   });
 });

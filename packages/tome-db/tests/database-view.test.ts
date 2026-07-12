@@ -1,3 +1,4 @@
+import { TEST_MEMBER_OF_ASSOCIATION_ID, TEST_PARENTS_CHILDREN_ASSOCIATION_ID } from "../src/content/test-helpers";
 import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -5,13 +6,11 @@ import { tmpdir } from "node:os";
 import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
-import {
-  contentModelDir,
+import { contentModelDir,
   dynamicFieldsFilePath,
   associationsFilePath,
   schemaFilePath,
-  tableSchemasFilePath,
-} from "tome-flatfile";
+  tableSchemasFilePath, projectionTypeForEndpoint } from "tome-flatfile";
 import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
 import { serializeSchemaFile } from "tome-flatfile";
@@ -34,15 +33,15 @@ describe("database-view", () => {
       version: 1,
       associations: {
         "000000000000000000000000A1": {
-          perspectives: ["members", "member_of"],
+          perspectives: ["Members", "Membership"],
           traits: ["set"],
         },
         "000000000000000000000000A2": {
-          perspectives: ["ordered_members", "ordered_member_of"],
+          perspectives: ["Ordered members", "Ordered membership"],
           traits: ["set", "ordered"],
         },
         "000000000000000000000000B1": {
-          perspectives: ["children", "parents"],
+          perspectives: ["Children", "Parents"],
         },
       },
     }),
@@ -103,7 +102,7 @@ describe("database-view", () => {
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page1", { title: "Desperation" });
-    db.upsertRelationship("page1", databaseId, "member_of", {
+    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
       view: "all",
       priority: "High",
     });
@@ -140,7 +139,7 @@ describe("database-view", () => {
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page2", { title: "Peace in the eye of the storm" });
-    db.upsertRelationship("page2", databaseId, "member_of", {
+    db.upsertRelationship("page2", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
       view: "default",
       row_index: 0,
       row_name: "Stale CSV label",
@@ -164,14 +163,14 @@ describe("database-view", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page3", { title: "Child feature" });
     db.upsertNode(parentId, { title: "Parent feature" });
-    db.upsertRelationship("page3", databaseId, "member_of", { row_index: 0 });
-    db.upsertRelationship("page3", parentId, "parents", { ordinal: 0 });
+    db.upsertRelationship("page3", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship("page3", parentId, projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1), { ordinal: 0 });
 
     const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(detail?.rows[0]?.cells.parents).toBe("Parent feature");
     expect(detail?.columnDefs?.[0]).toMatchObject({
       type: "relation",
-      relationType: "parents",
+      relationType: projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1),
     });
     expect(detail?.rows[0]?.relationCells?.parents).toEqual([
       { targetId: parentId, title: "Parent feature" },
@@ -193,7 +192,7 @@ describe("database-view", () => {
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Inspirations") });
     db.upsertNode("insp1", { title: "Example inspiration" });
-    db.upsertRelationship("insp1", databaseId, "member_of", {
+    db.upsertRelationship("insp1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
       row_index: 0,
       plot_is_driven_by_mc_desire: "True",
     });
@@ -221,7 +220,7 @@ describe("database-view", () => {
             traits: ["set"],
           },
           "000000000000000000000000B1": {
-            perspectives: ["children", "parents"],
+            perspectives: ["Children", "Parents"],
           },
         },
       }),
@@ -230,12 +229,12 @@ describe("database-view", () => {
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Cohorts") });
     db.upsertNode("member1", { title: "Member one" });
-    db.upsertRelationship("member1", databaseId, "belongs_to_cohort", { row_index: 0 });
+    db.upsertRelationship("member1", databaseId, projectionTypeForEndpoint("000000000000000000000000B6", 1), { row_index: 0 });
 
     const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(detail).toMatchObject({
-      viewAssociation: "cohort",
-      memberSidePerspective: "belongs_to_cohort",
+      viewAssociation: "000000000000000000000000B6",
+      memberSidePerspective: projectionTypeForEndpoint("000000000000000000000000B6", 1),
       rows: [{ nodeId: "member1", name: "Member one" }],
     });
 
@@ -246,15 +245,15 @@ describe("database-view", () => {
         version: 1,
         associations: {
           "000000000000000000000000A1": {
-            perspectives: ["members", "member_of"],
+            perspectives: ["Members", "Membership"],
             traits: ["set"],
           },
           "000000000000000000000000A2": {
-            perspectives: ["ordered_members", "ordered_member_of"],
+            perspectives: ["Ordered members", "Ordered membership"],
             traits: ["set", "ordered"],
           },
           "000000000000000000000000B1": {
-            perspectives: ["children", "parents"],
+            perspectives: ["Children", "Parents"],
           },
         },
       }),

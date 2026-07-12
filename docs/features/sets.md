@@ -8,18 +8,18 @@ A **set** is a node that contains other nodes via a relationship type that carri
 | --- | --- |
 | **`set` trait** | Marks an association as set containment (parent = set, child = member) |
 | **`ordered` trait** | Optional; sequence key defaults to `order` on the edge |
-| **Perspectives** | Exactly two slugs per association; set-side vs member-side from trait indices |
+| **Perspectives** | Exactly two **display labels** per association; set-side vs member-side from trait indices |
 | **Type table** | Set detected via `table-schemas.json` key (and related UI) |
 | **Archive hub** | Set detected via `workspace.json` → `archiveNodeId` |
 
 **Example (Marloth project associations — not Tome defaults):**
 
-| Association id | Perspectives | Traits | Typical use |
+| Association id | Perspective labels | Traits | Typical use |
 | --- | --- | --- | --- |
-| *(ULID)* | `members` / `member_of` | `set` | Plain type tables, Archive |
-| *(ULID)* | `ordered_members` / `ordered_member_of` | `set`, `ordered` | Scenes, Parts, Products (sequence on `order`) |
+| *(ULID)* | Members / Membership | `set` | Plain type tables, Archive |
+| *(ULID)* | Members / Ordered membership | `set`, `ordered` | Scenes, Parts, Products (sequence on `order`) |
 
-There is **no `membershipComposite` field** on `table-schemas.json`. Which set association applies for a node comes from **views / caller context** via `setRolePerspectivesForNode` (view set-side perspectives for that node, else a sole set-trait registry fallback).
+There is **no `membershipComposite` field** on `table-schemas.json`. Which set association applies for a node comes from **views / caller context** via `setRoleAssociationForNode` (view association ULID for that node, else a sole set-trait registry fallback).
 
 Peer association (scene↔feature, etc.) remains on separate association ids — see [tome-db.md](./tome-db.md).
 
@@ -37,14 +37,11 @@ For design-domain meaning of types and sets, read [`/workspaces/marloth-story/do
 
 ## Requirements
 
-### Set trait and perspectives
+### Set trait and endpoint labels
 
-Every relationship type in `associations.json` defines a `perspectives` **tuple of exactly two** slugs. Types with `traits` including `set` (or `{ "key": "set", ... }`) are set associations:
+Every relationship type in `associations.json` defines a `perspectives` **tuple of exactly two** display labels. Types with `traits` including `set` (or `{ "key": "set", ... }`) are set associations. Directed cache identity is `associationId:endpointIndex` (not the label text).
 
-- Parent (set) and child (member) indices come from `setRoleIndices` (default parent index 0, child index 1).
-- Registry entries carry `traits` as an **array interpreted as a set** — e.g. `["set"]` or `["set", "ordered"]`. Configured traits use `{ "key": "ordered", "property": "rank" }`; when `property` is omitted, `order` is the default sequence key.
-
-**Example content record (Marloth set association with perspectives `members` / `member_of`):**
+**Example content record (Marloth set association):**
 
 ```json
 {
@@ -55,22 +52,24 @@ Every relationship type in `associations.json` defines a `perspectives` **tuple 
 }
 ```
 
-Ordered sets (perspectives `ordered_members` / `ordered_member_of`) use the same parent/child indices with an `order` property when the `ordered` trait applies.
+Ordered sets use the same parent/child indices with an `order` property when the `ordered` trait applies.
 
-- Endpoints `a` / `b` are an **ordered tuple**: meaning of each index is defined by the type's `perspectives` pair. There is **no lexicographic sorting**.
-- **No `directedFrom` field exists** — direction is derived from tuple position + perspectives, not a stored flag.
+- Endpoints `a` / `b` are an **ordered tuple**: meaning of each index is defined by the type's `perspectives` label pair. There is **no lexicographic sorting**.
+- **No `directedFrom` field exists** — direction is derived from tuple position + endpoint index, not a stored flag.
 - Row scalars for type tables live on edge `properties` (keys from `table-schemas.json`). Legacy `row_index` is not written or displayed.
 
-### Perspective resolution (`setRolePerspectivesForNode`)
+### Role resolution (`setRoleAssociationForNode` / `setRoleProjectionTypesForNode`)
 
-Primary resolver: `setRolePerspectivesForNode(nodeId, contentDir)` → `[setPerspective, memberPerspective]`.
+Primary resolvers:
+- `setRoleAssociationForNode(nodeId, contentDir)` → set-trait association ULID
+- `setRoleProjectionTypesForNode(nodeId, contentDir)` → `[setProjection, memberProjection]` (`ULID:0` / `ULID:1`)
 
-1. Collect set-side perspectives from `views.json` for that `nodeId`.
-2. If any match, resolve the set-trait composite for the first and return its role pair.
-3. Else, if the registry has exactly one plain (non-ordered) set-trait composite — or exactly one set-trait composite — use that.
+1. Collect set associations from `views.json` for that `nodeId`.
+2. If any match, use the first and return its role projection pair.
+3. Else fall back to the sole plain (non-ordered) set-trait composite, else the sole set-trait composite.
 4. Else throw: the project must declare view context or a single set-trait association.
 
-Callers (database views, ordered collections, archive, node create) **must not** invent perspective slugs; they use this helper (or an explicit perspective argument from a view payload).
+Callers (database views, ordered collections, archive, node create) **must not** invent slug ids; they use these helpers (or an explicit association / projection from a view payload).
 
 ### Projection expansion
 
@@ -78,12 +77,12 @@ Expansion always emits two projections for registered types:
 
 | Endpoint | Projection |
 | --- | --- |
-| Index 0 | node at `a` → node at `b` with `perspectives[0]` |
-| Index 1 | node at `b` → node at `a` with `perspectives[1]` |
+| Index 0 | node at `a` → node at `b` with type `{associationId}:0` |
+| Index 1 | node at `b` → node at `a` with type `{associationId}:1` |
 
 There is **no `bidirectional` field** — the parser rejects any type that does not define exactly two perspectives. (An unregistered storage type falls back to a single defensive projection during sync, but registered types are always a pair.)
 
-For Marloth `member_of` with perspectives `["members", "member_of"]`: `(set)-[:members]->(member)` and `(member)-[:member_of]->(set)` from one content record.
+For Marloth set associations with labels `["Members", "Membership"]`: `(set)-[:{id}:0]->(member)` and `(member)-[:{id}:1]->(set)` from one content record.
 
 ### Set-kind interpretation
 
@@ -105,7 +104,7 @@ Helpers in `packages/tome-db/src/set-membership.ts` (trait-driven; no hard-coded
 - `isSetNode(db, nodeId, contentDir)`
 - `findSetEdge(db, memberId, setId)` — edge for a member↔set pair
 - `listSetMemberRowConnections(db, setId)` — edges normalized for type-table row building
-- `setRolePerspectives(setId, contentDir)` — re-export of `setRolePerspectivesForNode`
+- `setRoleProjectionTypesForNode(setId, contentDir)` — set/member directed projection types
 
 **Cardinality** (1:N UI, schema rules) is enforced in UI and `schema.json` — not in storage or projection count. Data layer is M:N.
 
@@ -119,7 +118,7 @@ Archive membership uses the same set-trait family as type tables (in Marloth: `m
 
 ### Link vs create row
 
-Linking or creating a type-table row **must** use the set association resolved for that set (`setRolePerspectivesForNode` / view context). Plain tables get no placement metadata. Ordered tables auto-stamp `order` when missing (`ordered-relationships.ts`).
+Linking or creating a type-table row **must** use the set association resolved for that set (`setRoleAssociationForNode` / view context). Plain tables get no placement metadata. Ordered tables auto-stamp `order` when missing (`ordered-relationships.ts`).
 
 ### Node page sections
 
@@ -147,7 +146,7 @@ flowchart LR
   VIEWS["views.json\nset-side perspective"]
   EXP["expandRelationshipEntry"]
   PROJ["relationship_projections"]
-  CTX["setRolePerspectivesForNode"]
+  CTX["setRoleAssociationForNode"]
 
   JSON --> EXP
   REG --> EXP
@@ -165,12 +164,12 @@ flowchart LR
 | Path | Role |
 | --- | --- |
 | `content/data/relationships.json` | Canonical set edges |
-| `content/model/associations.json` | Set-trait associations, perspectives, optional `perspectiveLabels` |
+| `content/model/associations.json` | Set-trait associations and perspective labels |
 | `content/model/table-schemas.json` | Type-table set detection, column defs (no membership composite field) |
 | `content/model/views.json` | Set-side perspective / section config for Members tables |
 | `content/model/workspace.json` | `archiveNodeId` for archive set detection |
 | `packages/tome-db/src/set-membership.ts` | Set query API |
-| `packages/tome-flatfile/src/association-traits.ts` | Set trait helpers (`setRolePerspectivesForNode`, `setRoleIndices`, …) |
+| `packages/tome-flatfile/src/association-traits.ts` | Set trait helpers (`setRoleAssociationForNode`, `setRoleIndices`, …) |
 | `packages/tome-db/src/content/relationship-sync-expand.ts` | Perspective-based expansion |
 
 ## Migration
@@ -194,7 +193,7 @@ Historical scripts (marloth-story) and migrations that renamed `is_a` → `membe
 | Module | Responsibility |
 | --- | --- |
 | `set-membership.ts` | `setMemberIds`, `memberSetIds`, `setKindForNode`, edge helpers |
-| `association-traits.ts` | `setRolePerspectivesForNode`, trait parsing, ordered property |
+| `association-traits.ts` | `setRoleAssociationForNode`, trait parsing, ordered property |
 | `relationship-sync-expand.ts` | Perspective-count expansion |
 | `database-view.ts` | Members table rows via resolved set perspective |
 | `node-page-sections.ts` | Members table on set pages; Properties on instances |

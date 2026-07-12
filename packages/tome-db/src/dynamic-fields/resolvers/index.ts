@@ -1,9 +1,8 @@
 import type { GraphDatabase, Relationship } from "tome-sqlite";
 import { resolveContentPath } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
-import { setTraitPerspectives } from "tome-flatfile";
+import { setTraitProjectionTypes } from "tome-flatfile";
 import { priorityWeight } from "../../property-enums";
-import { normalizeRelationshipType } from "tome-flatfile";
 import type { DynamicResolverContext } from "../registry";
 import {
   listRelationshipsForComposite,
@@ -56,12 +55,9 @@ function relatedProductIdsFromScene(
   }
 
   if (productLabel) {
-    const normalizedProductLabel = normalizeRelationshipType(productLabel);
     return db
       .listRelationshipsFromSource(sceneId)
-      .filter(
-        (relationship) => normalizeRelationshipType(relationship.type) === normalizedProductLabel,
-      )
+      .filter((relationship) => relationship.type === productLabel)
       .map((relationship) => relationship.targetNodeId);
   }
 
@@ -101,10 +97,9 @@ function countCharacterSceneRelationships(
   }
   const scenesLabel = stringParam(params, "scenes_edge_label");
   if (!scenesLabel) return 0;
-  const normalized = normalizeRelationshipType(scenesLabel);
   return db
     .listRelationshipsFromSource(nodeId)
-    .filter((relationship) => normalizeRelationshipType(relationship.type) === normalized).length;
+    .filter((relationship) => relationship.type === scenesLabel).length;
 }
 
 export function resolveAllSceneCount(
@@ -128,7 +123,6 @@ export function buildSceneCountByProductPrefetch(
   params: Record<string, unknown>,
 ): SceneCountByProductPrefetch {
   const scenesLabel = stringParam(params, "scenes_edge_label");
-  const normalizedScenesLabel = scenesLabel ? normalizeRelationshipType(scenesLabel) : "";
   const charactersSceneComposite = stringParam(params, "characters_scene_composite");
 
   const characterSceneProducts = new Map<string, Map<string, string[]>>();
@@ -148,9 +142,9 @@ export function buildSceneCountByProductPrefetch(
       }
     }
 
-    if (normalizedScenesLabel) {
+    if (scenesLabel) {
       for (const sceneConnection of ctx.db.listRelationshipsFromSource(nodeId)) {
-        if (normalizeRelationshipType(sceneConnection.type) !== normalizedScenesLabel) continue;
+        if (sceneConnection.type !== scenesLabel) continue;
         const sceneId = sceneConnection.targetNodeId;
         const products = relatedProductIdsFromScene(ctx.db, sceneId, params);
         if (products.length > 0) {
@@ -211,7 +205,7 @@ function inspirationFeatureConnections(
   }
   const featuresLabel = stringParam(params, "features_edge_label");
   if (!featuresLabel) return [];
-  return db.listRelationshipsFromSource(nodeId, normalizeRelationshipType(featuresLabel));
+  return db.listRelationshipsFromSource(nodeId, featuresLabel);
 }
 
 export function buildWeightedUsePrefetch(
@@ -223,7 +217,7 @@ export function buildWeightedUsePrefetch(
   const priorityByFeature = new Map<string, number>();
   if (featuresDbId) {
     const registry = loadAssociationsFromContent(resolveContentPath());
-    for (const type of setTraitPerspectives(registry)) {
+    for (const type of setTraitProjectionTypes(registry)) {
       for (const connection of ctx.db.listRelationshipsToTarget(featuresDbId, type)) {
         priorityByFeature.set(connection.sourceNodeId, priorityWeight(connection.properties.priority));
       }
@@ -262,13 +256,13 @@ export function buildWonderPrefetch(
   params: Record<string, unknown>,
 ): WonderPrefetch {
   const themeLabelRaw = stringParam(params, "theme_edge_label");
-  const themeLabel = themeLabelRaw ? normalizeRelationshipType(themeLabelRaw) : "";
+  const themeLabel = themeLabelRaw;
   const themeTargetId = stringParam(params, "theme_target_id");
 
   const themedFeatures = new Set<string>();
   if (themeTargetId && themeLabel) {
     for (const connection of ctx.db.listRelationshipsToTarget(themeTargetId)) {
-      if (normalizeRelationshipType(connection.type) === themeLabel) {
+      if (connection.type === themeLabel) {
         themedFeatures.add(connection.sourceNodeId);
       }
     }
@@ -276,7 +270,7 @@ export function buildWonderPrefetch(
       themedFeatures.add(connection.targetNodeId);
     }
     for (const connection of ctx.db.listRelationshipsFromSource(themeTargetId)) {
-      if (normalizeRelationshipType(connection.type) === themeLabel) {
+      if (connection.type === themeLabel) {
         themedFeatures.add(connection.targetNodeId);
       }
     }

@@ -8,7 +8,7 @@ import {
   isPriorityValue,
   isUnsetPriority,
 } from "./property-enums";
-import { setRolePerspectivesForNode } from "tome-flatfile";
+import { setRoleProjectionTypesForNode } from "tome-flatfile";
 import type { RelationshipPropertyUpdateError } from "tome-graph-interfaces";
 
 export type { RelationshipPropertyUpdateError } from "tome-graph-interfaces";
@@ -55,7 +55,7 @@ export function updateDatabaseRowProperty(
   propertyKey: string,
   value: string | null,
 ): RelationshipPropertyUpdateError | null {
-  const [, memberPerspective] = setRolePerspectivesForNode(databaseId, ctx.store.contentDir);
+  const [, memberPerspective] = setRoleProjectionTypesForNode(databaseId, ctx.store.contentDir);
   const connection = ctx.store.findRelationship(nodeId, databaseId, memberPerspective);
   if (connection) {
     return updateOutgoingRelationshipProperty(

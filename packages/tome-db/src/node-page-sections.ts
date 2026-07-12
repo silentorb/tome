@@ -13,21 +13,19 @@ import {
   associationRuleContext,
 } from "./association-endpoints";
 import { findTypeNodeByTitle, typeIdsForInstance } from "./node-capabilities";
-import { normalizeAssociationId, normalizeRelationshipType } from "tome-flatfile";
+import { normalizeAssociationId, parseProjectionType } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
-import { resolveAssociationId } from "tome-flatfile";
 import {
-  formatAssociationLabel,
   perspectiveDisplayLabel,
   perspectiveLinkAddLabel,
 } from "./association-label";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import {
-  isMemberSidePerspective,
-  isSetSidePerspective,
-  isSetTraitPerspective,
-  resolveSetTraitComposite,
-  setRolePerspectivesForNode,
+  isMemberSideProjectionType,
+  isSetSideProjectionType,
+  isSetTraitProjectionType,
+  associationIdFromTypeOrProjection,
+  setRoleAssociationForNode,
 } from "tome-flatfile";
 import { generatedProviderId } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "tome-flatfile";
@@ -35,7 +33,7 @@ import { loadTableSchemasFromContent } from "tome-flatfile";
 import type { TableRelationColumn } from "tome-flatfile";
 import { getTableSchema, relationColumns } from "tome-flatfile";
 import {
-  perspectiveForRelationColumn,
+  projectionTypeForRelationColumn,
   relationColumnCompositeType,
   targetTypeIdForRelationColumn,
 } from "tome-flatfile";
@@ -96,7 +94,7 @@ function relationTypeSortKey(
   type: string,
   registry: ReturnType<typeof loadAssociationsFromContent>,
 ): string {
-  if (isSetTraitPerspective(registry, type)) return "z:set";
+  if (isSetTraitProjectionType(registry, type)) return "z:set";
   return `a:${type}`;
 }
 
@@ -117,7 +115,7 @@ function relationGroupKeyFromColumn(
   hostTypeId: string,
   col: TableRelationColumn,
 ): string {
-  return perspectiveForRelationColumn(registry, hostTypeId, col);
+  return projectionTypeForRelationColumn(registry, hostTypeId, col);
 }
 
 function tableRelationByGroupKeyForInstance(
@@ -148,24 +146,25 @@ function resolveTypeNodeId(
   connections: Relationship[],
   registry: ReturnType<typeof loadAssociationsFromContent>,
 ): string | null {
-  if (isMemberSidePerspective(registry, association)) {
+  if (isMemberSideProjectionType(registry, association)) {
     const targetIds = [...new Set(connections.map((connection) => connection.targetNodeId))];
     if (targetIds.length === 1) return targetIds[0]!;
   }
 
-  return findTypeNodeByTitle(db, formatAssociationLabel(association));
+  return findTypeNodeByTitle(db, perspectiveDisplayLabel(registry, association));
 }
 
 function sectionTitleForType(
   db: GraphDatabase,
   label: string,
   typeNodeId: string | null,
+  registry: ReturnType<typeof loadAssociationsFromContent>,
 ): string {
   if (typeNodeId) {
     const typeNode = db.getNode(typeNodeId);
     if (typeNode) return titleFromProperties(typeNode.properties);
   }
-  return formatAssociationLabel(label);
+  return perspectiveDisplayLabel(registry, label);
 }
 
 function typeTableIdsFromContent(contentDir: string): string[] {
@@ -175,7 +174,7 @@ function typeTableIdsFromContent(contentDir: string): string[] {
 function compositeTypeForRelationSection(
   db: GraphDatabase,
   registry: ReturnType<typeof loadAssociationsFromContent>,
-  perspective: string,
+  projectionType: string,
   connections: Relationship[],
   tableRelation?: TableRelationColumn,
 ): string {
@@ -187,13 +186,18 @@ function compositeTypeForRelationSection(
     const record = db.getRelationshipRecord(first.recordId);
     if (record?.compositeType) {
       const fromRecord = normalizeAssociationId(record.compositeType);
-      const def = registry.associations[fromRecord];
-      if (def?.perspectives.includes(normalizeRelationshipType(perspective))) {
-        return fromRecord;
+      if (registry.associations[fromRecord]) {
+        const parsed = parseProjectionType(projectionType);
+        if (!parsed || parsed.associationId === fromRecord) {
+          return fromRecord;
+        }
       }
     }
   }
-  return resolveAssociationId(registry, perspective);
+  return (
+    associationIdFromTypeOrProjection(registry, projectionType) ??
+    normalizeAssociationId(projectionType)
+  );
 }
 
 function buildRelationSections(
@@ -232,7 +236,7 @@ function buildRelationSections(
     relationTypeSortKey(a, associations).localeCompare(relationTypeSortKey(b, associations)),
   )) {
     const perspective = label;
-    if (isSetSidePerspective(associations, perspective)) continue;
+    if (isSetSideProjectionType(associations, perspective)) continue;
 
     const connections = byType.get(label)!;
     const columnSet = new Set<string>();
@@ -259,7 +263,7 @@ function buildRelationSections(
       return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
     });
 
-    const isSetMembership = isSetTraitPerspective(associations, perspective);
+    const isSetMembership = isSetTraitProjectionType(associations, perspective);
     const typeNodeId = isSetMembership
       ? null
       : resolveTypeNodeId(db, perspective, connections, associations);
@@ -297,12 +301,12 @@ function buildRelationSections(
         );
 
     const setTraitCompositeKey =
-      resolveSetTraitComposite(associations, perspective) ?? perspective;
+      associationIdFromTypeOrProjection(associations, perspective) ?? perspective;
     const sectionTitle = isSetMembership
       ? perspectiveDisplayLabel(associations, perspective, setTraitCompositeKey)
-      : sectionTitleForType(db, perspective, typeNodeId);
+      : sectionTitleForType(db, perspective, typeNodeId, associations);
     const linkAddLabel =
-      isSetMembership && isMemberSidePerspective(associations, perspective)
+      isSetMembership && isMemberSideProjectionType(associations, perspective)
         ? perspectiveLinkAddLabel(
             associations,
             perspective,
@@ -372,7 +376,7 @@ export function getNodePageDetail(
   const sections: NodeSection[] = [{ type: "markdown", body: node.body }];
 
   if (node.isTypeTable) {
-    const sectionKey = setRolePerspectivesForNode(id, contentDir)[0];
+    const sectionKey = setRoleAssociationForNode(id, contentDir);
     const provider = generatedProviderId(views, id, sectionKey);
     if (provider) {
       const config = getConfigByProvider(provider, contentDir);

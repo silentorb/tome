@@ -38,7 +38,7 @@ export interface RelationTableSection {
   allowedTargetTypeIds?: string[];
   /** Inline table add control: link existing record vs none (registry linkExisting presentation). */
   addMode: RelationTableAddMode;
-  /** Optional link-existing button label from associations perspectiveLabels. */
+  /** Optional link-existing button label from association perspective config. */
   linkAddLabel?: string;
   columns: string[];
   columnDefs?: DatabaseColumnDef[];

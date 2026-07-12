@@ -8,6 +8,8 @@ import {
   VIEWS_FILE_VERSION,
 } from "../../src/content/views-file";
 
+const TEST_MEMBER_OF_ASSOCIATION_ID = "000000000000000000000000A1";
+
 describe("views-file", () => {
   test("round-trips custom and generated views", () => {
     const file = {
@@ -16,7 +18,7 @@ describe("views-file", () => {
         {
           id: "all",
           nodeId: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "All",
           sorts: [{ column: "name", direction: "asc" as const }],
           properties: { columnOrder: ["status", "priority"] },
@@ -24,7 +26,7 @@ describe("views-file", () => {
         },
         {
           nodeId: "EEEEEEEEEEEEEEEEEEEEEEEEEE",
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           generator: "scenes-by-book",
         },
       ],

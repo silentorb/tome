@@ -1,15 +1,20 @@
 import { describe, expect, test } from "bun:test";
-import { emptyAssociationsFile } from "tome-flatfile";
-import { isSetTraitPerspective } from "tome-flatfile";
+import { emptyAssociationsFile, projectionTypeForEndpoint } from "tome-flatfile";
+import { isSetTraitProjectionType } from "tome-flatfile";
 
-describe("isSetTraitPerspective", () => {
-  test("recognizes perspectives from set-trait registry entries", () => {
+const MEMBER_OF = "000000000000000000000000A1";
+
+describe("isSetTraitProjectionType", () => {
+  test("recognizes projection types from set-trait registry entries", () => {
     const registry = emptyAssociationsFile();
-    registry.associations["000000000000000000000000A1"] = {
-      perspectives: ["members", "member_of"],
+    registry.associations[MEMBER_OF] = {
+      perspectives: ["Members", "Membership"],
       traits: ["set"],
     };
-    expect(isSetTraitPerspective(registry, "member_of")).toBe(true);
-    expect(isSetTraitPerspective(registry, "features")).toBe(false);
+    expect(isSetTraitProjectionType(registry, projectionTypeForEndpoint(MEMBER_OF, 1))).toBe(
+      true,
+    );
+    expect(isSetTraitProjectionType(registry, MEMBER_OF)).toBe(true);
+    expect(isSetTraitProjectionType(registry, "features")).toBe(false);
   });
 });

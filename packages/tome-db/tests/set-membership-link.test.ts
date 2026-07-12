@@ -1,10 +1,12 @@
 import { describe, expect, test, afterAll } from "bun:test";
+import { projectionTypeForEndpoint } from "tome-flatfile";
 import { linkOutgoingRelationship } from "../src/relationship-link-mutations";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestNode,
   seedTestTableSchema,
+  TEST_MEMBER_OF_ASSOCIATION_ID,
   type TestContentFixture,
 } from "../src/content/test-helpers";
 import { getDatabaseViewDetail } from "../src/database-view";
@@ -14,6 +16,8 @@ import { typeTableMarkerProperties } from "../src/node-capabilities";
 
 const TYPE_ID = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 const MEMBER_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+const MEMBER_SIDE = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+const SET_SIDE = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 0);
 
 describe("linkOutgoingRelationship member_of row metadata", () => {
   const fixture: TestContentFixture = createTestContentFixture("tome-link-member-of-row-");
@@ -29,16 +33,16 @@ describe("linkOutgoingRelationship member_of row metadata", () => {
     const err = linkOutgoingRelationship(ctx, {
       sourceId: MEMBER_A,
       targetId: TYPE_ID,
-      type: "member_of",
+      type: MEMBER_SIDE,
     });
     expect(err).toBeNull();
 
     const db = ctx.cache;
-    const membership = db.listRelationshipsFromSource(MEMBER_A, "member_of")[0];
+    const membership = db.listRelationshipsFromSource(MEMBER_A, MEMBER_SIDE)[0];
     expect(membership?.properties.view).toBeUndefined();
     expect(membership?.properties.row_index).toBeUndefined();
 
-    const membersProjections = db.listRelationshipsFromSource(TYPE_ID, "members");
+    const membersProjections = db.listRelationshipsFromSource(TYPE_ID, SET_SIDE);
     expect(membersProjections.some((p) => p.targetNodeId === MEMBER_A)).toBe(true);
 
     const view = getDatabaseViewDetail(db, TYPE_ID, undefined, store.contentDir);

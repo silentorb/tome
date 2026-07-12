@@ -2,7 +2,7 @@ import type { GraphDatabase } from "tome-sqlite";
 import {
   loadAssociationsFromContent,
   resolveContentPath,
-  setTraitPerspectives,
+  setTraitProjectionTypes,
 } from "tome-flatfile";
 import { findSetEdge, setMemberIds } from "./set-membership";
 import { archiveNodeId, legacyArchivePathPrefix } from "tome-flatfile";
@@ -35,7 +35,7 @@ export function isArchivedNode(
   if (!archiveId) return false;
 
   const registry = loadAssociationsFromContent(dir);
-  if (setTraitPerspectives(registry).length === 0) return false;
+  if (setTraitProjectionTypes(registry).length === 0) return false;
 
   return findSetEdge(db, nodeId, archiveId, dir) !== null;
 }

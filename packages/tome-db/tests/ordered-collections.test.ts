@@ -6,17 +6,8 @@ import {
   UNASSIGNED_GROUP_ID,
 } from "../src/ordered-collections";
 import { getNodePageDetail } from "../src/node-page-sections";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  seedTestCompositeRelationships,
-  seedTestRelationships,
-  seedTestNode,
-  seedTestViews,
-  seedTestDynamicFields,
-  seedTestTableSchema,
-} from "../src/content/test-helpers";
-import { VIEWS_FILE_VERSION } from "tome-flatfile";
+import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestRelationships, seedTestNode, seedTestViews, seedTestDynamicFields, seedTestTableSchema, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
+import { VIEWS_FILE_VERSION, projectionTypeForEndpoint } from "tome-flatfile";
 import { firstRelatedNodeId } from "../src/relationship-traverse";
 
 const SCENES_DB = "0000000000000000000000000D";
@@ -108,66 +99,72 @@ describe("ordered-collections", () => {
   ]);
 
   seedTestCompositeRelationships(fixture, [
-    { a: scene1, b: bookA, typeFromA: "scenes", typeFromB: "product", properties: { ordinal: 0 } },
-    { a: scene2, b: bookA, typeFromA: "scenes", typeFromB: "product", properties: { ordinal: 0 } },
-    { a: scene3, b: bookB, typeFromA: "scenes", typeFromB: "product", properties: { ordinal: 0 } },
-    { a: scene1, b: part1, typeFromA: "scenes", typeFromB: "part", properties: { ordinal: 0 } },
-    { a: scene2, b: part1, typeFromA: "scenes", typeFromB: "part", properties: { ordinal: 1 } },
-    { a: scene3, b: part2, typeFromA: "scenes", typeFromB: "part", properties: { ordinal: 0 } },
+    { a: scene1, b: bookA, typeFromA: "Scenes", typeFromB: "Product", associationId: "000000000000000000000000A3", properties: { ordinal: 0 } },
+    { a: scene2, b: bookA, typeFromA: "Scenes", typeFromB: "Product", associationId: "000000000000000000000000A3", properties: { ordinal: 0 } },
+    { a: scene3, b: bookB, typeFromA: "Scenes", typeFromB: "Product", associationId: "000000000000000000000000A3", properties: { ordinal: 0 } },
+    { a: scene1, b: part1, typeFromA: "Scenes", typeFromB: "Part", associationId: "000000000000000000000000A4", properties: { ordinal: 0 } },
+    { a: scene2, b: part1, typeFromA: "Scenes", typeFromB: "Part", associationId: "000000000000000000000000A4", properties: { ordinal: 1 } },
+    { a: scene3, b: part2, typeFromA: "Scenes", typeFromB: "Part", associationId: "000000000000000000000000A4", properties: { ordinal: 0 } },
     {
       a: part1,
       b: bookA,
-      typeFromA: "products",
-      typeFromB: "parts_database",
+      typeFromA: "Products",
+      typeFromB: "Parts database",
+      associationId: "000000000000000000000000A5",
       properties: { ordinal: 0 },
     },
     {
       a: part2,
       b: bookA,
-      typeFromA: "products",
-      typeFromB: "parts_database",
+      typeFromA: "Products",
+      typeFromB: "Parts database",
+      associationId: "000000000000000000000000A5",
       properties: { ordinal: 0 },
     },
     {
       a: scene1,
       b: character1,
-      typeFromA: "scenes",
-      typeFromB: "characters",
+      typeFromA: "Scenes",
+      typeFromB: "Characters",
+      associationId: "000000000000000000000000B9",
       properties: { ordinal: 0 },
     },
   ]);
 
   const registry = fixture.ctx.store.readAssociationsFile();
   registry.associations["000000000000000000000000A3"] = {
-    perspectives: ["scenes", "product"],
+    perspectives: ["Scenes", "Product"],
     endpoints: {
-      0: { typeId: PRODUCTS_DB },
-      1: { typeId: SCENES_DB },
+      0: { typeId: SCENES_DB },
+      1: { typeId: PRODUCTS_DB },
     },
   };
   registry.associations["000000000000000000000000A4"] = {
-    perspectives: ["scenes", "part"],
+    perspectives: ["Scenes", "Part"],
     endpoints: {
       0: { typeId: SCENES_DB },
       1: { typeId: PARTS_DB },
     },
   };
+  registry.associations["000000000000000000000000A5"] = {
+    perspectives: ["Products", "Parts database"],
+  };
   registry.associations["000000000000000000000000BB"] = {
-    perspectives: ["solutions", "scenes"],
+    perspectives: ["Solutions", "Scenes"],
     endpoints: {
       0: { typeId: "0000000000000000000000000T" },
       1: { typeId: SCENES_DB },
     },
   };
   registry.associations["000000000000000000000000B9"] = {
-    perspectives: ["scenes", "characters"],
+    perspectives: ["Scenes", "Characters"],
     endpoints: {
       0: { typeId: SCENES_DB },
       1: { typeId: CHARACTERS_DB },
     },
   };
   registry.associations["000000000000000000000000BA"] = {
-    perspectives: ["location", "scenes"],
+    perspectives: ["Location", "Scenes"],
     endpoints: {
       0: { typeId: "0000000000000000000000002T" },
       1: { typeId: SCENES_DB },
@@ -181,17 +178,17 @@ describe("ordered-collections", () => {
     views: [
       {
         nodeId: SCENES_DB,
-        perspective: "ordered_members",
+        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
         generator: CONFIG_ID,
       },
       {
         nodeId: PARTS_DB,
-        perspective: "ordered_members",
+        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
         generator: CONFIG_ID,
       },
       {
         nodeId: PRODUCTS_DB,
-        perspective: "ordered_members",
+        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
         generator: CONFIG_ID,
       },
     ],
@@ -237,7 +234,7 @@ describe("ordered-collections", () => {
       { source: unassigned, target: SCENES_DB, type: "ordered_member_of", properties: { order: "40" } },
     ]);
     seedTestCompositeRelationships(fixture, [
-      { a: unassigned, b: bookA, typeFromA: "scenes", typeFromB: "product", properties: { ordinal: 0 } },
+      { a: unassigned, b: bookA, typeFromA: "Scenes", typeFromB: "Product", associationId: "000000000000000000000000A3", properties: { ordinal: 0 } },
     ]);
 
     const view = getOrderedCollectionView(db(), CONFIG_ID, bookA, contentDir());
@@ -256,8 +253,8 @@ describe("ordered-collections", () => {
     const partGroup = updated?.groups.find((group) => group.groupId === part1);
     expect(partGroup?.rows.map((row) => row.sceneId)).toEqual([scene2, scene1]);
 
-    const edge1 = db().getRelationship(`${scene1}:${"ordered_member_of"}:${SCENES_DB}`);
-    const edge2 = db().getRelationship(`${scene2}:${"ordered_member_of"}:${SCENES_DB}`);
+    const edge1 = db().getRelationship(`${scene1}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1)}:${SCENES_DB}`);
+    const edge2 = db().getRelationship(`${scene2}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1)}:${SCENES_DB}`);
     expect(edge1?.properties.order).toBe("20");
     expect(edge2?.properties.order).toBe("10");
   });

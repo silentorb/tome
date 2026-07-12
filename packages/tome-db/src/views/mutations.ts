@@ -28,18 +28,18 @@ function writeViews(store: ContentStore, file: ViewsFile): void {
 function ensureCustomViews(
   file: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
 ): ViewDefinition[] {
-  if (generatedViewForRelationship(file, nodeId, perspective)) {
+  if (generatedViewForRelationship(file, nodeId, association)) {
     throw new Error("not_custom_views");
   }
-  return viewsForRelationship(file, nodeId, perspective);
+  return viewsForRelationship(file, nodeId, association);
 }
 
 function findViewIndex(
   file: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
   viewId: string,
 ): number {
   const normalized = nodeId;
@@ -47,7 +47,7 @@ function findViewIndex(
     (view) =>
       isViewDefinition(view) &&
       view.nodeId === normalized &&
-      view.perspective === perspective &&
+      view.association === association &&
       view.id === viewId,
   );
 }
@@ -55,10 +55,10 @@ function findViewIndex(
 function syncPropertiesOnSiblings(
   file: ViewsFile,
   nodeId: string,
-  perspective: string,
+  association: string,
   properties: ViewProperties | undefined,
 ): void {
-  for (const view of viewsForRelationship(file, nodeId, perspective)) {
+  for (const view of viewsForRelationship(file, nodeId, association)) {
     if (properties?.columnOrder?.length) {
       view.properties = { columnOrder: [...properties.columnOrder] };
     } else if (properties === undefined) {
@@ -77,26 +77,26 @@ export function getNodeViews(store: ContentStore, nodeId: string): ViewDefinitio
 export function createView(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
 ): ViewDefinition {
   const trimmed = input.name.trim();
   if (!trimmed) throw new Error("invalid_name");
 
   const file = store.readViewsFile();
-  if (generatedViewForRelationship(file, nodeId, perspective)) {
+  if (generatedViewForRelationship(file, nodeId, association)) {
     throw new Error("not_custom_views");
   }
 
-  const existing = viewsForRelationship(file, nodeId, perspective);
+  const existing = viewsForRelationship(file, nodeId, association);
   const existingIds = new Set(existing.map((view) => view.id));
   const id = uniqueTabId(slugifyTabId(trimmed), existingIds);
   const siblingProperties =
-    input.properties ?? siblingViewProperties(file, nodeId, perspective);
+    input.properties ?? siblingViewProperties(file, nodeId, association);
   const view: ViewDefinition = {
     id,
     nodeId,
-    perspective,
+    association,
     name: trimmed,
     sorts: input.sorts ?? [{ column: "name", direction: "asc" }],
     ...(siblingProperties ? { properties: { ...siblingProperties } } : {}),
@@ -112,7 +112,7 @@ export const createTab = createView;
 export function updateView(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   viewId: string,
   input: {
     name?: string;
@@ -122,7 +122,7 @@ export function updateView(
   },
 ): ViewDefinition {
   const file = store.readViewsFile();
-  const index = findViewIndex(file, nodeId, perspective, viewId);
+  const index = findViewIndex(file, nodeId, association, viewId);
   if (index < 0) throw new Error("view_not_found");
 
   const view = file.views[index] as ViewDefinition;
@@ -135,7 +135,7 @@ export function updateView(
     view.sorts = input.sorts;
   }
   if (input.properties !== undefined) {
-    syncPropertiesOnSiblings(file, nodeId, perspective, input.properties);
+    syncPropertiesOnSiblings(file, nodeId, association, input.properties);
   }
   if (input.hiddenColumns !== undefined) {
     const normalized = input.hiddenColumns.map((key) => key.trim()).filter(Boolean);
@@ -156,14 +156,14 @@ export const updateTab = updateView;
 export function deleteView(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   viewId: string,
 ): void {
   const file = store.readViewsFile();
-  const views = ensureCustomViews(file, nodeId, perspective);
+  const views = ensureCustomViews(file, nodeId, association);
   if (views.length <= 1) throw new Error("last_view");
 
-  const index = findViewIndex(file, nodeId, perspective, viewId);
+  const index = findViewIndex(file, nodeId, association, viewId);
   if (index < 0) throw new Error("view_not_found");
   file.views.splice(index, 1);
   writeViews(store, file);
@@ -175,7 +175,7 @@ export const deleteTab = deleteView;
 export function reorderViews(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   viewIds: string[],
 ): ViewDefinition[] {
   if (!Array.isArray(viewIds) || viewIds.length === 0) {
@@ -183,7 +183,7 @@ export function reorderViews(
   }
 
   const file = store.readViewsFile();
-  const views = ensureCustomViews(file, nodeId, perspective);
+  const views = ensureCustomViews(file, nodeId, association);
   if (viewIds.length !== views.length) {
     throw new Error("invalid_view_order");
   }
@@ -196,7 +196,7 @@ export function reorderViews(
     reordered.push(view);
   }
 
-  const indices = indicesForRelationship(file, nodeId, perspective);
+  const indices = indicesForRelationship(file, nodeId, association);
   if (indices.length !== reordered.length) {
     throw new Error("invalid_view_order");
   }
@@ -215,7 +215,7 @@ export const reorderSectionTabs = reorderViews;
 export function updateRelationshipViewProperties(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   properties: ViewProperties,
 ): ViewProperties {
   const columnOrder = properties.columnOrder;
@@ -226,18 +226,18 @@ export function updateRelationshipViewProperties(
   if (normalized.length === 0) throw new Error("invalid_column_order");
 
   const file = store.readViewsFile();
-  let views = viewsForRelationship(file, nodeId, perspective);
+  let views = viewsForRelationship(file, nodeId, association);
   if (views.length === 0) {
     const defaultView: ViewDefinition = {
       ...DEFAULT_VIEW,
       nodeId,
-      perspective,
+      association,
     };
     file.views.push(defaultView);
     views = [defaultView];
   }
 
-  syncPropertiesOnSiblings(file, nodeId, perspective, { columnOrder: normalized });
+  syncPropertiesOnSiblings(file, nodeId, association, { columnOrder: normalized });
   writeViews(store, file);
   return { columnOrder: normalized };
 }
@@ -246,10 +246,10 @@ export function updateRelationshipViewProperties(
 export function updateSectionColumnOrder(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   columnOrder: string[],
 ): string[] {
-  const properties = updateRelationshipViewProperties(store, nodeId, perspective, {
+  const properties = updateRelationshipViewProperties(store, nodeId, association, {
     columnOrder,
   });
   return properties.columnOrder ?? [];
@@ -258,19 +258,19 @@ export function updateSectionColumnOrder(
 export function ensureCustomViewsForRelationship(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   definitions: Pick<ViewDefinition, "id" | "name" | "sorts">[],
 ): void {
   const file = store.readViewsFile();
   const normalized = nodeId;
   file.views = file.views.filter(
-    (view) => !(view.nodeId === normalized && view.perspective === perspective),
+    (view) => !(view.nodeId === normalized && view.association === association),
   );
   for (const definition of definitions) {
     file.views.push({
       id: definition.id,
       nodeId: normalized,
-      perspective,
+      association,
       name: definition.name,
       sorts: definition.sorts,
     });
@@ -281,15 +281,15 @@ export function ensureCustomViewsForRelationship(
 export function ensureGeneratedView(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   generator: string,
 ): void {
   const file = store.readViewsFile();
   const normalized = nodeId;
   file.views = file.views.filter(
-    (view) => !(view.nodeId === normalized && view.perspective === perspective),
+    (view) => !(view.nodeId === normalized && view.association === association),
   );
-  file.views.push({ nodeId: normalized, perspective, generator });
+  file.views.push({ nodeId: normalized, association, generator });
   writeViews(store, file);
 }
 
@@ -309,11 +309,11 @@ export function readViewsFileOrEmpty(store: ContentStore): ViewsFile {
 export function purgeColumnFromViews(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   columnKey: string,
 ): void {
   const file = store.readViewsFile();
-  const views = viewsForRelationship(file, nodeId, perspective);
+  const views = viewsForRelationship(file, nodeId, association);
   if (views.length === 0) return;
 
   let changed = false;
@@ -345,7 +345,7 @@ export function purgeColumnFromViews(
 
   if (changed) {
     const first = views[0]?.properties;
-    syncPropertiesOnSiblings(file, nodeId, perspective, first);
+    syncPropertiesOnSiblings(file, nodeId, association, first);
     writeViews(store, file);
   }
 }
@@ -354,12 +354,12 @@ export function purgeColumnFromViews(
 export function renameColumnInViews(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   oldKey: string,
   newKey: string,
 ): void {
   const file = store.readViewsFile();
-  const views = viewsForRelationship(file, nodeId, perspective);
+  const views = viewsForRelationship(file, nodeId, association);
   if (views.length === 0) return;
 
   let changed = false;
@@ -385,7 +385,7 @@ export function renameColumnInViews(
 
   if (changed) {
     const first = views[0]?.properties;
-    syncPropertiesOnSiblings(file, nodeId, perspective, first);
+    syncPropertiesOnSiblings(file, nodeId, association, first);
     writeViews(store, file);
   }
 }
@@ -394,16 +394,16 @@ export function renameColumnInViews(
 export function appendColumnToViewsOrder(
   store: ContentStore,
   nodeId: string,
-  perspective: string,
+  association: string,
   columnKey: string,
 ): void {
   const file = store.readViewsFile();
-  const views = viewsForRelationship(file, nodeId, perspective);
+  const views = viewsForRelationship(file, nodeId, association);
   if (views.length === 0) return;
 
   const order = views[0]?.properties?.columnOrder ?? [];
   if (!order.includes(columnKey)) {
-    syncPropertiesOnSiblings(file, nodeId, perspective, {
+    syncPropertiesOnSiblings(file, nodeId, association, {
       columnOrder: [...order, columnKey],
     });
     writeViews(store, file);

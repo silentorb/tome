@@ -5,8 +5,14 @@ import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestRelationships,
+  seedTestCompositeRelationships,
   seedTestNode,
+  projectionTypeForEndpoint,
+  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_RELATED_ASSOCIATION_ID,
 } from "../src/content/test-helpers";
+
+const RELATED_TYPE = projectionTypeForEndpoint(TEST_RELATED_ASSOCIATION_ID, 0);
 
 describe("relationship-property-update", () => {
   const fixture = createTestContentFixture("tome-db-conn-prop-");
@@ -30,7 +36,7 @@ describe("relationship-property-update", () => {
       updateDatabaseRowProperty(fixture.ctx, databaseId, pageId, "priority", "High"),
     ).toBeNull();
 
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, "member_of")[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1))[0];
     expect(edge?.properties.priority).toBe("High");
   });
 
@@ -39,14 +45,21 @@ describe("relationship-property-update", () => {
     const targetId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     seedTestNode(fixture, { id: pageId, properties: { title: "A" } });
     seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
-    seedTestRelationships(fixture, [
-      { source: pageId, target: targetId, type: "related", properties: { priority: "High" } },
+    seedTestCompositeRelationships(fixture, [
+      {
+        a: pageId,
+        b: targetId,
+        typeFromA: "Related",
+        typeFromB: "Related",
+        associationId: TEST_RELATED_ASSOCIATION_ID,
+        properties: { priority: "High" },
+      },
     ]);
 
     expect(
-      updateOutgoingRelationshipProperty(fixture.ctx, pageId, targetId, "related", "priority", ""),
+      updateOutgoingRelationshipProperty(fixture.ctx, pageId, targetId, RELATED_TYPE, "priority", ""),
     ).toBeNull();
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, "related")[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, RELATED_TYPE)[0];
     expect(edge?.properties.priority).toBe("Low");
   });
 
@@ -55,10 +68,19 @@ describe("relationship-property-update", () => {
     const targetId = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
     seedTestNode(fixture, { id: pageId, properties: { title: "A" } });
     seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
-    seedTestRelationships(fixture, [{ source: pageId, target: targetId, type: "related", properties: {} }]);
+    seedTestCompositeRelationships(fixture, [
+      {
+        a: pageId,
+        b: targetId,
+        typeFromA: "Related",
+        typeFromB: "Related",
+        associationId: TEST_RELATED_ASSOCIATION_ID,
+        properties: {},
+      },
+    ]);
 
     expect(
-      updateOutgoingRelationshipProperty(fixture.ctx, pageId, targetId, "related", "priority", "4"),
+      updateOutgoingRelationshipProperty(fixture.ctx, pageId, targetId, RELATED_TYPE, "priority", "4"),
     ).toBe("invalid_value");
   });
 

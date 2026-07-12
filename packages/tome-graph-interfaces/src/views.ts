@@ -9,11 +9,12 @@ export interface ViewProperties {
   columnOrder?: string[];
 }
 
-/** A static view definition for a node + relationship type pair. */
+/** A static view definition for a node + set association pair. */
 export interface ViewDefinition {
   id: string;
   nodeId: string;
-  perspective: string;
+  /** Set-trait association ULID (not a display label). */
+  association: string;
   name: string;
   sorts: ViewSortSpec[];
   properties?: ViewProperties;
@@ -24,7 +25,8 @@ export interface ViewDefinition {
 /** Generated views computed at runtime from a provider (e.g. scenes-by-book). */
 export interface GeneratedViewRecord {
   nodeId: string;
-  perspective: string;
+  /** Set-trait association ULID (not a display label). */
+  association: string;
   generator: string;
 }
 

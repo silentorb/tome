@@ -3,16 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  seedTestNode,
-  seedTestRelationships,
-  seedTestViews,
-  seedTestWorkspace,
-  TEST_STATIC_SITE_HOME_NODE_ID,
-  type TestContentFixture,
-} from "tome-db/content";
+import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, seedTestViews, seedTestWorkspace, TEST_STATIC_SITE_HOME_NODE_ID, type TestContentFixture, TEST_MEMBER_OF_ASSOCIATION_ID } from "tome-db/content";
 import { writeSiteData, defaultSiteDataPath } from "../src/generate-data";
 import { tabPayloadKey } from "../src/lib/static-export";
 import type { ResolvedConfig } from "../src/config";
@@ -58,14 +49,14 @@ describe("writeSiteData", () => {
         {
           id: "default",
           nodeId: typeId,
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "Default",
           sorts: [{ column: "name", direction: "asc" }],
         },
         {
           id: "all",
           nodeId: typeId,
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "All",
           sorts: [{ column: "name", direction: "desc" }],
         },

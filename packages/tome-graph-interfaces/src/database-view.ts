@@ -38,11 +38,11 @@ export interface DatabaseViewDetail {
   /** @deprecated Use tabs.items */
   views: string[];
   tabs: TableTabsDetail;
-  /** Set-side perspective = views.json association / section key. */
+  /** Set-trait association ULID from views.json. */
   viewAssociation: string;
-  /** Member-side perspective for unlink/move against this set. */
+  /** Member-side projection type (`ULID:1`) for unlink/move against this set. */
   memberSidePerspective: string;
-  /** Section heading from perspectiveLabels, else "Contents". */
+  /** Section heading from association perspective labels, else "Contents". */
   sectionTitle: string;
   /** Ordered data column keys before per-view visibility filtering. */
   allColumns: string[];

@@ -2,7 +2,7 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { ContentStore } from "tome-flatfile";
+import { ContentStore, projectionTypeForEndpoint } from "tome-flatfile";
 import { fileFromSeedInputs } from "tome-flatfile";
 import { invalidateDynamicFieldsCache } from "../src/content/sync";
 import { contentModelDir, workspaceFilePath } from "tome-flatfile";
@@ -44,11 +44,11 @@ describe("node-type-properties", () => {
     const registry = emptyAssociationsFile();
     registerSetAssociation(registry, {
       id: TEST_MEMBER_OF_ASSOCIATION_ID,
-      perspectives: ["members", "member_of"],
+      perspectives: ["Members", "Membership"],
     });
     registerSetAssociation(registry, {
       id: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-      perspectives: ["ordered_members", "ordered_member_of"],
+      perspectives: ["Ordered members", "Ordered membership"],
       ordered: true,
     });
     // Direct cache edges use perspective "scenes"; register so page detail can resolve them.
@@ -85,7 +85,7 @@ describe("node-type-properties", () => {
       ...typeTableMarkerProperties("Characters"),
     });
     db.upsertNode(character, { title: "James" });
-    db.upsertRelationship(character, CHAR_DB, "member_of", { row_index: 0, priority: "High" });
+    db.upsertRelationship(character, CHAR_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0, priority: "High" });
 
     db.upsertNode(scene1, { title: "Scene A" });
     db.upsertNode(scene2, { title: "Scene B" });
@@ -127,7 +127,7 @@ describe("node-type-properties", () => {
     const detail = getNodePageDetail(db, character, { contentDir });
     expect(detail?.properties?.cells.all_scene_count).toBe("2");
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "member_of",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
     );
     expect(membership?.rows).toEqual([
       { targetId: CHAR_DB, name: "Characters", cells: {} },

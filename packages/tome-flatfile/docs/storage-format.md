@@ -159,25 +159,25 @@ Path: `data/relationships.json`.
 
 ## Model files
 
-All model files live under `model/`. Unless noted, serialize as JSON indent 2 + trailing newline. Relationship type and perspective slugs use the same normalization as relationship `type` fields.
+All model files live under `model/`. Unless noted, serialize as JSON indent 2 + trailing newline. Association ids are ULIDs (no case folding). Perspective entries are display labels only.
 
 ### `associations.json` (version 1)
 
-Registry of associations keyed by **opaque ULID** ids. Perspectives remain snake_case slugs.
+Registry of associations keyed by **opaque ULID** ids. Perspective entries are display labels only; directed cache identity is `associationId:endpointIndex`.
 
 ```json
 {
   "version": 1,
   "associations": {
     "01EXAMPLEASSOCIATIONID0001": {
-      "perspectives": ["members", "member_of"],
-      "perspectiveLabels": {
-        "member_of": { "title": "Membership", "linkAdd": "Link type table" }
-      },
+      "perspectives": [
+        "Members",
+        { "title": "Membership", "linkAdd": "Link type table" }
+      ],
       "traits": ["set"]
     },
     "01EXAMPLEASSOCIATIONID0002": {
-      "perspectives": ["ordered_members", "ordered_member_of"],
+      "perspectives": ["Ordered members", "Ordered membership"],
       "traits": ["set", "ordered"]
     }
   }
@@ -193,17 +193,14 @@ Each type definition:
 
 | Field | Required | Notes |
 | --- | --- | --- |
-| `perspectives` | yes | Exactly two strings: `[index0, index1]`. Describes the node at tuple positions `a` and `b` |
-| `perspectiveLabels` | no | Map perspective slug → string title, or `{ title, linkAdd?, linkExisting? }` |
+| `perspectives` | yes | Exactly two label configs: string title or `{ title, linkAdd?, linkExisting? }` for endpoints 0 and 1 |
 | `linkExisting` | no | boolean; UI default for link-existing controls |
 | `traits` | no | Array of flag strings or `{ key, ...config }` objects; trait keys unique per type |
 | `endpoints` | no | `{ "0": { "typeId": "<ULID>" }, "1": { "typeId": "<ULID>" } }` — allowed `is_a` type node at each endpoint |
 
-**Set association orientation (example):** for a set-trait type with perspectives `["members", "member_of"]` — **set at `a` (index 0), member at `b` (index 1)**. An ordered set association uses the same parent/child indices with traits `set` and `ordered`. Association **ids** are ULIDs; perspective slugs are project-defined and not Tome defaults.
+**Set association orientation (example):** for a set-trait type with labels `["Members", "Membership"]` — **set at `a` (index 0), member at `b` (index 1)**. Cache projections use `{associationId}:0` / `{associationId}:1`. An ordered set association uses the same parent/child indices with traits `set` and `ordered`.
 
 Serialize sorts type keys and sorts traits (string flags before object entries) for stable diffs.
-
-Composite keys are often formed as `{p1}_{p2}` with reverse-lexicographic sort of the two perspective names (e.g. helpers that register bidirectional types).
 
 ### `schema.json` (version 1)
 

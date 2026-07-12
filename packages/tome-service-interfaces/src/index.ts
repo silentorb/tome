@@ -97,7 +97,7 @@ export type PerspectiveLabelConfig =
   | string
   | { title: string; linkAdd?: string; linkExisting?: boolean };
 
-export type PerspectivePair = [string, string];
+export type PerspectivePair = [PerspectiveLabelConfig, PerspectiveLabelConfig];
 
 export interface TraitObjectEntry {
   key: string;
@@ -117,7 +117,6 @@ export interface AssociationEndpoints {
 
 export interface AssociationDefinition {
   perspectives: PerspectivePair;
-  perspectiveLabels?: Record<string, PerspectiveLabelConfig>;
   linkExisting?: boolean;
   traits?: TraitEntry[];
   endpoints?: AssociationEndpoints;

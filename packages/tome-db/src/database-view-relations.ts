@@ -9,7 +9,16 @@ import {
   otherEndpoint,
   rowBelongsToDatabase,
 } from "./relationship-traverse";
-import { normalizeRelationshipType } from "tome-flatfile";
+import {
+  loadAssociationsFromContent,
+  normalizeRelationshipType,
+  parseProjectionType,
+  perspectiveConfigAt,
+  perspectiveTitle,
+  projectionTypeForEndpoint,
+  slugifyPropertyKey,
+} from "tome-flatfile";
+import type { AssociationDefinition, AssociationsFile } from "tome-flatfile";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;
@@ -34,17 +43,46 @@ function scopeForRow(
   return filterRelationshipsByRowDatabaseContext(db, rowId, databaseId, relationships, contentDir);
 }
 
+function perspectiveSlugAt(def: AssociationDefinition, index: 0 | 1): string {
+  return normalizeRelationshipType(
+    slugifyPropertyKey(perspectiveTitle(perspectiveConfigAt(def, index))),
+  );
+}
+
+/** Projection types that share a display label with `connectionType` (symmetric associations). */
+function acceptedOutgoingTypes(
+  connectionType: string,
+  registry: AssociationsFile | null,
+): Set<string> {
+  const normalized = normalizeRelationshipType(connectionType);
+  const accepted = new Set([normalized]);
+  if (!registry) return accepted;
+  const parsed = parseProjectionType(connectionType);
+  if (!parsed) return accepted;
+  const def = registry.associations[parsed.associationId];
+  if (!def) return accepted;
+  if (perspectiveSlugAt(def, 0) !== perspectiveSlugAt(def, 1)) return accepted;
+  accepted.add(
+    normalizeRelationshipType(projectionTypeForEndpoint(parsed.associationId, 0)),
+  );
+  accepted.add(
+    normalizeRelationshipType(projectionTypeForEndpoint(parsed.associationId, 1)),
+  );
+  return accepted;
+}
+
 /** Keep projections emitted from this row's local perspective (source + type). */
 function filterByOutgoingPerspective(
   nodeId: string,
   connectionType: string,
   relationships: Relationship[],
+  registry: AssociationsFile | null,
 ): Relationship[] {
-  const normalized = normalizeRelationshipType(connectionType);
+  const accepted = acceptedOutgoingTypes(connectionType, registry);
   return relationships.filter(
     (relationship) =>
       relationship.sourceNodeId === nodeId &&
-      normalizeRelationshipType(relationship.type) === normalized,
+      accepted.has(normalizeRelationshipType(relationship.type)),
   );
 }
 
@@ -57,6 +95,7 @@ export function listRelationConnectionsForRow(
   contentDir?: string,
 ): Relationship[] {
   if (!rowBelongsToDatabase(db, nodeId, databaseId, contentDir)) return [];
+  const registry = contentDir ? loadAssociationsFromContent(contentDir) : null;
 
   if (compositeType) {
     const byComposite = listRelationshipsForComposite(db, nodeId, compositeType);
@@ -64,14 +103,34 @@ export function listRelationConnectionsForRow(
       db,
       nodeId,
       databaseId,
-      filterByOutgoingPerspective(nodeId, connectionType, byComposite),
+      filterByOutgoingPerspective(nodeId, connectionType, byComposite, registry),
       contentDir,
     );
     if (compositeFiltered.length > 0) return compositeFiltered;
   }
 
   const outgoing = db.listRelationshipsFromSource(nodeId, connectionType);
-  return scopeForRow(db, nodeId, databaseId, outgoing, contentDir);
+  const symmetric =
+    registry &&
+    (() => {
+      const parsed = parseProjectionType(connectionType);
+      if (!parsed) return [] as Relationship[];
+      const def = registry.associations[parsed.associationId];
+      if (!def) return [] as Relationship[];
+      if (perspectiveSlugAt(def, 0) !== perspectiveSlugAt(def, 1)) return [] as Relationship[];
+      const otherIndex: 0 | 1 = parsed.endpointIndex === 0 ? 1 : 0;
+      return db.listRelationshipsFromSource(
+        nodeId,
+        projectionTypeForEndpoint(parsed.associationId, otherIndex),
+      );
+    })();
+  return scopeForRow(
+    db,
+    nodeId,
+    databaseId,
+    [...outgoing, ...(symmetric ?? [])],
+    contentDir,
+  );
 }
 
 function linksFromRelationships(

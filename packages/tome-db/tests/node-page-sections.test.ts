@@ -1,3 +1,4 @@
+import { TEST_MEMBER_OF_ASSOCIATION_ID, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, TEST_SCENES_PART_ASSOCIATION_ID, TEST_PARENTS_CHILDREN_ASSOCIATION_ID, TEST_CHILDREN_CHILDREN_ASSOCIATION_ID, TEST_FEATURES_BIBLE_PASSAGES_ASSOCIATION_ID } from "../src/content/test-helpers";
 import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -5,7 +6,7 @@ import { tmpdir } from "node:os";
 import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodePageDetail } from "../src/node-page-sections";
-import { contentModelDir, associationsFilePath, tableSchemasFilePath } from "tome-flatfile";
+import { contentModelDir, associationsFilePath, tableSchemasFilePath, projectionTypeForEndpoint } from "tome-flatfile";
 import {
   serializeAssociationsFile,
 } from "tome-flatfile";
@@ -20,17 +21,14 @@ function writeMembershipAssociations(contentDir: string): void {
       version: 1,
       associations: {
         "000000000000000000000000A1": {
-          perspectives: ["members", "member_of"],
+          perspectives: ["Members", { title: "Membership", linkAdd: "Link type table" }],
           traits: ["set"],
-          perspectiveLabels: {
-            member_of: { title: "Membership", linkAdd: "Link type table" },
-          },
         },
         "000000000000000000000000B2": {
-          perspectives: ["features", "inspirations"],
+          perspectives: ["Features", "Inspirations"],
         },
         "000000000000000000000000A4": {
-          perspectives: ["scenes", "part"],
+          perspectives: ["Scenes", "Part"],
         },
       },
     }),
@@ -49,14 +47,11 @@ function writeInspirationsFeaturesAssociations(
       version: 1,
       associations: {
         "000000000000000000000000A1": {
-          perspectives: ["members", "member_of"],
+          perspectives: ["Members", { title: "Membership", linkAdd: "Link type table" }],
           traits: ["set"],
-          perspectiveLabels: {
-            member_of: { title: "Membership", linkAdd: "Link type table" },
-          },
         },
         "000000000000000000000000B2": {
-          perspectives: ["features", "inspirations"],
+          perspectives: ["Features", "Inspirations"],
           endpoints: {
             0: { typeId: featuresTypeId },
             1: { typeId: inspirationsTypeId },
@@ -79,14 +74,11 @@ function writeFeaturesBiblePassagesAssociations(
       version: 1,
       associations: {
         "000000000000000000000000A1": {
-          perspectives: ["members", "member_of"],
+          perspectives: ["Members", { title: "Membership", linkAdd: "Link type table" }],
           traits: ["set"],
-          perspectiveLabels: {
-            member_of: { title: "Membership", linkAdd: "Link type table" },
-          },
         },
         "000000000000000000000000B5": {
-          perspectives: ["features", "bible_passages"],
+          perspectives: ["Features", "Bible passages"],
           endpoints: {
             0: { typeId: featuresTypeId },
             1: { typeId: biblePassagesTypeId },
@@ -121,8 +113,8 @@ describe("node-sections", () => {
     db.upsertNode("scene1", { title: "Opening", body: "" });
     db.upsertNode("feat1", { title: "Desperation" });
     db.upsertNode("insp1", { title: "Pride and Prejudice" });
-    db.upsertRelationship("scene1", "feat1", "features", { ordinal: 0, weight: "strong" });
-    db.upsertRelationship("scene1", "insp1", "inspirations", { ordinal: 1 });
+    db.upsertRelationship("scene1", "feat1", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0), { ordinal: 0, weight: "strong" });
+    db.upsertRelationship("scene1", "insp1", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1), { ordinal: 1 });
 
     const detail = getNodePageDetail(db, "scene1");
     const relationSections = detail?.sections.filter((section) => section.type === "relations");
@@ -130,7 +122,7 @@ describe("node-sections", () => {
     expect(relationSections).toHaveLength(2);
     expect(relationSections?.[0]).toMatchObject({
       type: "relations",
-      label: "features",
+      label: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
       title: "Features",
       addMode: "link-existing",
       columns: ["weight"],
@@ -144,7 +136,7 @@ describe("node-sections", () => {
     });
     expect(relationSections?.[1]).toMatchObject({
       type: "relations",
-      label: "inspirations",
+      label: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1),
       addMode: "link-existing",
       rows: [{ targetId: "insp1", name: "Pride and Prejudice" }],
     });
@@ -153,15 +145,15 @@ describe("node-sections", () => {
   test("defaults addMode link-existing on part relation sections", () => {
     db.upsertNode("scene5", { title: "Bridge" });
     db.upsertNode("part1", { title: "The Orphanage" });
-    db.upsertRelationship("scene5", "part1", "part", { ordinal: 0 });
+    db.upsertRelationship("scene5", "part1", projectionTypeForEndpoint(TEST_SCENES_PART_ASSOCIATION_ID, 1), { ordinal: 0 });
 
     const detail = getNodePageDetail(db, "scene5", { contentDir });
     const partSection = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "part",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_SCENES_PART_ASSOCIATION_ID, 1),
     );
 
     expect(partSection).toMatchObject({
-      label: "part",
+      label: projectionTypeForEndpoint(TEST_SCENES_PART_ASSOCIATION_ID, 1),
       addMode: "link-existing",
     });
   });
@@ -173,17 +165,14 @@ describe("node-sections", () => {
         version: 1,
         associations: {
           "000000000000000000000000A1": {
-            perspectives: ["members", "member_of"],
-            traits: ["set"],
-            perspectiveLabels: {
-            member_of: { title: "Membership", linkAdd: "Link type table" },
-            },
+            perspectives: ["Members", { title: "Membership", linkAdd: "Link type table" }],
+          traits: ["set"],
           },
           "000000000000000000000000B2": {
-            perspectives: ["features", "inspirations"],
+            perspectives: ["Features", "Inspirations"],
           },
           "000000000000000000000000A4": {
-            perspectives: ["scenes", "part"],
+            perspectives: ["Scenes", "Part"],
             linkExisting: false,
           },
         },
@@ -193,15 +182,15 @@ describe("node-sections", () => {
 
     db.upsertNode("scene6", { title: "Harbor" });
     db.upsertNode("part2", { title: "Act II" });
-    db.upsertRelationship("scene6", "part2", "part", { ordinal: 0 });
+    db.upsertRelationship("scene6", "part2", projectionTypeForEndpoint(TEST_SCENES_PART_ASSOCIATION_ID, 1), { ordinal: 0 });
 
     const detail = getNodePageDetail(db, "scene6", { contentDir });
     const partSection = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "part",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_SCENES_PART_ASSOCIATION_ID, 1),
     );
 
     expect(partSection).toMatchObject({
-      label: "part",
+      label: projectionTypeForEndpoint(TEST_SCENES_PART_ASSOCIATION_ID, 1),
       addMode: "none",
     });
 
@@ -212,7 +201,7 @@ describe("node-sections", () => {
     const databaseId = "db42345678901234567890123456789012";
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features DB"), body: "# About" });
     db.upsertNode("page4", { title: "Guest consultant" });
-    db.upsertRelationship("page4", databaseId, "member_of", {
+    db.upsertRelationship("page4", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
       status: "Partial",
     });
 
@@ -240,19 +229,19 @@ describe("node-sections", () => {
     db.upsertNode(databaseId, {
       ...typeTableMarkerProperties("Scene Archive"),
     });
-    db.upsertRelationship("page5", databaseId, "member_of", {
+    db.upsertRelationship("page5", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
       view: "default",
       priority: "High",
     });
 
     const detail = getNodePageDetail(db, "page5", { contentDir });
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "member_of",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
     );
 
     expect(membership).toMatchObject({
       type: "relations",
-      label: "member_of",
+      label: projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
       title: "Membership",
       typeNodeId: null,
       linkAddLabel: "Link type table",
@@ -283,16 +272,16 @@ describe("node-sections", () => {
     db.upsertNode(databaseId, {
       ...typeTableMarkerProperties("Legacy Features"),
     });
-    db.upsertRelationship("page6", databaseId, "member_of", { status: "Unresolved" });
+    db.upsertRelationship("page6", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { status: "Unresolved" });
 
     const detail = getNodePageDetail(db, "page6", { contentDir });
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "member_of",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
     );
 
     expect(membership).toMatchObject({
       type: "relations",
-      label: "member_of",
+      label: projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
       title: "Membership",
       typeNodeId: null,
       linkAddLabel: "Link type table",
@@ -310,13 +299,13 @@ describe("node-sections", () => {
     const featuresTypeId = "f72345678901234567890123456789012";
     db.upsertNode("scene2", { title: "Chase" });
     db.upsertNode(featuresTypeId, { ...typeTableMarkerProperties("Features") });
-    db.upsertRelationship("scene2", featuresTypeId, "member_of", { row_index: 0 });
+    db.upsertRelationship("scene2", featuresTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
     db.upsertNode("feat2", { title: "Desperation" });
-    db.upsertRelationship("scene2", "feat2", "features", { ordinal: 0 });
+    db.upsertRelationship("scene2", "feat2", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0), { ordinal: 0 });
 
     const detail = getNodePageDetail(db, "scene2");
     const features = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "features",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
     );
 
     expect(features).toMatchObject({
@@ -329,13 +318,13 @@ describe("node-sections", () => {
     const inspTypeId = "f82345678901234567890123456789012";
     db.upsertNode("scene3", { title: "Ball" });
     db.upsertNode(inspTypeId, { ...typeTableMarkerProperties("Inspirations") });
-    db.upsertRelationship("scene3", inspTypeId, "member_of", { row_index: 0 });
+    db.upsertRelationship("scene3", inspTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
     db.upsertNode("insp2", { title: "Emma" });
-    db.upsertRelationship("scene3", "insp2", "inspirations", { ordinal: 0 });
+    db.upsertRelationship("scene3", "insp2", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1), { ordinal: 0 });
 
     const detail = getNodePageDetail(db, "scene3");
     const inspirations = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "inspirations",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1),
     );
 
     expect(inspirations?.typeNodeId).toBe(inspTypeId);
@@ -348,12 +337,12 @@ describe("node-sections", () => {
     db.upsertNode("multi-member", { title: "Shared row", body: "" });
     db.upsertNode(typeA, { ...typeTableMarkerProperties("Type A") });
     db.upsertNode(typeB, { ...typeTableMarkerProperties("Type B") });
-    db.upsertRelationship("multi-member", typeA, "member_of", { row_index: 0 });
-    db.upsertRelationship("multi-member", typeB, "member_of", { row_index: 1 });
+    db.upsertRelationship("multi-member", typeA, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship("multi-member", typeB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 1 });
 
     const detail = getNodePageDetail(db, "multi-member", { contentDir });
     const membership = detail?.sections.filter(
-      (section) => section.type === "relations" && section.label === "member_of",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
     );
 
     expect(membership).toHaveLength(1);
@@ -411,7 +400,7 @@ describe("node-sections table-schema empty relation placeholders", () => {
   db.upsertNode(inspirationsTypeId, { ...typeTableMarkerProperties("Inspirations") });
   db.upsertNode(featuresTypeId, { ...typeTableMarkerProperties("Features") });
   db.upsertNode(inspirationId, { title: "Dishonored", body: "" });
-  db.upsertRelationship(inspirationId, inspirationsTypeId, "member_of", { row_index: 71 });
+  db.upsertRelationship(inspirationId, inspirationsTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 71 });
 
   test("includes empty relation section from table-schemas when includeSchemaEmptySections is true", () => {
     const detail = getNodePageDetail(db, inspirationId, {
@@ -419,12 +408,12 @@ describe("node-sections table-schema empty relation placeholders", () => {
       includeSchemaEmptySections: true,
     });
     const features = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "inspirations",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1),
     );
 
     expect(features).toMatchObject({
       type: "relations",
-      label: "inspirations",
+      label: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1),
       title: "Inspirations",
       typeNodeId: inspirationsTypeId,
       addMode: "link-existing",
@@ -437,22 +426,22 @@ describe("node-sections table-schema empty relation placeholders", () => {
   test("omits table-schema-only relation section by default", () => {
     const detail = getNodePageDetail(db, inspirationId, { contentDir });
     const features = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "inspirations",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1),
     );
     expect(features).toBeUndefined();
   });
 
   test("does not duplicate section when features link already exists", () => {
     db.upsertNode(featId, { title: "Desperation" });
-    db.upsertRelationship(featId, featuresTypeId, "member_of", { row_index: 0 });
-    db.upsertRelationship(inspirationId, featId, "inspirations", { ordinal: 0 });
+    db.upsertRelationship(featId, featuresTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship(inspirationId, featId, projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1), { ordinal: 0 });
 
     const detail = getNodePageDetail(db, inspirationId, {
       contentDir,
       includeSchemaEmptySections: true,
     });
     const featuresSections = detail?.sections.filter(
-      (section) => section.type === "relations" && section.label === "inspirations",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1),
     );
 
     expect(featuresSections).toHaveLength(1);
@@ -483,11 +472,11 @@ describe("node-sections children_children addMode", () => {
       version: 1,
       associations: {
         "000000000000000000000000A1": {
-          perspectives: ["members", "member_of"],
+          perspectives: ["Members", "Membership"],
           traits: ["set"],
         },
         "000000000000000000000000B1": {
-          perspectives: ["children", "parents"],
+          perspectives: ["Children", "Parents"],
           linkExisting: false,
         },
         "000000000000000000000000B4": {
@@ -532,19 +521,19 @@ describe("node-sections children_children addMode", () => {
     db.upsertNode(groupsTypeId, { ...typeTableMarkerProperties("Groups") });
     db.upsertNode("group1", { title: "Alpha Squad" });
     db.upsertNode("group2", { title: "Beta Squad" });
-    db.upsertRelationship("group1", groupsTypeId, "member_of", { row_index: 0 });
-    db.upsertRelationship("group1", "group2", "children", { ordinal: 0 });
+    db.upsertRelationship("group1", groupsTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship("group1", "group2", projectionTypeForEndpoint(TEST_CHILDREN_CHILDREN_ASSOCIATION_ID, 0), { ordinal: 0 });
 
     const detail = getNodePageDetail(db, "group1", {
       contentDir,
       includeSchemaEmptySections: true,
     });
     const childrenSection = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "children",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_CHILDREN_CHILDREN_ASSOCIATION_ID, 0),
     );
 
     expect(childrenSection).toMatchObject({
-      label: "children",
+      label: projectionTypeForEndpoint(TEST_CHILDREN_CHILDREN_ASSOCIATION_ID, 0),
       addMode: "link-existing",
     });
   });
@@ -565,18 +554,19 @@ describe("node-sections trait-based set presentation", () => {
   const customSetDb = "0000000000000000000000000C";
   const rowId = "0000000000000000000000000R";
   const featId = "0000000000000000000000000F";
+  const customSetAssociationId = "000000000000000000000000C1";
 
   writeFileSync(
     associationsFilePath(contentDir),
     serializeAssociationsFile({
       version: 1,
       associations: {
-        "000000000000000000000000C1": {
-          perspectives: ["custom_sets", "custom_members"],
+        [customSetAssociationId]: {
+          perspectives: ["Custom sets", "Custom members"],
           traits: ["set", "ordered"],
         },
         "000000000000000000000000B2": {
-          perspectives: ["features", "inspirations"],
+          perspectives: ["Features", "Inspirations"],
         },
       },
     }),
@@ -587,9 +577,9 @@ describe("node-sections trait-based set presentation", () => {
   db.upsertNode(customSetDb, { ...typeTableMarkerProperties("Custom Archive") });
   db.upsertNode(rowId, { title: "Custom row", body: "" });
   db.upsertNode(featId, { title: "Feature A" });
-  db.upsertRelationship(rowId, customSetDb, "custom_members", { order: "10" });
-  db.upsertRelationship(rowId, featId, "features", { ordinal: 0 });
-  db.upsertRelationship(rowId, customSetDb, "custom_sets", { order: "10" });
+  db.upsertRelationship(rowId, customSetDb, projectionTypeForEndpoint(customSetAssociationId, 1), { order: "10" });
+  db.upsertRelationship(rowId, featId, projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0), { ordinal: 0 });
+  db.upsertRelationship(rowId, customSetDb, projectionTypeForEndpoint(customSetAssociationId, 0), { order: "10" });
 
   test("hides set-side perspectives from instance pages", () => {
     const detail = getNodePageDetail(db, rowId, { contentDir });
@@ -597,8 +587,8 @@ describe("node-sections trait-based set presentation", () => {
       .filter((section) => section.type === "relations")
       .map((section) => section.label);
 
-    expect(labels).not.toContain("custom_sets");
-    expect(labels).toContain("custom_members");
+    expect(labels).not.toContain(projectionTypeForEndpoint(customSetAssociationId, 0));
+    expect(labels).toContain(projectionTypeForEndpoint(customSetAssociationId, 1));
   });
 
   test("sorts set-trait member perspectives after other relation sections", () => {
@@ -607,7 +597,10 @@ describe("node-sections trait-based set presentation", () => {
       .filter((section) => section.type === "relations")
       .map((section) => section.label);
 
-    expect(labels).toEqual(["features", "custom_members"]);
+    expect(labels).toEqual([
+      projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
+      projectionTypeForEndpoint(customSetAssociationId, 1),
+    ]);
   });
 
   test("uses registry linkExisting false for addMode on structural perspectives", () => {
@@ -616,12 +609,12 @@ describe("node-sections trait-based set presentation", () => {
       serializeAssociationsFile({
         version: 1,
         associations: {
-          "000000000000000000000000C1": {
-            perspectives: ["custom_sets", "custom_members"],
+          [customSetAssociationId]: {
+            perspectives: ["Custom sets", "Custom members"],
             traits: ["set", "ordered"],
           },
           "000000000000000000000000B1": {
-            perspectives: ["children", "parents"],
+            perspectives: ["Children", "Parents"],
             linkExisting: false,
           },
         },
@@ -631,15 +624,15 @@ describe("node-sections trait-based set presentation", () => {
 
     db.upsertNode("child1", { title: "Child row" });
     db.upsertNode("parent1", { title: "Parent row" });
-    db.upsertRelationship("child1", "parent1", "parents", { ordinal: 0 });
+    db.upsertRelationship("child1", "parent1", projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1), { ordinal: 0 });
 
     const detail = getNodePageDetail(db, "child1", { contentDir });
     const parentsSection = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "parents",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1),
     );
 
     expect(parentsSection).toMatchObject({
-      label: "parents",
+      label: projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1),
       addMode: "none",
     });
   });
@@ -688,7 +681,7 @@ describe("node-sections bible passages regression", () => {
   test("member row shows Verses in Properties and Bible passages in member_of section", () => {
     db.upsertNode(biblePassagesId, { ...typeTableMarkerProperties("Bible passages") });
     db.upsertNode(memberId, { title: "Men gather to David", body: "> 1 Samuel 22:2" });
-    db.upsertRelationship(memberId, biblePassagesId, "member_of", {
+    db.upsertRelationship(memberId, biblePassagesId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
       view: "Untitled",
       row_index: 20,
     });
@@ -704,11 +697,11 @@ describe("node-sections bible passages regression", () => {
     });
 
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === "member_of",
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
     );
     expect(membership).toMatchObject({
       type: "relations",
-      label: "member_of",
+      label: projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
       title: "Membership",
       typeNodeId: null,
       linkAddLabel: "Link type table",

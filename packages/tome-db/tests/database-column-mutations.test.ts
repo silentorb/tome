@@ -8,14 +8,7 @@ import {
 import { getDatabaseViewDetail } from "../src/database-view";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { invalidateSchemaCache } from "tome-flatfile";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-  seedTestNode,
-  seedTestRelationships,
-  seedTestTableSchema,
-  seedTestViews,
-} from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, seedTestCompositeRelationships, seedTestTableSchema, seedTestViews, TEST_MEMBER_OF_ASSOCIATION_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
 
 function seedParentsChildrenTypes(
   fixture: ReturnType<typeof createTestContentFixture>,
@@ -25,7 +18,7 @@ function seedParentsChildrenTypes(
 ): void {
   const file = fixture.ctx.store.readAssociationsFile();
   file.associations[compositeKey] = {
-    perspectives: ["children", "parents"],
+    perspectives: ["Children", "Parents"],
     endpoints: {
       0: { typeId: childTypeId },
       1: { typeId: parentTypeId },
@@ -139,7 +132,7 @@ describe("database column mutations", () => {
         {
           id: "by-notes",
           nodeId: databaseId,
-          perspective: "members",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "By notes",
           sorts: [{ column: "notes", direction: "asc" }],
           properties: { columnOrder: ["notes"] },
@@ -156,7 +149,7 @@ describe("database column mutations", () => {
       rowsMigrated: 1,
     });
 
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, "member_of")[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1))[0];
     expect(edge?.properties.description).toBe("Alpha");
     expect(edge?.properties.notes).toBeUndefined();
 
@@ -190,7 +183,7 @@ describe("database column mutations", () => {
     });
     expect(result).toMatchObject({ valuesCleared: 1, relationsUnlinked: 0 });
 
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(rowId, "member_of")[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(rowId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1))[0];
     expect(edge?.properties.label).toBeUndefined();
   });
 
@@ -215,7 +208,16 @@ describe("database column mutations", () => {
     seedTestNode(fixture, { id: parentId, properties: { title: "Parent" } });
     seedTestRelationships(fixture, [
       { source: rowId, target: databaseId, type: "member_of", properties: {} },
-      { source: rowId, target: parentId, type: "children", properties: {} },
+    ]);
+    seedTestCompositeRelationships(fixture, [
+      {
+        a: rowId,
+        b: parentId,
+        typeFromA: "Children",
+        typeFromB: "Parents",
+        associationId: "000000000000000000000000B1",
+        properties: {},
+      },
     ]);
 
     const result = updateDatabaseColumn(fixture.ctx, databaseId, "parents", {
@@ -224,7 +226,12 @@ describe("database column mutations", () => {
     });
     expect(result).toMatchObject({ relationsUnlinked: 1 });
 
-    expect(fixture.ctx.cache.listRelationshipsFromSource(rowId, "children")).toHaveLength(0);
+    expect(
+      fixture.ctx.cache.listRelationshipsFromSource(
+        rowId,
+        projectionTypeForEndpoint("000000000000000000000000B1", 0),
+      ),
+    ).toHaveLength(0);
   });
 
   test("updateDatabaseColumn relation target change unlinks old links", () => {
@@ -252,14 +259,28 @@ describe("database column mutations", () => {
     seedTestNode(fixture, { id: parentId, properties: { title: "Parent" } });
     seedTestRelationships(fixture, [
       { source: rowId, target: databaseId, type: "member_of", properties: {} },
-      { source: rowId, target: parentId, type: "children", properties: {} },
+    ]);
+    seedTestCompositeRelationships(fixture, [
+      {
+        a: rowId,
+        b: parentId,
+        typeFromA: "Children",
+        typeFromB: "Parents",
+        associationId: "000000000000000000000000B1",
+        properties: {},
+      },
     ]);
 
     const result = updateDatabaseColumn(fixture.ctx, databaseId, "parents", {
       association: "000000000000000000000000BE",
     });
     expect(result).toMatchObject({ relationsUnlinked: 1 });
-    expect(fixture.ctx.cache.listRelationshipsFromSource(rowId, "children")).toHaveLength(0);
+    expect(
+      fixture.ctx.cache.listRelationshipsFromSource(
+        rowId,
+        projectionTypeForEndpoint("000000000000000000000000B1", 0),
+      ),
+    ).toHaveLength(0);
   });
 
   test("rejects duplicate and reserved keys", () => {

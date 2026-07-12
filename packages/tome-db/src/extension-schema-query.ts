@@ -10,7 +10,7 @@ import { loadTableSchemasFromContent } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import { associationRulesFromRegistry } from "./association-endpoints";
 import {
-  perspectiveForRelationColumn,
+  projectionTypeForRelationColumn,
   targetTypeIdForRelationColumn,
 } from "tome-flatfile";
 
@@ -68,7 +68,7 @@ export function createExtensionSchemaQueryServices(
           if (column.type !== "relation") continue;
           const targetTypeId = targetTypeIdForRelationColumn(registry, sourceTypeId, column);
           if (!targetTypeId) continue;
-          const label = perspectiveForRelationColumn(registry, sourceTypeId, column);
+          const label = projectionTypeForRelationColumn(registry, sourceTypeId, column);
           edges.push({
             id: `${sourceTypeId}:${column.key}`,
             sourceTypeId,
