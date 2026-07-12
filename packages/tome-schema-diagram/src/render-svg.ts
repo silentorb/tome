@@ -1,6 +1,6 @@
 import type { SchemaDiagramTheme, SchemaDiagramMemberBadgePosition } from "./config";
 import type { ElkEdge, ElkGraph, ElkNode, ElkPoint } from "./build-elk-graph";
-import { buildElkGraph, measureEdgeLabelSize } from "./build-elk-graph";
+import { buildElkGraph } from "./build-elk-graph";
 import { layoutElkGraph } from "./layout-elk";
 import type { SchemaDiagramSnapshot } from "./snapshot";
 import type { SchemaDiagramConfig } from "./config";
@@ -22,8 +22,6 @@ interface DiagramPalette {
   nodeStroke: string;
   nodeText: string;
   edgeStroke: string;
-  labelFill: string;
-  labelText: string;
   badgeFill: string;
   badgeText: string;
 }
@@ -36,8 +34,6 @@ function paletteForTheme(theme: SchemaDiagramTheme): DiagramPalette {
         nodeStroke: "#666666",
         nodeText: "#ebebea",
         edgeStroke: "#9a9a9a",
-        labelFill: "#1e1e1e",
-        labelText: "#d4d4d4",
         badgeFill: "#e5534b",
         badgeText: "#ffffff",
       };
@@ -47,8 +43,6 @@ function paletteForTheme(theme: SchemaDiagramTheme): DiagramPalette {
         nodeStroke: "#4a7c4a",
         nodeText: "#e8f0e8",
         edgeStroke: "#6b9b6b",
-        labelFill: "#152015",
-        labelText: "#c8dcc8",
         badgeFill: "#5a9a5a",
         badgeText: "#ffffff",
       };
@@ -58,8 +52,6 @@ function paletteForTheme(theme: SchemaDiagramTheme): DiagramPalette {
         nodeStroke: "#b0b0b0",
         nodeText: "#333333",
         edgeStroke: "#707070",
-        labelFill: "#ffffff",
-        labelText: "#444444",
         badgeFill: "#d04a42",
         badgeText: "#ffffff",
       };
@@ -69,8 +61,6 @@ function paletteForTheme(theme: SchemaDiagramTheme): DiagramPalette {
         nodeStroke: "#cccccc",
         nodeText: "#222222",
         edgeStroke: "#666666",
-        labelFill: "#ffffff",
-        labelText: "#333333",
         badgeFill: "#e5534b",
         badgeText: "#ffffff",
       };
@@ -201,14 +191,6 @@ function computeBounds(
         extendBounds(bounds, point.x, point.y);
       }
     }
-    for (const label of edge.labels ?? []) {
-      const positioned = label as ElkLabelPositioned;
-      if (positioned.x == null || positioned.y == null) continue;
-      const width = positioned.width ?? 0;
-      const height = positioned.height ?? 14;
-      extendBounds(bounds, positioned.x, positioned.y);
-      extendBounds(bounds, positioned.x + width, positioned.y + height);
-    }
   }
 
   if (!Number.isFinite(bounds.minX)) {
@@ -216,14 +198,6 @@ function computeBounds(
   }
 
   return bounds;
-}
-
-interface ElkLabelPositioned {
-  text: string;
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
 }
 
 function shiftPoint(point: ElkPoint, offsetX: number, offsetY: number): ElkPoint {
@@ -327,6 +301,7 @@ function renderNode(
   palette: DiagramPalette,
   memberCount: number,
   memberBadgePosition: SchemaDiagramMemberBadgePosition,
+  nodePageHref?: (nodeId: string) => string,
 ): string {
   if (node.x == null || node.y == null || node.width == null || node.height == null) return "";
   const x = node.x - offsetX;
@@ -335,7 +310,7 @@ function renderNode(
   const textX = x + node.width / 2;
   const textY = y + node.height / 2;
 
-  return (
+  const body =
     `<g class="schema-diagram-node">` +
     `<rect x="${x}" y="${y}" width="${node.width}" height="${node.height}" rx="${NODE_RX}" ` +
     `fill="${palette.nodeFill}" stroke="${palette.nodeStroke}" stroke-width="1.5" />` +
@@ -343,17 +318,16 @@ function renderNode(
     `fill="${palette.nodeText}" font-size="${FONT_SIZE}" font-family="system-ui, sans-serif">` +
     `${escapeXml(title)}</text>` +
     renderMemberBadge(x, y, node.width, node.height, memberCount, palette, memberBadgePosition) +
-    `</g>`
-  );
-}
+    `</g>`;
 
-function resolveEdgeLabelBox(label: ElkLabelPositioned): { width: number; height: number } {
-  const estimated = measureEdgeLabelSize(label.text);
-  const width =
-    label.width != null && label.width > 0 ? Math.ceil(label.width) : estimated.width;
-  const height =
-    label.height != null && label.height > 0 ? Math.ceil(label.height) : estimated.height;
-  return { width, height };
+  const href = nodePageHref?.(node.id)?.trim();
+  if (!href) return body;
+
+  return (
+    `<a class="schema-diagram-node-link" data-node-id="${escapeXml(node.id)}" href="${escapeXml(href)}">` +
+    body +
+    `</a>`
+  );
 }
 
 function renderEdge(edge: ElkEdge, offsetX: number, offsetY: number, palette: DiagramPalette): string {
@@ -373,21 +347,7 @@ function renderEdge(edge: ElkEdge, offsetX: number, offsetY: number, palette: Di
     })
     .join("");
 
-  const label = edge.labels?.[0] as ElkLabelPositioned | undefined;
-  let labelMarkup = "";
-  if (label?.text && label.x != null && label.y != null) {
-    const { width, height } = resolveEdgeLabelBox(label);
-    const lx = label.x - offsetX;
-    const ly = label.y - offsetY;
-    labelMarkup =
-      `<rect x="${lx}" y="${ly}" width="${width}" height="${height}" rx="3" ` +
-      `fill="${palette.labelFill}" stroke="${palette.nodeStroke}" stroke-width="1" />` +
-      `<text x="${lx + width / 2}" y="${ly + height / 2}" text-anchor="middle" dominant-baseline="central" ` +
-      `fill="${palette.labelText}" font-size="11" font-family="system-ui, sans-serif">` +
-      `${escapeXml(label.text)}</text>`;
-  }
-
-  return `<g class="schema-diagram-edge">${polylines}${labelMarkup}</g>`;
+  return `<g class="schema-diagram-edge">${polylines}</g>`;
 }
 
 export function renderLaidOutGraphSvg(
@@ -395,6 +355,7 @@ export function renderLaidOutGraphSvg(
   theme: SchemaDiagramTheme,
   memberCounts: Map<string, number> = new Map(),
   memberBadgePosition: SchemaDiagramMemberBadgePosition = "bottom-right",
+  nodePageHref?: (nodeId: string) => string,
 ): RenderSchemaDiagramSvgResult {
   const palette = paletteForTheme(theme);
   const bounds = computeBounds(graph, memberCounts, memberBadgePosition);
@@ -414,13 +375,14 @@ export function renderLaidOutGraphSvg(
         palette,
         memberCounts.get(node.id) ?? 0,
         memberBadgePosition,
+        nodePageHref,
       ),
     )
     .join("");
 
   const svg =
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${Math.ceil(width)}" height="${Math.ceil(height)}" ` +
-    `class="schema-diagram-svg" role="img" aria-hidden="true">` +
+    `class="schema-diagram-svg">` +
     `<g class="schema-diagram-edges">${edgesMarkup}</g>` +
     `<g class="schema-diagram-nodes">${nodesMarkup}</g>` +
     `</svg>`;
@@ -436,6 +398,7 @@ export function renderLaidOutGraphSvg(
 export async function renderSchemaDiagramSvg(
   snapshot: SchemaDiagramSnapshot,
   config: SchemaDiagramConfig,
+  nodePageHref?: (nodeId: string) => string,
 ): Promise<RenderSchemaDiagramSvgResult | null> {
   const built = buildElkGraph(snapshot, config);
   if (built.entityCount === 0) return null;
@@ -446,5 +409,6 @@ export async function renderSchemaDiagramSvg(
     config.theme,
     built.memberCounts,
     config.memberBadgePosition,
+    nodePageHref,
   );
 }

@@ -61,7 +61,9 @@ describe("schema diagram static html", () => {
     expect(html).toContain('class="tome-schema-diagram"');
     expect(html).toContain("<svg");
     expect(html).toContain("Scene");
-    expect(html).toContain("features");
+    expect(html).toContain('class="schema-diagram-node-link"');
+    expect(html).toContain(`href="/${SCENE_TYPE_ID}/"`);
+    expect(html).toContain(`href="/${FEATURE_TYPE_ID}/"`);
     expect(html).not.toContain("open in the editor");
   });
 });

@@ -12,6 +12,7 @@ export function register(host: HtmlPageBlockHost): void {
         data,
         ctx.component.label,
         ctx.services?.schemaDiagram,
+        ctx.services?.nodePageHref,
       );
     },
   });

@@ -1,6 +1,5 @@
 import { describe, expect, test } from "bun:test";
 import { parseSchemaDiagramConfig } from "../src/config";
-import { measureEdgeLabelSize } from "../src/build-elk-graph";
 import { renderSchemaDiagramHtml } from "../src/render";
 import { renderSchemaDiagramSvg } from "../src/render-svg";
 
@@ -44,7 +43,7 @@ describe("schema diagram render", () => {
     expect(html).not.toContain("open in the editor");
   });
 
-  test("renderSchemaDiagramSvg produces labeled graph svg", async () => {
+  test("renderSchemaDiagramSvg produces unlabeled edge graph svg", async () => {
     const result = await renderSchemaDiagramSvg(
       {
         typeTables: [
@@ -61,15 +60,36 @@ describe("schema diagram render", () => {
         ],
       },
       parseSchemaDiagramConfig({}),
+      (nodeId) => `?node=${nodeId}`,
     );
     expect(result).not.toBeNull();
     expect(result!.entityCount).toBe(2);
     expect(result!.edgeCount).toBe(1);
     expect(result!.svg).toContain("Scene");
     expect(result!.svg).toContain("Feature");
-    expect(result!.svg).toContain("features");
+    expect(result!.svg).not.toContain("features");
     expect(result!.svg).toContain('class="schema-diagram-node"');
     expect(result!.svg).toContain('class="schema-diagram-edge"');
+    expect(result!.svg).toContain('class="schema-diagram-node-link"');
+    expect(result!.svg).toContain('href="?node=AAAAAAAAAAAAAAAAAAAAAAAAAA"');
+    expect(result!.svg).toContain('href="?node=BBBBBBBBBBBBBBBBBBBBBBBBBB"');
+    expect(result!.svg).toContain('data-node-id="AAAAAAAAAAAAAAAAAAAAAAAAAA"');
+  });
+
+  test("omits node links when nodePageHref is not provided", async () => {
+    const result = await renderSchemaDiagramSvg(
+      {
+        typeTables: [
+          { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Scene" },
+          { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Feature" },
+        ],
+        relationColumnEdges: [],
+      },
+      parseSchemaDiagramConfig({}),
+    );
+    expect(result).not.toBeNull();
+    expect(result!.svg).not.toContain("schema-diagram-node-link");
+    expect(result!.svg).not.toContain("href=");
   });
 
   test("renders member count badge when type table has members", async () => {
@@ -101,30 +121,6 @@ describe("schema diagram render", () => {
     expect(result!.svg).not.toContain("schema-diagram-member-badge");
   });
 
-  test("edge label background fits long perspective names", async () => {
-    const result = await renderSchemaDiagramSvg(
-      {
-        typeTables: [
-          { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Scene" },
-          { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Feature" },
-        ],
-        relationColumnEdges: [
-          {
-            id: "AAAAAAAAAAAAAAAAAAAAAAAAAA:character_attributes",
-            sourceTypeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
-            targetTypeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
-            label: "character_attributes",
-          },
-        ],
-      },
-      parseSchemaDiagramConfig({}),
-    );
-    expect(result).not.toBeNull();
-    const { width } = measureEdgeLabelSize("character_attributes");
-    expect(result!.svg).toContain(`width="${width}"`);
-    expect(result!.svg).toContain("character_attributes");
-  });
-
   test("parseSchemaDiagramConfig defaults", () => {
     const config = parseSchemaDiagramConfig({});
     expect(config.typeIds).toBeNull();
@@ -139,7 +135,7 @@ describe("schema diagram render", () => {
     expect(config.memberBadgePosition).toBe("top-left");
   });
 
-  test("renders bidirectional edges with combined label and arrowheads at both ends", async () => {
+  test("renders bidirectional edges with arrowheads at both ends and no labels", async () => {
     const result = await renderSchemaDiagramSvg(
       {
         typeTables: [
@@ -165,7 +161,9 @@ describe("schema diagram render", () => {
     );
     expect(result).not.toBeNull();
     expect(result!.edgeCount).toBe(1);
-    expect(result!.svg).toContain("products ↔ characters");
+    expect(result!.svg).not.toContain("products");
+    expect(result!.svg).not.toContain("characters");
+    expect(result!.svg).not.toContain("↔");
     const edgeGroup = result!.svg.match(/<g class="schema-diagram-edge">[\s\S]*?<\/g>/);
     expect(edgeGroup).not.toBeNull();
     expect(edgeGroup![0]!.match(/<polygon/g)?.length).toBe(2);

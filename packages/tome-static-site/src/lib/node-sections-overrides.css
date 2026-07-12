@@ -47,3 +47,7 @@
   max-width: 100%;
   height: auto;
 }
+
+.tome-content-panel .prose :where(.tome-schema-diagram) .schema-diagram-node-link {
+  cursor: pointer;
+}

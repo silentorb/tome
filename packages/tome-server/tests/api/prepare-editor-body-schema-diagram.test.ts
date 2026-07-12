@@ -159,7 +159,9 @@ describe("prepare-editor-body API — schema diagram", () => {
     expect(payload.markdown).toContain("<svg");
     expect(payload.markdown).toContain("Scene");
     expect(payload.markdown).toContain("Feature");
-    expect(payload.markdown).toContain("features");
+    expect(payload.markdown).toContain('class="schema-diagram-node-link"');
+    expect(payload.markdown).toContain(`href="?node=${sceneTypeId}"`);
+    expect(payload.markdown).toContain(`href="?node=${featureTypeId}"`);
     expect(payload.markdown).not.toContain("```tome-block");
   });
 

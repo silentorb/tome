@@ -33,7 +33,11 @@ export function register(host: ServerPageBlockHost): void {
       }
 
       const config = parseSchemaDiagramConfig(blockData);
-      const diagram = await renderSchemaDiagramSvg(snapshot, config);
+      const diagram = await renderSchemaDiagramSvg(
+        snapshot,
+        config,
+        (targetNodeId) => `?node=${targetNodeId}`,
+      );
       if (!diagram) {
         return { ok: false, error: "no diagram entities" };
       }

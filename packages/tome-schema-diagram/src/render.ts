@@ -38,6 +38,7 @@ export async function renderSchemaDiagramHtml(
   data: unknown,
   label: string,
   workspace?: SchemaDiagramWorkspaceOptions,
+  nodePageHref?: (nodeId: string) => string,
 ): Promise<string> {
   const snapshot = await loadSchemaDiagramSnapshot(schemaQuery);
   if (!snapshot || snapshot.typeTables.length === 0) {
@@ -45,7 +46,7 @@ export async function renderSchemaDiagramHtml(
   }
 
   const config = parseSchemaDiagramConfig(data, workspace);
-  const diagram = await renderSchemaDiagramSvg(snapshot, config);
+  const diagram = await renderSchemaDiagramSvg(snapshot, config, nodePageHref);
   if (!diagram) {
     return renderSchemaDiagramEmptyState(label);
   }

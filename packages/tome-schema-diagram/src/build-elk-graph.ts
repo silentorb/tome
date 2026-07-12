@@ -57,31 +57,11 @@ const NODE_PADDING_Y = 12;
 const MIN_NODE_WIDTH = 80;
 const MIN_NODE_HEIGHT = 36;
 
-const EDGE_LABEL_FONT_SIZE = 11;
-const EDGE_LABEL_CHAR_WIDTH = 7;
-const EDGE_LABEL_PAD_X = 8;
-const EDGE_LABEL_PAD_Y = 5;
-
-/** Separator between reciprocal relation column labels (e.g. products ↔ characters). */
-export const BIDIRECTIONAL_EDGE_LABEL_SEPARATOR = " ↔ ";
-
 export interface DiagramRelationEdge {
   id: string;
   sourceTypeId: string;
   targetTypeId: string;
-  label: string;
   bidirectional?: boolean;
-}
-
-function joinUniqueLabels(labels: string[]): string {
-  const seen = new Set<string>();
-  const unique: string[] = [];
-  for (const label of labels) {
-    if (seen.has(label)) continue;
-    seen.add(label);
-    unique.push(label);
-  }
-  return unique.join(", ");
 }
 
 export function mergeBidirectionalEdges(
@@ -110,31 +90,26 @@ export function mergeBidirectionalEdges(
     );
 
     if (forward.length > 0 && reverse.length > 0) {
-      const reverseLabel = joinUniqueLabels(reverse.map((edge) => edge.label));
-      const forwardLabel = joinUniqueLabels(forward.map((edge) => edge.label));
       merged.push({
         id: key,
         sourceTypeId: minId,
         targetTypeId: maxId,
-        label: `${reverseLabel}${BIDIRECTIONAL_EDGE_LABEL_SEPARATOR}${forwardLabel}`,
         bidirectional: true,
       });
       continue;
     }
 
     for (const edge of group) {
-      merged.push({ ...edge, bidirectional: false });
+      merged.push({
+        id: edge.id,
+        sourceTypeId: edge.sourceTypeId,
+        targetTypeId: edge.targetTypeId,
+        bidirectional: false,
+      });
     }
   }
 
   return merged;
-}
-
-export function measureEdgeLabelSize(text: string): { width: number; height: number } {
-  return {
-    width: Math.max(Math.ceil(text.length * EDGE_LABEL_CHAR_WIDTH + EDGE_LABEL_PAD_X * 2), 24),
-    height: EDGE_LABEL_FONT_SIZE + EDGE_LABEL_PAD_Y * 2,
-  };
 }
 
 export function measureNodeSize(title: string): { width: number; height: number } {
@@ -172,7 +147,6 @@ export function buildElkGraph(
       id: edge.id,
       sources: [edge.sourceTypeId],
       targets: [edge.targetTypeId],
-      labels: [{ text: edge.label, ...measureEdgeLabelSize(edge.label) }],
       ...(edge.bidirectional ? { bidirectional: true } : {}),
     });
   }
@@ -184,7 +158,6 @@ export function buildElkGraph(
       "elk.direction": config.direction === "LR" ? "RIGHT" : "DOWN",
       "elk.spacing.nodeNode": "40",
       "elk.layered.spacing.nodeNodeBetweenLayers": "60",
-      "elk.edgeLabels.inline": "true",
     },
     children,
     edges,

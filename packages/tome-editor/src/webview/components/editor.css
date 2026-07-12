@@ -381,6 +381,10 @@
   cursor: grabbing;
 }
 
+.tome-schema-diagram-viewport .schema-diagram-node-link {
+  cursor: pointer;
+}
+
 .tome-schema-diagram-toolbar {
   position: absolute;
   top: 8px;

@@ -11,6 +11,43 @@ interface PanZoomInstance {
 
 const panZoomByFigure = new WeakMap<HTMLElement, PanZoomInstance>();
 
+/** Suppress link navigation after a pan drag so grabbing a node does not navigate. */
+const DRAG_THRESHOLD_PX = 4;
+
+function attachNodeLinkDragGuard(viewport: HTMLElement): void {
+  let startX = 0;
+  let startY = 0;
+  let dragged = false;
+
+  viewport.addEventListener("pointerdown", (event) => {
+    if (event.button !== 0) return;
+    startX = event.clientX;
+    startY = event.clientY;
+    dragged = false;
+  });
+
+  viewport.addEventListener("pointermove", (event) => {
+    if ((event.buttons & 1) === 0) return;
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    if (dx * dx + dy * dy > DRAG_THRESHOLD_PX * DRAG_THRESHOLD_PX) {
+      dragged = true;
+    }
+  });
+
+  viewport.addEventListener(
+    "click",
+    (event) => {
+      if (!dragged) return;
+      const target = event.target as Element | null;
+      if (!target?.closest?.("a.schema-diagram-node-link")) return;
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    true,
+  );
+}
+
 function buildToolbar(): HTMLElement {
   const toolbar = document.createElement("div");
   toolbar.className = "tome-schema-diagram-toolbar";
@@ -161,6 +198,7 @@ function initViewport(figure: HTMLElement, viewport: HTMLElement): void {
   const instance = initPanZoom(figure, viewport, svg);
   if (!instance) return;
 
+  attachNodeLinkDragGuard(viewport);
   const toolbar = buildToolbar();
   viewport.appendChild(toolbar);
   attachToolbarHandlers(toolbar, () => panZoomByFigure.get(figure));
