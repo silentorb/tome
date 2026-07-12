@@ -9,7 +9,7 @@ import type { TableColumnDef } from "tome-flatfile";
 
 export const ROW_META_KEYS = new Set(["view", "row_name", "order", "row_index", "number"]);
 
-export function stripScalarFromMembershipEdges(
+export function stripScalarFromSetEdges(
   ctx: TomeWriteContext,
   databaseId: string,
   propertyKey: string,
@@ -33,7 +33,7 @@ export function stripScalarFromMembershipEdges(
   return count;
 }
 
-export function renameScalarOnMembershipEdges(
+export function renameScalarOnSetEdges(
   ctx: TomeWriteContext,
   databaseId: string,
   oldKey: string,

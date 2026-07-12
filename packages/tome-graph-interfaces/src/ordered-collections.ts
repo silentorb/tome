@@ -51,6 +51,8 @@ export interface OrderedCollectionViewDetail {
   viewAssociation: string;
   /** Member-side perspective for unlink/move against this set. */
   memberSidePerspective: string;
+  /** Section heading from perspectiveLabels, else "Contents". */
+  sectionTitle: string;
   tabs: TableTabsDetail;
   groups: OrderedCollectionGroup[];
   columns: string[];

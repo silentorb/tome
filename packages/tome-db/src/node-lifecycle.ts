@@ -6,7 +6,7 @@ import {
   markIncidentRelationshipsArchived,
   unmarkIncidentRelationshipsArchived,
 } from "./relationship-archive";
-import { membershipPerspectivesForSet } from "tome-flatfile";
+import { setRolePerspectivesForNode } from "tome-flatfile";
 import { archiveNodeId, protectedNodeIds } from "tome-flatfile";
 import type { NodeLifecycleError } from "tome-graph-interfaces";
 
@@ -36,7 +36,7 @@ export function archiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleErr
   if (isArchivedNode(ctx.cache, id, contentDir)) return "already_archived";
 
   markIncidentRelationshipsArchived(ctx.store, id, hubId);
-  const [, memberPerspective] = membershipPerspectivesForSet(hubId, contentDir);
+  const [, memberPerspective] = setRolePerspectivesForNode(hubId, contentDir);
   ctx.store.upsertRelationship(id, hubId, memberPerspective);
   syncAfterRelationshipsWrite(ctx);
   return null;
@@ -49,7 +49,7 @@ export function unarchiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleE
   if (!ctx.store.readNode(id)) return "not_found";
   if (!isArchivedNode(ctx.cache, id, contentDir)) return "not_archived";
 
-  const [, memberPerspective] = membershipPerspectivesForSet(hubId, contentDir);
+  const [, memberPerspective] = setRolePerspectivesForNode(hubId, contentDir);
   ctx.store.deleteRelationship(id, hubId, memberPerspective);
   const stillArchivedIds = new Set(listArchiveMemberIdsFromStore(ctx.store, hubId));
   unmarkIncidentRelationshipsArchived(ctx.store, id, stillArchivedIds, hubId);

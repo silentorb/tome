@@ -4,7 +4,7 @@ import {
   resolveContentPath,
   setTraitPerspectives,
 } from "tome-flatfile";
-import { findSetMembershipRelationship, setMemberIds } from "./set-membership";
+import { findSetEdge, setMemberIds } from "./set-membership";
 import { archiveNodeId, legacyArchivePathPrefix } from "tome-flatfile";
 
 export function isLegacyArchivedPath(path: string | null, contentDir?: string): boolean {
@@ -22,7 +22,7 @@ function resolveArchiveHubId(contentDir?: string): string | null {
   }
 }
 
-/** True when the node has set membership on the Archive hub (not the hub itself). */
+/** True when the node has a set edge on the Archive hub (not the hub itself). */
 export function isArchivedNode(
   db: GraphDatabase,
   nodeId: string,
@@ -37,7 +37,7 @@ export function isArchivedNode(
   const registry = loadAssociationsFromContent(dir);
   if (setTraitPerspectives(registry).length === 0) return false;
 
-  return findSetMembershipRelationship(db, nodeId, archiveId, dir) !== null;
+  return findSetEdge(db, nodeId, archiveId, dir) !== null;
 }
 
 export function listArchivedNodeIds(db: GraphDatabase, contentDir?: string): string[] {

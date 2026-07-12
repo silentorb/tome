@@ -70,7 +70,7 @@ Which `tome-db` modules participate in which behaviors (factual; modules may tou
 | [`node-create.ts`](../../../packages/tome-db/src/node-create.ts) | B1, B2, B3 |
 | [`archive-status.ts`](../../../packages/tome-db/src/archive-status.ts) | B1 |
 | [`relationship-archive.ts`](../../../packages/tome-db/src/relationship-archive.ts) | B1 |
-| [`type-membership-audit.ts`](../../../packages/tome-db/src/type-membership-audit.ts) | B1, B2 |
+| [`type-membership-audit.ts`](../../../../marloth-story/scripts/lib/type-membership-audit.ts) | B1, B2 (moved to marloth-story; legacy export hygiene) |
 | [`database-view-relations.ts`](../../../packages/tome-db/src/database-view-relations.ts) | B3, B4, B5, C |
 | [`schema-rules/resolve.ts`](../../../packages/tome-db/src/schema-rules/resolve.ts) | B3 |
 | [`node-page-sections.ts`](../../../packages/tome-db/src/node-page-sections.ts) | B2, B3, B7 |
@@ -110,7 +110,7 @@ Domain values above are from the Marloth corpus; `silentorb-web` has an empty `a
 
 ## Related feature docs
 
-- [Set membership](../../features/set-membership.md)
+- [Set membership](../../features/sets.md)
 - [Ordered collections](../../features/ordered-collections.md)
 - [tome-db](../../features/tome-db.md)
 - [Table schemas](../../features/table-schemas.md)

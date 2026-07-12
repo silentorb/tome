@@ -282,7 +282,7 @@ function buildGraphServices(
         input.type,
         contentPath,
       );
-      const membershipTypeId =
+      const typeTableId =
         rule && rule.allowedTargetTypeIds.length === 1
           ? rule.allowedTargetTypeIds[0]
           : undefined;
@@ -293,7 +293,7 @@ function buildGraphServices(
           sourceId,
           type: input.type,
           properties: input.properties,
-          membershipTypeId,
+          typeTableId,
         },
       });
     },

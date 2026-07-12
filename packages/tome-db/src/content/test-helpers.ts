@@ -4,9 +4,8 @@ import { tmpdir } from "node:os";
 import type { Node, Properties } from "tome-sqlite";
 import { bodyFromNode, serializeNodeFile } from "tome-flatfile";
 import { fileFromSeedInputs } from "tome-flatfile";
-import { serializeViewsFile, type ViewsFile } from "tome-flatfile";
+import { type ViewsFile, VIEWS_FILE_VERSION } from "tome-flatfile";
 import {
-  serializeTableSchemasFile,
   type TableColumnDef,
   type TableSchemasFile,
 } from "tome-flatfile";
@@ -26,8 +25,7 @@ import type { TomeWriteContext } from "./write-context";
 import {
   emptyAssociationsFile,
   registerBidirectionalType,
-  registerOrderedSetMembershipType,
-  registerSetMembershipType,
+  registerSetAssociation,
   serializeAssociationsFile,
 } from "tome-flatfile";
 import { invalidateAssociationsCache } from "tome-flatfile";
@@ -111,16 +109,30 @@ export function defaultTestOrderedCollectionsFile(): OrderedCollectionsFile {
 
 export function seedDefaultAssociations(fixture: TestContentFixture): void {
   const registry = fixture.ctx.store.readAssociationsFile();
-  registerSetMembershipType(registry);
-  registerOrderedSetMembershipType(registry);
+  registerSetAssociation(registry, {
+    id: "member_of",
+    perspectives: ["members", "member_of"],
+  });
+  registerSetAssociation(registry, {
+    id: "ordered_member_of",
+    perspectives: ["ordered_members", "ordered_member_of"],
+    ordered: true,
+  });
   fixture.ctx.store.writeAssociationsFile(registry);
 }
 
-/** Write conventional set-membership types into an ad-hoc content dir (non-fixture tests). */
-export function writeSetMembershipTypes(contentDir: string): void {
+/** Write explicit set associations into an ad-hoc content dir (non-fixture tests). */
+export function writeTestSetAssociations(contentDir: string): void {
   const registry = emptyAssociationsFile();
-  registerSetMembershipType(registry);
-  registerOrderedSetMembershipType(registry);
+  registerSetAssociation(registry, {
+    id: "member_of",
+    perspectives: ["members", "member_of"],
+  });
+  registerSetAssociation(registry, {
+    id: "ordered_member_of",
+    perspectives: ["ordered_members", "ordered_member_of"],
+    ordered: true,
+  });
   mkdirSync(contentModelDir(contentDir), { recursive: true });
   writeFileSync(
     associationsFilePath(contentDir),
@@ -135,11 +147,26 @@ export function seedDefaultOrderedCollectionTableSchemas(fixture: TestContentFix
   const partsDb = "0000000000000000000000000Z";
   const productsDb = "0000000000000000000000000S";
   const file = fixture.ctx.store.readTableSchemasFile();
-  file.tables[scenesDb] = { membershipComposite: "ordered_member_of", columns: [] };
-  file.tables[partsDb] = { membershipComposite: "ordered_member_of", columns: [] };
-  file.tables[productsDb] = { membershipComposite: "ordered_member_of", columns: [] };
+  file.tables[scenesDb] = { columns: [] };
+  file.tables[partsDb] = { columns: [] };
+  file.tables[productsDb] = { columns: [] };
   fixture.ctx.store.writeTableSchemasFile(file);
   invalidateTableSchemasCache();
+
+  const views = fixture.ctx.store.readViewsFile();
+  const orderedSetViews = [scenesDb, partsDb, productsDb].map((nodeId) => ({
+    nodeId,
+    perspective: "ordered_members",
+    generator: "scenes-by-book",
+  }));
+  const otherViews = views.views.filter(
+    (view) => !orderedSetViews.some((entry) => entry.nodeId === view.nodeId),
+  );
+  fixture.ctx.store.writeViewsFile({
+    version: views.version || VIEWS_FILE_VERSION,
+    views: [...otherViews, ...orderedSetViews],
+  });
+  invalidateViewsCache();
 }
 
 export function seedTestOrderedCollections(
@@ -223,12 +250,9 @@ export function seedTestTableSchema(
   fixture: TestContentFixture,
   databaseId: string,
   columns: TableColumnDef[],
-  membershipComposite?: string,
 ): void {
   const file = fixture.ctx.store.readTableSchemasFile();
-  file.tables[databaseId] = membershipComposite
-    ? { columns, membershipComposite }
-    : { columns };
+  file.tables[databaseId] = { columns };
   fixture.ctx.store.writeTableSchemasFile(file);
   invalidateTableSchemasCache();
 }
@@ -368,9 +392,16 @@ export function seedTestRelationships(
 
   for (const connection of connections) {
     if (connection.type === "member_of") {
-      registerSetMembershipType(registry);
+      registerSetAssociation(registry, {
+        id: "member_of",
+        perspectives: ["members", "member_of"],
+      });
     } else if (connection.type === "ordered_member_of") {
-      registerOrderedSetMembershipType(registry);
+      registerSetAssociation(registry, {
+        id: "ordered_member_of",
+        perspectives: ["ordered_members", "ordered_member_of"],
+        ordered: true,
+      });
     } else {
       const composite = normalizeRelationshipType(connection.type);
       if (!registry.associations[composite]) {

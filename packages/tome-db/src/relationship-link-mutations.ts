@@ -7,7 +7,7 @@ import { normalizeRelationshipType } from "tome-flatfile";
 import { associationRuleContext } from "./association-endpoints";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import { stampOrderIfMissing } from "./ordered-relationships";
-import { membershipPerspectivesForSet } from "tome-flatfile";
+import { isMemberSidePerspective } from "tome-flatfile";
 import type {
   LinkOutgoingRelationshipError,
   LinkOutgoingRelationshipInput,
@@ -83,9 +83,8 @@ export function linkOutgoingRelationship(
   }
 
   if (isTypeTableNode(ctx.cache, targetId, ctx.store.contentDir)) {
-    const [, memberPerspective] = membershipPerspectivesForSet(targetId, ctx.store.contentDir);
-    if (normalizedType === memberPerspective) {
-      relProps = stampOrderIfMissing(ctx, targetId, sourceId, relProps);
+    if (isMemberSidePerspective(registry, normalizedType)) {
+      relProps = stampOrderIfMissing(ctx, targetId, sourceId, relProps, normalizedType);
     }
   }
 

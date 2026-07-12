@@ -1,16 +1,14 @@
 import type { GraphDatabase, Properties, Relationship } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
-import { relationshipId } from "tome-sqlite";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import {
-  defaultOrderedSetMembershipComposite,
   isOrderedTraitComposite,
-  membershipCompositeForSet,
-  membershipPerspectivesForSet,
+  isOrderedSetPerspective,
   orderedPropertyName,
+  resolveSetTraitComposite,
+  setRolePerspectivesForNode,
 } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
-import type { AssociationsFile } from "tome-flatfile";
 import { listSetMemberRowConnections } from "./set-membership";
 
 export const ORDER_META_KEYS = new Set([
@@ -29,11 +27,14 @@ function numericOrderValue(raw: unknown, fallback = Number.NaN): number {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function orderPropertyForSet(setId: string, contentDir: string): string {
+function orderPropertyForPerspective(
+  contentDir: string,
+  perspective: string,
+): string | null {
   const registry = loadAssociationsFromContent(contentDir);
-  const composite = membershipCompositeForSet(setId, contentDir);
-  const def = registry.associations[composite];
-  return orderedPropertyName(def);
+  const composite = resolveSetTraitComposite(registry, perspective);
+  if (!composite || !isOrderedTraitComposite(registry, composite)) return null;
+  return orderedPropertyName(registry.associations[composite]);
 }
 
 export function listOrderedMemberConnections(
@@ -42,12 +43,13 @@ export function listOrderedMemberConnections(
   contentDir?: string,
 ): Relationship[] {
   const dir = contentDir ?? resolveContentPath();
-  const composite = membershipCompositeForSet(setId, dir);
   const registry = loadAssociationsFromContent(dir);
-  if (!isOrderedTraitComposite(registry, composite)) {
-    return [];
-  }
-  return listSetMemberRowConnections(db, setId, dir);
+  return listSetMemberRowConnections(db, setId, dir).filter((edge) => {
+    const composite =
+      resolveSetTraitComposite(registry, edge.type) ??
+      (isOrderedTraitComposite(registry, edge.type) ? edge.type : null);
+    return composite !== null && isOrderedTraitComposite(registry, composite);
+  });
 }
 
 export function maxOrderAtSet(
@@ -56,9 +58,12 @@ export function maxOrderAtSet(
   contentDir?: string,
 ): number {
   const dir = contentDir ?? resolveContentPath();
-  const property = orderPropertyForSet(setId, dir);
   let max = -1;
   for (const connection of listOrderedMemberConnections(db, setId, dir)) {
+    const registry = loadAssociationsFromContent(dir);
+    const composite =
+      resolveSetTraitComposite(registry, connection.type) ?? connection.type;
+    const property = orderedPropertyName(registry.associations[composite]);
     const value = numericOrderValue(connection.properties[property], Number.NaN);
     if (Number.isFinite(value) && value > max) max = value;
   }
@@ -70,11 +75,14 @@ export function stampOrderIfMissing(
   setId: string,
   memberId: string,
   props: Properties,
+  perspective?: string,
 ): Properties {
   const dir = ctx.store.contentDir;
   const registry = loadAssociationsFromContent(dir);
-  const composite = membershipCompositeForSet(setId, dir);
-  if (!isOrderedTraitComposite(registry, composite)) return props;
+  const resolvedPerspective =
+    perspective ?? setRolePerspectivesForNode(setId, dir)[1];
+  const composite = resolveSetTraitComposite(registry, resolvedPerspective);
+  if (!composite || !isOrderedTraitComposite(registry, composite)) return props;
   const property = orderedPropertyName(registry.associations[composite]);
   if (property in props) return props;
   return { ...props, [property]: maxOrderAtSet(ctx.cache, setId, dir) + 1 };
@@ -94,7 +102,9 @@ export function applySparseOrderRewrite(
   orderedMemberIds: string[],
 ): void {
   const dir = ctx.store.contentDir;
-  const property = orderPropertyForSet(setId, dir);
+  const [, memberPerspective] = setRolePerspectivesForNode(setId, dir);
+  const property = orderPropertyForPerspective(dir, memberPerspective);
+  if (!property) return;
   const edgeByMemberId = new Map(
     edges.map((edge) => [edge.sourceNodeId, edge]),
   );
@@ -116,48 +126,10 @@ export function applySparseOrderRewrite(
   }
 }
 
-export function isOrderedMembershipComposite(
-  registry: AssociationsFile,
-  compositeType: string,
-): boolean {
-  return isOrderedTraitComposite(registry, compositeType);
-}
-
-export function orderedMembershipCompositeType(contentDir?: string): string {
+/** Whether any ordered set-trait association has edges for this set (or views declare ordered). */
+export function setUsesOrderedAssociation(setId: string, contentDir?: string): boolean {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
-  return defaultOrderedSetMembershipComposite(registry);
-}
-
-export function memberPerspectiveForSet(setId: string, contentDir?: string): string {
-  const [, memberPerspective] = membershipPerspectivesForSet(setId, contentDir);
-  return memberPerspective;
-}
-
-export function setPerspectiveForSet(setId: string, contentDir?: string): string {
-  const [setPerspective] = membershipPerspectivesForSet(setId, contentDir);
-  return setPerspective;
-}
-
-export function getMembershipRelationship(
-  db: GraphDatabase,
-  memberId: string,
-  setId: string,
-  contentDir?: string,
-): Relationship | null {
-  const dir = contentDir ?? resolveContentPath();
-  const composite = membershipCompositeForSet(setId, dir);
-  const [, memberPerspective] = membershipPerspectivesForSet(setId, dir);
-  const edge = db.getRelationship(relationshipId(memberId, memberPerspective, setId));
-  if (edge && edge.type === composite) return edge;
-  const [setPerspective] = membershipPerspectivesForSet(setId, dir);
-  const viaSet = db.getRelationship(relationshipId(setId, setPerspective, memberId));
-  if (viaSet && viaSet.type === composite) {
-    return {
-      ...viaSet,
-      sourceNodeId: memberId,
-      targetNodeId: setId,
-    };
-  }
-  return null;
+  const [setPerspective] = setRolePerspectivesForNode(setId, dir);
+  return isOrderedSetPerspective(registry, setPerspective);
 }

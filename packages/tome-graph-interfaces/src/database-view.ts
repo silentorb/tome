@@ -42,6 +42,8 @@ export interface DatabaseViewDetail {
   viewAssociation: string;
   /** Member-side perspective for unlink/move against this set. */
   memberSidePerspective: string;
+  /** Section heading from perspectiveLabels, else "Contents". */
+  sectionTitle: string;
   /** Ordered data column keys before per-view visibility filtering. */
   allColumns: string[];
   columns: string[];

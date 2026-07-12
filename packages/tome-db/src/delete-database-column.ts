@@ -1,7 +1,7 @@
 import { loadDynamicFields } from "./dynamic-fields";
 import {
   ROW_META_KEYS,
-  stripScalarFromMembershipEdges,
+  stripScalarFromSetEdges,
   unlinkRelationColumnFromAllRows,
 } from "./database-column-data";
 import { isTypeTableNode } from "./node-capabilities";
@@ -12,7 +12,7 @@ import type { TableSchemasFile } from "tome-flatfile";
 import { findColumnByKey } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
 import { purgeColumnFromViews } from "./views/mutations";
-import { viewSectionKeyForSet } from "tome-flatfile";
+import { setRolePerspectivesForNode } from "tome-flatfile";
 import type {
   DeleteDatabaseColumnError,
   DeleteDatabaseColumnResult,
@@ -73,7 +73,7 @@ export function deleteDatabaseColumn(
   if (column.type === "relation") {
     relationsUnlinked = unlinkRelationColumnFromAllRows(ctx, databaseId, column);
   } else {
-    rowsAffected = stripScalarFromMembershipEdges(ctx, databaseId, normalizedKey);
+    rowsAffected = stripScalarFromSetEdges(ctx, databaseId, normalizedKey);
   }
 
   if (!removeColumnFromTableSchemas(schemasFile, databaseId, normalizedKey)) {
@@ -85,7 +85,7 @@ export function deleteDatabaseColumn(
   purgeColumnFromViews(
     ctx.store,
     databaseId,
-    viewSectionKeyForSet(databaseId, ctx.store.contentDir),
+    setRolePerspectivesForNode(databaseId, ctx.store.contentDir)[0],
     normalizedKey,
   );
 

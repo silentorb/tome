@@ -1,6 +1,6 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import { archiveNode, unarchiveNode } from "../src/node-lifecycle";
-import { isArchiveMembershipEntry } from "../src/relationship-archive";
+import { isArchiveSetEntry } from "../src/relationship-archive";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { getNodeDetail } from "../src/queries";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
@@ -51,7 +51,7 @@ describe("archive relationship flags", () => {
     expect(membership?.archived).toBeUndefined();
 
     const incident = file.relationships.filter(
-      (e) => !isArchiveMembershipEntry(e, HUB, fixture.ctx.store.contentDir) && (e.a === PAGE || e.b === PAGE),
+      (e) => !isArchiveSetEntry(e, HUB, fixture.ctx.store.contentDir) && (e.a === PAGE || e.b === PAGE),
     );
     expect(incident.length).toBeGreaterThanOrEqual(2);
     for (const entry of incident) {

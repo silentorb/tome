@@ -34,8 +34,6 @@ export type TableColumnDef = TableScalarColumn | TableRelationColumn;
 
 export interface TableSchema {
   columns: TableColumnDef[];
-  /** Storage composite for set membership rows (default `member_of`). */
-  membershipComposite?: string;
 }
 
 export interface TableSchemasFile {

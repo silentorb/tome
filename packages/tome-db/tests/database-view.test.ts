@@ -76,7 +76,6 @@ describe("database-view", () => {
   function writeTableSchema(
     databaseId: string,
     columns: Parameters<typeof serializeTableSchemasFile>[0]["tables"][string]["columns"],
-    membershipComposite?: string,
   ): void {
     writeFileSync(
       tableSchemasFilePath(contentDir),
@@ -84,7 +83,6 @@ describe("database-view", () => {
         version: 1,
         tables: {
           [databaseId]: {
-            ...(membershipComposite ? { membershipComposite } : {}),
             columns,
           },
         },
@@ -229,7 +227,7 @@ describe("database-view", () => {
       }),
     );
     invalidateAssociationsCache();
-    writeTableSchema(databaseId, [], "custom_set");
+    writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Cohorts") });
     db.upsertNode("member1", { title: "Member one" });
     db.upsertRelationship("member1", databaseId, "belongs_to_cohort", { row_index: 0 });

@@ -28,13 +28,15 @@ import { loadOrderedCollectionsFromContent } from "tome-flatfile";
 import { listSetMemberRowConnections } from "./set-membership";
 import { ORDERED_PROPERTY_DEFAULT,
   isOrderedTraitComposite,
-  membershipPerspectivesForSet,
   orderedPropertyName,
+  resolveSetTraitComposite,
   setRoleIndices,
+  setRolePerspectivesForNode,
   typesWithTrait,
   SET_TRAIT,
 } from "tome-flatfile";
 import { ORDER_META_KEYS, applySparseOrderRewrite } from "./ordered-relationships";
+import { perspectiveDisplayLabel } from "./association-label";
 import type {
   OrderedCollectionConfig,
   OrderedCollectionGroup,
@@ -67,7 +69,7 @@ interface MemberInfo {
   name: string;
   order: number;
   partId: string | null;
-  membershipRelationship: Relationship;
+  setRowEdge: Relationship;
   cells: Record<string, string>;
 }
 
@@ -168,7 +170,7 @@ function groupConnectionTarget(
   return firstRelatedNodeId(db, sceneId, compositeType);
 }
 
-function membershipRelationships(
+function setRowConnections(
   db: GraphDatabase,
   config: OrderedCollectionConfig,
   contentDir?: string,
@@ -203,7 +205,7 @@ function partSortKey(
   groupTypeDatabaseId: string,
   contentDir: string,
 ): number {
-  const [, memberPerspective] = membershipPerspectivesForSet(groupTypeDatabaseId, contentDir);
+  const [, memberPerspective] = setRolePerspectivesForNode(groupTypeDatabaseId, contentDir);
   const edge = db.getRelationship(relationshipId(partId, memberPerspective, groupTypeDatabaseId));
   if (edge) {
     return numericSortKey(edge.properties[ORDERED_PROPERTY_DEFAULT], 999);
@@ -218,7 +220,7 @@ function partsForScope(
   contentDir: string,
 ): { id: string; title: string; sortKey: number }[] {
   const parts: { id: string; title: string; sortKey: number }[] = [];
-  const [, memberPerspective] = membershipPerspectivesForSet(config.groupTypeDatabaseId, contentDir);
+  const [, memberPerspective] = setRolePerspectivesForNode(config.groupTypeDatabaseId, contentDir);
 
   for (const connection of db.listRelationshipsToTarget(
     config.groupTypeDatabaseId,
@@ -290,7 +292,7 @@ function collectMembersInScope(
   const members: MemberInfo[] = [];
   let fallbackOrder = 0;
 
-  for (const connection of membershipRelationships(db, config, contentDir)) {
+  for (const connection of setRowConnections(db, config, contentDir)) {
     const sceneId = connection.sourceNodeId;
     const productId = scopeRelationshipTarget(db, sceneId, config.scopeCompositeType);
     if (productId !== scopeId) continue;
@@ -304,7 +306,7 @@ function collectMembersInScope(
       name: vertex ? titleFromProperties(vertex.properties) : "Untitled",
       order: numericSortKey(connection.properties[ORDERED_PROPERTY_DEFAULT], fallbackOrder),
       partId,
-      membershipRelationship: connection,
+      setRowEdge: connection,
       cells: cellsFromMembershipRelationship(config, connection.properties),
     });
   }
@@ -377,7 +379,7 @@ function discoverScopes(
 ): OrderedCollectionScope[] {
   const scopeIds = new Set<string>();
 
-  for (const connection of membershipRelationships(db, config, contentDir)) {
+  for (const connection of setRowConnections(db, config, contentDir)) {
     const productId = scopeRelationshipTarget(db, connection.sourceNodeId, config.scopeCompositeType);
     if (productId) scopeIds.add(productId);
   }
@@ -468,7 +470,7 @@ export function getOrderedCollectionView(
       : collectColumns(members);
 
   const views = loadViewsFromContent(dir);
-  const [viewAssociation, memberSidePerspective] = membershipPerspectivesForSet(
+  const [viewAssociation, memberSidePerspective] = setRolePerspectivesForNode(
     config.typeDatabaseId,
     dir,
   );
@@ -480,12 +482,17 @@ export function getOrderedCollectionView(
     viewAssociation,
   );
 
+  const associations = loadAssociationsFromContent(dir);
+  const composite = resolveSetTraitComposite(associations, viewAssociation) ?? viewAssociation;
+  const sectionLabel = perspectiveDisplayLabel(associations, viewAssociation, composite);
+
   return {
     configId: config.id,
     typeDatabaseId: config.typeDatabaseId,
     typeDatabaseTitle: titleFromProperties(database.properties),
     viewAssociation,
     memberSidePerspective,
+    sectionTitle: sectionLabel.trim() ? sectionLabel : "Contents",
     tabs,
     groups: enrichedGroups,
     columns,
@@ -571,10 +578,10 @@ export function applyOrderedCollectionMove(
     ctx,
     config.typeDatabaseId,
     members.map((member) => ({
-      sourceNodeId: member.membershipRelationship.sourceNodeId,
-      targetNodeId: member.membershipRelationship.targetNodeId,
-      type: member.membershipRelationship.type,
-      properties: member.membershipRelationship.properties,
+      sourceNodeId: member.setRowEdge.sourceNodeId,
+      targetNodeId: member.setRowEdge.targetNodeId,
+      type: member.setRowEdge.type,
+      properties: member.setRowEdge.properties,
     })),
     orderedSceneIds,
   );

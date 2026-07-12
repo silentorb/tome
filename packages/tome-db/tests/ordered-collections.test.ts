@@ -44,9 +44,8 @@ describe("ordered-collections", () => {
     fixture,
     PRODUCTS_DB,
     [],
-    "ordered_member_of",
   );
-  seedTestTableSchema(fixture, PARTS_DB, [], "ordered_member_of");
+  seedTestTableSchema(fixture, PARTS_DB, []);
   seedTestNode(fixture, {
     id: SCENES_DB,
     properties: typeTableMarkerProperties("Scenes"),
@@ -87,7 +86,6 @@ describe("ordered-collections", () => {
     },
     { key: "order", name: "Order", type: "number" },
   ],
-    "ordered_member_of",
   );
   seedTestNode(fixture, { id: bookA, properties: { title: "Book A" } });
   seedTestNode(fixture, { id: bookB, properties: { title: "Book B" } });
@@ -183,6 +181,16 @@ describe("ordered-collections", () => {
     views: [
       {
         nodeId: SCENES_DB,
+        perspective: "ordered_members",
+        generator: CONFIG_ID,
+      },
+      {
+        nodeId: PARTS_DB,
+        perspective: "ordered_members",
+        generator: CONFIG_ID,
+      },
+      {
+        nodeId: PRODUCTS_DB,
         perspective: "ordered_members",
         generator: CONFIG_ID,
       },

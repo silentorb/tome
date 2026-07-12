@@ -140,18 +140,6 @@ export type { NodeBacklink, NodePageMetadata } from "./node-metadata";
 export { buildPropertiesSection } from "./node-type-properties";
 export type { PropertiesSection } from "./node-type-properties";
 export {
-  findMissingTypeMembershipRelationships,
-  findNestedPageSpuriousTypeMembership,
-  findSpuriousTypeMembershipRelationships,
-  findNodeScalarsOnTypedNodes,
-  folderDepthUnderInstanceRoot,
-  instanceRootFromTypeTableExport,
-  isNestedPageSpuriousTypeMembership,
-  pathFromSourceExport,
-  typeDatabaseTitleFromPath,
-  typeFolderFromPath,
-} from "./type-membership-audit";
-export {
   findTypeNodeByTitle,
   graphGroupForNode,
   graphLabelsForNode,
@@ -159,12 +147,6 @@ export {
   primaryTypeTitleForInstance,
   typeTableMarkerProperties,
 } from "./node-capabilities";
-export type {
-  MissingTypeMembership,
-  NestedPageSpuriousMembership,
-  NodeScalarOnTypedNode,
-  SpuriousTypeMembership,
-} from "./type-membership-audit";
 export { getNodePageDetail } from "./node-page-sections";
 export type {
   DatabaseTableSection,
@@ -218,55 +200,44 @@ export {
 } from "./dynamic-fields";
 export type { DynamicColumnSetRecord, DynamicFieldRecord } from "./dynamic-fields";
 export {
-  membershipPerspectives,
-  listSetMembership,
   listSetMemberRowConnections,
   memberSetIds,
   setMemberIds,
   setKindForNode,
   isSetNode,
-  findSetMembershipRelationship,
-  isSetMembershipStorageType,
-  isMembershipPerspective,
+  findSetEdge,
+  setRolePerspectives,
   collectSetNodeIds,
 } from "./set-membership";
-export {
-  registerSetMembershipType,
-  registerOrderedSetMembershipType,
-} from "tome-flatfile";
+export { registerSetAssociation } from "tome-flatfile";
 export type { TraitEntry, TraitObjectEntry } from "tome-flatfile";
 export {
   SET_TRAIT,
   ORDERED_TRAIT,
   ORDERED_PROPERTY_DEFAULT,
   childNodeId,
-  defaultOrderedSetMembershipComposite,
-  defaultPlainSetMembershipComposite,
   hasTrait,
   isMemberSidePerspective,
   isOrderedTraitComposite,
-  isOrderedMembershipSet,
+  isOrderedSetPerspective,
   isSetSidePerspective,
   isSetTraitComposite,
   isSetTraitEntry,
   isSetTraitPerspective,
   isSetTraitType,
-  memberSidePerspectiveForSet,
   memberSidePerspectives,
-  membershipCompositeForPerspective,
-  membershipCompositeForSet,
-  membershipPerspectivesForSet,
   orderedPropertyName,
   parentNodeId,
   resolveOrderedSetTraitComposite,
   resolveSetTraitComposite,
   setRoleIndices,
+  setRolePerspectivesForComposite,
+  setRolePerspectivesForNode,
   setSidePerspectives,
   setTraitPerspectives,
   traitConfig,
   traitMap,
   typesWithTrait,
-  viewSectionKeyForSet,
 } from "tome-flatfile";
 export {
   ORDER_META_KEYS,
@@ -274,6 +245,7 @@ export {
   listOrderedMemberConnections,
   maxOrderAtSet,
   stampOrderIfMissing,
+  setUsesOrderedAssociation,
 } from "./ordered-relationships";
 export {
   loadSchemaFromContent,

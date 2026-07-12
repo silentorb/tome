@@ -1,7 +1,7 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import {
   filterEntriesForCacheSync,
-  isArchiveMembershipEntry,
+  isArchiveSetEntry,
   listArchiveMemberIds,
   markIncidentRelationshipsArchived,
   unmarkIncidentRelationshipsArchived,
@@ -34,16 +34,16 @@ describe("relationship-archive helpers", () => {
 
   afterAll(() => destroyTestContentFixture(fixture));
 
-  test("isArchiveMembershipEntry detects hub membership", () => {
+  test("isArchiveSetEntry detects hub membership", () => {
     fixture.ctx.store.writeAssociationsFile({
       version: 1,
       associations: {
         member_of: { perspectives: ["members", "member_of"], traits: ["set"] },
       },
     });
-    expect(isArchiveMembershipEntry(entry(HUB, NODE_A, "member_of"), HUB, contentDir)).toBe(true);
-    expect(isArchiveMembershipEntry(entry(NODE_A, NODE_B, "includes"), HUB, contentDir)).toBe(false);
-    expect(isArchiveMembershipEntry(entry(NODE_A, NODE_B, "member_of"), HUB, contentDir)).toBe(false);
+    expect(isArchiveSetEntry(entry(HUB, NODE_A, "member_of"), HUB, contentDir)).toBe(true);
+    expect(isArchiveSetEntry(entry(NODE_A, NODE_B, "includes"), HUB, contentDir)).toBe(false);
+    expect(isArchiveSetEntry(entry(NODE_A, NODE_B, "member_of"), HUB, contentDir)).toBe(false);
   });
 
   test("listArchiveMemberIds returns non-hub endpoints", () => {

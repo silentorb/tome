@@ -23,7 +23,7 @@ describe("ordered-relationships", () => {
   const fixture = createTestContentFixture("tome-ordered-rel-");
 
   seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
-  seedTestTableSchema(fixture, SCENES_DB, [], "ordered_member_of");
+  seedTestTableSchema(fixture, SCENES_DB, []);
   seedTestNode(fixture, { id: scene1, properties: { title: "One" } });
   seedTestNode(fixture, { id: scene2, properties: { title: "Two" } });
   seedTestNode(fixture, { id: scene3, properties: { title: "Three" } });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
@@ -8,16 +8,22 @@ import {
   parseOrderedCollectionsFile,
   serializeOrderedCollectionsFile,
 } from "../../src/ordered-collections-config/ordered-collections-file";
-import { contentModelDir, associationsFilePath, tableSchemasFilePath } from "../../src/content/paths";
+import {
+  contentModelDir,
+  associationsFilePath,
+  tableSchemasFilePath,
+  viewsFilePath,
+} from "../../src/content/paths";
 import {
   emptyAssociationsFile,
-  registerOrderedSetMembershipType,
-  registerSetMembershipType,
+  registerSetAssociation,
   serializeAssociationsFile,
 } from "../../src/content/associations-file";
 import { serializeTableSchemasFile } from "../../src/content/table-schemas-file";
+import { serializeViewsFile, VIEWS_FILE_VERSION } from "../../src/content/views-file";
 import { invalidateAssociationsCache } from "../../src/associations/load";
 import { invalidateTableSchemasCache } from "../../src/table-schemas/load";
+import { invalidateViewsCache } from "../../src/views/load";
 
 const SCENES_DB = "0000000000000000000000000D";
 const PARTS_DB = "0000000000000000000000000Z";
@@ -35,20 +41,38 @@ const VALID_CONFIG = {
 };
 
 function testContentDir(options?: {
-  scenesMembershipComposite?: string;
-  partsMembershipComposite?: string;
+  registerPlain?: boolean;
+  registerOrdered?: boolean;
+  registerCustomOrdered?: boolean;
+  scenesPerspective?: string;
+  partsPerspective?: string;
+  seedViews?: boolean;
 }): string {
   const dir = mkdtempSync(join(tmpdir(), "tome-oa-config-"));
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
 
   const registry = emptyAssociationsFile();
-  registerSetMembershipType(registry);
-  registerOrderedSetMembershipType(registry);
-  registry.associations.custom_ordered_set = {
-    perspectives: ["custom_sets", "custom_ordered_members"],
-    traits: ["set", "ordered"],
-  };
+  if (options?.registerPlain !== false) {
+    registerSetAssociation(registry, {
+      id: "member_of",
+      perspectives: ["members", "member_of"],
+    });
+  }
+  if (options?.registerOrdered !== false) {
+    registerSetAssociation(registry, {
+      id: "ordered_member_of",
+      perspectives: ["ordered_members", "ordered_member_of"],
+      ordered: true,
+    });
+  }
+  if (options?.registerCustomOrdered) {
+    registerSetAssociation(registry, {
+      id: "custom_ordered_set",
+      perspectives: ["custom_sets", "custom_ordered_members"],
+      ordered: true,
+    });
+  }
   writeFileSync(
     associationsFilePath(contentDir),
     serializeAssociationsFile(registry),
@@ -60,18 +84,37 @@ function testContentDir(options?: {
     serializeTableSchemasFile({
       version: 1,
       tables: {
-        [SCENES_DB]: {
-          membershipComposite: options?.scenesMembershipComposite ?? "ordered_member_of",
-          columns: [],
-        },
-        [PARTS_DB]: {
-          membershipComposite: options?.partsMembershipComposite ?? "ordered_member_of",
-          columns: [],
-        },
+        [SCENES_DB]: { columns: [] },
+        [PARTS_DB]: { columns: [] },
       },
     }),
   );
   invalidateTableSchemasCache();
+
+  if (options?.seedViews !== false) {
+    const scenesPerspective = options?.scenesPerspective ?? "ordered_members";
+    const partsPerspective = options?.partsPerspective ?? "ordered_members";
+    writeFileSync(
+      viewsFilePath(contentDir),
+      serializeViewsFile({
+        version: VIEWS_FILE_VERSION,
+        views: [
+          {
+            nodeId: SCENES_DB,
+            perspective: scenesPerspective,
+            generator: "scenes-by-book",
+          },
+          {
+            nodeId: PARTS_DB,
+            perspective: partsPerspective,
+            generator: "scenes-by-book",
+          },
+        ],
+      }),
+    );
+    invalidateViewsCache();
+  }
+
   return contentDir;
 }
 
@@ -123,36 +166,33 @@ describe("parseOrderedCollectionsFile", () => {
     expect(() => parseOrderedCollectionsFile(raw, contentDir)).toThrow(/\.id/);
   });
 
-  test("rejects table without ordered membershipComposite", () => {
-    const contentDir = testContentDir();
-    writeFileSync(
-      tableSchemasFilePath(contentDir),
-      serializeTableSchemasFile({
-        version: 1,
-        tables: { [SCENES_DB]: { columns: [] }, [PARTS_DB]: { membershipComposite: "ordered_member_of", columns: [] } },
-      }),
-    );
-    invalidateTableSchemasCache();
+  test("rejects table without ordered set association context", () => {
+    const contentDir = testContentDir({ seedViews: false });
     const raw = serializeOrderedCollectionsFile({
       version: ORDERED_COLLECTIONS_FILE_VERSION,
       configs: [VALID_CONFIG],
     });
-    expect(() => parseOrderedCollectionsFile(raw, contentDir)).toThrow(/membershipComposite/);
+    expect(() => parseOrderedCollectionsFile(raw, contentDir)).toThrow(/ordered set-trait/);
   });
 
-  test("rejects plain set membershipComposite without ordered trait", () => {
-    const contentDir = testContentDir({ scenesMembershipComposite: "member_of" });
-    const raw = serializeOrderedCollectionsFile({
-      version: ORDERED_COLLECTIONS_FILE_VERSION,
-      configs: [VALID_CONFIG],
-    });
-    expect(() => parseOrderedCollectionsFile(raw, contentDir)).toThrow(/ordered trait/);
-  });
-
-  test("accepts custom ordered membershipComposite name", () => {
+  test("rejects plain set without ordered trait", () => {
     const contentDir = testContentDir({
-      scenesMembershipComposite: "custom_ordered_set",
-      partsMembershipComposite: "custom_ordered_set",
+      registerOrdered: false,
+      scenesPerspective: "members",
+      partsPerspective: "members",
+    });
+    const raw = serializeOrderedCollectionsFile({
+      version: ORDERED_COLLECTIONS_FILE_VERSION,
+      configs: [VALID_CONFIG],
+    });
+    expect(() => parseOrderedCollectionsFile(raw, contentDir)).toThrow(/ordered set-trait/);
+  });
+
+  test("accepts custom ordered set association via views", () => {
+    const contentDir = testContentDir({
+      registerCustomOrdered: true,
+      scenesPerspective: "custom_sets",
+      partsPerspective: "custom_sets",
     });
     const raw = serializeOrderedCollectionsFile({
       version: ORDERED_COLLECTIONS_FILE_VERSION,

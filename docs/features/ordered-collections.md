@@ -32,7 +32,7 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, re
 | Setting | Value |
 | --- | --- |
 | Type database | Scenes type table (`01KWN86X6MFZQAJ1V36T9592EA`) |
-| Membership relationship | `ordered_member_of` with `order` property (`membershipComposite` in table-schemas) |
+| Membership relationship | Ordered set-trait association with `order` property (Marloth example: `ordered_member_of`; perspectives from views / `setRolePerspectivesForNode`) |
 | Scope (book tabs) | `product` relationship from scene → Product |
 | Group (part subsections) | `part` relationship from scene → Part |
 | Part subsection order | Parts database `order` on each Part's `ordered_member_of` edge (Unassigned always last) |

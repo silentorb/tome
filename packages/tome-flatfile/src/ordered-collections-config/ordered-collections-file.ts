@@ -1,9 +1,6 @@
 import { isNodeId, resolveContentPath } from "../content/paths";
 import { loadAssociationsFromContent } from "../associations/load";
-import { isOrderedTraitComposite } from "../association-traits";
-import { normalizeRelationshipType } from "../relation-type";
-import { getTableSchema } from "../table-schema";
-import { loadTableSchemasFromContent } from "../table-schemas/load";
+import { isOrderedSetPerspective, setRolePerspectivesForNode } from "../association-traits";
 import type {
   OrderedCollectionConfig,
   OrderedCollectionsFile,
@@ -39,19 +36,13 @@ function parseStringArray(value: unknown, path: string): string[] | undefined {
   return value.map((entry, index) => parseRequiredString(entry, `${path}[${index}]`));
 }
 
-function assertOrderedMembershipTable(nodeId: string, path: string, contentDir?: string): void {
+function assertOrderedSetTable(nodeId: string, path: string, contentDir?: string): void {
   const dir = contentDir ?? resolveContentPath();
-  const schema = getTableSchema(loadTableSchemasFromContent(dir), nodeId);
-  const composite = schema?.membershipComposite;
-  if (typeof composite !== "string" || !composite.trim()) {
-    throw new Error(
-      `${path}: table must declare membershipComposite in table-schemas.json with the ordered trait`,
-    );
-  }
   const registry = loadAssociationsFromContent(dir);
-  if (!isOrderedTraitComposite(registry, normalizeRelationshipType(composite))) {
+  const [setPerspective] = setRolePerspectivesForNode(nodeId, dir);
+  if (!isOrderedSetPerspective(registry, setPerspective)) {
     throw new Error(
-      `${path}: table membershipComposite "${composite.trim()}" must have the ordered trait in associations.json`,
+      `${path}: table ${nodeId} must use an ordered set-trait association (views.json set-side perspective or sole ordered set association)`,
     );
   }
 }
@@ -64,8 +55,8 @@ function parseConfig(raw: unknown, path: string, contentDir?: string): OrderedCo
 
   const typeDatabaseId = parseNodeId(obj.typeDatabaseId, `${path}.typeDatabaseId`);
   const groupTypeDatabaseId = parseNodeId(obj.groupTypeDatabaseId, `${path}.groupTypeDatabaseId`);
-  assertOrderedMembershipTable(typeDatabaseId, `${path}.typeDatabaseId`, contentDir);
-  assertOrderedMembershipTable(groupTypeDatabaseId, `${path}.groupTypeDatabaseId`, contentDir);
+  assertOrderedSetTable(typeDatabaseId, `${path}.typeDatabaseId`, contentDir);
+  assertOrderedSetTable(groupTypeDatabaseId, `${path}.groupTypeDatabaseId`, contentDir);
 
   const config: OrderedCollectionConfig = {
     id: parseRequiredString(obj.id, `${path}.id`),

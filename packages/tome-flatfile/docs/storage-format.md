@@ -199,7 +199,7 @@ Each type definition:
 | `traits` | no | Array of flag strings or `{ key, ...config }` objects; trait keys unique per type |
 | `endpoints` | no | `{ "0": { "typeId": "<ULID>" }, "1": { "typeId": "<ULID>" } }` — allowed `is_a` type node at each endpoint |
 
-**Set membership orientation:** for `member_of`, perspectives are `["members", "member_of"]` — **set at `a` (index 0), member at `b` (index 1)**. Ordered membership (`ordered_member_of`) uses the same parent/child indices with traits `set` and `ordered`.
+**Set association orientation (example):** for a set-trait type with perspectives `["members", "member_of"]` — **set at `a` (index 0), member at `b` (index 1)**. An ordered set association uses the same parent/child indices with traits `set` and `ordered`. Project association slugs (e.g. Marloth `member_of` / `ordered_member_of`) are not Tome defaults.
 
 Serialize sorts type keys and sorts traits (string flags before object entries) for stable diffs.
 
@@ -260,8 +260,7 @@ Column definitions for type tables (keys are type-node ULIDs).
         { "key": "name", "name": "Name", "type": "text" },
         { "key": "status", "name": "Status", "type": "select", "enumId": "priority" },
         { "key": "related", "name": "Related", "type": "relation", "association": "related_to" }
-      ],
-      "membershipComposite": "member_of"
+      ]
     }
   }
 }
@@ -277,7 +276,6 @@ Column definitions for type tables (keys are type-node ULIDs).
 | Field | Notes |
 | --- | --- |
 | `columns` | array; column `key` unique within the table |
-| `membershipComposite` | optional composite type for set membership (e.g. `member_of`, `ordered_member_of`) |
 
 **Scalar column:** `{ key, name, type, enumId? }` where `type` is one of:
 
@@ -448,7 +446,7 @@ Configs for ordered part/group associations (e.g. scenes by book).
 
 **Config fields:** `id`, `typeDatabaseId`, `scopeCompositeType`, `groupCompositeType`, `partProductCompositeType`, `groupTypeDatabaseId`, `unassignedGroupTitle`; optional `columnViewName`, `excludedColumnKeys`.
 
-Both `typeDatabaseId` and `groupTypeDatabaseId` must declare a `membershipComposite` in `table-schemas.json` whose type has the **ordered** trait in `associations.json`.
+Both `typeDatabaseId` and `groupTypeDatabaseId` must be set nodes whose set association (from views / `setRolePerspectivesForNode`) has the **ordered** trait in `associations.json`.
 
 ### `extensions.json` (version 1)
 
@@ -542,4 +540,4 @@ Normative parsers and path helpers in this package:
 | Body link forms | `src/markdown-links.ts`, `src/dynamic-node-links.ts` |
 | Set / ordered traits | `src/association-traits.ts` |
 
-Related behavioral docs (not format contracts): `docs/features/tome-db.md`, `set-membership.md`, `schema.md`, `views.md`, `table-schemas.md`, `ordered-collections.md`, `extensions.md`, `dynamic-table-fields.md`.
+Related behavioral docs (not format contracts): `docs/features/tome-db.md`, `sets.md`, `schema.md`, `views.md`, `table-schemas.md`, `ordered-collections.md`, `extensions.md`, `dynamic-table-fields.md`.

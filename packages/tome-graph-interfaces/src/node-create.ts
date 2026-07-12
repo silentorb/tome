@@ -8,10 +8,19 @@ export type CreateNodeLink =
       sourceId: string;
       type: string;
       properties?: Properties;
-      /** When set, also create membership on the new node to this type table. */
-      membershipTypeId?: string;
+      /** When set, also link the new node into this type-table set (node id). */
+      typeTableId?: string;
+      /** Member-side perspective for the type-table link (required with typeTableId). */
+      typeTablePerspective?: string;
     }
-  | { kind: "database-row"; databaseId: string; view?: string; properties?: Properties };
+  | {
+      kind: "database-row";
+      databaseId: string;
+      view?: string;
+      properties?: Properties;
+      /** Set-side or member-side perspective for the row edge; defaults from views. */
+      perspective?: string;
+    };
 
 export interface CreateNodeInput {
   title: string;

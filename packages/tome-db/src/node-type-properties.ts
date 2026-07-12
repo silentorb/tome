@@ -123,22 +123,22 @@ export function buildPropertiesSection(
   const dir = contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
   // v1: first type membership connection when a node belongs to multiple types.
-  let membershipRelationship = null as ReturnType<GraphDatabase["listRelationshipsFromSource"]>[number] | null;
+  let setRowEdge = null as ReturnType<GraphDatabase["listRelationshipsFromSource"]>[number] | null;
   for (const type of memberSidePerspectives(registry)) {
     const connections = db.listRelationshipsFromSource(nodeId, type);
     if (connections.length > 0) {
-      membershipRelationship = connections[0]!;
+      setRowEdge = connections[0]!;
       break;
     }
   }
-  if (!membershipRelationship) return null;
+  if (!setRowEdge) return null;
 
-  const databaseId = membershipRelationship.targetNodeId;
+  const databaseId = setRowEdge.targetNodeId;
   const database = db.getNode(databaseId);
   if (!database || !isTypeTableNode(db, databaseId)) return null;
 
   const typeTitle = titleFromProperties(database.properties);
-  const storedCells = cellsFromConnectionProperties(membershipRelationship.properties);
+  const storedCells = cellsFromConnectionProperties(setRowEdge.properties);
 
   let storedColumnDefs: DatabaseColumnDef[];
   const tableSchema = loadTableSchemaForDatabase(databaseId);

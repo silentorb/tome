@@ -88,7 +88,7 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 
 - Endpoints `a` / `b` are an **ordered tuple**. Positions 0 (`a`) and 1 (`b`) carry **no inherent source/target meaning** — each position's meaning is defined entirely by the relationship type's ordered `perspectives` pair in `associations.json` (`perspectives[0]` describes the node at `a`, `perspectives[1]` the node at `b`). Authored order is preserved verbatim: there is **no lexicographic endpoint sorting** and no `directedFrom` field.
 - **Relative semantics come from tuple position + the type's per-position perspective** — never from slug comparison, endpoint sorting, or a stored direction flag.
-- **Set membership** (`member_of`) is authored as `(member, set)` (member at index 0, set at index 1) and expands to dual projections (`member_of`, `members`). See [set-membership.md](./set-membership.md).
+- **Set-trait** associations (project-defined; Marloth examples `member_of` / `ordered_member_of`) expand to dual projections from the type's perspectives. Parent/child indices and which association applies come from the `set` trait and view/caller context — see [sets.md](./sets.md).
 - **Symmetric** types (e.g. `includes`, `neighbor`, `enemies_enemies`) carry no directional meaning, so tuple order is irrelevant for them; UI resolves association context via the relation column's target database.
 - **Associative** links use `includes` (migrated from legacy composites such as `inspirations_features`, `scenes_characters`).
 - **Structural** and **taxonomy↔inspiration** pairs use named composite types (e.g. `scenes_part`, `monsters_inspirations`) whose two perspectives fix the meaning of each tuple position.
@@ -218,7 +218,7 @@ db.close();
 
 ## See also
 
-- [set-membership.md](./set-membership.md) — set membership family (`is_a` / `members`), archive as set
+- [sets.md](./sets.md) — set trait, type tables, archive hub
 - [schema.md](./schema.md) — workspace model config in `content/model/schema.json`
 - [graph-explorer.md](./graph-explorer.md) — anchor-scoped LOD graph visualization
 - [ordered-collections.md](./ordered-collections.md) — automatic sequence for associations (scenes-first)

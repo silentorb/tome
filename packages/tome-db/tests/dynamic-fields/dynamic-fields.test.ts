@@ -17,7 +17,7 @@ import {
   seedTestIncludes,
   seedTestNode,
   seedTestRelationships,
-  writeSetMembershipTypes,
+  writeTestSetAssociations,
 } from "../../src/content/test-helpers";
 import {
   buildAllSceneCountPrefetch,
@@ -75,7 +75,7 @@ describe("dynamic-fields resolvers", () => {
     const contentDir = join(dir, "content");
     mkdirSync(contentDir, { recursive: true });
     process.env.TOME_CONTENT_PATH = contentDir;
-    writeSetMembershipTypes(contentDir);
+    writeTestSetAssociations(contentDir);
     const store = new ContentStore(contentDir);
     store.writeDynamicFieldsFile(
       fileFromSeedInputs(

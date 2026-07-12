@@ -17,15 +17,19 @@ import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
 import { applySectionColumnOrder } from "./views/column-order";
 import { applyHiddenColumns } from "./views/column-visibility";
 import type { TableTabsDetail } from "./views/tabs";
-import { ORDER_META_KEYS } from "./ordered-relationships";
-import {
-  isOrderedMembershipSet,
-  membershipPerspectivesForSet,
-  ORDERED_PROPERTY_DEFAULT,
-  viewSectionKeyForSet,
-} from "tome-flatfile";
+import { ORDER_META_KEYS, setUsesOrderedAssociation } from "./ordered-relationships";
+import { ORDERED_PROPERTY_DEFAULT, setRolePerspectivesForNode, loadAssociationsFromContent, resolveSetTraitComposite } from "tome-flatfile";
+import { perspectiveDisplayLabel } from "./association-label";
 
 const ROW_META_KEYS = ORDER_META_KEYS;
+const DEFAULT_SET_SECTION_TITLE = "Contents";
+
+function setSectionTitle(contentDir: string, setSidePerspective: string): string {
+  const associations = loadAssociationsFromContent(contentDir);
+  const composite = resolveSetTraitComposite(associations, setSidePerspective) ?? setSidePerspective;
+  const label = perspectiveDisplayLabel(associations, setSidePerspective, composite);
+  return label.trim() ? label : DEFAULT_SET_SECTION_TITLE;
+}
 
 import type {
   DatabaseColumnDef,
@@ -100,11 +104,11 @@ function rowSort(a: DatabaseRow, b: DatabaseRow): number {
   return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 }
 
-function membershipPerspectives(
+function setPerspectives(
   databaseId: string,
   contentDir: string,
 ): { viewAssociation: string; memberSidePerspective: string } {
-  const [viewAssociation, memberSidePerspective] = membershipPerspectivesForSet(
+  const [viewAssociation, memberSidePerspective] = setRolePerspectivesForNode(
     databaseId,
     contentDir,
   );
@@ -119,7 +123,7 @@ function buildCustomViewDetail(
   contentDir: string,
   requestedTabId?: string,
 ): DatabaseViewDetail {
-  const { viewAssociation, memberSidePerspective } = membershipPerspectives(
+  const { viewAssociation, memberSidePerspective } = setPerspectives(
     databaseId,
     contentDir,
   );
@@ -130,7 +134,7 @@ function buildCustomViewDetail(
     viewAssociation,
   );
   const tabName = activeTabName(resolved);
-  const ordered = isOrderedMembershipSet(databaseId, contentDir);
+  const ordered = setUsesOrderedAssociation(databaseId, contentDir);
 
   const evalRows: EvalRow[] = [];
   for (const connection of incoming) {
@@ -216,6 +220,7 @@ function buildCustomViewDetail(
     tabs,
     viewAssociation,
     memberSidePerspective,
+    sectionTitle: setSectionTitle(contentDir, viewAssociation),
     allColumns,
     columns: visibleColumns,
     rows,
@@ -270,7 +275,7 @@ function buildLegacyViewDetail(
   }));
 
   const dir = contentDir ?? resolveContentPath();
-  const { viewAssociation, memberSidePerspective } = membershipPerspectives(
+  const { viewAssociation, memberSidePerspective } = setPerspectives(
     databaseId,
     dir,
   );
@@ -322,6 +327,7 @@ function buildLegacyViewDetail(
     tabs: { kind: "custom", items: tabItems, activeTabId },
     viewAssociation,
     memberSidePerspective,
+    sectionTitle: setSectionTitle(dir, viewAssociation),
     allColumns: columns,
     columns,
     rows,
@@ -330,7 +336,7 @@ function buildLegacyViewDetail(
   };
 }
 
-/** Build a database table view from membership connections and linked page titles. */
+/** Build a database table view from set edges and linked page titles. */
 export function getDatabaseViewDetail(
   db: GraphDatabase,
   databaseId: string,
@@ -345,7 +351,7 @@ export function getDatabaseViewDetail(
 
   const title = titleFromProperties(database.properties);
   const views = loadViewsFromContent(dir);
-  const sectionKey = viewSectionKeyForSet(databaseId, dir);
+  const sectionKey = setRolePerspectivesForNode(databaseId, dir)[0];
   const sectionConfig = getSectionTabsConfig(views, databaseId, sectionKey);
 
   if (sectionConfig?.kind === "generated") {

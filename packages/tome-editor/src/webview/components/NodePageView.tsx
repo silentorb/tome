@@ -162,7 +162,7 @@ export function NodePageView({
               <section key={`database-${section.databaseView.tabs.activeTabId}`} className="tome-record-section">
                 <SectionTitle
                   api={api}
-                  title="Members"
+                  title={section.databaseView.sectionTitle}
                   typeNodeId={
                     node.id === section.databaseView.id ? null : section.databaseView.id
                   }
@@ -191,7 +191,7 @@ export function NodePageView({
               >
                 <SectionTitle
                   api={api}
-                  title="Members"
+                  title={section.view.sectionTitle}
                   typeNodeId={
                     node.id === section.view.typeDatabaseId ? null : section.view.typeDatabaseId
                   }

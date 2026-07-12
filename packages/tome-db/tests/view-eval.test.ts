@@ -18,7 +18,7 @@ import {
 import { serializeTableSchemasFile } from "tome-flatfile";
 import { serializeAssociationsFile } from "tome-flatfile";
 import { invalidateAssociationsCache } from "tome-flatfile";
-import { writeSetMembershipTypes } from "../src/content/test-helpers";
+import { writeTestSetAssociations } from "../src/content/test-helpers";
 
 describe("row-sort", () => {
   const rows: EvalRow[] = [
@@ -101,7 +101,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-tabs-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
-    writeSetMembershipTypes(contentDir);
+    writeTestSetAssociations(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
@@ -157,7 +157,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-cols-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
-    writeSetMembershipTypes(contentDir);
+    writeTestSetAssociations(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
@@ -212,7 +212,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-hidden-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
-    writeSetMembershipTypes(contentDir);
+    writeTestSetAssociations(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
@@ -269,7 +269,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-rel-sort-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
-    writeSetMembershipTypes(contentDir);
+    writeTestSetAssociations(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const featuresDb = "0000000000000000000000002P";

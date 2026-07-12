@@ -1,7 +1,7 @@
 import {
-  renameScalarOnMembershipEdges,
+  renameScalarOnSetEdges,
   ROW_META_KEYS,
-  stripScalarFromMembershipEdges,
+  stripScalarFromSetEdges,
   unlinkRelationColumnFromAllRows,
 } from "./database-column-data";
 import { loadDynamicFields } from "./dynamic-fields";
@@ -26,7 +26,7 @@ import {
   appendColumnToViewsOrder,
   renameColumnInViews,
 } from "./views/mutations";
-import { viewSectionKeyForSet } from "tome-flatfile";
+import { setRolePerspectivesForNode } from "tome-flatfile";
 import type {
   CreateDatabaseColumnInput,
   DatabaseColumnMutationError,
@@ -174,7 +174,12 @@ export function createDatabaseColumn(
   tableSchema.columns.push(columnDef);
   ctx.store.writeTableSchemasFile(schemasFile);
   invalidateTableSchemasCache();
-  appendColumnToViewsOrder(ctx.store, databaseId, viewSectionKeyForSet(databaseId, ctx.store.contentDir), key);
+  appendColumnToViewsOrder(
+    ctx.store,
+    databaseId,
+    setRolePerspectivesForNode(databaseId, ctx.store.contentDir)[0],
+    key,
+  );
 
   ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
   ctx.sync.syncAfterWrite("views.json");
@@ -309,11 +314,11 @@ export function updateDatabaseColumn(
   }
 
   if (!wasRelation && willRelation) {
-    valuesCleared += stripScalarFromMembershipEdges(ctx, databaseId, normalizedKey);
+    valuesCleared += stripScalarFromSetEdges(ctx, databaseId, normalizedKey);
   }
 
   if (!wasRelation && !willRelation && finalKey !== normalizedKey) {
-    rowsMigrated += renameScalarOnMembershipEdges(ctx, databaseId, normalizedKey, finalKey);
+    rowsMigrated += renameScalarOnSetEdges(ctx, databaseId, normalizedKey, finalKey);
   }
 
   patched.key = finalKey;
@@ -327,7 +332,7 @@ export function updateDatabaseColumn(
     renameColumnInViews(
       ctx.store,
       databaseId,
-      viewSectionKeyForSet(databaseId, ctx.store.contentDir),
+      setRolePerspectivesForNode(databaseId, ctx.store.contentDir)[0],
       normalizedKey,
       finalKey,
     );

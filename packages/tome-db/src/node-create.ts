@@ -3,14 +3,16 @@ import type { Properties } from "tome-sqlite";
 import { normalizeRelationshipType } from "tome-flatfile";
 import { resolveAssociationId } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
+import {
+  isMemberSidePerspective,
+  resolveSetTraitComposite,
+  setRolePerspectivesForNode,
+  setRolePerspectivesForComposite,
+} from "tome-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
 import { stampOrderIfMissing } from "./ordered-relationships";
-import {
-  membershipCompositeForSet,
-  membershipPerspectivesForSet,
-} from "tome-flatfile";
 import type {
   CreateNodeError,
   CreateNodeInput,
@@ -61,6 +63,22 @@ function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: stri
   return Math.max(...ordinals) + 1;
 }
 
+function memberPerspectiveForSetLink(
+  ctx: TomeWriteContext,
+  setId: string,
+  perspective?: string,
+): string {
+  const dir = ctx.store.contentDir;
+  const registry = loadAssociationsFromContent(dir);
+  if (perspective) {
+    const normalized = normalizeRelationshipType(perspective);
+    if (isMemberSidePerspective(registry, normalized)) return normalized;
+    const composite = resolveSetTraitComposite(registry, normalized);
+    if (composite) return setRolePerspectivesForComposite(registry, composite)[1];
+  }
+  return setRolePerspectivesForNode(setId, dir)[1];
+}
+
 export function createNode(
   ctx: TomeWriteContext,
   input: CreateNodeInput,
@@ -99,31 +117,34 @@ export function createNode(
   syncAfterNodeWrite(ctx, id);
 
   if (input.link?.kind === "outgoing") {
-    const { sourceId, type, properties = {}, membershipTypeId } = input.link;
-    const relProps: Properties = { ...properties };
+    const { sourceId, type, properties: linkProps = {}, typeTableId, typeTablePerspective } =
+      input.link;
+    const relProps: Properties = { ...linkProps };
     const nextOrdinal = nextOutgoingOrdinal(ctx, sourceId, type);
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
     ctx.store.upsertRelationship(sourceId, id, type, relProps);
-    if (membershipTypeId) {
-      const [, memberPerspective] = membershipPerspectivesForSet(
-        membershipTypeId,
-        ctx.store.contentDir,
-      );
-      const membershipProps = stampOrderIfMissing(
+    if (typeTableId) {
+      const memberPerspective = memberPerspectiveForSetLink(
         ctx,
-        membershipTypeId,
-        id,
-        {},
+        typeTableId,
+        typeTablePerspective,
       );
-      ctx.store.upsertRelationship(id, membershipTypeId, memberPerspective, membershipProps);
+      const setProps = stampOrderIfMissing(ctx, typeTableId, id, {}, memberPerspective);
+      ctx.store.upsertRelationship(id, typeTableId, memberPerspective, setProps);
     }
     syncAfterRelationshipsWrite(ctx);
   }
 
   if (input.link?.kind === "database-row") {
-    const { databaseId, properties = {} } = input.link;
-    const [, memberPerspective] = membershipPerspectivesForSet(databaseId, ctx.store.contentDir);
-    const relProps = stampOrderIfMissing(ctx, databaseId, id, { ...properties });
+    const { databaseId, properties: rowProps = {}, perspective } = input.link;
+    const memberPerspective = memberPerspectiveForSetLink(ctx, databaseId, perspective);
+    const relProps = stampOrderIfMissing(
+      ctx,
+      databaseId,
+      id,
+      { ...rowProps },
+      memberPerspective,
+    );
     ctx.store.upsertRelationship(id, databaseId, memberPerspective, relProps);
     syncAfterRelationshipsWrite(ctx);
   }

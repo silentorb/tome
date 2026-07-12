@@ -26,8 +26,8 @@ import {
   isMemberSidePerspective,
   isSetSidePerspective,
   isSetTraitPerspective,
-  membershipCompositeForPerspective,
-  viewSectionKeyForSet,
+  resolveSetTraitComposite,
+  setRolePerspectivesForNode,
 } from "tome-flatfile";
 import { generatedProviderId } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "tome-flatfile";
@@ -296,10 +296,10 @@ function buildRelationSections(
           })),
         );
 
-    const membershipCompositeKey =
-      membershipCompositeForPerspective(associations, perspective) ?? perspective;
+    const setTraitCompositeKey =
+      resolveSetTraitComposite(associations, perspective) ?? perspective;
     const sectionTitle = isSetMembership
-      ? perspectiveDisplayLabel(associations, perspective, membershipCompositeKey)
+      ? perspectiveDisplayLabel(associations, perspective, setTraitCompositeKey)
       : sectionTitleForType(db, perspective, typeNodeId);
     const linkAddLabel =
       isSetMembership && isMemberSidePerspective(associations, perspective)
@@ -307,7 +307,7 @@ function buildRelationSections(
             associations,
             perspective,
             sectionTitle,
-            membershipCompositeKey,
+            setTraitCompositeKey,
           )
         : undefined;
 
@@ -372,7 +372,7 @@ export function getNodePageDetail(
   const sections: NodeSection[] = [{ type: "markdown", body: node.body }];
 
   if (node.isTypeTable) {
-    const sectionKey = viewSectionKeyForSet(id, contentDir);
+    const sectionKey = setRolePerspectivesForNode(id, contentDir)[0];
     const provider = generatedProviderId(views, id, sectionKey);
     if (provider) {
       const config = getConfigByProvider(provider, contentDir);

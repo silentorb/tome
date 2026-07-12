@@ -362,7 +362,7 @@ export class CacheSync {
 }
 
 /**
- * Open flatfile ContentStore + sqlite GraphDatabase with enum codec and set-membership
+ * Open flatfile ContentStore + sqlite GraphDatabase with enum codec and set-trait
  * perspectives, ensure the cache is ready, and wire store→sync subscriptions.
  */
 export function openContentGraph(contentDir: string, dbPath: string): TomeWriteContext {

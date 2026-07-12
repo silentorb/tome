@@ -18,7 +18,7 @@ import {
 import { RELATIONSHIPS_FILE_VERSION } from "tome-flatfile";
 import {
   emptyAssociationsFile,
-  registerSetMembershipType,
+  registerSetAssociation,
   registerTypeDefinition,
   serializeAssociationsFile,
 } from "tome-flatfile";
@@ -47,7 +47,10 @@ describe("database-view-relations", () => {
   const featuresDb = "0000000000000000000000002P";
 
   const relationTypes = emptyAssociationsFile();
-  registerSetMembershipType(relationTypes);
+  registerSetAssociation(relationTypes, {
+    id: "member_of",
+    perspectives: ["members", "member_of"],
+  });
   registerTypeDefinition(relationTypes, "prop_type_inspirations", {
     perspectives: ["prop_type", "inspirations"],
     endpoints: {
@@ -235,7 +238,10 @@ describe("database-view-relations", () => {
     seedTestNode(fixture, { id: locationA, properties: { title: "North grove" } });
     seedTestNode(fixture, { id: locationB, properties: { title: "South grove" } });
     const registry = emptyAssociationsFile();
-    registerSetMembershipType(registry);
+    registerSetAssociation(registry, {
+      id: "member_of",
+      perspectives: ["members", "member_of"],
+    });
     registerTypeDefinition(registry, "neighbor", {
       perspectives: ["neighbor", "neighbor"],
     });

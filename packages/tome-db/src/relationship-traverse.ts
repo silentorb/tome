@@ -1,5 +1,5 @@
 import type { GraphDatabase, Properties, Relationship } from "tome-sqlite";
-import { findSetMembershipRelationship, setMemberIds } from "./set-membership";
+import { findSetEdge, setMemberIds } from "./set-membership";
 import { normalizeRelationshipType } from "tome-flatfile";
 
 export function rowBelongsToDatabase(
@@ -8,7 +8,7 @@ export function rowBelongsToDatabase(
   databaseId: string,
   contentDir?: string,
 ): boolean {
-  return findSetMembershipRelationship(db, rowId, databaseId, contentDir) !== null;
+  return findSetEdge(db, rowId, databaseId, contentDir) !== null;
 }
 
 /** Keep incident edges when row is a member of the viewing database. */

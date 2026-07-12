@@ -2,7 +2,7 @@
 
 ## What it does
 
-Set membership uses two composites (see [set-membership.md](../../features/set-membership.md)):
+Set membership uses two composites (see [sets.md](../../features/sets.md)):
 
 | Composite | Sequence | Placement metadata |
 | --- | --- | --- |

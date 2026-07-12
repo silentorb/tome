@@ -26,9 +26,9 @@ describe("ordered-collections API", () => {
   seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
   seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
   seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
-  seedTestTableSchema(fixture, SCENES_DB, [], "ordered_member_of");
-  seedTestTableSchema(fixture, PARTS_DB, [], "ordered_member_of");
-  seedTestTableSchema(fixture, PRODUCTS_DB, [], "ordered_member_of");
+  seedTestTableSchema(fixture, SCENES_DB, []);
+  seedTestTableSchema(fixture, PARTS_DB, []);
+  seedTestTableSchema(fixture, PRODUCTS_DB, []);
   seedTestNode(fixture, { id: book, properties: { title: "TWOLD" } });
   seedTestNode(fixture, { id: part, properties: { title: "Part 1" } });
   seedTestNode(fixture, { id: scene1, properties: { title: "Scene One" } });
@@ -51,6 +51,16 @@ describe("ordered-collections API", () => {
     views: [
       {
         nodeId: SCENES_DB,
+        perspective: "ordered_members",
+        generator: "scenes-by-book",
+      },
+      {
+        nodeId: PARTS_DB,
+        perspective: "ordered_members",
+        generator: "scenes-by-book",
+      },
+      {
+        nodeId: PRODUCTS_DB,
         perspective: "ordered_members",
         generator: "scenes-by-book",
       },

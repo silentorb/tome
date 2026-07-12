@@ -7,8 +7,7 @@ import type {
 } from "./content/associations-file";
 import { resolveContentPath } from "./content/paths";
 import { loadAssociationsFromContent } from "./associations/load";
-import { getTableSchema } from "./table-schema";
-import { loadTableSchemasFromContent } from "./table-schemas/load";
+import { loadViewsFromContent } from "./views/load";
 
 export const SET_TRAIT = "set";
 export const ORDERED_TRAIT = "ordered";
@@ -227,79 +226,71 @@ export function isMemberSidePerspective(
   return memberSidePerspectives(registry).includes(normalized);
 }
 
-export function membershipCompositeForPerspective(
+/** Parent/set and child/member perspectives for a set-trait composite. */
+export function setRolePerspectivesForComposite(
   registry: AssociationsFile,
-  perspective: string,
-): string | null {
-  return resolveSetTraitComposite(registry, perspective);
-}
-
-export function defaultPlainSetMembershipComposite(registry: AssociationsFile): string {
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.associations[composite];
-    if (def && !isOrderedTraitType(def)) return composite;
-  }
-  throw new Error("No plain set-trait membership composite in associations registry");
-}
-
-export function defaultOrderedSetMembershipComposite(registry: AssociationsFile): string {
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.associations[composite];
-    if (def && isOrderedTraitType(def)) return composite;
-  }
-  throw new Error("No ordered set-trait membership composite in associations registry");
-}
-
-export function membershipCompositeForSet(setId: string, contentDir?: string): string {
-  const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
-  const schema = getTableSchema(loadTableSchemasFromContent(dir), setId);
-  const composite = schema?.membershipComposite;
-  if (typeof composite === "string" && composite.trim()) {
-    return normalizeRelationshipType(composite);
-  }
-  for (const candidate of typesWithTrait(registry, SET_TRAIT)) {
-    const def = registry.associations[candidate];
-    if (def && !isOrderedTraitType(def)) return candidate;
-  }
-  for (const candidate of typesWithTrait(registry, SET_TRAIT)) {
-    if (registry.associations[candidate]) return candidate;
-  }
-  throw new Error(
-    `No set-trait membership composite in associations registry for set ${setId}`,
-  );
-}
-
-export function membershipPerspectivesForSet(
-  setId: string,
-  contentDir?: string,
+  composite: string,
 ): [string, string] {
-  const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
-  const composite = membershipCompositeForSet(setId, dir);
-  const def = registry.associations[composite];
-  if (!def) {
-    throw new Error(
-      `Unknown membership composite "${composite}" for set ${setId}`,
-    );
+  const normalized = normalizeRelationshipType(composite);
+  const def = registry.associations[normalized];
+  if (!def || !isSetTraitType(def)) {
+    throw new Error(`Unknown set-trait composite "${composite}"`);
   }
   const { parentIndex, childIndex } = setRoleIndices(def);
   return [def.perspectives[parentIndex]!, def.perspectives[childIndex]!];
 }
 
-/** Set-side perspective used as views.json association / section key. */
-export function viewSectionKeyForSet(setId: string, contentDir?: string): string {
-  return membershipPerspectivesForSet(setId, contentDir)[0];
+/**
+ * When a node has no views/edges declaring a set association, use the sole
+ * plain (non-ordered) set-trait composite, else the sole set-trait composite.
+ */
+function soleSetCompositeFallback(registry: AssociationsFile): string {
+  const setComposites = typesWithTrait(registry, SET_TRAIT);
+  const plain = setComposites.filter((composite) => {
+    const def = registry.associations[composite];
+    return def && !isOrderedTraitType(def);
+  });
+  if (plain.length === 1) return plain[0]!;
+  if (setComposites.length === 1) return setComposites[0]!;
+  throw new Error(
+    "No set association context: add a set-side perspective in views.json for this node, or register a single set-trait association",
+  );
 }
 
-/** Member-side perspective for unlink/move against a set. */
-export function memberSidePerspectiveForSet(setId: string, contentDir?: string): string {
-  return membershipPerspectivesForSet(setId, contentDir)[1];
-}
-
-export function isOrderedMembershipSet(setId: string, contentDir?: string): boolean {
+/**
+ * Resolve set/member perspectives for a set node from project context:
+ * views.json set-side perspectives for the node, else sole set-trait fallback.
+ * Does not pick among multiple project associations via table-schemas.
+ */
+export function setRolePerspectivesForNode(
+  nodeId: string,
+  contentDir?: string,
+): [string, string] {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
-  const composite = membershipCompositeForSet(setId, dir);
-  return isOrderedTraitComposite(registry, composite);
+  const setSide = new Set(setSidePerspectives(registry));
+  const fromViews = new Set<string>();
+  for (const view of loadViewsFromContent(dir).views) {
+    const perspective = normalizeRelationshipType(view.perspective);
+    if (view.nodeId === nodeId && setSide.has(perspective)) {
+      fromViews.add(perspective);
+    }
+  }
+  if (fromViews.size > 0) {
+    const setPerspective = [...fromViews][0]!;
+    const composite = resolveSetTraitComposite(registry, setPerspective);
+    if (!composite) {
+      throw new Error(`View perspective "${setPerspective}" is not a set-trait association`);
+    }
+    return setRolePerspectivesForComposite(registry, composite);
+  }
+  return setRolePerspectivesForComposite(registry, soleSetCompositeFallback(registry));
+}
+
+export function isOrderedSetPerspective(
+  registry: AssociationsFile,
+  perspective: string,
+): boolean {
+  const composite = resolveSetTraitComposite(registry, perspective);
+  return composite !== null && isOrderedTraitComposite(registry, composite);
 }

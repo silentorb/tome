@@ -6,7 +6,7 @@ import { ContentStore } from "tome-flatfile";
 import { fileFromSeedInputs } from "tome-flatfile";
 import { invalidateDynamicFieldsCache } from "../src/content/sync";
 import { contentModelDir, workspaceFilePath } from "tome-flatfile";
-import { defaultTestWorkspaceFile, writeSetMembershipTypes } from "../src/content/test-helpers";
+import { defaultTestWorkspaceFile, writeTestSetAssociations } from "../src/content/test-helpers";
 import { serializeWorkspaceFile } from "tome-flatfile";
 import { invalidateWorkspaceCache } from "tome-flatfile";
 import { writeFileSync } from "node:fs";
@@ -28,7 +28,7 @@ describe("node-type-properties", () => {
     "utf-8",
   );
   invalidateWorkspaceCache();
-  writeSetMembershipTypes(contentDir);
+  writeTestSetAssociations(contentDir);
   process.env.TOME_CONTENT_PATH = contentDir;
 
   const CHAR_DB = "00000000000000000000000035";

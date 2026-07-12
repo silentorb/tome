@@ -89,7 +89,7 @@ Marloth `ordered-collections.json` sets `"membershipEdgeType": "member_of"` for 
 
 ### Type membership audit
 
-[`packages/tome-db/src/type-membership-audit.ts`](../../../packages/tome-db/src/type-membership-audit.ts) — audits instance↔type-table membership using `isTypeTableNode` and `member_of` edges.
+[`../../../../marloth-story/scripts/lib/type-membership-audit.ts`](../../../../marloth-story/scripts/lib/type-membership-audit.ts) — audits instance↔type-table membership using `isTypeTableNode` and set-trait edges (Marloth legacy-export hygiene; not tome runtime).
 
 ---
 
@@ -113,7 +113,7 @@ Set identity is **structural** (schema key or workspace archive id), not a prope
 | **B2** | Row ordering props (`row_index`, `view`) are written on `member_of` edges targeting type tables. |
 | **B6** | Membership is the first branch in `resolveAssociationIdForLink` (step 0). |
 | **B7** | Membership sections sorted last; `members` perspective sections hidden on instance pages. |
-| **B3** | Distinct from `includes` — set membership is a separate relationship family per [set-membership.md](../../features/set-membership.md). |
+| **B3** | Distinct from `includes` — set containment is a separate relationship family per [sets.md](../../features/sets.md). |
 
 ---
 

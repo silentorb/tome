@@ -193,7 +193,7 @@ export interface TomeQueryCacheOpenOptions {
   dbPath?: string;
   clean?: boolean;
   propertyCodec?: RelationshipPropertyCodec;
-  /** Local perspective types for set-membership filtering (archive, type filters). */
+  /** Local perspective types for set-trait filtering (archive, type filters). */
   memberPerspectives?: () => readonly string[];
 }
 

@@ -1,14 +1,15 @@
 import type { ContentStore } from "tome-flatfile";
 import type { RelationshipEntry } from "tome-flatfile";
-import { isSetMembershipStorageType } from "./set-membership";
+import { isSetTraitComposite, loadAssociationsFromContent } from "tome-flatfile";
 import { archiveNodeId } from "tome-flatfile";
 
-export function isArchiveMembershipEntry(
+export function isArchiveSetEntry(
   entry: RelationshipEntry,
   archiveHubId: string,
   contentDir?: string,
 ): boolean {
-  if (!isSetMembershipStorageType(entry.type, contentDir)) return false;
+  const registry = loadAssociationsFromContent(contentDir);
+  if (!isSetTraitComposite(registry, entry.type)) return false;
   return entry.a === archiveHubId || entry.b === archiveHubId;
 }
 
@@ -19,7 +20,7 @@ export function listArchiveMemberIds(
 ): string[] {
   const members = new Set<string>();
   for (const entry of entries) {
-    if (!isArchiveMembershipEntry(entry, archiveHubId, contentDir)) continue;
+    if (!isArchiveSetEntry(entry, archiveHubId, contentDir)) continue;
     const memberId = entry.a === archiveHubId ? entry.b : entry.a;
     if (memberId !== archiveHubId) members.add(memberId);
   }
@@ -49,7 +50,7 @@ export function markIncidentRelationshipsArchived(
   for (let i = 0; i < file.relationships.length; i++) {
     const entry = file.relationships[i]!;
     if (!isIncidentEntry(entry, nodeId)) continue;
-    if (isArchiveMembershipEntry(entry, archiveHubId, store.contentDir)) continue;
+    if (isArchiveSetEntry(entry, archiveHubId, store.contentDir)) continue;
     if (entry.archived === true) continue;
     file.relationships[i] = { ...entry, archived: true };
     changed++;
@@ -71,7 +72,7 @@ export function unmarkIncidentRelationshipsArchived(
   for (let i = 0; i < file.relationships.length; i++) {
     const entry = file.relationships[i]!;
     if (!isIncidentEntry(entry, nodeId)) continue;
-    if (isArchiveMembershipEntry(entry, archiveHubId, store.contentDir)) continue;
+    if (isArchiveSetEntry(entry, archiveHubId, store.contentDir)) continue;
     if (entry.archived !== true) continue;
 
     const other = otherEndpoint(entry, nodeId);

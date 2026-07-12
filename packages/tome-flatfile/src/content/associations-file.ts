@@ -357,19 +357,19 @@ export function registerBidirectionalType(
   return composite;
 }
 
-/** Set membership: parent (set) at index 0, child (member) at index 1. */
-export function registerSetMembershipType(file: AssociationsFile): void {
-  registerTypeDefinition(file, "member_of", {
-    perspectives: ["members", "member_of"],
-    traits: ["set"],
-  });
-}
-
-/** Ordered set membership: parent (set) at index 0, child (member) at index 1. */
-export function registerOrderedSetMembershipType(file: AssociationsFile): void {
-  registerTypeDefinition(file, "ordered_member_of", {
-    perspectives: ["ordered_members", "ordered_member_of"],
-    traits: ["set", "ordered"],
+/** Register a set-trait association with explicit id and perspectives (tests/projects). */
+export function registerSetAssociation(
+  file: AssociationsFile,
+  options: {
+    id: string;
+    perspectives: [string, string];
+    ordered?: boolean;
+  },
+): void {
+  const traits: TraitEntry[] = options.ordered ? ["set", "ordered"] : ["set"];
+  registerTypeDefinition(file, options.id, {
+    perspectives: options.perspectives,
+    traits,
   });
 }
 

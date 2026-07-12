@@ -4,45 +4,16 @@ import {
   loadAssociationsFromContent,
   archiveNodeId,
   hasTableSchemaEntry,
-  isSetTraitComposite,
-  membershipPerspectivesForSet,
   setRoleIndices,
-  setTraitPerspectives,
   typesWithTrait,
   SET_TRAIT,
   collectSetNodeIds,
+  setRolePerspectivesForNode,
 } from "tome-flatfile";
 
 export { collectSetNodeIds } from "tome-flatfile";
 
 export type SetKind = "type_table" | "archive";
-
-export function membershipPerspectives(contentDir?: string): string[] {
-  const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
-  return setTraitPerspectives(registry);
-}
-
-export function isSetMembershipStorageType(type: string, contentDir?: string): boolean {
-  const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
-  return isSetTraitComposite(registry, type);
-}
-
-export function isMembershipPerspective(perspective: string, contentDir?: string): boolean {
-  const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
-  return setTraitPerspectives(registry).includes(perspective);
-}
-
-/** Outgoing membership projections from nodeId for the given perspective. */
-export function listSetMembership(
-  db: GraphDatabase,
-  nodeId: string,
-  perspective: string,
-): Relationship[] {
-  return db.listRelationshipsFromSource(nodeId, perspective);
-}
 
 export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: string): string[] {
   const dir = contentDir ?? resolveContentPath();
@@ -62,10 +33,22 @@ export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: s
 
 export function setMemberIds(db: GraphDatabase, setId: string, contentDir?: string): string[] {
   const dir = contentDir ?? resolveContentPath();
-  const [setPerspective, memberPerspective] = membershipPerspectivesForSet(setId, dir);
-  const viaSet = listSetMembership(db, setId, setPerspective).map((r) => r.targetNodeId);
-  if (viaSet.length > 0) return viaSet;
-  return db.listRelationshipsToTarget(setId, memberPerspective).map((r) => r.sourceNodeId);
+  const registry = loadAssociationsFromContent(dir);
+  const ids = new Set<string>();
+  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+    const def = registry.associations[composite];
+    if (!def) continue;
+    const { parentIndex, childIndex } = setRoleIndices(def);
+    const setPerspective = def.perspectives[parentIndex]!;
+    const memberPerspective = def.perspectives[childIndex]!;
+    for (const rel of db.listRelationshipsFromSource(setId, setPerspective)) {
+      ids.add(rel.targetNodeId);
+    }
+    for (const rel of db.listRelationshipsToTarget(setId, memberPerspective)) {
+      ids.add(rel.sourceNodeId);
+    }
+  }
+  return [...ids];
 }
 
 export function setKindForNode(
@@ -87,35 +70,57 @@ export function isSetNode(db: GraphDatabase, nodeId: string, contentDir?: string
   return setKindForNode(db, nodeId, contentDir) !== null;
 }
 
-export function findSetMembershipRelationship(
+export function findSetEdge(
   db: GraphDatabase,
   memberId: string,
   setId: string,
   contentDir?: string,
 ): Relationship | null {
   const dir = contentDir ?? resolveContentPath();
-  const [, memberPerspective] = membershipPerspectivesForSet(setId, dir);
-  return (
-    listSetMembership(db, memberId, memberPerspective).find((r) => r.targetNodeId === setId) ??
-    null
-  );
+  const registry = loadAssociationsFromContent(dir);
+  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+    const def = registry.associations[composite];
+    if (!def) continue;
+    const { childIndex } = setRoleIndices(def);
+    const memberPerspective = def.perspectives[childIndex]!;
+    const edge = db
+      .listRelationshipsFromSource(memberId, memberPerspective)
+      .find((r) => r.targetNodeId === setId);
+    if (edge) return edge;
+  }
+  return null;
 }
 
-/** Membership edges normalized for type-table row building (member as sourceNodeId). */
+/** Set edges normalized for type-table row building (member as sourceNodeId). */
 export function listSetMemberRowConnections(
   db: GraphDatabase,
   setId: string,
   contentDir?: string,
 ): Relationship[] {
   const dir = contentDir ?? resolveContentPath();
-  const [setPerspective, memberPerspective] = membershipPerspectivesForSet(setId, dir);
-  const viaMembers = listSetMembership(db, setId, setPerspective);
-  if (viaMembers.length > 0) {
-    return viaMembers.map((r) => ({
-      ...r,
-      sourceNodeId: r.targetNodeId,
-      targetNodeId: setId,
-    }));
+  const registry = loadAssociationsFromContent(dir);
+  const byMember = new Map<string, Relationship>();
+  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+    const def = registry.associations[composite];
+    if (!def) continue;
+    const { parentIndex, childIndex } = setRoleIndices(def);
+    const setPerspective = def.perspectives[parentIndex]!;
+    const memberPerspective = def.perspectives[childIndex]!;
+    for (const r of db.listRelationshipsFromSource(setId, setPerspective)) {
+      byMember.set(r.targetNodeId, {
+        ...r,
+        sourceNodeId: r.targetNodeId,
+        targetNodeId: setId,
+      });
+    }
+    for (const r of db.listRelationshipsToTarget(setId, memberPerspective)) {
+      if (!byMember.has(r.sourceNodeId)) byMember.set(r.sourceNodeId, r);
+    }
   }
-  return db.listRelationshipsToTarget(setId, memberPerspective);
+  return [...byMember.values()];
+}
+
+/** Set/member perspectives for a set node from views (or sole set-trait fallback). */
+export function setRolePerspectives(setId: string, contentDir?: string): [string, string] {
+  return setRolePerspectivesForNode(setId, contentDir);
 }

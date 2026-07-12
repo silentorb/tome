@@ -119,14 +119,6 @@ function parseTableSchema(raw: unknown, tableId: string): TableSchema {
     keys.add(col.key);
   }
   const schema: TableSchema = { columns };
-  if (obj.membershipComposite !== undefined) {
-    if (typeof obj.membershipComposite !== "string" || !obj.membershipComposite.trim()) {
-      throw new Error(
-        `table-schemas.json tables.${tableId}: membershipComposite must be a non-empty string`,
-      );
-    }
-    schema.membershipComposite = obj.membershipComposite.trim();
-  }
   return schema;
 }
 
