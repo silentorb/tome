@@ -110,7 +110,7 @@ Set identity is **structural** (schema key or workspace archive id), not a prope
 
 | Behavior | Interaction |
 | --- | --- |
-| **B2** | Row ordering props (`row_index`, `view`) are written on `member_of` edges targeting type tables. |
+| **B2** | Ordered sets stamp `order` on `ordered_member_of`; plain `member_of` holds table-schema scalars only (no view / row_index). |
 | **B6** | Membership is the first branch in `resolveAssociationIdForLink` (step 0). |
 | **B7** | Membership sections sorted last; `members` perspective sections hidden on instance pages. |
 | **B3** | Distinct from `includes` — set containment is a separate relationship family per [sets.md](../../features/sets.md). |

@@ -29,7 +29,7 @@ describe("expandRelationshipEntry", () => {
       a: set,
       b: member,
       type: MEMBER_OF,
-      properties: { view: "All" },
+      properties: { priority: "High" },
     };
     const { projections } = expandRelationshipEntry(entry, registry);
     expect(projections).toHaveLength(2);

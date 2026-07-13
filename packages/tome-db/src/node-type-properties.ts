@@ -18,7 +18,7 @@ import type { PropertiesSection } from "tome-graph-interfaces";
 
 export type { PropertiesSection } from "tome-graph-interfaces";
 
-const ROW_META_KEYS = new Set(["view", "row_name", "order", "row_index", "number"]);
+const ROW_META_KEYS = new Set(["row_name", "order", "row_index", "number"]);
 
 
 function titleFromProperties(properties: Record<string, unknown>): string {

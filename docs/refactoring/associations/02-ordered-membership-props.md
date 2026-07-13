@@ -9,7 +9,7 @@ Set membership uses two composites (see [sets.md](../../features/sets.md)):
 | `member_of` | None | Row scalars from `table-schemas.json` only |
 | `ordered_member_of` | `order` (default from `ordered` trait) | Same; sequence owned by `ordered-relationships.ts` |
 
-Legacy `row_index` on `member_of` is **removed** — plain tables sort by title or view sorts; ordered tables use `order` on `ordered_member_of` only.
+Legacy `row_index` on `member_of` is **removed** — plain tables sort by title or view sorts; ordered tables use `order` on `ordered_member_of` only. Legacy Notion membership `view` and relation `via_view` properties are also **removed** (tabs live in `views.json` only).
 
 ---
 

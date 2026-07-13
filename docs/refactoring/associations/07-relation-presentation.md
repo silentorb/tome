@@ -127,7 +127,7 @@ Only `member_of` has rich `perspectiveLabels` in Marloth registry today.
 | Behavior | Interaction |
 | --- | --- |
 | **B1** | Membership sort-last; `members` hidden; membership link-existing |
-| **B2** | `RELATION_META_KEYS` strips row_index/view from displayed cells |
+| **B2** | `RELATION_META_KEYS` strips order meta (`ordinal`, `row_name`, `order`) from displayed cells |
 | **B3** | Includes grouping by target type; link-existing for includes slugs |
 | **B4** | Taxonomy slugs get link-existing |
 | **B5** | Parents/children typically `addMode: none` |

@@ -103,7 +103,6 @@ describe("database-view", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page1", { title: "Desperation" });
     db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
-      view: "all",
       priority: "High",
     });
 
@@ -111,11 +110,11 @@ describe("database-view", () => {
     expect(detail).toMatchObject({
       id: databaseId,
       title: "Features",
-      views: ["all"],
-      view: "all",
+      views: ["All"],
+      view: "All",
       tabs: {
         kind: "custom",
-        items: [{ id: "all", label: "all", kind: "custom" }],
+        items: [{ id: "all", label: "All", kind: "custom" }],
         activeTabId: "all",
       },
       columns: ["priority"],
@@ -140,7 +139,6 @@ describe("database-view", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page2", { title: "Peace in the eye of the storm" });
     db.upsertRelationship("page2", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
-      view: "default",
       row_index: 0,
       row_name: "Stale CSV label",
     });

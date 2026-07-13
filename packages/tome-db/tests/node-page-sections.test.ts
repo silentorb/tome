@@ -230,7 +230,6 @@ describe("node-sections", () => {
       ...typeTableMarkerProperties("Scene Archive"),
     });
     db.upsertRelationship("page5", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
-      view: "default",
       priority: "High",
     });
 
@@ -682,7 +681,6 @@ describe("node-sections bible passages regression", () => {
     db.upsertNode(biblePassagesId, { ...typeTableMarkerProperties("Bible passages") });
     db.upsertNode(memberId, { title: "Men gather to David", body: "> 1 Samuel 22:2" });
     db.upsertRelationship(memberId, biblePassagesId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
-      view: "Untitled",
       row_index: 20,
     });
 

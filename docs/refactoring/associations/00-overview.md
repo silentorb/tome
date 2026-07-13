@@ -48,7 +48,7 @@ No `directedFrom` field exists; tuple position + perspectives define direction.
 | ID | Doc | One-line description |
 | --- | --- | --- |
 | **B1** | [01-membership-and-set-roles.md](./01-membership-and-set-roles.md) | Set membership edge (`member_of`/`members`) and which nodes count as sets (type tables, archive hub). |
-| **B2** | [02-ordered-membership-props.md](./02-ordered-membership-props.md) | Row placement metadata (`row_index`, `row_name`, `view`) on membership edges. |
+| **B2** | [02-ordered-membership-props.md](./02-ordered-membership-props.md) | Ordered membership (`order` on `ordered_member_of`); plain membership holds table-schema scalars only. |
 | **B3** | [03-associative-includes-collapse.md](./03-associative-includes-collapse.md) | Many perspective slugs stored under the single `includes` bucket. |
 | **B4** | [04-taxonomy-inspiration.md](./04-taxonomy-inspiration.md) | Taxonomy↔inspiration links stored as `{perspective}_inspirations` composites. |
 | **B5** | [05-structural-hierarchy.md](./05-structural-hierarchy.md) | Parent/child perspectives routed to `parents_children`; inverse type inference. |

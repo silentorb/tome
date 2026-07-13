@@ -5,7 +5,6 @@ import type { EvalRow } from "./row-sort";
 import { applyDynamicFields } from "./dynamic-fields";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
-import { enrichColumnDefs } from "./property-enums";
 import { resolveContentPath } from "tome-flatfile";
 import {
   resolveCustomTabsForNode,
@@ -18,7 +17,7 @@ import { applySectionColumnOrder } from "./views/column-order";
 import { applyHiddenColumns } from "./views/column-visibility";
 import type { TableTabsDetail } from "./views/tabs";
 import { ORDER_META_KEYS, setUsesOrderedAssociation } from "./ordered-relationships";
-import { ORDERED_PROPERTY_DEFAULT, setRoleAssociationForNode, setRoleProjectionTypesForComposite, setRoleProjectionTypesForNode, loadAssociationsFromContent, associationIdFromTypeOrProjection } from "tome-flatfile";
+import { ORDERED_PROPERTY_DEFAULT, setRoleAssociationForNode, setRoleProjectionTypesForComposite, loadAssociationsFromContent, associationIdFromTypeOrProjection } from "tome-flatfile";
 import { perspectiveDisplayLabel } from "./association-label";
 
 const ROW_META_KEYS = ORDER_META_KEYS;
@@ -32,7 +31,6 @@ function setSectionTitle(contentDir: string, setSidePerspective: string): string
 }
 
 import type {
-  DatabaseColumnDef,
   DatabaseRow,
   DatabaseViewDetail,
 } from "tome-graph-interfaces";
@@ -76,32 +74,6 @@ function numericOrderValue(raw: unknown, fallback: number): number {
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
   const parsed = Number.parseFloat(String(raw ?? ""));
   return Number.isFinite(parsed) ? parsed : fallback;
-}
-
-function collectLegacyViews(connectionViews: string[]): string[] {
-  const views = new Set<string>();
-  for (const view of connectionViews) {
-    if (view) views.add(view);
-  }
-  if (views.size === 0) views.add("default");
-  return [...views].sort((a, b) => viewSortKey(a).localeCompare(viewSortKey(b)));
-}
-
-function viewSortKey(view: string): string {
-  if (view === "default") return "0";
-  if (view === "all") return "1";
-  return `2:${view}`;
-}
-
-function pickDefaultLegacyView(views: string[]): string {
-  if (views.includes("default")) return "default";
-  if (views.includes("all")) return "all";
-  return views[0] ?? "default";
-}
-
-function rowSort(a: DatabaseRow, b: DatabaseRow): number {
-  if (a.rowIndex !== b.rowIndex) return a.rowIndex - b.rowIndex;
-  return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
 }
 
 function setPerspectives(
@@ -231,113 +203,6 @@ function buildCustomViewDetail(
   };
 }
 
-function buildLegacyViewDetail(
-  db: GraphDatabase,
-  databaseId: string,
-  databaseTitle: string,
-  incoming: ReturnType<GraphDatabase["listRelationshipsToTarget"]>,
-  requestedView?: string,
-  contentDir?: string,
-): DatabaseViewDetail {
-  const connectionViews = incoming
-    .map((connection) => stringProperty(connection.properties.view))
-    .filter((view): view is string => view !== null);
-
-  const views = collectLegacyViews(connectionViews);
-  const view =
-    requestedView && views.includes(requestedView)
-      ? requestedView
-      : pickDefaultLegacyView(views);
-
-  const rowsByNodeId = new Map<string, DatabaseRow>();
-
-  for (const connection of incoming) {
-    const connectionView = stringProperty(connection.properties.view) ?? "default";
-    if (connectionView !== view) continue;
-
-    const page = db.getNode(connection.sourceNodeId);
-    const name = page ? titleFromProperties(page.properties) : "Untitled";
-    const cells = cellsFromProperties(connection.properties);
-
-    rowsByNodeId.set(connection.sourceNodeId, {
-      rowIndex: rowsByNodeId.size,
-      nodeId: connection.sourceNodeId,
-      name,
-      cells,
-    });
-  }
-
-  const evalRows: EvalRow[] = [...rowsByNodeId.values()].map((row) => ({
-    nodeId: row.nodeId,
-    name: row.name,
-    cells: row.cells,
-    rowIndex: row.rowIndex,
-    createdAt: null,
-    modifiedAt: null,
-  }));
-
-  const dir = contentDir ?? resolveContentPath();
-  const { viewAssociation, memberSidePerspective, setSideProjection } = setPerspectives(
-    databaseId,
-    dir,
-  );
-  const { rows: enrichedEvalRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicFields(
-    db,
-    databaseId,
-    view,
-    evalRows,
-    undefined,
-    { contentDir: dir },
-  );
-
-  const enrichedByNodeId = new Map(enrichedEvalRows.map((r) => [r.nodeId, r]));
-  for (const [nodeId, row] of rowsByNodeId) {
-    const enriched = enrichedByNodeId.get(nodeId);
-    if (enriched) row.cells = enriched.cells;
-  }
-
-  const columnSet = new Set<string>();
-  for (const row of rowsByNodeId.values()) {
-    for (const key of Object.keys(row.cells)) columnSet.add(key);
-  }
-  for (const col of dynamicColumnDefs) columnSet.add(col.key);
-  for (const key of hiddenColumnKeys) columnSet.delete(key);
-
-  const legacyColumnDefs: DatabaseColumnDef[] = enrichColumnDefs(
-    [...columnSet].sort((a, b) => a.localeCompare(b)).map((key) => {
-      const dynamic = dynamicColumnDefs.find((c) => c.key === key);
-      return dynamic ?? { key, name: key, type: "text" };
-    }),
-  );
-
-  const columns = legacyColumnDefs.map((c) => c.key);
-  const rows = [...rowsByNodeId.values()].sort(rowSort);
-
-  const tabItems = views.map((label) => ({
-    id: label,
-    label,
-    kind: "custom" as const,
-  }));
-  const activeTabId =
-    requestedView && views.includes(requestedView) ? requestedView : pickDefaultLegacyView(views);
-
-  return {
-    id: databaseId,
-    title: databaseTitle,
-    views,
-    view,
-    tabs: { kind: "custom", items: tabItems, activeTabId },
-    viewAssociation,
-    memberSidePerspective,
-    sectionTitle: setSectionTitle(dir, setSideProjection),
-    allColumns: columns,
-    columns,
-    rows,
-    columnDefs: legacyColumnDefs.length > 0 ? legacyColumnDefs : undefined,
-    allColumnDefs: legacyColumnDefs.length > 0 ? legacyColumnDefs : undefined,
-  };
-}
-
 /** Build a database table view from set edges and linked page titles. */
 export function getDatabaseViewDetail(
   db: GraphDatabase,
@@ -358,15 +223,6 @@ export function getDatabaseViewDetail(
 
   if (sectionConfig?.kind === "generated") {
     return null;
-  }
-
-  if (!sectionConfig) {
-    const hasLegacyViews = incoming.some((connection) =>
-      Boolean(stringProperty(connection.properties.view)),
-    );
-    if (hasLegacyViews) {
-      return buildLegacyViewDetail(db, databaseId, title, incoming, requestedTabId, dir);
-    }
   }
 
   return buildCustomViewDetail(db, databaseId, title, incoming, dir, requestedTabId);

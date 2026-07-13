@@ -127,7 +127,6 @@ describe("database-view-relations", () => {
       projectionTypeForEndpoint(PROP_TYPE_ASSOCIATION_ID, 0),
       {
         ordinal: 0,
-        via_view: "default",
       },
     );
 
@@ -457,7 +456,6 @@ describe("database-view-relations", () => {
     db.upsertRelationship(extendedScaleId, storyScaleDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
     db.upsertRelationship(storyScaleRowId, extendedScaleId, storyScaleProjection, {
       ordinal: 0,
-      via_view: "default",
     });
 
     const detail = getDatabaseViewDetail(db, storyScaleRowsDb, undefined, contentDir);

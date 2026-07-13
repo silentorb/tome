@@ -13,8 +13,6 @@ import { listSetMemberRowConnections } from "./set-membership";
 
 export const ORDER_META_KEYS = new Set([
   "ordinal",
-  "via_view",
-  "view",
   "row_name",
   "order",
   "row_index",

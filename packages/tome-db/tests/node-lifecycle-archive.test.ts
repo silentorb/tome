@@ -27,7 +27,7 @@ describe("archive relationship flags", () => {
       source: PAGE,
       target: TYPE_DB,
       type: "member_of",
-      properties: { view: "all", row_index: 0 },
+      properties: { row_index: 0 },
     },
   ]);
   seedTestIncludes(fixture, [{ a: PAGE, b: OTHER, compositeType: "000000000000000000000000BF" }]);

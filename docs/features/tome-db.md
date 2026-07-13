@@ -136,11 +136,11 @@ Helpers: `expandDynamicNodeLinks`, `collapseDynamicEditorLinks`, `findMarkdownLi
 | Concept | Graph representation |
 | --- | --- |
 | Type table | Node id in `table-schemas.json` (column defs) + optional `is_a` incoming edges |
-| Row / type instance | Relationship `(member)-[:is_a {view, row_index, …}]->(set)` with scalar props on the edge; `(set)-[:members]->(member)` is the inverse projection |
+| Row / type instance | Relationship `(member)-[:is_a {…}]->(set)` with scalar props from `table-schemas.json` on the edge; `(set)-[:members]->(member)` is the inverse projection |
 | Relation column | Outgoing relationships from the row page; scoped by row `is_a` membership |
 | Stored scalars | Keys from `table-schemas.json` columns, values on `is_a` edge properties |
 
-Database table **relation columns** are scoped by the row node's **`is_a` membership** in the viewing database—not by per-edge `via_database` properties (removed; see `scripts/migrate-remove-via-database.ts`).
+Database table **relation columns** are scoped by the row node's **`is_a` membership** in the viewing database—not by per-edge `via_database` / `via_view` / membership `view` properties (removed; see marloth-story `scripts/migrate-remove-view-props.ts`).
 
 Consolidate legacy dual directed edges with `bun scripts/consolidate-relationships.ts` (already run on the corpus). Migrate associative composites to `includes` with `bun scripts/migrate-to-includes.ts` (already run on the corpus).
 

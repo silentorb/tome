@@ -7,7 +7,7 @@ import { projectionTypeForRelationColumn, relationColumnCompositeType } from "to
 import type { TomeWriteContext } from "./content/write-context";
 import type { TableColumnDef } from "tome-flatfile";
 
-export const ROW_META_KEYS = new Set(["view", "row_name", "order", "row_index", "number"]);
+export const ROW_META_KEYS = new Set(["row_name", "order", "row_index", "number"]);
 
 export function stripScalarFromSetEdges(
   ctx: TomeWriteContext,

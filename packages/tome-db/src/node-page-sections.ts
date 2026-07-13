@@ -60,8 +60,6 @@ export type {
 
 const RELATION_META_KEYS = new Set([
   "ordinal",
-  "via_view",
-  "view",
   "row_name",
   "order",
 ]);
