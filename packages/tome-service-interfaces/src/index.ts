@@ -84,7 +84,6 @@ export interface RelationshipEntry {
   a: string;
   b: string;
   type: string;
-  archived?: boolean;
   properties?: Properties;
 }
 

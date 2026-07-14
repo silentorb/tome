@@ -32,11 +32,11 @@ describe("shared archived edge unarchive", () => {
 
     expect(unarchiveNode(fixture.ctx, NODE_A)).toBeNull();
 
-    const file = fixture.ctx.store.readRelationshipsFile();
-    const shared = file.relationships.find(
-      (e) => e.type === "000000000000000000000000BF" && e.a !== HUB && e.b !== HUB,
-    );
-    expect(shared?.archived).toBe(true);
+    const shared = fixture.ctx.store
+      .readArchivedRelationships()
+      .find((e) => e.type === "000000000000000000000000BF" && e.a !== HUB && e.b !== HUB);
+    expect(shared).toBeDefined();
+    expect(fixture.ctx.store.isRelationshipArchived(shared!.a, shared!.b, shared!.type)).toBe(true);
     expect(fixture.ctx.cache.listRelationshipsFromSource(NODE_A)).toHaveLength(0);
     const nodeBOutgoing = fixture.ctx.cache.listRelationshipsFromSource(NODE_B);
     expect(nodeBOutgoing).toHaveLength(1);

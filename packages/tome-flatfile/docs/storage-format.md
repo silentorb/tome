@@ -10,10 +10,20 @@ The content root is a directory conventionally named `content/`. Tools discover 
 
 ```
 {contentRoot}/
-  data/                          # instance data
-    relationships.json           # relationship records (v3)
-    {shard}/                     # two-char ULID entropy dirs
-      {nodeId}.md                # one node per file
+  data/                          # live instance data
+    nodes/
+      {shard}/                   # two-char ULID entropy dirs
+        {nodeId}.md
+    relationships/
+      {shard}/                   # two-char SHA-256 digest prefix
+        {digestRest}.json
+  archive/                       # archived instance data
+    nodes/
+      {shard}/
+        {nodeId}.md
+    relationships/
+      {shard}/
+        {digestRest}.json
   model/                         # workspace model (flat JSON)
     workspace.json
     associations.json
@@ -27,14 +37,18 @@ The content root is a directory conventionally named `content/`. Tools discover 
 
 | Area | Role |
 | --- | --- |
-| `data/` | Git-tracked nodes and relationship instances |
+| `data/nodes/` | Live node markdown |
+| `data/relationships/` | Live relationship instances |
+| `archive/nodes/` | Archived node markdown |
+| `archive/relationships/` | Archived relationship instances |
 | `model/` | Git-tracked workspace configuration |
 
 A sibling query cache (e.g. `{contentRoot}/../data/tome.sqlite`) is **derived** and outside this format.
 
 **Invariants**
 
-- Node markdown lives only under shard subdirectories of `data/`. Files at `data/*.md` are not part of the layout and are ignored by Tome’s store.
+- Live nodes live only under `data/nodes/{shard}/`. Archived nodes live only under `archive/nodes/{shard}/`.
+- Live relationships live under `data/relationships/`; archived under `archive/relationships/`. There is no monolithic `relationships.json`.
 - `model/` JSON files sit directly under `model/` (no nesting).
 - Encoding is UTF-8. JSON files use 2-space indent and a trailing newline.
 
@@ -46,9 +60,9 @@ A sibling query cache (e.g. `{contentRoot}/../data/tome.sqlite`) is **derived** 
 | Comparison | Exact string match; no case or dash normalization |
 | Basename | `{nodeId}.md` |
 | Shard | First two **entropy** characters: `nodeId.slice(10, 12)` (skip the 10-character timestamp prefix) |
-| Relative path | `data/{shard}/{nodeId}.md` |
+| Relative path | `data/nodes/{shard}/{nodeId}.md` (live) or `archive/nodes/{shard}/{nodeId}.md` |
 
-Example: `01KWN86X6KNBWXKBG5EGFMQJXA` → shard `NB` → `data/NB/01KWN86X6KNBWXKBG5EGFMQJXA.md`.
+Example: `01KWN86X6KNBWXKBG5EGFMQJXA` → shard `NB` → `data/nodes/NB/01KWN86X6KNBWXKBG5EGFMQJXA.md`.
 
 The node id is the **filename stem**. It is not required inside frontmatter.
 
@@ -104,56 +118,49 @@ Canonical forms authored in markdown bodies:
 
 Tome tools may also resolve legacy hrefs (`tome:{id}`, `tome://node/{id}`, query params `node` / `record` / `dynnode`). New content should use the two canonical forms above.
 
-## `relationships.json` (version 3)
+## Relationships (version 4)
 
-Path: `data/relationships.json`.
+One relationship per file under `data/relationships/` (live) or `archive/relationships/` (archived). Archive status is **path location**, not a JSON field.
+
+```
+data/relationships/{shard}/{digestRest}.json
+archive/relationships/{shard}/{digestRest}.json
+```
+
+### Path derivation
+
+1. Decode each of `a`, `b`, `type` from Crockford Base32 ULID → 16 bytes.
+2. Concatenate **authored order**: `bytes(a) ‖ bytes(b) ‖ bytes(type)` (48 bytes).
+3. SHA-256 → 64 uppercase hex chars.
+4. `{shard}` = first two hex chars; `{digestRest}` = remaining 62 hex chars.
+
+Identity is the composite key `(a, b, type)` (order-sensitive). There is **no** stored relationship id field.
+
+### Per-file JSON
 
 ```json
 {
-  "version": 3,
-  "relationships": [
-    {
-      "a": "01EXAMPLESETNODEID000000001",
-      "b": "01EXAMPLEMEMBERNODEID0000001",
-      "type": "01EXAMPLEASSOCIATIONID00001"
-    },
-    {
-      "a": "01EXAMPLENODEA00000000000001",
-      "b": "01EXAMPLENODEB00000000000001",
-      "type": "01EXAMPLEASSOCIATIONID00002",
-      "archived": true,
-      "properties": { "ordinal": 0 }
-    }
-  ]
+  "a": "01EXAMPLESETNODEID000000001",
+  "b": "01EXAMPLEMEMBERNODEID0000001",
+  "type": "01EXAMPLEASSOCIATIONID00001",
+  "properties": { "ordinal": 0 }
 }
 ```
-
-### Wrapper
-
-| Field | Type | Notes |
-| --- | --- | --- |
-| `version` | number | Current format version is **3** (required) |
-| `relationships` | array | Required. On read, legacy key `connections` is accepted as an alias |
-
-### Entry
 
 | Field | Type | Notes |
 | --- | --- | --- |
 | `a` | string | Endpoint at tuple index 0 (ULID) |
 | `b` | string | Endpoint at tuple index 1 (ULID) |
-| `type` | string | Storage composite type (normalized on read) |
-| `archived` | boolean | Optional; omit unless `true` |
+| `type` | string | Association ULID (trim only on read) |
 | `properties` | object | Optional; omit when empty |
 
 **Ordered tuple, not named source/target.** Positions `a`/`b` have no inherent direction. Meaning comes from `associations.json` `perspectives[0|1]`. Do not lexicographically sort endpoints.
 
-**Type normalization:** trim → lowercase → `-` → `_`.
-
 **Record identity (runtime, not stored):** `{a}:{b}:{type}` after type normalization.
 
-**Serialize:** pretty-print JSON (indent 2) + trailing newline; omit empty `properties`; omit `archived` unless `true`.
+**Serialize:** pretty-print JSON (indent 2) + trailing newline; omit empty `properties`.
 
-**Archive flag:** `archived: true` keeps the edge in git content. Tome’s SQLite sync skips archived edges (except archive-hub membership used to compute archived status). That sync policy is outside this format; the on-disk flag is part of the content contract.
+**Archive:** moving a file into `archive/relationships/` soft-hides the edge. Tome’s SQLite sync reads the **live** tree only. Archive-hub membership edges stay in the live tree so `nodes.is_archived` can be recomputed. Archiving a **node** also moves its markdown into `archive/nodes/`.
 
 **Enums:** when a property is an enum declared in `schema.json`, store the **string label** in `properties` (not a numeric index).
 
@@ -486,8 +493,9 @@ Runtime extension registration. Version defaults to `1` if omitted on read.
 
 | File / path | Minimal graph | Notes |
 | --- | --- | --- |
-| `data/{shard}/{id}.md` | required | At least home, archive, and any referenced nodes |
-| `data/relationships.json` | required | May be `{ "version": 3, "relationships": [] }` |
+| `data/{shard}/{id}.md` | required | Prefer `data/nodes/{shard}/{id}.md` (at least home, archive, and any referenced nodes) |
+| `data/nodes/` + `data/relationships/` | required | Live instance trees (may be empty of relationships) |
+| `archive/nodes/` + `archive/relationships/` | optional | Archived instance trees |
 | `model/associations.json` | required | At least associations you use (ids are ULIDs) |
 | `model/workspace.json` | required | Home, archive, anchors, quick links |
 | `model/schema.json` | optional | Needed when using enums / rules |
@@ -501,9 +509,10 @@ A Tome-compatible writer should:
 
 1. Use uppercase ULID node ids and the entropy shard path rule.
 2. Write valid frontmatter + body node files.
-3. Store relationships as v3 ordered `(a, b, type)` tuples with normalized type slugs.
+3. Store each relationship as one JSON file under `data/relationships/{shard}/{digest}.json` (path from SHA-256 of authored `a‖b‖type` bytes).
 4. Keep enum labels as strings in relationship properties.
 5. Align tuple orientation with `perspectives` in `associations.json`.
+6. Place soft-hidden edges under `archive/relationships/` and archived nodes under `archive/nodes/` (no `archived` JSON field).
 
 ## Non-goals
 

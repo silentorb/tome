@@ -61,7 +61,7 @@ Types are identified by **stable node id**, not display names.
 | `defaultOrder` | Optional `"asc"` (default) or `"desc"`. Controls **dropdown display order** only; `options` array order remains canonical for storage and table sorting. |
 | `values` | Optional map from option label → number; meaning is **consumer-defined** |
 
-**Storage:** `content/data/relationships.json` stores enum properties as **labels** (e.g. `"priority": "Medium"`). The SQLite cache stores the same properties as **integer indices** into `options` (see [tome-db.md](./tome-db.md)). Table sorts use **index order**, not `values`.
+**Storage:** relationship shard files store enum properties as **labels** (e.g. `"priority": "Medium"`). The SQLite cache stores the same properties as **integer indices** into `options` (see [tome-db.md](./tome-db.md)). Table sorts use **index order**, not `values`.
 
 For `priority`, `values` are interpreted as numeric **weights** by `priorityWeight()` and the [`inspirations.weightedUse`](../../docs/dynamic-fields/inspirations.weighted-use.md) dynamic field only — not for table sorting. Other enums may use `values` differently or omit them when only labels matter for UI dropdowns.
 

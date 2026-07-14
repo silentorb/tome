@@ -204,7 +204,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 - Manual: sidebar **New page** or `?view=create` → lands on new node page titled Untitled; `content/data/{shard}/{id}.md` exists
 - Manual: on an IS_A database table section, **+ New row** → new row appears after reload
 - Manual: on an includes / link-existing relation table section (e.g. Features), **Link** / **+ Link …** → pick existing record; row appears after reload
-- Manual: on a database table with relation columns (e.g. Features → Parents), click link labels to navigate; hover the cell and use the edit control to open the popup for add/remove; confirm `content/data/relationships.json` updates
+- Manual: on a database table with relation columns (e.g. Features → Parents), click link labels to navigate; hover the cell and use the edit control to open the popup for add/remove; confirm `content/data/relationships/` updates
 
 ## Implementation pointers
 

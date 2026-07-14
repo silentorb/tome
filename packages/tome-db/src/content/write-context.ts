@@ -29,7 +29,7 @@ export function syncAfterNodeWrite(ctx: TomeWriteContext, id: string): void {
 }
 
 export function syncAfterRelationshipsWrite(ctx: TomeWriteContext): void {
-  ctx.sync.syncAfterWrite("relationships.json");
+  ctx.sync.syncAfterWrite("relationships");
 }
 
 export function mergeNodePropertiesOnContent(

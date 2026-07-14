@@ -3,8 +3,8 @@ import type { Node } from "tome-graph-interfaces";
 import {
   relationshipFromEntry,
   entryFromRelationship,
-  parseRelationshipsFile,
-  serializeRelationshipsFile,
+  parseRelationshipEntry,
+  serializeRelationshipEntry,
 } from "../../src/content/relationships-file";
 import {
   emptyDynamicFieldsFile,
@@ -40,25 +40,18 @@ describe("node-file", () => {
   });
 });
 
-describe("relationships-file", () => {
+describe("relationship-entry file", () => {
   const SCENES_PRODUCT = "000000000000000000000000A3";
 
-  test("round-trips relationships preserving tuple order", () => {
-    const raw = JSON.stringify({
-      version: 3,
-      relationships: [
-        {
-          a: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
-          b: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
-          type: SCENES_PRODUCT,
-          properties: { ordinal: 1 },
-        },
-      ],
+  test("round-trips a single relationship entry", () => {
+    const raw = serializeRelationshipEntry({
+      a: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+      b: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+      type: SCENES_PRODUCT,
+      properties: { ordinal: 1 },
     });
-    const parsed = parseRelationshipsFile(raw);
-    expect(parsed.relationships).toHaveLength(1);
-    const conn = relationshipFromEntry(parsed.relationships[0]!);
-    // Directed view follows authored order: index 0 -> source, index 1 -> target.
+    const parsed = parseRelationshipEntry(raw);
+    const conn = relationshipFromEntry(parsed);
     expect(conn.id).toBe(
       `AAAAAAAAAAAAAAAAAAAAAAAAAA:${SCENES_PRODUCT}:BBBBBBBBBBBBBBBBBBBBBBBBBB`,
     );
@@ -72,16 +65,11 @@ describe("relationships-file", () => {
 
   test("rejects slug relationship types", () => {
     expect(() =>
-      parseRelationshipsFile(
+      parseRelationshipEntry(
         JSON.stringify({
-          version: 3,
-          relationships: [
-            {
-              a: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
-              b: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
-              type: "scenes_product",
-            },
-          ],
+          a: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+          b: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+          type: "scenes_product",
         }),
       ),
     ).toThrow(/must be a ULID/);

@@ -38,6 +38,8 @@ export function archiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleErr
   markIncidentRelationshipsArchived(ctx.store, id, hubId);
   const [, memberPerspective] = setRoleProjectionTypesForNode(hubId, contentDir);
   ctx.store.upsertRelationship(id, hubId, memberPerspective);
+  ctx.store.moveNodeToArchive(id);
+  syncAfterNodeWrite(ctx, id);
   syncAfterRelationshipsWrite(ctx);
   return null;
 }
@@ -53,6 +55,8 @@ export function unarchiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleE
   ctx.store.deleteRelationship(id, hubId, memberPerspective);
   const stillArchivedIds = new Set(listArchiveMemberIdsFromStore(ctx.store, hubId));
   unmarkIncidentRelationshipsArchived(ctx.store, id, stillArchivedIds, hubId);
+  ctx.store.moveNodeFromArchive(id);
+  syncAfterNodeWrite(ctx, id);
   syncAfterRelationshipsWrite(ctx);
   return null;
 }

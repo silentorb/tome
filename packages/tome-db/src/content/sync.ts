@@ -1,5 +1,5 @@
-import { existsSync, readFileSync, statSync } from "node:fs";
-import { basename, join } from "node:path";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { basename, join, resolve } from "node:path";
 import {
   ContentStore,
   bodyFromNode,
@@ -18,7 +18,7 @@ import {
   invalidateExtensionsCache,
   loadAssociationsFromContent,
   setTraitProjectionTypes,
-  RELATIONSHIPS_FILENAME,
+  RELATIONSHIPS_SYNC_MARKER,
   ASSOCIATIONS_FILENAME,
   DYNAMIC_FIELDS_FILENAME,
   SCHEMA_FILENAME,
@@ -27,10 +27,12 @@ import {
   WORKSPACE_FILENAME,
   ORDERED_COLLECTIONS_FILENAME,
   EXTENSIONS_FILENAME,
+  RELATIONSHIP_FILE_PATTERN,
   dynamicFieldsFilePath,
   NODE_FILE_PATTERN,
-  contentDataDir,
   contentModelDir,
+  contentRelationshipsDir,
+  contentRelationshipsArchiveDir,
   nodeFilePath,
   type DynamicColumnSetRecord,
   type DynamicFieldRecord,
@@ -39,7 +41,6 @@ import { GraphDatabase, type TomeQueryCache } from "tome-sqlite";
 import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum-config-fingerprint";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
 import { expandAllRelationships } from "./relationship-sync-expand";
-import { filterEntriesForCacheSync } from "../relationship-archive";
 import type { TomeDataStore } from "tome-service-interfaces";
 import type { TomeWriteContext } from "./write-context";
 
@@ -152,9 +153,21 @@ export class CacheSync {
       if (!existsSync(path)) return;
       max = Math.max(max, statSync(path).mtimeMs);
     };
-    const dataDir = contentDataDir(this.contentDir);
+    const scanRelationshipTree = (rootDir: string) => {
+      if (!existsSync(rootDir)) return;
+      for (const shardEntry of readdirSync(rootDir, { withFileTypes: true })) {
+        if (!shardEntry.isDirectory()) continue;
+        if (!/^[0-9A-F]{2}$/.test(shardEntry.name)) continue;
+        const shardDir = resolve(rootDir, shardEntry.name);
+        for (const name of readdirSync(shardDir)) {
+          if (!RELATIONSHIP_FILE_PATTERN.test(name)) continue;
+          max = Math.max(max, statSync(resolve(shardDir, name)).mtimeMs);
+        }
+      }
+    };
     const modelDir = contentModelDir(this.contentDir);
-    scanFile(dataDir, RELATIONSHIPS_FILENAME);
+    scanRelationshipTree(contentRelationshipsDir(this.contentDir));
+    scanRelationshipTree(contentRelationshipsArchiveDir(this.contentDir));
     scanFile(modelDir, ASSOCIATIONS_FILENAME);
     scanFile(modelDir, DYNAMIC_FIELDS_FILENAME);
     scanFile(modelDir, SCHEMA_FILENAME);
@@ -164,7 +177,8 @@ export class CacheSync {
     scanFile(modelDir, EXTENSIONS_FILENAME);
     try {
       for (const id of this.store.listNodeIds()) {
-        max = Math.max(max, statSync(nodeFilePath(this.contentDir, id)).mtimeMs);
+        const archived = this.store.isNodeFileArchived(id);
+        max = Math.max(max, statSync(nodeFilePath(this.contentDir, id, archived)).mtimeMs);
       }
     } catch {
       /* empty dir */
@@ -189,8 +203,8 @@ export class CacheSync {
   }
 
   private expandRelationshipsToCache(): void {
-    const allEntries = this.store.readRelationshipsFile().relationships;
-    const entries = filterEntriesForCacheSync(allEntries);
+    // Live tree only — archived edges live under relationships/archive/.
+    const entries = this.store.readRelationshipsFile().relationships;
     const registry = this.store.readAssociationsFile();
     const { records, projections } = expandAllRelationships(entries, registry);
 
@@ -291,7 +305,7 @@ export class CacheSync {
     if (this.applying) return;
 
     if (
-      relativeName === RELATIONSHIPS_FILENAME ||
+      relativeName === RELATIONSHIPS_SYNC_MARKER ||
       relativeName === ASSOCIATIONS_FILENAME
     ) {
       if (relativeName === ASSOCIATIONS_FILENAME) {

@@ -1,10 +1,18 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { NODE_ID_PATTERN, NODE_FILE_PATTERN, isNodeId } from "../node-id";
+import { relationshipRelativePath } from "./relationship-path";
 
 export const CONTENT_DATA_SUBDIR = "data";
+export const CONTENT_ARCHIVE_SUBDIR = "archive";
 export const CONTENT_MODEL_SUBDIR = "model";
+export const CONTENT_NODES_SUBDIR = "nodes";
+export const CONTENT_RELATIONSHIPS_SUBDIR = "relationships";
 
+/** Basename marker used for cache sync routing (not a real on-disk file). */
+export const RELATIONSHIPS_SYNC_MARKER = "relationships";
+
+/** @deprecated Legacy monolithic relationships file under data/. */
 export const RELATIONSHIPS_FILENAME = "relationships.json";
 export const ASSOCIATIONS_FILENAME = "associations.json";
 /** @deprecated Use RELATIONSHIPS_FILENAME. Legacy content file name (pre–relationship terminology). */
@@ -17,6 +25,9 @@ export const WORKSPACE_FILENAME = "workspace.json";
 export const ORDERED_COLLECTIONS_FILENAME = "ordered-collections.json";
 export const EXTENSIONS_FILENAME = "extensions.json";
 export { NODE_ID_PATTERN, NODE_FILE_PATTERN, isNodeId };
+
+/** Matches a relationship shard JSON basename (`{62 hex}.json`). */
+export const RELATIONSHIP_FILE_PATTERN = /^[0-9A-F]{62}\.json$/;
 
 export function nodeFileName(id: string): string {
   if (!isNodeId(id)) throw new Error(`Invalid node id: ${id}`);
@@ -32,14 +43,42 @@ export function nodeShardDir(id: string): string {
   return id.slice(10, 12);
 }
 
-/** Path relative to `content/data/`: `{shard}/{id}.md`. */
+/**
+ * Path relative to a nodes root (`data/nodes` or `archive/nodes`):
+ * `{shard}/{id}.md`.
+ */
 export function nodeRelativePath(id: string): string {
   return `${nodeShardDir(id)}/${nodeFileName(id)}`;
 }
 
-/** Git-tracked node + relationship instance files. */
+/** Git-tracked instance data root (`content/data`). */
 export function contentDataDir(contentRoot: string): string {
   return resolve(contentRoot, CONTENT_DATA_SUBDIR);
+}
+
+/** Archived instance data root (`content/archive`). */
+export function contentArchiveDir(contentRoot: string): string {
+  return resolve(contentRoot, CONTENT_ARCHIVE_SUBDIR);
+}
+
+/** Live node markdown tree. */
+export function contentNodesDir(contentRoot: string): string {
+  return resolve(contentDataDir(contentRoot), CONTENT_NODES_SUBDIR);
+}
+
+/** Archived node markdown tree. */
+export function contentNodesArchiveDir(contentRoot: string): string {
+  return resolve(contentArchiveDir(contentRoot), CONTENT_NODES_SUBDIR);
+}
+
+/** Live relationship shard tree. */
+export function contentRelationshipsDir(contentRoot: string): string {
+  return resolve(contentDataDir(contentRoot), CONTENT_RELATIONSHIPS_SUBDIR);
+}
+
+/** Archived relationship shard tree. */
+export function contentRelationshipsArchiveDir(contentRoot: string): string {
+  return resolve(contentArchiveDir(contentRoot), CONTENT_RELATIONSHIPS_SUBDIR);
 }
 
 /** Workspace model config JSON (schema, views, types registry, dynamic fields). */
@@ -47,10 +86,34 @@ export function contentModelDir(contentRoot: string): string {
   return resolve(contentRoot, CONTENT_MODEL_SUBDIR);
 }
 
-export function nodeFilePath(contentRoot: string, id: string): string {
-  return resolve(contentDataDir(contentRoot), nodeRelativePath(id));
+/**
+ * Absolute path for a node file.
+ * @param archived when true, under `archive/nodes/`; otherwise `data/nodes/`.
+ */
+export function nodeFilePath(contentRoot: string, id: string, archived = false): string {
+  const root = archived ? contentNodesArchiveDir(contentRoot) : contentNodesDir(contentRoot);
+  return resolve(root, nodeRelativePath(id));
 }
 
+/**
+ * Absolute path for a relationship file.
+ * @param archived when true, under `archive/relationships/`; otherwise `data/relationships/`.
+ */
+export function relationshipFilePath(
+  contentRoot: string,
+  a: string,
+  b: string,
+  type: string,
+  archived = false,
+): string {
+  const rel = relationshipRelativePath(a, b, type);
+  const root = archived
+    ? contentRelationshipsArchiveDir(contentRoot)
+    : contentRelationshipsDir(contentRoot);
+  return resolve(root, rel);
+}
+
+/** @deprecated Legacy monolithic path `data/relationships.json`. */
 export function relationshipsFilePath(contentRoot: string): string {
   return resolve(contentDataDir(contentRoot), RELATIONSHIPS_FILENAME);
 }

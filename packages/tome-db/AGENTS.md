@@ -7,8 +7,8 @@
 
 ## Terminology
 
-- **Node** — entity in `content/data/{shard}/{id}.md` and cache `nodes`.
-- **Relationship** — link in `content/data/relationships.json` with types in lower snake_case.
+- **Node** — entity in `content/data/nodes/{shard}/{id}.md` (or `content/archive/nodes/…`) and cache `nodes`.
+- **Relationship** — link under `content/data/relationships/{shard}/{digest}.json` (archive under `content/archive/relationships/`).
 - **Page** — editor view of a node (`getNodePageDetail`).
 - **Type table** — node with incoming set-membership and/or a [`table-schemas.json`](../../docs/features/table-schemas.md) entry.
 - **Schema** — relationship rules in `content/model/schema.json`.

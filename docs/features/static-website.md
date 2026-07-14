@@ -81,8 +81,8 @@ Editing, add-row/link-existing, row actions, drag-reorder, table search, tab/col
 
 | Input | Source |
 | --- | --- |
-| Nodes | `content/data/{shard}/{id}.md` |
-| Relationships | `content/data/relationships.json` via SQLite rebuild |
+| Nodes | `content/data/nodes/{shard}/{id}.md` (+ `content/archive/nodes/`) |
+| Relationships | `content/data/relationships/` via SQLite rebuild |
 | Workspace model | `content/model/` (`views.json`, `schema.json`, `table-schemas.json`, `dynamic-fields.json`, `extensions.json`) |
 
 | Output | Default path |

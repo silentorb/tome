@@ -43,7 +43,7 @@ API names: `ContentStore`, `openContentGraph`, `TomeWriteContext` (`{ store, syn
 
 **Default:** change files under `content/`.
 
-- Use `ContentStore` / `TomeWriteContext` (via editor API or `openContentGraph`), or edit `content/data/{shard}/{id}.md`, `content/data/relationships.json`, and `content/model/associations.json` directly.
+- Use `ContentStore` / `TomeWriteContext` (via editor API or `openContentGraph`), or edit `content/data/nodes/**/*.md`, `content/data/relationships/**/*.json`, and `content/model/associations.json` directly.
 - Commit changes under `content/`; do not commit `data/tome.sqlite` or legacy `data/marloth.sqlite`.
 - Run `bun run content:sync` after bulk file edits if the editor API is not running (otherwise the store watcher emits changes and `CacheSync` updates SQLite).
 
@@ -57,8 +57,10 @@ Canonical on-disk layout and file formats: [`packages/tome-flatfile/docs/storage
 
 | Path | Role |
 | --- | --- |
-| `content/data/{shard}/{nodeId}.md` | Canonical node (YAML frontmatter + markdown body); `{shard}` is the first two ULID entropy characters (`id.slice(10, 12)`) |
-| `content/data/relationships.json` | Canonical bidirectional relationship records as ordered `(a, b)` tuples (v3) |
+| `content/data/nodes/{shard}/{nodeId}.md` | Live node (YAML frontmatter + markdown body); `{shard}` is the first two ULID entropy characters (`id.slice(10, 12)`) |
+| `content/archive/nodes/{shard}/{nodeId}.md` | Archived node markdown (same shape) |
+| `content/data/relationships/{shard}/{digest}.json` | Live relationship records (one edge per file; path from SHA-256 of composite key) |
+| `content/archive/relationships/{shard}/{digest}.json` | Archived relationship records (tree location is archive status) |
 | `content/model/*.json` | Workspace model (relationship types, schema, views, table schemas, workspace, etc.) — see storage-format doc |
 | `data/tome.sqlite` | Local query cache (gitignored; default path via `TOME_DB_PATH`; legacy `data/marloth.sqlite` / `MARLOTH_DB_PATH` still read when present) |
 
@@ -105,13 +107,11 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 | `nodes` | Entity property bags; `is_archived` denormalized flag (recomputed on sync) |
 | `meta` | Schema version, content mtime, enum config fingerprint |
 
-**Archive membership:** a page is archived when it has set membership (`is_a`) on the Archive hub node (`01KWN86X6MFZQAJ1V36T95928S`). Archiving (`POST /api/nodes/:id/archive`) marks every other incident relationship in `relationships.json` with top-level `"archived": true`, then adds the hub membership edge (without `archived`). Unarchiving (`POST /api/nodes/:id/unarchive`) removes the hub membership edge and clears `archived` on incident relationships whose other endpoint is not still archived.
+**Archive membership:** a page is archived when it has set membership on the Archive hub node (`01KWN86X6MFZQAJ1V36T95928S`). Archiving (`POST /api/nodes/:id/archive`) **moves** the node markdown into `content/archive/nodes/`, moves every other incident relationship file into `content/archive/relationships/`, then adds the hub membership edge in the live relationship tree. Unarchiving reverses those moves when the other endpoint is not still archived.
 
-**Archived relationships in content:** entries with `"archived": true` are kept in git-tracked `relationships.json` but **skipped** when syncing to SQLite. The hub membership `includes` edge is always synced so `nodes.is_archived` can be recomputed. Search and `nodes.is_archived` exclude archived pages; graph export also excludes archived nodes.
+**Archived relationships in content:** files under `content/archive/relationships/` are kept in git but **excluded** from SQLite sync (only the live `content/data/relationships/` tree is expanded). Hub membership edges stay live so `nodes.is_archived` can be recomputed. Search and `nodes.is_archived` exclude archived pages; graph export also excludes archived nodes.
 
-One-time backfill for existing archive members: `bun scripts/migrate-archive-relationship-flags.ts`.
-
-**Enum properties in cache:** keys declared in [`content/model/schema.json`](../../content/model/schema.json) `enums` (e.g. `priority`) are stored in SQLite relationship `properties` JSON as **0-based indices** into the enum’s `options` array. Git-tracked [`content/data/relationships.json`](../../content/data/relationships.json) keeps **string labels**. Encode on cache write and decode on cache read (`packages/tome-db/src/enum-codec.ts` injected as the cache `propertyCodec`). Changing enum `options` order in `schema.json` triggers a relationship cache re-sync (store change events + `enum_config_fingerprint` meta check). After pulling enum-cache changes or a `SCHEMA_VERSION` bump, run `bun run content:sync` (or restart the editor API) to rebuild the cache from content.
+**Enum properties in cache:** keys declared in [`content/model/schema.json`](../../content/model/schema.json) `enums` (e.g. `priority`) are stored in SQLite relationship `properties` JSON as **0-based indices** into the enum’s `options` array. Git-tracked relationship shard files keep **string labels**. Encode on cache write and decode on cache read (`packages/tome-db/src/enum-codec.ts` injected as the cache `propertyCodec`). Changing enum `options` order in `schema.json` triggers a relationship cache re-sync (store change events + `enum_config_fingerprint` meta check). After pulling enum-cache changes or a `SCHEMA_VERSION` bump, run `bun run content:sync` (or restart the editor API) to rebuild the cache from content.
 
 Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTableNode` in `node-capabilities.ts`).
 
@@ -205,7 +205,7 @@ db.close();
 | --- | --- |
 | `packages/tome-sqlite/src/schema.ts` | DDL and version |
 | `packages/tome-sqlite/src/graph.ts` | GraphDatabase API (reads projections) |
-| `packages/tome-flatfile/src/content/relationships-file.ts` | v3 `relationships.json` parse/serialize (ordered `(a, b)` tuples) |
+| `packages/tome-flatfile/src/content/relationships-file.ts` | Per-edge relationship JSON parse/serialize (ordered `(a, b)` tuples) |
 | `packages/tome-flatfile/src/migrations/relationship-order.ts` | Reorder tuples into meaningful `(index0, index1)` order; bump v2→v3 |
 | `packages/tome-flatfile/src/content/associations-file.ts` | `associations.json` parse/serialize + composite helpers |
 | `packages/tome-flatfile/src/associations/load.ts` | Cached `associations.json` loader |

@@ -1,12 +1,12 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import {
-  filterEntriesForCacheSync,
   isArchiveSetEntry,
   listArchiveMemberIds,
   markIncidentRelationshipsArchived,
   unmarkIncidentRelationshipsArchived,
 } from "../src/relationship-archive";
 import type { RelationshipEntry } from "tome-flatfile";
+import { RELATIONSHIPS_FILE_VERSION } from "tome-flatfile";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -68,15 +68,6 @@ describe("relationship-archive helpers", () => {
     );
     expect(ids.sort()).toEqual([NODE_A, NODE_B].sort());
   });
-
-  test("filterEntriesForCacheSync drops archived entries", () => {
-    const filtered = filterEntriesForCacheSync([
-      entry(NODE_A, NODE_B, INCLUDES),
-      entry(NODE_A, NODE_C, MEMBER_OF, { archived: true }),
-    ]);
-    expect(filtered).toHaveLength(1);
-    expect(filtered[0]?.b).toBe(NODE_B);
-  });
 });
 
 describe("relationship-archive store mutations", () => {
@@ -91,9 +82,9 @@ describe("relationship-archive store mutations", () => {
     },
   });
 
-  test("markIncidentRelationshipsArchived flags incident edges but not hub membership", () => {
+  test("markIncidentRelationshipsArchived moves incident edges but not hub membership", () => {
     store.writeRelationshipsFile({
-      version: 3,
+      version: RELATIONSHIPS_FILE_VERSION,
       relationships: [
         entry(NODE_A, NODE_B, INCLUDES),
         entry(HUB, NODE_A, MEMBER_OF),
@@ -104,42 +95,44 @@ describe("relationship-archive store mutations", () => {
     const changed = markIncidentRelationshipsArchived(store, NODE_A, HUB);
     expect(changed).toBe(2);
 
-    const file = store.readRelationshipsFile();
-    const byPair = new Map(file.relationships.map((e) => [`${e.a}:${e.b}:${e.type}`, e]));
-    expect(byPair.get(`${NODE_A}:${NODE_B}:${INCLUDES}`)?.archived).toBe(true);
-    expect(byPair.get(`${HUB}:${NODE_A}:${MEMBER_OF}`)?.archived).toBeUndefined();
-    expect(byPair.get(`${NODE_A}:${NODE_C}:${MEMBER_OF}`)?.archived).toBe(true);
+    const live = store.readRelationshipsFile().relationships;
+    const archived = store.readArchivedRelationships();
+    expect(live).toHaveLength(1);
+    expect(live[0]?.a).toBe(HUB);
+    expect(live[0]?.b).toBe(NODE_A);
+    expect(archived).toHaveLength(2);
+    expect(store.isRelationshipArchived(NODE_A, NODE_B, INCLUDES)).toBe(true);
+    expect(store.isRelationshipArchived(NODE_A, NODE_C, MEMBER_OF)).toBe(true);
+    expect(store.isRelationshipArchived(HUB, NODE_A, MEMBER_OF)).toBe(false);
   });
 
   test("unmarkIncidentRelationshipsArchived keeps shared edge when other endpoint still archived", () => {
-    store.writeRelationshipsFile({
-      version: 3,
-      relationships: [
-        entry(NODE_A, NODE_B, INCLUDES, { archived: true }),
-        entry(HUB, NODE_B, MEMBER_OF),
-      ],
-    });
+    store.writeRelationshipsFile(
+      { version: RELATIONSHIPS_FILE_VERSION, relationships: [entry(HUB, NODE_B, MEMBER_OF)] },
+      { archivedEntries: [entry(NODE_A, NODE_B, INCLUDES)] },
+    );
 
     const stillArchived = new Set([NODE_B]);
     const changed = unmarkIncidentRelationshipsArchived(store, NODE_A, stillArchived, HUB);
     expect(changed).toBe(0);
-    expect(store.readRelationshipsFile().relationships[0]?.archived).toBe(true);
+    expect(store.isRelationshipArchived(NODE_A, NODE_B, INCLUDES)).toBe(true);
   });
 
-  test("unmarkIncidentRelationshipsArchived clears flags when other endpoint is active", () => {
-    store.writeRelationshipsFile({
-      version: 3,
-      relationships: [
-        entry(NODE_A, NODE_B, INCLUDES, { archived: true }),
-        entry(NODE_A, NODE_C, MEMBER_OF, { archived: true }),
-      ],
-    });
+  test("unmarkIncidentRelationshipsArchived restores edges when other endpoint is active", () => {
+    store.writeRelationshipsFile(
+      { version: RELATIONSHIPS_FILE_VERSION, relationships: [] },
+      {
+        archivedEntries: [
+          entry(NODE_A, NODE_B, INCLUDES),
+          entry(NODE_A, NODE_C, MEMBER_OF),
+        ],
+      },
+    );
 
     const changed = unmarkIncidentRelationshipsArchived(store, NODE_A, new Set(), HUB);
     expect(changed).toBe(2);
-    for (const rel of store.readRelationshipsFile().relationships) {
-      expect(rel.archived).toBeUndefined();
-    }
+    expect(store.readArchivedRelationships()).toHaveLength(0);
+    expect(store.readRelationshipsFile().relationships).toHaveLength(2);
   });
 
   afterAll(() => {

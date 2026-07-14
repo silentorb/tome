@@ -35,8 +35,11 @@ export function otherEndpoint(entry: RelationshipEntry, nodeId: string): string 
   return entry.a === nodeId ? entry.b : entry.a;
 }
 
+/**
+ * @deprecated Live-tree reads already exclude archived edges; kept for call-site clarity.
+ */
 export function filterEntriesForCacheSync(entries: readonly RelationshipEntry[]): RelationshipEntry[] {
-  return entries.filter((entry) => entry.archived !== true);
+  return [...entries];
 }
 
 export function markIncidentRelationshipsArchived(
@@ -44,19 +47,16 @@ export function markIncidentRelationshipsArchived(
   nodeId: string,
   archiveHubId: string,
 ): number {
-  const file = store.readRelationshipsFile();
   let changed = 0;
 
-  for (let i = 0; i < file.relationships.length; i++) {
-    const entry = file.relationships[i]!;
+  for (const entry of store.readRelationshipsFile().relationships) {
     if (!isIncidentEntry(entry, nodeId)) continue;
     if (isArchiveSetEntry(entry, archiveHubId, store.contentDir)) continue;
-    if (entry.archived === true) continue;
-    file.relationships[i] = { ...entry, archived: true };
-    changed++;
+    if (store.moveRelationshipToArchive(entry.a, entry.b, entry.type)) {
+      changed++;
+    }
   }
 
-  if (changed > 0) store.writeRelationshipsFile(file);
   return changed;
 }
 
@@ -66,24 +66,20 @@ export function unmarkIncidentRelationshipsArchived(
   stillArchivedIds: ReadonlySet<string>,
   archiveHubId: string,
 ): number {
-  const file = store.readRelationshipsFile();
   let changed = 0;
 
-  for (let i = 0; i < file.relationships.length; i++) {
-    const entry = file.relationships[i]!;
+  for (const entry of store.readArchivedRelationships()) {
     if (!isIncidentEntry(entry, nodeId)) continue;
     if (isArchiveSetEntry(entry, archiveHubId, store.contentDir)) continue;
-    if (entry.archived !== true) continue;
 
     const other = otherEndpoint(entry, nodeId);
     if (stillArchivedIds.has(other)) continue;
 
-    const { archived: _removed, ...rest } = entry;
-    file.relationships[i] = rest;
-    changed++;
+    if (store.moveRelationshipFromArchive(entry.a, entry.b, entry.type)) {
+      changed++;
+    }
   }
 
-  if (changed > 0) store.writeRelationshipsFile(file);
   return changed;
 }
 

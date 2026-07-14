@@ -8,12 +8,21 @@ export {
   RELATIONSHIPS_FILE_VERSION,
   relationshipFromEntry,
   entryFromRelationship,
+  parseRelationshipEntry,
+  serializeRelationshipEntry,
+  parseLegacyRelationshipsFile,
   parseRelationshipsFile,
   serializeRelationshipsFile,
   relationshipRecordId,
   connectsEndpoints,
 } from "./content/relationships-file";
 export type { RelationshipEntry, RelationshipsFile } from "./content/relationships-file";
+export {
+  relationshipDigest,
+  relationshipShardDir,
+  relationshipRelativePath,
+} from "./content/relationship-path";
+export { ulidToBytes, relationshipKeyBytes } from "./content/ulid-bytes";
 
 export {
   ASSOCIATIONS_FILE_VERSION,
@@ -83,7 +92,11 @@ export type { ParsedNodeFile } from "./content/node-file";
 
 export {
   CONTENT_DATA_SUBDIR,
+  CONTENT_ARCHIVE_SUBDIR,
   CONTENT_MODEL_SUBDIR,
+  CONTENT_NODES_SUBDIR,
+  CONTENT_RELATIONSHIPS_SUBDIR,
+  RELATIONSHIPS_SYNC_MARKER,
   RELATIONSHIPS_FILENAME,
   ASSOCIATIONS_FILENAME,
   DYNAMIC_FIELDS_FILENAME,
@@ -95,9 +108,16 @@ export {
   EXTENSIONS_FILENAME,
   NODE_FILE_PATTERN,
   NODE_ID_PATTERN,
+  RELATIONSHIP_FILE_PATTERN,
   contentDataDir,
+  contentArchiveDir,
   contentModelDir,
+  contentNodesDir,
+  contentNodesArchiveDir,
+  contentRelationshipsDir,
+  contentRelationshipsArchiveDir,
   relationshipsFilePath,
+  relationshipFilePath,
   associationsFilePath,
   defaultDbPathForContent,
   DEFAULT_DB_FILENAME,

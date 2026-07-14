@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   readdirSync,
   readFileSync,
@@ -22,14 +23,13 @@ import {
   type RelationshipsFile,
   RELATIONSHIPS_FILE_VERSION,
   connectsEndpoints,
-  parseRelationshipsFile,
+  parseRelationshipEntry,
   relationshipRecordId,
-  serializeRelationshipsFile,
+  serializeRelationshipEntry,
 } from "./relationships-file";
 import {
   type AssociationsFile,
   emptyAssociationsFile,
-  isAssociationId,
   normalizeAssociationId,
   parseAssociationsFile,
   parseProjectionType,
@@ -68,7 +68,6 @@ import {
 } from "../workspace/workspace-file";
 import { bodyFromNode, nodeFromFile, serializeNodeFile } from "./node-file";
 import {
-  RELATIONSHIPS_FILENAME,
   ASSOCIATIONS_FILENAME,
   DYNAMIC_FIELDS_FILENAME,
   SCHEMA_FILENAME,
@@ -77,18 +76,24 @@ import {
   WORKSPACE_FILENAME,
   ORDERED_COLLECTIONS_FILENAME,
   EXTENSIONS_FILENAME,
+  RELATIONSHIPS_SYNC_MARKER,
+  RELATIONSHIP_FILE_PATTERN,
+  contentArchiveDir,
   contentDataDir,
   contentModelDir,
-  relationshipsFilePath,
+  contentNodesArchiveDir,
+  contentNodesDir,
+  contentRelationshipsArchiveDir,
+  contentRelationshipsDir,
   associationsFilePath,
   dynamicFieldsFilePath,
   viewsFilePath,
   tableSchemasFilePath,
   workspaceFilePath,
+  relationshipFilePath,
   isNodeId,
   nodeFilePath,
   NODE_FILE_PATTERN,
-  legacyConnectionsFilePath,
 } from "./paths";
 
 const DEBOUNCE_MS = 200;
@@ -185,7 +190,7 @@ function atomicWrite(filePath: string, content: string): void {
 function storeChangeKindForFilename(filename: string): StoreChangeKind {
   const base = basename(filename);
   if (NODE_FILE_PATTERN.test(base)) return "node";
-  if (base === RELATIONSHIPS_FILENAME) return "relationships";
+  if (RELATIONSHIP_FILE_PATTERN.test(base)) return "relationships";
   if (base === ASSOCIATIONS_FILENAME) return "associations";
   if (base === SCHEMA_FILENAME) return "schema";
   if (base === DYNAMIC_FIELDS_FILENAME) return "dynamic-fields";
@@ -197,6 +202,56 @@ function storeChangeKindForFilename(filename: string): StoreChangeKind {
   return "unknown";
 }
 
+/** Scan a relationships root (live or archive). */
+function scanRelationshipTree(rootDir: string): RelationshipEntry[] {
+  const entries: RelationshipEntry[] = [];
+  if (!existsSync(rootDir)) return entries;
+  for (const shardEntry of readdirSync(rootDir, { withFileTypes: true })) {
+    if (!shardEntry.isDirectory()) continue;
+    if (!/^[0-9A-F]{2}$/.test(shardEntry.name)) continue;
+    const shardDir = resolve(rootDir, shardEntry.name);
+    for (const name of readdirSync(shardDir)) {
+      if (!RELATIONSHIP_FILE_PATTERN.test(name)) continue;
+      const path = resolve(shardDir, name);
+      entries.push(parseRelationshipEntry(readFileSync(path, "utf-8"), path));
+    }
+  }
+  return entries;
+}
+
+function clearRelationshipTree(rootDir: string): void {
+  if (!existsSync(rootDir)) return;
+  for (const shardEntry of readdirSync(rootDir, { withFileTypes: true })) {
+    if (!shardEntry.isDirectory()) continue;
+    if (!/^[0-9A-F]{2}$/.test(shardEntry.name)) continue;
+    rmSync(resolve(rootDir, shardEntry.name), { recursive: true, force: true });
+  }
+}
+
+function listNodeIdsInTree(rootDir: string): string[] {
+  const ids: string[] = [];
+  if (!existsSync(rootDir)) return ids;
+  for (const entry of readdirSync(rootDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const shardDir = resolve(rootDir, entry.name);
+    for (const name of readdirSync(shardDir)) {
+      if (NODE_FILE_PATTERN.test(name)) {
+        ids.push(name.slice(0, -3));
+      }
+    }
+  }
+  return ids;
+}
+
+function writeRelationshipEntryFile(
+  contentDir: string,
+  entry: RelationshipEntry,
+  archived: boolean,
+): void {
+  const path = relationshipFilePath(contentDir, entry.a, entry.b, entry.type, archived);
+  atomicWrite(path, serializeRelationshipEntry(entry));
+}
+
 /**
  * Flatfile canonical store. Implements `TomeDataStore` including change notifications.
  */
@@ -205,6 +260,7 @@ export class ContentStore implements TomeDataStore {
   readonly contentDir: string;
 
   private dataWatcher: FSWatcher | null = null;
+  private archiveWatcher: FSWatcher | null = null;
   private modelWatcher: FSWatcher | null = null;
   private pending = new Map<string, ReturnType<typeof setTimeout>>();
   private closed = false;
@@ -214,7 +270,10 @@ export class ContentStore implements TomeDataStore {
   constructor(contentDir: string, options?: { onWatchError?: (err: Error) => void }) {
     this.contentDir = contentDir;
     this.onWatchError = options?.onWatchError;
-    mkdirSync(contentDataDir(contentDir), { recursive: true });
+    mkdirSync(contentNodesDir(contentDir), { recursive: true });
+    mkdirSync(contentRelationshipsDir(contentDir), { recursive: true });
+    mkdirSync(contentNodesArchiveDir(contentDir), { recursive: true });
+    mkdirSync(contentRelationshipsArchiveDir(contentDir), { recursive: true });
     mkdirSync(contentModelDir(contentDir), { recursive: true });
   }
 
@@ -226,10 +285,17 @@ export class ContentStore implements TomeDataStore {
   }
 
   startWatching(): void {
-    if (this.closed || this.dataWatcher || this.modelWatcher) return;
-    this.dataWatcher = this.watchDir(contentDataDir(this.contentDir), (name) => this.isRelevantDataFile(name), {
-      recursive: true,
-    });
+    if (this.closed || this.dataWatcher || this.archiveWatcher || this.modelWatcher) return;
+    this.dataWatcher = this.watchDir(
+      contentDataDir(this.contentDir),
+      (name) => this.isRelevantInstanceFile(name),
+      { recursive: true },
+    );
+    this.archiveWatcher = this.watchDir(
+      contentArchiveDir(this.contentDir),
+      (name) => this.isRelevantInstanceFile(name),
+      { recursive: true },
+    );
     this.modelWatcher = this.watchDir(contentModelDir(this.contentDir), (name) =>
       this.isRelevantModelFile(name),
     );
@@ -239,8 +305,10 @@ export class ContentStore implements TomeDataStore {
     for (const timer of this.pending.values()) clearTimeout(timer);
     this.pending.clear();
     this.dataWatcher?.close();
+    this.archiveWatcher?.close();
     this.modelWatcher?.close();
     this.dataWatcher = null;
+    this.archiveWatcher = null;
     this.modelWatcher = null;
   }
 
@@ -281,9 +349,9 @@ export class ContentStore implements TomeDataStore {
     }
   }
 
-  private isRelevantDataFile(name: string): boolean {
+  private isRelevantInstanceFile(name: string): boolean {
     const base = basename(name);
-    return base === RELATIONSHIPS_FILENAME || NODE_FILE_PATTERN.test(base);
+    return NODE_FILE_PATTERN.test(base) || RELATIONSHIP_FILE_PATTERN.test(base);
   }
 
   private isRelevantModelFile(name: string): boolean {
@@ -308,9 +376,10 @@ export class ContentStore implements TomeDataStore {
       setTimeout(() => {
         this.pending.delete(filename);
         if (this.closed) return;
+        const kind = storeChangeKindForFilename(filename);
         this.emit({
-          path: basename(filename),
-          kind: storeChangeKindForFilename(filename),
+          path: kind === "relationships" ? RELATIONSHIPS_SYNC_MARKER : basename(filename),
+          kind,
         });
       }, DEBOUNCE_MS),
     );
@@ -318,72 +387,196 @@ export class ContentStore implements TomeDataStore {
 
   listNodeIds(): string[] {
     try {
-      const dataDir = contentDataDir(this.contentDir);
-      const ids: string[] = [];
-      for (const entry of readdirSync(dataDir, { withFileTypes: true })) {
-        if (!entry.isDirectory()) continue;
-        const shardDir = resolve(dataDir, entry.name);
-        for (const name of readdirSync(shardDir)) {
-          if (NODE_FILE_PATTERN.test(name)) {
-            ids.push(name.slice(0, -3));
-          }
-        }
-      }
-      return ids;
+      return [
+        ...listNodeIdsInTree(contentNodesDir(this.contentDir)),
+        ...listNodeIdsInTree(contentNodesArchiveDir(this.contentDir)),
+      ];
     } catch {
       return [];
     }
   }
 
+  /** True when the node markdown exists under `archive/nodes/`. */
+  isNodeFileArchived(id: string): boolean {
+    if (!isNodeId(id)) return false;
+    return existsSync(nodeFilePath(this.contentDir, id, true));
+  }
+
   readNode(id: string): Node | null {
     if (!isNodeId(id)) return null;
-    const path = nodeFilePath(this.contentDir, id);
-    try {
-      const raw = readFileSync(path, "utf-8");
-      return nodeFromFile(id, raw);
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-      throw err;
+    for (const archived of [false, true]) {
+      const path = nodeFilePath(this.contentDir, id, archived);
+      try {
+        const raw = readFileSync(path, "utf-8");
+        return nodeFromFile(id, raw);
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") continue;
+        throw err;
+      }
     }
+    return null;
   }
 
   writeNode(node: Node, body?: string): void {
     const markdownBody = body ?? bodyFromNode(node);
     const { body: _removed, ...rest } = node.properties;
     const toWrite: Node = { ...node, properties: rest };
-    atomicWrite(nodeFilePath(this.contentDir, node.id), serializeNodeFile(toWrite, markdownBody));
+    const archived = this.isNodeFileArchived(node.id);
+    atomicWrite(
+      nodeFilePath(this.contentDir, node.id, archived),
+      serializeNodeFile(toWrite, markdownBody),
+    );
   }
 
   deleteNodeFile(id: string): void {
-    try {
-      rmSync(nodeFilePath(this.contentDir, id), { force: true });
-    } catch {
-      /* ignore */
-    }
-  }
-
-  readRelationshipsFile(): RelationshipsFile {
-    const path = relationshipsFilePath(this.contentDir);
-    try {
-      return parseRelationshipsFile(readFileSync(path, "utf-8"));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        const legacyFile = legacyConnectionsFilePath(this.contentDir);
-        try {
-          return parseRelationshipsFile(readFileSync(legacyFile, "utf-8"));
-        } catch (legacyErr) {
-          if ((legacyErr as NodeJS.ErrnoException).code === "ENOENT") {
-            return { version: RELATIONSHIPS_FILE_VERSION, relationships: [] };
-          }
-          throw legacyErr;
-        }
+    for (const archived of [false, true]) {
+      try {
+        rmSync(nodeFilePath(this.contentDir, id, archived), { force: true });
+      } catch {
+        /* ignore */
       }
-      throw err;
     }
   }
 
-  writeRelationshipsFile(file: RelationshipsFile): void {
-    atomicWrite(relationshipsFilePath(this.contentDir), serializeRelationshipsFile(file));
+  /** Move a node markdown file between live and archive trees. */
+  moveNodeToArchive(id: string): boolean {
+    if (!isNodeId(id)) return false;
+    const from = nodeFilePath(this.contentDir, id, false);
+    const to = nodeFilePath(this.contentDir, id, true);
+    if (!existsSync(from)) return false;
+    mkdirSync(dirname(to), { recursive: true });
+    if (existsSync(to)) rmSync(to, { force: true });
+    renameSync(from, to);
+    return true;
+  }
+
+  moveNodeFromArchive(id: string): boolean {
+    if (!isNodeId(id)) return false;
+    const from = nodeFilePath(this.contentDir, id, true);
+    const to = nodeFilePath(this.contentDir, id, false);
+    if (!existsSync(from)) return false;
+    mkdirSync(dirname(to), { recursive: true });
+    if (existsSync(to)) rmSync(to, { force: true });
+    renameSync(from, to);
+    return true;
+  }
+
+  /** Live (non-archived) relationships only. */
+  readRelationshipsFile(): RelationshipsFile {
+    return {
+      version: RELATIONSHIPS_FILE_VERSION,
+      relationships: scanRelationshipTree(contentRelationshipsDir(this.contentDir)),
+    };
+  }
+
+  /** Archived relationships under `archive/relationships/`. */
+  readArchivedRelationships(): RelationshipEntry[] {
+    return scanRelationshipTree(contentRelationshipsArchiveDir(this.contentDir));
+  }
+
+  /**
+   * Replace the live relationship tree. Does not touch the archive tree.
+   * Pass `archivedEntries` to also replace the archive tree in the same call.
+   */
+  writeRelationshipsFile(
+    file: RelationshipsFile,
+    options?: { archivedEntries?: readonly RelationshipEntry[] },
+  ): void {
+    const liveRoot = contentRelationshipsDir(this.contentDir);
+    clearRelationshipTree(liveRoot);
+    for (const entry of file.relationships) {
+      writeRelationshipEntryFile(this.contentDir, entry, false);
+    }
+    if (options?.archivedEntries) {
+      this.writeArchivedRelationships(options.archivedEntries);
+    }
+  }
+
+  /** Replace the archive relationship tree. */
+  writeArchivedRelationships(entries: readonly RelationshipEntry[]): void {
+    const archiveRoot = contentRelationshipsArchiveDir(this.contentDir);
+    clearRelationshipTree(archiveRoot);
+    for (const entry of entries) {
+      writeRelationshipEntryFile(this.contentDir, entry, true);
+    }
+  }
+
+  writeRelationshipEntry(entry: RelationshipEntry, archived = false): void {
+    writeRelationshipEntryFile(this.contentDir, entry, archived);
+  }
+
+  /** True when the edge file exists under the archive tree (either endpoint order). */
+  isRelationshipArchived(a: string, b: string, type: string): boolean {
+    return this.findRelationshipPath(a, b, type, true) !== null;
+  }
+
+  /**
+   * Move a live relationship file into the archive tree.
+   * Returns false if not found in the live tree.
+   */
+  moveRelationshipToArchive(a: string, b: string, type: string): boolean {
+    const found = this.findRelationshipPath(a, b, type, false);
+    if (!found) return false;
+    const dest = relationshipFilePath(this.contentDir, found.a, found.b, found.type, true);
+    mkdirSync(dirname(dest), { recursive: true });
+    if (existsSync(dest)) rmSync(dest, { force: true });
+    renameSync(found.path, dest);
+    return true;
+  }
+
+  /**
+   * Move an archived relationship file back to the live tree.
+   * Returns false if not found in the archive tree.
+   */
+  moveRelationshipFromArchive(a: string, b: string, type: string): boolean {
+    const found = this.findRelationshipPath(a, b, type, true);
+    if (!found) return false;
+    const dest = relationshipFilePath(this.contentDir, found.a, found.b, found.type, false);
+    mkdirSync(dirname(dest), { recursive: true });
+    if (existsSync(dest)) rmSync(dest, { force: true });
+    renameSync(found.path, dest);
+    return true;
+  }
+
+  private findRelationshipPath(
+    a: string,
+    b: string,
+    type: string,
+    archived: boolean,
+  ): { path: string; a: string; b: string; type: string } | null {
+    const normalized = normalizeAssociationId(type);
+    const candidates: Array<[string, string]> = [
+      [a, b],
+      [b, a],
+    ];
+    for (const [x, y] of candidates) {
+      const path = relationshipFilePath(this.contentDir, x, y, normalized, archived);
+      if (existsSync(path)) return { path, a: x, b: y, type: normalized };
+    }
+    return null;
+  }
+
+  private readRelationshipAt(
+    a: string,
+    b: string,
+    type: string,
+    archived: boolean,
+  ): RelationshipEntry | null {
+    const found = this.findRelationshipPath(a, b, type, archived);
+    if (!found) return null;
+    return parseRelationshipEntry(readFileSync(found.path, "utf-8"), found.path);
+  }
+
+  private deleteRelationshipFile(a: string, b: string, type: string): boolean {
+    let deleted = false;
+    for (const archived of [false, true]) {
+      const found = this.findRelationshipPath(a, b, type, archived);
+      if (found) {
+        rmSync(found.path, { force: true });
+        deleted = true;
+      }
+    }
+    return deleted;
   }
 
   readAssociationsFile(): AssociationsFile {
@@ -408,6 +601,12 @@ export class ContentStore implements TomeDataStore {
     associationOrProjection: string,
   ): RelationshipEntry | null {
     const registry = this.readAssociationsFile();
+    const associationId = associationIdFromTypeArg(registry, associationOrProjection);
+
+    if (associationId) {
+      const live = this.readRelationshipAt(source, target, associationId, false);
+      if (live) return live;
+    }
 
     for (const entry of this.readRelationshipsFile().relationships) {
       if (!connectsEndpoints(entry, source, target)) continue;
@@ -445,11 +644,11 @@ export class ContentStore implements TomeDataStore {
     properties: Properties = {},
   ): void {
     const registry = this.readAssociationsFile();
-    const file = this.readRelationshipsFile();
+    const live = this.readRelationshipsFile().relationships;
 
     let composite = resolveAssociationIdForLink(
       registry,
-      file.relationships,
+      live,
       this.contentDir,
       source,
       target,
@@ -460,41 +659,42 @@ export class ContentStore implements TomeDataStore {
       throw new LinkResolutionError(associationOrProjection);
     }
 
-    let index = file.relationships.findIndex(
-      (e) => connectsEndpoints(e, source, target) && e.type === composite,
-    );
-
-    if (index < 0) {
-      for (let i = 0; i < file.relationships.length; i++) {
-        const entry = file.relationships[i]!;
+    let existing = this.readRelationshipAt(source, target, composite, false);
+    if (!existing) {
+      for (const entry of live) {
         if (!connectsEndpoints(entry, source, target)) continue;
         if (entryMatchesAssociation(registry, entry, associationOrProjection)) {
           composite = entry.type;
-          index = i;
+          existing = entry;
           break;
         }
       }
     }
 
-    if (index >= 0) {
-      const prev = file.relationships[index]!;
-      file.relationships[index] = {
-        ...prev,
+    if (existing) {
+      const next: RelationshipEntry = {
+        ...existing,
         type: composite,
-        properties: { ...(prev.properties ?? {}), ...properties },
+        properties: { ...(existing.properties ?? {}), ...properties },
       };
-    } else {
-      const { a, b } = orderedEndpointsForAssociation(
-        registry,
-        composite,
-        source,
-        target,
-        associationOrProjection,
-        this.contentDir,
-      );
-      file.relationships.push({ a, b, type: composite, properties });
+      // Keep authored endpoint order from the existing file.
+      writeRelationshipEntryFile(this.contentDir, next, false);
+      return;
     }
-    this.writeRelationshipsFile(file);
+
+    const { a, b } = orderedEndpointsForAssociation(
+      registry,
+      composite,
+      source,
+      target,
+      associationOrProjection,
+      this.contentDir,
+    );
+    writeRelationshipEntryFile(
+      this.contentDir,
+      { a, b, type: composite, properties },
+      false,
+    );
   }
 
   mergeRelationshipProperties(
@@ -524,63 +724,65 @@ export class ContentStore implements TomeDataStore {
     properties: Properties,
   ): boolean {
     const registry = this.readAssociationsFile();
-    const file = this.readRelationshipsFile();
+    const live = this.readRelationshipsFile().relationships;
 
     const composite = resolveAssociationIdForLink(
       registry,
-      file.relationships,
+      live,
       this.contentDir,
       source,
       target,
       associationOrProjection,
     );
-    let index = file.relationships.findIndex(
-      (e) => connectsEndpoints(e, source, target) && e.type === composite,
-    );
 
-    if (index < 0) {
-      for (let i = 0; i < file.relationships.length; i++) {
-        const entry = file.relationships[i]!;
+    let existing = this.readRelationshipAt(source, target, composite, false);
+    if (!existing) {
+      for (const entry of live) {
         if (!connectsEndpoints(entry, source, target)) continue;
         if (entryMatchesAssociation(registry, entry, associationOrProjection)) {
-          index = i;
+          existing = entry;
           break;
         }
       }
     }
+    if (!existing) return false;
 
-    if (index < 0) return false;
-
-    const prev = file.relationships[index]!;
-    file.relationships[index] = {
-      ...prev,
-      properties,
-    };
-    this.writeRelationshipsFile(file);
+    writeRelationshipEntryFile(
+      this.contentDir,
+      { ...existing, properties },
+      false,
+    );
     return true;
   }
 
   deleteRelationship(source: string, target: string, associationOrProjection: string): boolean {
     const registry = this.readAssociationsFile();
-    const file = this.readRelationshipsFile();
-    const before = file.relationships.length;
+    const associationId = associationIdFromTypeArg(registry, associationOrProjection);
 
-    file.relationships = file.relationships.filter((entry) => {
-      if (!connectsEndpoints(entry, source, target)) return true;
-      return !entryMatchesAssociation(registry, entry, associationOrProjection);
-    });
+    if (associationId && this.deleteRelationshipFile(source, target, associationId)) {
+      return true;
+    }
 
-    if (file.relationships.length === before) return false;
-    this.writeRelationshipsFile(file);
-    return true;
+    let deleted = false;
+    for (const entry of [
+      ...this.readRelationshipsFile().relationships,
+      ...this.readArchivedRelationships(),
+    ]) {
+      if (!connectsEndpoints(entry, source, target)) continue;
+      if (!entryMatchesAssociation(registry, entry, associationOrProjection)) continue;
+      if (this.deleteRelationshipFile(entry.a, entry.b, entry.type)) deleted = true;
+    }
+    return deleted;
   }
 
   removeIncidentRelationships(nodeId: string): void {
-    const file = this.readRelationshipsFile();
-    file.relationships = file.relationships.filter(
-      (c) => c.a !== nodeId && c.b !== nodeId,
-    );
-    this.writeRelationshipsFile(file);
+    for (const entry of [
+      ...this.readRelationshipsFile().relationships,
+      ...this.readArchivedRelationships(),
+    ]) {
+      if (entry.a !== nodeId && entry.b !== nodeId) continue;
+      this.deleteRelationshipFile(entry.a, entry.b, entry.type);
+    }
   }
 
   readDynamicFieldsFile(): DynamicFieldsFile {

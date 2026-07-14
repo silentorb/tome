@@ -32,22 +32,24 @@ describe("archive relationship flags", () => {
   ]);
   seedTestIncludes(fixture, [{ a: PAGE, b: OTHER, compositeType: "000000000000000000000000BF" }]);
 
-  test("archiveNode marks incident relationships archived in JSON", () => {
+  test("archiveNode moves incident relationships and the node file into archive trees", () => {
     expect(archiveNode(fixture.ctx, PAGE)).toBeNull();
 
-    const file = fixture.ctx.store.readRelationshipsFile();
-    const membership = file.relationships.find(
+    expect(fixture.ctx.store.isNodeFileArchived(PAGE)).toBe(true);
+
+    const live = fixture.ctx.store.readRelationshipsFile().relationships;
+    const membership = live.find(
       (e) => e.type === TEST_MEMBER_OF_ASSOCIATION_ID && (e.a === HUB || e.b === HUB) && (e.a === PAGE || e.b === PAGE),
     );
-    expect(membership?.archived).toBeUndefined();
+    expect(membership).toBeDefined();
+    expect(fixture.ctx.store.isRelationshipArchived(membership!.a, membership!.b, membership!.type)).toBe(
+      false,
+    );
 
-    const incident = file.relationships.filter(
+    const archived = fixture.ctx.store.readArchivedRelationships().filter(
       (e) => !isArchiveSetEntry(e, HUB, fixture.ctx.store.contentDir) && (e.a === PAGE || e.b === PAGE),
     );
-    expect(incident.length).toBeGreaterThanOrEqual(2);
-    for (const entry of incident) {
-      expect(entry.archived).toBe(true);
-    }
+    expect(archived.length).toBeGreaterThanOrEqual(2);
   });
 
   test("archived incident relationships are excluded from SQLite cache", () => {
@@ -67,14 +69,12 @@ describe("archive relationship flags", () => {
   test("unarchiveNode restores relationships and archived status", () => {
     expect(unarchiveNode(fixture.ctx, PAGE)).toBeNull();
     expect(getNodeDetail(fixture.ctx.cache, PAGE)?.archived).toBe(false);
+    expect(fixture.ctx.store.isNodeFileArchived(PAGE)).toBe(false);
 
-    const file = fixture.ctx.store.readRelationshipsFile();
-    for (const entry of file.relationships) {
-      if (entry.a === HUB || entry.b === HUB) continue;
-      if (entry.a === PAGE || entry.b === PAGE) {
-        expect(entry.archived).toBeUndefined();
-      }
-    }
+    const archivedIncident = fixture.ctx.store.readArchivedRelationships().filter(
+      (e) => e.a === PAGE || e.b === PAGE,
+    );
+    expect(archivedIncident).toHaveLength(0);
 
     expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1))).toHaveLength(1);
     expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_RELATED_ASSOCIATION_ID, 0))).toHaveLength(1);

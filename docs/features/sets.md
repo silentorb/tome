@@ -141,7 +141,7 @@ The auto-generated inverse set-side relation section is **not** emitted on set p
 
 ```mermaid
 flowchart LR
-  JSON["relationships.json\n{a,b,type,properties}"]
+  JSON["data/relationships/{shard}/{digest}.json"]
   REG["associations.json\nset trait + perspectives"]
   VIEWS["views.json\nset-side perspective"]
   EXP["expandRelationshipEntry"]
@@ -163,7 +163,7 @@ flowchart LR
 
 | Path | Role |
 | --- | --- |
-| `content/data/relationships.json` | Canonical set edges |
+| `content/data/relationships/{shard}/{digest}.json` | Canonical set edges (live tree) |
 | `content/model/associations.json` | Set-trait associations and perspective labels |
 | `content/model/table-schemas.json` | Type-table set detection, column defs (no membership composite field) |
 | `content/model/views.json` | Set-side perspective / section config for Members tables |
