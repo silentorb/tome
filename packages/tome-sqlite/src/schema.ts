@@ -36,5 +36,5 @@ CREATE INDEX IF NOT EXISTS idx_rel_proj_source ON relationship_projections(sourc
 CREATE INDEX IF NOT EXISTS idx_rel_proj_target ON relationship_projections(target_node_id, type);
 `;
 
-/** @deprecated Dynamic field configuration lives in content/model/dynamic-fields.json (schema v4+). */
-export const DYNAMIC_FIELDS_DDL = "";
+/** @deprecated Dynamic property configuration lives in content/model/dynamic-properties.json (schema v4+). */
+export const DYNAMIC_PROPERTIES_DDL = "";

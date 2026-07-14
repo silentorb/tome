@@ -10,8 +10,8 @@ import {
   type TableSchemasFile,
 } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
-import type { SeedDynamicColumnSetInput, SeedDynamicFieldInput } from "tome-flatfile";
-import { invalidateDynamicFieldsCache } from "./sync";
+import type { SeedDynamicColumnSetInput, SeedDynamicPropertyInput } from "tome-flatfile";
+import { invalidateDynamicPropertiesCache } from "./sync";
 import { invalidateViewsCache } from "tome-flatfile";
 import { invalidateWorkspaceCache } from "tome-flatfile";
 import { invalidateOrderedCollectionsCache } from "tome-flatfile";
@@ -238,8 +238,8 @@ export function createTestContentFixture(prefix = "tome-content-test-"): TestCon
   const dbPath = join(tempDir, "test.sqlite");
   const ctx = openContentGraph(contentDir, dbPath);
   const fixture: TestContentFixture = { tempDir, ctx };
-  ctx.store.writeDynamicFieldsFile(fileFromSeedInputs([], []));
-  invalidateDynamicFieldsCache();
+  ctx.store.writeDynamicPropertiesFile(fileFromSeedInputs([], []));
+  invalidateDynamicPropertiesCache();
   seedDefaultAssociations(fixture);
   seedDefaultOrderedCollectionTableSchemas(fixture);
   seedTestOrderedCollections(fixture);
@@ -268,13 +268,13 @@ export function seedTestNode(fixture: TestContentFixture, node: Node, body?: str
   fixture.ctx.sync.syncNode(node.id);
 }
 
-export function seedTestDynamicFields(
+export function seedTestDynamicProperties(
   fixture: TestContentFixture,
-  fields: SeedDynamicFieldInput[],
+  fields: SeedDynamicPropertyInput[],
   columnSets: SeedDynamicColumnSetInput[] = [],
 ): void {
-  fixture.ctx.store.writeDynamicFieldsFile(fileFromSeedInputs(fields, columnSets));
-  invalidateDynamicFieldsCache();
+  fixture.ctx.store.writeDynamicPropertiesFile(fileFromSeedInputs(fields, columnSets));
+  invalidateDynamicPropertiesCache();
 }
 
 export function seedTestViews(fixture: TestContentFixture, file: ViewsFile): void {

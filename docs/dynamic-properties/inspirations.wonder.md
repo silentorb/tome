@@ -4,7 +4,7 @@
 
 Count of linked Features that are associated with the Wonderland theme page.
 
-## Database
+## Owner
 
 - **Database id:** `2eea538996934ce8abafc27132e576c1` (Inspirations)
 - **Column key:** `wonder`

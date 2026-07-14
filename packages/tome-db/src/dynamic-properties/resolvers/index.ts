@@ -40,15 +40,15 @@ function relatedProductIdsFromScene(
   params: Record<string, unknown>,
 ): string[] {
   const sceneProductComposite = stringParam(params, "scene_product_composite");
-  const productsDatabaseId = stringParam(params, "products_database_id");
+  const productsTableId = stringParam(params, "products_table_id");
   const productLabel = stringParam(params, "product_edge_label");
 
   if (sceneProductComposite) {
     const candidates = listRelationshipsForComposite(db, sceneId, sceneProductComposite).map(
       (relationship) => otherEndpoint(relationship, sceneId),
     );
-    if (productsDatabaseId) {
-      const productMembers = new Set(setMemberIds(db, productsDatabaseId));
+    if (productsTableId) {
+      const productMembers = new Set(setMemberIds(db, productsTableId));
       return candidates.filter((id) => productMembers.has(id));
     }
     return candidates;
@@ -90,8 +90,8 @@ function countCharacterSceneRelationships(
   params: Record<string, unknown>,
 ): number {
   const composite = stringParam(params, "characters_scene_composite");
-  const scenesDatabaseId = stringParam(params, "scenes_database_id");
-  if (composite || scenesDatabaseId) {
+  const scenesTableId = stringParam(params, "scenes_table_id");
+  if (composite || scenesTableId) {
     const compositeCount = listCharacterSceneConnections(db, nodeId, params).length;
     if (compositeCount > 0) return compositeCount;
   }
@@ -131,7 +131,7 @@ export function buildSceneCountByProductPrefetch(
   for (const nodeId of ctx.rowNodeIds) {
     const sceneMap = new Map<string, string[]>();
 
-    if (charactersSceneComposite || stringParam(params, "scenes_database_id")) {
+    if (charactersSceneComposite || stringParam(params, "scenes_table_id")) {
       for (const sceneConnection of listCharacterSceneConnections(ctx.db, nodeId, params)) {
         const sceneId = otherEndpoint(sceneConnection, nodeId);
         const products = relatedProductIdsFromScene(ctx.db, sceneId, params);
@@ -212,13 +212,13 @@ export function buildWeightedUsePrefetch(
   ctx: DynamicResolverContext,
   params: Record<string, unknown>,
 ): WeightedUsePrefetch {
-  const featuresDbId = stringParam(params, "features_database_id");
+  const featuresTableId = stringParam(params, "features_table_id");
 
   const priorityByFeature = new Map<string, number>();
-  if (featuresDbId) {
+  if (featuresTableId) {
     const registry = loadAssociationsFromContent(resolveContentPath());
     for (const type of setTraitProjectionTypes(registry)) {
-      for (const connection of ctx.db.listRelationshipsToTarget(featuresDbId, type)) {
+      for (const connection of ctx.db.listRelationshipsToTarget(featuresTableId, type)) {
         priorityByFeature.set(connection.sourceNodeId, priorityWeight(connection.properties.priority));
       }
     }

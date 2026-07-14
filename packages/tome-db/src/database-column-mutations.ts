@@ -4,7 +4,7 @@ import {
   stripScalarFromSetEdges,
   unlinkRelationColumnFromAllRows,
 } from "./database-column-data";
-import { loadDynamicFields } from "./dynamic-fields";
+import { loadDynamicProperties } from "./dynamic-properties";
 import { isTypeTableNode } from "./node-capabilities";
 import { normalizeAssociationId, isAssociationId } from "tome-flatfile";
 import { resolvePropertyEnumFromContent } from "./property-enums";
@@ -69,8 +69,8 @@ function isDynamicColumnKey(
   databaseId: string,
   columnKey: string,
 ): boolean {
-  const dynamicFields = loadDynamicFields(ctx.cache, databaseId, ctx.store.contentDir);
-  return dynamicFields.some((field) => field.enabled && field.columnKey === columnKey);
+  const dynamicProperties = loadDynamicProperties(ctx.cache, databaseId, ctx.store.contentDir);
+  return dynamicProperties.some((property) => property.columnKey === columnKey);
 }
 
 function validateScalarType(type: string): type is TableColumnScalarType {

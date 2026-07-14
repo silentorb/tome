@@ -62,25 +62,25 @@ export type {
 } from "./content/associations-file";
 
 export {
-  DYNAMIC_FIELDS_FILE_VERSION,
+  DYNAMIC_PROPERTIES_FILE_VERSION,
   columnSetRecordFromEntry,
-  emptyDynamicFieldsFile,
+  emptyDynamicPropertiesFile,
   entryFromSeedColumnSet,
-  entryFromSeedField,
-  fieldRecordFromEntry,
+  entryFromSeedProperty,
+  propertyRecordFromEntry,
   fileFromSeedInputs,
-  parseDynamicFieldsFile,
-  serializeDynamicFieldsFile,
-} from "./content/dynamic-fields-file";
+  parseDynamicPropertiesFile,
+  serializeDynamicPropertiesFile,
+} from "./content/dynamic-properties-file";
 export type {
   DynamicColumnSetFileEntry,
   DynamicColumnSetRecord,
-  DynamicFieldFileEntry,
-  DynamicFieldRecord,
-  DynamicFieldsFile,
+  DynamicPropertyFileEntry,
+  DynamicPropertyRecord,
+  DynamicPropertiesFile,
   SeedDynamicColumnSetInput,
-  SeedDynamicFieldInput,
-} from "./content/dynamic-fields-file";
+  SeedDynamicPropertyInput,
+} from "./content/dynamic-properties-file";
 
 export {
   bodyFromNode,
@@ -99,7 +99,7 @@ export {
   RELATIONSHIPS_SYNC_MARKER,
   RELATIONSHIPS_FILENAME,
   ASSOCIATIONS_FILENAME,
-  DYNAMIC_FIELDS_FILENAME,
+  DYNAMIC_PROPERTIES_FILENAME,
   SCHEMA_FILENAME,
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
@@ -122,7 +122,7 @@ export {
   defaultDbPathForContent,
   DEFAULT_DB_FILENAME,
   readEnv,
-  dynamicFieldsFilePath,
+  dynamicPropertiesFilePath,
   schemaFilePath,
   viewsFilePath,
   tableSchemasFilePath,

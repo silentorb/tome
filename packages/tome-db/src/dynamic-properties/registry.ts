@@ -1,11 +1,11 @@
 import type { GraphDatabase } from "tome-sqlite";
 import type { EvalRow } from "../row-sort";
 
-export type DynamicFieldParams = Record<string, unknown>;
+export type DynamicPropertyParams = Record<string, unknown>;
 
 export interface DynamicResolverContext {
   db: GraphDatabase;
-  databaseId: string;
+  owner: string;
   viewName: string;
   rowNodeIds: string[];
 }
@@ -16,26 +16,26 @@ export interface ColumnSetDimension {
 }
 
 export interface ColumnSetResolver {
-  discoverDimensions(ctx: DynamicResolverContext, params: DynamicFieldParams): ColumnSetDimension[];
+  discoverDimensions(ctx: DynamicResolverContext, params: DynamicPropertyParams): ColumnSetDimension[];
   resolveCell(
     ctx: DynamicResolverContext,
-    params: DynamicFieldParams,
+    params: DynamicPropertyParams,
     nodeId: string,
     dimensionId: string,
     prefetch: unknown,
   ): string;
-  buildPrefetch(ctx: DynamicResolverContext, params: DynamicFieldParams): unknown;
+  buildPrefetch(ctx: DynamicResolverContext, params: DynamicPropertyParams): unknown;
 }
 
-export type FixedFieldResolver = (
+export type FixedPropertyResolver = (
   ctx: DynamicResolverContext,
-  params: DynamicFieldParams,
+  params: DynamicPropertyParams,
   nodeId: string,
   prefetch: unknown,
 ) => string;
 
 export interface ResolverRegistry {
-  fixed: Map<string, FixedFieldResolver>;
+  fixed: Map<string, FixedPropertyResolver>;
   columnSets: Map<string, ColumnSetResolver>;
 }
 
@@ -49,7 +49,7 @@ export function createResolverRegistry(): ResolverRegistry {
 export function registerFixedResolver(
   registry: ResolverRegistry,
   id: string,
-  resolver: FixedFieldResolver,
+  resolver: FixedPropertyResolver,
 ): void {
   registry.fixed.set(id, resolver);
 }
@@ -69,7 +69,7 @@ export interface MaterializedColumnSetColumn {
   name: string;
   type: string;
   resolverId: string;
-  params: DynamicFieldParams;
+  params: DynamicPropertyParams;
 }
 
 export function materializeColumnKey(pattern: string, dimensionId: string): string {
@@ -88,7 +88,7 @@ export function applyPattern(text: string, dimension: ColumnSetDimension): strin
     .replace("{dimensionTitle}", dimension.title);
 }
 
-export function isFieldVisibleForView(viewNames: string[], viewName: string): boolean {
+export function isPropertyVisibleForView(viewNames: string[], viewName: string): boolean {
   return viewNames.length === 0 || viewNames.includes(viewName);
 }
 

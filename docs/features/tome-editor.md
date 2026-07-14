@@ -185,7 +185,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 | --- | --- |
 | Database table assembly (`getDatabaseViewDetail`) | `packages/tome-db/tests/database-view.test.ts`, `database-view-relations.test.ts` |
 | Ordered-association part tables | `packages/tome-db/tests/ordered-collections.test.ts` |
-| Dynamic computed columns | `packages/tome-db/tests/dynamic-fields/dynamic-fields.test.ts` |
+| Dynamic computed columns | `packages/tome-db/tests/dynamic-properties/dynamic-properties.test.ts` |
 | Composite relationship traversal | `packages/tome-db/tests/relationship-traverse.test.ts` |
 | Database table UI | `packages/tome-editor/tests/webview/components/DatabaseTableView.test.tsx` |
 | Shared sortable table UI | `packages/tome-editor/tests/webview/components/SectionDataTable.test.tsx`, `database-table-layout.test.tsx` (column header hit-area CSS) |

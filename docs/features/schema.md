@@ -63,7 +63,7 @@ Types are identified by **stable node id**, not display names.
 
 **Storage:** relationship shard files store enum properties as **labels** (e.g. `"priority": "Medium"`). The SQLite cache stores the same properties as **integer indices** into `options` (see [tome-db.md](./tome-db.md)). Table sorts use **index order**, not `values`.
 
-For `priority`, `values` are interpreted as numeric **weights** by `priorityWeight()` and the [`inspirations.weightedUse`](../../docs/dynamic-fields/inspirations.weighted-use.md) dynamic field only — not for table sorting. Other enums may use `values` differently or omit them when only labels matter for UI dropdowns.
+For `priority`, `values` are interpreted as numeric **weights** by `priorityWeight()` and the [`inspirations.weightedUse`](../../docs/dynamic-properties/inspirations.weighted-use.md) dynamic field only — not for table sorting. Other enums may use `values` differently or omit them when only labels matter for UI dropdowns.
 
 `GET /api/schema` returns the parsed file including `enums`.
 
@@ -97,4 +97,4 @@ The long-term goal is a **user-configured model**: enums, types, relationship ru
 - [tome-db.md](./tome-db.md)
 - [ontology.md](../ontology.md)
 - [ordered-collections.md](./ordered-collections.md)
-- [inspirations.weighted-use.md](../dynamic-fields/inspirations.weighted-use.md)
+- [inspirations.weighted-use.md](../dynamic-properties/inspirations.weighted-use.md)

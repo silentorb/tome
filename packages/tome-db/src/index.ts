@@ -1,4 +1,4 @@
-export { GraphDatabase, relationshipId, DDL, DYNAMIC_FIELDS_DDL, SCHEMA_VERSION } from "tome-sqlite";
+export { GraphDatabase, relationshipId, DDL, DYNAMIC_PROPERTIES_DDL, SCHEMA_VERSION } from "tome-sqlite";
 export type { Relationship, GraphCounts, Node, Properties, PropertyValue } from "tome-sqlite";
 export {
   isArchivedNode,
@@ -191,14 +191,19 @@ export {
 } from "./content/write-context";
 export { openContentGraph } from "./content/sync";
 export {
-  applyDynamicFields,
+  applyDynamicProperties,
   getDefaultResolverRegistry,
   loadDynamicColumnSets,
-  loadDynamicFields,
+  loadDynamicProperties,
   seedDynamicColumnSet,
-  seedDynamicField,
-} from "./dynamic-fields";
-export type { DynamicColumnSetRecord, DynamicFieldRecord } from "./dynamic-fields";
+  seedDynamicProperty,
+} from "./dynamic-properties";
+export type {
+  DynamicColumnSetRecord,
+  DynamicPropertyRecord,
+  SeedDynamicColumnSetInput,
+  SeedDynamicPropertyInput,
+} from "./dynamic-properties";
 export {
   listSetMemberRowConnections,
   memberSetIds,

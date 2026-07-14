@@ -60,7 +60,7 @@ export type StoreChangeKind =
   | "relationships"
   | "associations"
   | "schema"
-  | "dynamic-fields"
+  | "dynamic-properties"
   | "views"
   | "workspace"
   | "ordered-collections"
@@ -126,35 +126,31 @@ export interface AssociationsFile {
   types: Record<string, AssociationDefinition>;
 }
 
-export interface DynamicFieldFileEntry {
+export interface DynamicPropertyFileEntry {
   id: string;
-  databaseId: string;
+  owner: string;
   columnKey: string;
   columnName: string;
   columnType: string;
   resolverId: string;
-  docsPath: string;
-  enabled: boolean;
   params?: Record<string, unknown>;
   viewNames?: string[];
 }
 
 export interface DynamicColumnSetFileEntry {
   id: string;
-  databaseId: string;
+  owner: string;
   columnKeyPattern: string;
   columnNamePattern: string;
   columnType: string;
   resolverId: string;
-  docsPath: string;
-  enabled: boolean;
   params?: Record<string, unknown>;
   viewNames?: string[];
 }
 
-export interface DynamicFieldsFile {
+export interface DynamicPropertiesFile {
   version: number;
-  fields: DynamicFieldFileEntry[];
+  properties: DynamicPropertyFileEntry[];
   columnSets: DynamicColumnSetFileEntry[];
 }
 
@@ -250,8 +246,8 @@ export interface TomeDataStore {
   deleteRelationship(source: string, target: string, localType: string): boolean;
   removeIncidentRelationships(nodeId: string): void;
 
-  readDynamicFieldsFile(): DynamicFieldsFile;
-  writeDynamicFieldsFile(file: DynamicFieldsFile): void;
+  readDynamicPropertiesFile(): DynamicPropertiesFile;
+  writeDynamicPropertiesFile(file: DynamicPropertiesFile): void;
   readViewsFile(): ViewsFile;
   writeViewsFile(file: ViewsFile): void;
   readTableSchemasFile(): TableSchemasFile;

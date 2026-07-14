@@ -1,7 +1,7 @@
 /**
  * Remap association registry keys from semantic slugs to ULIDs, and rewrite
  * every content reference (relationships, table-schemas, ordered-collections,
- * dynamic-fields).
+ * dynamic-properties).
  *
  * Usage:
  *   bun packages/tome-db/scripts/migrate-association-ids-to-ulid.ts <contentDir>
@@ -12,7 +12,7 @@ import { resolve } from "node:path";
 import { monotonicFactory } from "ulid";
 import {
   associationsFilePath,
-  dynamicFieldsFilePath,
+  dynamicPropertiesFilePath,
   orderedCollectionsFilePath,
   relationshipsFilePath,
   tableSchemasFilePath,
@@ -150,23 +150,23 @@ export function migrateAssociationIdsToUlid(contentDir: string): {
   // Skip full parseOrderedCollectionsFile here: it loads views/set perspectives and
   // can fail on cache timing mid-migration. Structural remap is enough.
 
-  const dynamicPath = dynamicFieldsFilePath(contentDir);
+  const dynamicPath = dynamicPropertiesFilePath(contentDir);
   const dynamicRaw = JSON.parse(readFileSync(dynamicPath, "utf-8")) as {
     version: number;
-    fields?: Array<{ params?: Record<string, unknown> }>;
-    columnSets?: unknown[];
+    properties?: Array<{ params?: Record<string, unknown> }>;
+    columnSets?: Array<{ params?: Record<string, unknown> }>;
   };
   const compositeParamKeys = [
     "inspiration_feature_composite",
     "characters_scene_composite",
     "scene_product_composite",
   ];
-  for (const field of dynamicRaw.fields ?? []) {
-    if (!field.params) continue;
+  for (const entry of [...(dynamicRaw.properties ?? []), ...(dynamicRaw.columnSets ?? [])]) {
+    if (!entry.params) continue;
     for (const key of compositeParamKeys) {
-      const value = field.params[key];
+      const value = entry.params[key];
       if (typeof value === "string") {
-        field.params[key] = remapAssociationRef(value, slugToUlid, `dynamic-fields.${key}`);
+        entry.params[key] = remapAssociationRef(value, slugToUlid, `dynamic-properties.${key}`);
       }
     }
   }

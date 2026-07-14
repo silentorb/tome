@@ -4,12 +4,12 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { ContentStore, projectionTypeForEndpoint } from "tome-flatfile";
 import { fileFromSeedInputs } from "tome-flatfile";
-import { invalidateDynamicFieldsCache } from "../../src/content/sync";
+import { invalidateDynamicPropertiesCache } from "../../src/content/sync";
 import { invalidateSchemaCache } from "tome-flatfile";
 import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { getDatabaseViewDetail } from "../../src/database-view";
-import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestDynamicFields, seedTestIncludes, seedTestNode, seedTestRelationships, writeTestSetAssociations, TEST_MEMBER_OF_ASSOCIATION_ID, TEST_SCENES_PRODUCT_ASSOCIATION_ID, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID } from "../../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestDynamicProperties, seedTestIncludes, seedTestNode, seedTestRelationships, writeTestSetAssociations, TEST_MEMBER_OF_ASSOCIATION_ID, TEST_SCENES_PRODUCT_ASSOCIATION_ID, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID } from "../../src/content/test-helpers";
 import {
   buildAllSceneCountPrefetch,
   buildSceneCountByProductPrefetch,
@@ -19,7 +19,7 @@ import {
   resolveSceneCountByProduct,
   resolveWeightedUse,
   resolveWonder,
-} from "../../src/dynamic-fields/resolvers/index";
+} from "../../src/dynamic-properties/resolvers/index";
 
 const THEME_ASSOCIATION_ID = "000000000000000000000000TH";
 const SCENES_EDGE = "SCENES";
@@ -39,7 +39,7 @@ const LEGACY_CHARACTER_PRODUCT_PARAMS = {
 
 const LEGACY_INSPIRATION_WEIGHTED_PARAMS = {
   features_edge_label: FEATURES_EDGE,
-  features_database_id: "0000000000000000000000002P",
+  features_table_id: "0000000000000000000000002P",
 };
 
 const LEGACY_INSPIRATION_WONDER_PARAMS = {
@@ -48,7 +48,7 @@ const LEGACY_INSPIRATION_WONDER_PARAMS = {
   theme_target_id: "0000000000000000000000000P",
 };
 
-describe("dynamic-fields resolvers", () => {
+describe("dynamic-properties resolvers", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-df-"));
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
@@ -74,51 +74,47 @@ describe("dynamic-fields resolvers", () => {
     process.env.TOME_CONTENT_PATH = contentDir;
     writeTestSetAssociations(contentDir);
     const store = new ContentStore(contentDir);
-    store.writeDynamicFieldsFile(
+    store.writeDynamicPropertiesFile(
       fileFromSeedInputs(
         [
           {
             id: "test-all-scene",
-            databaseId: CHAR_DB,
+            owner: CHAR_DB,
             columnKey: "all_scene_count",
             columnName: "All Scene count",
             resolverId: "characters.allSceneCount",
-            docsPath: "docs/dynamic-fields/characters.all-scene-count.md",
-            params: LEGACY_CHARACTER_SCENE_PARAMS,
+                        params: LEGACY_CHARACTER_SCENE_PARAMS,
           },
           {
             id: "test-weighted-use",
-            databaseId: INSP_DB,
+            owner: INSP_DB,
             columnKey: "weighted_use",
             columnName: "Weighted Use",
             resolverId: "inspirations.weightedUse",
-            docsPath: "docs/dynamic-fields/inspirations.weighted-use.md",
-            params: { ...LEGACY_INSPIRATION_WEIGHTED_PARAMS, features_database_id: FEAT_DB },
+                        params: { ...LEGACY_INSPIRATION_WEIGHTED_PARAMS, features_table_id: FEAT_DB },
           },
           {
             id: "test-wonder",
-            databaseId: INSP_DB,
+            owner: INSP_DB,
             columnKey: "wonder",
             columnName: "Wonder",
             resolverId: "inspirations.wonder",
-            docsPath: "docs/dynamic-fields/inspirations.wonder.md",
-            params: { ...LEGACY_INSPIRATION_WONDER_PARAMS, theme_target_id: WONDERLAND },
+                        params: { ...LEGACY_INSPIRATION_WONDER_PARAMS, theme_target_id: WONDERLAND },
           },
         ],
         [
           {
             id: "test-scene-by-product",
-            databaseId: CHAR_DB,
+            owner: CHAR_DB,
             columnKeyPattern: "scene_count__{productId}",
             columnNamePattern: "{productTitle} Scene count",
             resolverId: "characters.sceneCountByProduct",
-            docsPath: "docs/dynamic-fields/characters.scene-count-by-product.md",
-            params: LEGACY_CHARACTER_PRODUCT_PARAMS,
+                        params: LEGACY_CHARACTER_PRODUCT_PARAMS,
           },
         ],
       ),
     );
-    invalidateDynamicFieldsCache();
+    invalidateDynamicPropertiesCache();
     db.upsertNode(CHAR_DB, { ...typeTableMarkerProperties("Characters") });
     db.upsertNode(INSP_DB, { ...typeTableMarkerProperties("Inspirations") });
     db.upsertNode(FEAT_DB, { ...typeTableMarkerProperties("Features") });
@@ -152,46 +148,46 @@ describe("dynamic-fields resolvers", () => {
   });
 
   test("all scene count", () => {
-    const ctx = { db, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const ctx = { db, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
     const prefetch = buildAllSceneCountPrefetch(ctx, LEGACY_CHARACTER_SCENE_PARAMS);
     expect(resolveAllSceneCount(ctx, {}, character, prefetch)).toBe("3");
   });
 
   test("scene count by product", () => {
-    const ctx = { db, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const ctx = { db, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
     const prefetch = buildSceneCountByProductPrefetch(ctx, LEGACY_CHARACTER_PRODUCT_PARAMS);
     expect(resolveSceneCountByProduct(ctx, {}, character, TWOLD, prefetch)).toBe("2");
     expect(resolveSceneCountByProduct(ctx, {}, character, OTHER_PRODUCT, prefetch)).toBe("1");
   });
 
   test("weighted use", () => {
-    const ctx = { db, databaseId: INSP_DB, viewName: "Weighted", rowNodeIds: [inspiration] };
-    const params = { ...LEGACY_INSPIRATION_WEIGHTED_PARAMS, features_database_id: FEAT_DB };
+    const ctx = { db, owner: INSP_DB, viewName: "Weighted", rowNodeIds: [inspiration] };
+    const params = { ...LEGACY_INSPIRATION_WEIGHTED_PARAMS, features_table_id: FEAT_DB };
     const prefetch = buildWeightedUsePrefetch(ctx, params);
     expect(resolveWeightedUse(ctx, {}, inspiration, prefetch)).toBe("6");
   });
 
   test("wonder count", () => {
-    const ctx = { db, databaseId: INSP_DB, viewName: "Wonder", rowNodeIds: [inspiration] };
+    const ctx = { db, owner: INSP_DB, viewName: "Wonder", rowNodeIds: [inspiration] };
     const params = { ...LEGACY_INSPIRATION_WONDER_PARAMS, theme_target_id: WONDERLAND };
     const prefetch = buildWonderPrefetch(ctx, params);
     expect(resolveWonder(ctx, {}, inspiration, prefetch)).toBe("1");
   });
 
   test("returns zero when composite param omitted despite composite edges in graph", () => {
-    const ctx = { db, databaseId: INSP_DB, viewName: "Weighted", rowNodeIds: [inspiration] };
+    const ctx = { db, owner: INSP_DB, viewName: "Weighted", rowNodeIds: [inspiration] };
     expect(
       resolveWeightedUse(
         ctx,
         {},
         inspiration,
-        buildWeightedUsePrefetch(ctx, { features_database_id: FEAT_DB }),
+        buildWeightedUsePrefetch(ctx, { features_table_id: FEAT_DB }),
       ),
     ).toBe("0");
   });
 
   test("returns zero for scene count when edge label param omitted", () => {
-    const ctx = { db, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const ctx = { db, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
     const prefetch = buildAllSceneCountPrefetch(ctx, {});
     expect(resolveAllSceneCount(ctx, {}, character, prefetch)).toBe("0");
   });
@@ -216,13 +212,13 @@ describe("dynamic-fields resolvers", () => {
 
   afterAll(() => {
     delete process.env.TOME_CONTENT_PATH;
-    invalidateDynamicFieldsCache();
+    invalidateDynamicPropertiesCache();
     db.close();
     rmSync(dir, { recursive: true, force: true });
   });
 });
 
-describe("dynamic-fields with composite relationships", () => {
+describe("dynamic-properties with composite relationships", () => {
   const fixture = createTestContentFixture("tome-df-composite-");
   const INSP_DB = "0000000000000000000000000K";
   const FEAT_DB = "0000000000000000000000002P";
@@ -248,28 +244,26 @@ describe("dynamic-fields with composite relationships", () => {
       }),
     );
     invalidateSchemaCache();
-    seedTestDynamicFields(fixture, [
+    seedTestDynamicProperties(fixture, [
       {
         id: "inspirations-weighted-use",
-        databaseId: INSP_DB,
+        owner: INSP_DB,
         columnKey: "weighted_use",
         columnName: "Weighted Use",
         resolverId: "inspirations.weightedUse",
-        docsPath: "docs/dynamic-fields/inspirations.weighted-use.md",
-        params: {
+                params: {
           inspiration_feature_composite: "000000000000000000000000B2",
           features_edge_label: "FEATURES",
-          features_database_id: FEAT_DB,
+          features_table_id: FEAT_DB,
         },
       },
       {
         id: "inspirations-wonder",
-        databaseId: INSP_DB,
+        owner: INSP_DB,
         columnKey: "wonder",
         columnName: "Wonder",
         resolverId: "inspirations.wonder",
-        docsPath: "docs/dynamic-fields/inspirations.wonder.md",
-        params: {
+                params: {
           inspiration_feature_composite: "000000000000000000000000B2",
           features_edge_label: "FEATURES",
           theme_edge_label: projectionTypeForEndpoint(THEME_ASSOCIATION_ID, 0),
@@ -333,7 +327,7 @@ describe("dynamic-fields with composite relationships", () => {
   test("weighted_use returns zero when inspiration_feature_composite omitted", () => {
     const ctx = {
       db: fixture.ctx.cache,
-      databaseId: INSP_DB,
+      owner: INSP_DB,
       viewName: "Weighted",
       rowNodeIds: [inspiration],
     };
@@ -342,19 +336,19 @@ describe("dynamic-fields with composite relationships", () => {
         ctx,
         {},
         inspiration,
-        buildWeightedUsePrefetch(ctx, { features_database_id: FEAT_DB }),
+        buildWeightedUsePrefetch(ctx, { features_table_id: FEAT_DB }),
       ),
     ).toBe("0");
   });
 
   afterAll(() => {
     delete process.env.TOME_CONTENT_PATH;
-    invalidateDynamicFieldsCache();
+    invalidateDynamicPropertiesCache();
     destroyTestContentFixture(fixture);
   });
 });
 
-describe("dynamic-fields character includes with product edges (Marloth regression)", () => {
+describe("dynamic-properties character includes with product edges (Marloth regression)", () => {
   const fixture = createTestContentFixture("tome-df-char-includes-");
   const CHAR_DB = "00000000000000000000000035";
   const SCENES_DB = "0000000000000000000000000D";
@@ -370,39 +364,37 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
     scene_product_composite: "000000000000000000000000A3",
     scenes_edge_label: "SCENES",
     product_edge_label: "PRODUCT",
-    scenes_database_id: SCENES_DB,
-    products_database_id: PRODUCTS_DB,
+    scenes_table_id: SCENES_DB,
+    products_table_id: PRODUCTS_DB,
   };
 
   beforeAll(() => {
     process.env.TOME_CONTENT_PATH = fixture.ctx.store.contentDir;
-    seedTestDynamicFields(
+    seedTestDynamicProperties(
       fixture,
       [
         {
           id: "characters-all-scene-count",
-          databaseId: CHAR_DB,
+          owner: CHAR_DB,
           columnKey: "all_scene_count",
           columnName: "All Scene count",
           resolverId: "characters.allSceneCount",
-          docsPath: "docs/dynamic-fields/characters.all-scene-count.md",
-          params: {
+                    params: {
             characters_scene_composite: "000000000000000000000000B9",
             scenes_edge_label: "SCENES",
-            scenes_database_id: SCENES_DB,
+            scenes_table_id: SCENES_DB,
           },
         },
       ],
       [
         {
           id: "characters-scene-count-by-product",
-          databaseId: CHAR_DB,
+          owner: CHAR_DB,
           columnKeyPattern: "scene_count__{productId}",
           columnNamePattern: "{productTitle} Scene count",
           columnType: "number",
           resolverId: "characters.sceneCountByProduct",
-          docsPath: "docs/dynamic-fields/characters.scene-count-by-product.md",
-          params: productionParams,
+                    params: productionParams,
         },
       ],
     );
@@ -432,11 +424,11 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
   });
 
   test("scopes includes to scenes only and emits product dimensions only", () => {
-    const ctx = { db: fixture.ctx.cache, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const ctx = { db: fixture.ctx.cache, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
     const allScenePrefetch = buildAllSceneCountPrefetch(ctx, {
       characters_scene_composite: "000000000000000000000000B9",
       scenes_edge_label: "SCENES",
-      scenes_database_id: SCENES_DB,
+      scenes_table_id: SCENES_DB,
     });
     expect(resolveAllSceneCount(ctx, {}, character, allScenePrefetch)).toBe("2");
 
@@ -472,12 +464,12 @@ describe("dynamic-fields character includes with product edges (Marloth regressi
 
   afterAll(() => {
     delete process.env.TOME_CONTENT_PATH;
-    invalidateDynamicFieldsCache();
+    invalidateDynamicPropertiesCache();
     destroyTestContentFixture(fixture);
   });
 });
 
-describe("dynamic-fields character composite relationships", () => {
+describe("dynamic-properties character composite relationships", () => {
   const fixture = createTestContentFixture("tome-df-char-composite-");
   const CHAR_DB = "00000000000000000000000035";
   const TWOLD = "0000000000000000000000002V";
@@ -496,17 +488,16 @@ describe("dynamic-fields character composite relationships", () => {
 
   beforeAll(() => {
     process.env.TOME_CONTENT_PATH = fixture.ctx.store.contentDir;
-    seedTestDynamicFields(
+    seedTestDynamicProperties(
       fixture,
       [
         {
           id: "characters-all-scene-count",
-          databaseId: CHAR_DB,
+          owner: CHAR_DB,
           columnKey: "all_scene_count",
           columnName: "All Scene count",
           resolverId: "characters.allSceneCount",
-          docsPath: "docs/dynamic-fields/characters.all-scene-count.md",
-          params: {
+                    params: {
             characters_scene_composite: "000000000000000000000000B9",
             scenes_edge_label: "SCENES",
           },
@@ -515,13 +506,12 @@ describe("dynamic-fields character composite relationships", () => {
       [
         {
           id: "characters-scene-count-by-product",
-          databaseId: CHAR_DB,
+          owner: CHAR_DB,
           columnKeyPattern: "scene_count__{productId}",
           columnNamePattern: "{productTitle} Scene count",
           columnType: "number",
           resolverId: "characters.sceneCountByProduct",
-          docsPath: "docs/dynamic-fields/characters.scene-count-by-product.md",
-          params: productionParams,
+                    params: productionParams,
         },
       ],
     );
@@ -546,7 +536,7 @@ describe("dynamic-fields character composite relationships", () => {
   });
 
   test("all scene count and per-product columns via composite edges", () => {
-    const ctx = { db: fixture.ctx.cache, databaseId: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const ctx = { db: fixture.ctx.cache, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
     const allScenePrefetch = buildAllSceneCountPrefetch(ctx, {
       characters_scene_composite: "000000000000000000000000B9",
       scenes_edge_label: "SCENES",
@@ -573,7 +563,7 @@ describe("dynamic-fields character composite relationships", () => {
 
   afterAll(() => {
     delete process.env.TOME_CONTENT_PATH;
-    invalidateDynamicFieldsCache();
+    invalidateDynamicPropertiesCache();
     destroyTestContentFixture(fixture);
   });
 });

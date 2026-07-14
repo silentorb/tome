@@ -4,9 +4,9 @@ import {
   ContentStore,
   bodyFromNode,
   columnSetRecordFromEntry,
-  emptyDynamicFieldsFile,
-  fieldRecordFromEntry,
-  parseDynamicFieldsFile,
+  emptyDynamicPropertiesFile,
+  propertyRecordFromEntry,
+  parseDynamicPropertiesFile,
   invalidateSchemaCache,
   loadSchemaFromContent,
   invalidateViewsCache,
@@ -20,7 +20,7 @@ import {
   setTraitProjectionTypes,
   RELATIONSHIPS_SYNC_MARKER,
   ASSOCIATIONS_FILENAME,
-  DYNAMIC_FIELDS_FILENAME,
+  DYNAMIC_PROPERTIES_FILENAME,
   SCHEMA_FILENAME,
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
@@ -28,14 +28,14 @@ import {
   ORDERED_COLLECTIONS_FILENAME,
   EXTENSIONS_FILENAME,
   RELATIONSHIP_FILE_PATTERN,
-  dynamicFieldsFilePath,
+  dynamicPropertiesFilePath,
   NODE_FILE_PATTERN,
   contentModelDir,
   contentRelationshipsDir,
   contentRelationshipsArchiveDir,
   nodeFilePath,
   type DynamicColumnSetRecord,
-  type DynamicFieldRecord,
+  type DynamicPropertyRecord,
 } from "tome-flatfile";
 import { GraphDatabase, type TomeQueryCache } from "tome-sqlite";
 import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum-config-fingerprint";
@@ -57,19 +57,19 @@ export function subscribeStoreToCacheSync(
 
 let cachedDynamicConfig: {
   mtimeMs: number;
-  fieldsByDatabase: Map<string, DynamicFieldRecord[]>;
-  columnSetsByDatabase: Map<string, DynamicColumnSetRecord[]>;
+  propertiesByOwner: Map<string, DynamicPropertyRecord[]>;
+  columnSetsByOwner: Map<string, DynamicColumnSetRecord[]>;
 } | null = null;
 
-export function invalidateDynamicFieldsCache(): void {
+export function invalidateDynamicPropertiesCache(): void {
   cachedDynamicConfig = null;
 }
 
 function loadDynamicConfigFromContent(contentDir: string): {
-  fieldsByDatabase: Map<string, DynamicFieldRecord[]>;
-  columnSetsByDatabase: Map<string, DynamicColumnSetRecord[]>;
+  propertiesByOwner: Map<string, DynamicPropertyRecord[]>;
+  columnSetsByOwner: Map<string, DynamicColumnSetRecord[]>;
 } {
-  const path = dynamicFieldsFilePath(contentDir);
+  const path = dynamicPropertiesFilePath(contentDir);
   let mtimeMs = 0;
   if (existsSync(path)) {
     mtimeMs = statSync(path).mtimeMs;
@@ -77,57 +77,55 @@ function loadDynamicConfigFromContent(contentDir: string): {
 
   if (cachedDynamicConfig && cachedDynamicConfig.mtimeMs === mtimeMs) {
     return {
-      fieldsByDatabase: cachedDynamicConfig.fieldsByDatabase,
-      columnSetsByDatabase: cachedDynamicConfig.columnSetsByDatabase,
+      propertiesByOwner: cachedDynamicConfig.propertiesByOwner,
+      columnSetsByOwner: cachedDynamicConfig.columnSetsByOwner,
     };
   }
 
   let file;
   try {
-    file = parseDynamicFieldsFile(readFileSync(path, "utf-8"));
+    file = parseDynamicPropertiesFile(readFileSync(path, "utf-8"));
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      file = emptyDynamicFieldsFile();
+      file = emptyDynamicPropertiesFile();
     } else {
       throw err;
     }
   }
 
-  const fieldsByDatabase = new Map<string, DynamicFieldRecord[]>();
-  const columnSetsByDatabase = new Map<string, DynamicColumnSetRecord[]>();
+  const propertiesByOwner = new Map<string, DynamicPropertyRecord[]>();
+  const columnSetsByOwner = new Map<string, DynamicColumnSetRecord[]>();
 
-  for (const entry of file.fields) {
-    if (!entry.enabled) continue;
-    const record = fieldRecordFromEntry(entry);
-    const list = fieldsByDatabase.get(record.databaseId) ?? [];
+  for (const entry of file.properties) {
+    const record = propertyRecordFromEntry(entry);
+    const list = propertiesByOwner.get(record.owner) ?? [];
     list.push(record);
-    fieldsByDatabase.set(record.databaseId, list);
+    propertiesByOwner.set(record.owner, list);
   }
 
   for (const entry of file.columnSets) {
-    if (!entry.enabled) continue;
     const record = columnSetRecordFromEntry(entry);
-    const list = columnSetsByDatabase.get(record.databaseId) ?? [];
+    const list = columnSetsByOwner.get(record.owner) ?? [];
     list.push(record);
-    columnSetsByDatabase.set(record.databaseId, list);
+    columnSetsByOwner.set(record.owner, list);
   }
 
-  cachedDynamicConfig = { mtimeMs, fieldsByDatabase, columnSetsByDatabase };
-  return { fieldsByDatabase, columnSetsByDatabase };
+  cachedDynamicConfig = { mtimeMs, propertiesByOwner, columnSetsByOwner };
+  return { propertiesByOwner, columnSetsByOwner };
 }
 
-export function loadDynamicFieldsFromContent(
+export function loadDynamicPropertiesFromContent(
   contentDir: string,
-  databaseId: string,
-): DynamicFieldRecord[] {
-  return loadDynamicConfigFromContent(contentDir).fieldsByDatabase.get(databaseId) ?? [];
+  owner: string,
+): DynamicPropertyRecord[] {
+  return loadDynamicConfigFromContent(contentDir).propertiesByOwner.get(owner) ?? [];
 }
 
 export function loadDynamicColumnSetsFromContent(
   contentDir: string,
-  databaseId: string,
+  owner: string,
 ): DynamicColumnSetRecord[] {
-  return loadDynamicConfigFromContent(contentDir).columnSetsByDatabase.get(databaseId) ?? [];
+  return loadDynamicConfigFromContent(contentDir).columnSetsByOwner.get(owner) ?? [];
 }
 
 export class CacheSync {
@@ -169,7 +167,7 @@ export class CacheSync {
     scanRelationshipTree(contentRelationshipsDir(this.contentDir));
     scanRelationshipTree(contentRelationshipsArchiveDir(this.contentDir));
     scanFile(modelDir, ASSOCIATIONS_FILENAME);
-    scanFile(modelDir, DYNAMIC_FIELDS_FILENAME);
+    scanFile(modelDir, DYNAMIC_PROPERTIES_FILENAME);
     scanFile(modelDir, SCHEMA_FILENAME);
     scanFile(modelDir, VIEWS_FILENAME);
     scanFile(modelDir, WORKSPACE_FILENAME);
@@ -245,7 +243,7 @@ export class CacheSync {
 
       this.expandRelationshipsToCache();
 
-      invalidateDynamicFieldsCache();
+      invalidateDynamicPropertiesCache();
       this.updateCacheMarkers();
     } finally {
       this.applying = false;
@@ -316,8 +314,8 @@ export class CacheSync {
       return;
     }
 
-    if (relativeName === DYNAMIC_FIELDS_FILENAME) {
-      invalidateDynamicFieldsCache();
+    if (relativeName === DYNAMIC_PROPERTIES_FILENAME) {
+      invalidateDynamicPropertiesCache();
       this.updateCacheMarkers();
       return;
     }

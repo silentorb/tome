@@ -2,23 +2,23 @@ import { existsSync } from "node:fs";
 import type { GraphDatabase } from "tome-sqlite";
 import {
   loadDynamicColumnSetsFromContent,
-  loadDynamicFieldsFromContent,
+  loadDynamicPropertiesFromContent,
 } from "../content/sync";
 import {
-  dynamicFieldsFilePath,
+  dynamicPropertiesFilePath,
   readEnv,
   resolveContentPath,
   type DynamicColumnSetRecord,
-  type DynamicFieldRecord,
+  type DynamicPropertyRecord,
   type SeedDynamicColumnSetInput,
-  type SeedDynamicFieldInput,
+  type SeedDynamicPropertyInput,
 } from "tome-flatfile";
 
 export type {
   DynamicColumnSetRecord,
-  DynamicFieldRecord,
+  DynamicPropertyRecord,
   SeedDynamicColumnSetInput,
-  SeedDynamicFieldInput,
+  SeedDynamicPropertyInput,
 } from "tome-flatfile";
 
 function parseParams(rows: { param_key: string; param_value: string }[]): Record<string, unknown> {
@@ -33,61 +33,57 @@ function parseParams(rows: { param_key: string; param_value: string }[]): Record
   return out;
 }
 
-function contentDirForDynamicFields(explicit?: string): string | null {
+function contentDirForDynamicProperties(explicit?: string): string | null {
   const dir = explicit ?? readEnv("TOME_CONTENT_PATH") ?? resolveContentPath();
-  if (existsSync(dynamicFieldsFilePath(dir))) return dir;
+  if (existsSync(dynamicPropertiesFilePath(dir))) return dir;
   return null;
 }
 
-export function loadDynamicFields(
+export function loadDynamicProperties(
   db: GraphDatabase,
-  databaseId: string,
+  owner: string,
   contentDir?: string,
-): DynamicFieldRecord[] {
-  const fromContent = contentDirForDynamicFields(contentDir);
+): DynamicPropertyRecord[] {
+  const fromContent = contentDirForDynamicProperties(contentDir);
   if (fromContent) {
-    return loadDynamicFieldsFromContent(fromContent, databaseId);
+    return loadDynamicPropertiesFromContent(fromContent, owner);
   }
 
   try {
-    const fields = db.queryAll<{
+    const properties = db.queryAll<{
       id: string;
       database_id: string;
       column_key: string;
       column_name: string;
       column_type: string;
       resolver_id: string;
-      docs_path: string;
-      enabled: number;
     }>(
-      `SELECT id, database_id, column_key, column_name, column_type, resolver_id, docs_path, enabled
+      `SELECT id, database_id, column_key, column_name, column_type, resolver_id
      FROM dynamic_fields
      WHERE database_id = ? AND enabled = 1`,
-      databaseId,
+      owner,
     );
 
-    return fields.map((field) => {
+    return properties.map((property) => {
       const params = parseParams(
         db.queryAll<{ param_key: string; param_value: string }>(
           "SELECT param_key, param_value FROM dynamic_field_params WHERE field_id = ?",
-          field.id,
+          property.id,
         ),
       );
       const viewNames = db
         .queryAll<{ view_name: string }>(
           "SELECT view_name FROM dynamic_field_view_bindings WHERE field_id = ?",
-          field.id,
+          property.id,
         )
         .map((r) => r.view_name);
       return {
-        id: field.id,
-        databaseId: field.database_id,
-        columnKey: field.column_key,
-        columnName: field.column_name,
-        columnType: field.column_type,
-        resolverId: field.resolver_id,
-        docsPath: field.docs_path,
-        enabled: field.enabled === 1,
+        id: property.id,
+        owner: property.database_id,
+        columnKey: property.column_key,
+        columnName: property.column_name,
+        columnType: property.column_type,
+        resolverId: property.resolver_id,
         params,
         viewNames,
       };
@@ -99,12 +95,12 @@ export function loadDynamicFields(
 
 export function loadDynamicColumnSets(
   db: GraphDatabase,
-  databaseId: string,
+  owner: string,
   contentDir?: string,
 ): DynamicColumnSetRecord[] {
-  const fromContent = contentDirForDynamicFields(contentDir);
+  const fromContent = contentDirForDynamicProperties(contentDir);
   if (fromContent) {
-    return loadDynamicColumnSetsFromContent(fromContent, databaseId);
+    return loadDynamicColumnSetsFromContent(fromContent, owner);
   }
 
   try {
@@ -115,13 +111,11 @@ export function loadDynamicColumnSets(
       column_name_pattern: string;
       column_type: string;
       resolver_id: string;
-      docs_path: string;
-      enabled: number;
     }>(
-      `SELECT id, database_id, column_key_pattern, column_name_pattern, column_type, resolver_id, docs_path, enabled
+      `SELECT id, database_id, column_key_pattern, column_name_pattern, column_type, resolver_id
      FROM dynamic_column_sets
      WHERE database_id = ? AND enabled = 1`,
-      databaseId,
+      owner,
     );
 
     return sets.map((set) => {
@@ -142,13 +136,11 @@ export function loadDynamicColumnSets(
         : [];
       return {
         id: set.id,
-        databaseId: set.database_id,
+        owner: set.database_id,
         columnKeyPattern: set.column_key_pattern,
         columnNamePattern: set.column_name_pattern,
         columnType: set.column_type,
         resolverId: set.resolver_id,
-        docsPath: set.docs_path,
-        enabled: set.enabled === 1,
         params,
         viewNames,
         hideLegacyKeys,
@@ -159,25 +151,24 @@ export function loadDynamicColumnSets(
   }
 }
 
-export function seedDynamicField(db: GraphDatabase, input: SeedDynamicFieldInput): void {
+export function seedDynamicProperty(db: GraphDatabase, input: SeedDynamicPropertyInput): void {
   db.runExec(
     `INSERT INTO dynamic_fields (id, database_id, column_key, column_name, column_type, resolver_id, docs_path, enabled)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+     VALUES (?, ?, ?, ?, ?, ?, '', 1)
      ON CONFLICT(id) DO UPDATE SET
        database_id = excluded.database_id,
        column_key = excluded.column_key,
        column_name = excluded.column_name,
        column_type = excluded.column_type,
        resolver_id = excluded.resolver_id,
-       docs_path = excluded.docs_path,
+       docs_path = '',
        enabled = 1`,
     input.id,
-    input.databaseId,
+    input.owner,
     input.columnKey,
     input.columnName,
     input.columnType ?? "number",
     input.resolverId,
-    input.docsPath,
   );
   db.runExec("DELETE FROM dynamic_field_params WHERE field_id = ?", input.id);
   for (const [key, value] of Object.entries(input.params ?? {})) {
@@ -201,22 +192,21 @@ export function seedDynamicField(db: GraphDatabase, input: SeedDynamicFieldInput
 export function seedDynamicColumnSet(db: GraphDatabase, input: SeedDynamicColumnSetInput): void {
   db.runExec(
     `INSERT INTO dynamic_column_sets (id, database_id, column_key_pattern, column_name_pattern, column_type, resolver_id, docs_path, enabled)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 1)
+     VALUES (?, ?, ?, ?, ?, ?, '', 1)
      ON CONFLICT(id) DO UPDATE SET
        database_id = excluded.database_id,
        column_key_pattern = excluded.column_key_pattern,
        column_name_pattern = excluded.column_name_pattern,
        column_type = excluded.column_type,
        resolver_id = excluded.resolver_id,
-       docs_path = excluded.docs_path,
+       docs_path = '',
        enabled = 1`,
     input.id,
-    input.databaseId,
+    input.owner,
     input.columnKeyPattern,
     input.columnNamePattern,
     input.columnType ?? "number",
     input.resolverId,
-    input.docsPath,
   );
   db.runExec("DELETE FROM dynamic_column_set_params WHERE set_id = ?", input.id);
   for (const [key, value] of Object.entries(input.params ?? {})) {

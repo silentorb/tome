@@ -43,11 +43,11 @@ import {
 } from "../association-traits";
 import { collectSetNodeIds } from "../set-nodes";
 import {
-  type DynamicFieldsFile,
-  emptyDynamicFieldsFile,
-  parseDynamicFieldsFile,
-  serializeDynamicFieldsFile,
-} from "./dynamic-fields-file";
+  type DynamicPropertiesFile,
+  emptyDynamicPropertiesFile,
+  parseDynamicPropertiesFile,
+  serializeDynamicPropertiesFile,
+} from "./dynamic-properties-file";
 import {
   type ViewsFile,
   emptyViewsFile,
@@ -69,7 +69,7 @@ import {
 import { bodyFromNode, nodeFromFile, serializeNodeFile } from "./node-file";
 import {
   ASSOCIATIONS_FILENAME,
-  DYNAMIC_FIELDS_FILENAME,
+  DYNAMIC_PROPERTIES_FILENAME,
   SCHEMA_FILENAME,
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
@@ -86,7 +86,7 @@ import {
   contentRelationshipsArchiveDir,
   contentRelationshipsDir,
   associationsFilePath,
-  dynamicFieldsFilePath,
+  dynamicPropertiesFilePath,
   viewsFilePath,
   tableSchemasFilePath,
   workspaceFilePath,
@@ -193,7 +193,7 @@ function storeChangeKindForFilename(filename: string): StoreChangeKind {
   if (RELATIONSHIP_FILE_PATTERN.test(base)) return "relationships";
   if (base === ASSOCIATIONS_FILENAME) return "associations";
   if (base === SCHEMA_FILENAME) return "schema";
-  if (base === DYNAMIC_FIELDS_FILENAME) return "dynamic-fields";
+  if (base === DYNAMIC_PROPERTIES_FILENAME) return "dynamic-properties";
   if (base === VIEWS_FILENAME) return "views";
   if (base === TABLE_SCHEMAS_FILENAME) return "table-schemas";
   if (base === WORKSPACE_FILENAME) return "workspace";
@@ -359,7 +359,7 @@ export class ContentStore implements TomeDataStore {
     return (
       base === ASSOCIATIONS_FILENAME ||
       base === SCHEMA_FILENAME ||
-      base === DYNAMIC_FIELDS_FILENAME ||
+      base === DYNAMIC_PROPERTIES_FILENAME ||
       base === VIEWS_FILENAME ||
       base === TABLE_SCHEMAS_FILENAME ||
       base === WORKSPACE_FILENAME ||
@@ -785,20 +785,20 @@ export class ContentStore implements TomeDataStore {
     }
   }
 
-  readDynamicFieldsFile(): DynamicFieldsFile {
-    const path = dynamicFieldsFilePath(this.contentDir);
+  readDynamicPropertiesFile(): DynamicPropertiesFile {
+    const path = dynamicPropertiesFilePath(this.contentDir);
     try {
-      return parseDynamicFieldsFile(readFileSync(path, "utf-8"));
+      return parseDynamicPropertiesFile(readFileSync(path, "utf-8"));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        return emptyDynamicFieldsFile();
+        return emptyDynamicPropertiesFile();
       }
       throw err;
     }
   }
 
-  writeDynamicFieldsFile(file: DynamicFieldsFile): void {
-    atomicWrite(dynamicFieldsFilePath(this.contentDir), serializeDynamicFieldsFile(file));
+  writeDynamicPropertiesFile(file: DynamicPropertiesFile): void {
+    atomicWrite(dynamicPropertiesFilePath(this.contentDir), serializeDynamicPropertiesFile(file));
   }
 
   readViewsFile(): ViewsFile {

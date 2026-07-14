@@ -7,11 +7,11 @@ import {
   serializeRelationshipEntry,
 } from "../../src/content/relationships-file";
 import {
-  emptyDynamicFieldsFile,
-  fieldRecordFromEntry,
-  parseDynamicFieldsFile,
-  serializeDynamicFieldsFile,
-} from "../../src/content/dynamic-fields-file";
+  emptyDynamicPropertiesFile,
+  propertyRecordFromEntry,
+  parseDynamicPropertiesFile,
+  serializeDynamicPropertiesFile,
+} from "../../src/content/dynamic-properties-file";
 import { bodyFromNode, nodeFromFile, parseNodeFile, serializeNodeFile } from "../../src/content/node-file";
 
 describe("node-file", () => {
@@ -76,35 +76,36 @@ describe("relationship-entry file", () => {
   });
 });
 
-describe("dynamic-fields-file", () => {
+describe("dynamic-properties-file", () => {
   test("round-trips empty config", () => {
-    const raw = serializeDynamicFieldsFile(emptyDynamicFieldsFile());
-    const parsed = parseDynamicFieldsFile(raw);
-    expect(parsed.fields).toEqual([]);
+    const raw = serializeDynamicPropertiesFile(emptyDynamicPropertiesFile());
+    const parsed = parseDynamicPropertiesFile(raw);
+    expect(parsed.properties).toEqual([]);
     expect(parsed.columnSets).toEqual([]);
   });
 
-  test("maps field entry to record", () => {
+  test("maps property entry to record", () => {
     const file = {
       version: 1,
-      fields: [
+      properties: [
         {
-          id: "test-field",
-          databaseId: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
+          id: "01KXF8TE6YH12XF803JS5W4677",
+          owner: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
           columnKey: "count",
           columnName: "Count",
           columnType: "number",
           resolverId: "test.resolver",
-          docsPath: "docs/dynamic-fields/test.md",
-          enabled: true,
           params: { foo: "bar" },
           viewNames: ["All"],
         },
       ],
       columnSets: [],
     };
-    const record = fieldRecordFromEntry(parseDynamicFieldsFile(serializeDynamicFieldsFile(file)).fields[0]!);
+    const record = propertyRecordFromEntry(
+      parseDynamicPropertiesFile(serializeDynamicPropertiesFile(file)).properties[0]!,
+    );
     expect(record.resolverId).toBe("test.resolver");
     expect(record.params.foo).toBe("bar");
+    expect(record.owner).toBe("DDDDDDDDDDDDDDDDDDDDDDDDDD");
   });
 });

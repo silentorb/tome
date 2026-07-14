@@ -2,9 +2,9 @@
 
 ## Summary
 
-Dimension-expanded columns: one scene-count column per Product that appears on at least one scene linked to any character in the Characters database.
+Dimension-expanded columns: one scene-count column per Product that appears on at least one scene linked to any character in the Characters type table.
 
-## Database
+## Owner
 
 - **Database id:** `f984a934ad644f8480b0f8f51449569f` (Characters)
 - **Column key pattern:** `scene_count__{productId}`
@@ -15,7 +15,7 @@ Dimension-expanded columns: one scene-count column per Product that appears on a
 
 ### Column discovery (view-wide)
 
-- **Must** consider all character rows in the Characters database (all `IS_A` incoming relationships to the database).
+- **Must** consider all character rows in the Characters type table (all `IS_A` incoming relationships to the database).
 - For each character, collect scenes via outgoing `SCENES` relationships.
 - For each scene, read its outgoing `PRODUCT` relationship target (product page id).
 - **Must** emit one column for each distinct product id that appears on at least one scene linked to **any** character.

@@ -2,7 +2,7 @@ import type { GraphDatabase } from "tome-sqlite";
 import { listSetMemberRowConnections } from "./set-membership";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
-import { applyDynamicFields } from "./dynamic-fields";
+import { applyDynamicProperties } from "./dynamic-properties";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import { resolveContentPath } from "tome-flatfile";
@@ -127,7 +127,7 @@ function buildCustomViewDetail(
     });
   }
 
-  const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicFields(
+  const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
     db,
     databaseId,
     tabName,

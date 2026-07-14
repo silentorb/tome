@@ -1,14 +1,14 @@
-# Dynamic field specifications
+# Dynamic property specifications
 
 Authoritative logic for **dynamic table view columns** — computed at read time from the property graph, not stored on `IS_A` relationship properties.
 
-When adding or changing a dynamic field:
+When adding or changing a dynamic property:
 
 1. Write or update the spec file here first (requirements trump implementation).
-2. Implement the resolver in `packages/tome-db/src/dynamic-fields/resolvers/`.
-3. Seed overlay configuration via `scripts/seed-dynamic-fields.ts`.
+2. Implement the resolver in `packages/tome-db/src/dynamic-properties/resolvers/`.
+3. Seed overlay configuration via `scripts/seed-dynamic-properties.ts`.
 
-See [dynamic-table-fields.md](../features/dynamic-table-fields.md) for the system feature spec.
+See [dynamic-properties.md](../features/dynamic-properties.md) for the system feature spec.
 
 ## Registered fields
 
@@ -28,7 +28,7 @@ Copy when authoring a new field:
 
 ## Summary
 
-## Database
+## Owner
 
 - **Type table node id:**
 - **Column key:**

@@ -4,7 +4,7 @@
 
 Count of all scenes linked to a character, regardless of product scope.
 
-## Database
+## Owner
 
 - **Database id:** `f984a934ad644f8480b0f8f51449569f` (Characters)
 - **Column key:** `all_scene_count`
@@ -13,7 +13,7 @@ Count of all scenes linked to a character, regardless of product scope.
 
 ## Requirement
 
-For each character row (node with `IS_A` membership in the Characters database):
+For each character row (node with `IS_A` membership in the Characters type table):
 
 - **Must** count outgoing relationships labeled `SCENES` from the character page to scene pages.
 - **Must** return the count as a decimal string (e.g. `"113"`).
@@ -54,4 +54,4 @@ James has 113 outgoing `SCENES` relationships in the current graph.
 ## Verification
 
 - Unit test: character with N `SCENES` relationships returns `"N"`.
-- Integration: Characters database view includes `all_scene_count`; James row equals 113.
+- Integration: Characters type table view includes `all_scene_count`; James row equals 113.

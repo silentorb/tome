@@ -1,7 +1,6 @@
-import type { DatabaseColumnDef } from "../database-view";
 import type { GraphDatabase } from "tome-sqlite";
 import type { EvalRow } from "../row-sort";
-import { applyDynamicFields as enrichEvalRows, type DynamicEnrichmentResult } from "./enrich";
+import { applyDynamicProperties as enrichEvalRows, type DynamicEnrichmentResult } from "./enrich";
 import {
   createResolverRegistry,
   registerColumnSetResolver,
@@ -50,22 +49,22 @@ function registerStarterResolvers(registry: ResolverRegistry): void {
   );
 }
 
-export function applyDynamicFields(
+export function applyDynamicProperties(
   db: GraphDatabase,
-  databaseId: string,
+  owner: string,
   viewName: string,
   evalRows: EvalRow[],
   registry: ResolverRegistry = getDefaultResolverRegistry(),
-  options?: import("./enrich").ApplyDynamicFieldsOptions,
+  options?: import("./enrich").ApplyDynamicPropertiesOptions,
 ): DynamicEnrichmentResult {
-  return enrichEvalRows(db, databaseId, viewName, evalRows, registry, options);
+  return enrichEvalRows(db, owner, viewName, evalRows, registry, options);
 }
 
 export {
   loadDynamicColumnSets,
-  loadDynamicFields,
+  loadDynamicProperties,
   seedDynamicColumnSet,
-  seedDynamicField,
+  seedDynamicProperty,
 } from "./overlay";
-export type { DynamicColumnSetRecord, DynamicFieldRecord } from "./overlay";
-export type { DynamicEnrichmentResult, ApplyDynamicFieldsOptions } from "./enrich";
+export type { DynamicColumnSetRecord, DynamicPropertyRecord } from "./overlay";
+export type { DynamicEnrichmentResult, ApplyDynamicPropertiesOptions } from "./enrich";

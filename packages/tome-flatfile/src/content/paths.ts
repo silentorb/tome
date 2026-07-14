@@ -17,7 +17,7 @@ export const RELATIONSHIPS_FILENAME = "relationships.json";
 export const ASSOCIATIONS_FILENAME = "associations.json";
 /** @deprecated Use RELATIONSHIPS_FILENAME. Legacy content file name (pre–relationship terminology). */
 export const CONNECTIONS_FILENAME = "connections.json";
-export const DYNAMIC_FIELDS_FILENAME = "dynamic-fields.json";
+export const DYNAMIC_PROPERTIES_FILENAME = "dynamic-properties.json";
 export const SCHEMA_FILENAME = "schema.json";
 export const VIEWS_FILENAME = "views.json";
 export const TABLE_SCHEMAS_FILENAME = "table-schemas.json";
@@ -81,7 +81,7 @@ export function contentRelationshipsArchiveDir(contentRoot: string): string {
   return resolve(contentArchiveDir(contentRoot), CONTENT_RELATIONSHIPS_SUBDIR);
 }
 
-/** Workspace model config JSON (schema, views, types registry, dynamic fields). */
+/** Workspace model config JSON (schema, views, types registry, dynamic properties). */
 export function contentModelDir(contentRoot: string): string {
   return resolve(contentRoot, CONTENT_MODEL_SUBDIR);
 }
@@ -131,8 +131,8 @@ export function legacyConnectionsFilePath(contentRoot: string): string {
   return resolve(contentDataDir(contentRoot), CONNECTIONS_FILENAME);
 }
 
-export function dynamicFieldsFilePath(contentRoot: string): string {
-  return resolve(contentModelDir(contentRoot), DYNAMIC_FIELDS_FILENAME);
+export function dynamicPropertiesFilePath(contentRoot: string): string {
+  return resolve(contentModelDir(contentRoot), DYNAMIC_PROPERTIES_FILENAME);
 }
 
 export function schemaFilePath(contentRoot: string): string {

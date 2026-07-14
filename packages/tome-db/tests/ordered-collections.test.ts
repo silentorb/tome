@@ -6,7 +6,7 @@ import {
   UNASSIGNED_GROUP_ID,
 } from "../src/ordered-collections";
 import { getNodePageDetail } from "../src/node-page-sections";
-import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestRelationships, seedTestNode, seedTestViews, seedTestDynamicFields, seedTestTableSchema, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestRelationships, seedTestNode, seedTestViews, seedTestDynamicProperties, seedTestTableSchema, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
 import { VIEWS_FILE_VERSION, projectionTypeForEndpoint } from "tome-flatfile";
 import { firstRelatedNodeId } from "../src/relationship-traverse";
 
@@ -193,7 +193,7 @@ describe("ordered-collections", () => {
       },
     ],
   });
-  seedTestDynamicFields(fixture, []);
+  seedTestDynamicProperties(fixture, []);
 
   const db = () => fixture.ctx.cache;
   const contentDir = () => fixture.ctx.store.contentDir;

@@ -2,8 +2,8 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { contentModelDir, dynamicFieldsFilePath, associationsFilePath, tableSchemasFilePath, projectionTypeForEndpoint } from "tome-flatfile";
-import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "tome-flatfile";
+import { contentModelDir, dynamicPropertiesFilePath, associationsFilePath, tableSchemasFilePath, projectionTypeForEndpoint } from "tome-flatfile";
+import { emptyDynamicPropertiesFile, serializeDynamicPropertiesFile } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
 import { GraphDatabase } from "tome-sqlite";
@@ -37,8 +37,8 @@ describe("database-view-relations", () => {
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
   writeFileSync(
-    dynamicFieldsFilePath(contentDir),
-    serializeDynamicFieldsFile(emptyDynamicFieldsFile()),
+    dynamicPropertiesFilePath(contentDir),
+    serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
   );
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);

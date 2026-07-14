@@ -2,7 +2,7 @@ import type { GraphDatabase, Relationship, Properties } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
 import { relationshipId } from "tome-sqlite";
-import { applyDynamicFields } from "./dynamic-fields";
+import { applyDynamicProperties } from "./dynamic-properties";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import type { EvalRow } from "./row-sort";
@@ -434,7 +434,7 @@ export function getOrderedCollectionView(
     createdAt: null,
     modifiedAt: null,
   }));
-  const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicFields(
+  const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
     db,
     config.typeDatabaseId,
     "default",

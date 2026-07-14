@@ -1,4 +1,4 @@
-import { loadDynamicFields } from "./dynamic-fields";
+import { loadDynamicProperties } from "./dynamic-properties";
 import {
   ROW_META_KEYS,
   stripScalarFromSetEdges,
@@ -51,8 +51,8 @@ export function deleteDatabaseColumn(
     return "database_not_found";
   }
 
-  const dynamicFields = loadDynamicFields(ctx.cache, databaseId, ctx.store.contentDir);
-  if (dynamicFields.some((field) => field.enabled && field.columnKey === normalizedKey)) {
+  const dynamicProperties = loadDynamicProperties(ctx.cache, databaseId, ctx.store.contentDir);
+  if (dynamicProperties.some((property) => property.columnKey === normalizedKey)) {
     return "column_not_deletable";
   }
 

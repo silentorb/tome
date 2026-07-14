@@ -1,9 +1,9 @@
 import type { DatabaseColumnDef } from "../database-view";
 import type { GraphDatabase } from "tome-sqlite";
 import type { EvalRow } from "../row-sort";
-import { loadDynamicColumnSets, loadDynamicFields } from "./overlay";
+import { loadDynamicColumnSets, loadDynamicProperties } from "./overlay";
 import {
-  isFieldVisibleForView,
+  isPropertyVisibleForView,
   materializeColumnKey,
   materializeColumnName,
   type MaterializedColumnSetColumn,
@@ -22,25 +22,25 @@ export interface DynamicEnrichmentResult {
   hiddenColumnKeys: Set<string>;
 }
 
-export interface ApplyDynamicFieldsOptions {
-  /** When true, include all overlay-bound fields regardless of view-tab bindings. */
+export interface ApplyDynamicPropertiesOptions {
+  /** When true, include all overlay-bound properties regardless of view-tab bindings. */
   allViews?: boolean;
-  /** Content directory for dynamic-fields.json (defaults to TOME_CONTENT_PATH / repo content/). */
+  /** Content directory for dynamic-properties.json (defaults to TOME_CONTENT_PATH / repo content/). */
   contentDir?: string;
 }
 
-function fieldVisible(
+function propertyVisible(
   viewNames: string[],
   viewName: string,
-  options?: ApplyDynamicFieldsOptions,
+  options?: ApplyDynamicPropertiesOptions,
 ): boolean {
   if (options?.allViews) return true;
-  return isFieldVisibleForView(viewNames, viewName);
+  return isPropertyVisibleForView(viewNames, viewName);
 }
 
 function buildFixedPrefetch(
   resolverId: string,
-  ctx: { db: GraphDatabase; databaseId: string; viewName: string; rowNodeIds: string[] },
+  ctx: { db: GraphDatabase; owner: string; viewName: string; rowNodeIds: string[] },
   params: Record<string, unknown>,
 ): unknown {
   switch (resolverId) {
@@ -55,29 +55,29 @@ function buildFixedPrefetch(
   }
 }
 
-export function applyDynamicFields(
+export function applyDynamicProperties(
   db: GraphDatabase,
-  databaseId: string,
+  owner: string,
   viewName: string,
   evalRows: EvalRow[],
   registry: ResolverRegistry,
-  options?: ApplyDynamicFieldsOptions,
+  options?: ApplyDynamicPropertiesOptions,
 ): DynamicEnrichmentResult {
-  const fields = loadDynamicFields(db, databaseId, options?.contentDir);
-  const columnSets = loadDynamicColumnSets(db, databaseId, options?.contentDir);
+  const properties = loadDynamicProperties(db, owner, options?.contentDir);
+  const columnSets = loadDynamicColumnSets(db, owner, options?.contentDir);
 
   const dynamicColumnDefs: DatabaseColumnDef[] = [];
   const hiddenColumnKeys = new Set<string>();
   const materializedSetColumns: MaterializedColumnSetColumn[] = [];
 
   const rowNodeIds = evalRows.map((r) => r.nodeId);
-  const ctx = { db, databaseId, viewName, rowNodeIds };
+  const ctx = { db, owner, viewName, rowNodeIds };
 
   const setPrefetches = new Map<string, unknown>();
   const fixedPrefetches = new Map<string, unknown>();
 
   for (const set of columnSets) {
-    if (!fieldVisible(set.viewNames, viewName, options)) continue;
+    if (!propertyVisible(set.viewNames, viewName, options)) continue;
     for (const key of set.hideLegacyKeys) hiddenColumnKeys.add(key);
 
     const resolver = registry.columnSets.get(set.resolverId);
@@ -103,18 +103,18 @@ export function applyDynamicFields(
     }
   }
 
-  for (const field of fields) {
-    if (!fieldVisible(field.viewNames, viewName, options)) continue;
-    if (!fixedPrefetches.has(field.resolverId)) {
+  for (const property of properties) {
+    if (!propertyVisible(property.viewNames, viewName, options)) continue;
+    if (!fixedPrefetches.has(property.resolverId)) {
       fixedPrefetches.set(
-        field.resolverId,
-        buildFixedPrefetch(field.resolverId, ctx, field.params),
+        property.resolverId,
+        buildFixedPrefetch(property.resolverId, ctx, property.params),
       );
     }
     dynamicColumnDefs.push({
-      key: field.columnKey,
-      name: field.columnName,
-      type: field.columnType,
+      key: property.columnKey,
+      name: property.columnName,
+      type: property.columnType,
       source: "dynamic",
     });
   }
@@ -128,19 +128,19 @@ export function applyDynamicFields(
     });
   }
 
-  if (fields.length === 0 && materializedSetColumns.length === 0) {
+  if (properties.length === 0 && materializedSetColumns.length === 0) {
     return { rows: evalRows, dynamicColumnDefs: [], hiddenColumnKeys };
   }
 
   const finalRows = evalRows.map((row) => {
     const cells = { ...row.cells };
 
-    for (const field of fields) {
-      if (!fieldVisible(field.viewNames, viewName, options)) continue;
-      const resolver = registry.fixed.get(field.resolverId);
+    for (const property of properties) {
+      if (!propertyVisible(property.viewNames, viewName, options)) continue;
+      const resolver = registry.fixed.get(property.resolverId);
       if (!resolver) continue;
-      const prefetch = fixedPrefetches.get(field.resolverId);
-      cells[field.columnKey] = resolver(ctx, field.params, row.nodeId, prefetch);
+      const prefetch = fixedPrefetches.get(property.resolverId);
+      cells[property.columnKey] = resolver(ctx, property.params, row.nodeId, prefetch);
     }
 
     for (const col of materializedSetColumns) {

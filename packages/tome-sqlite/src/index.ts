@@ -1,6 +1,6 @@
 export { GraphDatabase, relationshipId } from "./graph";
 export type { GraphCounts, Node, Properties, PropertyValue, Relationship } from "./graph";
-export { DDL, DYNAMIC_FIELDS_DDL, SCHEMA_VERSION } from "./schema";
+export { DDL, DYNAMIC_PROPERTIES_DDL, SCHEMA_VERSION } from "./schema";
 export { createSqliteModule } from "./module";
 export type {
   RelationshipProjectionRow,

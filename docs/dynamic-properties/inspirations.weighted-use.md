@@ -4,7 +4,7 @@
 
 Sum of priority weights for all Features linked to an Inspiration.
 
-## Database
+## Owner
 
 - **Database id:** `2eea538996934ce8abafc27132e576c1` (Inspirations)
 - **Column key:** `weighted_use`
@@ -63,7 +63,7 @@ Sum of priority weights across all linked features for this inspiration equals 3
 - **Overlay params:**
   - `inspiration_feature_composite`: composite type for inspiration↔feature links (e.g. `"inspirations_features"`)
   - `features_edge_label`: legacy unidirectional FEATURES label (e.g. `"FEATURES"`)
-  - `features_database_id`: Features type-table node id for priority lookup
+  - `features_table_id`: Features type-table node id for priority lookup
 
 ## Verification
 

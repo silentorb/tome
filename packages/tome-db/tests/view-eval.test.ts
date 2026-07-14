@@ -7,11 +7,11 @@ import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { sortEvalRows, type EvalRow } from "../src/row-sort";
 import { serializeViewsFile, VIEWS_FILE_VERSION, projectionTypeForEndpoint } from "tome-flatfile";
-import { serializeDynamicFieldsFile, emptyDynamicFieldsFile } from "tome-flatfile";
+import { serializeDynamicPropertiesFile, emptyDynamicPropertiesFile } from "tome-flatfile";
 import {
   contentModelDir,
   viewsFilePath,
-  dynamicFieldsFilePath,
+  dynamicPropertiesFilePath,
   associationsFilePath,
   tableSchemasFilePath,
 } from "tome-flatfile";
@@ -122,8 +122,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
       }),
     );
     writeFileSync(
-      dynamicFieldsFilePath(contentDir),
-      serializeDynamicFieldsFile(emptyDynamicFieldsFile()),
+      dynamicPropertiesFilePath(contentDir),
+      serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
     );
 
     writeFileSync(
@@ -179,8 +179,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
       }),
     );
     writeFileSync(
-      dynamicFieldsFilePath(contentDir),
-      serializeDynamicFieldsFile(emptyDynamicFieldsFile()),
+      dynamicPropertiesFilePath(contentDir),
+      serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
     );
 
     writeFileSync(
@@ -234,8 +234,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
       }),
     );
     writeFileSync(
-      dynamicFieldsFilePath(contentDir),
-      serializeDynamicFieldsFile(emptyDynamicFieldsFile()),
+      dynamicPropertiesFilePath(contentDir),
+      serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
     );
 
     writeFileSync(
@@ -311,8 +311,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
       }),
     );
     writeFileSync(
-      dynamicFieldsFilePath(contentDir),
-      serializeDynamicFieldsFile(emptyDynamicFieldsFile()),
+      dynamicPropertiesFilePath(contentDir),
+      serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
     );
     writeFileSync(
       tableSchemasFilePath(contentDir),

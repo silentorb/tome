@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { ContentStore, projectionTypeForEndpoint } from "tome-flatfile";
 import { fileFromSeedInputs } from "tome-flatfile";
-import { invalidateDynamicFieldsCache } from "../src/content/sync";
+import { invalidateDynamicPropertiesCache } from "../src/content/sync";
 import { contentModelDir, workspaceFilePath } from "tome-flatfile";
 import { defaultTestWorkspaceFile } from "../src/content/test-helpers";
 import { serializeWorkspaceFile } from "tome-flatfile";
@@ -64,23 +64,22 @@ describe("node-type-properties", () => {
   const scene2 = "22222222222222222222222222";
 
   test("includes computed dynamic fields with allViews", () => {
-    new ContentStore(contentDir).writeDynamicFieldsFile(
+    new ContentStore(contentDir).writeDynamicPropertiesFile(
       fileFromSeedInputs([
         {
           id: "props-all-scene",
-          databaseId: CHAR_DB,
+          owner: CHAR_DB,
           columnKey: "all_scene_count",
           columnName: "All Scene count",
           resolverId: "characters.allSceneCount",
-          docsPath: "docs/dynamic-fields/characters.all-scene-count.md",
-          viewNames: ["Hidden View"],
+                    viewNames: ["Hidden View"],
           params: {
             scenes_edge_label: "SCENES",
           },
         },
       ]),
     );
-    invalidateDynamicFieldsCache();
+    invalidateDynamicPropertiesCache();
     db.upsertNode(CHAR_DB, {
       ...typeTableMarkerProperties("Characters"),
     });
@@ -108,22 +107,21 @@ describe("node-type-properties", () => {
   });
 
   test("getNodePageDetail exposes properties alongside membership relation section", () => {
-    new ContentStore(contentDir).writeDynamicFieldsFile(
+    new ContentStore(contentDir).writeDynamicPropertiesFile(
       fileFromSeedInputs([
         {
           id: "props-all-scene-2",
-          databaseId: CHAR_DB,
+          owner: CHAR_DB,
           columnKey: "all_scene_count",
           columnName: "All Scene count",
           resolverId: "characters.allSceneCount",
-          docsPath: "docs/dynamic-fields/characters.all-scene-count.md",
-          params: {
+                    params: {
             scenes_edge_label: "SCENES",
           },
         },
       ]),
     );
-    invalidateDynamicFieldsCache();
+    invalidateDynamicPropertiesCache();
     const detail = getNodePageDetail(db, character, { contentDir });
     expect(detail?.properties?.cells.all_scene_count).toBe("2");
     const membership = detail?.sections.find(
@@ -136,7 +134,7 @@ describe("node-type-properties", () => {
 
   afterAll(() => {
     delete process.env.TOME_CONTENT_PATH;
-    invalidateDynamicFieldsCache();
+    invalidateDynamicPropertiesCache();
     invalidateWorkspaceCache();
     db.close();
     rmSync(dir, { recursive: true, force: true });

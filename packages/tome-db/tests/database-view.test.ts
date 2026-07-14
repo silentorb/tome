@@ -7,11 +7,11 @@ import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { contentModelDir,
-  dynamicFieldsFilePath,
+  dynamicPropertiesFilePath,
   associationsFilePath,
   schemaFilePath,
   tableSchemasFilePath, projectionTypeForEndpoint } from "tome-flatfile";
-import { emptyDynamicFieldsFile, serializeDynamicFieldsFile } from "tome-flatfile";
+import { emptyDynamicPropertiesFile, serializeDynamicPropertiesFile } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
 import { serializeSchemaFile } from "tome-flatfile";
 import { serializeAssociationsFile } from "tome-flatfile";
@@ -24,8 +24,8 @@ describe("database-view", () => {
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
   writeFileSync(
-    dynamicFieldsFilePath(contentDir),
-    serializeDynamicFieldsFile(emptyDynamicFieldsFile()),
+    dynamicPropertiesFilePath(contentDir),
+    serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
   );
   writeFileSync(
     associationsFilePath(contentDir),

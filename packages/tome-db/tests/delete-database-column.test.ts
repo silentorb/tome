@@ -2,7 +2,7 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { deleteDatabaseColumn } from "../src/delete-database-column";
-import { createTestContentFixture, destroyTestContentFixture, seedTestDynamicFields, seedTestNode, seedTestRelationships, seedTestCompositeRelationships, seedTestTableSchema, seedTestViews, TEST_MEMBER_OF_ASSOCIATION_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestDynamicProperties, seedTestNode, seedTestRelationships, seedTestCompositeRelationships, seedTestTableSchema, seedTestViews, TEST_MEMBER_OF_ASSOCIATION_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
 describe("deleteDatabaseColumn", () => {
   const fixture = createTestContentFixture("tome-db-delete-col-");
 
@@ -155,14 +155,14 @@ describe("deleteDatabaseColumn", () => {
       properties: typeTableMarkerProperties("Characters"),
     });
     seedTestTableSchema(fixture, databaseId, []);
-    seedTestDynamicFields(fixture, [
+    seedTestDynamicProperties(fixture, [
       {
-        databaseId,
+        id: "01TESTDYNAMICCOL00000000001",
+        owner: databaseId,
         columnKey: "all_scene_count",
         columnName: "All scene count",
         columnType: "number",
         resolverId: "characters.allSceneCount",
-        docsPath: "docs/dynamic-fields/all-scene-count.md",
       },
     ]);
 

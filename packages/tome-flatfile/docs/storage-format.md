@@ -30,7 +30,7 @@ The content root is a directory conventionally named `content/`. Tools discover 
     schema.json
     table-schemas.json
     views.json
-    dynamic-fields.json
+    dynamic-properties.json
     ordered-collections.json
     extensions.json
 ```
@@ -374,37 +374,33 @@ Strict version **1**. Workspace identity and navigation anchors.
 | `spatialGraph.nodeDimensionScale` | `{ x?, y? }` positive finite numbers |
 | `schemaDiagram.memberBadgePosition` | `top-left` \| `top-right` \| `bottom-left` \| `bottom-right` |
 
-### `dynamic-fields.json` (version 1)
+### `dynamic-properties.json` (version 1)
 
-Bindings for computed table columns. Parser validates the wrapper; entry fields are conventional.
+Bindings for computed type-table columns. Parser validates the wrapper; entry fields are conventional.
 
 ```json
 {
   "version": 1,
-  "fields": [
+  "properties": [
     {
-      "id": "word-count",
-      "databaseId": "01EXAMPLETYPENODEID000000001",
+      "id": "01EXAMPLEPROPERTYID000000001",
+      "owner": "01EXAMPLETYPENODEID000000001",
       "columnKey": "word_count",
       "columnName": "Word count",
       "columnType": "number",
       "resolverId": "word_count",
-      "docsPath": "docs/dynamic-fields/word-count.md",
-      "enabled": true,
       "params": {},
       "viewNames": ["all"]
     }
   ],
   "columnSets": [
     {
-      "id": "metric-set",
-      "databaseId": "01EXAMPLETYPENODEID000000001",
+      "id": "01EXAMPLECOLUMNSETID00000001",
+      "owner": "01EXAMPLETYPENODEID000000001",
       "columnKeyPattern": "metric_{id}",
       "columnNamePattern": "Metric {name}",
       "columnType": "number",
-      "resolverId": "metric_set",
-      "docsPath": "docs/dynamic-fields/metric-set.md",
-      "enabled": true
+      "resolverId": "metric_set"
     }
   ]
 }
@@ -413,10 +409,10 @@ Bindings for computed table columns. Parser validates the wrapper; entry fields 
 | Field | Notes |
 | --- | --- |
 | `version` | number, required |
-| `fields` | array of field entries |
+| `properties` | array of property entries |
 | `columnSets` | array of column-set entries |
 
-**Field entry:** `id`, `databaseId`, `columnKey`, `columnName`, `columnType`, `resolverId`, `docsPath`, `enabled`, optional `params`, `viewNames`.
+**Property entry:** `id` (ULID), `owner` (type-table / set node id), `columnKey`, `columnName`, `columnType`, `resolverId`, optional `params`, `viewNames`. Spec docs live under `docs/dynamic-properties/` by convention from `resolverId`.
 
 **Column-set entry:** same pattern with `columnKeyPattern` / `columnNamePattern` instead of fixed keys/names.
 
@@ -501,7 +497,7 @@ Runtime extension registration. Version defaults to `1` if omitted on read.
 | `model/schema.json` | optional | Needed when using enums / rules |
 | `model/table-schemas.json` | optional | Needed for type-table columns |
 | `model/views.json` | optional | Needed for custom/generated table tabs |
-| `model/dynamic-fields.json` | optional | Computed columns |
+| `model/dynamic-properties.json` | optional | Computed columns |
 | `model/ordered-collections.json` | optional | Ordered collection UIs |
 | `model/extensions.json` | optional | Extension packages |
 
@@ -540,10 +536,10 @@ Normative parsers and path helpers in this package:
 | Table schemas | `src/content/table-schemas-file.ts` |
 | Views | `src/content/views-file.ts` |
 | Workspace | `src/workspace/workspace-file.ts` |
-| Dynamic fields | `src/content/dynamic-fields-file.ts` |
+| Dynamic properties | `src/content/dynamic-properties-file.ts` |
 | Ordered collections | `src/ordered-collections-config/ordered-collections-file.ts` |
 | Extensions | `src/extensions/extensions-file.ts` |
 | Body link forms | `src/markdown-links.ts`, `src/dynamic-node-links.ts` |
 | Set / ordered traits | `src/association-traits.ts` |
 
-Related behavioral docs (not format contracts): `docs/features/tome-db.md`, `sets.md`, `schema.md`, `views.md`, `table-schemas.md`, `ordered-collections.md`, `extensions.md`, `dynamic-table-fields.md`.
+Related behavioral docs (not format contracts): `docs/features/tome-db.md`, `sets.md`, `schema.md`, `views.md`, `table-schemas.md`, `ordered-collections.md`, `extensions.md`, `dynamic-properties.md`.

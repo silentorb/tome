@@ -1,5 +1,5 @@
 import type { DatabaseColumnDef } from "./database-view";
-import { applyDynamicFields } from "./dynamic-fields";
+import { applyDynamicProperties } from "./dynamic-properties";
 import type { GraphDatabase } from "tome-sqlite";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
@@ -167,7 +167,7 @@ export function buildPropertiesSection(
     modifiedAt: null,
   };
 
-  const { rows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicFields(
+  const { rows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
     db,
     databaseId,
     "",
