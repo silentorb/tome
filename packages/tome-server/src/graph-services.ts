@@ -45,7 +45,6 @@ import {
   type NodeLifecycleError,
   type SchemaFile,
   type ViewSortSpec,
-  type ViewProperties,
   type TomeWriteContext,
   type GraphDatabase,
   loadWorkspaceFromContent,
@@ -135,7 +134,7 @@ function buildGraphServices(
     createRelationshipView(
       nodeId: string,
       association: string,
-      input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
+      input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
     ) {
       return createRelationshipView(writeCtx, nodeId, association, input);
     },
@@ -143,7 +142,7 @@ function buildGraphServices(
       nodeId: string,
       association: string,
       viewId: string,
-      input: { name?: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
+      input: { name?: string; sorts?: ViewSortSpec[]; properties?: string[] },
     ) {
       return updateRelationshipView(writeCtx, nodeId, association, viewId, input);
     },
@@ -153,7 +152,7 @@ function buildGraphServices(
     patchRelationshipViews(
       nodeId: string,
       association: string,
-      input: { viewOrder?: string[]; properties?: ViewProperties },
+      input: { viewOrder?: string[]; properties?: string[] },
     ) {
       return patchRelationshipViews(writeCtx, nodeId, association, input);
     },

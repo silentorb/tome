@@ -301,25 +301,25 @@ Strict version **2**. Table tab definitions (custom and generated).
       "association": "member_of",
       "name": "All",
       "sorts": [{ "column": "name", "direction": "asc" }],
-      "properties": { "columnOrder": ["name", "status"] },
-      "hiddenColumns": ["internal_key"]
+      "properties": ["name", "status"]
     },
     {
       "nodeId": "01EXAMPLETYPENODEID000000001",
       "association": "member_of",
-      "generator": "some_provider"
+      "generator": "some_provider",
+      "properties": ["name", "status"]
     }
   ]
 }
 ```
 
-**Custom view:** `{ id, nodeId, association, name, sorts, properties?, hiddenColumns? }`
+**Custom view:** `{ id, nodeId, association, name, sorts, properties? }`
 
 - `sorts`: `{ column, direction: "asc"|"desc" }[]`
-- `properties.columnOrder`: optional string array
+- `properties`: optional string array of visible column keys in display order (absent → all columns, default order)
 - Unique custom key: `(nodeId, association, id)`
 
-**Generated view:** `{ nodeId, association, generator }` — must not include `id`, `name`, or `sorts`.
+**Generated view:** `{ nodeId, association, generator, properties? }` — must not include `id`, `name`, or `sorts`. Shared `properties` apply to all tabs from the generator.
 
 Do not mix generated and custom views for the same `(nodeId, association)` pair. At most one generated view per pair.
 
@@ -389,8 +389,7 @@ Bindings for computed type-table columns. Parser validates the wrapper; entry fi
       "columnName": "Word count",
       "columnType": "number",
       "resolverId": "word_count",
-      "params": {},
-      "viewNames": ["all"]
+      "params": {}
     }
   ],
   "columnSets": [
@@ -412,7 +411,7 @@ Bindings for computed type-table columns. Parser validates the wrapper; entry fi
 | `properties` | array of property entries |
 | `columnSets` | array of column-set entries |
 
-**Property entry:** `id` (ULID), `owner` (type-table / set node id), `columnKey`, `columnName`, `columnType`, `resolverId`, optional `params`, `viewNames`. Spec docs live under `docs/dynamic-properties/` by convention from `resolverId`.
+**Property entry:** `id` (ULID), `owner` (type-table / set node id), `columnKey`, `columnName`, `columnType`, `resolverId`, optional `params`. Spec docs live under `docs/dynamic-properties/` by convention from `resolverId`. Column visibility in table views is controlled by view `properties` allowlists in `views.json`, not binding-level view names.
 
 **Column-set entry:** same pattern with `columnKeyPattern` / `columnNamePattern` instead of fixed keys/names.
 

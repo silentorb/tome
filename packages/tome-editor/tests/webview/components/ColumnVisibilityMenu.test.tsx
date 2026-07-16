@@ -10,7 +10,7 @@ describe("ColumnVisibilityMenu", () => {
       <ColumnVisibilityMenu
         columns={["status", "priority"]}
         columnLabels={{ status: "Status", priority: "Priority" }}
-        hiddenColumns={["priority"]}
+        visibleColumns={["status"]}
         onToggle={onToggle}
       />,
     );
@@ -27,7 +27,7 @@ describe("ColumnVisibilityMenu", () => {
     render(
       <ColumnVisibilityMenu
         columns={["status"]}
-        hiddenColumns={[]}
+        visibleColumns={["status"]}
         onToggle={() => {}}
       />,
     );

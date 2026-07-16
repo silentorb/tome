@@ -1,19 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { applyHiddenColumns } from "../../src/views/column-visibility";
+import { applyViewPropertiesVisibility } from "../../src/views/column-visibility";
 
-describe("applyHiddenColumns", () => {
-  test("returns all columns when hiddenColumns is empty", () => {
-    const result = applyHiddenColumns(["status", "priority", "type"], undefined);
+describe("applyViewPropertiesVisibility", () => {
+  test("returns all columns when properties is absent or empty", () => {
+    const result = applyViewPropertiesVisibility(["status", "priority", "type"], undefined);
     expect(result.visibleColumns).toEqual(["status", "priority", "type"]);
-    expect(result.hiddenSet.size).toBe(0);
+    expect(result.visibleSet).toEqual(new Set(["status", "priority", "type"]));
   });
 
-  test("filters hidden keys from ordered columns", () => {
-    const result = applyHiddenColumns(
+  test("filters to listed keys in listed order", () => {
+    const result = applyViewPropertiesVisibility(
       ["status", "priority", "type"],
-      ["priority", "missing"],
+      ["type", "status", "missing"],
     );
-    expect(result.visibleColumns).toEqual(["status", "type"]);
-    expect(result.hiddenSet.has("priority")).toBe(true);
+    expect(result.visibleColumns).toEqual(["type", "status"]);
+    expect(result.visibleSet).toEqual(new Set(["type", "status"]));
   });
 });

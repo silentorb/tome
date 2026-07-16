@@ -16,12 +16,13 @@ Table view configuration for type-table member relationships lives in [`content/
       "association": "01KXBNPNJDENZ9BXN5BYZ7JKPT",
       "name": "Weighted",
       "sorts": [{ "column": "weighted_use", "direction": "desc" }],
-      "properties": { "columnOrder": ["type", "features", "weighted_use"] }
+      "properties": ["type", "features", "weighted_use"]
     },
     {
       "nodeId": "204dba198db74611b0b49a98dd53e8f5",
       "association": "01KXBNPNJDENZ9BXN5BYZ7JKPT",
-      "generator": "scenes-by-book"
+      "generator": "scenes-by-book",
+      "properties": ["parents", "children", "scenes"]
     }
   ]
 }
@@ -30,8 +31,11 @@ Table view configuration for type-table member relationships lives in [`content/
 - **`association`**: set-trait association ULID from `associations.json` (not a display label).
 - **Custom views**: require `id`, `name`, `sorts` (array, may be empty).
 - **Generated views**: use `generator` (e.g. `scenes-by-book`); computed at runtime from ordered-collections config.
-- **`properties.columnOrder`**: optional column key order, duplicated on each view for the same `(nodeId, association)` pair.
-- **`hiddenColumns`**: optional column keys hidden in that view only (not synced across sibling views).
+- **`properties`**: optional string array of visible column keys in display order (additive allowlist).
+  - Absent → all columns visible, default order.
+  - Present → only listed keys are visible, in listed order (unknown keys ignored; missing keys are not appended).
+  - **Custom views:** per-view (not synced across sibling tabs). Reorder, visibility toggles, and UI column-add update the active view only.
+  - **Generated views:** shared on the single generated record for all tabs produced by that generator.
 - **Tab order**: array order of views sharing the same pair; the UI derives tabs when more than one view exists.
 
 ## Editor behavior
@@ -39,8 +43,9 @@ Table view configuration for type-table member relationships lives in [`content/
 - Active tab is selected via `?tab=` (standalone) or node GET `?tab=` when present; otherwise the editor restores the last tab from `.marloth/user-settings.json` (`tableTabs`).
 - Custom views support in-editor CRUD via `/api/views/nodes/:id/associations/:associationId/views`.
 - View order is updated via `PATCH /api/views/nodes/:id/associations/:associationId` with `{ viewOrder: string[] }`.
-- Column order is updated via the same PATCH with `{ properties: { columnOrder: string[] } }` (syncs all sibling views).
-- Column visibility is updated per view via `PATCH .../views/:viewId` with `{ hiddenColumns: string[] }`.
+- Column order and visibility for a custom view are updated via `PATCH .../views/:viewId` with `{ properties: string[] }`.
+- Shared properties for a generated association are updated via `PATCH .../associations/:associationId` with `{ properties: string[] }`.
+- Adding a stored column via the UI passes `viewId` so the new key is appended only to the active custom view’s `properties` (when that allowlist already exists). Sibling custom views are unchanged.
 - Generated views (Scenes) switch scope only; no CRUD chrome.
 
 ## Migration

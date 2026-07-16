@@ -12,7 +12,7 @@ import {
 import { loadViewsFromContent } from "tome-flatfile";
 import type { ResolvedTab, TableTabsDetail } from "./tabs";
 
-type TabDefinitionSummary = Pick<ViewDefinition, "id" | "name" | "sorts" | "hiddenColumns">;
+type TabDefinitionSummary = Pick<ViewDefinition, "id" | "name" | "sorts" | "properties">;
 
 export interface ResolvedCustomTabs {
   kind: "custom";

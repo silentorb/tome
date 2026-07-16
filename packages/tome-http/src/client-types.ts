@@ -51,7 +51,7 @@ export interface TomeHttpClient {
   createRelationshipView(
     nodeId: string,
     association: string,
-    input: { name: string; sorts?: import("tome-graph-interfaces").ViewSortSpec[]; properties?: import("tome-graph-interfaces").ViewProperties },
+    input: { name: string; sorts?: import("tome-graph-interfaces").ViewSortSpec[]; properties?: string[] },
   ): Promise<import("tome-graph-interfaces").ViewDefinition>;
   updateRelationshipView(
     nodeId: string,
@@ -60,8 +60,7 @@ export interface TomeHttpClient {
     input: {
       name?: string;
       sorts?: import("tome-graph-interfaces").ViewSortSpec[];
-      properties?: import("tome-graph-interfaces").ViewProperties;
-      hiddenColumns?: string[];
+      properties?: string[];
     },
   ): Promise<import("tome-graph-interfaces").ViewDefinition>;
   deleteRelationshipView(
@@ -74,11 +73,11 @@ export interface TomeHttpClient {
     association: string,
     input: {
       viewOrder?: string[];
-      properties?: import("tome-graph-interfaces").ViewProperties;
+      properties?: string[];
     },
   ): Promise<{
     views?: import("tome-graph-interfaces").ViewDefinition[];
-    properties?: import("tome-graph-interfaces").ViewProperties;
+    properties?: string[];
   }>;
   deleteDatabaseColumn(
     databaseId: string,
@@ -92,6 +91,7 @@ export interface TomeHttpClient {
       type: string;
       enumId?: string;
       association?: string;
+      viewId?: string;
     },
   ): Promise<{
     column: import("tome-graph-interfaces").TableColumnDef;

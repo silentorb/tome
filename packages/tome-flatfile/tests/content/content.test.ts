@@ -96,7 +96,6 @@ describe("dynamic-properties-file", () => {
           columnType: "number",
           resolverId: "test.resolver",
           params: { foo: "bar" },
-          viewNames: ["All"],
         },
       ],
       columnSets: [],

@@ -88,8 +88,4 @@ export function applyPattern(text: string, dimension: ColumnSetDimension): strin
     .replace("{dimensionTitle}", dimension.title);
 }
 
-export function isPropertyVisibleForView(viewNames: string[], viewName: string): boolean {
-  return viewNames.length === 0 || viewNames.includes(viewName);
-}
-
 export type { EvalRow };

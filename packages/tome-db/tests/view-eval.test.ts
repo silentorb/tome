@@ -153,7 +153,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("applies section columnOrder override from views.json", () => {
+  test("applies section properties allowlist from views.json", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-cols-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
@@ -173,7 +173,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
             association: TEST_MEMBER_OF_ASSOCIATION_ID,
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
-            properties: { columnOrder: ["status"] },
+            properties: ["status"],
           },
         ],
       }),
@@ -202,13 +202,13 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
-    expect(view?.columns).toEqual(["status", "priority"]);
+    expect(view?.columns).toEqual(["status"]);
 
     db.close();
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("filters columns by per-view hiddenColumns", () => {
+  test("filters columns by per-view properties allowlist", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-hidden-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
@@ -228,7 +228,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
             association: TEST_MEMBER_OF_ASSOCIATION_ID,
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
-            hiddenColumns: ["priority"],
+            properties: ["status"],
           },
         ],
       }),

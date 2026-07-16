@@ -108,7 +108,7 @@ describe("deleteDatabaseColumn", () => {
     expect(detail?.columns).not.toContain("parents");
   });
 
-  test("cleans views.json columnOrder and tab sorts", () => {
+  test("cleans views.json properties and tab sorts", () => {
     const databaseId = "11111111111111111111111111";
     const pageId = "22222222222222222222222222";
     seedTestNode(fixture, {
@@ -131,7 +131,7 @@ describe("deleteDatabaseColumn", () => {
           association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "By task state",
           sorts: [{ column: "task_state", direction: "asc" }],
-          properties: { columnOrder: ["task_state"] },
+          properties: ["task_state"],
         },
       ],
     });
@@ -142,7 +142,7 @@ describe("deleteDatabaseColumn", () => {
     const view = views.views.find(
       (entry) => entry.nodeId === databaseId && "id" in entry && entry.id === "by-task-state",
     );
-    expect(view && "properties" in view ? view.properties?.columnOrder : undefined).toBeUndefined();
+    expect(view && "properties" in view ? view.properties : undefined).toBeUndefined();
     expect(view && "sorts" in view ? view.sorts : undefined).toEqual([
       { column: "name", direction: "asc" },
     ]);

@@ -308,10 +308,10 @@ export function createApiHandler(
         const association = viewsRelationshipMatch[2]!;
         const payload = (await req.json()) as {
           viewOrder?: string[];
-          properties?: import("tome-graph-interfaces").ViewProperties;
+          properties?: string[];
         };
         const hasViewOrder = Array.isArray(payload.viewOrder);
-        const hasProperties = payload.properties !== undefined;
+        const hasProperties = Array.isArray(payload.properties);
         if (!hasViewOrder && !hasProperties) {
           return json({ error: "viewOrder or properties required" }, 400);
         }
@@ -334,7 +334,7 @@ export function createApiHandler(
         const payload = (await req.json()) as {
           name?: string;
           sorts?: ViewSortSpec[];
-          properties?: import("tome-graph-interfaces").ViewProperties;
+          properties?: string[];
         };
         if (typeof payload.name !== "string" || !payload.name.trim()) {
           return json({ error: "name required" }, 400);
@@ -363,8 +363,7 @@ export function createApiHandler(
           const payload = (await req.json()) as {
             name?: string;
             sorts?: ViewSortSpec[];
-            properties?: import("tome-graph-interfaces").ViewProperties;
-            hiddenColumns?: string[];
+            properties?: string[];
           };
           try {
             const view = db.updateRelationshipView(nodeId, association, viewId, payload);
@@ -455,6 +454,7 @@ export function createApiHandler(
           type?: string;
           enumId?: string;
           association?: string;
+          viewId?: string;
         };
         if (typeof payload.name !== "string" || typeof payload.type !== "string") {
           return json({ error: "name and type required" }, 400);
@@ -465,6 +465,7 @@ export function createApiHandler(
           type: payload.type as import("tome-graph-interfaces").TableColumnDef["type"],
           enumId: payload.enumId,
           association: payload.association,
+          viewId: payload.viewId,
         });
         if (result === "database_not_found") return json({ error: "not found" }, 404);
         if (result === "column_key_taken") return json({ error: "column key taken" }, 409);

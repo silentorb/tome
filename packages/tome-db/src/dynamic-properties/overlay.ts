@@ -71,12 +71,6 @@ export function loadDynamicProperties(
           property.id,
         ),
       );
-      const viewNames = db
-        .queryAll<{ view_name: string }>(
-          "SELECT view_name FROM dynamic_field_view_bindings WHERE field_id = ?",
-          property.id,
-        )
-        .map((r) => r.view_name);
       return {
         id: property.id,
         owner: property.database_id,
@@ -85,7 +79,6 @@ export function loadDynamicProperties(
         columnType: property.column_type,
         resolverId: property.resolver_id,
         params,
-        viewNames,
       };
     });
   } catch {
@@ -125,12 +118,6 @@ export function loadDynamicColumnSets(
           set.id,
         ),
       );
-      const viewNames = db
-        .queryAll<{ view_name: string }>(
-          "SELECT view_name FROM dynamic_column_set_view_bindings WHERE set_id = ?",
-          set.id,
-        )
-        .map((r) => r.view_name);
       const hideLegacyKeys = Array.isArray(params.hide_legacy_keys)
         ? (params.hide_legacy_keys as string[])
         : [];
@@ -142,7 +129,6 @@ export function loadDynamicColumnSets(
         columnType: set.column_type,
         resolverId: set.resolver_id,
         params,
-        viewNames,
         hideLegacyKeys,
       };
     });
@@ -180,13 +166,6 @@ export function seedDynamicProperty(db: GraphDatabase, input: SeedDynamicPropert
     );
   }
   db.runExec("DELETE FROM dynamic_field_view_bindings WHERE field_id = ?", input.id);
-  for (const viewName of input.viewNames ?? []) {
-    db.runExec(
-      "INSERT INTO dynamic_field_view_bindings (field_id, view_name) VALUES (?, ?)",
-      input.id,
-      viewName,
-    );
-  }
 }
 
 export function seedDynamicColumnSet(db: GraphDatabase, input: SeedDynamicColumnSetInput): void {
@@ -218,11 +197,4 @@ export function seedDynamicColumnSet(db: GraphDatabase, input: SeedDynamicColumn
     );
   }
   db.runExec("DELETE FROM dynamic_column_set_view_bindings WHERE set_id = ?", input.id);
-  for (const viewName of input.viewNames ?? []) {
-    db.runExec(
-      "INSERT INTO dynamic_column_set_view_bindings (set_id, view_name) VALUES (?, ?)",
-      input.id,
-      viewName,
-    );
-  }
 }

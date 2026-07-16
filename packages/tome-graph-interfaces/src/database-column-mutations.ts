@@ -17,6 +17,8 @@ export interface CreateDatabaseColumnInput {
   type: TableColumnType;
   enumId?: string;
   association?: string;
+  /** Active custom view id — new column is appended only to this view's properties. */
+  viewId?: string;
 }
 
 export interface UpdateDatabaseColumnInput {

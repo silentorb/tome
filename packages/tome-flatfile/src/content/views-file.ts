@@ -3,7 +3,6 @@ import type {
   CustomTabDefinition,
   GeneratedViewRecord,
   ViewDefinition,
-  ViewProperties,
   ViewRecord,
   ViewsFile,
   ViewSortDirection,
@@ -14,7 +13,6 @@ export type {
   CustomTabDefinition,
   GeneratedViewRecord,
   ViewDefinition,
-  ViewProperties,
   ViewRecord,
   ViewsFile,
   ViewSortDirection,
@@ -50,47 +48,21 @@ function parseSortSpec(raw: unknown, path: string): ViewSortSpec {
   return { column: obj.column.trim(), direction: obj.direction };
 }
 
-function parseColumnOrder(raw: unknown, path: string): string[] | undefined {
+/** Parse optional additive properties allowlist (column keys in display order). */
+export function parsePropertiesArray(raw: unknown, path: string): string[] | undefined {
   if (raw === undefined) return undefined;
   if (!Array.isArray(raw)) {
-    throw new Error(`${path}: columnOrder must be an array`);
+    throw new Error(`${path}: properties must be an array of column keys`);
   }
-  const order: string[] = [];
+  const keys: string[] = [];
   for (let index = 0; index < raw.length; index += 1) {
     const entry = raw[index];
     if (typeof entry !== "string" || !entry.trim()) {
-      throw new Error(`${path}.columnOrder[${index}]: must be a non-empty string`);
+      throw new Error(`${path}[${index}]: must be a non-empty string`);
     }
-    order.push(entry.trim());
+    keys.push(entry.trim());
   }
-  return order.length > 0 ? order : undefined;
-}
-
-function parseHiddenColumns(raw: unknown, path: string): string[] | undefined {
-  if (raw === undefined) return undefined;
-  if (!Array.isArray(raw)) {
-    throw new Error(`${path}: hiddenColumns must be an array`);
-  }
-  const hidden: string[] = [];
-  for (let index = 0; index < raw.length; index += 1) {
-    const entry = raw[index];
-    if (typeof entry !== "string" || !entry.trim()) {
-      throw new Error(`${path}.hiddenColumns[${index}]: must be a non-empty string`);
-    }
-    hidden.push(entry.trim());
-  }
-  return hidden.length > 0 ? hidden : undefined;
-}
-
-function parseViewProperties(raw: unknown, path: string): ViewProperties | undefined {
-  if (raw === undefined) return undefined;
-  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    throw new Error(`${path}: properties must be an object`);
-  }
-  const obj = raw as Record<string, unknown>;
-  const columnOrder = parseColumnOrder(obj.columnOrder, `${path}.columnOrder`);
-  if (!columnOrder) return undefined;
-  return { columnOrder };
+  return keys.length > 0 ? keys : undefined;
 }
 
 function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
@@ -117,8 +89,18 @@ function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
   if (!Array.isArray(obj.sorts)) {
     throw new Error(`${path}: sorts must be an array`);
   }
-  const properties = parseViewProperties(obj.properties, `${path}.properties`);
-  const hiddenColumns = parseHiddenColumns(obj.hiddenColumns, `${path}.hiddenColumns`);
+  if ("hiddenColumns" in obj) {
+    throw new Error(`${path}: hiddenColumns is not supported; use properties allowlist`);
+  }
+  if (
+    obj.properties !== undefined &&
+    obj.properties !== null &&
+    typeof obj.properties === "object" &&
+    !Array.isArray(obj.properties)
+  ) {
+    throw new Error(`${path}: properties must be a string array (not { columnOrder })`);
+  }
+  const properties = parsePropertiesArray(obj.properties, `${path}.properties`);
   return {
     id: obj.id.trim(),
     nodeId: obj.nodeId.trim(),
@@ -128,7 +110,6 @@ function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
       parseSortSpec(sort, `${path}.sorts[${sortIndex}]`),
     ),
     ...(properties ? { properties } : {}),
-    ...(hiddenColumns ? { hiddenColumns } : {}),
   };
 }
 
@@ -150,10 +131,23 @@ function parseGeneratedViewRecord(raw: unknown, index: number): GeneratedViewRec
   if ("id" in obj || "name" in obj || "sorts" in obj) {
     throw new Error(`${path}: generated views must not include id, name, or sorts`);
   }
+  if ("hiddenColumns" in obj) {
+    throw new Error(`${path}: hiddenColumns is not supported; use properties allowlist`);
+  }
+  if (
+    obj.properties !== undefined &&
+    obj.properties !== null &&
+    typeof obj.properties === "object" &&
+    !Array.isArray(obj.properties)
+  ) {
+    throw new Error(`${path}: properties must be a string array (not { columnOrder })`);
+  }
+  const properties = parsePropertiesArray(obj.properties, `${path}.properties`);
   return {
     nodeId: obj.nodeId.trim(),
     association: obj.association.trim(),
     generator: obj.generator.trim(),
+    ...(properties ? { properties } : {}),
   };
 }
 

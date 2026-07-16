@@ -8,7 +8,6 @@ export interface DynamicPropertyRecord {
   columnType: string;
   resolverId: string;
   params: Record<string, unknown>;
-  viewNames: string[];
 }
 
 export interface DynamicColumnSetRecord {
@@ -19,7 +18,6 @@ export interface DynamicColumnSetRecord {
   columnType: string;
   resolverId: string;
   params: Record<string, unknown>;
-  viewNames: string[];
   /** Keys of legacy columns to hide when this set is active. */
   hideLegacyKeys: string[];
 }
@@ -32,7 +30,6 @@ export interface SeedDynamicPropertyInput {
   columnType?: string;
   resolverId: string;
   params?: Record<string, unknown>;
-  viewNames?: string[];
 }
 
 export interface SeedDynamicColumnSetInput {
@@ -43,7 +40,6 @@ export interface SeedDynamicColumnSetInput {
   columnType?: string;
   resolverId: string;
   params?: Record<string, unknown>;
-  viewNames?: string[];
 }
 
 export interface DynamicPropertyFileEntry {
@@ -54,7 +50,6 @@ export interface DynamicPropertyFileEntry {
   columnType: string;
   resolverId: string;
   params?: Record<string, unknown>;
-  viewNames?: string[];
 }
 
 export interface DynamicColumnSetFileEntry {
@@ -65,7 +60,6 @@ export interface DynamicColumnSetFileEntry {
   columnType: string;
   resolverId: string;
   params?: Record<string, unknown>;
-  viewNames?: string[];
 }
 
 export interface DynamicPropertiesFile {
@@ -113,7 +107,6 @@ export function propertyRecordFromEntry(entry: DynamicPropertyFileEntry): Dynami
     columnType: entry.columnType,
     resolverId: entry.resolverId,
     params: entry.params ?? {},
-    viewNames: entry.viewNames ?? [],
   };
 }
 
@@ -130,7 +123,6 @@ export function columnSetRecordFromEntry(entry: DynamicColumnSetFileEntry): Dyna
     columnType: entry.columnType,
     resolverId: entry.resolverId,
     params,
-    viewNames: entry.viewNames ?? [],
     hideLegacyKeys,
   };
 }
@@ -144,7 +136,6 @@ export function entryFromSeedProperty(input: SeedDynamicPropertyInput): DynamicP
     columnType: input.columnType ?? "number",
     resolverId: input.resolverId,
     params: input.params,
-    viewNames: input.viewNames,
   };
 }
 
@@ -157,7 +148,6 @@ export function entryFromSeedColumnSet(input: SeedDynamicColumnSetInput): Dynami
     columnType: input.columnType ?? "number",
     resolverId: input.resolverId,
     params: input.params,
-    viewNames: input.viewNames,
   };
 }
 

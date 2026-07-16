@@ -114,7 +114,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       input: {
         name: string;
         sorts?: import("tome-graph-interfaces").ViewSortSpec[];
-        properties?: import("tome-graph-interfaces").ViewProperties;
+        properties?: string[];
       },
     ) {
       const data = await fetchJson<{ view: import("tome-graph-interfaces").ViewDefinition }>(
@@ -134,8 +134,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       input: {
         name?: string;
         sorts?: import("tome-graph-interfaces").ViewSortSpec[];
-        properties?: import("tome-graph-interfaces").ViewProperties;
-        hiddenColumns?: string[];
+        properties?: string[];
       },
     ) {
       const data = await fetchJson<{ view: import("tome-graph-interfaces").ViewDefinition }>(
@@ -163,12 +162,12 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       association: string,
       input: {
         viewOrder?: string[];
-        properties?: import("tome-graph-interfaces").ViewProperties;
+        properties?: string[];
       },
     ) {
       return fetchJson<{
         views?: import("tome-graph-interfaces").ViewDefinition[];
-        properties?: import("tome-graph-interfaces").ViewProperties;
+        properties?: string[];
       }>(
         `/api/views/nodes/${nodeId}/associations/${encodeURIComponent(association)}`,
         {
@@ -195,6 +194,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         type: string;
         enumId?: string;
         association?: string;
+        viewId?: string;
       },
     ): Promise<{
       column: import("tome-graph-interfaces").TableColumnDef;

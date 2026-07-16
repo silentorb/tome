@@ -4,7 +4,7 @@ import "./column-visibility-menu.css";
 interface ColumnVisibilityMenuProps {
   columns: string[];
   columnLabels?: Record<string, string>;
-  hiddenColumns: readonly string[];
+  visibleColumns: readonly string[];
   onToggle: (columnKey: string) => void;
 }
 
@@ -84,12 +84,12 @@ function EyeOffIcon() {
 export function ColumnVisibilityMenu({
   columns,
   columnLabels,
-  hiddenColumns,
+  visibleColumns,
   onToggle,
 }: ColumnVisibilityMenuProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const hiddenSet = new Set(hiddenColumns);
+  const visibleSet = new Set(visibleColumns);
 
   useEffect(() => {
     if (!open) return;
@@ -120,7 +120,7 @@ export function ColumnVisibilityMenu({
       {open ? (
         <div className="tome-column-visibility-menu" role="menu" aria-label="Column visibility">
           {columns.map((column) => {
-            const visible = !hiddenSet.has(column);
+            const visible = visibleSet.has(column);
             return (
               <div key={column} className="tome-column-visibility-item" role="none">
                 <span className="tome-column-visibility-label">{labelFor(column)}</span>

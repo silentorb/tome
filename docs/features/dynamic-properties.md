@@ -57,7 +57,7 @@ Per-property semantics and worked examples: [`docs/dynamic-properties/`](../dyna
 
 - Dynamic properties **must** appear in **database table views** (`DatabaseTableView` / `getDatabaseViewDetail`) and on instance-page **Properties** sections (`buildPropertiesSection` / `PropertiesSectionView`).
 - On Properties sections, dynamic values are **read-only**; stored scalars remain editable via the existing database row property API.
-- Instance-page Properties use `applyDynamicProperties` with all overlay-bound properties for the type table (view-tab bindings ignored).
+- Instance-page Properties use `applyDynamicProperties` with all overlay-bound properties for the type table.
 - Relation table sections **may** gain dynamic columns in a future version.
 - `DatabaseColumnDef` **may** include `source: 'dynamic'` for read-only UI styling.
 

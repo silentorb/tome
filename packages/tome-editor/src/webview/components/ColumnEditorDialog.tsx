@@ -31,6 +31,8 @@ interface ColumnEditorDialogProps {
   api: EditorApi;
   open: boolean;
   databaseId: string;
+  /** Active custom view id — new columns are appended only to this view's properties. */
+  viewId?: string;
   state: ColumnEditorState | null;
   columnDefs?: DatabaseColumnDef[];
   onClose: () => void;
@@ -88,6 +90,7 @@ export function ColumnEditorDialog({
   api,
   open,
   databaseId,
+  viewId,
   state,
   columnDefs,
   onClose,
@@ -191,6 +194,7 @@ export function ColumnEditorDialog({
           enumId: "enumId" in payload ? payload.enumId : undefined,
           association:
             "association" in payload ? payload.association : undefined,
+          viewId,
         });
       } else if (state.columnKey) {
         await api.updateDatabaseColumn(databaseId, state.columnKey, {

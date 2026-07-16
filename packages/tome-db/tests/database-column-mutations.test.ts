@@ -135,7 +135,7 @@ describe("database column mutations", () => {
           association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "By notes",
           sorts: [{ column: "notes", direction: "asc" }],
-          properties: { columnOrder: ["notes"] },
+          properties: ["notes"],
         },
       ],
     });
@@ -157,9 +157,7 @@ describe("database column mutations", () => {
     const view = views.views.find(
       (entry) => entry.nodeId === databaseId && "id" in entry && entry.id === "by-notes",
     );
-    expect(view && "properties" in view ? view.properties?.columnOrder : undefined).toEqual([
-      "description",
-    ]);
+    expect(view && "properties" in view ? view.properties : undefined).toEqual(["description"]);
   });
 
   test("updateDatabaseColumn scalar to relation clears scalars", () => {

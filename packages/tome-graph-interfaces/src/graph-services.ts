@@ -32,7 +32,6 @@ import type { RelationshipPropertyUpdateError } from "./relationship-property-up
 import type { SchemaFile } from "./schema";
 import type {
   ViewDefinition,
-  ViewProperties,
   ViewSortSpec,
 } from "./views";
 import type { QuickLinkError, WorkspaceFile } from "./workspace";
@@ -51,20 +50,20 @@ export interface TomeGraphServices {
   createRelationshipView(
     nodeId: string,
     association: string,
-    input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
+    input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
   ): ViewDefinition;
   updateRelationshipView(
     nodeId: string,
     association: string,
     viewId: string,
-    input: { name?: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
+    input: { name?: string; sorts?: ViewSortSpec[]; properties?: string[] },
   ): ViewDefinition;
   deleteRelationshipView(nodeId: string, association: string, viewId: string): void;
   patchRelationshipViews(
     nodeId: string,
     association: string,
-    input: { viewOrder?: string[]; properties?: ViewProperties },
-  ): { views?: ViewDefinition[]; properties?: ViewProperties };
+    input: { viewOrder?: string[]; properties?: string[] },
+  ): { views?: ViewDefinition[]; properties?: string[] };
   deleteDatabaseColumn(
     databaseId: string,
     columnKey: string,

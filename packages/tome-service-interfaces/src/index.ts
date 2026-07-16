@@ -134,7 +134,6 @@ export interface DynamicPropertyFileEntry {
   columnType: string;
   resolverId: string;
   params?: Record<string, unknown>;
-  viewNames?: string[];
 }
 
 export interface DynamicColumnSetFileEntry {
@@ -145,7 +144,6 @@ export interface DynamicColumnSetFileEntry {
   columnType: string;
   resolverId: string;
   params?: Record<string, unknown>;
-  viewNames?: string[];
 }
 
 export interface DynamicPropertiesFile {

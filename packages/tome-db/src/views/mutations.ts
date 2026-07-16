@@ -6,7 +6,6 @@ import {
   uniqueTabId,
   DEFAULT_VIEW,
   type ViewDefinition,
-  type ViewProperties,
   type ViewSortSpec,
   type ViewsFile,
 } from "tome-flatfile";
@@ -23,6 +22,10 @@ export type { ViewsMutationError } from "tome-graph-interfaces";
 
 function writeViews(store: ContentStore, file: ViewsFile): void {
   store.writeViewsFile(file);
+}
+
+function normalizeProperties(properties: string[]): string[] {
+  return properties.map((key) => key.trim()).filter(Boolean);
 }
 
 function ensureCustomViews(
@@ -52,20 +55,19 @@ function findViewIndex(
   );
 }
 
-function syncPropertiesOnSiblings(
-  file: ViewsFile,
-  nodeId: string,
-  association: string,
-  properties: ViewProperties | undefined,
+function setPropertiesOnRecord(
+  record: { properties?: string[] },
+  properties: string[] | undefined,
 ): void {
-  for (const view of viewsForRelationship(file, nodeId, association)) {
-    if (properties?.columnOrder?.length) {
-      view.properties = { columnOrder: [...properties.columnOrder] };
-    } else if (properties === undefined) {
-      delete view.properties;
-    } else {
-      view.properties = { ...properties };
-    }
+  if (properties === undefined) {
+    delete record.properties;
+    return;
+  }
+  const normalized = normalizeProperties(properties);
+  if (normalized.length > 0) {
+    record.properties = normalized;
+  } else {
+    delete record.properties;
   }
 }
 
@@ -78,7 +80,7 @@ export function createView(
   store: ContentStore,
   nodeId: string,
   association: string,
-  input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
+  input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
 ): ViewDefinition {
   const trimmed = input.name.trim();
   if (!trimmed) throw new Error("invalid_name");
@@ -99,7 +101,7 @@ export function createView(
     association,
     name: trimmed,
     sorts: input.sorts ?? [{ column: "name", direction: "asc" }],
-    ...(siblingProperties ? { properties: { ...siblingProperties } } : {}),
+    ...(siblingProperties?.length ? { properties: [...siblingProperties] } : {}),
   };
   file.views.push(view);
   writeViews(store, file);
@@ -117,8 +119,7 @@ export function updateView(
   input: {
     name?: string;
     sorts?: ViewSortSpec[];
-    properties?: ViewProperties;
-    hiddenColumns?: string[];
+    properties?: string[];
   },
 ): ViewDefinition {
   const file = store.readViewsFile();
@@ -135,15 +136,7 @@ export function updateView(
     view.sorts = input.sorts;
   }
   if (input.properties !== undefined) {
-    syncPropertiesOnSiblings(file, nodeId, association, input.properties);
-  }
-  if (input.hiddenColumns !== undefined) {
-    const normalized = input.hiddenColumns.map((key) => key.trim()).filter(Boolean);
-    if (normalized.length > 0) {
-      view.hiddenColumns = normalized;
-    } else {
-      delete view.hiddenColumns;
-    }
+    setPropertiesOnRecord(view, input.properties);
   }
 
   writeViews(store, file);
@@ -212,34 +205,47 @@ export function reorderViews(
 /** @deprecated Use reorderViews */
 export const reorderSectionTabs = reorderViews;
 
+/**
+ * Update shared properties on a generated view record, or create/update a default
+ * custom view when the association uses custom views and none exist yet.
+ * Used by ordered-collection / generated tabs (shared allowlist).
+ */
 export function updateRelationshipViewProperties(
   store: ContentStore,
   nodeId: string,
   association: string,
-  properties: ViewProperties,
-): ViewProperties {
-  const columnOrder = properties.columnOrder;
-  if (!Array.isArray(columnOrder) || columnOrder.length === 0) {
-    throw new Error("invalid_column_order");
-  }
-  const normalized = columnOrder.map((key) => key.trim()).filter(Boolean);
+  properties: string[],
+): string[] {
+  const normalized = normalizeProperties(properties);
   if (normalized.length === 0) throw new Error("invalid_column_order");
 
   const file = store.readViewsFile();
+  const generated = generatedViewForRelationship(file, nodeId, association);
+  if (generated) {
+    setPropertiesOnRecord(generated, normalized);
+    writeViews(store, file);
+    return normalized;
+  }
+
   let views = viewsForRelationship(file, nodeId, association);
   if (views.length === 0) {
     const defaultView: ViewDefinition = {
       ...DEFAULT_VIEW,
       nodeId,
       association,
+      properties: [...normalized],
     };
     file.views.push(defaultView);
-    views = [defaultView];
+    writeViews(store, file);
+    return normalized;
   }
 
-  syncPropertiesOnSiblings(file, nodeId, association, { columnOrder: normalized });
+  // Relationship-wide PATCH for custom associations is not used for sibling sync;
+  // callers should updateView per tab. Keep writing the first view for API compatibility
+  // when patching generated-style shared config on a single-view custom association.
+  setPropertiesOnRecord(views[0]!, normalized);
   writeViews(store, file);
-  return { columnOrder: normalized };
+  return normalized;
 }
 
 /** @deprecated Use updateRelationshipViewProperties */
@@ -249,10 +255,7 @@ export function updateSectionColumnOrder(
   association: string,
   columnOrder: string[],
 ): string[] {
-  const properties = updateRelationshipViewProperties(store, nodeId, association, {
-    columnOrder,
-  });
-  return properties.columnOrder ?? [];
+  return updateRelationshipViewProperties(store, nodeId, association, columnOrder);
 }
 
 export function ensureCustomViewsForRelationship(
@@ -313,28 +316,23 @@ export function purgeColumnFromViews(
   columnKey: string,
 ): void {
   const file = store.readViewsFile();
-  const views = viewsForRelationship(file, nodeId, association);
-  if (views.length === 0) return;
-
+  const generated = generatedViewForRelationship(file, nodeId, association);
   let changed = false;
-  for (const view of views) {
-    const order = view.properties?.columnOrder;
-    if (order?.includes(columnKey)) {
-      const next = order.filter((key) => key !== columnKey);
-      if (next.length > 0) {
-        view.properties = { columnOrder: next };
-      } else {
-        delete view.properties;
-      }
-      changed = true;
-    }
-    if (view.hiddenColumns?.includes(columnKey)) {
-      const next = view.hiddenColumns.filter((key) => key !== columnKey);
-      if (next.length > 0) {
-        view.hiddenColumns = next;
-      } else {
-        delete view.hiddenColumns;
-      }
+
+  if (generated?.properties?.includes(columnKey)) {
+    setPropertiesOnRecord(
+      generated,
+      generated.properties.filter((key) => key !== columnKey),
+    );
+    changed = true;
+  }
+
+  for (const view of viewsForRelationship(file, nodeId, association)) {
+    if (view.properties?.includes(columnKey)) {
+      setPropertiesOnRecord(
+        view,
+        view.properties.filter((key) => key !== columnKey),
+      );
       changed = true;
     }
     if (view.sorts.some((sort) => sort.column === columnKey)) {
@@ -343,11 +341,7 @@ export function purgeColumnFromViews(
     }
   }
 
-  if (changed) {
-    const first = views[0]?.properties;
-    syncPropertiesOnSiblings(file, nodeId, association, first);
-    writeViews(store, file);
-  }
+  if (changed) writeViews(store, file);
 }
 
 /** Rename a column key in view properties and sorts. */
@@ -359,20 +353,23 @@ export function renameColumnInViews(
   newKey: string,
 ): void {
   const file = store.readViewsFile();
-  const views = viewsForRelationship(file, nodeId, association);
-  if (views.length === 0) return;
-
+  const generated = generatedViewForRelationship(file, nodeId, association);
   let changed = false;
-  for (const view of views) {
-    const order = view.properties?.columnOrder;
-    if (order?.includes(oldKey)) {
-      view.properties = {
-        columnOrder: order.map((key) => (key === oldKey ? newKey : key)),
-      };
-      changed = true;
-    }
-    if (view.hiddenColumns?.includes(oldKey)) {
-      view.hiddenColumns = view.hiddenColumns.map((key) => (key === oldKey ? newKey : key));
+
+  if (generated?.properties?.includes(oldKey)) {
+    setPropertiesOnRecord(
+      generated,
+      generated.properties.map((key) => (key === oldKey ? newKey : key)),
+    );
+    changed = true;
+  }
+
+  for (const view of viewsForRelationship(file, nodeId, association)) {
+    if (view.properties?.includes(oldKey)) {
+      setPropertiesOnRecord(
+        view,
+        view.properties.map((key) => (key === oldKey ? newKey : key)),
+      );
       changed = true;
     }
     for (const sort of view.sorts) {
@@ -383,29 +380,42 @@ export function renameColumnInViews(
     }
   }
 
-  if (changed) {
-    const first = views[0]?.properties;
-    syncPropertiesOnSiblings(file, nodeId, association, first);
-    writeViews(store, file);
-  }
+  if (changed) writeViews(store, file);
 }
 
-/** Append a column key to view properties when views exist for the relationship. */
+/**
+ * Append a column key to the active custom view's properties, or to the shared
+ * generated record properties when the association is generated.
+ * Does not fan out to sibling custom views.
+ */
 export function appendColumnToViewsOrder(
   store: ContentStore,
   nodeId: string,
   association: string,
   columnKey: string,
+  viewId?: string,
 ): void {
   const file = store.readViewsFile();
+  const generated = generatedViewForRelationship(file, nodeId, association);
+
+  if (generated) {
+    if (!generated.properties?.length) return;
+    if (generated.properties.includes(columnKey)) return;
+    setPropertiesOnRecord(generated, [...generated.properties, columnKey]);
+    writeViews(store, file);
+    return;
+  }
+
   const views = viewsForRelationship(file, nodeId, association);
   if (views.length === 0) return;
 
-  const order = views[0]?.properties?.columnOrder ?? [];
-  if (!order.includes(columnKey)) {
-    syncPropertiesOnSiblings(file, nodeId, association, {
-      columnOrder: [...order, columnKey],
-    });
-    writeViews(store, file);
-  }
+  const target =
+    viewId != null
+      ? views.find((view) => view.id === viewId)
+      : undefined;
+  if (!target) return;
+  if (!target.properties?.length) return;
+  if (target.properties.includes(columnKey)) return;
+  setPropertiesOnRecord(target, [...target.properties, columnKey]);
+  writeViews(store, file);
 }

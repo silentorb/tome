@@ -6,7 +6,6 @@ import {
   updateView,
   updateRelationshipViewProperties,
   reorderViews,
-  type ViewProperties,
   type ViewSortSpec,
 } from "tome-db";
 import { invalidateViewsCache } from "tome-db";
@@ -14,8 +13,7 @@ import { invalidateViewsCache } from "tome-db";
 export interface ViewMutationInput {
   name?: string;
   sorts?: ViewSortSpec[];
-  properties?: ViewProperties;
-  hiddenColumns?: string[];
+  properties?: string[];
 }
 
 export function readNodeViews(ctx: TomeWriteContext, nodeId: string) {
@@ -27,7 +25,7 @@ export function createRelationshipView(
   ctx: TomeWriteContext,
   nodeId: string,
   association: string,
-  input: { name: string; sorts?: ViewSortSpec[]; properties?: ViewProperties },
+  input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
@@ -61,13 +59,13 @@ export function patchRelationshipViews(
   ctx: TomeWriteContext,
   nodeId: string,
   association: string,
-  input: { viewOrder?: string[]; properties?: ViewProperties },
+  input: { viewOrder?: string[]; properties?: string[] },
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
   const response: {
     views?: ReturnType<typeof reorderViews>;
-    properties?: ViewProperties;
+    properties?: string[];
   } = {};
   if (input.viewOrder) {
     response.views = reorderViews(ctx.store, nodeId, association, input.viewOrder);

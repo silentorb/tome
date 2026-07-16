@@ -21,8 +21,7 @@ describe("views-file", () => {
           association: TEST_MEMBER_OF_ASSOCIATION_ID,
           name: "All",
           sorts: [{ column: "name", direction: "asc" as const }],
-          properties: { columnOrder: ["status", "priority"] },
-          hiddenColumns: ["priority"],
+          properties: ["status"],
         },
         {
           nodeId: "EEEEEEEEEEEEEEEEEEEEEEEEEE",
@@ -33,6 +32,40 @@ describe("views-file", () => {
     };
     const parsed = parseViewsFile(serializeViewsFile(file));
     expect(parsed).toEqual(file);
+  });
+
+  test("rejects legacy hiddenColumns and columnOrder shapes", () => {
+    const legacy = serializeViewsFile({
+      version: VIEWS_FILE_VERSION,
+      views: [
+        {
+          id: "all",
+          nodeId: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          name: "All",
+          sorts: [{ column: "name", direction: "asc" }],
+          hiddenColumns: ["priority"],
+        },
+      ],
+    });
+    expect(() => parseViewsFile(legacy)).toThrow("hiddenColumns is not supported");
+
+    const columnOrder = serializeViewsFile({
+      version: VIEWS_FILE_VERSION,
+      views: [
+        {
+          id: "all",
+          nodeId: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
+          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          name: "All",
+          sorts: [{ column: "name", direction: "asc" }],
+          properties: { columnOrder: ["status"] },
+        },
+      ],
+    });
+    expect(() => parseViewsFile(columnOrder)).toThrow(
+      "properties must be a string array (not { columnOrder })",
+    );
   });
 
   test("emptyViewsFile returns versioned empty views array", () => {

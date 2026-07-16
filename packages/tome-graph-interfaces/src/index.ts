@@ -21,7 +21,6 @@ export type { RelationLink } from "./relation-link";
 export type {
   ViewSortDirection,
   ViewSortSpec,
-  ViewProperties,
   ViewDefinition,
   GeneratedViewRecord,
   ViewRecord,

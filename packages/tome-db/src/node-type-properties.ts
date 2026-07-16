@@ -173,7 +173,7 @@ export function buildPropertiesSection(
     "",
     [evalRow],
     undefined,
-    { allViews: true },
+    { contentDir: dir },
   );
 
   const mergedColumnDefs = mergeStoredAndDynamicColumnDefs(

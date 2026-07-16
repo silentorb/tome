@@ -3,7 +3,6 @@ import {
   isViewDefinition,
   type GeneratedViewRecord,
   type ViewDefinition,
-  type ViewProperties,
   type ViewsFile,
 } from "tome-flatfile";
 
@@ -50,38 +49,26 @@ export function hasGeneratedViews(
   return generatedViewForRelationship(file, nodeId, association) !== null;
 }
 
-export function columnOrderFromViews(
+export function viewDefinitionsForTabs(
+  views: ViewDefinition[],
+): Pick<ViewDefinition, "id" | "name" | "sorts" | "properties">[] {
+  return views.map(({ id, name, sorts, properties }) => ({
+    id,
+    name,
+    sorts,
+    ...(properties ? { properties } : {}),
+  }));
+}
+
+/** Copy sibling properties as an initial template for a new custom view. */
+export function siblingViewProperties(
   file: ViewsFile,
   nodeId: string,
   association: string,
 ): string[] | undefined {
   const views = viewsForRelationship(file, nodeId, association);
   for (const view of views) {
-    const order = view.properties?.columnOrder;
-    if (order?.length) return order;
-  }
-  return undefined;
-}
-
-export function viewDefinitionsForTabs(
-  views: ViewDefinition[],
-): Pick<ViewDefinition, "id" | "name" | "sorts" | "hiddenColumns">[] {
-  return views.map(({ id, name, sorts, hiddenColumns }) => ({
-    id,
-    name,
-    sorts,
-    ...(hiddenColumns ? { hiddenColumns } : {}),
-  }));
-}
-
-export function siblingViewProperties(
-  file: ViewsFile,
-  nodeId: string,
-  association: string,
-): ViewProperties | undefined {
-  const views = viewsForRelationship(file, nodeId, association);
-  for (const view of views) {
-    if (view.properties) return { ...view.properties };
+    if (view.properties?.length) return [...view.properties];
   }
   return undefined;
 }

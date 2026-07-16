@@ -13,8 +13,7 @@ import {
 } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "tome-flatfile";
 import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
-import { applySectionColumnOrder } from "./views/column-order";
-import { applyHiddenColumns } from "./views/column-visibility";
+import { applySectionColumnOrder, reorderColumnDefs } from "./views/column-order";
 import type { TableTabsDetail } from "./views/tabs";
 import { ORDER_META_KEYS, setUsesOrderedAssociation } from "./ordered-relationships";
 import { ORDERED_PROPERTY_DEFAULT, setRoleAssociationForNode, setRoleProjectionTypesForComposite, loadAssociationsFromContent, associationIdFromTypeOrProjection } from "tome-flatfile";
@@ -156,20 +155,19 @@ function buildCustomViewDetail(
         );
 
   const views = loadViewsFromContent(contentDir);
-  const { columns: allColumns, columnDefs: orderedColumnDefs } = applySectionColumnOrder(
+  const { columns: visibleColumns, columnDefs: visibleColumnDefs } = applySectionColumnOrder(
     defaultColumns,
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     databaseId,
     viewAssociation,
+    resolved.activeDefinition.properties,
   );
 
-  const { visibleColumns } = applyHiddenColumns(
-    allColumns,
-    resolved.activeDefinition.hiddenColumns,
-  );
-  const visibleSet = new Set(visibleColumns);
-  const visibleColumnDefs = orderedColumnDefs?.filter((def) => visibleSet.has(def.key));
+  const allColumnDefs =
+    mergedColumnDefs.length > 0
+      ? reorderColumnDefs(mergedColumnDefs, defaultColumns)
+      : undefined;
 
   const rows: DatabaseRow[] = sorted.map((row, index) => ({
     rowIndex: index,
@@ -195,11 +193,11 @@ function buildCustomViewDetail(
     viewAssociation,
     memberSidePerspective,
     sectionTitle: setSectionTitle(contentDir, setSideProjection),
-    allColumns,
+    allColumns: defaultColumns,
     columns: visibleColumns,
     rows,
     columnDefs: visibleColumnDefs,
-    allColumnDefs: orderedColumnDefs,
+    allColumnDefs,
   };
 }
 

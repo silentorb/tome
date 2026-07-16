@@ -72,7 +72,6 @@ describe("node-type-properties", () => {
           columnKey: "all_scene_count",
           columnName: "All Scene count",
           resolverId: "characters.allSceneCount",
-                    viewNames: ["Hidden View"],
           params: {
             scenes_edge_label: "SCENES",
           },

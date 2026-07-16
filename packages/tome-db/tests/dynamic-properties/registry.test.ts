@@ -1,14 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { isPropertyVisibleForView } from "../../src/dynamic-properties/registry";
+import { materializeColumnKey } from "../../src/dynamic-properties/registry";
 
-describe("dynamic property view bindings", () => {
-  test("isPropertyVisibleForView treats empty viewNames as all views", () => {
-    expect(isPropertyVisibleForView([], "Weighted")).toBe(true);
-    expect(isPropertyVisibleForView([], "Wonder")).toBe(true);
-  });
-
-  test("isPropertyVisibleForView respects explicit view bindings", () => {
-    expect(isPropertyVisibleForView(["Weighted"], "Weighted")).toBe(true);
-    expect(isPropertyVisibleForView(["Weighted"], "Wonder")).toBe(false);
+describe("dynamic property registry helpers", () => {
+  test("materializeColumnKey substitutes dimension placeholders", () => {
+    expect(materializeColumnKey("count_{productId}", "book-1")).toBe("count_book-1");
+    expect(materializeColumnKey("score_{dimensionId}", "scene-2")).toBe("score_scene-2");
   });
 });

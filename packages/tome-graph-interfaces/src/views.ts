@@ -5,10 +5,6 @@ export interface ViewSortSpec {
   direction: ViewSortDirection;
 }
 
-export interface ViewProperties {
-  columnOrder?: string[];
-}
-
 /** A static view definition for a node + set association pair. */
 export interface ViewDefinition {
   id: string;
@@ -17,9 +13,11 @@ export interface ViewDefinition {
   association: string;
   name: string;
   sorts: ViewSortSpec[];
-  properties?: ViewProperties;
-  /** Column keys hidden in this view only (not synced across sibling views). */
-  hiddenColumns?: string[];
+  /**
+   * Optional allowlist of visible column keys (order = display order).
+   * Absent → all columns visible in default order.
+   */
+  properties?: string[];
 }
 
 /** Generated views computed at runtime from a provider (e.g. scenes-by-book). */
@@ -28,12 +26,17 @@ export interface GeneratedViewRecord {
   /** Set-trait association ULID (not a display label). */
   association: string;
   generator: string;
+  /**
+   * Shared allowlist for all tabs produced by this generator.
+   * Absent → all columns visible in default order.
+   */
+  properties?: string[];
 }
 
 export type ViewRecord = ViewDefinition | GeneratedViewRecord;
 
 /** @deprecated Use ViewDefinition */
-export type CustomTabDefinition = Pick<ViewDefinition, "id" | "name" | "sorts" | "hiddenColumns">;
+export type CustomTabDefinition = Pick<ViewDefinition, "id" | "name" | "sorts" | "properties">;
 
 export interface ViewsFile {
   version: number;

@@ -346,7 +346,6 @@ export type {
   CustomTabDefinition,
   GeneratedViewRecord,
   ViewDefinition,
-  ViewProperties,
   ViewSortDirection,
   ViewSortSpec,
   ViewRecord,
@@ -356,8 +355,10 @@ export type { ResolvedTab, TableTabsDetail, TabKind } from "./views/tabs";
 export { sortEvalRowsFromViewSorts } from "./views/sort-spec";
 export {
   applyColumnOrder,
+  applyViewProperties,
   applySectionColumnOrder,
   getSectionColumnOrder,
+  getRelationshipProperties,
   reorderColumnDefs,
 } from "./views/column-order";
 export {

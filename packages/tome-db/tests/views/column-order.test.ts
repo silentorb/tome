@@ -1,18 +1,18 @@
 import { describe, expect, test } from "bun:test";
-import { applyColumnOrder, reorderColumnDefs } from "../../src/views/column-order";
+import { applyViewProperties, reorderColumnDefs } from "../../src/views/column-order";
 
-describe("applyColumnOrder", () => {
-  test("returns defaults when columnOrder is absent", () => {
-    expect(applyColumnOrder(["a", "b", "c"], undefined)).toEqual(["a", "b", "c"]);
-    expect(applyColumnOrder(["a", "b", "c"], [])).toEqual(["a", "b", "c"]);
+describe("applyViewProperties", () => {
+  test("returns defaults when properties is absent or empty", () => {
+    expect(applyViewProperties(["a", "b", "c"], undefined)).toEqual(["a", "b", "c"]);
+    expect(applyViewProperties(["a", "b", "c"], [])).toEqual(["a", "b", "c"]);
   });
 
-  test("reorders known keys and drops stale keys", () => {
-    expect(applyColumnOrder(["a", "b", "c"], ["c", "missing", "a"])).toEqual(["c", "a", "b"]);
+  test("returns only listed keys in listed order and drops stale keys", () => {
+    expect(applyViewProperties(["a", "b", "c"], ["c", "missing", "a"])).toEqual(["c", "a"]);
   });
 
-  test("appends new default keys not listed in override", () => {
-    expect(applyColumnOrder(["a", "b", "c", "d"], ["c", "a"])).toEqual(["c", "a", "b", "d"]);
+  test("does not append unlisted default keys", () => {
+    expect(applyViewProperties(["a", "b", "c", "d"], ["c", "a"])).toEqual(["c", "a"]);
   });
 });
 

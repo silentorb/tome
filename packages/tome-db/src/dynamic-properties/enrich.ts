@@ -3,7 +3,6 @@ import type { GraphDatabase } from "tome-sqlite";
 import type { EvalRow } from "../row-sort";
 import { loadDynamicColumnSets, loadDynamicProperties } from "./overlay";
 import {
-  isPropertyVisibleForView,
   materializeColumnKey,
   materializeColumnName,
   type MaterializedColumnSetColumn,
@@ -23,19 +22,8 @@ export interface DynamicEnrichmentResult {
 }
 
 export interface ApplyDynamicPropertiesOptions {
-  /** When true, include all overlay-bound properties regardless of view-tab bindings. */
-  allViews?: boolean;
   /** Content directory for dynamic-properties.json (defaults to TOME_CONTENT_PATH / repo content/). */
   contentDir?: string;
-}
-
-function propertyVisible(
-  viewNames: string[],
-  viewName: string,
-  options?: ApplyDynamicPropertiesOptions,
-): boolean {
-  if (options?.allViews) return true;
-  return isPropertyVisibleForView(viewNames, viewName);
 }
 
 function buildFixedPrefetch(
@@ -77,7 +65,6 @@ export function applyDynamicProperties(
   const fixedPrefetches = new Map<string, unknown>();
 
   for (const set of columnSets) {
-    if (!propertyVisible(set.viewNames, viewName, options)) continue;
     for (const key of set.hideLegacyKeys) hiddenColumnKeys.add(key);
 
     const resolver = registry.columnSets.get(set.resolverId);
@@ -104,7 +91,6 @@ export function applyDynamicProperties(
   }
 
   for (const property of properties) {
-    if (!propertyVisible(property.viewNames, viewName, options)) continue;
     if (!fixedPrefetches.has(property.resolverId)) {
       fixedPrefetches.set(
         property.resolverId,
@@ -136,7 +122,6 @@ export function applyDynamicProperties(
     const cells = { ...row.cells };
 
     for (const property of properties) {
-      if (!propertyVisible(property.viewNames, viewName, options)) continue;
       const resolver = registry.fixed.get(property.resolverId);
       if (!resolver) continue;
       const prefetch = fixedPrefetches.get(property.resolverId);

@@ -61,14 +61,14 @@ describe("views API", () => {
       new Request(`http://127.0.0.1${base}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ properties: { columnOrder: ["name", "priority"] } }),
+        body: JSON.stringify({ properties: ["name", "priority"] }),
       }),
     );
     expect(propertiesPatch.status).toBe(200);
     const propertiesBody = (await propertiesPatch.json()) as {
-      properties: { columnOrder: string[] };
+      properties: string[];
     };
-    expect(propertiesBody.properties.columnOrder).toEqual(["name", "priority"]);
+    expect(propertiesBody.properties).toEqual(["name", "priority"]);
 
     const viewOrderPatch = await handler(
       new Request(`http://127.0.0.1${base}`, {
@@ -83,31 +83,31 @@ describe("views API", () => {
     };
     expect(viewOrderBody.views.map((view) => view.id)).toEqual([createdBody.view.id, "all"]);
 
-    const hiddenPatch = await handler(
+    const allPropertiesPatch = await handler(
       new Request(`http://127.0.0.1${base}/views/all`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hiddenColumns: ["priority"] }),
+        body: JSON.stringify({ properties: ["name"] }),
       }),
     );
-    expect(hiddenPatch.status).toBe(200);
-    const hiddenBody = (await hiddenPatch.json()) as {
-      view: { hiddenColumns?: string[] };
+    expect(allPropertiesPatch.status).toBe(200);
+    const allPropertiesBody = (await allPropertiesPatch.json()) as {
+      view: { properties?: string[] };
     };
-    expect(hiddenBody.view.hiddenColumns).toEqual(["priority"]);
+    expect(allPropertiesBody.view.properties).toEqual(["name"]);
 
-    const extraHiddenPatch = await handler(
+    const extraPropertiesPatch = await handler(
       new Request(`http://127.0.0.1${base}/views/${createdBody.view.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hiddenColumns: ["status"] }),
+        body: JSON.stringify({ properties: ["status"] }),
       }),
     );
-    expect(extraHiddenPatch.status).toBe(200);
-    const extraHiddenBody = (await extraHiddenPatch.json()) as {
-      view: { hiddenColumns?: string[] };
+    expect(extraPropertiesPatch.status).toBe(200);
+    const extraPropertiesBody = (await extraPropertiesPatch.json()) as {
+      view: { properties?: string[] };
     };
-    expect(extraHiddenBody.view.hiddenColumns).toEqual(["status"]);
+    expect(extraPropertiesBody.view.properties).toEqual(["status"]);
 
     rmSync(dir, { recursive: true, force: true });
   });

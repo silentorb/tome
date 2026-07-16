@@ -153,7 +153,6 @@ export type {
   CustomTabDefinition,
   GeneratedViewRecord,
   ViewDefinition,
-  ViewProperties,
   ViewSortDirection,
   ViewSortSpec,
   ViewRecord,

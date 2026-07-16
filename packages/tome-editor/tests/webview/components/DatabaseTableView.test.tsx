@@ -218,7 +218,7 @@ describe("DatabaseTableView", () => {
 
   test("omits hidden columns from the table and toggles visibility via toolbar", async () => {
     const api = makeMockEditorApi();
-    let updateInput: { hiddenColumns?: string[] } | undefined;
+    let updateInput: { properties?: string[] } | undefined;
     api.updateRelationshipView = async (nodeId, association, viewId, input) => {
       void nodeId;
       void association;
@@ -230,7 +230,7 @@ describe("DatabaseTableView", () => {
         association: "members",
         name: "All",
         sorts: [{ column: "name", direction: "asc" }],
-        hiddenColumns: input.hiddenColumns,
+        properties: input.properties,
       };
     };
 
@@ -251,7 +251,7 @@ describe("DatabaseTableView", () => {
             id: "all",
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
-            hiddenColumns: ["priority"],
+            properties: ["status"],
           },
         ],
       },
@@ -282,7 +282,7 @@ describe("DatabaseTableView", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Column visibility" }));
     fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Show Priority" }));
-    expect(updateInput?.hiddenColumns).toEqual([]);
+    expect(updateInput?.properties).toEqual(["status", "priority"]);
   });
 
   test("unlinks rows with memberSidePerspective from the view payload", async () => {

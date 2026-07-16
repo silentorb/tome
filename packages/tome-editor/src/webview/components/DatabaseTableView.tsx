@@ -55,8 +55,9 @@ export function DatabaseTableView({
     [databaseView.tabs.activeTabId, databaseView.tabs.customDefinitions],
   );
 
-  const hiddenColumns = activeTabDefinition?.hiddenColumns ?? [];
+  const visibleProperties = activeTabDefinition?.properties;
   const allColumns = databaseView.allColumns ?? databaseView.columns;
+  const visibleColumns = databaseView.columns;
 
   const tabDefaultSort = useMemo(() => {
     return activeTabDefinition?.sorts?.length
@@ -75,25 +76,33 @@ export function DatabaseTableView({
       const activeTabId = databaseView.tabs.activeTabId;
       if (!activeTabId) return;
 
-      const hidden = new Set(hiddenColumns);
-      if (hidden.has(columnKey)) {
-        hidden.delete(columnKey);
+      const currentVisible = visibleProperties?.length
+        ? [...visibleProperties]
+        : [...allColumns];
+      const visibleSet = new Set(currentVisible);
+      let next: string[];
+      if (visibleSet.has(columnKey)) {
+        next = currentVisible.filter((key) => key !== columnKey);
       } else {
-        hidden.add(columnKey);
+        // Insert in default-order position among currently visible + this key
+        next = allColumns.filter(
+          (key) => key === columnKey || visibleSet.has(key),
+        );
       }
 
       await api.updateRelationshipView(nodeId, databaseView.viewAssociation, activeTabId, {
-        hiddenColumns: [...hidden],
+        properties: next,
       });
       onTabsUpdated?.();
     },
     [
       api,
+      allColumns,
       databaseView.tabs.activeTabId,
       databaseView.viewAssociation,
-      hiddenColumns,
       nodeId,
       onTabsUpdated,
+      visibleProperties,
     ],
   );
 
@@ -287,7 +296,7 @@ export function DatabaseTableView({
               <ColumnVisibilityMenu
                 columns={allColumns}
                 columnLabels={columnLabels}
-                hiddenColumns={hiddenColumns}
+                visibleColumns={visibleColumns}
                 onToggle={(columnKey) => {
                   void toggleColumnVisibility(columnKey);
                 }}
@@ -345,9 +354,14 @@ export function DatabaseTableView({
             renderCell={renderCell}
             rowPageActions={rowPageActions}
             onColumnsReorder={async (columnOrder) => {
-              await api.patchRelationshipViews(nodeId, databaseView.viewAssociation, {
-                properties: { columnOrder },
-              });
+              const activeTabId = databaseView.tabs.activeTabId;
+              if (!activeTabId) return;
+              await api.updateRelationshipView(
+                nodeId,
+                databaseView.viewAssociation,
+                activeTabId,
+                { properties: columnOrder },
+              );
               onTabsUpdated?.();
             }}
             canManageColumn={canManageColumn}
@@ -367,6 +381,7 @@ export function DatabaseTableView({
         api={api}
         open={columnEditorState != null}
         databaseId={databaseView.id}
+        viewId={databaseView.tabs.activeTabId}
         state={columnEditorState}
         columnDefs={databaseView.columnDefs}
         onClose={() => setColumnEditorState(null)}

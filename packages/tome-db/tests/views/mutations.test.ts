@@ -39,17 +39,19 @@ describe("views mutations", () => {
     expect(updated.name).toBe("Renamed");
   });
 
-  test("updates relationship view properties column order on all sibling views", () => {
-    const properties = updateRelationshipViewProperties(fixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, {
-      columnOrder: ["status", "priority"],
-    });
-    expect(properties.columnOrder).toEqual(["status", "priority"]);
+  test("updates relationship view properties on the first custom view", () => {
+    const properties = updateRelationshipViewProperties(
+      fixture.ctx.store,
+      nodeId,
+      TEST_MEMBER_OF_ASSOCIATION_ID,
+      ["status", "priority"],
+    );
+    expect(properties).toEqual(["status", "priority"]);
     const file = fixture.ctx.store.readViewsFile();
-    for (const view of file.views) {
-      if (view.nodeId === nodeId && "id" in view) {
-        expect(view.properties?.columnOrder).toEqual(["status", "priority"]);
-      }
-    }
+    const relationshipViews = file.views.filter(
+      (view) => view.nodeId === nodeId && "id" in view && view.association === TEST_MEMBER_OF_ASSOCIATION_ID,
+    );
+    expect(relationshipViews[0]?.properties).toEqual(["status", "priority"]);
   });
 
   test("reorders custom views", () => {
@@ -92,9 +94,9 @@ describe("views mutations", () => {
     }
   });
 
-  test("updates hiddenColumns on a single view without syncing siblings", () => {
-    const hiddenFixture = createTestContentFixture("tome-views-hidden-");
-    seedTestViews(hiddenFixture, {
+  test("updates properties allowlist on a single view without syncing siblings", () => {
+    const propertiesFixture = createTestContentFixture("tome-views-properties-");
+    seedTestViews(propertiesFixture, {
       version: VIEWS_FILE_VERSION,
       views: [
         {
@@ -114,23 +116,23 @@ describe("views mutations", () => {
       ],
     });
     try {
-      updateView(hiddenFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "all", {
-        hiddenColumns: ["status"],
+      updateView(propertiesFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "all", {
+        properties: ["status"],
       });
-      updateView(hiddenFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "extra", {
-        hiddenColumns: ["priority"],
+      updateView(propertiesFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "extra", {
+        properties: ["priority"],
       });
-      const file = hiddenFixture.ctx.store.readViewsFile();
+      const file = propertiesFixture.ctx.store.readViewsFile();
       const allView = file.views.find((view) => "id" in view && view.id === "all");
       const extraView = file.views.find((view) => "id" in view && view.id === "extra");
-      expect(allView && "hiddenColumns" in allView ? allView.hiddenColumns : undefined).toEqual([
+      expect(allView && "properties" in allView ? allView.properties : undefined).toEqual([
         "status",
       ]);
-      expect(
-        extraView && "hiddenColumns" in extraView ? extraView.hiddenColumns : undefined,
-      ).toEqual(["priority"]);
+      expect(extraView && "properties" in extraView ? extraView.properties : undefined).toEqual([
+        "priority",
+      ]);
     } finally {
-      destroyTestContentFixture(hiddenFixture);
+      destroyTestContentFixture(propertiesFixture);
     }
   });
 

@@ -180,6 +180,7 @@ export function createDatabaseColumn(
     databaseId,
     setRoleAssociationForNode(databaseId, ctx.store.contentDir),
     key,
+    input.viewId,
   );
 
   ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);

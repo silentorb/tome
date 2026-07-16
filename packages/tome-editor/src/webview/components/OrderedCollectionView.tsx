@@ -287,7 +287,7 @@ export function OrderedCollectionView({
     async (columnOrder: string[]) => {
       setDisplayColumns(columnOrder);
       await api.patchRelationshipViews(view.typeDatabaseId, view.viewAssociation, {
-        properties: { columnOrder },
+        properties: columnOrder,
       });
       onCellUpdated?.();
     },
