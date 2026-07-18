@@ -124,8 +124,21 @@
 }
 
 .tome-query-error {
-  color: var(--tome-danger, #ff8a8a);
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
   margin: 0 0 0.5rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--tome-danger, #ff8a8a);
+  font: inherit;
+  line-height: inherit;
+  resize: none;
+  field-sizing: content;
+  min-height: 1.5em;
+  cursor: text;
+  user-select: text;
 }
 
 .tome-query-meta {

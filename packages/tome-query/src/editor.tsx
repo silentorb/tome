@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
 import type { ReactFlowGraph } from "imp-react-flow";
 import {
@@ -125,7 +125,21 @@ export function QueryBlockComponent({
         <QueryFlowEditor graph={graph} readOnly={readOnly} onGraphChange={persistGraph} />
       ) : (
         <div className="tome-query-table-panel">
-          {error ? <p className="tome-query-error">{error}</p> : null}
+          {error ? (
+            <textarea
+              className="tome-query-error"
+              readOnly
+              draggable={false}
+              value={error}
+              aria-label="Query error"
+              rows={Math.min(8, Math.max(1, error.split("\n").length))}
+              onMouseDown={allowTextSelectionAgainstDraggableAncestors}
+              onDragStart={(event) => {
+                event.preventDefault();
+                event.stopPropagation();
+              }}
+            />
+          ) : null}
           {table ? (
             <div className="tome-query-table-wrap">
               <table className="tome-query-table">
@@ -165,6 +179,33 @@ function formatCell(value: unknown): string {
     return String(value);
   }
   return JSON.stringify(value);
+}
+
+/**
+ * ProseMirror marks selected atom embeds `draggable`; Chromium then starts a native
+ * drag of the whole block instead of text selection. Clear that for the gesture.
+ */
+function allowTextSelectionAgainstDraggableAncestors(
+  event: MouseEvent<HTMLTextAreaElement>,
+): void {
+  const cleared: HTMLElement[] = [];
+  let el: HTMLElement | null = event.currentTarget.parentElement;
+  while (el) {
+    if (el.draggable) {
+      el.draggable = false;
+      cleared.push(el);
+    }
+    el = el.parentElement;
+  }
+  if (cleared.length === 0) return;
+
+  const restore = () => {
+    for (const node of cleared) node.draggable = true;
+    window.removeEventListener("mouseup", restore);
+    window.removeEventListener("blur", restore);
+  };
+  window.addEventListener("mouseup", restore);
+  window.addEventListener("blur", restore);
 }
 
 export function register(host: EditorPageBlockHost): void {

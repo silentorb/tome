@@ -66,8 +66,41 @@ describe("QueryBlockComponent", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Compile failed")).toBeTruthy();
+      const field = screen.getByLabelText("Query error") as HTMLTextAreaElement;
+      expect(field.readOnly).toBe(true);
+      expect(field.value).toBe("Compile failed");
     });
+  });
+
+  test("error field mousedown clears ancestor draggable so text can be selected", async () => {
+    const invoke = mock(async () => ({
+      ok: false,
+      error: "Compile failed",
+    }));
+
+    const dragShell = document.createElement("div");
+    dragShell.draggable = true;
+    document.body.appendChild(dragShell);
+
+    render(
+      <QueryBlockComponent
+        ctx={{ ...baseCtx, invoke }}
+        blockData={defaultBlockData()}
+        onBlockDataChange={() => {}}
+      />,
+      { container: dragShell },
+    );
+
+    const field = await waitFor(() => screen.getByLabelText("Query error"));
+    expect(dragShell.draggable).toBe(true);
+
+    fireEvent.mouseDown(field);
+    expect(dragShell.draggable).toBe(false);
+
+    fireEvent.mouseUp(window);
+    expect(dragShell.draggable).toBe(true);
+
+    dragShell.remove();
   });
 
   test("shows message when invoke is missing", async () => {
@@ -80,7 +113,9 @@ describe("QueryBlockComponent", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("Query invoke is not available")).toBeTruthy();
+      const field = screen.getByLabelText("Query error") as HTMLTextAreaElement;
+      expect(field.readOnly).toBe(true);
+      expect(field.value).toBe("Query invoke is not available");
     });
   });
 
