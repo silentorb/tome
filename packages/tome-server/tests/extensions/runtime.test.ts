@@ -71,13 +71,21 @@ describe("ExtensionServerRuntime", () => {
     expect(expanded).toContain("Hi");
   });
 
-  test("bundles editor module for browser import", async () => {
+  test("bundles editor module for browser import and caches repeats", async () => {
     const runtime = new ExtensionServerRuntime(join(fixture.tempDir, "content"));
     await runtime.ensureLoaded();
-    const bundle = await runtime.bundleEditorModule("fixture");
-    expect(bundle).toBeTruthy();
-    expect(bundle).toContain("register");
-    expect(bundle).toContain('"react/jsx-runtime"');
-    expect(bundle).not.toContain('"react/jsx-dev-runtime"');
+    const [a, b, c] = await Promise.all([
+      runtime.bundleEditorModule("fixture"),
+      runtime.bundleEditorModule("fixture"),
+      runtime.bundleEditorModule("fixture"),
+    ]);
+    expect(a).toBeTruthy();
+    expect(a).toContain("register");
+    expect(a).toContain('"react/jsx-runtime"');
+    expect(a).not.toContain('"react/jsx-dev-runtime"');
+    expect(b).toBe(a);
+    expect(c).toBe(a);
+    const again = await runtime.bundleEditorModule("fixture");
+    expect(again).toBe(a);
   });
 });

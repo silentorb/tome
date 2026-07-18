@@ -259,5 +259,5 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
 export const pageBlockEmbed: MilkdownPlugin[] = [
   ...remarkPageBlockEmbedPlugin,
   ...pageBlockEmbedSchema,
-  ...(pageBlockEmbedView as unknown as MilkdownPlugin[]),
+  pageBlockEmbedView,
 ];

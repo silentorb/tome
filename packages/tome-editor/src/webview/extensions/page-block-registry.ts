@@ -51,15 +51,20 @@ export async function loadEditorBundles(manifest: PublicExtensionsManifest): Pro
   await Promise.all(
     manifest.editorBundles.map(async ({ extensionId, url }) => {
       if (loadedExtensionIds.has(extensionId)) return;
-      const mod = (await import(/* @vite-ignore */ url)) as EditorPageBlockModule & {
-        default?: EditorPageBlockModule;
-      };
-      const register = mod.register ?? mod.default?.register;
-      if (typeof register !== "function") {
-        throw new Error(`Extension ${extensionId} editor bundle missing register(host)`);
+      try {
+        const mod = (await import(/* @vite-ignore */ url)) as EditorPageBlockModule & {
+          default?: EditorPageBlockModule;
+        };
+        const register = mod.register ?? mod.default?.register;
+        if (typeof register !== "function") {
+          console.error(`Extension ${extensionId} editor bundle missing register(host)`);
+          return;
+        }
+        register(host);
+        loadedExtensionIds.add(extensionId);
+      } catch (err: unknown) {
+        console.error(`Failed to load editor bundle for ${extensionId}:`, err);
       }
-      register(host);
-      loadedExtensionIds.add(extensionId);
     }),
   );
 }

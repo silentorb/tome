@@ -72,6 +72,8 @@ export class ExtensionServerRuntime {
   readonly #editorHost = new EditorPageBlockHostImpl();
   readonly #htmlHost = new HtmlPageBlockHostImpl();
   readonly #serverHost = new ServerPageBlockHostImpl();
+  readonly #editorBundleCache = new Map<string, string>();
+  readonly #editorBundleInflight = new Map<string, Promise<string | null>>();
   #manifest: ExtensionsManifest = { extensions: [], components: [] };
   #loadedModules: LoadedExtensionModules[] = [];
   #lastConfigMtime = -1;
@@ -119,6 +121,8 @@ export class ExtensionServerRuntime {
     this.#editorHost.clear();
     this.#htmlHost.clear();
     this.#serverHost.clear();
+    this.#editorBundleCache.clear();
+    this.#editorBundleInflight.clear();
     this.#loadedModules = [];
 
     const loadedHtmlExtensionIds = new Set<string>();
@@ -201,30 +205,71 @@ export class ExtensionServerRuntime {
   }
 
   async bundleEditorModule(extensionId: string): Promise<string | null> {
+    const cached = this.#editorBundleCache.get(extensionId);
+    if (cached !== undefined) return cached;
+
+    const inflight = this.#editorBundleInflight.get(extensionId);
+    if (inflight) return inflight;
+
+    const buildPromise = this.#buildEditorModule(extensionId);
+    this.#editorBundleInflight.set(extensionId, buildPromise);
+    try {
+      return await buildPromise;
+    } finally {
+      this.#editorBundleInflight.delete(extensionId);
+    }
+  }
+
+  async #buildEditorModule(extensionId: string): Promise<string | null> {
     const extension = this.#manifest.extensions.find((entry) => entry.id === extensionId);
     if (!extension?.editorModule) return null;
 
     const entrypoint = resolveExtensionModulePath(extension.editorModule, this.#contentPath);
-    const result = await Bun.build({
-      entrypoints: [entrypoint],
-      target: "browser",
-      format: "esm",
-      define: {
-        "process.env.NODE_ENV": '"production"',
-      },
-      jsx: {
-        runtime: "automatic",
-        importSource: "react",
-        development: false,
-      },
-      external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
-    });
+    let result: Awaited<ReturnType<typeof Bun.build>>;
+    try {
+      result = await Bun.build({
+        entrypoints: [entrypoint],
+        target: "browser",
+        format: "esm",
+        define: {
+          "process.env.NODE_ENV": '"production"',
+        },
+        jsx: {
+          runtime: "automatic",
+          importSource: "react",
+          development: false,
+        },
+        external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`Bun.build threw for ${extensionId} (${entrypoint}): ${message}`);
+    }
     if (!result.success || result.outputs.length === 0) {
       throw new Error(
         result.logs.map((log) => log.message).join("\n") || "Failed to bundle editor extension",
       );
     }
-    return await result.outputs[0]!.text();
+    // Prefer the JS entry; CSS assets (e.g. @xyflow) are separate BuildArtifacts.
+    const jsOutput =
+      result.outputs.find((output) => output.kind === "entry-point") ??
+      result.outputs.find((output) => output.path.endsWith(".js")) ??
+      result.outputs[0]!;
+    const js = await jsOutput.text();
+    const cssParts: string[] = [];
+    for (const output of result.outputs) {
+      if (output === jsOutput) continue;
+      if (output.type.startsWith("text/css") || output.path.endsWith(".css")) {
+        cssParts.push(await output.text());
+      }
+    }
+    const bundle =
+      cssParts.length === 0
+        ? js
+        : `;(function(){var s=document.createElement("style");s.setAttribute("data-tome-ext",${JSON.stringify(extensionId)});` +
+          `s.textContent=${JSON.stringify(cssParts.join("\n"))};document.head.appendChild(s);})();\n${js}`;
+    this.#editorBundleCache.set(extensionId, bundle);
+    return bundle;
   }
 
   async prepareEditorBody(nodeId: string, body: string): Promise<string> {
