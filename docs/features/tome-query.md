@@ -60,6 +60,15 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 - Replacing `views.json` database tabs
 - Editable result rows
 
+## Verification
+
+- Unit: `packages/tome-query/tests/execute.test.ts` — config parse, schema rewrite, compile/execute
+- UI: `packages/tome-query/tests/editor.test.tsx` — Table/Query toggle, invoke/Refresh, errors (happy-dom + `@testing-library/react`; `QueryFlowEditor` mocked)
+
+```bash
+bun run --filter tome-query test
+```
+
 ## See also
 
 - [extensions.md](./extensions.md) — registration + interactive mounting

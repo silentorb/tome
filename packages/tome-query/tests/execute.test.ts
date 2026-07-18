@@ -245,7 +245,7 @@ describe("tome-query compile + execute", () => {
     const table = await executeQueryBlock(
       {
         queryAll(sql, params = []) {
-          return db.prepare(sql).all(...params) as Record<string, unknown>[];
+          return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
         },
       },
       defaultReactFlowGraph(),

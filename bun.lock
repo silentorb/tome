@@ -178,7 +178,13 @@
         "tome-interfaces": "workspace:*",
       },
       "devDependencies": {
+        "@happy-dom/global-registrator": "17.4.4",
+        "@testing-library/react": "16.2.0",
+        "@types/bun": "1.2.23",
         "@types/react": "19.0.12",
+        "@types/react-dom": "19.0.4",
+        "happy-dom": "17.4.4",
+        "react-dom": "19.0.0",
         "typescript": "5.8.2",
       },
     },

@@ -14,7 +14,7 @@ import "./query-block.css";
 
 type ViewMode = "table" | "query";
 
-function QueryBlockComponent({
+export function QueryBlockComponent({
   ctx,
   blockData,
   onBlockDataChange,
