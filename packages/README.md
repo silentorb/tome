@@ -17,6 +17,7 @@ Each subdirectory is a **workspace package** in the Tome monorepo. Packages are 
 | [`tome-interfaces`](./tome-interfaces/) | Extension / page-block integration contracts |
 | [`tome-extension-fixture`](./tome-extension-fixture/) | Reference/test extension (not production) |
 | [`tome-spatial-graph`](./tome-spatial-graph/) | Compound spatial graph page block (cytoscape SVG) |
+| [`tome-query`](./tome-query/) | Imp-backed custom table page block (React Flow → SQL) |
 
 ## Package documentation
 

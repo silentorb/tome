@@ -63,6 +63,7 @@ export function createEditorApi(): EditorApi {
     moveOrderedCollection: rest.moveOrderedCollection.bind(rest),
     getExtensionsManifest: rest.getExtensionsManifest.bind(rest),
     prepareEditorBody: rest.prepareEditorBody.bind(rest),
+    invokeExtension: rest.invokeExtension.bind(rest),
     navigate(nodeId: string, openInNewTab = false): void {
       if (openInNewTab) {
         openStandaloneNodeInNewTab(nodeId);

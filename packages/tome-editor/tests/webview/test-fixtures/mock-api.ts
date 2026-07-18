@@ -126,6 +126,7 @@ export function makeMockEditorApi(): EditorApi {
     },
     getExtensionsManifest: async () => ({ components: [], editorBundles: [] }),
     prepareEditorBody: async (_nodeId, markdown) => markdown,
+    invokeExtension: async () => null,
     navigate: () => {},
   };
 }

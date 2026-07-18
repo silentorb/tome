@@ -16,6 +16,7 @@
 | `packages/tome-editor/` | Vite/React editor webview (client only) |
 | `packages/tome-static-site/` | Astro static export |
 | `packages/tome-interfaces/` | Extension / page-block integration contracts |
+| `packages/tome-query/` | Imp-backed custom table page block (React Flow → SQL) |
 | `packages/tome-extension-*/` | Optional extensions (e.g. `tome-extension-fixture` for tests) |
 
 Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to work in the package). See [`packages/README.md`](./packages/README.md).
@@ -40,3 +41,5 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 ## Workbench integration
 
 In **silentorb-workbench**, this repo mounts at `repos/tome/`. The Compose `tome` service runs `editor:dev` with `TOME_CONTENT_PATH` pointing at the domain repo (e.g. marloth-story `content/`).
+
+Root `package.json` workspaces also include `../imp/packages/*` so `tome-query` can depend on Imp (`imp-spec`, `imp-sql`, …) while Imp remains a sibling repo.

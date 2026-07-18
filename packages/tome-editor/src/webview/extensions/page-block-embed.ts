@@ -1,7 +1,20 @@
 import type { MilkdownPlugin } from "@milkdown/kit/ctx";
 import { $nodeSchema, $remark, $view } from "@milkdown/kit/utils";
-import type { Node as MdastNode, Root } from "mdast";
+import type { Node as MdastNode, Root as MdastRoot } from "mdast";
+import { createElement, type ReactNode } from "react";
+import { createRoot, type Root as ReactRoot } from "react-dom/client";
+import {
+  formatPageBlockEmbedComment,
+  parsePageBlockPayload,
+  type PageBlockPayload,
+} from "tome-interfaces/page-block";
+import type { EditorPageBlockProps } from "tome-interfaces/page-block/editor";
 import { destroySchemaDiagramPanZoom, scheduleSchemaDiagramViewportInit } from "./schema-diagram-viewport";
+import {
+  getInteractivePageBlockRegistration,
+  getPublicExtensionComponent,
+  invokePageBlockExtension,
+} from "./page-block-registry";
 
 const PAGE_BLOCK_COMMENT_RE = /^<!-- tome-page-block /;
 
@@ -26,7 +39,7 @@ function paragraphSingleHtml(node: MdastNode): string | null {
 }
 
 function remarkPageBlockEmbed() {
-  return (tree: Root) => {
+  return (tree: MdastRoot) => {
     const nextChildren: MdastNode[] = [];
 
     for (let index = 0; index < tree.children.length; index += 1) {
@@ -53,7 +66,7 @@ function remarkPageBlockEmbed() {
       nextChildren.push(node);
     }
 
-    tree.children = nextChildren as Root["children"];
+    tree.children = nextChildren as MdastRoot["children"];
   };
 }
 
@@ -111,26 +124,134 @@ export const pageBlockEmbedSchema = $nodeSchema("tome_page_block", () => ({
   },
 }));
 
-export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node) => {
+function payloadFromComment(comment: string): PageBlockPayload | null {
+  const match = /^<!-- tome-page-block (\{[\s\S]*\}) -->$/.exec(comment.trim());
+  if (!match) return null;
+  return parsePageBlockPayload(match[1]!);
+}
+
+/** Mutable page context set by TomeEditor before Crepe create. */
+let pageBlockEmbedNodeId = "";
+
+export function setPageBlockEmbedNodeId(nodeId: string): void {
+  pageBlockEmbedNodeId = nodeId;
+}
+
+export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, view, getPos) => {
   const dom = document.createElement("div");
   dom.className = "tome-page-block-embed";
   dom.dataset.type = "tome-page-block";
   dom.dataset.comment = node.attrs.comment;
   dom.contentEditable = "false";
 
+  const reactHost = document.createElement("div");
+  reactHost.dataset.type = "tome-page-block-react";
+  dom.appendChild(reactHost);
+
   const htmlHost = document.createElement("div");
   htmlHost.dataset.type = "tome-page-block-html";
   htmlHost.innerHTML = node.attrs.html;
   dom.appendChild(htmlHost);
 
-  scheduleSchemaDiagramViewportInit(htmlHost);
+  let root: ReactRoot | null = null;
+  let currentComment = node.attrs.comment as string;
+  let currentHtml = node.attrs.html as string;
+
+  const renderHtmlFallback = (html: string) => {
+    root?.unmount();
+    root = null;
+    reactHost.replaceChildren();
+    htmlHost.hidden = false;
+    htmlHost.innerHTML = html;
+    scheduleSchemaDiagramViewportInit(htmlHost);
+  };
+
+  const renderInteractive = (payload: PageBlockPayload) => {
+    const registration = getInteractivePageBlockRegistration(payload.componentId);
+    const publicComponent = getPublicExtensionComponent(payload.componentId);
+    if (!registration?.Component || !publicComponent) {
+      renderHtmlFallback(currentHtml);
+      return;
+    }
+
+    destroySchemaDiagramPanZoom(htmlHost);
+    htmlHost.hidden = true;
+    htmlHost.replaceChildren();
+    root ??= createRoot(reactHost);
+
+    const props: EditorPageBlockProps = {
+      ctx: {
+        component: {
+          id: publicComponent.id,
+          extensionId: publicComponent.extensionId,
+          implementationId: publicComponent.implementationId,
+          label: publicComponent.label,
+          params: {},
+        },
+        nodeId: pageBlockEmbedNodeId,
+        invoke: (input) =>
+          invokePageBlockExtension(payload.componentId, input, pageBlockEmbedNodeId),
+      },
+      blockData: payload.data,
+      readOnly: !view.editable,
+      onBlockDataChange(data) {
+        const nextComment = formatPageBlockEmbedComment({
+          componentId: payload.componentId,
+          data,
+        });
+        const pos = typeof getPos === "function" ? getPos() : undefined;
+        if (typeof pos !== "number") return;
+        const tr = view.state.tr.setNodeMarkup(pos, undefined, {
+          comment: nextComment,
+          html: currentHtml,
+        });
+        view.dispatch(tr);
+      },
+    };
+
+    const Component = registration.Component as (p: EditorPageBlockProps) => ReactNode;
+    root.render(createElement(Component, props));
+  };
+
+  const remount = (comment: string, html: string) => {
+    currentComment = comment;
+    currentHtml = html;
+    dom.dataset.comment = comment;
+    const payload = payloadFromComment(comment);
+    if (payload && getInteractivePageBlockRegistration(payload.componentId)) {
+      renderInteractive(payload);
+      return;
+    }
+    renderHtmlFallback(html);
+  };
+
+  remount(node.attrs.comment, node.attrs.html);
 
   return {
     dom,
-    ignoreMutation: () => true,
-    stopEvent: () => true,
+    update(updated) {
+      if (updated.type.name !== "tome_page_block") return false;
+      if (updated.attrs.comment === currentComment && updated.attrs.html === currentHtml) {
+        return true;
+      }
+      remount(updated.attrs.comment, updated.attrs.html);
+      return true;
+    },
+    ignoreMutation: (mutation) => {
+      const target = mutation.target;
+      if (!(target instanceof Node)) return true;
+      return !reactHost.contains(target);
+    },
+    stopEvent: (event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) return true;
+      // Let React handle events inside the interactive host; stop ProseMirror from taking them.
+      return reactHost.contains(target);
+    },
     destroy() {
       destroySchemaDiagramPanZoom(htmlHost);
+      root?.unmount();
+      root = null;
     },
   };
 });
@@ -138,5 +259,5 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node) 
 export const pageBlockEmbed: MilkdownPlugin[] = [
   ...remarkPageBlockEmbedPlugin,
   ...pageBlockEmbedSchema,
-  pageBlockEmbedView,
+  ...(pageBlockEmbedView as unknown as MilkdownPlugin[]),
 ];

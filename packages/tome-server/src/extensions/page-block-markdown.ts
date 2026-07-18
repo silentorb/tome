@@ -1,5 +1,6 @@
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
+import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
 import {
   expandPageBlockFencesForEditor,
   type PageBlockPayload,
@@ -26,6 +27,7 @@ async function renderBlockHtml(
   contentPath: string,
   graphQuery: ExtensionGraphQueryServices | undefined,
   schemaQuery: ExtensionSchemaQueryServices | undefined,
+  sqlQuery: ExtensionSqlQueryServices | undefined,
   spatialGraph: SpatialGraphPageBlockServices | undefined,
   schemaDiagram: SchemaDiagramPageBlockServices | undefined,
   payload: PageBlockPayload,
@@ -47,6 +49,7 @@ async function renderBlockHtml(
       services: {
         graphQuery,
         schemaQuery,
+        sqlQuery,
         nodePageHref: (targetNodeId) => `?node=${targetNodeId}`,
         ...(spatialGraph ? { spatialGraph } : {}),
         ...(schemaDiagram ? { schemaDiagram } : {}),
@@ -64,6 +67,7 @@ export async function prepareEditorBodyWithPageBlocks(
   components: ResolvedExtensionComponent[],
   graphQuery: ExtensionGraphQueryServices | undefined,
   schemaQuery: ExtensionSchemaQueryServices | undefined,
+  sqlQuery?: ExtensionSqlQueryServices,
   spatialGraph?: SpatialGraphPageBlockServices,
   schemaDiagram?: SchemaDiagramPageBlockServices,
 ): Promise<string> {
@@ -76,6 +80,7 @@ export async function prepareEditorBodyWithPageBlocks(
       contentPath,
       graphQuery,
       schemaQuery,
+      sqlQuery,
       spatialGraph,
       schemaDiagram,
       payload,

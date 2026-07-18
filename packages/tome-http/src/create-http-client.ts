@@ -439,6 +439,22 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       );
       return data.markdown;
     },
+    async invokeExtension(
+      componentId: string,
+      input?: unknown,
+      nodeId?: string,
+    ): Promise<unknown> {
+      const data = await fetchJson<{ ok: true; data: unknown } | { ok: false; error: string }>(
+        `/api/extensions/${encodeURIComponent(componentId)}/invoke`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ input, nodeId }),
+        },
+      );
+      if (!data.ok) throw new Error(data.error);
+      return data.data;
+    },
   };
 }
 

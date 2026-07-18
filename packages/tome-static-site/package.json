@@ -16,6 +16,7 @@
     "tome-extension-fixture": "workspace:*",
     "tome-spatial-graph": "workspace:*",
     "tome-schema-diagram": "workspace:*",
+    "tome-query": "workspace:*",
     "marked": "15.0.12"
   },
   "devDependencies": {

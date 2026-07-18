@@ -10,6 +10,8 @@ export interface EditorSlashMenuSpec {
 export interface EditorPageBlockContext {
   component: PageBlockComponentRef;
   nodeId: string;
+  /** Invoke this block's server handler (`POST /api/extensions/:componentId/invoke`). */
+  invoke?(input: unknown): Promise<unknown>;
 }
 
 export interface EditorPageBlockProps {
@@ -25,6 +27,8 @@ export type EditorPageBlockComponent = (props: EditorPageBlockProps) => unknown;
 export interface EditorPageBlockRegistration {
   implementationId: string;
   Component: EditorPageBlockComponent;
+  /** When true, the editor mounts `Component` in the page-block embed instead of static HTML. */
+  interactive?: boolean;
   slashMenu?: EditorSlashMenuSpec;
   insertDefaultData?: () => unknown;
 }

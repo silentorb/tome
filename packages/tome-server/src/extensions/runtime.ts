@@ -2,6 +2,7 @@ import { existsSync, statSync } from "node:fs";
 import { extensionsFilePath } from "tome-db/content";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
+import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
 import type { EditorPageBlockModule } from "tome-interfaces/page-block/editor";
 import type { HtmlPageBlockModule } from "tome-interfaces/page-block/html";
 import type { ServerPageBlockModule } from "tome-interfaces/page-block/server";
@@ -67,6 +68,7 @@ export class ExtensionServerRuntime {
   readonly #contentPath: string;
   readonly #getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined;
   readonly #getSchemaQueryServices?: () => ExtensionSchemaQueryServices | undefined;
+  readonly #getSqlQueryServices?: () => ExtensionSqlQueryServices | undefined;
   readonly #editorHost = new EditorPageBlockHostImpl();
   readonly #htmlHost = new HtmlPageBlockHostImpl();
   readonly #serverHost = new ServerPageBlockHostImpl();
@@ -78,10 +80,12 @@ export class ExtensionServerRuntime {
     contentPath: string,
     getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined,
     getSchemaQueryServices?: () => ExtensionSchemaQueryServices | undefined,
+    getSqlQueryServices?: () => ExtensionSqlQueryServices | undefined,
   ) {
     this.#contentPath = contentPath;
     this.#getGraphQueryServices = getGraphQueryServices;
     this.#getSchemaQueryServices = getSchemaQueryServices;
+    this.#getSqlQueryServices = getSqlQueryServices;
   }
 
   get editorHost(): EditorPageBlockHostImpl {
@@ -151,6 +155,7 @@ export class ExtensionServerRuntime {
           implementationId: component.implementationId,
           label: component.label,
           slashMenu: component.slashMenu,
+          ...(registration?.interactive ? { interactive: true } : {}),
           ...(insertDefaultData !== undefined ? { insertDefaultData } : {}),
         };
       }),
@@ -187,6 +192,7 @@ export class ExtensionServerRuntime {
         services: {
           graphQuery: this.#getGraphQueryServices?.(),
           schemaQuery: this.#getSchemaQueryServices?.(),
+          sqlQuery: this.#getSqlQueryServices?.(),
         },
       },
       input,
@@ -234,6 +240,7 @@ export class ExtensionServerRuntime {
       this.#manifest.components,
       this.#getGraphQueryServices?.(),
       this.#getSchemaQueryServices?.(),
+      this.#getSqlQueryServices?.(),
       scale ? { nodeDimensionScale: scale } : undefined,
       schemaDiagram,
     );

@@ -176,6 +176,7 @@ export interface TomeHttpClient {
   patchUserSettings(patch: UserSettingsPatch): Promise<UserSettings>;
   getExtensionsManifest(): Promise<PublicExtensionsManifest>;
   prepareEditorBody(nodeId: string, markdown: string): Promise<string>;
+  invokeExtension(componentId: string, input?: unknown, nodeId?: string): Promise<unknown>;
 }
 
 /** @deprecated Use TomeHttpClient */

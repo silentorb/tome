@@ -22,6 +22,9 @@
     "tome-sqlite": "workspace:*",
     "tome-http": "workspace:*",
     "tome-flatfile": "workspace:*",
+    "tome-query": "workspace:*",
+    "tome-spatial-graph": "workspace:*",
+    "tome-schema-diagram": "workspace:*",
     "typescript": "5.8.2"
   }
 }

@@ -4,6 +4,7 @@ import { openContentGraph } from "tome-db/content";
 import {
   createExtensionGraphQueryServices,
   createExtensionSchemaQueryServices,
+  createExtensionSqlQueryServices,
   loadSchemaFromContent,
   loadWorkspaceFromContent,
   schemaDiagramPageBlockServices,
@@ -50,6 +51,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
   await htmlRuntime.ensureLoaded();
   const graphQuery = createExtensionGraphQueryServices(cache, config.contentDir);
   const schemaQuery = createExtensionSchemaQueryServices(cache, config.contentDir);
+  const sqlQuery = createExtensionSqlQueryServices(cache);
   const spatialGraphScale = spatialGraphNodeDimensionScale(workspace);
   const spatialGraphServices = spatialGraphScale
     ? { nodeDimensionScale: spatialGraphScale }
@@ -66,6 +68,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
         spatialGraphServices,
         schemaQuery,
         schemaDiagram,
+        sqlQuery,
       );
       node.bodyHtml = await renderNodeBodyHtml(
         node.body,

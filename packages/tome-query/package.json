@@ -1,0 +1,29 @@
+{
+  "name": "tome-query",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./config": "./src/config.ts",
+    "./editor": "./src/editor.tsx",
+    "./html": "./src/html.ts",
+    "./server": "./src/server.ts"
+  },
+  "dependencies": {
+    "@xyflow/react": "12.8.2",
+    "imp-collection-transforms": "workspace:*",
+    "imp-react-flow": "workspace:*",
+    "imp-registry": "workspace:*",
+    "imp-spec": "workspace:*",
+    "imp-sql": "workspace:*",
+    "react": "19.0.0",
+    "tome-interfaces": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "19.0.12",
+    "typescript": "5.8.2"
+  },
+  "scripts": {
+    "test": "bun test tests"
+  }
+}

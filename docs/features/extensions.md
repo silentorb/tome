@@ -30,6 +30,7 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 - Storage **must** use shared `tome-block` fenced JSON (see [page-blocks.md](../extensions/page-blocks.md)).
 - Editor-only blocks **are valid** (no html module required).
 - HTML rendering uses general-purpose `HtmlPageBlockRenderer` — not static-site-specific types.
+- Registrations may set `interactive: true` so the editor mounts the React `Component` from the browser `editor.js` bundle instead of (or in addition to) static HTML.
 
 ### Reload
 
@@ -78,8 +79,9 @@ extensions.json
 | `packages/tome-static-site/src/extensions/` | HTML subsystem loader |
 | `packages/tome-extension-fixture/` | Test/reference extension |
 | `packages/tome-spatial-graph/` | Spatial graph page block (cytoscape SVG) |
+| `packages/tome-query/` | Imp-backed custom table page block |
 
-Hosts expose **`ExtensionGraphQueryServices`** (`tome-interfaces/extension-services/graph-query`) to server and HTML block renderers via `createExtensionGraphQueryServices()` in `tome-db`. HTML renderers may return async `renderHtml()` results.
+Hosts expose **`ExtensionGraphQueryServices`**, **`ExtensionSchemaQueryServices`**, and **`ExtensionSqlQueryServices`** (`tome-interfaces/extension-services/*`) to server and HTML block renderers via factories in `tome-db`. HTML renderers may return async `renderHtml()` results.
 
 ## Configuration
 

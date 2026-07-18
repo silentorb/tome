@@ -11,7 +11,8 @@ import {
   buildPageBlockSlashMenu,
   composeBlockEditMenus,
 } from "../extensions/page-block-menu";
-import { pageBlockEmbed } from "../extensions/page-block-embed";
+import { pageBlockEmbed, setPageBlockEmbedNodeId } from "../extensions/page-block-embed";
+import { loadEditorBundles, setPageBlockInvokeExtension } from "../extensions/page-block-registry";
 import { scheduleSchemaDiagramViewportInit } from "../extensions/schema-diagram-viewport";
 import { installCalloutCursor } from "../callout-cursor";
 import { attachEditorLinkNavigation } from "../editor-link-navigation";
@@ -128,6 +129,12 @@ export function TomeEditor({
         let markdown = initialBody;
         const manifest = await api.getExtensionsManifest();
         if (destroyed) return;
+        await loadEditorBundles(manifest);
+        if (destroyed) return;
+        setPageBlockEmbedNodeId(nodeId);
+        setPageBlockInvokeExtension((componentId, input, invokeNodeId) =>
+          api.invokeExtension(componentId, input, invokeNodeId),
+        );
         if (manifest.components.length > 0) {
           markdown = await api.prepareEditorBody(nodeId, markdown);
           blockMenuBuilder = composeBlockEditMenus(
@@ -304,6 +311,7 @@ export function TomeEditor({
 
     return () => {
       destroyed = true;
+      setPageBlockInvokeExtension(null);
       if (editorDom && onKeyDown) {
         editorDom.removeEventListener("keydown", onKeyDown, true);
       }

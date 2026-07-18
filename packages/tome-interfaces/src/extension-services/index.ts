@@ -9,3 +9,4 @@ export type {
   SchemaQueryRelationshipRule,
   SchemaQueryTypeTable,
 } from "./schema-query";
+export type { ExtensionSqlQueryServices } from "./sql-query";

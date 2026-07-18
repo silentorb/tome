@@ -40,7 +40,7 @@ A logical block **may** implement editor only, html only, server only, or any co
 
 - Slash menu inserts fences via `serializePageBlock` (defaults from manifest `insertDefaultData`).
 - On save, `normalizeEditorBody` collapses embeds back to `tome-block` fences (same pattern as dynamic link prepare/collapse).
-- No ProseMirror NodeView or client extension bundles required for in-editor block display.
+- **Interactive blocks:** when `EditorPageBlockRegistration.interactive` is true (exposed on the public manifest), the webview loads `editorBundles`, mounts the extension React `Component` inside the page-block NodeView, and persists edits via `onBlockDataChange` → embed comment attrs. Non-interactive blocks keep the static HTML path (plus optional host enhancements such as schema-diagram pan/zoom).
 
 ## HTML host (v1: static site generate)
 
@@ -53,21 +53,22 @@ A logical block **may** implement editor only, html only, server only, or any co
 
 - Loads `serverModule` at API startup.
 - `POST /api/extensions/:componentId/invoke` dispatches to registered handler (stub-friendly).
-- Handlers receive `ServerHostServices` including optional `graphQuery` (`tome-interfaces/extension-services/graph-query`) for read-only graph access.
+- Handlers receive `ServerHostServices` including optional `graphQuery`, `schemaQuery`, and `sqlQuery` for host-mediated reads.
 
-## Graph query services
+## Host query services
 
-Host-side helper: `createExtensionGraphQueryServices(db)` in `tome-db`.
+Factories in `tome-db`: `createExtensionGraphQueryServices`, `createExtensionSchemaQueryServices`, `createExtensionSqlQueryServices`.
 
-| Method | Purpose |
+| Service | Purpose |
 | --- | --- |
-| `listTypeMembers(typeId)` | Nodes with `is_a → typeId` |
-| `listEdges({ nodeIds, types? })` | Incident edges among a node set |
+| `graphQuery.listTypeMembers` / `listEdges` | Read-only graph selection for diagram blocks |
+| `schemaQuery` | Schema / type-table metadata for schema-diagram |
+| `sqlQuery.queryAll(sql, params)` | Parameterized SQL from trusted compilers (e.g. Imp → SQL) |
 
 Wired into:
 
-- **Editor API** — `ExtensionServerRuntime.invokeExtension()` and `prepareEditorBody()` pass `services.graphQuery`
-- **Static site generate** — `PageBlockHtmlContext.graphQuery` during `renderNodeBodyHtml()`
+- **Editor API** — `ExtensionServerRuntime.invokeExtension()` and `prepareEditorBody()` pass these services
+- **Static site generate** — `PageBlockHtmlContext` during `renderNodeBodyHtml()`
 
 ## HTML async render
 

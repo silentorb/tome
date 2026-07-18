@@ -380,6 +380,7 @@ export {
 } from "tome-flatfile";
 export { createExtensionGraphQueryServices } from "./extension-graph-query";
 export { createExtensionSchemaQueryServices } from "./extension-schema-query";
+export { createExtensionSqlQueryServices } from "./extension-sql-query";
 export type {
   ExtensionComponentEntry,
   ExtensionComponentKind,

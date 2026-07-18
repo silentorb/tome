@@ -12,6 +12,7 @@ import {
   exportFullGraph,
   createExtensionGraphQueryServices,
   createExtensionSchemaQueryServices,
+  createExtensionSqlQueryServices,
   getDatabaseViewDetail,
   getNodePageDetail,
   loadSchemaFromContent,
@@ -94,6 +95,7 @@ function buildGraphServices(
     contentPath,
     () => createExtensionGraphQueryServices(cache, contentPath),
     () => createExtensionSchemaQueryServices(cache, contentPath),
+    () => createExtensionSqlQueryServices(cache),
   );
   const extensionsReady = extensions.ensureLoaded().catch((err: unknown) => {
     console.error("[tome-extensions] failed to load:", err);

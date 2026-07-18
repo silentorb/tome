@@ -4,6 +4,8 @@ export interface PublicExtensionComponent {
   implementationId: string;
   label: string;
   slashMenu?: { group?: string; order?: number };
+  /** When true, the editor mounts the extension React Component for this block. */
+  interactive?: boolean;
   insertDefaultData?: unknown;
 }
 
