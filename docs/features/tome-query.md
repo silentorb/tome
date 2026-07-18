@@ -26,6 +26,8 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 - Mode toggle: **Table** (results) | **Query** (React Flow)
 - Table mode invokes `POST /api/extensions/tome-query.block/invoke` with `{ action: "execute", data }`
 - No page-node / type-table scope in v1 — `nodeId` is ignored for the collection source
+- Wiring a new edge onto an occupied input port replaces the previous inbound edge; output ports may fan out
+- Legacy graphs with multiple inbound edges to one port keep the last edge and drop the rest (parse + compile); they do not fail to load. Fence data is not rewritten on mount.
 
 ### Query semantics
 

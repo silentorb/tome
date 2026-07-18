@@ -3,6 +3,7 @@ import { reactFlowToImp, type ReactFlowGraph } from "imp-react-flow";
 import { createRegistry, loadLibrary } from "imp-registry";
 import { coreNodeLibrary } from "imp-spec";
 import { compileSql, graphToKysely } from "imp-sql";
+import { dedupeInboundReactFlowEdges } from "./config";
 import { applyLiveNodesConstraint, tomeLiveNodesSchema } from "./schema";
 
 export function createQueryRegistry() {
@@ -15,7 +16,8 @@ export interface CompiledTomeQuery {
 }
 
 export function compileReactFlowQuery(reactFlow: ReactFlowGraph): CompiledTomeQuery {
-  const graph = reactFlowToImp(reactFlow.nodes, reactFlow.edges);
+  const edges = dedupeInboundReactFlowEdges(reactFlow.edges);
+  const graph = reactFlowToImp(reactFlow.nodes, edges);
   const compiled = graphToKysely(graph, {
     registry: createQueryRegistry(),
     schema: tomeLiveNodesSchema,

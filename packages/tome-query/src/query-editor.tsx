@@ -17,6 +17,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import type { PrimitiveValue } from "imp-spec";
 import type { ReactFlowGraph } from "imp-react-flow";
+import { withoutInboundToPort } from "./config";
 import {
   createOperatorNode,
   listPaletteNodeTypes,
@@ -125,13 +126,19 @@ export function QueryFlowEditor({ graph, readOnly, onGraphChange }: QueryFlowEdi
   const onConnect = useCallback(
     (connection: Connection) => {
       if (readOnly) return;
+      if (!connection.target) return;
       setEdges((current) => {
+        const cleared = withoutInboundToPort(
+          current,
+          connection.target!,
+          connection.targetHandle,
+        );
         const next = addEdge(
           {
             ...connection,
             id: `e_${connection.source}_${connection.target}_${connection.sourceHandle}_${connection.targetHandle}`,
           },
-          current,
+          cleared,
         );
         setNodes((currentNodes) => {
           emit(currentNodes, next);

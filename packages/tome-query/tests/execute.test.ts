@@ -5,6 +5,7 @@ import {
   defaultBlockData,
   defaultReactFlowGraph,
   parseQueryBlockData,
+  withoutInboundToPort,
 } from "../src/config";
 import { compileReactFlowQuery, rowsToTable } from "../src/execute";
 import { applyLiveNodesConstraint, tomeNodesColumnExpression } from "../src/schema";
@@ -23,6 +24,61 @@ describe("tome-query config", () => {
   test("parseQueryBlockData falls back on invalid input", () => {
     const parsed = parseQueryBlockData({ version: 1 });
     expect(parsed.reactFlow.nodes.length).toBe(2);
+  });
+
+  test("parseQueryBlockData keeps last inbound edge per target handle", () => {
+    const parsed = parseQueryBlockData({
+      version: 1,
+      reactFlow: {
+        nodes: defaultReactFlowGraph().nodes,
+        edges: [
+          {
+            id: "e_stale",
+            source: "in",
+            target: "out",
+            sourceHandle: "value",
+            targetHandle: "value",
+          },
+          {
+            id: "e_keep",
+            source: "in",
+            target: "out",
+            sourceHandle: "value",
+            targetHandle: "value",
+          },
+        ],
+      },
+    });
+    expect(parsed.reactFlow.edges).toEqual([
+      {
+        id: "e_keep",
+        source: "in",
+        target: "out",
+        sourceHandle: "value",
+        targetHandle: "value",
+      },
+    ]);
+  });
+
+  test("withoutInboundToPort drops edges to the same target handle", () => {
+    const edges = [
+      {
+        id: "a",
+        source: "in",
+        target: "out",
+        sourceHandle: "value",
+        targetHandle: "value",
+      },
+      {
+        id: "b",
+        source: "in",
+        target: "filter",
+        sourceHandle: "value",
+        targetHandle: "collection",
+      },
+    ];
+    expect(withoutInboundToPort(edges, "out", "value")).toEqual([edges[1]]);
+    expect(withoutInboundToPort(edges, "filter", "collection")).toEqual([edges[0]]);
   });
 });
 
@@ -48,6 +104,24 @@ describe("tome-query compile + execute", () => {
     const { sql } = compileReactFlowQuery(defaultReactFlowGraph());
     expect(sql.toLowerCase()).toContain("nodes");
     expect(sql).toContain('is_archived" = 0');
+  });
+
+  test("compiles when multiple edges target the same input port", () => {
+    const base = defaultReactFlowGraph();
+    const { sql } = compileReactFlowQuery({
+      ...base,
+      edges: [
+        ...base.edges,
+        {
+          id: "e_duplicate",
+          source: "in",
+          target: "out",
+          sourceHandle: "value",
+          targetHandle: "value",
+        },
+      ],
+    });
+    expect(sql.toLowerCase()).toContain("nodes");
   });
 
   test("compiles project + filter graph", () => {
