@@ -193,6 +193,7 @@ export function QueryFlowEditor({ graph, readOnly, onGraphChange }: QueryFlowEdi
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
+          deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
           nodesDraggable={!readOnly}
           nodesConnectable={!readOnly}
           elementsSelectable={!readOnly}
