@@ -127,6 +127,11 @@ export interface TomeHttpClient {
     options?: { includeBody?: boolean },
   ): Promise<NodeSummary[]>;
   listRecent(limit?: number): Promise<NodeSummary[]>;
+  saveNode(
+    id: string,
+    patch: { body?: string; title?: string },
+    options?: { keepalive?: boolean },
+  ): Promise<void>;
   saveBody(id: string, body: string): Promise<void>;
   saveTitle(id: string, title: string): Promise<void>;
   updateDatabaseRowProperty(

@@ -30,6 +30,7 @@ import {
 import { resolvePageTitleAndContent } from "./markdown-body";
 import {
   bodyNeedsSave,
+  buildPendingSavePayload,
   normalizeEditorBody,
   titleNeedsSave,
 } from "./editor-save";
@@ -243,13 +244,45 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     [explorerAnchorId],
   );
 
-  const loadNode = useCallback(
-    async (nodeId: string, options?: GetNodeOptions | string) => {
-      setError(null);
+  const flushPendingSaves = useCallback(
+    async (options?: { keepalive?: boolean }) => {
       if (saveTimer.current) {
         window.clearTimeout(saveTimer.current);
         saveTimer.current = null;
       }
+      const id = nodeIdRef.current;
+      const patch = buildPendingSavePayload(
+        pendingBody.current,
+        pendingTitle.current,
+        savedBody.current,
+        savedTitle.current,
+      );
+      if (!id || !patch) return;
+
+      if (options?.keepalive) {
+        if (patch.body !== undefined) savedBody.current = patch.body;
+        if (patch.title !== undefined) savedTitle.current = patch.title;
+        void api.saveNode(id, patch, { keepalive: true }).catch(() => {});
+        return;
+      }
+
+      setSaveState("saving");
+      try {
+        await api.saveNode(id, patch);
+        if (patch.body !== undefined) savedBody.current = patch.body;
+        if (patch.title !== undefined) savedTitle.current = patch.title;
+        setSaveState("saved");
+      } catch {
+        setSaveState("error");
+      }
+    },
+    [api],
+  );
+
+  const loadNode = useCallback(
+    async (nodeId: string, options?: GetNodeOptions | string) => {
+      setError(null);
+      await flushPendingSaves();
       try {
         const normalized =
           typeof options === "string" ? { tab: options } : (options ?? {});
@@ -276,7 +309,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [api, syncStandaloneUrl],
+    [api, flushPendingSaves, syncStandaloneUrl],
   );
 
   const bumpRecentNodes = useCallback(() => {
@@ -382,6 +415,14 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     quickLinkIconMaps.byNodeId,
   ]);
 
+  useEffect(() => {
+    const onPageHide = () => {
+      void flushPendingSaves({ keepalive: true });
+    };
+    window.addEventListener("pagehide", onPageHide);
+    return () => window.removeEventListener("pagehide", onPageHide);
+  }, [flushPendingSaves]);
+
   const syncEditorBaseline = useCallback(
     (markdown: string) => {
       if (!node) return;
@@ -401,22 +442,10 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       setSaveState("dirty");
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => {
-        void (async () => {
-          const id = nodeIdRef.current;
-          const nextBody = pendingBody.current;
-          if (!id || nextBody === null) return;
-          setSaveState("saving");
-          try {
-            await api.saveBody(id, nextBody);
-            savedBody.current = nextBody;
-            setSaveState("saved");
-          } catch {
-            setSaveState("error");
-          }
-        })();
+        void flushPendingSaves();
       }, saveDebounceDelay);
     },
-    [api, node],
+    [flushPendingSaves, node],
   );
 
   const scheduleSaveTitle = useCallback(
@@ -429,22 +458,10 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       setSaveState("dirty");
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => {
-        void (async () => {
-          const id = nodeIdRef.current;
-          const nextTitle = pendingTitle.current;
-          if (!id || nextTitle === null) return;
-          setSaveState("saving");
-          try {
-            await api.saveTitle(id, nextTitle);
-            savedTitle.current = nextTitle;
-            setSaveState("saved");
-          } catch {
-            setSaveState("error");
-          }
-        })();
+        void flushPendingSaves();
       }, saveDebounceDelay);
     },
-    [api, node],
+    [flushPendingSaves, node],
   );
 
   const goHome = useCallback(async () => {
@@ -555,10 +572,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
 
   const archiveCurrentNode = useCallback(
     async (nodeId: string) => {
-      if (saveTimer.current) {
-        window.clearTimeout(saveTimer.current);
-        saveTimer.current = null;
-      }
+      await flushPendingSaves();
       try {
         await api.archiveNode(nodeId);
         bumpRecentNodes();
@@ -571,15 +585,12 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [api, bumpRecentNodes, goHome, loadNode, node],
+    [api, bumpRecentNodes, flushPendingSaves, goHome, loadNode, node],
   );
 
   const unarchiveCurrentNode = useCallback(
     async (nodeId: string) => {
-      if (saveTimer.current) {
-        window.clearTimeout(saveTimer.current);
-        saveTimer.current = null;
-      }
+      await flushPendingSaves();
       try {
         await api.unarchiveNode(nodeId);
         bumpRecentNodes();
@@ -592,15 +603,12 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [api, bumpRecentNodes, loadNode, node],
+    [api, bumpRecentNodes, flushPendingSaves, loadNode, node],
   );
 
   const deleteCurrentNode = useCallback(
     async (nodeId: string) => {
-      if (saveTimer.current) {
-        window.clearTimeout(saveTimer.current);
-        saveTimer.current = null;
-      }
+      await flushPendingSaves();
       try {
         await api.deleteNode(nodeId);
         bumpRecentNodes();
@@ -613,7 +621,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [api, bumpRecentNodes, goHome, loadNode, node],
+    [api, bumpRecentNodes, flushPendingSaves, goHome, loadNode, node],
   );
 
   const addQuickLinkForNode = useCallback(

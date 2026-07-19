@@ -42,6 +42,19 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     return (await res.json()) as T;
   }
 
+  async function saveNode(
+    id: string,
+    patch: { body?: string; title?: string },
+    options?: { keepalive?: boolean },
+  ): Promise<void> {
+    await fetchJson(`/api/nodes/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+      keepalive: options?.keepalive === true,
+    });
+  }
+
   return {
     async getWorkspace(): Promise<WorkspacePublic> {
       return fetchJson<WorkspacePublic>("/api/workspace");
@@ -278,19 +291,12 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       );
       return data.results;
     },
+    saveNode,
     async saveBody(id: string, body: string): Promise<void> {
-      await fetchJson(`/api/nodes/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body }),
-      });
+      await saveNode(id, { body });
     },
     async saveTitle(id: string, title: string): Promise<void> {
-      await fetchJson(`/api/nodes/${id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title }),
-      });
+      await saveNode(id, { title });
     },
     async updateDatabaseRowProperty(
       databaseId: string,

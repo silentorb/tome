@@ -20,3 +20,23 @@ export function titleNeedsSave(nextTitle: string, savedTitle: string | null): bo
   const trimmed = nextTitle.trim() || "Untitled";
   return savedTitle !== null && trimmed !== savedTitle;
 }
+
+export type PendingSavePayload = { body?: string; title?: string };
+
+/** Build a combined PUT patch for dirty pending fields, or null when nothing to flush. */
+export function buildPendingSavePayload(
+  pendingBody: string | null,
+  pendingTitle: string | null,
+  savedBody: string | null,
+  savedTitle: string | null,
+): PendingSavePayload | null {
+  const patch: PendingSavePayload = {};
+  if (pendingBody !== null && savedBody !== null && pendingBody !== savedBody) {
+    patch.body = pendingBody;
+  }
+  if (pendingTitle !== null && savedTitle !== null && pendingTitle !== savedTitle) {
+    patch.title = pendingTitle;
+  }
+  if (patch.body === undefined && patch.title === undefined) return null;
+  return patch;
+}

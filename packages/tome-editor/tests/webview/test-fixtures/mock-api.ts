@@ -85,6 +85,7 @@ export function makeMockEditorApi(): EditorApi {
     listTypeTables: async () => [],
     search: async (_query, _limit, _allowedTypeIds, _options) => [],
     listRecent: async () => [],
+    saveNode: async () => {},
     saveBody: async () => {},
     saveTitle: async () => {},
     updateDatabaseRowProperty: async () => {},

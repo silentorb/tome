@@ -40,6 +40,7 @@ export function createEditorApi(): EditorApi {
     listTypeTables: rest.listTypeTables.bind(rest),
     search: rest.search.bind(rest),
     listRecent: rest.listRecent.bind(rest),
+    saveNode: rest.saveNode.bind(rest),
     saveBody: rest.saveBody.bind(rest),
     saveTitle: rest.saveTitle.bind(rest),
     updateDatabaseRowProperty: rest.updateDatabaseRowProperty.bind(rest),

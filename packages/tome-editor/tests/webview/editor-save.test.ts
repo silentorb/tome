@@ -4,7 +4,12 @@ import {
   formatPageBlockEmbedComment,
   serializePageBlock,
 } from "tome-interfaces/page-block";
-import { bodyNeedsSave, normalizeEditorBody, titleNeedsSave } from "../../src/webview/editor-save";
+import {
+  bodyNeedsSave,
+  buildPendingSavePayload,
+  normalizeEditorBody,
+  titleNeedsSave,
+} from "../../src/webview/editor-save";
 
 describe("normalizeEditorBody", () => {
   test("strips duplicate page title before compare", () => {
@@ -65,5 +70,34 @@ describe("titleNeedsSave", () => {
 
   test("returns true when title changed", () => {
     expect(titleNeedsSave("Beta", "Alpha")).toBe(true);
+  });
+});
+
+describe("buildPendingSavePayload", () => {
+  test("returns null when nothing is dirty", () => {
+    expect(buildPendingSavePayload("Notes", "Alpha", "Notes", "Alpha")).toBeNull();
+  });
+
+  test("returns body-only when body changed", () => {
+    expect(buildPendingSavePayload("More", "Alpha", "Notes", "Alpha")).toEqual({
+      body: "More",
+    });
+  });
+
+  test("returns title-only when title changed", () => {
+    expect(buildPendingSavePayload("Notes", "Beta", "Notes", "Alpha")).toEqual({
+      title: "Beta",
+    });
+  });
+
+  test("returns both when body and title changed", () => {
+    expect(buildPendingSavePayload("More", "Beta", "Notes", "Alpha")).toEqual({
+      body: "More",
+      title: "Beta",
+    });
+  });
+
+  test("returns null when baselines are unset", () => {
+    expect(buildPendingSavePayload("More", "Beta", null, null)).toBeNull();
   });
 });
