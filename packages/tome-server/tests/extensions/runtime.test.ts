@@ -1,10 +1,12 @@
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, unlinkSync, writeFileSync, utimesSync } from "node:fs";
 import { join } from "node:path";
 import { createTestContentFixture, destroyTestContentFixture, type TestContentFixture } from "tome-db/content";
 import { serializeExtensionsFile } from "tome-db";
 import { serializePageBlock } from "tome-interfaces/page-block";
 import { ExtensionServerRuntime } from "../../src/extensions/runtime";
+import { editorBundleWatchRoot, maxSourceMtimeMs } from "../../src/extensions/editor-bundle-mtime";
+import { resolveExtensionModulePath } from "../../src/extensions/resolve-extension-module";
 
 describe("ExtensionServerRuntime", () => {
   let fixture: TestContentFixture;
@@ -87,5 +89,27 @@ describe("ExtensionServerRuntime", () => {
     expect(c).toBe(a);
     const again = await runtime.bundleEditorModule("fixture");
     expect(again).toBe(a);
+  });
+
+  test("source mtime watch root tracks entrypoint directory updates", () => {
+    const entrypoint = resolveExtensionModulePath(
+      "tome-extension-fixture/editor",
+      join(fixture.tempDir, "content"),
+    );
+    const root = editorBundleWatchRoot(entrypoint);
+    const before = maxSourceMtimeMs(root);
+    const marker = join(root, `.mtime-probe-${Date.now()}.txt`);
+    writeFileSync(marker, "probe", "utf-8");
+    const stamp = new Date(Date.now() + 10_000);
+    utimesSync(marker, stamp, stamp);
+    try {
+      expect(maxSourceMtimeMs(root)).toBeGreaterThan(before);
+    } finally {
+      try {
+        unlinkSync(marker);
+      } catch {
+        /* ignore */
+      }
+    }
   });
 });

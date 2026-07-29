@@ -7,11 +7,25 @@ export interface EditorSlashMenuSpec {
   icon?: string;
 }
 
+/** Session for the host right tool panel (opened from an interactive page block). */
+export interface EditorToolPanelSession {
+  title: string;
+  /** Framework-agnostic component (React function component in tome-editor). */
+  Component: (props: Record<string, unknown>) => unknown;
+  props: Record<string, unknown>;
+  /** Called when the host closes the panel (close button, Escape, navigation). */
+  onClose?: () => void;
+}
+
 export interface EditorPageBlockContext {
   component: PageBlockComponentRef;
   nodeId: string;
   /** Invoke this block's server handler (`POST /api/extensions/:componentId/invoke`). */
   invoke?(input: unknown): Promise<unknown>;
+  /** Open the host right tool panel (hidden when no session). */
+  openToolPanel?(session: EditorToolPanelSession): void;
+  /** Close the host right tool panel if open. */
+  closeToolPanel?(): void;
 }
 
 export interface EditorPageBlockProps {

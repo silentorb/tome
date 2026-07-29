@@ -1,0 +1,60 @@
+.tome-tool-panel {
+  --tome-tool-panel-width: 28rem;
+
+  flex-shrink: 0;
+  align-self: stretch;
+  height: 100%;
+  width: var(--tome-tool-panel-width);
+  min-width: 22.5rem;
+  max-width: 40vw;
+  border-left: 1px solid var(--tome-border);
+  background: var(--tome-surface);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tome-tool-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--tome-border);
+}
+
+.tome-tool-panel-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--tome-fg);
+}
+
+.tome-tool-panel-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  background: var(--tome-bg);
+  color: var(--tome-fg);
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.tome-tool-panel-close:hover {
+  background: var(--tome-hover);
+}
+
+.tome-tool-panel-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}

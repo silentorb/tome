@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
 import type { ReactFlowGraph } from "imp-react-flow";
 import {
   COMPONENT_ID,
   IMPLEMENTATION_ID,
+  QUERY_BLOCK_VERSION,
   defaultBlockData,
   parseQueryBlockData,
   type TomeQueryBlockData,
@@ -12,7 +13,29 @@ import { QueryFlowEditor } from "./query-editor";
 import type { QueryResultTable } from "./execute";
 import "./query-block.css";
 
-type ViewMode = "table" | "query";
+function toBlockData(reactFlow: ReactFlowGraph): TomeQueryBlockData {
+  return {
+    version: QUERY_BLOCK_VERSION,
+    reactFlow,
+  };
+}
+
+/** Panel body for the host right tool panel (React Flow only). */
+export function QueryToolPanelContent({
+  graph,
+  readOnly,
+  onGraphChange,
+}: {
+  graph: ReactFlowGraph;
+  readOnly?: boolean;
+  onGraphChange: (graph: ReactFlowGraph) => void;
+}) {
+  return (
+    <div className="tome-query-tool-panel">
+      <QueryFlowEditor graph={graph} readOnly={readOnly} onGraphChange={onGraphChange} />
+    </div>
+  );
+}
 
 export function QueryBlockComponent({
   ctx,
@@ -24,13 +47,19 @@ export function QueryBlockComponent({
     component: { id: string; label: string };
     nodeId: string;
     invoke?: (input: unknown) => Promise<unknown>;
+    openToolPanel?: (session: {
+      title: string;
+      Component: (props: Record<string, unknown>) => unknown;
+      props: Record<string, unknown>;
+      onClose?: () => void;
+    }) => void;
+    closeToolPanel?: () => void;
   };
   blockData: unknown;
   onBlockDataChange: (data: unknown) => void;
   readOnly?: boolean;
 }) {
   const parsed = parseQueryBlockData(blockData);
-  const [mode, setMode] = useState<ViewMode>("table");
   const [graph, setGraph] = useState<ReactFlowGraph>(parsed.reactFlow);
   const [table, setTable] = useState<QueryResultTable | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -44,8 +73,7 @@ export function QueryBlockComponent({
   const persistGraph = useCallback(
     (next: ReactFlowGraph) => {
       setGraph(next);
-      const data: TomeQueryBlockData = { version: 1, reactFlow: next };
-      onBlockDataChange(data);
+      onBlockDataChange(toBlockData(next));
     },
     [onBlockDataChange],
   );
@@ -60,7 +88,7 @@ export function QueryBlockComponent({
     try {
       const result = await ctx.invoke({
         action: "execute",
-        data: { version: 1, reactFlow: graph },
+        data: toBlockData(graph),
       });
       const record =
         result && typeof result === "object" && !Array.isArray(result)
@@ -86,89 +114,99 @@ export function QueryBlockComponent({
     }
   }, [ctx.invoke, graph]);
 
+  const runQueryRef = useRef(runQuery);
+  runQueryRef.current = runQuery;
+
   useEffect(() => {
-    if (mode !== "table") return;
     void runQuery();
-  }, [mode]); // eslint-disable-line react-hooks/exhaustive-deps -- run on mode enter; Refresh button for re-run
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- run on mount; Refresh / panel close for re-run
+
+  const openQueryEditor = useCallback(() => {
+    if (!ctx.openToolPanel) {
+      setError("Query editor panel is not available");
+      return;
+    }
+    ctx.openToolPanel({
+      title: "Edit query",
+      Component: QueryToolPanelContent as (props: Record<string, unknown>) => unknown,
+      props: {
+        graph,
+        readOnly: Boolean(readOnly),
+        onGraphChange: persistGraph,
+      },
+      onClose: () => {
+        void runQueryRef.current();
+      },
+    });
+  }, [ctx, graph, persistGraph, readOnly]);
 
   return (
     <div className="tome-query-block-ui" data-component-id={ctx.component.id}>
       <div className="tome-query-toolbar">
-        <div className="tome-query-mode-toggle" role="tablist" aria-label="Query block mode">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "table"}
-            className={mode === "table" ? "is-active" : undefined}
-            onClick={() => setMode("table")}
-          >
-            Table
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={mode === "query"}
-            className={mode === "query" ? "is-active" : undefined}
-            onClick={() => setMode("query")}
-          >
-            Query
-          </button>
-        </div>
-        {mode === "table" ? (
-          <button type="button" className="tome-query-run" onClick={() => void runQuery()} disabled={loading}>
-            {loading ? "Running…" : "Refresh"}
-          </button>
-        ) : null}
+        <button
+          type="button"
+          className="tome-query-edit"
+          onClick={openQueryEditor}
+          disabled={readOnly || !ctx.openToolPanel}
+        >
+          Edit query
+        </button>
+        <button
+          type="button"
+          className="tome-query-run"
+          onClick={() => void runQuery()}
+          disabled={loading}
+          aria-label={loading ? "Running…" : "Refresh"}
+          title={loading ? "Running…" : "Refresh"}
+        >
+          <RefreshCwIcon className={loading ? "is-spinning" : undefined} />
+        </button>
       </div>
 
-      {mode === "query" ? (
-        <QueryFlowEditor graph={graph} readOnly={readOnly} onGraphChange={persistGraph} />
-      ) : (
-        <div className="tome-query-table-panel">
-          {error ? (
-            <textarea
-              className="tome-query-error"
-              readOnly
-              draggable={false}
-              value={error}
-              aria-label="Query error"
-              rows={Math.min(8, Math.max(1, error.split("\n").length))}
-              onMouseDown={allowTextSelectionAgainstDraggableAncestors}
-              onDragStart={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-              }}
-            />
-          ) : null}
-          {table ? (
-            <div className="tome-query-table-wrap">
-              <table className="tome-query-table">
-                <thead>
-                  <tr>
+      <div className="tome-query-table-panel">
+        {error ? (
+          <textarea
+            className="tome-query-error"
+            readOnly
+            draggable={false}
+            value={error}
+            aria-label="Query error"
+            rows={Math.min(8, Math.max(1, error.split("\n").length))}
+            onMouseDown={allowTextSelectionAgainstDraggableAncestors}
+            onDragStart={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }}
+          />
+        ) : null}
+        {table ? (
+          <div className="tome-query-table-wrap">
+            <table className="tome-query-table">
+              <thead>
+                <tr>
+                  {table.columns.map((column) => (
+                    <th key={column}>{column}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {table.rows.map((row, index) => (
+                  <tr key={typeof row.id === "string" ? row.id : index}>
                     {table.columns.map((column) => (
-                      <th key={column}>{column}</th>
+                      <td key={column}>{formatCell(row[column])}</td>
                     ))}
                   </tr>
-                </thead>
-                <tbody>
-                  {table.rows.map((row, index) => (
-                    <tr key={typeof row.id === "string" ? row.id : index}>
-                      {table.columns.map((column) => (
-                        <td key={column}>{formatCell(row[column])}</td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="tome-query-meta">
-                {table.rows.length} row{table.rows.length === 1 ? "" : "s"}
-              </p>
-            </div>
-          ) : !error && loading ? (
-            <p className="tome-query-meta">Loading…</p>
-          ) : null}
-        </div>
-      )}
+                ))}
+              </tbody>
+            </table>
+            <p className="tome-query-meta">
+              {table.rows.length} row{table.rows.length === 1 ? "" : "s"}
+            </p>
+          </div>
+        ) : !error && loading ? (
+          <p className="tome-query-meta">Loading…</p>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -179,6 +217,28 @@ function formatCell(value: unknown): string {
     return String(value);
   }
   return JSON.stringify(value);
+}
+
+/** Lucide refresh-cw (ISC) — inline stroke icon for re-run. */
+function RefreshCwIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={["tome-query-run-icon", className].filter(Boolean).join(" ")}
+      aria-hidden="true"
+    >
+      <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
+      <path d="M21 3v5h-5" />
+      <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
+      <path d="M8 16H3v5" />
+    </svg>
+  );
 }
 
 /**

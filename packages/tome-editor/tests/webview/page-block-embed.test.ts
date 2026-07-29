@@ -69,4 +69,52 @@ describe("page block embed rendering", () => {
 
     await editor.destroy();
   });
+
+  test("setNodeMarkup block data updates survive getMarkdown normalize", async () => {
+    const initialData = {
+      version: 1,
+      reactFlow: { nodes: [], edges: [] },
+    };
+    const embed =
+      `${formatPageBlockEmbedComment({ componentId: "tome-query.block", data: initialData })}\n` +
+      '<div class="tome-query-block">snapshot</div>';
+
+    const { editor } = await createEditor(embed);
+
+    await editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      let blockPos: number | null = null;
+      view.state.doc.descendants((node, pos) => {
+        if (node.type.name === "tome_page_block") {
+          blockPos = pos;
+          return false;
+        }
+      });
+      expect(blockPos).not.toBeNull();
+      const node = view.state.doc.nodeAt(blockPos!)!;
+      const nextComment = formatPageBlockEmbedComment({
+        componentId: "tome-query.block",
+        data: {
+          ...initialData,
+          reactFlow: {
+            nodes: [{ id: "in", type: "input", position: { x: 7, y: 8 }, data: {} }],
+            edges: [],
+          },
+        },
+      });
+      view.dispatch(
+        view.state.tr.setNodeMarkup(blockPos!, undefined, {
+          comment: nextComment,
+          html: node.attrs.html,
+        }),
+      );
+    });
+
+    const markdown = await editor.action(getMarkdown());
+    const fence = normalizeEditorBody(markdown, "Page");
+    expect(fence).toContain('"x": 7');
+    expect(fence).not.toContain('"viewMode"');
+
+    await editor.destroy();
+  });
 });

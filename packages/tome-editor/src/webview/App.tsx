@@ -3,6 +3,7 @@ import { GraphView } from "./components/GraphView";
 import { GlobalSearch } from "./components/GlobalSearch";
 import { NodePageView } from "./components/NodePageView";
 import { SidePanel } from "./components/SidePanel";
+import { ToolPanel, type ToolPanelSession } from "./components/ToolPanel";
 import { createEditorApi } from "./api/client";
 import { UserSettingsProvider, useUserSettings } from "./hooks/useUserSettings";
 import { nodeTableTabKey } from "../shared/user-settings";
@@ -54,6 +55,7 @@ import {
 } from "./graph-preferences";
 import { syncDocumentTitle } from "./document-title";
 import { syncDocumentIcon } from "./document-icon";
+import { setPageBlockToolPanelHandlers } from "./extensions/page-block-registry";
 
 export type { AppView };
 
@@ -124,12 +126,31 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const [recentNodesRefreshKey, setRecentNodesRefreshKey] = useState(0);
   const [homeId, setHomeId] = useState<string | null>(null);
   const [explorerAnchorId, setExplorerAnchorId] = useState("");
+  const [toolPanelSession, setToolPanelSession] = useState<ToolPanelSession | null>(null);
   const pendingBody = useRef<string | null>(null);
   const pendingTitle = useRef<string | null>(null);
   const savedBody = useRef<string | null>(null);
   const savedTitle = useRef<string | null>(null);
   const nodeIdRef = useRef<string | null>(null);
   const saveTimer = useRef<number | null>(null);
+  const toolPanelSessionRef = useRef<ToolPanelSession | null>(null);
+  toolPanelSessionRef.current = toolPanelSession;
+
+  const closeToolPanel = useCallback(() => {
+    const current = toolPanelSessionRef.current;
+    if (!current) return;
+    setToolPanelSession(null);
+    current.onClose?.();
+  }, []);
+
+  const openToolPanel = useCallback((session: ToolPanelSession) => {
+    setToolPanelSession(session);
+  }, []);
+
+  useEffect(() => {
+    setPageBlockToolPanelHandlers({ open: openToolPanel, close: closeToolPanel });
+    return () => setPageBlockToolPanelHandlers(null);
+  }, [openToolPanel, closeToolPanel]);
 
   const syncExplorerAnchorUrl = useCallback(
     (anchorId: string) => {
@@ -282,6 +303,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const loadNode = useCallback(
     async (nodeId: string, options?: GetNodeOptions | string) => {
       setError(null);
+      closeToolPanel();
       await flushPendingSaves();
       try {
         const normalized =
@@ -309,7 +331,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [api, flushPendingSaves, syncStandaloneUrl],
+    [api, closeToolPanel, flushPendingSaves, syncStandaloneUrl],
   );
 
   const bumpRecentNodes = useCallback(() => {
@@ -765,6 +787,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
           />
         )}
       </div>
+      <ToolPanel session={toolPanelSession} onClose={closeToolPanel} />
       </div>
       <GlobalSearch
         api={api}

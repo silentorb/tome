@@ -10,6 +10,7 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 
 - Authoring or changing the query page block
 - Interactive page-block mounting (host mounts extension React)
+- Host right tool panel (React Flow editor outside Milkdown)
 - Imp ↔ Tome SQL binding for the `nodes` table
 
 ## Requirements
@@ -19,13 +20,17 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 - Fence component id: `tome-query.block`
 - Block `data`: `{ version: 1, reactFlow: { nodes, edges } }` — React Flow is canonical so layout survives save
 - Default insert: Imp `input` → `output` (no transforms)
+- Legacy fences may still contain `viewMode`; parse ignores it
 
 ### Editor UI
 
-- Must register with `interactive: true` so tome-editor mounts the React `Component`
-- Mode toggle: **Table** (results) | **Query** (React Flow)
-- Table mode invokes `POST /api/extensions/tome-query.block/invoke` with `{ action: "execute", data }`
-- Table-mode errors are shown in a readonly field so they can be selected/copied inside the Milkdown embed
+- Must register with `interactive: true` so tome-editor mounts the React `Component` in the document embed
+- **Document embed:** always the results table (Refresh + **Edit query**)
+- **Edit query** opens the host right tool panel with React Flow; the panel is hidden when closed
+- Closing the panel re-runs the table query; Refresh re-runs while the panel is closed
+- Graph edits update fence `data` via `onBlockDataChange`
+- Table invokes `POST /api/extensions/tome-query.block/invoke` with `{ action: "execute", data }`
+- Table errors are shown in a readonly field so they can be selected/copied inside the Milkdown embed
 - No page-node / type-table scope in v1 — `nodeId` is ignored for the collection source
 - Wiring a new edge onto an occupied input port replaces the previous inbound edge; output ports may fan out
 - Selected nodes/edges are removable with **Backspace** or **Delete** (disabled when the block is read-only)
@@ -41,19 +46,22 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 ### Host services
 
 - Extensions receive `services.sqlQuery.queryAll(sql, params)` (parameterized SQL from Imp compile only)
+- Editor page-block context may expose `openToolPanel` / `closeToolPanel` for the host right panel
 
 ## Design rationale
 
 - Imp already models collection → collection with boundary `input` / `output`; Tome supplies `RelationalSchema` for `nodes`
 - Storing React Flow (not Imp alone) preserves node positions
 - Interactive page blocks are a general host capability; tome-query is the first consumer
+- React Flow is too complex for ProseMirror node views — the graph editor lives in the host tool panel, not inside Milkdown
 
 ## Behavior / pipeline
 
 1. Author inserts **Query table** from the slash menu
-2. Query mode: edit Imp operators in React Flow; changes update fence `data`
-3. Table mode: server converts RF → Imp → SQL, wraps `FROM nodes` with live-only subquery, runs `queryAll`, returns `{ columns, rows }`
-4. Static / prepare-editor HTML renders the same snapshot when `sqlQuery` is available
+2. Document shows the result table (auto-run on mount)
+3. **Edit query** opens the right panel; author edits Imp operators in React Flow; changes update fence `data`
+4. Panel close (or Refresh) re-runs: server converts RF → Imp → SQL, wraps `FROM nodes` with live-only subquery, runs `queryAll`, returns `{ columns, rows }`
+5. Static / prepare-editor HTML renders the same snapshot when `sqlQuery` is available
 
 ## Out of scope (v1)
 
@@ -65,10 +73,15 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 ## Verification
 
 - Unit: `packages/tome-query/tests/execute.test.ts` — config parse, schema rewrite, compile/execute
-- UI: `packages/tome-query/tests/editor.test.tsx` — Table/Query toggle, invoke/Refresh, errors (happy-dom + `@testing-library/react`; `QueryFlowEditor` mocked)
+- UI: `packages/tome-query/tests/editor.test.tsx` — Edit query → `openToolPanel`, invoke/Refresh, errors (happy-dom + `@testing-library/react`; `QueryFlowEditor` mocked)
+- Functional: `packages/tome-functional-tests/tests/query-block-data-roundtrip.test.tsx` — UI → normalize → `saveBody` → `prepare-editor-body` → remount (in-process API)
+- Host hop: `packages/tome-editor/tests/webview/page-block-data-persist.test.tsx` — block data change → `getMarkdown` / `markdownUpdated`
+- Autosave baseline: `packages/tome-editor/tests/webview/editor-markdown-update.test.ts` — first edit after create is saved (not treated as load baseline)
+- Tool panel: `packages/tome-editor/tests/webview/components/ToolPanel.test.tsx`
 
 ```bash
 bun run --filter tome-query test
+bun run test:functional
 ```
 
 ## See also

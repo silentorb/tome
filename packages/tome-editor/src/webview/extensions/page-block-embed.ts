@@ -11,9 +11,11 @@ import {
 import type { EditorPageBlockProps } from "tome-interfaces/page-block/editor";
 import { destroySchemaDiagramPanZoom, scheduleSchemaDiagramViewportInit } from "./schema-diagram-viewport";
 import {
+  closePageBlockToolPanel,
   getInteractivePageBlockRegistration,
   getPublicExtensionComponent,
   invokePageBlockExtension,
+  openPageBlockToolPanel,
 } from "./page-block-registry";
 
 const PAGE_BLOCK_COMMENT_RE = /^<!-- tome-page-block /;
@@ -191,6 +193,8 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
         nodeId: pageBlockEmbedNodeId,
         invoke: (input) =>
           invokePageBlockExtension(payload.componentId, input, pageBlockEmbedNodeId),
+        openToolPanel: openPageBlockToolPanel,
+        closeToolPanel: closePageBlockToolPanel,
       },
       blockData: payload.data,
       readOnly: !view.editable,
@@ -199,12 +203,25 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
           componentId: payload.componentId,
           data,
         });
-        const pos = typeof getPos === "function" ? getPos() : undefined;
+        let pos = typeof getPos === "function" ? getPos() : undefined;
+        if (typeof pos !== "number") {
+          // Fallback when getPos is briefly unavailable (e.g. mid-update).
+          view.state.doc.descendants((node, nodePos) => {
+            if (node.type.name === "tome_page_block" && node.attrs.comment === currentComment) {
+              pos = nodePos;
+              return false;
+            }
+          });
+        }
         if (typeof pos !== "number") return;
+        const existing = view.state.doc.nodeAt(pos);
         const tr = view.state.tr.setNodeMarkup(pos, undefined, {
           comment: nextComment,
-          html: currentHtml,
+          html: existing?.attrs.html ?? currentHtml,
         });
+        // Keep local mirror in sync before update() so remount does not race.
+        currentComment = nextComment;
+        dom.dataset.comment = nextComment;
         view.dispatch(tr);
       },
     };
@@ -237,10 +254,9 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
       remount(updated.attrs.comment, updated.attrs.html);
       return true;
     },
-    ignoreMutation: (mutation) => {
-      const target = mutation.target;
-      if (!(target instanceof Node)) return true;
-      return !reactHost.contains(target);
+    ignoreMutation: () => {
+      // Fully controlled atom: React owns the DOM inside the node view.
+      return true;
     },
     stopEvent: (event) => {
       const target = event.target;

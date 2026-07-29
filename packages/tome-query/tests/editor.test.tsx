@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { defaultBlockData } from "../src/config";
+import { defaultBlockData, defaultReactFlowGraph } from "../src/config";
 
 mock.module("../src/query-editor", () => ({
   QueryFlowEditor: () => <div data-testid="query-flow-stub" />,
@@ -14,20 +14,20 @@ const baseCtx = {
 };
 
 describe("QueryBlockComponent", () => {
-  test("renders Table and Query mode tabs", () => {
+  test("renders Edit query and Refresh controls", () => {
     render(
       <QueryBlockComponent
-        ctx={baseCtx}
+        ctx={{ ...baseCtx, openToolPanel: () => {} }}
         blockData={defaultBlockData()}
         onBlockDataChange={() => {}}
       />,
     );
 
-    expect(screen.getByRole("tab", { name: "Table" })).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "Query" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Edit query" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeTruthy();
   });
 
-  test("Table mode auto-invokes and renders result columns and rows", async () => {
+  test("auto-invokes and renders result columns and rows", async () => {
     const invoke = mock(async () => ({
       ok: true,
       columns: ["id", "title"],
@@ -36,7 +36,7 @@ describe("QueryBlockComponent", () => {
 
     render(
       <QueryBlockComponent
-        ctx={{ ...baseCtx, invoke }}
+        ctx={{ ...baseCtx, invoke, openToolPanel: () => {} }}
         blockData={defaultBlockData()}
         onBlockDataChange={() => {}}
       />,
@@ -59,7 +59,7 @@ describe("QueryBlockComponent", () => {
 
     render(
       <QueryBlockComponent
-        ctx={{ ...baseCtx, invoke }}
+        ctx={{ ...baseCtx, invoke, openToolPanel: () => {} }}
         blockData={defaultBlockData()}
         onBlockDataChange={() => {}}
       />,
@@ -84,7 +84,7 @@ describe("QueryBlockComponent", () => {
 
     render(
       <QueryBlockComponent
-        ctx={{ ...baseCtx, invoke }}
+        ctx={{ ...baseCtx, invoke, openToolPanel: () => {} }}
         blockData={defaultBlockData()}
         onBlockDataChange={() => {}}
       />,
@@ -106,7 +106,7 @@ describe("QueryBlockComponent", () => {
   test("shows message when invoke is missing", async () => {
     render(
       <QueryBlockComponent
-        ctx={baseCtx}
+        ctx={{ ...baseCtx, openToolPanel: () => {} }}
         blockData={defaultBlockData()}
         onBlockDataChange={() => {}}
       />,
@@ -128,7 +128,7 @@ describe("QueryBlockComponent", () => {
 
     render(
       <QueryBlockComponent
-        ctx={{ ...baseCtx, invoke }}
+        ctx={{ ...baseCtx, invoke, openToolPanel: () => {} }}
         blockData={defaultBlockData()}
         onBlockDataChange={() => {}}
       />,
@@ -145,16 +145,25 @@ describe("QueryBlockComponent", () => {
     });
   });
 
-  test("Query mode shows flow stub and hides table panel", async () => {
+  test("Edit query opens the host tool panel with QueryFlowEditor props", async () => {
     const invoke = mock(async () => ({
       ok: true,
       columns: ["id"],
       rows: [],
     }));
+    type OpenedSession = {
+      title: string;
+      props: Record<string, unknown>;
+      onClose?: () => void;
+    };
+    let opened: OpenedSession | null = null;
+    const openToolPanel = mock((session: OpenedSession) => {
+      opened = session;
+    });
 
     render(
       <QueryBlockComponent
-        ctx={{ ...baseCtx, invoke }}
+        ctx={{ ...baseCtx, invoke, openToolPanel }}
         blockData={defaultBlockData()}
         onBlockDataChange={() => {}}
       />,
@@ -164,9 +173,87 @@ describe("QueryBlockComponent", () => {
       expect(invoke).toHaveBeenCalled();
     });
 
-    fireEvent.click(screen.getByRole("tab", { name: "Query" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
 
-    expect(screen.getByTestId("query-flow-stub")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Refresh" })).toBeNull();
+    expect(openToolPanel).toHaveBeenCalledTimes(1);
+    expect(opened).not.toBeNull();
+    expect(opened!.title).toBe("Edit query");
+    expect(opened!.props.graph).toEqual(defaultReactFlowGraph());
+    expect(typeof opened!.props.onGraphChange).toBe("function");
+  });
+
+  test("panel onClose re-runs the query", async () => {
+    const invoke = mock(async () => ({
+      ok: true,
+      columns: ["id"],
+      rows: [],
+    }));
+    let onClose: (() => void) | undefined;
+    const openToolPanel = mock(
+      (session: { onClose?: () => void }) => {
+        onClose = session.onClose;
+      },
+    );
+
+    render(
+      <QueryBlockComponent
+        ctx={{ ...baseCtx, invoke, openToolPanel }}
+        blockData={defaultBlockData()}
+        onBlockDataChange={() => {}}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledTimes(1);
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
+    expect(onClose).toBeDefined();
+    onClose!();
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  test("graph change from panel persists reactFlow without viewMode", async () => {
+    const invoke = mock(async () => ({
+      ok: true,
+      columns: ["id"],
+      rows: [],
+    }));
+    const calls: unknown[] = [];
+    let onGraphChange: ((graph: unknown) => void) | undefined;
+    const openToolPanel = mock(
+      (session: { props: Record<string, unknown> }) => {
+        onGraphChange = session.props.onGraphChange as (graph: unknown) => void;
+      },
+    );
+
+    render(
+      <QueryBlockComponent
+        ctx={{ ...baseCtx, invoke, openToolPanel }}
+        blockData={defaultBlockData()}
+        onBlockDataChange={(data) => {
+          calls.push(data);
+        }}
+      />,
+    );
+
+    await waitFor(() => {
+      expect(invoke).toHaveBeenCalled();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
+    const nextGraph = {
+      nodes: [{ id: "in", type: "input", position: { x: 0, y: 0 }, data: { inputValues: {} } }],
+      edges: [],
+    };
+    onGraphChange?.(nextGraph);
+
+    expect(calls.length).toBeGreaterThan(0);
+    const last = calls.at(-1) as { reactFlow?: unknown; viewMode?: unknown };
+    expect(last.reactFlow).toEqual(nextGraph);
+    expect(last.viewMode).toBeUndefined();
   });
 });

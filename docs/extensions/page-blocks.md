@@ -41,6 +41,7 @@ A logical block **may** implement editor only, html only, server only, or any co
 - Slash menu inserts fences via `serializePageBlock` (defaults from manifest `insertDefaultData`).
 - On save, `normalizeEditorBody` collapses embeds back to `tome-block` fences (same pattern as dynamic link prepare/collapse).
 - **Interactive blocks:** when `EditorPageBlockRegistration.interactive` is true (exposed on the public manifest), the webview loads `editorBundles`, mounts the extension React `Component` inside the page-block NodeView, and persists edits via `onBlockDataChange` → embed comment attrs. Non-interactive blocks keep the static HTML path (plus optional host enhancements such as schema-diagram pan/zoom).
+- **Tool panel:** `EditorPageBlockContext.openToolPanel` / `closeToolPanel` open a host right panel (sibling of `.tome-main`) for complex UIs that should not live inside Milkdown (e.g. tome-query React Flow). The panel is omitted from the layout when no session is open.
 
 ## HTML host (v1: static site generate)
 

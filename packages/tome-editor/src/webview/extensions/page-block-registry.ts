@@ -2,8 +2,14 @@ import type {
   EditorPageBlockHost,
   EditorPageBlockModule,
   EditorPageBlockRegistration,
+  EditorToolPanelSession,
 } from "tome-interfaces/page-block/editor";
 import type { PublicExtensionComponent, PublicExtensionsManifest } from "tome-graph-interfaces";
+
+export type PageBlockToolPanelHandlers = {
+  open: (session: EditorToolPanelSession) => void;
+  close: () => void;
+};
 
 class ClientEditorPageBlockHost implements EditorPageBlockHost {
   readonly #blocks = new Map<string, EditorPageBlockRegistration>();
@@ -27,11 +33,24 @@ let componentsById = new Map<string, PublicExtensionComponent>();
 let invokeExtensionFn:
   | ((componentId: string, input?: unknown, nodeId?: string) => Promise<unknown>)
   | null = null;
+let toolPanelHandlers: PageBlockToolPanelHandlers | null = null;
 
 export function setPageBlockInvokeExtension(
   fn: ((componentId: string, input?: unknown, nodeId?: string) => Promise<unknown>) | null,
 ): void {
   invokeExtensionFn = fn;
+}
+
+export function setPageBlockToolPanelHandlers(handlers: PageBlockToolPanelHandlers | null): void {
+  toolPanelHandlers = handlers;
+}
+
+export function openPageBlockToolPanel(session: EditorToolPanelSession): void {
+  toolPanelHandlers?.open(session);
+}
+
+export function closePageBlockToolPanel(): void {
+  toolPanelHandlers?.close();
 }
 
 export async function invokePageBlockExtension(
@@ -88,4 +107,15 @@ export function resetPageBlockRegistryForTests(): void {
   host.clear();
   loadedExtensionIds.clear();
   componentsById = new Map();
+  invokeExtensionFn = null;
+  toolPanelHandlers = null;
+}
+
+/** Test helper: register an interactive page block and public component metadata. */
+export function registerInteractivePageBlockForTests(
+  component: PublicExtensionComponent,
+  registration: EditorPageBlockRegistration,
+): void {
+  componentsById.set(component.id, { ...component, interactive: true });
+  host.registerPageBlock({ ...registration, interactive: true });
 }

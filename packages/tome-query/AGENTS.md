@@ -10,10 +10,10 @@ Only `tome-interfaces` among Tome packages. Imp packages resolve via tome root w
 
 | Path | Role |
 | --- | --- |
-| `src/config.ts` | Parse/default block `data` (React Flow graph is canonical) |
+| `src/config.ts` | Parse/default block `data` (React Flow graph) |
 | `src/schema.ts` | Live `nodes` schema + `is_archived` rewrite |
 | `src/execute.ts` | Compile RF → Imp → SQL |
-| `src/editor.tsx` | `interactive: true` page block; Table / Query mode toggle |
+| `src/editor.tsx` | `interactive: true` page block; in-doc table + Edit query → host tool panel |
 | `src/html.ts` / `server.ts` | Snapshot table / invoke execute |
 
 ## Agent constraints

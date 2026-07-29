@@ -31,11 +31,13 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 - Editor-only blocks **are valid** (no html module required).
 - HTML rendering uses general-purpose `HtmlPageBlockRenderer` — not static-site-specific types.
 - Registrations may set `interactive: true` so the editor mounts the React `Component` from the browser `editor.js` bundle instead of (or in addition to) static HTML.
+- Interactive blocks may call `ctx.openToolPanel` / `ctx.closeToolPanel` to show a host right tool panel for UIs that should not live inside Milkdown (see [page-blocks.md](../extensions/page-blocks.md)).
 
 ### Reload
 
 - `extensions.json` changes **must** invalidate the loader cache (store change events → `CacheSync` + `invalidateExtensionsCache`).
 - Editor API reloads extension modules when config mtime changes (`ExtensionServerRuntime.ensureLoaded()`).
+- Browser `editor.js` bundles **must** rebuild when the extension package source tree mtime changes (not only when `extensions.json` changes), and responses use `Cache-Control: no-store`.
 
 ### Out of scope (v1)
 

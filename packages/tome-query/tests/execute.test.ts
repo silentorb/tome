@@ -26,6 +26,13 @@ describe("tome-query config", () => {
     expect(parsed.reactFlow.nodes.length).toBe(2);
   });
 
+  test("parseQueryBlockData strips legacy viewMode", () => {
+    const base = defaultBlockData();
+    const parsed = parseQueryBlockData({ ...base, viewMode: "query" });
+    expect(parsed.reactFlow).toEqual(base.reactFlow);
+    expect("viewMode" in parsed).toBe(false);
+  });
+
   test("parseQueryBlockData keeps last inbound edge per target handle", () => {
     const parsed = parseQueryBlockData({
       version: 1,

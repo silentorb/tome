@@ -14,12 +14,7 @@
   margin-bottom: 0.75rem;
 }
 
-.tome-query-mode-toggle {
-  display: inline-flex;
-  gap: 0.25rem;
-}
-
-.tome-query-mode-toggle button,
+.tome-query-edit,
 .tome-query-run,
 .tome-query-palette-btn {
   appearance: none;
@@ -31,26 +26,70 @@
   font: inherit;
 }
 
-.tome-query-mode-toggle button.is-active {
-  border-color: var(--tome-accent, #7aa2ff);
-  background: var(--tome-accent-muted, #243456);
+.tome-query-edit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.tome-query-flow {
+.tome-query-run {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.3rem;
+  line-height: 0;
+}
+
+.tome-query-run:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.tome-query-run-icon {
+  width: 1rem;
+  height: 1rem;
+  display: block;
+}
+
+.tome-query-run-icon.is-spinning {
+  animation: tome-query-spin 0.8s linear infinite;
+}
+
+@keyframes tome-query-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.tome-query-tool-panel {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+  color: var(--tome-fg, #e8e8e8);
+  background: var(--tome-surface, #1c1c1c);
+}
+
+.tome-query-tool-panel .tome-query-flow {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
   gap: 0.5rem;
-  min-height: 22rem;
+  padding: 0.75rem;
 }
 
 .tome-query-palette {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
+  flex-shrink: 0;
 }
 
-.tome-query-flow-canvas {
-  height: 22rem;
+.tome-query-tool-panel .tome-query-flow-canvas {
+  flex: 1;
+  min-height: 0;
+  height: auto;
   border: 1px solid var(--tome-border, #3a3a3a);
   border-radius: 2px;
   overflow: hidden;
@@ -90,6 +129,7 @@
   color: inherit;
   border: 1px solid var(--tome-border, #555);
   padding: 0.1rem 0.25rem;
+  box-shadow: none;
 }
 
 .tome-query-rf-handle {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { editorViewCtx } from "@milkdown/kit/core";
-import { replaceRange } from "@milkdown/kit/utils";
+import { getMarkdown, replaceRange } from "@milkdown/kit/utils";
 import { Crepe } from "@milkdown/crepe";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame-dark.css";
@@ -33,6 +33,7 @@ import {
   formatEditorDynamicNodeLink,
   prepareEditorMarkdown,
 } from "../standalone-markdown";
+import { classifyMarkdownUpdate } from "../editor-markdown-update";
 import "./editor.css";
 
 interface MentionState {
@@ -186,13 +187,18 @@ export function TomeEditor({
 
     crepe.on((listener) => {
       listener.markdownUpdated((_ctx, markdown, prevMarkdown) => {
-        if (markdown === prevMarkdown || destroyed || !editorReady) return;
-        setIsEmpty(!markdown.trim());
-        if (!baselineCaptured) {
-          baselineCaptured = true;
-          onEditorBaseline?.(markdown);
+        if (
+          classifyMarkdownUpdate({
+            destroyed,
+            editorReady,
+            baselineCaptured,
+            markdown,
+            prevMarkdown,
+          }) !== "save"
+        ) {
           return;
         }
+        setIsEmpty(!markdown.trim());
         onBodyChange?.(markdown);
       });
     });
@@ -201,9 +207,22 @@ export function TomeEditor({
     const activeCrepe = crepe;
     crepeRef.current = activeCrepe;
 
-    void activeCrepe.create().then(() => {
+    void activeCrepe.create().then(async () => {
       if (destroyed) return;
-      editorReady = true;
+      // Capture baseline from the initial doc so the first user edit (e.g. page-block
+      // tab toggle) is saved — not mistaken for the load baseline.
+      try {
+        const initialMarkdown = await activeCrepe.editor.action(getMarkdown());
+        if (destroyed) return;
+        baselineCaptured = true;
+        editorReady = true;
+        setIsEmpty(!initialMarkdown.trim());
+        onEditorBaseline?.(initialMarkdown);
+      } catch {
+        if (destroyed) return;
+        baselineCaptured = true;
+        editorReady = true;
+      }
       activeCrepe.editor.action((ctx) => {
         const view = ctx.get(editorViewCtx);
         const dom = view.dom;

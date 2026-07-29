@@ -674,6 +674,7 @@ export function createApiHandler(
         return new Response(bundle, {
           headers: {
             "Content-Type": "application/javascript",
+            "Cache-Control": "no-store",
             "Access-Control-Allow-Origin": "*",
           },
         });

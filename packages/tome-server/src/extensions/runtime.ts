@@ -20,6 +20,7 @@ import { EditorPageBlockHostImpl, ServerPageBlockHostImpl } from "./hosts";
 import { HtmlPageBlockHostImpl } from "./html-host";
 import { prepareEditorBodyWithPageBlocks } from "./page-block-markdown";
 import { resolveExtensionModulePath } from "./resolve-extension-module";
+import { editorBundleWatchRoot, maxSourceMtimeMs } from "./editor-bundle-mtime";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
 
 export type { PublicExtensionsManifest };
@@ -29,6 +30,11 @@ export interface LoadedExtensionModules {
   editorModule?: string;
   htmlModule?: string;
   serverModule?: string;
+}
+
+interface CachedEditorBundle {
+  js: string;
+  sourceMtimeMs: number;
 }
 
 async function importHtmlModule(modulePath: string, host: HtmlPageBlockHostImpl): Promise<void> {
@@ -72,7 +78,7 @@ export class ExtensionServerRuntime {
   readonly #editorHost = new EditorPageBlockHostImpl();
   readonly #htmlHost = new HtmlPageBlockHostImpl();
   readonly #serverHost = new ServerPageBlockHostImpl();
-  readonly #editorBundleCache = new Map<string, string>();
+  readonly #editorBundleCache = new Map<string, CachedEditorBundle>();
   readonly #editorBundleInflight = new Map<string, Promise<string | null>>();
   #manifest: ExtensionsManifest = { extensions: [], components: [] };
   #loadedModules: LoadedExtensionModules[] = [];
@@ -205,13 +211,21 @@ export class ExtensionServerRuntime {
   }
 
   async bundleEditorModule(extensionId: string): Promise<string | null> {
+    const extension = this.#manifest.extensions.find((entry) => entry.id === extensionId);
+    if (!extension?.editorModule) return null;
+
+    const entrypoint = resolveExtensionModulePath(extension.editorModule, this.#contentPath);
+    const sourceMtimeMs = maxSourceMtimeMs(editorBundleWatchRoot(entrypoint));
+
     const cached = this.#editorBundleCache.get(extensionId);
-    if (cached !== undefined) return cached;
+    if (cached !== undefined && cached.sourceMtimeMs === sourceMtimeMs) {
+      return cached.js;
+    }
 
     const inflight = this.#editorBundleInflight.get(extensionId);
     if (inflight) return inflight;
 
-    const buildPromise = this.#buildEditorModule(extensionId);
+    const buildPromise = this.#buildEditorModule(extensionId, entrypoint, sourceMtimeMs);
     this.#editorBundleInflight.set(extensionId, buildPromise);
     try {
       return await buildPromise;
@@ -220,11 +234,11 @@ export class ExtensionServerRuntime {
     }
   }
 
-  async #buildEditorModule(extensionId: string): Promise<string | null> {
-    const extension = this.#manifest.extensions.find((entry) => entry.id === extensionId);
-    if (!extension?.editorModule) return null;
-
-    const entrypoint = resolveExtensionModulePath(extension.editorModule, this.#contentPath);
+  async #buildEditorModule(
+    extensionId: string,
+    entrypoint: string,
+    sourceMtimeMs: number,
+  ): Promise<string | null> {
     let result: Awaited<ReturnType<typeof Bun.build>>;
     try {
       result = await Bun.build({
@@ -268,7 +282,7 @@ export class ExtensionServerRuntime {
         ? js
         : `;(function(){var s=document.createElement("style");s.setAttribute("data-tome-ext",${JSON.stringify(extensionId)});` +
           `s.textContent=${JSON.stringify(cssParts.join("\n"))};document.head.appendChild(s);})();\n${js}`;
-    this.#editorBundleCache.set(extensionId, bundle);
+    this.#editorBundleCache.set(extensionId, { js: bundle, sourceMtimeMs });
     return bundle;
   }
 
