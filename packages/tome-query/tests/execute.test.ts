@@ -7,8 +7,12 @@ import {
   parseQueryBlockData,
   withoutInboundToPort,
 } from "../src/config";
+import {
+  applyLiveNodesConstraint,
+  projectionType,
+  tomeNodesColumnExpression,
+} from "tome-imp-sql";
 import { compileReactFlowQuery, rowsToTable } from "../src/execute";
-import { applyLiveNodesConstraint, tomeNodesColumnExpression } from "../src/schema";
 import { executeQueryBlock } from "../src/render";
 
 describe("tome-query config", () => {
@@ -267,5 +271,150 @@ describe("tome-query compile + execute", () => {
     const table = rowsToTable([{ title: "A", id: "1", z: 1 }]);
     expect(table.columns[0]).toBe("id");
     expect(table.columns[1]).toBe("title");
+  });
+
+  test("compiles traverse over relationship_projections", () => {
+    const edgeType = projectionType("00000000000000000000000001", 0);
+    const reactFlow = {
+      nodes: [
+        {
+          id: "in",
+          type: "input",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+        {
+          id: "hop",
+          type: "traverse",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { edgeType } },
+        },
+        {
+          id: "out",
+          type: "output",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+      ],
+      edges: [
+        {
+          id: "e1",
+          source: "in",
+          sourceHandle: "value",
+          target: "hop",
+          targetHandle: "collection",
+        },
+        {
+          id: "e2",
+          source: "hop",
+          sourceHandle: "collection",
+          target: "out",
+          targetHandle: "value",
+        },
+      ],
+    };
+
+    const { sql, parameters } = compileReactFlowQuery(reactFlow);
+    expect(sql).toContain("relationship_projections");
+    expect(sql).toContain("source_node_id");
+    expect(parameters).toContain(edgeType);
+  });
+
+  test("executeQueryBlock traverse follows relationship_projections", async () => {
+    const edgeType = projectionType("00000000000000000000000001", 0);
+    const db = new Database(":memory:");
+    db.run(`
+      CREATE TABLE nodes (
+        id TEXT PRIMARY KEY NOT NULL,
+        properties TEXT NOT NULL DEFAULT '{}',
+        is_archived INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE relationship_projections (
+        id TEXT PRIMARY KEY NOT NULL,
+        record_id TEXT NOT NULL,
+        source_node_id TEXT NOT NULL,
+        target_node_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        properties TEXT NOT NULL DEFAULT '{}'
+      );
+    `);
+    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+      "a",
+      JSON.stringify({ title: "A" }),
+      0,
+    ]);
+    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+      "b",
+      JSON.stringify({ title: "B" }),
+      0,
+    ]);
+    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+      "archived-target",
+      JSON.stringify({ title: "Archived" }),
+      1,
+    ]);
+    db.run(
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
+       VALUES (?, ?, ?, ?, ?, '{}')`,
+      ["p1", "r1", "a", "b", edgeType],
+    );
+    db.run(
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
+       VALUES (?, ?, ?, ?, ?, '{}')`,
+      ["p2", "r2", "a", "archived-target", edgeType],
+    );
+
+    const reactFlow = {
+      nodes: [
+        {
+          id: "in",
+          type: "input",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+        {
+          id: "hop",
+          type: "traverse",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { edgeType } },
+        },
+        {
+          id: "out",
+          type: "output",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+      ],
+      edges: [
+        {
+          id: "e1",
+          source: "in",
+          sourceHandle: "value",
+          target: "hop",
+          targetHandle: "collection",
+        },
+        {
+          id: "e2",
+          source: "hop",
+          sourceHandle: "collection",
+          target: "out",
+          targetHandle: "value",
+        },
+      ],
+    };
+
+    const table = await executeQueryBlock(
+      {
+        queryAll(sql, params = []) {
+          return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
+        },
+      },
+      reactFlow,
+    );
+
+    const ids = table.rows.map((row) => row.id);
+    expect(ids).toContain("b");
+    expect(ids).not.toContain("archived-target");
+    expect(ids).not.toContain("a");
   });
 });

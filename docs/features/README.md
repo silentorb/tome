@@ -30,6 +30,8 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Extension system (runtime-loaded packages) | [extensions.md](./extensions.md) |
 | Spatial graph (Cytoscape location diagrams) | [spatial-graph.md](./spatial-graph.md) |
 | Schema diagram (Mermaid ER meta-model) | [schema-diagram.md](./schema-diagram.md) |
+| Imp → Tome SQL binder | [tome-imp-sql.md](./tome-imp-sql.md) |
+| Imp query page block | [tome-query.md](./tome-query.md) |
 
 ## Split of concerns
 

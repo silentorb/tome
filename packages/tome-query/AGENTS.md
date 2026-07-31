@@ -4,15 +4,14 @@
 
 ## Dependencies
 
-Only `tome-interfaces` among Tome packages. Imp packages resolve via tome root workspaces (`../imp/packages/*`). Do not import `tome-db` / `tome-editor` / `tome-static-site`.
+Among Tome packages: `tome-interfaces` + `tome-imp-sql` (schema/registry/compile binder). Imp packages resolve via tome root workspaces (`../imp/packages/*`). Do not import `tome-db` / `tome-editor` / `tome-static-site`.
 
 ## Layout
 
 | Path | Role |
 | --- | --- |
 | `src/config.ts` | Parse/default block `data` (React Flow graph) |
-| `src/schema.ts` | Live `nodes` schema + `is_archived` rewrite |
-| `src/execute.ts` | Compile RF → Imp → SQL |
+| `src/execute.ts` | Compile RF → Imp → SQL via `tome-imp-sql` |
 | `src/editor.tsx` | `interactive: true` page block; in-doc table + Edit query → host tool panel |
 | `src/html.ts` / `server.ts` | Snapshot table / invoke execute |
 
@@ -21,6 +20,7 @@ Only `tome-interfaces` among Tome packages. Imp packages resolve via tome root w
 - Query Input is **all live nodes** — ignore page `nodeId` for the collection source (v1).
 - React Flow shows Imp operators only — never materialize corpus rows as RF nodes.
 - Column selection uses Imp `project`; property columns map via `json_extract`.
+- Path hops use Imp `traverse` + `tome-imp-sql` `projectionType` for `edgeType`.
 
 ## Tests
 

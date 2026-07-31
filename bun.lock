@@ -16,6 +16,17 @@
         "typescript": "5.8.2",
       },
     },
+    "../imp/packages/imp-pathing": {
+      "name": "imp-pathing",
+      "version": "0.1.0",
+      "dependencies": {
+        "imp-spec": "workspace:*",
+      },
+      "devDependencies": {
+        "imp-registry": "workspace:*",
+        "typescript": "5.8.2",
+      },
+    },
     "../imp/packages/imp-react-flow": {
       "name": "imp-react-flow",
       "version": "0.1.0",
@@ -54,6 +65,7 @@
       "version": "0.1.0",
       "dependencies": {
         "imp-collection-transforms": "workspace:*",
+        "imp-pathing": "workspace:*",
         "imp-registry": "workspace:*",
         "imp-spec": "workspace:*",
         "kysely": "^0.28.2",
@@ -180,6 +192,21 @@
         "typescript": "5.8.2",
       },
     },
+    "packages/tome-imp-sql": {
+      "name": "tome-imp-sql",
+      "version": "0.1.0",
+      "dependencies": {
+        "imp-collection-transforms": "workspace:*",
+        "imp-pathing": "workspace:*",
+        "imp-registry": "workspace:*",
+        "imp-spec": "workspace:*",
+        "imp-sql": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.2.23",
+        "typescript": "5.8.2",
+      },
+    },
     "packages/tome-interfaces": {
       "name": "tome-interfaces",
       "version": "0.1.0",
@@ -193,12 +220,11 @@
       "version": "0.1.0",
       "dependencies": {
         "@xyflow/react": "12.8.2",
-        "imp-collection-transforms": "workspace:*",
         "imp-react-flow": "workspace:*",
         "imp-registry": "workspace:*",
         "imp-spec": "workspace:*",
-        "imp-sql": "workspace:*",
         "react": "19.0.0",
+        "tome-imp-sql": "workspace:*",
         "tome-interfaces": "workspace:*",
       },
       "devDependencies": {
@@ -1085,6 +1111,8 @@
 
     "imp-collection-transforms": ["imp-collection-transforms@workspace:../imp/packages/imp-collection-transforms"],
 
+    "imp-pathing": ["imp-pathing@workspace:../imp/packages/imp-pathing"],
+
     "imp-react-flow": ["imp-react-flow@workspace:../imp/packages/imp-react-flow"],
 
     "imp-registry": ["imp-registry@workspace:../imp/packages/imp-registry"],
@@ -1504,6 +1532,8 @@
     "tome-graph-interfaces": ["tome-graph-interfaces@workspace:packages/tome-graph-interfaces"],
 
     "tome-http": ["tome-http@workspace:packages/tome-http"],
+
+    "tome-imp-sql": ["tome-imp-sql@workspace:packages/tome-imp-sql"],
 
     "tome-interfaces": ["tome-interfaces@workspace:packages/tome-interfaces"],
 

@@ -17,8 +17,89 @@ Each subdirectory is a **workspace package** in the Tome monorepo. Packages are 
 | [`tome-interfaces`](./tome-interfaces/) | Extension / page-block integration contracts |
 | [`tome-extension-fixture`](./tome-extension-fixture/) | Reference/test extension (not production) |
 | [`tome-spatial-graph`](./tome-spatial-graph/) | Compound spatial graph page block (cytoscape SVG) |
+| [`tome-imp-sql`](./tome-imp-sql/) | Imp → Tome SQL schema/registry binder (above tome-db) |
 | [`tome-query`](./tome-query/) | Imp-backed custom table page block (React Flow → SQL) |
 | [`tome-functional-tests`](./tome-functional-tests/) | Cross-package functional tests (dev-only; not a runtime library) |
+
+```mermaid
+flowchart TB
+  subgraph contracts [Contracts]
+    GI[tome-graph-interfaces]
+    SI[tome-service-interfaces]
+    EI[tome-interfaces]
+    SI --> GI
+  end
+
+  subgraph storage [Storage]
+    SF[tome-flatfile]
+    CS[tome-sqlite]
+  end
+
+  SF --> SI
+  SF --> GI
+  CS --> SI
+  CS --> GI
+
+  DB[tome-db]
+  DB --> SF
+  DB --> CS
+  DB --> GI
+  DB --> SI
+  DB --> EI
+
+  subgraph host [Host]
+    SRV[tome-server]
+    HTTP[tome-http]
+  end
+
+  SRV --> DB
+  SRV --> SI
+  SRV -.->|loads via config| HTTP
+  HTTP --> SI
+  HTTP --> GI
+
+  subgraph surfaces [Surfaces]
+    ED[tome-editor]
+    SS[tome-static-site]
+  end
+
+  ED -->|HTTP client| HTTP
+  ED --> DB
+  ED --> GI
+  ED --> EI
+  ED --> SF
+  SS --> DB
+  SS --> EI
+  SS --> SF
+
+  subgraph plugins [Themes and extensions]
+    TH[tome-theme-midnight]
+    EXT[tome-extension-*]
+    SP[tome-spatial-graph]
+    SD[tome-schema-diagram]
+    IMPSQL[tome-imp-sql]
+    Q[tome-query]
+  end
+
+  EXT --> EI
+  SP --> EI
+  SD --> EI
+  Q --> EI
+  Q --> IMPSQL
+  ED --> TH
+  SS --> TH
+  SS --> EXT
+  SS --> SP
+  SS --> SD
+  SS --> Q
+
+  FT[tome-functional-tests]
+  FT --> DB
+  FT --> ED
+  FT --> SRV
+  FT --> HTTP
+  FT --> Q
+```
 
 ## Package documentation
 

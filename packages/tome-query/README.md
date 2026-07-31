@@ -11,8 +11,7 @@ Imp-backed custom table page block: React Flow query editor → Imp graph → SQ
 | Path | Role |
 | --- | --- |
 | `src/config.ts` | Block data + default input→output graph |
-| `src/schema.ts` | `nodes` RelationalSchema + live-node SQL rewrite |
-| `src/execute.ts` | RF → Imp → SQL compile |
+| `src/execute.ts` | RF → Imp → SQL compile via `tome-imp-sql` |
 | `src/render.ts` | Execute + HTML table |
 | `src/editor.tsx` | Interactive React UI (table / query modes) |
 | `src/query-editor.tsx` | React Flow canvas |
@@ -20,7 +19,7 @@ Imp-backed custom table page block: React Flow query editor → Imp graph → SQ
 
 ## Dependencies
 
-- `tome-interfaces` only among Tome packages
+- `tome-interfaces` + `tome-imp-sql` among Tome packages
 - Imp packages via workspace link (`tome` root workspaces include `../imp/packages/*` in the workbench)
 - `@xyflow/react` for the query canvas
 

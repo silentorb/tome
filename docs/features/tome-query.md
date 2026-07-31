@@ -4,14 +4,14 @@
 
 **tome-query** is a page-block extension that lets authors build a **custom table** whose row pipeline is an Imp collection graph, edited in React Flow and executed as SQL against all **live** Tome nodes (`nodes` where `is_archived = 0`).
 
-Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
+Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryAll**.
 
 ## When to read this
 
 - Authoring or changing the query page block
 - Interactive page-block mounting (host mounts extension React)
 - Host right tool panel (React Flow editor outside Milkdown)
-- Imp ↔ Tome SQL binding for the `nodes` table
+- Imp ↔ Tome SQL binding for live `nodes` and path hops (see [tome-imp-sql.md](./tome-imp-sql.md))
 
 ## Requirements
 
@@ -27,6 +27,7 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 - Must register with `interactive: true` so tome-editor mounts the React `Component` in the document embed
 - **Document embed:** always the results table (Refresh + **Edit query**)
 - **Edit query** opens the host right tool panel with React Flow; the panel is hidden when closed
+- The host tool panel is user-resizable (drag the left edge; width persists in localStorage)
 - Closing the panel re-runs the table query; Refresh re-runs while the panel is closed
 - Graph edits update fence `data` via `onBlockDataChange`
 - Table invokes `POST /api/extensions/tome-query.block/invoke` with `{ action: "execute", data }`
@@ -40,8 +41,9 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 
 - Input = unresolved enumeration of all live nodes (IEnumerable-style pipeline; corpus rows are not RF nodes)
 - Supported transforms: Imp collection library (`filter`, `sort`, `limit`, `offset`, `project`, predicates, `column`, `literal`)
+- Supported path ops: Imp `traverse` (single hop via `relationship_projections`; `edgeType` is a projection type string)
 - Columns: Imp `project` with comma-separated logical names; `id` / `is_archived` are table columns; other names map to `json_extract(properties, '$.name')`
-- Host must exclude archived nodes even when the graph has no filter
+- Host must exclude archived nodes even when the graph has no filter (including traverse targets)
 
 ### Host services
 
@@ -50,7 +52,7 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 
 ## Design rationale
 
-- Imp already models collection → collection with boundary `input` / `output`; Tome supplies `RelationalSchema` for `nodes`
+- Imp already models collection → collection with boundary `input` / `output`; `tome-imp-sql` supplies the Tome `RelationalSchema` (nodes + projections)
 - Storing React Flow (not Imp alone) preserves node positions
 - Interactive page blocks are a general host capability; tome-query is the first consumer
 - React Flow is too complex for ProseMirror node views — the graph editor lives in the host tool panel, not inside Milkdown
@@ -66,7 +68,8 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 ## Out of scope (v1)
 
 - Page node as optional Imp input
-- Joins / relationship traversals / type-table membership as Input
+- Type-table membership as Input
+- Variable-length / recursive path CTEs (chain `traverse` nodes instead)
 - Replacing `views.json` database tabs
 - Editable result rows
 
@@ -78,6 +81,7 @@ Data flow: **React Flow → Imp graph → imp-sql → TomeQueryCache.queryAll**.
 - Host hop: `packages/tome-editor/tests/webview/page-block-data-persist.test.tsx` — block data change → `getMarkdown` / `markdownUpdated`
 - Autosave baseline: `packages/tome-editor/tests/webview/editor-markdown-update.test.ts` — first edit after create is saved (not treated as load baseline)
 - Tool panel: `packages/tome-editor/tests/webview/components/ToolPanel.test.tsx`
+- Tool panel width prefs: `packages/tome-editor/tests/webview/tool-panel-preferences.test.ts`
 
 ```bash
 bun run --filter tome-query test
@@ -86,6 +90,7 @@ bun run test:functional
 
 ## See also
 
+- [tome-imp-sql.md](./tome-imp-sql.md) — Imp → Tome SQL binder
 - [extensions.md](./extensions.md) — registration + interactive mounting
 - [page-blocks.md](../extensions/page-blocks.md)
-- Imp [sql.md](../../../imp/docs/features/sql.md) / [collection-transforms.md](../../../imp/docs/features/collection-transforms.md)
+- Imp [sql.md](../../../imp/docs/features/sql.md) / [collection-transforms.md](../../../imp/docs/features/collection-transforms.md) / [pathing.md](../../../imp/docs/features/pathing.md)

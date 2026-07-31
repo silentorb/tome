@@ -16,6 +16,7 @@
 | `packages/tome-editor/` | Vite/React editor webview (client only) |
 | `packages/tome-static-site/` | Astro static export |
 | `packages/tome-interfaces/` | Extension / page-block integration contracts |
+| `packages/tome-imp-sql/` | Imp → Tome SQL schema/registry binder (above tome-db) |
 | `packages/tome-query/` | Imp-backed custom table page block (React Flow → SQL) |
 | `packages/tome-extension-*/` | Optional extensions (e.g. `tome-extension-fixture` for tests) |
 

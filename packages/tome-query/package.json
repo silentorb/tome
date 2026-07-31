@@ -11,12 +11,11 @@
   },
   "dependencies": {
     "@xyflow/react": "12.8.2",
-    "imp-collection-transforms": "workspace:*",
     "imp-react-flow": "workspace:*",
     "imp-registry": "workspace:*",
     "imp-spec": "workspace:*",
-    "imp-sql": "workspace:*",
     "react": "19.0.0",
+    "tome-imp-sql": "workspace:*",
     "tome-interfaces": "workspace:*"
   },
   "devDependencies": {
