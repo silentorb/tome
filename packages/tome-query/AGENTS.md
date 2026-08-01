@@ -22,7 +22,7 @@ Among Tome packages: `tome-interfaces` + `tome-imp-sql` (schema/registry/compile
 - Column selection uses Imp `project`; property columns map via `json_extract`.
 - Result tables always lead with a title-link column; compile ensures `id` + `title` plumbing (`ensureIdentityTitleProjection` / `ensureTitleColumnInSelectStar`).
 - RF port literal inputs: only scalar ports without an inbound edge (`shouldShowPortLiteralInput`).
-- Path hops use Imp `traverse` + `tome-imp-sql` `projectionType` for `edgeType`.
+- Path hops use Imp `traverse` with `association` + `direction`; `tome-imp-sql` maps those to projection types at SQL bind time.
 
 ## Tests
 

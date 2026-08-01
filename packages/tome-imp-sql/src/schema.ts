@@ -39,6 +39,12 @@ export const tomeLiveNodesSchema: RelationalSchema = {
     targetColumn: "target_node_id",
     typeColumn: "type",
   },
+  edgeType(association, direction) {
+    if (direction !== 0 && direction !== 1) {
+      throw new Error(`direction must be 0 or 1, got ${String(direction)}`);
+    }
+    return projectionType(association, direction);
+  },
 };
 
 const LIVE_NODES_SUBQUERY = '(select * from "nodes" where "is_archived" = 0)';

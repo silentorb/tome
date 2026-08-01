@@ -42,6 +42,9 @@ describe("tome-imp-sql schema", () => {
     expect(tomeLiveNodesSchema.edges?.sourceColumn).toBe("source_node_id");
     expect(tomeLiveNodesSchema.edges?.targetColumn).toBe("target_node_id");
     expect(tomeLiveNodesSchema.edges?.typeColumn).toBe("type");
+    expect(tomeLiveNodesSchema.edgeType?.(VALID_ASSOCIATION, 0)).toBe(
+      `${VALID_ASSOCIATION}:0`,
+    );
   });
 
   test("projectionType encodes association and direction", () => {
@@ -56,14 +59,14 @@ describe("tome-imp-sql schema", () => {
 
 describe("tome-imp-sql compile", () => {
   test("compiles traverse against relationship_projections", () => {
-    const edgeType = projectionType(VALID_ASSOCIATION, 0);
+    const expectedType = projectionType(VALID_ASSOCIATION, 0);
     const graph: Graph = {
       nodes: {
         in: { id: "in", type: "input", inputs: {} },
         hop: {
           id: "hop",
           type: "traverse",
-          inputs: { edgeType },
+          inputs: { association: VALID_ASSOCIATION, direction: 0 },
         },
         out: { id: "out", type: "output", inputs: {} },
       },
@@ -84,18 +87,18 @@ describe("tome-imp-sql compile", () => {
     expect(sql).toContain("source_node_id");
     expect(sql).toContain("target_node_id");
     expect(sql).toContain('is_archived" = 0');
-    expect(parameters).toContain(edgeType);
+    expect(parameters).toContain(expectedType);
   });
 
   test("compiles except + traverse as NOT EXISTS over relationship_projections", () => {
-    const edgeType = projectionType(VALID_ASSOCIATION, 0);
+    const expectedType = projectionType(VALID_ASSOCIATION, 0);
     const graph: Graph = {
       nodes: {
         in: { id: "in", type: "input", inputs: {} },
         hop: {
           id: "hop",
           type: "traverse",
-          inputs: { edgeType },
+          inputs: { association: VALID_ASSOCIATION, direction: 0 },
         },
         except: { id: "except", type: "except", inputs: {} },
         out: { id: "out", type: "output", inputs: {} },
@@ -124,6 +127,6 @@ describe("tome-imp-sql compile", () => {
     expect(sql.toLowerCase()).toContain("not exists");
     expect(sql).toContain("relationship_projections");
     expect(sql).toContain('is_archived" = 0');
-    expect(parameters).toContain(edgeType);
+    expect(parameters).toContain(expectedType);
   });
 });

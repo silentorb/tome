@@ -453,7 +453,8 @@ describe("tome-query compile + execute", () => {
   });
 
   test("compiles traverse over relationship_projections", () => {
-    const edgeType = projectionType("00000000000000000000000001", 0);
+    const association = "00000000000000000000000001";
+    const expectedType = projectionType(association, 0);
     const reactFlow = {
       nodes: [
         {
@@ -466,7 +467,7 @@ describe("tome-query compile + execute", () => {
           id: "hop",
           type: "traverse",
           position: { x: 0, y: 0 },
-          data: { inputValues: { edgeType } },
+          data: { inputValues: { association, direction: 0 } },
         },
         {
           id: "out",
@@ -496,11 +497,12 @@ describe("tome-query compile + execute", () => {
     const { sql, parameters } = compileReactFlowQuery(reactFlow);
     expect(sql).toContain("relationship_projections");
     expect(sql).toContain("source_node_id");
-    expect(parameters).toContain(edgeType);
+    expect(parameters).toContain(expectedType);
   });
 
   test("executeQueryBlock traverse follows relationship_projections", async () => {
-    const edgeType = projectionType("00000000000000000000000001", 0);
+    const association = "00000000000000000000000001";
+    const edgeType = projectionType(association, 0);
     const db = new Database(":memory:");
     db.run(`
       CREATE TABLE nodes (
@@ -555,7 +557,7 @@ describe("tome-query compile + execute", () => {
           id: "hop",
           type: "traverse",
           position: { x: 0, y: 0 },
-          data: { inputValues: { edgeType } },
+          data: { inputValues: { association, direction: 0 } },
         },
         {
           id: "out",
@@ -598,8 +600,9 @@ describe("tome-query compile + execute", () => {
   });
 
   test("executeQueryBlock except + traverse keeps nodes outside membership", async () => {
-    const setToMember = projectionType("00000000000000000000000001", 0);
-    const memberToSet = projectionType("00000000000000000000000001", 1);
+    const association = "00000000000000000000000001";
+    const setToMember = projectionType(association, 0);
+    const memberToSet = projectionType(association, 1);
     const db = new Database(":memory:");
     db.run(`
       CREATE TABLE nodes (
@@ -649,13 +652,13 @@ describe("tome-query compile + execute", () => {
           id: "hopMembers",
           type: "traverse",
           position: { x: 0, y: 0 },
-          data: { inputValues: { edgeType: setToMember } },
+          data: { inputValues: { association, direction: 0 } },
         },
         {
           id: "hopHubs",
           type: "traverse",
           position: { x: 0, y: 0 },
-          data: { inputValues: { edgeType: memberToSet } },
+          data: { inputValues: { association, direction: 1 } },
         },
         {
           id: "exceptMembers",

@@ -13,10 +13,10 @@ describe("shouldShowPortLiteralInput", () => {
 
   test("shows scalar ports only when unconnected", () => {
     expect(
-      shouldShowPortLiteralInput({ id: "edgeType", type: { id: "string" } }, []),
+      shouldShowPortLiteralInput({ id: "association", type: { id: "string" } }, []),
     ).toBe(true);
     expect(
-      shouldShowPortLiteralInput({ id: "edgeType", type: { id: "string" } }, ["edgeType"]),
+      shouldShowPortLiteralInput({ id: "association", type: { id: "string" } }, ["association"]),
     ).toBe(false);
     expect(
       shouldShowPortLiteralInput({ id: "column", type: { id: "string" } }, ["collection"]),

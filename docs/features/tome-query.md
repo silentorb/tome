@@ -42,7 +42,7 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 
 - Input = unresolved enumeration of all live nodes (IEnumerable-style pipeline; corpus rows are not RF nodes)
 - Supported transforms: Imp collection library (`filter`, `except`, `sort`, `limit`, `offset`, `project`, predicates, `column`, `literal`)
-- Supported path ops: Imp `traverse` (single hop via `relationship_projections`; `edgeType` is a projection type string)
+- Supported path ops: Imp `traverse` (single hop via `relationship_projections`; Imp inputs are separate `association` + `direction` — Tome binds them to projection types at SQL time)
 - `except` is declarative set difference by `id`; SQL lowering uses `NOT EXISTS` over the exclude subquery (not an in-memory subtract)
 - Columns: Imp `project` with comma-separated logical names; `id` / `is_archived` are table columns; other names map to `json_extract(properties, '$.name')`
 - **Title-link baseline:** every result table always shows a first **title** column of node page links (like database table name cells). Compile always ensures SQL selects `id` and `title` (merging into any author `project`, or adding `json_extract(…) AS title` on bare `SELECT *`). Visible columns omit raw `id` / duplicate `title` plumbing; author-projected extras follow the title column. Projecting only `id` yields a single-column title-link table.

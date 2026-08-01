@@ -7,7 +7,7 @@
 ## When to read this
 
 - Compiling Imp graphs against Tome `nodes` / `relationship_projections`
-- Authoring `traverse` edgeType literals (association + direction)
+- Authoring `traverse` hops (`association` + `direction`)
 - Wiring hosts such as `tome-query` to Imp → SQL
 
 ## Requirements
@@ -19,6 +19,7 @@
 | Node collection (`schema.table`) | `nodes` |
 | Property columns | `id` / `is_archived` as columns; others via `json_extract(properties, '$.name')` |
 | Edges (`schema.edges`) | `relationship_projections` with `source_node_id`, `target_node_id`, `type` |
+| Traverse hop | Imp `association` + `direction` (0\|1) → `schema.edgeType` → `{associationId}:{direction}` for `relationship_projections.type` |
 
 ### Live nodes
 
@@ -30,7 +31,7 @@ Compiled SQL that selects from `"nodes"` **must** be rewritten so the base relat
 
 ### Projection type helper
 
-`projectionType(associationId, direction)` **must** return `{associationId}:{0|1}` matching Tome directed projection types used in `relationship_projections.type`.
+`projectionType(associationId, direction)` **must** return `{associationId}:{0|1}` matching Tome directed projection types used in `relationship_projections.type`. This encoding is a **storage/SQL boundary** concern — Imp graphs keep `association` and `direction` as separate values and must not store the colon-joined form.
 
 ### API
 
@@ -38,7 +39,7 @@ Compiled SQL that selects from `"nodes"` **must** be rewritten so the base relat
 | --- | --- |
 | `compileImpGraphToTomeSql(graph)` | `graphToKysely` + `compileSql` + live-nodes rewrite |
 | `createTomeImpRegistry()` | Standard Imp registry for Tome hosts |
-| `tomeLiveNodesSchema` | `RelationalSchema` with edges |
+| `tomeLiveNodesSchema` | `RelationalSchema` with edges + `edgeType` binder |
 | `applyLiveNodesConstraint(sql, parameters)` | Rewrite `FROM "nodes"` |
 
 ### Dependencies
@@ -49,12 +50,12 @@ Must not depend on `tome-db`. Hosts execute SQL via `queryAll` (or equivalent).
 
 - Keeps path/SQL binding out of core graph storage (`tome-db`).
 - Reuses Imp’s catalog/lowerer split; Tome only supplies schema knowledge.
-- Opaque Imp `edgeType` + local `projectionType` helper avoids baking association registries into Imp.
+- Imp graphs stay explicit (`association` / `direction`); Tome’s packed projection type string is produced only when binding to SQL.
 
 ## Behavior / pipeline
 
-1. Host builds an Imp graph (`input` → transforms / `traverse` → `output`).
-2. `compileImpGraphToTomeSql` lowers with `tomeLiveNodesSchema`.
+1. Host builds an Imp graph (`input` → transforms / `traverse` → `output`) with separate `association` and `direction` on each hop.
+2. `compileImpGraphToTomeSql` lowers with `tomeLiveNodesSchema` (composing projection types via `edgeType`).
 3. Host runs SQL via cache `queryAll`.
 
 ## Inputs / outputs / artifacts
@@ -67,9 +68,9 @@ Must not depend on `tome-db`. Hosts execute SQL via `queryAll` (or equivalent).
 ## Quick start
 
 ```ts
-import { compileImpGraphToTomeSql, projectionType } from "tome-imp-sql"
+import { compileImpGraphToTomeSql } from "tome-imp-sql"
 
-const edgeType = projectionType(associationId, 0)
+// traverse node inputs: { association: associationId, direction: 0 | 1 }
 const { sql, parameters } = compileImpGraphToTomeSql(graph)
 ```
 
