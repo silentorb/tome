@@ -1,18 +1,48 @@
 .tome-tool-panel {
   --tome-tool-panel-width: 28rem;
 
+  position: relative;
   flex-shrink: 0;
   align-self: stretch;
   height: 100%;
   width: var(--tome-tool-panel-width);
-  min-width: 22.5rem;
-  max-width: 40vw;
   border-left: 1px solid var(--tome-border);
   background: var(--tome-surface);
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
+}
+
+.tome-tool-panel-dragging {
+  user-select: none;
+}
+
+.tome-tool-panel-dragging,
+.tome-tool-panel-dragging * {
+  cursor: col-resize !important;
+}
+
+.tome-tool-panel-resize {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 6px;
+  margin-left: -3px;
+  z-index: 2;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.tome-tool-panel-resize:hover,
+.tome-tool-panel-resize:focus-visible {
+  background: color-mix(in srgb, var(--tome-accent, var(--tome-border)) 35%, transparent);
+}
+
+.tome-tool-panel-resize:focus-visible {
+  outline: 2px solid var(--tome-accent, var(--tome-fg));
+  outline-offset: -2px;
 }
 
 .tome-tool-panel-header {

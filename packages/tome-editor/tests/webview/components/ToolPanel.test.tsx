@@ -1,7 +1,12 @@
-import { describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, test } from "bun:test";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { ToolPanel, type ToolPanelSession } from "../../../src/webview/components/ToolPanel";
+import {
+  DEFAULT_TOOL_PANEL_WIDTH_PX,
+  MIN_TOOL_PANEL_WIDTH_PX,
+  TOOL_PANEL_WIDTH_KEY,
+} from "../../../src/webview/tool-panel-preferences";
 
 function Probe({ label }: { label: string }) {
   return <div data-testid="panel-content">{label}</div>;
@@ -10,7 +15,7 @@ function Probe({ label }: { label: string }) {
 function Harness() {
   const [session, setSession] = useState<ToolPanelSession | null>(null);
   return (
-    <div>
+    <div style={{ width: 1200 }}>
       <button
         type="button"
         onClick={() =>
@@ -29,6 +34,11 @@ function Harness() {
 }
 
 describe("ToolPanel", () => {
+  beforeEach(() => {
+    localStorage.removeItem(TOOL_PANEL_WIDTH_KEY);
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: 1920 });
+  });
+
   test("is hidden until a session is open", () => {
     const { container } = render(<Harness />);
     expect(container.querySelector(".tome-tool-panel")).toBeNull();
@@ -51,5 +61,40 @@ describe("ToolPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open" }));
     fireEvent.keyDown(window, { key: "Escape" });
     expect(container.querySelector(".tome-tool-panel")).toBeNull();
+  });
+
+  test("exposes a vertical resize separator", () => {
+    render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    const handle = screen.getByRole("separator", { name: "Resize tool panel" });
+    expect(handle.getAttribute("aria-orientation")).toBe("vertical");
+    expect(handle.getAttribute("aria-valuenow")).toBe(String(DEFAULT_TOOL_PANEL_WIDTH_PX));
+    expect(handle.getAttribute("aria-valuemin")).toBe(String(MIN_TOOL_PANEL_WIDTH_PX));
+  });
+
+  test("pointer drag widens the panel and persists width", () => {
+    const { container } = render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    const handle = screen.getByRole("separator", { name: "Resize tool panel" });
+    const panel = container.querySelector(".tome-tool-panel") as HTMLElement;
+
+    fireEvent.pointerDown(handle, { button: 0, pointerId: 1, clientX: 800 });
+    fireEvent.pointerMove(handle, { pointerId: 1, clientX: 700 });
+    fireEvent.pointerUp(handle, { pointerId: 1, clientX: 700 });
+
+    expect(panel.style.width).toBe(`${DEFAULT_TOOL_PANEL_WIDTH_PX + 100}px`);
+    expect(localStorage.getItem(TOOL_PANEL_WIDTH_KEY)).toBe(String(DEFAULT_TOOL_PANEL_WIDTH_PX + 100));
+  });
+
+  test("ArrowLeft widens the panel via the separator", () => {
+    const { container } = render(<Harness />);
+    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+    const handle = screen.getByRole("separator", { name: "Resize tool panel" });
+    const panel = container.querySelector(".tome-tool-panel") as HTMLElement;
+
+    fireEvent.keyDown(handle, { key: "ArrowLeft" });
+
+    expect(panel.style.width).toBe(`${DEFAULT_TOOL_PANEL_WIDTH_PX + 16}px`);
+    expect(localStorage.getItem(TOOL_PANEL_WIDTH_KEY)).toBe(String(DEFAULT_TOOL_PANEL_WIDTH_PX + 16));
   });
 });
