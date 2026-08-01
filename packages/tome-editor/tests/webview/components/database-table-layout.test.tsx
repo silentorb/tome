@@ -45,13 +45,20 @@ describe("database table layout CSS", () => {
     expect(css).not.toMatch(/tome-table-name-col/);
   });
 
-  test("scrolls horizontally on the page shell, not inside the table wrap", () => {
+  test("scrolls on the page shell, not inside the table wrap", () => {
     expect(panelCss).toMatch(/\.tome-database-table-wrap[\s\S]*width:\s*fit-content/);
     expect(panelCss).toMatch(/\.tome-database-table-wrap[\s\S]*overflow:\s*visible/);
     expect(panelCss).not.toMatch(/\.tome-database-table-wrap[\s\S]*overflow:\s*auto/);
+    expect(css).toMatch(/\.tome-database-view[\s\S]*flex:\s*0\s+0\s+auto/);
 
     const mainCss = readFileSync(join(COMPONENT_DIR, "../../../src/webview/styles.css"), "utf8");
     expect(mainCss).toMatch(/\.tome-main[\s\S]*overflow:\s*auto/);
+
+    const pageCss = readFileSync(
+      join(COMPONENT_DIR, "../../../src/webview/components/node-page-view.css"),
+      "utf8",
+    );
+    expect(pageCss).toMatch(/\.tome-record-page[\s\S]*flex:\s*0\s+0\s+auto/);
   });
 
   test("column header context menu fills thead cell padding", () => {

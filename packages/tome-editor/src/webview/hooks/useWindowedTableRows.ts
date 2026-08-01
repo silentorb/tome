@@ -43,7 +43,7 @@ export function useWindowedTableRows<T>({
   const [rowsWindow, setRowsWindow] = useState(seed.rowsWindow);
   const [loadingMore, setLoadingMore] = useState(false);
   const [reloading, setReloading] = useState(false);
-  const sentinelNodeRef = useRef<HTMLElement | null>(null);
+  const [sentinelEl, setSentinelEl] = useState<HTMLElement | null>(null);
   const fetchPageRef = useRef(fetchPage);
   fetchPageRef.current = fetchPage;
   const mergeRowsRef = useRef(mergeRows);
@@ -134,23 +134,27 @@ export function useWindowedTableRows<T>({
   }, [load]);
 
   const sentinelRef = useCallback((node: HTMLElement | null) => {
-    sentinelNodeRef.current = node;
+    setSentinelEl(node);
   }, []);
 
   useEffect(() => {
-    const node = sentinelNodeRef.current;
-    if (!node || !rowsWindow.hasMore) return;
+    if (!sentinelEl || !rowsWindow.hasMore) return;
+    // Page scroll lives on `.tome-main`, not the viewport / an inner table block.
+    const scrollRoot =
+      sentinelEl.closest(".tome-main") instanceof HTMLElement
+        ? (sentinelEl.closest(".tome-main") as HTMLElement)
+        : null;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries.some((entry) => entry.isIntersecting)) {
           loadMore();
         }
       },
-      { root: null, rootMargin: "200px", threshold: 0 },
+      { root: scrollRoot, rootMargin: "240px", threshold: 0 },
     );
-    observer.observe(node);
+    observer.observe(sentinelEl);
     return () => observer.disconnect();
-  }, [loadMore, rowsWindow.hasMore, rows.length]);
+  }, [loadMore, rowsWindow.hasMore, rows.length, sentinelEl]);
 
   return {
     rows,

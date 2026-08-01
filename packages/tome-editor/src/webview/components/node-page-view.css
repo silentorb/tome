@@ -21,8 +21,10 @@
 }
 
 .tome-record-page {
-  flex: 1;
-  min-height: 0;
+  /* Grow with sections/tables; `.tome-main` scrolls the page, not an inner block. */
+  flex: 0 0 auto;
+  min-height: min-content;
+  width: 100%;
 }
 
 .tome-record-sections {

@@ -50,7 +50,7 @@ Table view configuration for type-table member relationships lives in [`content/
 
 ## Lazy-loaded rows (infinite scroll)
 
-Multi-row Items tables **must not** block page load on the full member set. The editor requests rows in batches (default **`limit=50`**) with **`offset`**, optional name filter **`q`**, and optional **`sorts`** JSON. There is **no paging UI** (no page numbers): the client appends the next batch when the user scrolls near the bottom (infinite scroll).
+Multi-row Items tables **must not** block page load on the full member set. The editor requests rows in batches (default **`limit=50`**) with **`offset`**, optional name filter **`q`**, and optional **`sorts`** JSON. There is **no paging UI** (no page numbers): the client appends the next batch when the user scrolls the **page shell** (`.tome-main`) near the table sentinel—not an inner table scroll box. Tables size to their loaded rows (natural page height).
 
 - Responses include `rowsWindow: { offset, limit, total, hasMore }` on `DatabaseViewDetail`, `OrderedCollectionViewDetail`, and `RelationTableSection`.
 - Name filter and column sorts are applied **server-side** before slicing. Relation-cell hydration runs for the returned window only (dynamic columns still evaluate over the full set when needed for sort correctness).

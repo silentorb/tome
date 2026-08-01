@@ -25,7 +25,7 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 ### Editor UI
 
 - Must register with `interactive: true` so tome-editor mounts the React `Component` in the document embed
-- **Document embed:** always the results table (Refresh + **Edit query**)
+- **Document embed:** always the results table (Refresh + **Edit query**); the table grows with its rows and scrolls with the page shell (no inner `max-height` scroll box)
 - **Edit query** opens the host right tool panel with React Flow; the panel is hidden when closed
 - The host tool panel is user-resizable (drag the left edge; width persists in localStorage)
 - Closing the panel re-runs the table query; Refresh re-runs while the panel is closed

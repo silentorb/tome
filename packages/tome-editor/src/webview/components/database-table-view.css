@@ -12,7 +12,8 @@
 }
 
 .tome-database-view {
-  flex: 1;
+  /* Size to row content; page shell (`.tome-main`) owns vertical scrolling. */
+  flex: 0 0 auto;
   min-height: 0;
   padding: 24px 32px 32px;
 }

@@ -15,4 +15,11 @@ describe("query-block CSS", () => {
     expect(css).toMatch(/\.tome-query-rf-port-input\s*\{/);
     expect(css).toMatch(/\.tome-query-tool-panel\s+\.tome-query-flow-canvas/);
   });
+
+  test("result table grows with rows instead of an inner scroll viewport", () => {
+    expect(css).toMatch(/\.tome-query-table-wrap\s*\{[^}]*overflow:\s*visible/s);
+    expect(css).toMatch(/\.tome-query-table-wrap\s*\{[^}]*max-height:\s*none/s);
+    expect(css).not.toMatch(/\.tome-query-table-wrap\s*\{[^}]*max-height:\s*24rem/s);
+    expect(css).not.toMatch(/\.tome-query-table-wrap\s*\{[^}]*overflow:\s*auto/s);
+  });
 });

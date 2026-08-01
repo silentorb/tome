@@ -139,8 +139,9 @@
 }
 
 .tome-query-table-wrap {
-  overflow: auto;
-  max-height: 24rem;
+  /* Size to rows; page shell (`.tome-main`) owns scrolling — not an inner block. */
+  overflow: visible;
+  max-height: none;
 }
 
 .tome-query-table {
