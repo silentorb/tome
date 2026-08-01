@@ -42,7 +42,10 @@ import type {
   NodeSection,
   RelationRow,
   RelationTableSection,
+  TableRowsQuery,
+  ViewSortSpec,
 } from "tome-graph-interfaces";
+import { applyNameFilterAndWindow } from "./table-rows-window";
 
 export type {
   DatabaseTableSection,
@@ -198,12 +201,161 @@ function compositeTypeForRelationSection(
   );
 }
 
+function sortRelationRows(rows: RelationRow[], sorts: ViewSortSpec[]): void {
+  rows.sort((a, b) => {
+    for (const sort of sorts) {
+      const left = sort.column === "name" ? a.name : (a.cells[sort.column] ?? "");
+      const right = sort.column === "name" ? b.name : (b.cells[sort.column] ?? "");
+      const cmp = left.localeCompare(right, undefined, { sensitivity: "base", numeric: true });
+      if (cmp !== 0) return sort.direction === "desc" ? -cmp : cmp;
+    }
+    return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+  });
+}
+
+function buildRelationSectionForPerspective(
+  db: GraphDatabase,
+  nodeId: string,
+  perspective: string,
+  connections: Relationship[],
+  options: {
+    contentDir: string;
+    typeTableIds: string[];
+    associations: ReturnType<typeof loadAssociationsFromContent>;
+    tableRelationByGroupKey: Map<string, TableRelationColumn>;
+    rowsQuery?: TableRowsQuery;
+  },
+): RelationTableSection | null {
+  const { contentDir, typeTableIds, associations, tableRelationByGroupKey, rowsQuery } = options;
+  if (isSetSideProjectionType(associations, perspective)) return null;
+
+  const columnSet = new Set<string>();
+  const rows: RelationRow[] = [];
+
+  for (const connection of connections) {
+    const target = db.getNode(connection.targetNodeId);
+    const cells = cellsFromConnectionProperties(connection.properties);
+    for (const key of Object.keys(cells)) columnSet.add(key);
+
+    rows.push({
+      targetId: connection.targetNodeId,
+      name: target ? titleFromProperties(target.properties) : "Untitled",
+      cells,
+    });
+  }
+
+  const q = rowsQuery?.q?.trim() ?? "";
+  if (!q && rowsQuery?.sorts?.length) {
+    sortRelationRows(rows, rowsQuery.sorts);
+  } else {
+    rows.sort((a, b) => {
+      const connA = connections.find((connection) => connection.targetNodeId === a.targetId);
+      const connB = connections.find((connection) => connection.targetNodeId === b.targetId);
+      const ordA = connA ? ordinalFromProperties(connA.properties) : Number.MAX_SAFE_INTEGER;
+      const ordB = connB ? ordinalFromProperties(connB.properties) : Number.MAX_SAFE_INTEGER;
+      if (ordA !== ordB) return ordA - ordB;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
+  }
+
+  const isSetMembership = isSetTraitProjectionType(associations, perspective);
+  const typeNodeId = isSetMembership
+    ? null
+    : resolveTypeNodeId(db, perspective, connections, associations);
+  const tableRelation = tableRelationByGroupKey.get(perspective);
+  const hostTypeId = typeIdsForInstance(db, nodeId, contentDir)[0];
+  const ruleContext =
+    !isSetMembership && !tableRelation
+      ? associationRuleContext(associations, db, nodeId, perspective, contentDir)
+      : null;
+  let columns = [...columnSet].sort((a, b) => a.localeCompare(b));
+  if (isSetMembership) {
+    for (const row of rows) {
+      row.cells = {};
+    }
+    columns = [];
+  } else if (columns.includes("priority")) {
+    for (const row of rows) {
+      row.cells.priority = coalescePriorityValue(row.cells.priority);
+    }
+  }
+  const columnDefs = isSetMembership
+    ? []
+    : enrichColumnDefs(
+        columns.map((key) => ({
+          key,
+          name: isPriorityColumnKey(key)
+            ? "Priority"
+            : key
+                .split("_")
+                .filter(Boolean)
+                .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+                .join(" "),
+          type: "text",
+        })),
+      );
+
+  const setTraitCompositeKey =
+    associationIdFromTypeOrProjection(associations, perspective) ?? perspective;
+  const sectionTitle = isSetMembership
+    ? perspectiveDisplayLabel(associations, perspective, setTraitCompositeKey)
+    : sectionTitleForType(db, perspective, typeNodeId, associations);
+  const linkAddLabel =
+    isSetMembership && isMemberSideProjectionType(associations, perspective)
+      ? perspectiveLinkAddLabel(
+          associations,
+          perspective,
+          sectionTitle,
+          setTraitCompositeKey,
+        )
+      : undefined;
+
+  const compositeType = compositeTypeForRelationSection(
+    db,
+    associations,
+    perspective,
+    connections,
+    tableRelation,
+  );
+
+  const { rows: windowedRows, rowsWindow } = applyNameFilterAndWindow(
+    rows,
+    rowsQuery,
+    (row) => row.name,
+  );
+
+  return {
+    type: "relations",
+    label: perspective,
+    title: sectionTitle,
+    typeNodeId,
+    allowedTargetTypeIds: isSetMembership
+      ? typeTableIds
+      : tableRelation && hostTypeId
+        ? (targetTypeIdForRelationColumn(associations, hostTypeId, tableRelation)
+            ? [targetTypeIdForRelationColumn(associations, hostTypeId, tableRelation)!]
+            : undefined)
+        : ruleContext?.allowedTargetTypeIds,
+    addMode: isSetMembership
+      ? "link-existing"
+      : relationSectionSupportsLinkExisting(associations, perspective, compositeType)
+        ? "link-existing"
+        : "none",
+    ...(linkAddLabel ? { linkAddLabel } : {}),
+    columns,
+    columnDefs,
+    rows: windowedRows,
+    rowsWindow,
+  };
+}
+
 function buildRelationSections(
   db: GraphDatabase,
   nodeId: string,
   options?: {
     contentDir?: string;
     includeSchemaEmptySections?: boolean;
+    rowsQuery?: TableRowsQuery;
   },
 ): RelationTableSection[] {
   const contentDir = options?.contentDir ?? resolveContentPath();
@@ -233,119 +385,53 @@ function buildRelationSections(
   for (const label of [...byType.keys()].sort((a, b) =>
     relationTypeSortKey(a, associations).localeCompare(relationTypeSortKey(b, associations)),
   )) {
-    const perspective = label;
-    if (isSetSideProjectionType(associations, perspective)) continue;
-
-    const connections = byType.get(label)!;
-    const columnSet = new Set<string>();
-    const rows: RelationRow[] = [];
-
-    for (const connection of connections) {
-      const target = db.getNode(connection.targetNodeId);
-      const cells = cellsFromConnectionProperties(connection.properties);
-      for (const key of Object.keys(cells)) columnSet.add(key);
-
-      rows.push({
-        targetId: connection.targetNodeId,
-        name: target ? titleFromProperties(target.properties) : "Untitled",
-        cells,
-      });
-    }
-
-    rows.sort((a, b) => {
-      const connA = connections.find((connection) => connection.targetNodeId === a.targetId);
-      const connB = connections.find((connection) => connection.targetNodeId === b.targetId);
-      const ordA = connA ? ordinalFromProperties(connA.properties) : Number.MAX_SAFE_INTEGER;
-      const ordB = connB ? ordinalFromProperties(connB.properties) : Number.MAX_SAFE_INTEGER;
-      if (ordA !== ordB) return ordA - ordB;
-      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-    });
-
-    const isSetMembership = isSetTraitProjectionType(associations, perspective);
-    const typeNodeId = isSetMembership
-      ? null
-      : resolveTypeNodeId(db, perspective, connections, associations);
-    const tableRelation = tableRelationByGroupKey.get(perspective);
-    const hostTypeId = typeIdsForInstance(db, nodeId, contentDir)[0];
-    const ruleContext =
-      !isSetMembership && !tableRelation
-        ? associationRuleContext(associations, db, nodeId, perspective, contentDir)
-        : null;
-    let columns = [...columnSet].sort((a, b) => a.localeCompare(b));
-    if (isSetMembership) {
-      for (const row of rows) {
-        row.cells = {};
-      }
-      columns = [];
-    } else if (columns.includes("priority")) {
-      for (const row of rows) {
-        row.cells.priority = coalescePriorityValue(row.cells.priority);
-      }
-    }
-    const columnDefs = isSetMembership
-      ? []
-      : enrichColumnDefs(
-          columns.map((key) => ({
-            key,
-            name: isPriorityColumnKey(key)
-              ? "Priority"
-              : key
-                  .split("_")
-                  .filter(Boolean)
-                  .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-                  .join(" "),
-            type: "text",
-          })),
-        );
-
-    const setTraitCompositeKey =
-      associationIdFromTypeOrProjection(associations, perspective) ?? perspective;
-    const sectionTitle = isSetMembership
-      ? perspectiveDisplayLabel(associations, perspective, setTraitCompositeKey)
-      : sectionTitleForType(db, perspective, typeNodeId, associations);
-    const linkAddLabel =
-      isSetMembership && isMemberSideProjectionType(associations, perspective)
-        ? perspectiveLinkAddLabel(
-            associations,
-            perspective,
-            sectionTitle,
-            setTraitCompositeKey,
-          )
-        : undefined;
-
-    const compositeType = compositeTypeForRelationSection(
-      db,
+    const section = buildRelationSectionForPerspective(db, nodeId, label, byType.get(label)!, {
+      contentDir,
+      typeTableIds,
       associations,
-      perspective,
-      connections,
-      tableRelation,
-    );
-
-    sections.push({
-      type: "relations",
-      label: perspective,
-      title: sectionTitle,
-      typeNodeId,
-      allowedTargetTypeIds: isSetMembership
-        ? typeTableIds
-        : tableRelation && hostTypeId
-          ? (targetTypeIdForRelationColumn(associations, hostTypeId, tableRelation)
-              ? [targetTypeIdForRelationColumn(associations, hostTypeId, tableRelation)!]
-              : undefined)
-          : ruleContext?.allowedTargetTypeIds,
-      addMode: isSetMembership
-        ? "link-existing"
-        : relationSectionSupportsLinkExisting(associations, perspective, compositeType)
-          ? "link-existing"
-          : "none",
-      ...(linkAddLabel ? { linkAddLabel } : {}),
-      columns,
-      columnDefs,
-      rows,
+      tableRelationByGroupKey,
+      rowsQuery: options?.rowsQuery,
     });
+    if (section) sections.push(section);
   }
 
   return sections;
+}
+
+/** Fetch one windowed relation table section by perspective label. */
+export function getRelationTableSection(
+  db: GraphDatabase,
+  nodeId: string,
+  perspective: string,
+  options?: {
+    contentDir?: string;
+    includeSchemaEmptySections?: boolean;
+    rowsQuery?: TableRowsQuery;
+  },
+): RelationTableSection | null {
+  const contentDir = options?.contentDir ?? resolveContentPath();
+  if (!db.getNode(nodeId)) return null;
+
+  const associations = loadAssociationsFromContent(contentDir);
+  const outgoing = db.listRelationshipsFromSource(nodeId).filter(
+    (connection) => relationGroupKey(connection) === perspective,
+  );
+  const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
+
+  if (
+    outgoing.length === 0 &&
+    !(options?.includeSchemaEmptySections && tableRelationByGroupKey.has(perspective))
+  ) {
+    return null;
+  }
+
+  return buildRelationSectionForPerspective(db, nodeId, perspective, outgoing, {
+    contentDir,
+    typeTableIds: typeTableIdsFromContent(contentDir),
+    associations,
+    tableRelationByGroupKey,
+    rowsQuery: options?.rowsQuery,
+  });
 }
 
 /** Build a universal node page view: markdown first, then database and relation table sections. */
@@ -362,6 +448,8 @@ export function getNodePageDetail(
     contentDir?: string;
     /** Editor only: emit empty relation sections for type-table relation columns with no outgoing edges yet. */
     includeSchemaEmptySections?: boolean;
+    /** When set, multi-row sections return a windowed first batch. */
+    rows?: TableRowsQuery;
   },
 ): NodePageDetail | null {
   const contentDir = options?.contentDir ?? resolveContentPath();
@@ -370,6 +458,7 @@ export function getNodePageDetail(
 
   const tabId = options?.tabId ?? options?.scopeId ?? options?.databaseView;
   const views = loadViewsFromContent(contentDir);
+  const rowsQuery = options?.rows;
 
   const sections: NodeSection[] = [{ type: "markdown", body: node.body }];
 
@@ -379,7 +468,13 @@ export function getNodePageDetail(
     if (provider) {
       const config = getConfigByProvider(provider, contentDir);
       if (config) {
-        const orderedView = getOrderedCollectionView(db, config.id, tabId, contentDir);
+        const orderedView = getOrderedCollectionView(
+          db,
+          config.id,
+          tabId,
+          contentDir,
+          rowsQuery,
+        );
         if (orderedView) {
           sections.push({
             type: "ordered-collection",
@@ -389,7 +484,13 @@ export function getNodePageDetail(
         }
       }
     } else {
-      const databaseSection = getDatabaseViewDetail(db, id, tabId, contentDir);
+      const databaseSection = getDatabaseViewDetail(
+        db,
+        id,
+        tabId,
+        contentDir,
+        rowsQuery,
+      );
       if (databaseSection) {
         sections.push({ type: "database", databaseView: databaseSection });
       }
@@ -400,6 +501,7 @@ export function getNodePageDetail(
     ...buildRelationSections(db, id, {
       contentDir,
       includeSchemaEmptySections: options?.includeSchemaEmptySections,
+      rowsQuery,
     }),
   );
 

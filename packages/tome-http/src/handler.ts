@@ -2,6 +2,7 @@ import type { TomeGraphServices } from "tome-graph-interfaces";
 import type { NodeLifecycleError, QuickLinkError, ViewSortSpec } from "tome-graph-interfaces";
 import type { UserSettingsPatch } from "./user-settings";
 import { UserSettingsStore } from "./user-settings-store";
+import { tableRowsQueryFromSearchParams } from "./table-rows-query";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -193,6 +194,17 @@ export function createApiHandler(
         return json({ markdown });
       }
 
+      const relationTableMatch =
+        /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relation-tables\/([^/]+)$/i.exec(path);
+      if (relationTableMatch && req.method === "GET") {
+        const nodeId = relationTableMatch[1]!;
+        const perspective = decodeURIComponent(relationTableMatch[2]!);
+        const rows = tableRowsQueryFromSearchParams(url.searchParams);
+        const section = db.getRelationTable(nodeId, perspective, rows);
+        if (!section) return json({ error: "not found" }, 404);
+        return json({ section });
+      }
+
       const nodeMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (nodeMatch) {
         const id = nodeMatch[1]!;
@@ -202,7 +214,8 @@ export function createApiHandler(
             url.searchParams.get("scope") ??
             url.searchParams.get("view") ??
             undefined;
-          const node = db.getNode(id, { tabId: tab ?? undefined });
+          const rows = tableRowsQueryFromSearchParams(url.searchParams);
+          const node = db.getNode(id, { tabId: tab ?? undefined, rows });
           if (!node) return json({ error: "not found" }, 404);
           return json({ node });
         }
@@ -390,7 +403,8 @@ export function createApiHandler(
             url.searchParams.get("tab") ??
             url.searchParams.get("view") ??
             undefined;
-          const databaseView = db.getDatabaseView(id, tab ?? undefined);
+          const rows = tableRowsQueryFromSearchParams(url.searchParams);
+          const databaseView = db.getDatabaseView(id, tab ?? undefined, rows);
           if (!databaseView) return json({ error: "not found" }, 404);
           return json({ databaseView });
         }
@@ -632,6 +646,19 @@ export function createApiHandler(
         if (error === "not_found") return json({ error: "not found" }, 404);
         if (error === "invalid_value") return json({ error: "invalid value" }, 400);
         return json({ ok: true });
+      }
+
+      const orderedCollectionMatch = /^\/api\/ordered-collections\/([a-z0-9-]+)$/i.exec(path);
+      if (orderedCollectionMatch && req.method === "GET") {
+        const configId = orderedCollectionMatch[1]!;
+        const tab =
+          url.searchParams.get("tab") ??
+          url.searchParams.get("scope") ??
+          undefined;
+        const rows = tableRowsQueryFromSearchParams(url.searchParams);
+        const view = db.getOrderedCollectionView(configId, tab ?? undefined, rows);
+        if (!view) return json({ error: "not found" }, 404);
+        return json({ view });
       }
 
       const moveMatch = /^\/api\/ordered-collections\/([a-z0-9-]+)\/move$/i.exec(path);

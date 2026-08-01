@@ -1,10 +1,16 @@
 import { useCallback, useMemo, useState } from "react";
+import type { DatabaseRow, TableRowsQuery } from "tome-graph-interfaces";
 import type { EditorApi } from "../api/client";
 import type { DatabaseViewDetail } from "../../shared/types";
-import { databaseTableSortKey, viewSortsToTableSort } from "../../shared/user-settings";
+import {
+  databaseTableSortKey,
+  tableSortToViewSorts,
+  viewSortsToTableSort,
+} from "../../shared/user-settings";
 import { nodePageHref } from "../node-links";
 import { useTableSearch } from "../hooks/useTableSearch";
-import { filterRowsByName } from "../table-name-filter";
+import { useWindowedTableRows } from "../hooks/useWindowedTableRows";
+import { useUserSettings } from "../hooks/useUserSettings";
 import { itemsTableSearchParamKey } from "../../shared/table-search-url";
 import { SectionDataTable, type SectionDataTableRow } from "./SectionDataTable";
 import { TableAddRow, TableAddRowFooter, TableAddRowTrigger } from "./TableAddRowFooter";
@@ -14,6 +20,7 @@ import { TableSearchInput } from "./TableSearchInput";
 import { TableUtilityBar } from "./TableUtilityBar";
 import { ColumnVisibilityMenu } from "./ColumnVisibilityMenu";
 import { ColumnEditorDialog, type ColumnEditorState } from "./ColumnEditorDialog";
+import { TableRowsSentinel } from "./TableRowsSentinel";
 import "./database-table-view.css";
 
 interface DatabaseTableViewProps {
@@ -28,6 +35,15 @@ interface DatabaseTableViewProps {
   onDeleteNode?: (nodeId: string) => Promise<void>;
   protectedNodeIds?: readonly string[];
   archiveHubTitle?: string;
+}
+
+function toTableRows(rows: DatabaseRow[]): SectionDataTableRow[] {
+  return rows.map((row) => ({
+    id: `${row.nodeId}:${row.rowIndex}`,
+    name: row.name,
+    cells: row.cells,
+    relationCells: row.relationCells,
+  }));
 }
 
 export function DatabaseTableView({
@@ -46,6 +62,7 @@ export function DatabaseTableView({
   const [searchQuery, setSearchQuery] = useTableSearch(itemsTableSearchParamKey());
   const [columnEditorState, setColumnEditorState] = useState<ColumnEditorState | null>(null);
   const tableKey = databaseTableSortKey(nodeId, databaseView.id, databaseView.tabs.activeTabId);
+  const { getTableSort, hasTableSortOverride } = useUserSettings();
 
   const activeTabDefinition = useMemo(
     () =>
@@ -65,11 +82,59 @@ export function DatabaseTableView({
       : undefined;
   }, [activeTabDefinition]);
 
+  const sortSpec = getTableSort(tableKey, tabDefaultSort);
+  // Only send sorts when the user overrode the tab default; otherwise the seed/view sorts apply.
+  const serverSorts = useMemo(
+    () =>
+      hasTableSortOverride(tableKey) ? tableSortToViewSorts(sortSpec) : undefined,
+    [hasTableSortOverride, sortSpec, tableKey],
+  );
+
   const columnLabels = useMemo(() => {
     const defs = databaseView.allColumnDefs ?? databaseView.columnDefs;
     if (!defs?.length) return undefined;
     return Object.fromEntries(defs.map((col) => [col.key, col.name]));
   }, [databaseView.allColumnDefs, databaseView.columnDefs]);
+
+  const seed = useMemo(
+    () => ({
+      rows: toTableRows(databaseView.rows),
+      rowsWindow: databaseView.rowsWindow,
+    }),
+    [databaseView.rows, databaseView.rowsWindow],
+  );
+
+  const fetchPage = useCallback(
+    async (query: TableRowsQuery) => {
+      const view = await api.getDatabaseView(
+        databaseView.id,
+        databaseView.tabs.activeTabId,
+        query,
+      );
+      return {
+        rows: toTableRows(view.rows),
+        rowsWindow: view.rowsWindow,
+      };
+    },
+    [api, databaseView.id, databaseView.tabs.activeTabId],
+  );
+
+  const {
+    rows: windowedRows,
+    rowsWindow,
+    loadingMore,
+    sentinelRef,
+  } = useWindowedTableRows({
+    seedKey: `${databaseView.id}:${databaseView.tabs.activeTabId}`,
+    seed,
+    q: searchQuery,
+    sorts: serverSorts,
+    fetchPage,
+  });
+
+  const refresh = useCallback(() => {
+    onCellUpdated?.();
+  }, [onCellUpdated]);
 
   const toggleColumnVisibility = useCallback(
     async (columnKey: string) => {
@@ -84,7 +149,6 @@ export function DatabaseTableView({
       if (visibleSet.has(columnKey)) {
         next = currentVisible.filter((key) => key !== columnKey);
       } else {
-        // Insert in default-order position among currently visible + this key
         next = allColumns.filter(
           (key) => key === columnKey || visibleSet.has(key),
         );
@@ -159,7 +223,7 @@ export function DatabaseTableView({
                 targetId,
               );
             }}
-            onEditingComplete={onCellUpdated}
+            onEditingComplete={refresh}
           />
         );
       }
@@ -177,33 +241,16 @@ export function DatabaseTableView({
                   column,
                   next,
                 );
-                onCellUpdated?.();
+                refresh();
               }
             : undefined,
       });
     },
-    [api, databaseView.columnDefs, databaseView.id, onCellUpdated],
-  );
-
-  const rows = useMemo(
-    () =>
-      databaseView.rows.map((row) => ({
-        id: `${row.nodeId}:${row.rowIndex}`,
-        name: row.name,
-        cells: row.cells,
-        relationCells: row.relationCells,
-      })),
-    [databaseView.rows],
-  );
-
-  const filteredRows = useMemo(
-    () => filterRowsByName(rows, searchQuery, (row) => row.name),
-    [rows, searchQuery],
+    [api, databaseView.columnDefs, databaseView.id, refresh],
   );
 
   const hasActiveSearch = searchQuery.trim().length > 0;
-  const hasRows = databaseView.rows.length > 0;
-  const hasMatchingRows = filteredRows.length > 0;
+  const hasRows = rowsWindow.total > 0 || windowedRows.length > 0;
 
   const renderNameCell = useCallback(
     (row: SectionDataTableRow) => {
@@ -231,7 +278,7 @@ export function DatabaseTableView({
                 databaseView.memberSidePerspective,
                 databaseView.id,
               );
-              onCellUpdated?.();
+              refresh();
             },
             onDeleteNode,
             getMoveConfig: (rowNodeId: string) => ({
@@ -246,7 +293,7 @@ export function DatabaseTableView({
                   newTargetId: selectedId,
                 });
               },
-              onMoved: onCellUpdated,
+              onMoved: refresh,
             }),
           }
         : undefined,
@@ -256,8 +303,8 @@ export function DatabaseTableView({
       databaseView.memberSidePerspective,
       nodeId,
       onArchiveNode,
-      onCellUpdated,
       onDeleteNode,
+      refresh,
     ],
   );
 
@@ -269,7 +316,7 @@ export function DatabaseTableView({
           title,
           view: databaseView.view,
         });
-        onCellUpdated?.();
+        refresh();
       }}
     >
       <div className={`tome-database-view${embedded ? " is-embedded" : ""}`}>
@@ -339,41 +386,51 @@ export function DatabaseTableView({
           />
         </header>
 
-        {!hasRows ? (
+        {!hasActiveSearch && !hasRows ? (
           <div className="tome-database-empty">No rows in this view.</div>
-        ) : !hasMatchingRows && hasActiveSearch ? (
+        ) : hasActiveSearch && rowsWindow.total === 0 ? (
           <div className="tome-database-empty">No rows match “{searchQuery.trim()}”.</div>
         ) : (
-          <SectionDataTable
-            tableKey={tableKey}
-            columns={databaseView.columns}
-            rows={filteredRows}
-            defaultSort={tabDefaultSort}
-            renderNameCell={renderNameCell}
-            columnLabels={columnLabels}
-            renderCell={renderCell}
-            rowPageActions={rowPageActions}
-            onColumnsReorder={async (columnOrder) => {
-              const activeTabId = databaseView.tabs.activeTabId;
-              if (!activeTabId) return;
-              await api.updateRelationshipView(
-                nodeId,
-                databaseView.viewAssociation,
-                activeTabId,
-                { properties: columnOrder },
-              );
-              onTabsUpdated?.();
-            }}
-            canManageColumn={canManageColumn}
-            isRelationColumn={isRelationColumn}
-            onColumnHide={(columnKey) => {
-              void toggleColumnVisibility(columnKey);
-            }}
-            onColumnEdit={handleColumnEdit}
-            onColumnDelete={handleColumnDelete}
-            protectedNodeIds={protectedNodeIds}
-            archiveHubTitle={archiveHubTitle}
-          />
+          <>
+            <SectionDataTable
+              tableKey={tableKey}
+              columns={databaseView.columns}
+              rows={windowedRows}
+              serverRowOrder
+              defaultSort={tabDefaultSort}
+              renderNameCell={renderNameCell}
+              columnLabels={columnLabels}
+              renderCell={renderCell}
+              rowPageActions={rowPageActions}
+              onColumnsReorder={async (columnOrder) => {
+                const activeTabId = databaseView.tabs.activeTabId;
+                if (!activeTabId) return;
+                await api.updateRelationshipView(
+                  nodeId,
+                  databaseView.viewAssociation,
+                  activeTabId,
+                  { properties: columnOrder },
+                );
+                onTabsUpdated?.();
+              }}
+              canManageColumn={canManageColumn}
+              isRelationColumn={isRelationColumn}
+              onColumnHide={(columnKey) => {
+                void toggleColumnVisibility(columnKey);
+              }}
+              onColumnEdit={handleColumnEdit}
+              onColumnDelete={handleColumnDelete}
+              protectedNodeIds={protectedNodeIds}
+              archiveHubTitle={archiveHubTitle}
+            />
+            <TableRowsSentinel
+              sentinelRef={sentinelRef}
+              hasMore={rowsWindow.hasMore}
+              loadingMore={loadingMore}
+              total={rowsWindow.total}
+              loaded={windowedRows.length}
+            />
+          </>
         )}
         <TableAddRowFooter />
       </div>

@@ -574,13 +574,11 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       );
       if (orderedSection?.type === "ordered-collection") {
         try {
-          const detail = await api.getNode(node.id, { tab: tabId });
-          const nextOrdered = detail.sections.find(
-            (section) => section.type === "ordered-collection",
+          const nextView = await api.getOrderedCollectionView(
+            orderedSection.configId,
+            tabId,
           );
-          if (nextOrdered?.type === "ordered-collection") {
-            updateOrderedCollectionView(nextOrdered.view);
-          }
+          updateOrderedCollectionView(nextView);
         } catch (err) {
           setError(err instanceof Error ? err.message : String(err));
         }

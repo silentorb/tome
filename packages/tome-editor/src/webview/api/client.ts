@@ -30,6 +30,8 @@ export function createEditorApi(): EditorApi {
     createDatabaseRow: rest.createDatabaseRow.bind(rest),
     getNode: rest.getNode.bind(rest),
     getDatabaseView: rest.getDatabaseView.bind(rest),
+    getOrderedCollectionView: rest.getOrderedCollectionView.bind(rest),
+    getRelationTable: rest.getRelationTable.bind(rest),
     createRelationshipView: rest.createRelationshipView.bind(rest),
     updateRelationshipView: rest.updateRelationshipView.bind(rest),
     deleteRelationshipView: rest.deleteRelationshipView.bind(rest),

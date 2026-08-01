@@ -17,6 +17,16 @@
   padding: 24px 32px 32px;
 }
 
+.tome-table-rows-sentinel {
+  padding: 12px 0 4px;
+  color: var(--tome-muted, #8b949e);
+  font-size: 0.85rem;
+}
+
+.tome-table-rows-sentinel-status {
+  display: inline-block;
+}
+
 .tome-database-header {
   display: flex;
   flex-wrap: wrap;

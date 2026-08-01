@@ -13,6 +13,7 @@ const view: OrderedCollectionViewDetail = {
   typeDatabaseTitle: "Scenes",
   viewAssociation: "000000000000000000000000A2",
   memberSidePerspective: "000000000000000000000000A2:1",
+  sectionTitle: "Contents",
   tabs: {
     kind: "generated",
     items: [
@@ -42,6 +43,7 @@ const view: OrderedCollectionViewDetail = {
       rows: [],
     },
   ],
+  rowsWindow: { offset: 0, limit: 50, total: 1, hasMore: false },
   columns: ["solutions", "characters", "location"],
   columnDefs: [
     { key: "solutions", name: "Solutions", type: "relation", relationType: "solutions" },
@@ -76,9 +78,20 @@ describe("OrderedCollectionView", () => {
     expect(queryByRole("columnheader", { name: "Status" })).toBeNull();
   });
 
-  test("filters scene rows and hides empty groups", () => {
+  test("filters scene rows via server window query", async () => {
     window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=abc");
-    const api = makeMockEditorApi();
+    const getOrderedCollectionView = mock(async (_configId: string, _tabId?: string, query?: { q?: string }) => {
+      expect(query?.q).toBe("opening");
+      return {
+        ...view,
+        groups: [view.groups[0]!],
+        rowsWindow: { offset: 0, limit: 50, total: 1, hasMore: false },
+      };
+    });
+    const api = {
+      ...makeMockEditorApi(),
+      getOrderedCollectionView,
+    };
 
     const { getByRole, queryByRole } = render(
       <OrderedCollectionView
@@ -95,17 +108,23 @@ describe("OrderedCollectionView", () => {
       target: { value: "opening" },
     });
 
+    await waitFor(() => expect(getOrderedCollectionView).toHaveBeenCalled());
     expect(getByRole("link", { name: "Opening" })).toBeTruthy();
     expect(queryByRole("heading", { name: "Unassigned", level: 3 })).toBeNull();
-    expect((getByRole("searchbox", { name: "Filter table rows by name" }) as HTMLInputElement).value).toBe(
-      "opening",
-    );
     expect(window.location.search).toContain("search_items=opening");
   });
 
-  test("shows empty match message when no scenes match", () => {
+  test("shows empty match message when no scenes match", async () => {
     window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=abc&search_items=missing");
-    const api = makeMockEditorApi();
+    const getOrderedCollectionView = mock(async () => ({
+      ...view,
+      groups: [],
+      rowsWindow: { offset: 0, limit: 50, total: 0, hasMore: false },
+    }));
+    const api = {
+      ...makeMockEditorApi(),
+      getOrderedCollectionView,
+    };
 
     const { getByText } = render(
       <OrderedCollectionView
@@ -118,7 +137,7 @@ describe("OrderedCollectionView", () => {
       />,
     );
 
-    expect(getByText('No rows match “missing”.')).toBeTruthy();
+    await waitFor(() => expect(getByText('No rows match “missing”.')).toBeTruthy());
   });
 
   test("unlinks rows with memberSidePerspective from the view payload", async () => {

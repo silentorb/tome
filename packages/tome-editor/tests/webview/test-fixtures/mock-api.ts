@@ -31,6 +31,12 @@ export function makeMockEditorApi(): EditorApi {
       void tabId;
       return makeDatabaseViewDetail();
     },
+    getOrderedCollectionView: async () => {
+      throw new Error("not implemented in mock");
+    },
+    getRelationTable: async () => {
+      throw new Error("not implemented in mock");
+    },
     createRelationshipView: async (nodeId, association, input) => ({
       id: "new-view",
       nodeId,

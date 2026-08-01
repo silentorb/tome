@@ -1,4 +1,5 @@
 import type { RelationLink } from "./relation-link";
+import type { TableRowsWindow } from "./table-rows-window";
 import type { TableTabsDetail } from "./views";
 
 export interface DatabaseRow {
@@ -48,6 +49,8 @@ export interface DatabaseViewDetail {
   allColumns: string[];
   columns: string[];
   rows: DatabaseRow[];
+  /** Window metadata for lazy-loaded / infinite-scroll fetches. */
+  rowsWindow: TableRowsWindow;
   /** Column defs for visible columns only. */
   columnDefs?: DatabaseColumnDef[];
   /** Ordered column defs before per-view visibility filtering. */

@@ -45,7 +45,9 @@ import type {
   OrderedCollectionRow,
   OrderedCollectionScope,
   OrderedCollectionViewDetail,
+  TableRowsQuery,
 } from "tome-graph-interfaces";
+import { applyNameFilterAndWindow, DEFAULT_TABLE_ROW_LIMIT } from "./table-rows-window";
 
 export type {
   OrderedCollectionConfig,
@@ -403,11 +405,57 @@ function discoverScopes(
   return scopes;
 }
 
+function windowOrderedGroups(
+  groups: OrderedCollectionGroup[],
+  rowsQuery: TableRowsQuery | undefined,
+): { groups: OrderedCollectionGroup[]; rowsWindow: ReturnType<typeof applyNameFilterAndWindow>["rowsWindow"] } {
+  type FlatRow = OrderedCollectionRow & { groupId: string; groupTitle: string };
+  const flat: FlatRow[] = [];
+  for (const group of groups) {
+    for (const row of group.rows) {
+      flat.push({ ...row, groupId: group.groupId, groupTitle: group.title });
+    }
+  }
+  const { rows: windowed, rowsWindow } = applyNameFilterAndWindow(
+    flat,
+    rowsQuery,
+    (row) => row.name,
+  );
+  const byGroup = new Map<string, OrderedCollectionGroup>();
+  for (const row of windowed) {
+    let group = byGroup.get(row.groupId);
+    if (!group) {
+      group = { groupId: row.groupId, title: row.groupTitle, rows: [] };
+      byGroup.set(row.groupId, group);
+    }
+    group.rows.push({
+      sceneId: row.sceneId,
+      name: row.name,
+      cells: row.cells,
+      relationCells: row.relationCells,
+    });
+  }
+  // Preserve original group order. Include empty groups when the window covers the
+  // full filtered set so placeholders (e.g. Unassigned) still appear.
+  const includeEmptyGroups = !rowsWindow.hasMore && rowsWindow.offset === 0;
+  const orderedGroups: OrderedCollectionGroup[] = [];
+  for (const group of groups) {
+    const windowedGroup = byGroup.get(group.groupId);
+    if (windowedGroup) {
+      orderedGroups.push(windowedGroup);
+    } else if (includeEmptyGroups) {
+      orderedGroups.push({ groupId: group.groupId, title: group.title, rows: [] });
+    }
+  }
+  return { groups: orderedGroups, rowsWindow };
+}
+
 export function getOrderedCollectionView(
   db: GraphDatabase,
   configId: string,
   requestedTabId?: string,
   contentDir?: string,
+  rowsQuery?: TableRowsQuery,
 ): OrderedCollectionViewDetail | null {
   const dir = contentDir ?? resolveContentPath();
   const config = getConfig(configId, dir);
@@ -449,7 +497,6 @@ export function getOrderedCollectionView(
     hiddenColumnKeys,
     { excludeKeys, contentDir: dir },
   );
-  hydrateRelationCellsForRows(db, config.typeDatabaseId, mergedColumnDefs, enrichedRows, dir);
   const rowBySceneId = new Map(enrichedRows.map((row) => [row.nodeId, row]));
   const enrichedGroups = groups.map((group) => ({
     ...group,
@@ -460,10 +507,44 @@ export function getOrderedCollectionView(
         sceneId: row.sceneId,
         name: row.name,
         cells: normalizeRowCells(enriched.cells, mergedColumnDefs),
-        relationCells: enriched.relationCells,
       };
     }),
   }));
+
+  const { groups: windowedGroups, rowsWindow } = windowOrderedGroups(enrichedGroups, rowsQuery);
+
+  const windowEvalRows: EvalRow[] = [];
+  for (const group of windowedGroups) {
+    for (const row of group.rows) {
+      const enriched = rowBySceneId.get(row.sceneId);
+      windowEvalRows.push(
+        enriched ?? {
+          nodeId: row.sceneId,
+          name: row.name,
+          cells: row.cells,
+          rowIndex: 0,
+          createdAt: null,
+          modifiedAt: null,
+        },
+      );
+    }
+  }
+  hydrateRelationCellsForRows(db, config.typeDatabaseId, mergedColumnDefs, windowEvalRows, dir);
+  const hydratedBySceneId = new Map(windowEvalRows.map((row) => [row.nodeId, row]));
+  const finalGroups = windowedGroups.map((group) => ({
+    ...group,
+    rows: group.rows.map((row) => {
+      const hydrated = hydratedBySceneId.get(row.sceneId);
+      if (!hydrated) return row;
+      return {
+        sceneId: row.sceneId,
+        name: row.name,
+        cells: normalizeRowCells(hydrated.cells, mergedColumnDefs),
+        relationCells: hydrated.relationCells,
+      };
+    }),
+  }));
+
   const defaultColumns =
     mergedColumnDefs.length > 0
       ? mergedColumnDefs.map((col) => col.key)
@@ -494,7 +575,8 @@ export function getOrderedCollectionView(
     memberSidePerspective,
     sectionTitle: sectionLabel.trim() ? sectionLabel : "Contents",
     tabs,
-    groups: enrichedGroups,
+    groups: finalGroups,
+    rowsWindow,
     columns,
     columnDefs,
   };
@@ -626,5 +708,8 @@ export function applyOrderedCollectionMove(
   }
 
   syncAfterRelationshipsWrite(ctx);
-  return getOrderedCollectionView(db, configId, params.scopeId, contentDir);
+  return getOrderedCollectionView(db, configId, params.scopeId, contentDir, {
+    limit: DEFAULT_TABLE_ROW_LIMIT,
+    offset: 0,
+  });
 }

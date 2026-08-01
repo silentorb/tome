@@ -5,6 +5,8 @@ import type {
   NodeSummary,
   DatabaseViewDetail,
   OrderedCollectionViewDetail,
+  RelationTableSection,
+  TableRowsQuery,
 } from "tome-graph-interfaces";
 import type { UserSettings, UserSettingsPatch } from "./user-settings";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
@@ -15,6 +17,7 @@ export type WorkspacePublic = WorkspaceFile & { archiveNodeTitle?: string };
 
 export type { GraphRelationship, GraphNode, GraphSnapshot, GraphLodSnapshot, DatabaseViewDetail } from "tome-graph-interfaces";
 export type { OrderedCollectionViewDetail } from "tome-graph-interfaces";
+export type { TableRowsQuery } from "tome-graph-interfaces";
 
 export interface GetNodeOptions {
   tab?: string;
@@ -22,6 +25,7 @@ export interface GetNodeOptions {
   view?: string;
   /** @deprecated Use tab */
   scope?: string;
+  rows?: TableRowsQuery;
 }
 
 export interface GraphExplorerLodOptions {
@@ -47,7 +51,21 @@ export interface TomeHttpClient {
     input: { title: string; view?: string; properties?: Record<string, string> },
   ): Promise<CreateNodeResponse>;
   getNode(id: string, options?: GetNodeOptions | string): Promise<NodePageDetail>;
-  getDatabaseView(id: string, tabId?: string): Promise<DatabaseViewDetail>;
+  getDatabaseView(
+    id: string,
+    tabId?: string,
+    rows?: TableRowsQuery,
+  ): Promise<DatabaseViewDetail>;
+  getOrderedCollectionView(
+    configId: string,
+    tabId?: string,
+    rows?: TableRowsQuery,
+  ): Promise<OrderedCollectionViewDetail>;
+  getRelationTable(
+    nodeId: string,
+    perspective: string,
+    rows?: TableRowsQuery,
+  ): Promise<RelationTableSection>;
   createRelationshipView(
     nodeId: string,
     association: string,

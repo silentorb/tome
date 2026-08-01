@@ -16,23 +16,25 @@ import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
 import { applySectionColumnOrder, reorderColumnDefs } from "./views/column-order";
 import type { TableTabsDetail } from "./views/tabs";
 import { ORDER_META_KEYS, setUsesOrderedAssociation } from "./ordered-relationships";
-import { ORDERED_PROPERTY_DEFAULT, setRoleAssociationForNode, setRoleProjectionTypesForComposite, loadAssociationsFromContent, associationIdFromTypeOrProjection } from "tome-flatfile";
+import {
+  ORDERED_PROPERTY_DEFAULT,
+  setRoleAssociationForNode,
+  setRoleProjectionTypesForComposite,
+  loadAssociationsFromContent,
+  associationIdFromTypeOrProjection,
+} from "tome-flatfile";
 import { perspectiveDisplayLabel } from "./association-label";
+import { applyNameFilterAndWindow } from "./table-rows-window";
+import type {
+  DatabaseColumnDef,
+  DatabaseRow,
+  DatabaseViewDetail,
+  TableRowsQuery,
+  ViewSortSpec,
+} from "tome-graph-interfaces";
 
 const ROW_META_KEYS = ORDER_META_KEYS;
 const DEFAULT_SET_SECTION_TITLE = "Contents";
-
-function setSectionTitle(contentDir: string, setSidePerspective: string): string {
-  const associations = loadAssociationsFromContent(contentDir);
-  const composite = associationIdFromTypeOrProjection(associations, setSidePerspective) ?? setSidePerspective;
-  const label = perspectiveDisplayLabel(associations, setSidePerspective, composite);
-  return label.trim() ? label : DEFAULT_SET_SECTION_TITLE;
-}
-
-import type {
-  DatabaseRow,
-  DatabaseViewDetail,
-} from "tome-graph-interfaces";
 
 export type {
   DatabaseColumnDef,
@@ -41,6 +43,13 @@ export type {
   RelationLink,
 } from "tome-graph-interfaces";
 
+function setSectionTitle(contentDir: string, setSidePerspective: string): string {
+  const associations = loadAssociationsFromContent(contentDir);
+  const composite =
+    associationIdFromTypeOrProjection(associations, setSidePerspective) ?? setSidePerspective;
+  const label = perspectiveDisplayLabel(associations, setSidePerspective, composite);
+  return label.trim() ? label : DEFAULT_SET_SECTION_TITLE;
+}
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;
@@ -88,6 +97,17 @@ function setPerspectives(
   return { viewAssociation: associationId, memberSidePerspective, setSideProjection };
 }
 
+function sortsNeedRelationHydration(
+  sorts: ViewSortSpec[],
+  columnDefs: DatabaseColumnDef[],
+): boolean {
+  if (sorts.length === 0) return false;
+  const relationKeys = new Set(
+    columnDefs.filter((def) => def.type === "relation").map((def) => def.key),
+  );
+  return sorts.some((sort) => relationKeys.has(sort.column));
+}
+
 function buildCustomViewDetail(
   db: GraphDatabase,
   databaseId: string,
@@ -95,6 +115,7 @@ function buildCustomViewDetail(
   incoming: ReturnType<GraphDatabase["listRelationshipsToTarget"]>,
   contentDir: string,
   requestedTabId?: string,
+  rowsQuery?: TableRowsQuery,
 ): DatabaseViewDetail {
   const { viewAssociation, memberSidePerspective, setSideProjection } = setPerspectives(
     databaseId,
@@ -143,9 +164,16 @@ function buildCustomViewDetail(
     { contentDir },
   );
 
-  hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+  const sorts = rowsQuery?.sorts ?? resolved.activeDefinition.sorts;
+  const q = rowsQuery?.q?.trim() ?? "";
+  const hydrateBeforeSort =
+    !q && sortsNeedRelationHydration(sorts, mergedColumnDefs);
 
-  const sorted = sortEvalRowsFromViewSorts(enrichedRows, resolved.activeDefinition.sorts);
+  if (hydrateBeforeSort) {
+    hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+  }
+
+  const sorted = q ? enrichedRows : sortEvalRowsFromViewSorts(enrichedRows, sorts);
 
   const defaultColumns =
     mergedColumnDefs.length > 0
@@ -169,8 +197,18 @@ function buildCustomViewDetail(
       ? reorderColumnDefs(mergedColumnDefs, defaultColumns)
       : undefined;
 
-  const rows: DatabaseRow[] = sorted.map((row, index) => ({
-    rowIndex: index,
+  const { rows: windowedEvalRows, rowsWindow } = applyNameFilterAndWindow(
+    sorted,
+    rowsQuery,
+    (row) => row.name,
+  );
+
+  if (!hydrateBeforeSort) {
+    hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, windowedEvalRows, contentDir);
+  }
+
+  const rows: DatabaseRow[] = windowedEvalRows.map((row, index) => ({
+    rowIndex: rowsWindow.offset + index,
     nodeId: row.nodeId,
     name: row.name,
     cells: normalizeRowCells(row.cells, mergedColumnDefs),
@@ -196,6 +234,7 @@ function buildCustomViewDetail(
     allColumns: defaultColumns,
     columns: visibleColumns,
     rows,
+    rowsWindow,
     columnDefs: visibleColumnDefs,
     allColumnDefs,
   };
@@ -207,6 +246,7 @@ export function getDatabaseViewDetail(
   databaseId: string,
   requestedTabId?: string,
   contentDir?: string,
+  rowsQuery?: TableRowsQuery,
 ): DatabaseViewDetail | null {
   const database = db.getNode(databaseId);
   const dir = contentDir ?? resolveContentPath();
@@ -223,5 +263,13 @@ export function getDatabaseViewDetail(
     return null;
   }
 
-  return buildCustomViewDetail(db, databaseId, title, incoming, dir, requestedTabId);
+  return buildCustomViewDetail(
+    db,
+    databaseId,
+    title,
+    incoming,
+    dir,
+    requestedTabId,
+    rowsQuery,
+  );
 }

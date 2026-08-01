@@ -60,6 +60,15 @@ export type {
   RelationLink,
 } from "./database-view";
 export {
+  DEFAULT_TABLE_ROW_LIMIT,
+  applyNameFilterAndWindow,
+  buildTableRowsWindow,
+  filterRowsByName,
+  matchesTableNameFilter,
+  resolveWindowBounds,
+} from "./table-rows-window";
+export type { TableRowsQuery, TableRowsWindow } from "./table-rows-window";
+export {
   linkOutgoingRelationship,
   moveRelationshipConnection,
   unlinkOutgoingRelationship,
@@ -147,7 +156,7 @@ export {
   primaryTypeTitleForInstance,
   typeTableMarkerProperties,
 } from "./node-capabilities";
-export { getNodePageDetail } from "./node-page-sections";
+export { getNodePageDetail, getRelationTableSection } from "./node-page-sections";
 export type {
   DatabaseTableSection,
   MarkdownSection,

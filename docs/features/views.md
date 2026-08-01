@@ -48,6 +48,14 @@ Table view configuration for type-table member relationships lives in [`content/
 - Adding a stored column via the UI passes `viewId` so the new key is appended only to the active custom view’s `properties` (when that allowlist already exists). Sibling custom views are unchanged.
 - Generated views (Scenes) switch scope only; no CRUD chrome.
 
+## Lazy-loaded rows (infinite scroll)
+
+Multi-row Items tables **must not** block page load on the full member set. The editor requests rows in batches (default **`limit=50`**) with **`offset`**, optional name filter **`q`**, and optional **`sorts`** JSON. There is **no paging UI** (no page numbers): the client appends the next batch when the user scrolls near the bottom (infinite scroll).
+
+- Responses include `rowsWindow: { offset, limit, total, hasMore }` on `DatabaseViewDetail`, `OrderedCollectionViewDetail`, and `RelationTableSection`.
+- Name filter and column sorts are applied **server-side** before slicing. Relation-cell hydration runs for the returned window only (dynamic columns still evaluate over the full set when needed for sort correctness).
+- Endpoints: `GET /api/databases/:id`, `GET /api/ordered-collections/:configId`, `GET /api/nodes/:id/relation-tables/:perspective`, and the multi-row sections embedded in `GET /api/nodes/:id` (editor default limit). Omit `limit` for a full result (static site export).
+
 ## Migration
 
 Legacy v1 nested format was migrated with:

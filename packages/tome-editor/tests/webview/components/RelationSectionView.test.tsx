@@ -1,12 +1,11 @@
-import { describe, expect, test } from "bun:test";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { describe, expect, mock, test } from "bun:test";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { UserSettingsProvider } from "../../../src/webview/hooks/useUserSettings";
 import { RelationSectionView } from "../../../src/webview/components/RelationSectionView";
 import { FIXTURE_PAGE_ID, FIXTURE_TARGET_ID, FIXTURE_TYPE_ID, makeRelationSection } from "../test-fixtures/node-page";
 import { makeMockEditorApi } from "../test-fixtures/mock-api";
 
-function renderRelationSection() {
-  const api = makeMockEditorApi();
+function renderRelationSection(api = makeMockEditorApi()) {
   return render(
     <UserSettingsProvider api={api}>
       <RelationSectionView
@@ -67,29 +66,37 @@ describe("RelationSectionView", () => {
     expect(screen.queryByRole("button", { name: /\+ Link/ })).toBeNull();
   });
 
-  test("filters rows using search_<label> URL param", () => {
+  test("filters rows using search_<label> URL param", async () => {
     window.history.replaceState(
       {},
       "",
       "http://127.0.0.1:5173/?node=abc&search_RELATED=linked",
     );
-    renderRelationSection();
+    const getRelationTable = mock(async () => makeRelationSection());
+    renderRelationSection({ ...makeMockEditorApi(), getRelationTable });
 
     expect(
       (screen.getByRole("searchbox", { name: "Filter table rows by name" }) as HTMLInputElement).value,
     ).toBe("linked");
+    await waitFor(() => expect(getRelationTable).toHaveBeenCalled());
     expect(screen.getByRole("link", { name: "Linked record" })).toBeTruthy();
   });
 
-  test("filters rows when typing in search input", () => {
+  test("filters rows when typing in search input", async () => {
     window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=abc");
-    renderRelationSection();
+    const getRelationTable = mock(async () =>
+      makeRelationSection({
+        rows: [],
+        rowsWindow: { offset: 0, limit: 50, total: 0, hasMore: false },
+      }),
+    );
+    renderRelationSection({ ...makeMockEditorApi(), getRelationTable });
 
     fireEvent.change(screen.getByRole("searchbox", { name: "Filter table rows by name" }), {
       target: { value: "nope" },
     });
 
-    expect(screen.getByText('No rows match “nope”.')).toBeTruthy();
+    await waitFor(() => expect(screen.getByText('No rows match “nope”.')).toBeTruthy());
     expect(window.location.search).toContain("search_RELATED=nope");
   });
 

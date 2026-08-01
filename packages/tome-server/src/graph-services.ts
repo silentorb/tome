@@ -15,6 +15,9 @@ import {
   createExtensionSqlQueryServices,
   getDatabaseViewDetail,
   getNodePageDetail,
+  getOrderedCollectionView as getOrderedCollectionViewDetail,
+  getRelationTableSection,
+  DEFAULT_TABLE_ROW_LIMIT,
   loadSchemaFromContent,
   loadAssociationsFromContent,
   associationRuleContext,
@@ -70,9 +73,15 @@ import {
 import type {
   NodeSummary,
   PublicExtensionsManifest,
+  TableRowsQuery,
   TomeGraphServices,
   WorkspacePublic,
 } from "tome-graph-interfaces";
+
+const EDITOR_TABLE_ROWS: TableRowsQuery = {
+  limit: DEFAULT_TABLE_ROW_LIMIT,
+  offset: 0,
+};
 
 export type { PublicExtensionsManifest, WorkspacePublic, TomeGraphServices };
 
@@ -119,16 +128,47 @@ function buildGraphServices(
       const recent = searchNodes(cache, "", 1);
       return recent[0]?.id ?? homeId;
     },
-    getNode(id: string, options?: { tabId?: string; databaseView?: string; scopeId?: string }) {
+    getNode(
+      id: string,
+      options?: {
+        tabId?: string;
+        databaseView?: string;
+        scopeId?: string;
+        rows?: TableRowsQuery;
+      },
+    ) {
       const tabId = options?.tabId ?? options?.scopeId ?? options?.databaseView;
       return getNodePageDetail(cache, id, {
         tabId,
         contentDir: contentPath,
         includeSchemaEmptySections: true,
+        rows: options?.rows ?? EDITOR_TABLE_ROWS,
       });
     },
-    getDatabaseView(id: string, tabId?: string) {
-      return getDatabaseViewDetail(cache, id, tabId, contentPath);
+    getDatabaseView(id: string, tabId?: string, rows?: TableRowsQuery) {
+      return getDatabaseViewDetail(
+        cache,
+        id,
+        tabId,
+        contentPath,
+        rows ?? EDITOR_TABLE_ROWS,
+      );
+    },
+    getOrderedCollectionView(configId: string, tabId?: string, rows?: TableRowsQuery) {
+      return getOrderedCollectionViewDetail(
+        cache,
+        configId,
+        tabId,
+        contentPath,
+        rows ?? EDITOR_TABLE_ROWS,
+      );
+    },
+    getRelationTable(nodeId: string, perspective: string, rows?: TableRowsQuery) {
+      return getRelationTableSection(cache, nodeId, perspective, {
+        contentDir: contentPath,
+        includeSchemaEmptySections: true,
+        rowsQuery: rows ?? EDITOR_TABLE_ROWS,
+      });
     },
     getNodeViews(nodeId: string) {
       return readNodeViews(writeCtx, nodeId);

@@ -41,6 +41,11 @@ interface SectionDataTableProps {
   rows: SectionDataTableRow[];
   renderNameCell: (row: SectionDataTableRow) => ReactNode;
   sortable?: boolean;
+  /**
+   * When true, keep the server-provided row order (windowed / infinite-scroll tables).
+   * Sort header clicks still update user settings so the parent can refetch.
+   */
+  serverRowOrder?: boolean;
   /** Tab or section default when the user has not overridden sort for `tableKey`. */
   defaultSort?: TableSortSpec;
   columnLabels?: Record<string, string>;
@@ -80,6 +85,7 @@ export function SectionDataTable({
   rows,
   renderNameCell,
   sortable = true,
+  serverRowOrder = false,
   defaultSort,
   columnLabels,
   renderCell,
@@ -103,7 +109,8 @@ export function SectionDataTable({
 
   const sortSpec = getTableSort(tableKey, defaultSort);
   const useServerRowOrder =
-    sortable && defaultSort !== undefined && !hasTableSortOverride(tableKey);
+    serverRowOrder ||
+    (sortable && defaultSort !== undefined && !hasTableSortOverride(tableKey));
   const sortedRows = useMemo(
     () => (sortable && !useServerRowOrder ? sortTableRows(rows, sortSpec, schema) : rows),
     [rows, sortSpec, schema, sortable, useServerRowOrder],

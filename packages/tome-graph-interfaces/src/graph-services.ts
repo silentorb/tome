@@ -17,7 +17,7 @@ import type {
   CreateNodeResult,
 } from "./node-create";
 import type { NodeLifecycleError } from "./node-lifecycle";
-import type { NodePageDetail } from "./node-page-sections";
+import type { NodePageDetail, RelationTableSection } from "./node-page-sections";
 import type {
   OrderedCollectionMoveParams,
   OrderedCollectionViewDetail,
@@ -30,6 +30,7 @@ import type {
 } from "./relationship-link-mutations";
 import type { RelationshipPropertyUpdateError } from "./relationship-property-update";
 import type { SchemaFile } from "./schema";
+import type { TableRowsQuery } from "./table-rows-window";
 import type {
   ViewDefinition,
   ViewSortSpec,
@@ -43,9 +44,28 @@ export interface TomeGraphServices {
   getHomeId(): string;
   getNode(
     id: string,
-    options?: { tabId?: string; databaseView?: string; scopeId?: string },
+    options?: {
+      tabId?: string;
+      databaseView?: string;
+      scopeId?: string;
+      rows?: TableRowsQuery;
+    },
   ): NodePageDetail | null;
-  getDatabaseView(id: string, tabId?: string): DatabaseViewDetail | null;
+  getDatabaseView(
+    id: string,
+    tabId?: string,
+    rows?: TableRowsQuery,
+  ): DatabaseViewDetail | null;
+  getOrderedCollectionView(
+    configId: string,
+    tabId?: string,
+    rows?: TableRowsQuery,
+  ): OrderedCollectionViewDetail | null;
+  getRelationTable(
+    nodeId: string,
+    perspective: string,
+    rows?: TableRowsQuery,
+  ): RelationTableSection | null;
   getNodeViews(nodeId: string): ViewDefinition[];
   createRelationshipView(
     nodeId: string,

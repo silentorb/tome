@@ -49,6 +49,7 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For the editor UI, re
 - Users **must** be able to drag scenes within a part to reorder (book-wide sequence).
 - Users **must** be able to drag scenes to a different part to change the `PART` association.
 - Name cells **must** remain navigable links to scene node pages.
+- Rows **must** load in windowed batches with infinite scroll (same `limit`/`offset`/`q` contract as other multi-row tables; see [views.md](./views.md) § Lazy-loaded rows). Groups are a flat row sequence for windowing; empty placeholder groups appear when the full filtered set fits in one window.
 
 ### Mutations
 

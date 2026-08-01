@@ -184,6 +184,13 @@ export function viewSortsToTableSort(sorts: ViewSortLike[]): TableSortSpec {
     : DEFAULT_TABLE_SORT;
 }
 
+export function tableSortToViewSorts(spec: TableSortSpec): ViewSortLike[] {
+  return normalizeTableSort(spec).orderBy.map((entry) => ({
+    column: entry.column,
+    direction: entry.direction,
+  }));
+}
+
 export function nextSortOnColumnClick(
   current: TableSortSpec,
   column: string,

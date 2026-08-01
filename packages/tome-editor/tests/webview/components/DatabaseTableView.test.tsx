@@ -138,9 +138,22 @@ describe("DatabaseTableView", () => {
     expect(screen.getByText("No rows in this view.")).toBeTruthy();
   });
 
-  test("filters rows by name from search input", () => {
+  test("filters rows by name from search input", async () => {
     window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=abc");
-    const api = makeMockEditorApi();
+    const getDatabaseView = mock(async (_id: string, _tab?: string, query?: { q?: string }) => {
+      expect(query?.q).toBe("quest");
+      return makeDatabaseViewDetail({
+        rows: [
+          {
+            rowIndex: 0,
+            nodeId: FIXTURE_TARGET_ID,
+            name: "Quest item",
+            cells: { priority: "High" },
+          },
+        ],
+      });
+    });
+    const api = { ...makeMockEditorApi(), getDatabaseView };
     render(
       <UserSettingsProvider api={api}>
         <DatabaseTableView
@@ -171,18 +184,32 @@ describe("DatabaseTableView", () => {
       target: { value: "quest" },
     });
 
+    await waitFor(() => expect(getDatabaseView).toHaveBeenCalled());
     expect(screen.getByRole("link", { name: "Quest item" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Other item" })).toBeNull();
     expect(window.location.search).toContain("search_items=quest");
   });
 
-  test("seeds search filter from URL on load", () => {
+  test("seeds search filter from URL on load", async () => {
     window.history.replaceState(
       {},
       "",
       "http://127.0.0.1:5173/?node=abc&search_items=linked",
     );
-    const api = makeMockEditorApi();
+    const getDatabaseView = mock(async (_id: string, _tab?: string, query?: { q?: string }) => {
+      expect(query?.q).toBe("linked");
+      return makeDatabaseViewDetail({
+        rows: [
+          {
+            rowIndex: 0,
+            nodeId: FIXTURE_TARGET_ID,
+            name: "Linked record",
+            cells: { priority: "High" },
+          },
+        ],
+      });
+    });
+    const api = { ...makeMockEditorApi(), getDatabaseView };
     render(
       <UserSettingsProvider api={api}>
         <DatabaseTableView
@@ -212,6 +239,7 @@ describe("DatabaseTableView", () => {
     expect(
       (screen.getByRole("searchbox", { name: "Filter table rows by name" }) as HTMLInputElement).value,
     ).toBe("linked");
+    await waitFor(() => expect(getDatabaseView).toHaveBeenCalled());
     expect(screen.getByRole("link", { name: "Linked record" })).toBeTruthy();
     expect(screen.queryByRole("link", { name: "Other record" })).toBeNull();
   });

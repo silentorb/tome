@@ -1,5 +1,6 @@
 import type { DatabaseColumnDef } from "./database-view";
 import type { RelationLink } from "./relation-link";
+import type { TableRowsWindow } from "./table-rows-window";
 import type { TableTabsDetail } from "./views";
 
 export interface OrderedCollectionConfig {
@@ -55,6 +56,8 @@ export interface OrderedCollectionViewDetail {
   sectionTitle: string;
   tabs: TableTabsDetail;
   groups: OrderedCollectionGroup[];
+  /** Window over the flat row sequence (group order preserved). */
+  rowsWindow: TableRowsWindow;
   columns: string[];
   columnDefs?: DatabaseColumnDef[];
 }

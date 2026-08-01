@@ -155,8 +155,8 @@ Consolidate legacy dual directed edges with `bun scripts/consolidate-relationshi
 
 - `upsertNode(id, properties)` — create or merge node
 - `listRelationshipsFromSource` / `listRelationshipsToTarget` — query projection table by local perspective type
-- `getNodeDetail` / `getNodePageDetail` — inspection; the latter adds **metadata** and ordered **sections** (markdown, database table, relation tables)
-- `getDatabaseViewDetail` — database row table for a type-table node
+- `getNodeDetail` / `getNodePageDetail` — inspection; the latter adds **metadata** and ordered **sections** (markdown, database table, relation tables). Optional `rows` (`limit`/`offset`/`q`/`sorts`) windows multi-row sections for the editor.
+- `getDatabaseViewDetail` / `getOrderedCollectionView` / `getRelationTableSection` — multi-row tables with the same optional window query; responses include `rowsWindow` (see [views.md](./views.md) § Lazy-loaded rows)
 - `finalize()` — `PRAGMA optimize` + `VACUUM`
 - Constructor `{ clean: true }` — delete existing file before open
 

@@ -11,6 +11,7 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { TableRowsQuery } from "tome-graph-interfaces";
 import type {
   OrderedCollectionGroup,
   OrderedCollectionViewDetail,
@@ -18,9 +19,9 @@ import type {
 import type { EditorApi } from "../api/client";
 import { isProtectedEditorNode } from "../../shared/types";
 import { nodePageHref } from "../node-links";
-import { filterRowsByName } from "../table-name-filter";
 import { itemsTableSearchParamKey } from "../../shared/table-search-url";
 import { useTableSearch } from "../hooks/useTableSearch";
+import { useWindowedTableRows } from "../hooks/useWindowedTableRows";
 import { RelationCellEditor } from "./RelationCellEditor";
 import { TableRowActionsCell, type TableRowMoveConfig } from "./TableRowActionsCell";
 import { renderTableCell } from "./table-cell-render";
@@ -28,8 +29,38 @@ import { TableSearchInput } from "./TableSearchInput";
 import { TableUtilityBar } from "./TableUtilityBar";
 import { ColumnEditorDialog, type ColumnEditorState } from "./ColumnEditorDialog";
 import { SortableDataColumnHeaders, columnLabelFor, moveColumnOrderItem } from "./SortableDataColumnHeaders";
+import { TableRowsSentinel } from "./TableRowsSentinel";
 import "./ordered-collection-view.css";
 import "./section-data-table.css";
+
+function mergeOrderedGroups(
+  existing: OrderedCollectionGroup[],
+  incoming: OrderedCollectionGroup[],
+): OrderedCollectionGroup[] {
+  const byId = new Map<string, OrderedCollectionGroup>();
+  for (const group of existing) {
+    byId.set(group.groupId, { ...group, rows: [...group.rows] });
+  }
+  for (const group of incoming) {
+    const prior = byId.get(group.groupId);
+    if (!prior) {
+      byId.set(group.groupId, { ...group, rows: [...group.rows] });
+      continue;
+    }
+    const seen = new Set(prior.rows.map((row) => row.sceneId));
+    for (const row of group.rows) {
+      if (!seen.has(row.sceneId)) prior.rows.push(row);
+    }
+  }
+  const order: string[] = [];
+  for (const group of existing) {
+    if (!order.includes(group.groupId)) order.push(group.groupId);
+  }
+  for (const group of incoming) {
+    if (!order.includes(group.groupId)) order.push(group.groupId);
+  }
+  return order.map((id) => byId.get(id)!).filter(Boolean);
+}
 
 interface OrderedCollectionViewProps {
   api: EditorApi;
@@ -279,6 +310,39 @@ export function OrderedCollectionView({
   const [displayColumns, setDisplayColumns] = useState(view.columns);
   const [columnEditorState, setColumnEditorState] = useState<ColumnEditorState | null>(null);
 
+  const seed = useMemo(
+    () => ({
+      rows: view.groups,
+      rowsWindow: view.rowsWindow,
+    }),
+    [view.groups, view.rowsWindow],
+  );
+
+  const fetchPage = useCallback(
+    async (query: TableRowsQuery) => {
+      const next = await api.getOrderedCollectionView(
+        configId,
+        view.tabs.activeTabId,
+        query,
+      );
+      return { rows: next.groups, rowsWindow: next.rowsWindow };
+    },
+    [api, configId, view.tabs.activeTabId],
+  );
+
+  const {
+    rows: windowedGroups,
+    rowsWindow,
+    loadingMore,
+    sentinelRef,
+  } = useWindowedTableRows({
+    seedKey: `${configId}:${view.tabs.activeTabId}`,
+    seed,
+    q: searchQuery,
+    fetchPage,
+    mergeRows: mergeOrderedGroups,
+  });
+
   useEffect(() => {
     setDisplayColumns(view.columns);
   }, [view.columns]);
@@ -374,12 +438,12 @@ export function OrderedCollectionView({
 
   const activeRow = useMemo(() => {
     if (!activeRowId) return null;
-    for (const group of view.groups) {
+    for (const group of windowedGroups) {
       const row = group.rows.find((entry) => entry.sceneId === activeRowId);
       if (row) return row;
     }
     return null;
-  }, [activeRowId, view.groups]);
+  }, [activeRowId, windowedGroups]);
 
   const renderNameCell = useCallback(
     (rowId: string, name: string) => (
@@ -435,7 +499,7 @@ export function OrderedCollectionView({
       setActiveRowId(null);
       if (!over || active.id === over.id) return;
 
-      const target = resolveDropTarget(view.groups, String(over.id));
+      const target = resolveDropTarget(windowedGroups, String(over.id));
       if (!target) return;
 
       setMoveError(null);
@@ -454,7 +518,7 @@ export function OrderedCollectionView({
         setIsMoving(false);
       }
     },
-    [api, configId, onViewChange, view.tabs.activeTabId, view.groups],
+    [api, configId, onViewChange, view.tabs.activeTabId, windowedGroups],
   );
 
   const handleColumnDragEnd = useCallback(
@@ -502,20 +566,9 @@ export function OrderedCollectionView({
     setActiveColumnId(null);
   }, []);
 
-  const filteredGroups = useMemo(() => {
-    const trimmed = searchQuery.trim();
-    if (!trimmed) return view.groups;
-    return view.groups
-      .map((group) => ({
-        ...group,
-        rows: filterRowsByName(group.rows, searchQuery, (row) => row.name),
-      }))
-      .filter((group) => group.rows.length > 0);
-  }, [searchQuery, view.groups]);
-
-  const totalRowCount = useMemo(
-    () => view.groups.reduce((count, group) => count + group.rows.length, 0),
-    [view.groups],
+  const loadedRowCount = useMemo(
+    () => windowedGroups.reduce((count, group) => count + group.rows.length, 0),
+    [windowedGroups],
   );
   const hasActiveSearch = searchQuery.trim().length > 0;
 
@@ -542,7 +595,7 @@ export function OrderedCollectionView({
 
       {moveError ? <div className="tome-ordered-collection-error">{moveError}</div> : null}
 
-      {totalRowCount > 0 && hasActiveSearch && filteredGroups.length === 0 ? (
+      {hasActiveSearch && rowsWindow.total === 0 ? (
         <div className="tome-database-empty">No rows match “{searchQuery.trim()}”.</div>
       ) : (
       <DndContext
@@ -553,7 +606,7 @@ export function OrderedCollectionView({
         onDragCancel={handleDragCancel}
       >
         <div className="tome-ordered-collection-groups">
-          {filteredGroups.map((group) => (
+          {windowedGroups.map((group) => (
             <GroupTable
               key={group.groupId}
               group={group}
@@ -584,6 +637,13 @@ export function OrderedCollectionView({
         </DragOverlay>
       </DndContext>
       )}
+      <TableRowsSentinel
+        sentinelRef={sentinelRef}
+        hasMore={rowsWindow.hasMore}
+        loadingMore={loadingMore}
+        total={rowsWindow.total}
+        loaded={loadedRowCount}
+      />
       <ColumnEditorDialog
         api={api}
         open={columnEditorState != null}

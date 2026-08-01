@@ -5,6 +5,8 @@ import type {
   NodeSummary,
   DatabaseViewDetail,
   OrderedCollectionViewDetail,
+  RelationTableSection,
+  TableRowsQuery,
 } from "tome-graph-interfaces";
 import type { UserSettings, UserSettingsPatch } from "./user-settings";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
@@ -17,6 +19,7 @@ import type {
   GraphExplorerLodOptions,
   WorkspacePublic,
 } from "./client-types";
+import { appendTableRowsQueryParams } from "./table-rows-query";
 
 export const DEFAULT_API_BASE_URL = "http://127.0.0.1:3847";
 
@@ -108,18 +111,53 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       const params = new URLSearchParams();
       const tab = normalized.tab ?? normalized.scope ?? normalized.view;
       if (tab) params.set("tab", tab);
+      appendTableRowsQueryParams(params, normalized.rows);
       const query = params.toString();
       const data = await fetchJson<{ node: NodePageDetail }>(
         `/api/nodes/${id}${query ? `?${query}` : ""}`,
       );
       return data.node;
     },
-    async getDatabaseView(id: string, tabId?: string): Promise<DatabaseViewDetail> {
-      const params = tabId ? `?tab=${encodeURIComponent(tabId)}` : "";
+    async getDatabaseView(
+      id: string,
+      tabId?: string,
+      rows?: TableRowsQuery,
+    ): Promise<DatabaseViewDetail> {
+      const params = new URLSearchParams();
+      if (tabId) params.set("tab", tabId);
+      appendTableRowsQueryParams(params, rows);
+      const query = params.toString();
       const data = await fetchJson<{ databaseView: DatabaseViewDetail }>(
-        `/api/databases/${id}${params}`,
+        `/api/databases/${id}${query ? `?${query}` : ""}`,
       );
       return data.databaseView;
+    },
+    async getOrderedCollectionView(
+      configId: string,
+      tabId?: string,
+      rows?: TableRowsQuery,
+    ): Promise<OrderedCollectionViewDetail> {
+      const params = new URLSearchParams();
+      if (tabId) params.set("tab", tabId);
+      appendTableRowsQueryParams(params, rows);
+      const query = params.toString();
+      const data = await fetchJson<{ view: OrderedCollectionViewDetail }>(
+        `/api/ordered-collections/${encodeURIComponent(configId)}${query ? `?${query}` : ""}`,
+      );
+      return data.view;
+    },
+    async getRelationTable(
+      nodeId: string,
+      perspective: string,
+      rows?: TableRowsQuery,
+    ): Promise<RelationTableSection> {
+      const params = new URLSearchParams();
+      appendTableRowsQueryParams(params, rows);
+      const query = params.toString();
+      const data = await fetchJson<{ section: RelationTableSection }>(
+        `/api/nodes/${nodeId}/relation-tables/${encodeURIComponent(perspective)}${query ? `?${query}` : ""}`,
+      );
+      return data.section;
     },
     async createRelationshipView(
       nodeId: string,

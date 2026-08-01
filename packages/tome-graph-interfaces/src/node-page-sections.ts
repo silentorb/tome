@@ -3,6 +3,7 @@ import type { NodeDetail } from "./queries";
 import type { NodePageMetadata } from "./node-metadata";
 import type { PropertiesSection } from "./node-type-properties";
 import type { OrderedCollectionViewDetail } from "./ordered-collections";
+import type { TableRowsWindow } from "./table-rows-window";
 
 export interface MarkdownSection {
   type: "markdown";
@@ -43,6 +44,8 @@ export interface RelationTableSection {
   columns: string[];
   columnDefs?: DatabaseColumnDef[];
   rows: RelationRow[];
+  /** Window metadata for lazy-loaded / infinite-scroll fetches. */
+  rowsWindow: TableRowsWindow;
 }
 
 export type NodeSection =

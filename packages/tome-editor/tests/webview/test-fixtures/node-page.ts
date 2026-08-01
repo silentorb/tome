@@ -33,6 +33,7 @@ export function makeDatabaseViewDetail(
     tabs,
     viewAssociation: "members",
     memberSidePerspective: "member_of",
+    sectionTitle: "Contents",
     allColumns: ["priority"],
     columns: ["priority"],
     columnDefs: [
@@ -63,13 +64,36 @@ export function makeDatabaseViewDetail(
         cells: { priority: "High" },
       },
     ],
+    rowsWindow: { offset: 0, limit: 50, total: 1, hasMore: false },
     ...overrides,
+    rowsWindow:
+      overrides.rowsWindow ??
+      ({
+        offset: 0,
+        limit: 50,
+        total: (overrides.rows ?? [
+          {
+            rowIndex: 0,
+            nodeId: FIXTURE_TARGET_ID,
+            name: "Linked record",
+            cells: { priority: "High" },
+          },
+        ]).length,
+        hasMore: false,
+      }),
   };
 }
 
 export function makeRelationSection(
   overrides: Partial<RelationTableSection> = {},
 ): RelationTableSection {
+  const defaultRows = [
+    {
+      targetId: FIXTURE_TARGET_ID,
+      name: "Linked record",
+      cells: { priority: "High" },
+    },
+  ];
   return {
     type: "relations",
     label: "RELATED",
@@ -87,14 +111,17 @@ export function makeRelationSection(
         defaultValue: "Low",
       },
     ],
-    rows: [
-      {
-        targetId: FIXTURE_TARGET_ID,
-        name: "Linked record",
-        cells: { priority: "High" },
-      },
-    ],
+    rows: defaultRows,
+    rowsWindow: { offset: 0, limit: 50, total: 1, hasMore: false },
     ...overrides,
+    rowsWindow:
+      overrides.rowsWindow ??
+      ({
+        offset: 0,
+        limit: 50,
+        total: (overrides.rows ?? defaultRows).length,
+        hasMore: false,
+      }),
   };
 }
 

@@ -361,6 +361,22 @@ describe("getDatabaseViewDetail with custom tabs", () => {
       "No inspirations",
     ]);
     expect(view?.rows[2]?.relationCells?.inspirations).toEqual([]);
+    expect(view?.rowsWindow).toEqual({ offset: 0, limit: 3, total: 3, hasMore: false });
+
+    const windowed = getDatabaseViewDetail(db, featuresDb, "by-inspirations", contentDir, {
+      limit: 1,
+      offset: 0,
+    });
+    expect(windowed?.rows.map((row) => row.name)).toEqual(["Many inspirations"]);
+    expect(windowed?.rowsWindow).toEqual({ offset: 0, limit: 1, total: 3, hasMore: true });
+
+    const filtered = getDatabaseViewDetail(db, featuresDb, "by-inspirations", contentDir, {
+      q: "few",
+      limit: 10,
+      offset: 0,
+    });
+    expect(filtered?.rows.map((row) => row.name)).toEqual(["Few inspirations"]);
+    expect(filtered?.rowsWindow.total).toBe(1);
 
     db.close();
     rmSync(dir, { recursive: true, force: true });

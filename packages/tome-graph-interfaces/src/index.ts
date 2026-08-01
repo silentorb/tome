@@ -39,6 +39,12 @@ export type {
 } from "./database-view";
 
 export type {
+  TableRowsWindow,
+  TableRowsQuery,
+} from "./table-rows-window";
+export { DEFAULT_TABLE_ROW_LIMIT } from "./table-rows-window";
+
+export type {
   GraphNodeRelevance,
   GraphNodeBundle,
   GraphNode,
