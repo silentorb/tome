@@ -417,4 +417,149 @@ describe("tome-query compile + execute", () => {
     expect(ids).not.toContain("archived-target");
     expect(ids).not.toContain("a");
   });
+
+  test("executeQueryBlock except + traverse keeps nodes outside membership", async () => {
+    const setToMember = projectionType("00000000000000000000000001", 0);
+    const memberToSet = projectionType("00000000000000000000000001", 1);
+    const db = new Database(":memory:");
+    db.run(`
+      CREATE TABLE nodes (
+        id TEXT PRIMARY KEY NOT NULL,
+        properties TEXT NOT NULL DEFAULT '{}',
+        is_archived INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE relationship_projections (
+        id TEXT PRIMARY KEY NOT NULL,
+        record_id TEXT NOT NULL,
+        source_node_id TEXT NOT NULL,
+        target_node_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        properties TEXT NOT NULL DEFAULT '{}'
+      );
+    `);
+    for (const [id, title] of [
+      ["hub", "Hub"],
+      ["member", "Member"],
+      ["orphan", "Orphan"],
+    ] as const) {
+      db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, 0)`, [
+        id,
+        JSON.stringify({ title }),
+      ]);
+    }
+    db.run(
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
+       VALUES (?, ?, ?, ?, ?, '{}')`,
+      ["p0", "r1", "hub", "member", setToMember],
+    );
+    db.run(
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
+       VALUES (?, ?, ?, ?, ?, '{}')`,
+      ["p1", "r1", "member", "hub", memberToSet],
+    );
+
+    const reactFlow = {
+      nodes: [
+        {
+          id: "in",
+          type: "input",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+        {
+          id: "hopMembers",
+          type: "traverse",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { edgeType: setToMember } },
+        },
+        {
+          id: "hopHubs",
+          type: "traverse",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { edgeType: memberToSet } },
+        },
+        {
+          id: "exceptMembers",
+          type: "except",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+        {
+          id: "exceptHubs",
+          type: "except",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+        {
+          id: "out",
+          type: "output",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+      ],
+      edges: [
+        {
+          id: "e_in_members",
+          source: "in",
+          sourceHandle: "value",
+          target: "hopMembers",
+          targetHandle: "collection",
+        },
+        {
+          id: "e_in_hubs",
+          source: "in",
+          sourceHandle: "value",
+          target: "hopHubs",
+          targetHandle: "collection",
+        },
+        {
+          id: "e_keep1",
+          source: "in",
+          sourceHandle: "value",
+          target: "exceptMembers",
+          targetHandle: "collection",
+        },
+        {
+          id: "e_excl1",
+          source: "hopMembers",
+          sourceHandle: "collection",
+          target: "exceptMembers",
+          targetHandle: "exclude",
+        },
+        {
+          id: "e_keep2",
+          source: "exceptMembers",
+          sourceHandle: "collection",
+          target: "exceptHubs",
+          targetHandle: "collection",
+        },
+        {
+          id: "e_excl2",
+          source: "hopHubs",
+          sourceHandle: "collection",
+          target: "exceptHubs",
+          targetHandle: "exclude",
+        },
+        {
+          id: "e_out",
+          source: "exceptHubs",
+          sourceHandle: "collection",
+          target: "out",
+          targetHandle: "value",
+        },
+      ],
+    };
+
+    const table = await executeQueryBlock(
+      {
+        queryAll(sql, params = []) {
+          return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
+        },
+      },
+      reactFlow,
+    );
+
+    const ids = table.rows.map((row) => row.id);
+    expect(ids).toEqual(["orphan"]);
+  });
 });

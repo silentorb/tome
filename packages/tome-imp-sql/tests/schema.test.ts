@@ -86,4 +86,44 @@ describe("tome-imp-sql compile", () => {
     expect(sql).toContain('is_archived" = 0');
     expect(parameters).toContain(edgeType);
   });
+
+  test("compiles except + traverse as NOT EXISTS over relationship_projections", () => {
+    const edgeType = projectionType(VALID_ASSOCIATION, 0);
+    const graph: Graph = {
+      nodes: {
+        in: { id: "in", type: "input", inputs: {} },
+        hop: {
+          id: "hop",
+          type: "traverse",
+          inputs: { edgeType },
+        },
+        except: { id: "except", type: "except", inputs: {} },
+        out: { id: "out", type: "output", inputs: {} },
+      },
+      edges: {
+        e_keep: {
+          from: { node: "in", port: "value" },
+          to: { node: "except", port: "collection" },
+        },
+        e_hop_in: {
+          from: { node: "in", port: "value" },
+          to: { node: "hop", port: "collection" },
+        },
+        e_excl: {
+          from: { node: "hop", port: "collection" },
+          to: { node: "except", port: "exclude" },
+        },
+        e_out: {
+          from: { node: "except", port: "collection" },
+          to: { node: "out", port: "value" },
+        },
+      },
+    };
+
+    const { sql, parameters } = compileImpGraphToTomeSql(graph);
+    expect(sql.toLowerCase()).toContain("not exists");
+    expect(sql).toContain("relationship_projections");
+    expect(sql).toContain('is_archived" = 0');
+    expect(parameters).toContain(edgeType);
+  });
 });

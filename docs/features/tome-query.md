@@ -40,8 +40,9 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 ### Query semantics
 
 - Input = unresolved enumeration of all live nodes (IEnumerable-style pipeline; corpus rows are not RF nodes)
-- Supported transforms: Imp collection library (`filter`, `sort`, `limit`, `offset`, `project`, predicates, `column`, `literal`)
+- Supported transforms: Imp collection library (`filter`, `except`, `sort`, `limit`, `offset`, `project`, predicates, `column`, `literal`)
 - Supported path ops: Imp `traverse` (single hop via `relationship_projections`; `edgeType` is a projection type string)
+- `except` is declarative set difference by `id`; SQL lowering uses `NOT EXISTS` over the exclude subquery (not an in-memory subtract)
 - Columns: Imp `project` with comma-separated logical names; `id` / `is_archived` are table columns; other names map to `json_extract(properties, '$.name')`
 - Host must exclude archived nodes even when the graph has no filter (including traverse targets)
 
