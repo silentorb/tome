@@ -16,7 +16,8 @@ export function register(host: HtmlPageBlockHost): void {
       }
       try {
         const table = await executeQueryBlock(ctx.services.sqlQuery, parsed.reactFlow);
-        return renderQueryTableHtml(table);
+        const nodePageHref = ctx.services.nodePageHref;
+        return renderQueryTableHtml(table, nodePageHref);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         return renderQueryPlaceholderHtml(`Query failed: ${message}`);

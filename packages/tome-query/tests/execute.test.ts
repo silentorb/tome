@@ -12,8 +12,13 @@ import {
   projectionType,
   tomeNodesColumnExpression,
 } from "tome-imp-sql";
-import { compileReactFlowQuery, rowsToTable } from "../src/execute";
-import { executeQueryBlock } from "../src/render";
+import {
+  compileReactFlowQuery,
+  ensureIdentityTitleProjection,
+  ensureTitleColumnInSelectStar,
+  rowsToTable,
+} from "../src/execute";
+import { executeQueryBlock, renderQueryTableHtml } from "../src/render";
 
 describe("tome-query config", () => {
   test("default block data has input → output react flow graph", () => {
@@ -115,6 +120,100 @@ describe("tome-query compile + execute", () => {
     const { sql } = compileReactFlowQuery(defaultReactFlowGraph());
     expect(sql.toLowerCase()).toContain("nodes");
     expect(sql).toContain('is_archived" = 0');
+    expect(sql.toLowerCase()).toContain("as title");
+  });
+
+  test("project id-only compiles with title plumbing", () => {
+    const reactFlow = {
+      nodes: [
+        {
+          id: "in",
+          type: "input",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+        {
+          id: "project",
+          type: "project",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { columns: "id" } },
+        },
+        {
+          id: "out",
+          type: "output",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+      ],
+      edges: [
+        {
+          id: "e1",
+          source: "in",
+          sourceHandle: "value",
+          target: "project",
+          targetHandle: "collection",
+        },
+        {
+          id: "e2",
+          source: "project",
+          sourceHandle: "collection",
+          target: "out",
+          targetHandle: "value",
+        },
+      ],
+    };
+    const { sql } = compileReactFlowQuery(reactFlow);
+    expect(sql.toLowerCase()).toMatch(/as\s+title/);
+    expect(sql.toLowerCase()).toContain("json_extract");
+  });
+
+  test("ensureIdentityTitleProjection merges id and title into project", () => {
+    const graph = reactFlowToImp(
+      [
+        {
+          id: "in",
+          type: "input",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+        {
+          id: "project",
+          type: "project",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { columns: "id" } },
+        },
+        {
+          id: "out",
+          type: "output",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+      ],
+      [
+        {
+          id: "e1",
+          source: "in",
+          sourceHandle: "value",
+          target: "project",
+          targetHandle: "collection",
+        },
+        {
+          id: "e2",
+          source: "project",
+          sourceHandle: "collection",
+          target: "out",
+          targetHandle: "value",
+        },
+      ],
+    );
+    const ensured = ensureIdentityTitleProjection(graph);
+    expect(ensured.nodes.project?.inputs?.columns).toBe("id,title");
+  });
+
+  test("ensureTitleColumnInSelectStar rewrites bare select *", () => {
+    const sql = ensureTitleColumnInSelectStar('select * from "nodes"');
+    expect(sql.toLowerCase()).toContain("as title");
+    expect(sql.toLowerCase().startsWith("select *,")).toBe(true);
   });
 
   test("compiles when multiple edges target the same input port", () => {
@@ -265,12 +364,92 @@ describe("tome-query compile + execute", () => {
     const ids = table.rows.map((row) => row.id);
     expect(ids).toContain("live1");
     expect(ids).not.toContain("arch1");
+    expect(table.columns[0]).toBe("title");
+    expect(table.columns).not.toContain("id");
   });
 
-  test("rowsToTable prefers id and title columns", () => {
+  test("project id-only execute yields title-only visible columns", async () => {
+    const db = new Database(":memory:");
+    db.run(`
+      CREATE TABLE nodes (
+        id TEXT PRIMARY KEY NOT NULL,
+        properties TEXT NOT NULL DEFAULT '{}',
+        is_archived INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+      "n1",
+      JSON.stringify({ title: "Alpha" }),
+      0,
+    ]);
+    const reactFlow = {
+      nodes: [
+        {
+          id: "in",
+          type: "input",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+        {
+          id: "project",
+          type: "project",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { columns: "id" } },
+        },
+        {
+          id: "out",
+          type: "output",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+      ],
+      edges: [
+        {
+          id: "e1",
+          source: "in",
+          sourceHandle: "value",
+          target: "project",
+          targetHandle: "collection",
+        },
+        {
+          id: "e2",
+          source: "project",
+          sourceHandle: "collection",
+          target: "out",
+          targetHandle: "value",
+        },
+      ],
+    };
+    const table = await executeQueryBlock(
+      {
+        queryAll(sql, params = []) {
+          return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
+        },
+      },
+      reactFlow,
+    );
+    expect(table.columns).toEqual(["title"]);
+    expect(table.rows[0]?.id).toBe("n1");
+    expect(table.rows[0]?.title).toBe("Alpha");
+  });
+
+  test("rowsToTable leads with title and hides id plumbing", () => {
     const table = rowsToTable([{ title: "A", id: "1", z: 1 }]);
-    expect(table.columns[0]).toBe("id");
-    expect(table.columns[1]).toBe("title");
+    expect(table.columns).toEqual(["title", "z"]);
+    expect(table.rows[0]?.id).toBe("1");
+  });
+
+  test("renderQueryTableHtml emits title links", () => {
+    const html = renderQueryTableHtml(
+      {
+        columns: ["title"],
+        rows: [{ id: "n1", title: "Alpha" }],
+      },
+      (id) => `/?node=${id}`,
+    );
+    expect(html).toContain('href="/?node=n1"');
+    expect(html).toContain("tome-query-title-link");
+    expect(html).toContain("Alpha");
   });
 
   test("compiles traverse over relationship_projections", () => {

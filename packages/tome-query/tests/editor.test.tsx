@@ -30,7 +30,7 @@ describe("QueryBlockComponent", () => {
   test("auto-invokes and renders result columns and rows", async () => {
     const invoke = mock(async () => ({
       ok: true,
-      columns: ["id", "title"],
+      columns: ["title"],
       rows: [{ id: "n1", title: "Alpha" }],
     }));
 
@@ -45,9 +45,10 @@ describe("QueryBlockComponent", () => {
     await waitFor(() => {
       expect(invoke).toHaveBeenCalled();
     });
-    expect(screen.getByText("id")).toBeTruthy();
     expect(screen.getByText("title")).toBeTruthy();
-    expect(screen.getByText("Alpha")).toBeTruthy();
+    const link = screen.getByRole("link", { name: "Alpha" }) as HTMLAnchorElement;
+    expect(link.href).toContain("node=n1");
+    expect(link.className).toContain("tome-query-title-link");
     expect(screen.getByText("1 row")).toBeTruthy();
   });
 

@@ -11,22 +11,28 @@ import { createQueryRegistry } from "./execute";
 
 export type ImpFlowNodeData = {
   inputValues: InputValues;
+  /** Target handle ids that currently have an inbound edge. */
+  connectedInputPorts?: string[];
   onInputChange?: (nodeId: string, portId: string, value: PrimitiveValue) => void;
 };
 
 export type ImpFlowNode = Node<ImpFlowNodeData>;
 
-function isWiredOnlyPort(typeId: string, portId: string): boolean {
-  if (portId === "collection" || portId === "predicate") return true;
-  if (portId === "left" || portId === "right") return true;
-  if (typeId === "output" && portId === "value") return true;
-  return false;
+/** Literal text fields only for scalar ports with no inbound edge. */
+export function shouldShowPortLiteralInput(
+  port: { id: string; type: { id: string } },
+  connectedInputPorts: readonly string[] = [],
+): boolean {
+  const signal = port.type.id;
+  if (signal === "collection" || signal === "boolean") return false;
+  return !connectedInputPorts.includes(port.id);
 }
 
 function ImpOperatorNode({ id, data, type }: NodeProps<ImpFlowNode>) {
   const registry = useMemo(() => createQueryRegistry(), []);
   const nodeType = type ? getNodeType(registry, type) : undefined;
   const inputValues = data.inputValues ?? {};
+  const connectedInputPorts = data.connectedInputPorts ?? [];
 
   if (!nodeType) {
     return (
@@ -51,7 +57,7 @@ function ImpOperatorNode({ id, data, type }: NodeProps<ImpFlowNode>) {
             className="tome-query-rf-handle"
           />
           <span className="tome-query-rf-port-label">{port.id}</span>
-          {!isWiredOnlyPort(nodeType.id, port.id) ? (
+          {shouldShowPortLiteralInput(port, connectedInputPorts) ? (
             <input
               className="tome-query-rf-port-input nodrag"
               value={formatInputValue(inputValues[port.id])}

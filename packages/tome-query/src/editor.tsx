@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
 import type { ReactFlowGraph } from "imp-react-flow";
 import {
@@ -11,6 +18,8 @@ import {
 } from "./config";
 import { QueryFlowEditor } from "./query-editor";
 import type { QueryResultTable } from "./execute";
+import { formatCellText } from "./render";
+import { queryNodePageHref } from "./node-links";
 import "./query-block.css";
 
 function toBlockData(reactFlow: ReactFlowGraph): TomeQueryBlockData {
@@ -193,7 +202,7 @@ export function QueryBlockComponent({
                 {table.rows.map((row, index) => (
                   <tr key={typeof row.id === "string" ? row.id : index}>
                     {table.columns.map((column) => (
-                      <td key={column}>{formatCell(row[column])}</td>
+                      <td key={column}>{renderCell(column, row)}</td>
                     ))}
                   </tr>
                 ))}
@@ -211,12 +220,20 @@ export function QueryBlockComponent({
   );
 }
 
-function formatCell(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
-    return String(value);
+function renderCell(column: string, row: Record<string, unknown>): ReactNode {
+  if (column === "title") {
+    const id = typeof row.id === "string" ? row.id : null;
+    const text = formatCellText(row.title);
+    if (id) {
+      return (
+        <a className="tome-query-title-link" href={queryNodePageHref(id, window.location.href)}>
+          {text}
+        </a>
+      );
+    }
+    return text;
   }
-  return JSON.stringify(value);
+  return formatCellText(row[column]);
 }
 
 /** Lucide refresh-cw (ISC) — inline stroke icon for re-run. */

@@ -163,6 +163,21 @@
   top: 0;
 }
 
+.tome-query-title-link {
+  border: 0;
+  background: transparent;
+  color: var(--tome-link, #7aa2ff);
+  padding: 0;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+.tome-query-title-link:hover {
+  text-decoration: underline;
+}
+
 .tome-query-error {
   display: block;
   box-sizing: border-box;

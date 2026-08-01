@@ -83,14 +83,14 @@ export function QueryFlowEditor({ graph, readOnly, onGraphChange }: QueryFlowEdi
   );
 
   const [nodes, setNodes] = useNodesState(
-    attachInputHandlers(graph.nodes as ImpFlowNode[], onInputChange),
+    attachInputHandlers(graph.nodes as ImpFlowNode[], graph.edges as Edge[], onInputChange),
   );
   const [edges, setEdges] = useEdgesState(graph.edges as Edge[]);
 
-  // Keep handlers fresh on nodes without resetting positions from parent on every keystroke.
+  // Keep handlers + connection flags fresh without resetting positions from parent.
   const nodesWithHandlers = useMemo(
-    () => attachInputHandlers(nodes, onInputChange),
-    [nodes, onInputChange],
+    () => attachInputHandlers(nodes, edges, onInputChange),
+    [nodes, edges, onInputChange],
   );
 
   const onNodesChange = useCallback(
@@ -208,14 +208,29 @@ export function QueryFlowEditor({ graph, readOnly, onGraphChange }: QueryFlowEdi
   );
 }
 
+function connectedInputPortsByNode(edges: Edge[]): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  for (const edge of edges) {
+    const handle = edge.targetHandle;
+    if (!edge.target || !handle) continue;
+    const list = map.get(edge.target) ?? [];
+    if (!list.includes(handle)) list.push(handle);
+    map.set(edge.target, list);
+  }
+  return map;
+}
+
 function attachInputHandlers(
   nodes: ImpFlowNode[],
+  edges: Edge[],
   onInputChange: ImpFlowNodeData["onInputChange"],
 ): ImpFlowNode[] {
+  const connected = connectedInputPortsByNode(edges);
   return nodes.map((node) => ({
     ...node,
     data: {
       inputValues: node.data?.inputValues ?? {},
+      connectedInputPorts: connected.get(node.id) ?? [],
       onInputChange,
     },
   }));

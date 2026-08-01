@@ -2,6 +2,7 @@ import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-servic
 import type { ReactFlowGraph } from "imp-react-flow";
 import { compileReactFlowQuery, rowsToTable, type QueryResultTable } from "./execute";
 import { parseQueryBlockData } from "./config";
+import { queryNodePageHref } from "./node-links";
 
 export async function executeQueryBlock(
   sqlQuery: ExtensionSqlQueryServices | undefined,
@@ -31,7 +32,18 @@ export function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export function renderQueryTableHtml(table: QueryResultTable): string {
+export function formatCellText(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  return JSON.stringify(value);
+}
+
+export function renderQueryTableHtml(
+  table: QueryResultTable,
+  nodePageHref: (nodeId: string) => string = (id) => queryNodePageHref(id),
+): string {
   const header = table.columns
     .map((column) => `<th>${escapeHtml(column)}</th>`)
     .join("");
@@ -39,14 +51,16 @@ export function renderQueryTableHtml(table: QueryResultTable): string {
     .map((row) => {
       const cells = table.columns
         .map((column) => {
-          const value = row[column];
-          const text =
-            value === null || value === undefined
-              ? ""
-              : typeof value === "string" || typeof value === "number" || typeof value === "boolean"
-                ? String(value)
-                : JSON.stringify(value);
-          return `<td>${escapeHtml(text)}</td>`;
+          if (column === "title") {
+            const id = typeof row.id === "string" ? row.id : null;
+            const text = escapeHtml(formatCellText(row.title));
+            if (id) {
+              const href = escapeHtml(nodePageHref(id));
+              return `<td><a class="tome-query-title-link" href="${href}">${text}</a></td>`;
+            }
+            return `<td>${text}</td>`;
+          }
+          return `<td>${escapeHtml(formatCellText(row[column]))}</td>`;
         })
         .join("");
       return `<tr>${cells}</tr>`;

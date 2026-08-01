@@ -34,6 +34,7 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 - Table errors are shown in a readonly field so they can be selected/copied inside the Milkdown embed
 - No page-node / type-table scope in v1 — `nodeId` is ignored for the collection source
 - Wiring a new edge onto an occupied input port replaces the previous inbound edge; output ports may fan out
+- Literal text fields on operator ports appear only for scalar ports (`string` / `number` / `any`) that have **no** inbound edge; `collection` and `boolean` ports never show text inputs
 - Selected nodes/edges are removable with **Backspace** or **Delete** (disabled when the block is read-only)
 - Legacy graphs with multiple inbound edges to one port keep the last edge and drop the rest (parse + compile); they do not fail to load. Fence data is not rewritten on mount.
 
@@ -44,6 +45,7 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 - Supported path ops: Imp `traverse` (single hop via `relationship_projections`; `edgeType` is a projection type string)
 - `except` is declarative set difference by `id`; SQL lowering uses `NOT EXISTS` over the exclude subquery (not an in-memory subtract)
 - Columns: Imp `project` with comma-separated logical names; `id` / `is_archived` are table columns; other names map to `json_extract(properties, '$.name')`
+- **Title-link baseline:** every result table always shows a first **title** column of node page links (like database table name cells). Compile always ensures SQL selects `id` and `title` (merging into any author `project`, or adding `json_extract(…) AS title` on bare `SELECT *`). Visible columns omit raw `id` / duplicate `title` plumbing; author-projected extras follow the title column. Projecting only `id` yields a single-column title-link table.
 - Host must exclude archived nodes even when the graph has no filter (including traverse targets)
 
 ### Host services

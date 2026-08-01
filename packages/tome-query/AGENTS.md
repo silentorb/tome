@@ -20,6 +20,8 @@ Among Tome packages: `tome-interfaces` + `tome-imp-sql` (schema/registry/compile
 - Query Input is **all live nodes** — ignore page `nodeId` for the collection source (v1).
 - React Flow shows Imp operators only — never materialize corpus rows as RF nodes.
 - Column selection uses Imp `project`; property columns map via `json_extract`.
+- Result tables always lead with a title-link column; compile ensures `id` + `title` plumbing (`ensureIdentityTitleProjection` / `ensureTitleColumnInSelectStar`).
+- RF port literal inputs: only scalar ports without an inbound edge (`shouldShowPortLiteralInput`).
 - Path hops use Imp `traverse` + `tome-imp-sql` `projectionType` for `edgeType`.
 
 ## Tests
