@@ -101,7 +101,7 @@ Pointer handlers (click, context menu, drag affordances) **must** cover the **fu
 
 ### Node creation
 
-- **New page** (sidebar **New page** or `?view=create`) **must** immediately create a standalone node with default title `Untitled` (no relationships) and open the universal node edit page so the user can set title and body there.
+- **New page** (sidebar **New page** or `?view=create`) **must** open a client-only draft page (empty title with placeholder `Untitled`, empty body, URL stays `?view=create`) **without** writing to content. Persistence (`POST /api/nodes`) **must** run only once the title is non-empty and not literally `Untitled`; the draft body (if any) is included in that create. After create, the URL **must** become `?node={id}` and further edits use normal autosave. Navigating away with no persistable title **must** leave nothing on disk. Stored titles **must not** be empty or `Untitled` (`createNode` / title PUT reject those).
 - **Database (IS_A) table add row** — type-table **Items** sections (`section.type === "database"`) **must** offer an inline **New row** control that creates a new type instance and links it via `is_a` (`POST /api/databases/:id/rows`). The new row **must** appear after reload.
 - **Associative relation table link** — many-to-many outgoing relation sections (`addMode: "link-existing"`, e.g. Features, Inspirations, Characters) **must** offer an inline **Link** control that picks an **existing** record (`POST /api/nodes/:id/connections`), scoped by `allowedTargetTypeIds` from `schema.json` when a rule matches. Structural one-to-many relation sections (`addMode: "none"`, e.g. Part) **must not** show a table-level add control; ordered-collection tables are unchanged.
 - Relation table sections appear when the page has at least one outgoing edge for that label **or** when the instance's type table defines a matching `type: relation` column in `table-schemas.json` (editor only; the static site still omits empty relation sections). Every non-protected node page **must** offer **Relate** in the page actions menu (⋯ to the right of the page title) to open a dialog linking the current page to an **existing** target: searchable relationship type (`GET /api/associations`, all types present in data) and searchable target node (`GET /api/nodes/search`, optionally filtered via `GET /api/nodes/:id/relationship-link-options?type=…` from `schema.json`). Linking uses `POST /api/nodes/:id/connections`; the page reloads so new relation sections appear when applicable.
@@ -202,7 +202,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 - Manual: click a section table column header to sort; reload and confirm sort persists in `.tome/user-settings.json (legacy: .marloth/user-settings.json)`
 - Manual: switch a database table tab; navigate away and return (or reload without `?tab=`); confirm the same tab is active and `tableTabs` updated in `.tome/user-settings.json (legacy: .marloth/user-settings.json)`
 - Manual: sidebar **Recent** lists latest edited nodes below static database links; edit a title/body and confirm the node moves to the top after save
-- Manual: sidebar **New page** or `?view=create` → lands on new node page titled Untitled; `content/data/{shard}/{id}.md` exists
+- Manual: sidebar **New page** or `?view=create` → blank draft (no content file yet); type a real title → node file appears under `content/data/nodes/{shard}/` and URL becomes `?node=`
 - Manual: on an IS_A database table section, **+ New row** → new row appears after reload
 - Manual: on an includes / link-existing relation table section (e.g. Features), **Link** / **+ Link …** → pick existing record; row appears after reload
 - Manual: on a database table with relation columns (e.g. Features → Parents), click link labels to navigate; hover the cell and use the edit control to open the popup for add/remove; confirm `content/data/relationships/` updates
@@ -217,7 +217,9 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 | `packages/tome-editor/src/shared/user-settings.ts` | User settings types and table sort helpers |
 | `packages/tome-editor/src/webview/` | React + Milkdown Crepe UI |
 | `packages/tome-editor/src/webview/components/NodePageView.tsx` | Universal page layout (title, metadata, properties, markdown, sections) |
-| `packages/tome-editor/src/webview/App.tsx` (`createNewPage`) | New-page auto-create + navigation |
+| `packages/tome-editor/src/webview/App.tsx` (`openDraftPage`) | New-page client draft; create on persistable title |
+| `packages/tome-editor/src/webview/draft-page.ts` | Draft node id + empty `NodePageDetail` |
+| `packages/tome-graph-interfaces/src/node-title.ts` | `isPersistableNodeTitle` (rejects empty / `Untitled`) |
 | `packages/tome-editor/src/webview/components/GlobalSearch.tsx` | Global node search |
 | `packages/tome-editor/src/webview/components/RecentNodesPanel.tsx` | Sidebar recent nodes (`GET /api/nodes/recent`) |
 | `packages/tome-db/src/node-create.ts` | Create node + optional relationship (`createNode`) |

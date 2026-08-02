@@ -103,6 +103,11 @@ export type {
   CreateNodeResult,
 } from "./node-create";
 
+export {
+  NON_PERSISTABLE_NODE_TITLE,
+  isPersistableNodeTitle,
+} from "./node-title";
+
 export type {
   LinkOutgoingRelationshipError,
   UnlinkOutgoingRelationshipError,

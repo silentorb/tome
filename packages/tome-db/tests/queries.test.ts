@@ -5,6 +5,7 @@ import {
   listRecentNodesByModifiedAt,
   searchNodes,
   updateNodeBody,
+  updateNodeTitle,
 } from "../src/queries";
 import {
   createTestContentFixture,
@@ -172,6 +173,18 @@ describe("queries", () => {
     expect(getNodeDetail(fixture.ctx.cache, "0000000000000000000000000E")?.body.trimEnd()).toBe(
       "new body",
     );
+  });
+
+  test("updateNodeTitle rejects empty and Untitled", () => {
+    seedTestNode(fixture, {
+      id: "0000000000000000000000000F",
+      properties: { title: "Keep me", body: "body" },
+    });
+    expect(updateNodeTitle(fixture.ctx, "0000000000000000000000000F", "")).toBe(false);
+    expect(updateNodeTitle(fixture.ctx, "0000000000000000000000000F", "Untitled")).toBe(false);
+    expect(getNodeDetail(fixture.ctx.cache, "0000000000000000000000000F")?.title).toBe("Keep me");
+    expect(updateNodeTitle(fixture.ctx, "0000000000000000000000000F", "Renamed")).toBe(true);
+    expect(getNodeDetail(fixture.ctx.cache, "0000000000000000000000000F")?.title).toBe("Renamed");
   });
 
   test("listRecentNodesByModifiedAt orders by modified_at descending", () => {

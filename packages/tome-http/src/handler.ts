@@ -1,5 +1,6 @@
 import type { TomeGraphServices } from "tome-graph-interfaces";
 import type { NodeLifecycleError, QuickLinkError, ViewSortSpec } from "tome-graph-interfaces";
+import { isPersistableNodeTitle } from "tome-graph-interfaces";
 import type { UserSettingsPatch } from "./user-settings";
 import { UserSettingsStore } from "./user-settings-store";
 import { tableRowsQueryFromSearchParams } from "./table-rows-query";
@@ -231,6 +232,9 @@ export function createApiHandler(
             if (!ok) return json({ error: "not found" }, 404);
           }
           if (hasTitle) {
+            if (!isPersistableNodeTitle(payload.title!)) {
+              return json({ error: "invalid title" }, 400);
+            }
             const ok = db.saveTitle(id, payload.title!);
             if (!ok) return json({ error: "not found" }, 404);
           }

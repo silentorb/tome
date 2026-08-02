@@ -1,6 +1,7 @@
 import { collapsePageBlockEmbedsForStorage } from "tome-interfaces/page-block";
 import { canonicalizeMarkdownBodyLinks } from "tome-flatfile/markdown-links";
 import { collapseDynamicEditorLinks } from "tome-flatfile/dynamic-node-links";
+import { isPersistableNodeTitle } from "../shared/types";
 import { stripLeadingTitleHeading } from "./markdown-body";
 
 /** Normalize markdown for comparing editor output against the last saved body. */
@@ -17,8 +18,10 @@ export function bodyNeedsSave(nextBody: string, savedBody: string | null, title:
 }
 
 export function titleNeedsSave(nextTitle: string, savedTitle: string | null): boolean {
-  const trimmed = nextTitle.trim() || "Untitled";
-  return savedTitle !== null && trimmed !== savedTitle;
+  if (savedTitle === null) return false;
+  const trimmed = nextTitle.trim();
+  if (!isPersistableNodeTitle(trimmed)) return false;
+  return trimmed !== savedTitle;
 }
 
 export type PendingSavePayload = { body?: string; title?: string };
@@ -34,8 +37,11 @@ export function buildPendingSavePayload(
   if (pendingBody !== null && savedBody !== null && pendingBody !== savedBody) {
     patch.body = pendingBody;
   }
-  if (pendingTitle !== null && savedTitle !== null && pendingTitle !== savedTitle) {
-    patch.title = pendingTitle;
+  if (pendingTitle !== null && savedTitle !== null) {
+    const trimmed = pendingTitle.trim();
+    if (isPersistableNodeTitle(trimmed) && trimmed !== savedTitle) {
+      patch.title = trimmed;
+    }
   }
   if (patch.body === undefined && patch.title === undefined) return null;
   return patch;

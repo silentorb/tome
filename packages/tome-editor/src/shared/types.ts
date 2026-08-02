@@ -48,8 +48,9 @@ export type {
 
 export type AppView = "node-page" | "graph-explorer";
 
-/** Default title for pages created via New page (sidebar / command). */
-export const NEW_PAGE_DEFAULT_TITLE = "Untitled";
+/** Placeholder / non-persistable default shown for New page drafts. */
+export { NON_PERSISTABLE_NODE_TITLE as NEW_PAGE_DEFAULT_TITLE } from "tome-graph-interfaces";
+export { isPersistableNodeTitle } from "tome-graph-interfaces";
 
 export function tomeHref(nodeId: string): string {
   return `${TOME_LINK_SCHEME}${nodeId}`;

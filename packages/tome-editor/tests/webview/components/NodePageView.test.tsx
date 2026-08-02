@@ -140,7 +140,7 @@ describe("NodePageView", () => {
 
   test("selectTitleOnMount focuses and selects the page title", async () => {
     const api = makeMockEditorApi();
-    const node = makeNodePageDetail({ title: "Untitled", body: "" });
+    const node = makeNodePageDetail({ title: "Draft title", body: "" });
 
     render(
       <UserSettingsProvider api={api}>
@@ -167,7 +167,40 @@ describe("NodePageView", () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(title);
       expect(title.selectionStart).toBe(0);
-      expect(title.selectionEnd).toBe("Untitled".length);
+      expect(title.selectionEnd).toBe("Draft title".length);
+    });
+  });
+
+  test("selectTitleOnMount focuses a blank draft title", async () => {
+    const api = makeMockEditorApi();
+    const node = makeNodePageDetail({ title: "", body: "" });
+
+    render(
+      <UserSettingsProvider api={api}>
+        <NodePageView
+          api={api}
+          node={node}
+          saveState="idle"
+          metadataExpanded={false}
+          onMetadataExpandedChange={() => {}}
+          onBodyChange={() => {}}
+          onTitleChange={() => {}}
+          onTabSelect={() => {}}
+          onOrderedCollectionViewChange={() => {}}
+          onArchiveNode={async () => {}}
+          onUnarchiveNode={async () => {}}
+          onDeleteNode={async () => {}}
+          selectTitleOnMount
+        />
+      </UserSettingsProvider>,
+    );
+
+    const title = screen.getByRole("textbox", { name: "Page title" }) as HTMLTextAreaElement;
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(title);
+      expect(title.value).toBe("");
+      expect(title.placeholder).toBe("Untitled");
     });
   });
 

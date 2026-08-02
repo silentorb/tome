@@ -31,6 +31,11 @@ describe("createNode", () => {
     expect(createNode(fixture.ctx, { title: "   " })).toBe("invalid_title");
   });
 
+  test("rejects Untitled title", () => {
+    fixture = createTestContentFixture("tome-create-");
+    expect(createNode(fixture.ctx, { title: "Untitled" })).toBe("invalid_title");
+  });
+
   test("creates outgoing relation row", () => {
     fixture = createTestContentFixture("tome-create-");
     const registry = fixture.ctx.store.readAssociationsFile();

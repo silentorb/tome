@@ -6,10 +6,11 @@ import { bodyFromNode } from "tome-flatfile";
 import { isTypeTableNode, primaryTypeTitleForInstance } from "./node-capabilities";
 import { buildSearchMatchPreview } from "./search-match-preview";
 import { sortBySearchRelevance } from "./search-relevance";
-import type {
-  NodeDetail,
-  NodeSummary,
-  SearchNodesOptions,
+import {
+  isPersistableNodeTitle,
+  type NodeDetail,
+  type NodeSummary,
+  type SearchNodesOptions,
 } from "tome-graph-interfaces";
 
 export type {
@@ -155,7 +156,8 @@ export function updateNodeBody(ctx: TomeWriteContext, id: string, body: string):
 export function updateNodeTitle(ctx: TomeWriteContext, id: string, title: string): boolean {
   const node = ctx.store.readNode(id);
   if (!node) return false;
-  const trimmed = title.trim() || "Untitled";
+  const trimmed = title.trim();
+  if (!isPersistableNodeTitle(trimmed)) return false;
   const oldTitle = titleFromProperties(node.properties);
   const body = bodyFromNode(node);
   const content = stripLeadingTitleHeadingIfMatches(body, oldTitle);

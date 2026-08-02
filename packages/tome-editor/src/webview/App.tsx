@@ -9,7 +9,7 @@ import { UserSettingsProvider, useUserSettings } from "./hooks/useUserSettings";
 import { nodeTableTabKey } from "../shared/user-settings";
 import type { GetNodeOptions } from "../shared/http-client";
 import {
-  NEW_PAGE_DEFAULT_TITLE,
+  isPersistableNodeTitle,
   standaloneNodeUrl,
   type AppView,
   type DatabaseViewDetail,
@@ -28,6 +28,7 @@ import {
   syncMetadataExpandedParam,
   standaloneViewUrl,
 } from "./node-links";
+import { DRAFT_NODE_ID, isDraftNodeId, makeDraftNodePageDetail } from "./draft-page";
 import { resolvePageTitleAndContent } from "./markdown-body";
 import {
   bodyNeedsSave,
@@ -121,7 +122,6 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   );
   const [explorerAnchorStack, setExplorerAnchorStack] = useState<string[]>([]);
   const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
-  const [creatingPage, setCreatingPage] = useState(false);
   const [selectPageTitleOnMount, setSelectPageTitleOnMount] = useState(false);
   const [recentNodesRefreshKey, setRecentNodesRefreshKey] = useState(0);
   const [homeId, setHomeId] = useState<string | null>(null);
@@ -265,6 +265,75 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     [explorerAnchorId],
   );
 
+  const applyLoadedNode = useCallback(
+    (detail: NodePageDetail, options?: GetNodeOptions) => {
+      const { title, content } = resolvePageTitleAndContent(detail.body, detail.title);
+      const normalizedNode = {
+        ...detail,
+        title,
+        body: content,
+        sections: detail.sections.map((section) =>
+          section.type === "markdown" ? { ...section, body: content } : section,
+        ),
+      };
+      nodeIdRef.current = detail.id;
+      setNode(normalizedNode);
+      setView("node-page");
+      setMetadataExpanded(false);
+      pendingBody.current = content;
+      pendingTitle.current = title;
+      savedBody.current = content;
+      savedTitle.current = title;
+      setSaveState("idle");
+      syncStandaloneUrl("node-page", detail.id, options);
+    },
+    [syncStandaloneUrl],
+  );
+
+  const bumpRecentNodes = useCallback(() => {
+    setRecentNodesRefreshKey((value) => value + 1);
+  }, []);
+
+  const commitDraftPage = useCallback(
+    async (options?: { keepalive?: boolean }) => {
+      const title = (pendingTitle.current ?? "").trim();
+      if (!isPersistableNodeTitle(title)) return;
+      const body = pendingBody.current ?? "";
+      const normalizedBody = normalizeEditorBody(body, title);
+
+      if (options?.keepalive) {
+        void api
+          .createNode({ title, body: normalizedBody || undefined })
+          .then((created) => {
+            nodeIdRef.current = created.id;
+            savedTitle.current = title;
+            savedBody.current = normalizedBody;
+            pendingTitle.current = title;
+            pendingBody.current = normalizedBody;
+            replaceStandaloneHistory(standaloneNodeUrl(created.id));
+          })
+          .catch(() => {});
+        return;
+      }
+
+      setSaveState("saving");
+      try {
+        const created = await api.createNode({
+          title,
+          body: normalizedBody || undefined,
+        });
+        bumpRecentNodes();
+        const detail = await api.getNode(created.id);
+        applyLoadedNode(detail);
+        setSaveState("saved");
+      } catch (err) {
+        setSaveState("error");
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [api, applyLoadedNode, bumpRecentNodes],
+  );
+
   const flushPendingSaves = useCallback(
     async (options?: { keepalive?: boolean }) => {
       if (saveTimer.current) {
@@ -272,13 +341,18 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         saveTimer.current = null;
       }
       const id = nodeIdRef.current;
+      if (!id || isDraftNodeId(id)) {
+        await commitDraftPage(options);
+        return;
+      }
+
       const patch = buildPendingSavePayload(
         pendingBody.current,
         pendingTitle.current,
         savedBody.current,
         savedTitle.current,
       );
-      if (!id || !patch) return;
+      if (!patch) return;
 
       if (options?.keepalive) {
         if (patch.body !== undefined) savedBody.current = patch.body;
@@ -297,7 +371,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         setSaveState("error");
       }
     },
-    [api],
+    [api, commitDraftPage],
   );
 
   const loadNode = useCallback(
@@ -309,50 +383,43 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         const normalized =
           typeof options === "string" ? { tab: options } : (options ?? {});
         const detail = await api.getNode(nodeId, normalized);
-        const { title, content } = resolvePageTitleAndContent(detail.body, detail.title);
-        const normalizedNode = {
-          ...detail,
-          title,
-          body: content,
-          sections: detail.sections.map((section) =>
-            section.type === "markdown" ? { ...section, body: content } : section,
-          ),
-        };
-        nodeIdRef.current = nodeId;
-        setNode(normalizedNode);
-        setMetadataExpanded(false);
-        pendingBody.current = content;
-        pendingTitle.current = title;
-        savedBody.current = content;
-        savedTitle.current = title;
-        setSaveState("idle");
-        syncStandaloneUrl("node-page", nodeId, normalized);
+        applyLoadedNode(detail, normalized);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [api, closeToolPanel, flushPendingSaves, syncStandaloneUrl],
+    [api, applyLoadedNode, closeToolPanel, flushPendingSaves],
   );
 
-  const bumpRecentNodes = useCallback(() => {
-    setRecentNodesRefreshKey((value) => value + 1);
+  const syncCreatePageUrl = useCallback(() => {
+    const url = new URL(window.location.href);
+    url.searchParams.set("view", "create");
+    url.searchParams.delete("node");
+    url.searchParams.delete("tab");
+    url.searchParams.delete("scope");
+    url.searchParams.delete("dbView");
+    url.searchParams.delete("anchor");
+    stripMetadataParamFromUrl(url);
+    replaceStandaloneHistory(url.toString());
   }, []);
 
-  const createNewPage = useCallback(async () => {
-    setCreatingPage(true);
+  const openDraftPage = useCallback(async () => {
     setError(null);
-    try {
-      const created = await api.createNode({ title: NEW_PAGE_DEFAULT_TITLE });
-      bumpRecentNodes();
-      setView("node-page");
-      setSelectPageTitleOnMount(true);
-      await loadNode(created.id);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setCreatingPage(false);
-    }
-  }, [api, bumpRecentNodes, loadNode]);
+    closeToolPanel();
+    await flushPendingSaves();
+    const draft = makeDraftNodePageDetail();
+    nodeIdRef.current = DRAFT_NODE_ID;
+    setNode(draft);
+    setView("node-page");
+    setSelectPageTitleOnMount(true);
+    setMetadataExpanded(false);
+    pendingBody.current = "";
+    pendingTitle.current = "";
+    savedBody.current = "";
+    savedTitle.current = "";
+    setSaveState("idle");
+    syncCreatePageUrl();
+  }, [closeToolPanel, flushPendingSaves, syncCreatePageUrl]);
 
   const bootstrap = useCallback(async () => {
     if (!userSettingsReady || !workspace) return;
@@ -365,7 +432,9 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       );
       setExplorerAnchorId(graphAnchor);
       if (isStandaloneCreatePageUrl()) {
-        await createNewPage();
+        if (!isDraftNodeId(nodeIdRef.current)) {
+          await openDraftPage();
+        }
         return;
       }
       const initialView = viewFromLocation();
@@ -388,7 +457,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
           : "Could not reach the Tome editor API. Start it with: bun run editor:dev",
       );
     }
-  }, [api, createNewPage, getTableTab, loadNode, userSettingsReady, workspace]);
+  }, [api, getTableTab, loadNode, openDraftPage, userSettingsReady, workspace]);
 
   useEffect(() => {
     void bootstrap();
@@ -462,6 +531,9 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       if (!bodyNeedsSave(body, savedBody.current, node.title)) return;
       pendingBody.current = normalizedBody;
       setSaveState("dirty");
+      if (isDraftNodeId(nodeIdRef.current)) {
+        if (!isPersistableNodeTitle(pendingTitle.current ?? node.title)) return;
+      }
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => {
         void flushPendingSaves();
@@ -473,10 +545,24 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const scheduleSaveTitle = useCallback(
     (title: string) => {
       if (!node) return;
-      const trimmed = title.trim() || "Untitled";
+      const trimmed = title.trim();
       setNode((prev) => (prev && prev.title !== title ? { ...prev, title } : prev));
-      if (!titleNeedsSave(title, savedTitle.current)) return;
       pendingTitle.current = trimmed;
+      if (isDraftNodeId(nodeIdRef.current)) {
+        if (!isPersistableNodeTitle(trimmed)) {
+          setSaveState(
+            bodyNeedsSave(pendingBody.current ?? "", savedBody.current, title) ? "dirty" : "idle",
+          );
+          return;
+        }
+        setSaveState("dirty");
+        if (saveTimer.current) window.clearTimeout(saveTimer.current);
+        saveTimer.current = window.setTimeout(() => {
+          void flushPendingSaves();
+        }, saveDebounceDelay);
+        return;
+      }
+      if (!titleNeedsSave(title, savedTitle.current)) return;
       setSaveState("dirty");
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => {
@@ -692,10 +778,16 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       <SidePanel
         api={api}
         activeView={view}
-        activeNodeId={view === "node-page" ? (node?.id ?? nodeFromLocation()) : null}
+        activeNodeId={
+          view === "node-page" && node && !isDraftNodeId(node.id)
+            ? node.id
+            : view === "node-page"
+              ? nodeFromLocation()
+              : null
+        }
         homeNodeId={homeId}
         onViewChange={changeView}
-        onNewPage={() => void createNewPage()}
+        onNewPage={() => void openDraftPage()}
         onOpenSearch={() => setGlobalSearchOpen(true)}
         standaloneUrls={standaloneUrls}
         recentNodesRefreshKey={recentNodesRefreshKey}
@@ -710,9 +802,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         onDeleteNode={deleteCurrentNode}
       />
       <div className={`tome-main${view === "graph-explorer" ? " tome-main-graph" : ""}`}>
-        {creatingPage ? (
-          <div className="tome-loading">Creating page…</div>
-        ) : workspaceError ? (
+        {workspaceError ? (
           <div className="tome-error">{workspaceError}</div>
         ) : !workspace ? (
           <div className="tome-loading">Loading…</div>

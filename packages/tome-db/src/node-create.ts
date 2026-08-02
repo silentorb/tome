@@ -12,11 +12,12 @@ import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
 import { stampOrderIfMissing } from "./ordered-relationships";
-import type {
-  CreateNodeError,
-  CreateNodeInput,
-  CreateNodeLink,
-  CreateNodeResult,
+import {
+  isPersistableNodeTitle,
+  type CreateNodeError,
+  type CreateNodeInput,
+  type CreateNodeLink,
+  type CreateNodeResult,
 } from "tome-graph-interfaces";
 
 export type {
@@ -86,7 +87,7 @@ export function createNode(
   input: CreateNodeInput,
 ): CreateNodeResult | CreateNodeError {
   const title = input.title.trim();
-  if (!title) return "invalid_title";
+  if (!isPersistableNodeTitle(title)) return "invalid_title";
 
   if (input.link?.kind === "outgoing") {
     if (!ctx.store.readNode(input.link.sourceId)) return "source_not_found";

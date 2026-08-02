@@ -71,6 +71,16 @@ describe("titleNeedsSave", () => {
   test("returns true when title changed", () => {
     expect(titleNeedsSave("Beta", "Alpha")).toBe(true);
   });
+
+  test("returns false for empty or Untitled titles", () => {
+    expect(titleNeedsSave("", "Alpha")).toBe(false);
+    expect(titleNeedsSave("   ", "Alpha")).toBe(false);
+    expect(titleNeedsSave("Untitled", "Alpha")).toBe(false);
+  });
+
+  test("returns true when draft baseline is empty and title is persistable", () => {
+    expect(titleNeedsSave("Hello", "")).toBe(true);
+  });
 });
 
 describe("buildPendingSavePayload", () => {
@@ -88,6 +98,11 @@ describe("buildPendingSavePayload", () => {
     expect(buildPendingSavePayload("Notes", "Beta", "Notes", "Alpha")).toEqual({
       title: "Beta",
     });
+  });
+
+  test("omits invalid titles from the patch", () => {
+    expect(buildPendingSavePayload("Notes", "Untitled", "Notes", "Alpha")).toBeNull();
+    expect(buildPendingSavePayload("Notes", "", "Notes", "Alpha")).toBeNull();
   });
 
   test("returns both when body and title changed", () => {

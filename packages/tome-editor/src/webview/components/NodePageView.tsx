@@ -10,6 +10,7 @@ import { AddRelationshipDialog } from "./AddRelationshipDialog";
 import type { EditorApi } from "../api/client";
 import type { OrderedCollectionViewDetail, NodePageDetail } from "../../shared/types";
 import { isProtectedEditorNode } from "../../shared/types";
+import { isDraftNodeId } from "../draft-page";
 import { isEffectivelyEmptyMarkdown, resolvePageTitleAndContent } from "../markdown-body";
 import { SectionTitle } from "./NodeNameLink";
 import "./node-page-view.css";
@@ -67,7 +68,8 @@ export function NodePageView({
   const { content } = resolvePageTitleAndContent(node.body, node.title);
   const emptyMarkdown = isEffectivelyEmptyMarkdown(node.body, node.title);
   const editorBody = emptyMarkdown ? "" : content;
-  const showPageActions = !isProtectedEditorNode(node.id, protectedNodeIds);
+  const showPageActions =
+    !isDraftNodeId(node.id) && !isProtectedEditorNode(node.id, protectedNodeIds);
   const [relateOpen, setRelateOpen] = useState(false);
 
   const saveStatusLabel =

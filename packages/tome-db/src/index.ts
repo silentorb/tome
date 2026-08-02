@@ -37,6 +37,7 @@ export {
 } from "./queries";
 export { createNode } from "./node-create";
 export type { CreateNodeError, CreateNodeInput, CreateNodeLink, CreateNodeResult } from "./node-create";
+export { NON_PERSISTABLE_NODE_TITLE, isPersistableNodeTitle } from "tome-graph-interfaces";
 export type { NodeDetail, NodeSummary } from "./queries";
 export { buildSearchMatchPreview } from "./search-match-preview";
 export type { SearchMatchPreview, SearchMatchPreviewPart } from "./search-match-preview";
