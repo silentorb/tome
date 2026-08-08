@@ -1,25 +1,28 @@
 import { describe, expect, test, afterEach, beforeEach } from "bun:test";
 import { handleEditorLinkPointerEvent } from "../../src/webview/editor-link-navigation";
+import { setStandaloneNavigationHandler } from "../../src/webview/node-links";
 
 const TARGET_ID = "0000000000000000000000002X";
 const BASE = "http://127.0.0.1:5173/?node=AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 describe("handleEditorLinkPointerEvent", () => {
   let originalAssign: typeof window.location.assign;
-  let originalCreateElement: typeof document.createElement;
   let assignedUrl: string | null = null;
-  let newTabHref: string | null = null;
+  let softNavCalls = 0;
 
   beforeEach(() => {
     originalAssign = window.location.assign.bind(window.location);
-    originalCreateElement = document.createElement.bind(document);
+    assignedUrl = null;
+    softNavCalls = 0;
+    setStandaloneNavigationHandler(null);
+    window.history.replaceState({}, "", BASE);
   });
 
   afterEach(() => {
     window.location.assign = originalAssign;
-    document.createElement = originalCreateElement;
+    setStandaloneNavigationHandler(null);
     assignedUrl = null;
-    newTabHref = null;
+    softNavCalls = 0;
   });
 
   function setupRoot(): { root: HTMLDivElement; anchor: HTMLAnchorElement } {
@@ -30,24 +33,16 @@ describe("handleEditorLinkPointerEvent", () => {
     return { root, anchor };
   }
 
-  function mockNavigation() {
+  function mockAssign() {
     window.location.assign = ((url: string | URL) => {
       assignedUrl = String(url);
     }) as typeof window.location.assign;
-
-    document.createElement = ((tag: string) => {
-      const el = originalCreateElement(tag);
-      if (tag === "a") {
-        el.click = () => {
-          newTabHref = (el as HTMLAnchorElement).href;
-        };
-      }
-      return el;
-    }) as typeof document.createElement;
   }
 
-  test("plain click navigates same tab via navigateStandaloneNode", () => {
-    mockNavigation();
+  test("plain click soft-navigates via navigateStandaloneNode", () => {
+    setStandaloneNavigationHandler(() => {
+      softNavCalls += 1;
+    });
     const { root, anchor } = setupRoot();
     const event = new MouseEvent("click", {
       bubbles: true,
@@ -59,13 +54,30 @@ describe("handleEditorLinkPointerEvent", () => {
     const handled = handleEditorLinkPointerEvent(event, root, BASE);
     expect(handled).toBe(true);
     expect(event.defaultPrevented).toBe(true);
-    expect(assignedUrl).toContain(`node=${TARGET_ID}`);
-    expect(newTabHref).toBeNull();
+    expect(softNavCalls).toBe(1);
+    expect(window.location.search).toContain(`node=${TARGET_ID}`);
+    expect(assignedUrl).toBeNull();
     root.remove();
   });
 
-  test("ctrl+click opens node in new tab", () => {
-    mockNavigation();
+  test("plain click falls back to location.assign without handler", () => {
+    mockAssign();
+    const { root, anchor } = setupRoot();
+    const event = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    Object.defineProperty(event, "target", { value: anchor, configurable: true });
+
+    const handled = handleEditorLinkPointerEvent(event, root, BASE);
+    expect(handled).toBe(true);
+    expect(assignedUrl).toContain(`node=${TARGET_ID}`);
+    root.remove();
+  });
+
+  test("ctrl+click leaves native hard open (no preventDefault)", () => {
+    mockAssign();
     const { root, anchor } = setupRoot();
     const event = new MouseEvent("click", {
       bubbles: true,
@@ -76,14 +88,32 @@ describe("handleEditorLinkPointerEvent", () => {
     Object.defineProperty(event, "target", { value: anchor, configurable: true });
 
     const handled = handleEditorLinkPointerEvent(event, root, BASE);
-    expect(handled).toBe(true);
+    expect(handled).toBe(false);
+    expect(event.defaultPrevented).toBe(false);
     expect(assignedUrl).toBeNull();
-    expect(newTabHref).toContain(`node=${TARGET_ID}`);
+    root.remove();
+  });
+
+  test("shift+click leaves native hard open (no preventDefault)", () => {
+    mockAssign();
+    const { root, anchor } = setupRoot();
+    const event = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      shiftKey: true,
+    });
+    Object.defineProperty(event, "target", { value: anchor, configurable: true });
+
+    const handled = handleEditorLinkPointerEvent(event, root, BASE);
+    expect(handled).toBe(false);
+    expect(event.defaultPrevented).toBe(false);
+    expect(assignedUrl).toBeNull();
     root.remove();
   });
 
   test("right-click does not navigate", () => {
-    mockNavigation();
+    mockAssign();
     const { root, anchor } = setupRoot();
     const event = new MouseEvent("auxclick", {
       bubbles: true,
@@ -96,7 +126,6 @@ describe("handleEditorLinkPointerEvent", () => {
     expect(handled).toBe(false);
     expect(event.defaultPrevented).toBe(false);
     expect(assignedUrl).toBeNull();
-    expect(newTabHref).toBeNull();
     root.remove();
   });
 

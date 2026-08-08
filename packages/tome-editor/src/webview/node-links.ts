@@ -98,6 +98,59 @@ export function replaceStandaloneHistory(url: string): void {
   window.history.replaceState({}, "", url);
 }
 
+/** Push a new history entry (same-tab SPA navigation). */
+export function pushStandaloneHistory(url: string): void {
+  if (typeof window === "undefined") return;
+  window.history.pushState({}, "", url);
+}
+
+export type StandaloneNavigationHandler = () => void | Promise<void>;
+
+let standaloneNavigationHandler: StandaloneNavigationHandler | null = null;
+
+/** Register the App hydrate callback used after soft `pushState` navigation. */
+export function setStandaloneNavigationHandler(
+  handler: StandaloneNavigationHandler | null,
+): void {
+  standaloneNavigationHandler = handler;
+}
+
+function normalizeHref(url: string, base?: string | URL): string {
+  const baseHref =
+    base instanceof URL
+      ? base.href
+      : (base ?? (typeof window !== "undefined" ? window.location.href : "http://127.0.0.1:5173/"));
+  return new URL(url, baseHref).toString();
+}
+
+function urlsMatchForNavigation(a: string, b: string): boolean {
+  try {
+    const left = new URL(a);
+    const right = new URL(b);
+    return left.pathname === right.pathname && left.search === right.search && left.hash === right.hash;
+  } catch {
+    return a === b;
+  }
+}
+
+/**
+ * Soft-navigate to an in-app URL when a handler is registered; otherwise hard-assign.
+ * Pushes a history entry when the URL changes.
+ */
+export function navigateStandaloneUrl(url: string, base?: string | URL): void {
+  const next = normalizeHref(url, base);
+  if (standaloneNavigationHandler) {
+    if (typeof window !== "undefined" && !urlsMatchForNavigation(window.location.href, next)) {
+      pushStandaloneHistory(next);
+    }
+    void standaloneNavigationHandler();
+    return;
+  }
+  if (typeof window !== "undefined") {
+    window.location.assign(next);
+  }
+}
+
 export function stripMetadataParamFromUrl(url: URL): void {
   url.searchParams.delete("meta");
 }
@@ -121,13 +174,27 @@ export function standaloneViewUrl(
   return url.toString();
 }
 
-/** Href for opening a node page from app chrome (native navigation; no per-link click handlers). */
+/** Href for opening a node page from app chrome (`?node=`). */
 export function nodePageHref(nodeId: string, base?: string | URL): string {
   return standaloneNodeUrl(nodeId, base);
 }
 
 export function navigateStandaloneNode(nodeId: string, base?: string | URL): void {
-  window.location.assign(standaloneNodeUrl(nodeId, base));
+  navigateStandaloneUrl(standaloneNodeUrl(nodeId, base), base);
+}
+
+export function navigateStandaloneView(
+  view: AppView,
+  nodeId?: string | null,
+  base?: string | URL,
+  anchorId?: string | null,
+  defaultAnchorId = "",
+): void {
+  navigateStandaloneUrl(standaloneViewUrl(view, nodeId, base, anchorId, defaultAnchorId), base);
+}
+
+export function navigateStandaloneCreate(base?: string | URL): void {
+  navigateStandaloneUrl(standaloneCreatePageUrl(base), base);
 }
 
 /** URL that triggers automatic new-page creation on load (`?view=create`). */
@@ -153,4 +220,9 @@ export function openStandaloneNodeInNewTab(nodeId: string, base?: string | URL):
   anchor.target = "_blank";
   anchor.rel = "noopener noreferrer";
   anchor.click();
+}
+
+/** Emulate shift-click hard open in a new browsing context (for non-anchor controls). */
+export function openStandaloneNodeInNewWindow(nodeId: string, base?: string | URL): void {
+  window.open(standaloneNodeUrl(nodeId, base), "_blank", "noopener,noreferrer");
 }

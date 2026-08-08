@@ -2,6 +2,7 @@ import { describe, expect, mock, test, afterEach, beforeEach } from "bun:test";
 import { createEvent, fireEvent, render, within } from "@testing-library/react";
 import type { EditorApi } from "../../../src/webview/api/client";
 import { QuickLinksPanel } from "../../../src/webview/components/QuickLinksPanel";
+import { setStandaloneNavigationHandler } from "../../../src/webview/node-links";
 
 const mockApi = {} as EditorApi;
 const NODE_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -39,6 +40,7 @@ describe("QuickLinksPanel", () => {
   beforeEach(() => {
     originalAssign = window.location.assign.bind(window.location);
     assignedUrl = null;
+    setStandaloneNavigationHandler(null);
     window.location.assign = ((url: string | URL) => {
       assignedUrl = String(url);
     }) as typeof window.location.assign;
@@ -46,6 +48,7 @@ describe("QuickLinksPanel", () => {
 
   afterEach(() => {
     window.location.assign = originalAssign;
+    setStandaloneNavigationHandler(null);
   });
 
   test("renders non-reorderable quick links as native anchors", () => {
@@ -163,7 +166,7 @@ describe("QuickLinksPanel", () => {
     expect(getComputedStyle(link!).cursor).not.toBe("grab");
   });
 
-  test("non-reorderable quick links use native pointer behavior", () => {
+  test("non-reorderable quick links remain anchors with href", () => {
     const { getByRole } = render(
       <QuickLinksPanel
         api={mockApi}
@@ -177,11 +180,8 @@ describe("QuickLinksPanel", () => {
     );
 
     const link = getByRole("link", { name: /Features/ });
-    const clickEvent = createEvent.click(link, { bubbles: true, cancelable: true });
-    fireEvent(link, clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(false);
-    expect(assignedUrl).toBeNull();
+    expect(link.tagName).toBe("A");
+    expect(link.getAttribute("href")).toContain(NODE_A);
   });
 
   test("returns null when quick links are empty", () => {

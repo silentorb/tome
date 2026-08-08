@@ -5,6 +5,7 @@ import {
   navigateQuickLinkKeyboard,
   navigateQuickLinkPointerUp,
 } from "../../src/webview/quick-links-nav";
+import { setStandaloneNavigationHandler } from "../../src/webview/node-links";
 
 const testQuickLinks: readonly WorkspaceQuickLink[] = [
   { nodeId: "0000000000000000000000002P", label: "Features", icon: "★" },
@@ -50,18 +51,30 @@ const BASE = "http://127.0.0.1:5173/?node=AAAAAAAAAAAAAAAAAAAAAAAAAA";
 describe("navigateQuickLinkPointerUp", () => {
   let originalAssign: typeof window.location.assign;
   let originalCreateElement: typeof document.createElement;
+  let originalOpen: typeof window.open;
   let assignedUrl: string | null = null;
   let newTabHref: string | null = null;
+  let openedUrl: string | null = null;
+  let softNavCalls = 0;
 
   beforeEach(() => {
     originalAssign = window.location.assign.bind(window.location);
     originalCreateElement = document.createElement.bind(document);
+    originalOpen = window.open.bind(window);
     assignedUrl = null;
     newTabHref = null;
+    openedUrl = null;
+    softNavCalls = 0;
+    setStandaloneNavigationHandler(null);
 
     window.location.assign = ((url: string | URL) => {
       assignedUrl = String(url);
     }) as typeof window.location.assign;
+
+    window.open = ((url?: string | URL) => {
+      openedUrl = url != null ? String(url) : null;
+      return null;
+    }) as typeof window.open;
 
     document.createElement = ((tag: string) => {
       const el = originalCreateElement(tag);
@@ -76,7 +89,9 @@ describe("navigateQuickLinkPointerUp", () => {
 
   afterEach(() => {
     window.location.assign = originalAssign;
+    window.open = originalOpen;
     document.createElement = originalCreateElement;
+    setStandaloneNavigationHandler(null);
   });
 
   test("pointerup navigates when drag did not activate", () => {
@@ -87,6 +102,21 @@ describe("navigateQuickLinkPointerUp", () => {
     expect(navigated).toBe(true);
     expect(assignedUrl).toContain(`node=${NODE_ID}`);
     expect(dragState.didDrag).toBe(false);
+  });
+
+  test("pointerup soft-navigates when handler is registered", () => {
+    setStandaloneNavigationHandler(() => {
+      softNavCalls += 1;
+    });
+    window.history.replaceState({}, "", BASE);
+    const dragState = { didDrag: false };
+    const event = new PointerEvent("pointerup", { bubbles: true, cancelable: true, button: 0 });
+
+    const navigated = navigateQuickLinkPointerUp(event, NODE_ID, BASE, dragState);
+    expect(navigated).toBe(true);
+    expect(softNavCalls).toBe(1);
+    expect(assignedUrl).toBeNull();
+    expect(window.location.search).toContain(`node=${NODE_ID}`);
   });
 
   test("pointerup skips navigation after drag and clears didDrag", () => {
@@ -114,6 +144,21 @@ describe("navigateQuickLinkPointerUp", () => {
     expect(newTabHref).toContain(`node=${NODE_ID}`);
   });
 
+  test("shift+pointerup opens node in new window", () => {
+    const dragState = { didDrag: false };
+    const event = new PointerEvent("pointerup", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      shiftKey: true,
+    });
+
+    const navigated = navigateQuickLinkPointerUp(event, NODE_ID, BASE, dragState);
+    expect(navigated).toBe(true);
+    expect(assignedUrl).toBeNull();
+    expect(openedUrl).toContain(`node=${NODE_ID}`);
+  });
+
   test("right pointerup does not navigate", () => {
     const dragState = { didDrag: false };
     const event = new PointerEvent("pointerup", { bubbles: true, cancelable: true, button: 2 });
@@ -131,6 +176,7 @@ describe("navigateQuickLinkKeyboard", () => {
   beforeEach(() => {
     originalAssign = window.location.assign.bind(window.location);
     assignedUrl = null;
+    setStandaloneNavigationHandler(null);
     window.location.assign = ((url: string | URL) => {
       assignedUrl = String(url);
     }) as typeof window.location.assign;
@@ -138,6 +184,7 @@ describe("navigateQuickLinkKeyboard", () => {
 
   afterEach(() => {
     window.location.assign = originalAssign;
+    setStandaloneNavigationHandler(null);
   });
 
   test("Enter navigates to the node page", () => {

@@ -1,10 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
   metadataExpandedFromLocation,
+  navigateStandaloneNode,
+  pushStandaloneHistory,
   replaceStandaloneHistory,
   resolveGraphExplorerAnchor,
   resolveNodeLinkTarget,
   resolveNodePageTarget,
+  setStandaloneNavigationHandler,
   standaloneCreatePageUrl,
   standaloneViewUrl,
   syncMetadataExpandedParam,
@@ -57,6 +60,28 @@ describe("node-links", () => {
     replaceStandaloneHistory("http://127.0.0.1:5173/?node=CCCCCCCCCCCCCCCCCCCCCCCCCC");
     expect(window.history.length).toBe(lengthBefore);
     expect(window.location.search).toContain("node=CCCCCCCCCCCCCCCCCCCCCCCCCC");
+    window.history.replaceState({}, "", original);
+  });
+
+  test("pushStandaloneHistory updates URL", () => {
+    const original = window.location.href;
+    window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=AAAAAAAAAAAAAAAAAAAAAAAAAA");
+    pushStandaloneHistory("http://127.0.0.1:5173/?node=CCCCCCCCCCCCCCCCCCCCCCCCCC");
+    expect(window.location.search).toContain("node=CCCCCCCCCCCCCCCCCCCCCCCCCC");
+    window.history.replaceState({}, "", original);
+  });
+
+  test("navigateStandaloneNode uses handler when registered", () => {
+    const original = window.location.href;
+    window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=AAAAAAAAAAAAAAAAAAAAAAAAAA");
+    let calls = 0;
+    setStandaloneNavigationHandler(() => {
+      calls += 1;
+    });
+    navigateStandaloneNode("CCCCCCCCCCCCCCCCCCCCCCCCCC");
+    expect(calls).toBe(1);
+    expect(window.location.search).toContain("node=CCCCCCCCCCCCCCCCCCCCCCCCCC");
+    setStandaloneNavigationHandler(null);
     window.history.replaceState({}, "", original);
   });
 

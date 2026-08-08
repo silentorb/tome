@@ -21,14 +21,18 @@ import {
   anchorFromLocation,
   metadataExpandedFromLocation,
   isStandaloneCreatePageUrl,
+  navigateStandaloneCreate,
   navigateStandaloneNode,
+  navigateStandaloneView,
   replaceStandaloneHistory,
   resolveGraphExplorerAnchor,
+  setStandaloneNavigationHandler,
   standaloneCreatePageUrl,
   stripMetadataParamFromUrl,
   syncMetadataExpandedParam,
   standaloneViewUrl,
 } from "./node-links";
+import { attachStandaloneChromeNavigation } from "./standalone-navigation";
 import { DRAFT_NODE_ID, isDraftNodeId, makeDraftNodePageDetail } from "./draft-page";
 import {
   documentToEditorMarkdown,
@@ -405,53 +409,86 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     replaceStandaloneHistory(url.toString());
   }, []);
 
-  const openDraftPage = useCallback(async () => {
-    setError(null);
-    closeToolPanel();
-    await flushPendingSaves();
-    const draft = makeDraftNodePageDetail();
-    nodeIdRef.current = DRAFT_NODE_ID;
-    setNode(draft);
-    setView("node-page");
-    setSelectPageTitleOnMount(true);
-    setMetadataExpanded(false);
-    pendingBody.current = "";
-    pendingTitle.current = "";
-    savedDocument.current = EMPTY_DOCUMENT;
-    savedTitle.current = "";
-    setSaveState("idle");
-    syncCreatePageUrl();
-  }, [closeToolPanel, flushPendingSaves, syncCreatePageUrl]);
+  const openDraftPage = useCallback(
+    async (options?: { syncUrl?: "replace" | "none" }) => {
+      setError(null);
+      closeToolPanel();
+      await flushPendingSaves();
+      const draft = makeDraftNodePageDetail();
+      nodeIdRef.current = DRAFT_NODE_ID;
+      setNode(draft);
+      setView("node-page");
+      setSelectPageTitleOnMount(true);
+      setMetadataExpanded(false);
+      pendingBody.current = "";
+      pendingTitle.current = "";
+      savedDocument.current = EMPTY_DOCUMENT;
+      savedTitle.current = "";
+      setSaveState("idle");
+      if (options?.syncUrl !== "none") {
+        syncCreatePageUrl();
+      }
+    },
+    [closeToolPanel, flushPendingSaves, syncCreatePageUrl],
+  );
+
+  const hydrateFromLocation = useCallback(
+    async (options?: { homeId?: string | null }) => {
+      if (!workspace) return;
+      setError(null);
+      closeToolPanel();
+
+      const graphAnchor = resolveGraphExplorerAnchor(
+        anchorFromLocation(),
+        workspace.graphExplorer.defaultAnchorNodeId,
+      );
+      setExplorerAnchorId(graphAnchor);
+      setExplorerAnchorStack([]);
+
+      if (isStandaloneCreatePageUrl()) {
+        if (!isDraftNodeId(nodeIdRef.current)) {
+          await openDraftPage({ syncUrl: "none" });
+        }
+        return;
+      }
+
+      const nextView = viewFromLocation();
+      setView(nextView);
+      if (nextView !== "node-page") {
+        await flushPendingSaves();
+        return;
+      }
+
+      const urlTab = tabFromLocation();
+      const fromUrl = nodeFromLocation();
+      const effectiveHome = options?.homeId ?? homeId;
+      const targetId = fromUrl ?? effectiveHome;
+      if (!targetId) return;
+
+      if (nodeIdRef.current === targetId && !isDraftNodeId(targetId)) {
+        return;
+      }
+
+      const tab = urlTab ?? getTableTab(nodeTableTabKey(targetId));
+      await loadNode(targetId, tab ? { tab } : undefined);
+    },
+    [
+      closeToolPanel,
+      flushPendingSaves,
+      getTableTab,
+      homeId,
+      loadNode,
+      openDraftPage,
+      workspace,
+    ],
+  );
 
   const bootstrap = useCallback(async () => {
     if (!userSettingsReady || !workspace) return;
     try {
       const home = await api.getHomeId();
       setHomeId(home);
-      const graphAnchor = resolveGraphExplorerAnchor(
-        anchorFromLocation(),
-        workspace.graphExplorer.defaultAnchorNodeId,
-      );
-      setExplorerAnchorId(graphAnchor);
-      if (isStandaloneCreatePageUrl()) {
-        if (!isDraftNodeId(nodeIdRef.current)) {
-          await openDraftPage();
-        }
-        return;
-      }
-      const initialView = viewFromLocation();
-      setView(initialView);
-      if (initialView !== "node-page") return;
-
-      const urlTab = tabFromLocation();
-      const fromUrl = nodeFromLocation();
-      if (fromUrl) {
-        const tab = urlTab ?? getTableTab(nodeTableTabKey(fromUrl));
-        await loadNode(fromUrl, tab ? { tab } : undefined);
-        return;
-      }
-      const homeTab = urlTab ?? getTableTab(nodeTableTabKey(home));
-      await loadNode(home, homeTab ? { tab: homeTab } : undefined);
+      await hydrateFromLocation({ homeId: home });
     } catch (err) {
       setError(
         err instanceof Error
@@ -459,11 +496,25 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
           : "Could not reach the Tome editor API. Start it with: bun run editor:dev",
       );
     }
-  }, [api, getTableTab, loadNode, openDraftPage, userSettingsReady, workspace]);
+  }, [api, hydrateFromLocation, userSettingsReady, workspace]);
 
   useEffect(() => {
     void bootstrap();
   }, [bootstrap]);
+
+  useEffect(() => {
+    setStandaloneNavigationHandler(() => hydrateFromLocation());
+    const detachChrome = attachStandaloneChromeNavigation();
+    const onPopState = () => {
+      void hydrateFromLocation();
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      setStandaloneNavigationHandler(null);
+      detachChrome();
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, [hydrateFromLocation]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -579,14 +630,12 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
 
   const changeView = useCallback(
     (nextView: AppView) => {
-      window.location.assign(
-        standaloneViewUrl(
-          nextView,
-          node?.id ?? nodeFromLocation(),
-          undefined,
-          nextView === "graph-explorer" ? explorerAnchorId : undefined,
-          defaultGraphAnchorId,
-        ),
+      navigateStandaloneView(
+        nextView,
+        node?.id ?? nodeFromLocation(),
+        undefined,
+        nextView === "graph-explorer" ? explorerAnchorId : undefined,
+        defaultGraphAnchorId,
       );
     },
     [defaultGraphAnchorId, explorerAnchorId, node?.id],
@@ -598,7 +647,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         api.navigate(nodeId, true);
         return;
       }
-      window.location.assign(standaloneNodeUrl(nodeId));
+      navigateStandaloneNode(nodeId);
     },
     [api],
   );
@@ -759,7 +808,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         }
         homeNodeId={homeId}
         onViewChange={changeView}
-        onNewPage={() => void openDraftPage()}
+        onNewPage={() => navigateStandaloneCreate()}
         onOpenSearch={() => setGlobalSearchOpen(true)}
         standaloneUrls={standaloneUrls}
         recentNodesRefreshKey={recentNodesRefreshKey}

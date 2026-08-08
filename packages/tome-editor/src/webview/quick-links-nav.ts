@@ -1,6 +1,10 @@
 import type { WorkspaceQuickLink } from "tome-graph-interfaces";
 import type { AppView } from "../shared/types";
-import { navigateStandaloneNode, openStandaloneNodeInNewTab } from "./node-links";
+import {
+  navigateStandaloneNode,
+  openStandaloneNodeInNewTab,
+  openStandaloneNodeInNewWindow,
+} from "./node-links";
 
 export const HOME_ICON = "⌂";
 
@@ -42,9 +46,10 @@ export function navigateQuickLinkPointerUp(
     return false;
   }
 
-  const openInNewTab = event.metaKey || event.ctrlKey || event.button === 1;
-  if (openInNewTab) {
+  if (event.metaKey || event.ctrlKey || event.button === 1) {
     openStandaloneNodeInNewTab(nodeId, pageBase);
+  } else if (event.shiftKey) {
+    openStandaloneNodeInNewWindow(nodeId, pageBase);
   } else {
     navigateStandaloneNode(nodeId, pageBase);
   }
