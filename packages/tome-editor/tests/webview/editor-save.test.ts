@@ -40,18 +40,20 @@ describe("normalizeEditorBody", () => {
 
   test("collapses dynamic editor links to storage syntax", () => {
     const id = "0000000000000000000000000F";
-    const body = `[Target](?dynnode=${id})`;
+    const body = `[Target](?node=${id}&dynamicTitle=1)`;
     expect(normalizeEditorBody(body, "Page")).toBe(`[[${id}]]`);
   });
 });
 
 describe("bodyNeedsSave", () => {
+  const notesDoc = { segments: [{ type: "prose" as const, markdown: "Notes" }] };
+
   test("returns false when normalized body matches saved baseline", () => {
-    expect(bodyNeedsSave("# Alpha\n\nNotes", "Notes", "Alpha")).toBe(false);
+    expect(bodyNeedsSave("# Alpha\n\nNotes", notesDoc, "Alpha")).toBe(false);
   });
 
   test("returns true when content changed", () => {
-    expect(bodyNeedsSave("# Alpha\n\nMore notes", "Notes", "Alpha")).toBe(true);
+    expect(bodyNeedsSave("# Alpha\n\nMore notes", notesDoc, "Alpha")).toBe(true);
   });
 
   test("returns false when saved baseline is unset", () => {
@@ -84,35 +86,38 @@ describe("titleNeedsSave", () => {
 });
 
 describe("buildPendingSavePayload", () => {
+  const notesDoc = { segments: [{ type: "prose" as const, markdown: "Notes" }] };
+  const moreDoc = { segments: [{ type: "prose" as const, markdown: "More" }] };
+
   test("returns null when nothing is dirty", () => {
-    expect(buildPendingSavePayload("Notes", "Alpha", "Notes", "Alpha")).toBeNull();
+    expect(buildPendingSavePayload("Notes", "Alpha", notesDoc, "Alpha", "Alpha")).toBeNull();
   });
 
-  test("returns body-only when body changed", () => {
-    expect(buildPendingSavePayload("More", "Alpha", "Notes", "Alpha")).toEqual({
-      body: "More",
+  test("returns document when body changed", () => {
+    expect(buildPendingSavePayload("More", "Alpha", notesDoc, "Alpha", "Alpha")).toEqual({
+      document: moreDoc,
     });
   });
 
   test("returns title-only when title changed", () => {
-    expect(buildPendingSavePayload("Notes", "Beta", "Notes", "Alpha")).toEqual({
+    expect(buildPendingSavePayload("Notes", "Beta", notesDoc, "Alpha", "Alpha")).toEqual({
       title: "Beta",
     });
   });
 
   test("omits invalid titles from the patch", () => {
-    expect(buildPendingSavePayload("Notes", "Untitled", "Notes", "Alpha")).toBeNull();
-    expect(buildPendingSavePayload("Notes", "", "Notes", "Alpha")).toBeNull();
+    expect(buildPendingSavePayload("Notes", "Untitled", notesDoc, "Alpha", "Alpha")).toBeNull();
+    expect(buildPendingSavePayload("Notes", "", notesDoc, "Alpha", "Alpha")).toBeNull();
   });
 
   test("returns both when body and title changed", () => {
-    expect(buildPendingSavePayload("More", "Beta", "Notes", "Alpha")).toEqual({
-      body: "More",
+    expect(buildPendingSavePayload("More", "Beta", notesDoc, "Alpha", "Alpha")).toEqual({
+      document: moreDoc,
       title: "Beta",
     });
   });
 
   test("returns null when baselines are unset", () => {
-    expect(buildPendingSavePayload("More", "Beta", null, null)).toBeNull();
+    expect(buildPendingSavePayload("More", "Beta", null, null, "Alpha")).toBeNull();
   });
 });

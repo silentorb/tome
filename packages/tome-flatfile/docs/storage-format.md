@@ -116,7 +116,7 @@ Canonical forms authored in markdown bodies:
 | `[label](./{nodeId}.md)` | Static link to another node |
 | `[[{nodeId}]]` | Dynamic-titled wiki link (title resolved at display time) |
 
-Tome tools may also resolve legacy hrefs (`tome:{id}`, `tome://node/{id}`, query params `node` / `record` / `dynnode`). New content should use the two canonical forms above.
+Tome tools may also resolve legacy hrefs (`tome:{id}`, `tome://node/{id}`, query params `node` / `record`). Editor display hrefs may add `dynamicTitle=1` alongside `node` (not stored). New content should use the two canonical forms above.
 
 ## Relationships (version 4)
 

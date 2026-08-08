@@ -10,8 +10,8 @@ describe("draft-page", () => {
     const draft = makeDraftNodePageDetail();
     expect(draft.id).toBe(DRAFT_NODE_ID);
     expect(draft.title).toBe("");
-    expect(draft.body).toBe("");
-    expect(draft.sections).toEqual([{ type: "markdown", body: "" }]);
+    expect(draft.document).toEqual({ segments: [{ type: "prose", markdown: "" }] });
+    expect(draft.sections).toEqual([{ type: "markdown" }]);
     expect(isDraftNodeId(draft.id)).toBe(true);
   });
 

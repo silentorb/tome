@@ -1,4 +1,8 @@
-import type { DatabaseViewDetail, NodePageDetail, RelationTableSection } from "../../../src/shared/types";
+import type {
+  DatabaseViewDetail,
+  EditorNodePageDetail,
+  RelationTableSection,
+} from "tome-graph-interfaces";
 
 export const FIXTURE_PAGE_ID = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 export const FIXTURE_TYPE_ID = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -25,6 +29,14 @@ export function makeDatabaseViewDetail(
       sorts: [{ column: "name", direction: "asc" as const }],
     })),
   };
+  const defaultRows = [
+    {
+      rowIndex: 0,
+      nodeId: FIXTURE_TARGET_ID,
+      name: "Linked record",
+      cells: { priority: "High" },
+    },
+  ];
   return {
     id: FIXTURE_DATABASE_ID,
     title: "Features",
@@ -56,31 +68,14 @@ export function makeDatabaseViewDetail(
         defaultValue: "Low",
       },
     ],
-    rows: [
-      {
-        rowIndex: 0,
-        nodeId: FIXTURE_TARGET_ID,
-        name: "Linked record",
-        cells: { priority: "High" },
-      },
-    ],
-    rowsWindow: { offset: 0, limit: 50, total: 1, hasMore: false },
+    rows: defaultRows,
+    rowsWindow: {
+      offset: 0,
+      limit: 50,
+      total: (overrides.rows ?? defaultRows).length,
+      hasMore: false,
+    },
     ...overrides,
-    rowsWindow:
-      overrides.rowsWindow ??
-      ({
-        offset: 0,
-        limit: 50,
-        total: (overrides.rows ?? [
-          {
-            rowIndex: 0,
-            nodeId: FIXTURE_TARGET_ID,
-            name: "Linked record",
-            cells: { priority: "High" },
-          },
-        ]).length,
-        hasMore: false,
-      }),
   };
 }
 
@@ -112,24 +107,23 @@ export function makeRelationSection(
       },
     ],
     rows: defaultRows,
-    rowsWindow: { offset: 0, limit: 50, total: 1, hasMore: false },
+    rowsWindow: {
+      offset: 0,
+      limit: 50,
+      total: (overrides.rows ?? defaultRows).length,
+      hasMore: false,
+    },
     ...overrides,
-    rowsWindow:
-      overrides.rowsWindow ??
-      ({
-        offset: 0,
-        limit: 50,
-        total: (overrides.rows ?? defaultRows).length,
-        hasMore: false,
-      }),
   };
 }
 
 export function makeNodePageDetail(
-  overrides: Partial<NodePageDetail> = {},
-): NodePageDetail {
-  const sections = overrides.sections ?? [
-    { type: "markdown", body: "# Example page\n\nBody text." },
+  overrides: Partial<EditorNodePageDetail> & { body?: string } = {},
+): EditorNodePageDetail {
+  const { body, document: documentOverride, sections: sectionOverride, ...rest } = overrides;
+  const prose = body ?? "# Example page\n\nBody text.";
+  const sections = sectionOverride ?? [
+    { type: "markdown" as const },
     makeRelationSection(),
   ];
 
@@ -137,7 +131,6 @@ export function makeNodePageDetail(
     id: FIXTURE_PAGE_ID,
     title: "Example page",
     primaryTypeTitle: null,
-    body: "# Example page\n\nBody text.",
     isTypeTable: false,
     archived: false,
     properties: null,
@@ -147,7 +140,8 @@ export function makeNodePageDetail(
       relationshipCount: 1,
       backlinks: [],
     },
+    document: documentOverride ?? { segments: [{ type: "prose", markdown: prose }] },
     sections,
-    ...overrides,
+    ...rest,
   };
 }

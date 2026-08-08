@@ -42,7 +42,7 @@ export function createEditorApi(): EditorApi {
     search: rest.search.bind(rest),
     listRecent: rest.listRecent.bind(rest),
     saveNode: rest.saveNode.bind(rest),
-    saveBody: rest.saveBody.bind(rest),
+    saveDocument: rest.saveDocument.bind(rest),
     saveTitle: rest.saveTitle.bind(rest),
     updateDatabaseRowProperty: rest.updateDatabaseRowProperty.bind(rest),
     updateOutgoingRelationshipProperty: rest.updateOutgoingRelationshipProperty.bind(rest),

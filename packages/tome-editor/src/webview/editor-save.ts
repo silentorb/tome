@@ -1,20 +1,33 @@
-import { collapsePageBlockEmbedsForStorage } from "tome-interfaces/page-block";
-import { canonicalizeMarkdownBodyLinks } from "tome-flatfile/markdown-links";
-import { collapseDynamicEditorLinks } from "tome-flatfile/dynamic-node-links";
+import { documentToStorageBody } from "tome-db";
+import type { NodeBodyDocument } from "tome-graph-interfaces";
 import { isPersistableNodeTitle } from "../shared/types";
 import { stripLeadingTitleHeading } from "./markdown-body";
+import {
+  documentsEqual,
+  editorMarkdownToDocument,
+} from "./body-document-projection";
 
-/** Normalize markdown for comparing editor output against the last saved body. */
+/** Editor markdown → storage markdown (tests / createNode body). */
 export function normalizeEditorBody(body: string, title: string): string {
   const normalized = stripLeadingTitleHeading(body.replace(/\r\n/g, "\n"), title);
-  const collapsedBlocks = collapsePageBlockEmbedsForStorage(normalized);
-  const collapsed = collapseDynamicEditorLinks(collapsedBlocks);
-  return canonicalizeMarkdownBodyLinks(collapsed).trimEnd();
+  return documentToStorageBody(editorMarkdownToDocument(normalized)).trimEnd();
 }
 
-export function bodyNeedsSave(nextBody: string, savedBody: string | null, title: string): boolean {
-  if (savedBody === null) return false;
-  return normalizeEditorBody(nextBody, title) !== savedBody;
+export function editorMarkdownToSaveDocument(
+  body: string,
+  title: string,
+): NodeBodyDocument {
+  const normalized = stripLeadingTitleHeading(body.replace(/\r\n/g, "\n"), title);
+  return editorMarkdownToDocument(normalized);
+}
+
+export function bodyNeedsSave(
+  nextBody: string,
+  savedDocument: NodeBodyDocument | null,
+  title: string,
+): boolean {
+  if (savedDocument === null) return false;
+  return !documentsEqual(editorMarkdownToSaveDocument(nextBody, title), savedDocument);
 }
 
 export function titleNeedsSave(nextTitle: string, savedTitle: string | null): boolean {
@@ -24,18 +37,22 @@ export function titleNeedsSave(nextTitle: string, savedTitle: string | null): bo
   return trimmed !== savedTitle;
 }
 
-export type PendingSavePayload = { body?: string; title?: string };
+export type PendingSavePayload = { document?: NodeBodyDocument; title?: string };
 
 /** Build a combined PUT patch for dirty pending fields, or null when nothing to flush. */
 export function buildPendingSavePayload(
   pendingBody: string | null,
   pendingTitle: string | null,
-  savedBody: string | null,
+  savedDocument: NodeBodyDocument | null,
   savedTitle: string | null,
+  pageTitle: string,
 ): PendingSavePayload | null {
   const patch: PendingSavePayload = {};
-  if (pendingBody !== null && savedBody !== null && pendingBody !== savedBody) {
-    patch.body = pendingBody;
+  if (pendingBody !== null && savedDocument !== null) {
+    const nextDoc = editorMarkdownToSaveDocument(pendingBody, pageTitle);
+    if (!documentsEqual(nextDoc, savedDocument)) {
+      patch.document = nextDoc;
+    }
   }
   if (pendingTitle !== null && savedTitle !== null) {
     const trimmed = pendingTitle.trim();
@@ -43,6 +60,6 @@ export function buildPendingSavePayload(
       patch.title = trimmed;
     }
   }
-  if (patch.body === undefined && patch.title === undefined) return null;
+  if (patch.document === undefined && patch.title === undefined) return null;
   return patch;
 }

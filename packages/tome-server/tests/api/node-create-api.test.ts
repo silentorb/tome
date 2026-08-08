@@ -57,9 +57,15 @@ describe("node create API", () => {
 
     const nodeRes = await api.handler(new Request(`http://127.0.0.1/api/nodes/${payload.node.id}`));
     expect(nodeRes.status).toBe(200);
-    const nodePayload = (await nodeRes.json()) as { node: { title: string; body: string } };
+    const nodePayload = (await nodeRes.json()) as {
+      node: { title: string; document: { segments: Array<{ type: string; markdown?: string }> } };
+    };
     expect(nodePayload.node.title).toBe("Standalone");
-    expect(nodePayload.node.body).toContain("Hello");
+    const prose = nodePayload.node.document.segments
+      .filter((s) => s.type === "prose")
+      .map((s) => s.markdown ?? "")
+      .join("");
+    expect(prose).toContain("Hello");
   });
 
   test("POST relation-rows links to source", async () => {

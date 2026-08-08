@@ -18,6 +18,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | SQLite property graph (`data/`) | [tome-db.md](./tome-db.md) |
 | Type table columns (`table-schemas.json`) | [table-schemas.md](./table-schemas.md) |
 | Web markdown editor (browser client) | [tome-editor.md](./tome-editor.md) |
+| Application-specific web API design | [web-api-design.md](./web-api-design.md) |
 | Config-driven API host + service modules | [tome-server.md](./tome-server.md) |
 | Graph Explorer (LOD graph visualization) | [graph-explorer.md](./graph-explorer.md) |
 | Table presentation (scope tabs, groups, reorder) | [table-presentation.md](./table-presentation.md) |

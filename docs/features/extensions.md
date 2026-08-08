@@ -66,7 +66,7 @@ No backwards-compatibility guarantees. Refactor hosts and contracts freely.
 extensions.json
   → tome-db loadExtensionsFromContent / resolveExtensionsManifest
   → Editor API: import editorModule + htmlModule + serverModule → register hosts
-  → Webview: GET /api/extensions (manifest) + POST prepare-editor-body (expand blocks) → Milkdown
+  → Webview: GET /api/nodes/:id includes page_block.editorHtml; GET /api/extensions (manifest) for interactive bundles; POST prepare-editor-body for slash-menu insert/preview only
   → Static generate: import htmlModule → render bodyHtml
 ```
 
@@ -149,4 +149,5 @@ bun test packages/tome-static-site/tests/extensions
 
 - [page-blocks.md](../extensions/page-blocks.md)
 - [tome-editor.md](./tome-editor.md)
+- [web-api-design.md](./web-api-design.md)
 - [static-website.md](./static-website.md)

@@ -1,4 +1,6 @@
+import type { NodeBodyDocument } from "tome-graph-interfaces";
 import { extractPageIconFromMarkdown } from "./callout-decoration";
+import { extractPageIconFromDocument } from "./body-document-projection";
 import { HOME_ICON, VIEW_ICONS } from "./quick-links-nav";
 import type { AppView } from "../shared/types";
 
@@ -12,6 +14,7 @@ export interface DocumentIconContext {
   nodeId?: string | null;
   primaryTypeTitle?: string | null;
   recordBody?: string | null;
+  recordDocument?: NodeBodyDocument | null;
   isTypeTable?: boolean | null;
   homeId?: string | null;
   defaultDocumentIcon?: string | null;
@@ -29,7 +32,11 @@ export function resolveDocumentIcon(ctx: DocumentIconContext): string {
   const nodeId = ctx.nodeId;
   if (nodeId && ctx.homeId && nodeId === ctx.homeId) return HOME_ICON;
 
-  const bodyIcon = ctx.recordBody ? extractPageIconFromMarkdown(ctx.recordBody) : null;
+  const bodyIcon = ctx.recordDocument
+    ? extractPageIconFromDocument(ctx.recordDocument)
+    : ctx.recordBody
+      ? extractPageIconFromMarkdown(ctx.recordBody)
+      : null;
   if (bodyIcon) return bodyIcon;
 
   const quickLinkIconByNodeId = ctx.quickLinkIconByNodeId ?? ctx.sidebarIconByNodeId;

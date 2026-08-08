@@ -73,6 +73,7 @@ Requires `TOME_CONTENT_PATH` (and usually a populated content tree). Historical 
 
 ## See also
 
+- [`web-api-design.md`](./web-api-design.md) — application-specific HTTP use-case rules
 - [`tome-editor.md`](./tome-editor.md) — client UI
 - [`tome-db.md`](./tome-db.md) — domain + sync; store/cache packages
 - [`extensions.md`](./extensions.md) — page-block extensions (server runtime in `tome-server`)

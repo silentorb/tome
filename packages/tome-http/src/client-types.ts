@@ -1,7 +1,8 @@
 import type {
   GraphSnapshot,
   GraphLodSnapshot,
-  NodePageDetail,
+  EditorNodePageDetail,
+  NodeBodyDocument,
   NodeSummary,
   DatabaseViewDetail,
   RelationTableSection,
@@ -55,7 +56,7 @@ export interface TomeHttpClient {
       orderScopeRelations?: Array<{ type: string; targetId: string }>;
     },
   ): Promise<CreateNodeResponse>;
-  getNode(id: string, options?: GetNodeOptions | string): Promise<NodePageDetail>;
+  getNode(id: string, options?: GetNodeOptions | string): Promise<EditorNodePageDetail>;
   getDatabaseView(
     id: string,
     tabId?: string,
@@ -147,10 +148,10 @@ export interface TomeHttpClient {
   listRecent(limit?: number): Promise<NodeSummary[]>;
   saveNode(
     id: string,
-    patch: { body?: string; title?: string },
+    patch: { document?: NodeBodyDocument; title?: string },
     options?: { keepalive?: boolean },
   ): Promise<void>;
-  saveBody(id: string, body: string): Promise<void>;
+  saveDocument(id: string, document: NodeBodyDocument): Promise<void>;
   saveTitle(id: string, title: string): Promise<void>;
   updateDatabaseRowProperty(
     databaseId: string,

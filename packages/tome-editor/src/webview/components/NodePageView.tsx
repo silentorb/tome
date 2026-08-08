@@ -7,17 +7,20 @@ import { NodeMetadataPanel } from "./NodeMetadataPanel";
 import { RelationSectionView } from "./RelationSectionView";
 import { AddRelationshipDialog } from "./AddRelationshipDialog";
 import type { EditorApi } from "../api/client";
-import type { DatabaseViewDetail, NodePageDetail } from "../../shared/types";
+import type { DatabaseViewDetail, EditorNodePageDetail } from "../../shared/types";
 import { isProtectedEditorNode } from "../../shared/types";
 import { isDraftNodeId } from "../draft-page";
-import { isEffectivelyEmptyMarkdown, resolvePageTitleAndContent } from "../markdown-body";
+import {
+  documentToEditorMarkdown,
+  isDocumentEffectivelyEmpty,
+} from "../body-document-projection";
 import { SectionTitle } from "./NodeNameLink";
 import "./node-page-view.css";
 import "./page-actions-menu.css";
 
 interface NodePageViewProps {
   api: EditorApi;
-  node: NodePageDetail;
+  node: EditorNodePageDetail;
   saveState: "idle" | "dirty" | "saving" | "saved" | "error";
   metadataExpanded: boolean;
   onMetadataExpandedChange: (expanded: boolean) => void;
@@ -64,9 +67,8 @@ export function NodePageView({
   onAddQuickLink,
   onRemoveQuickLink,
 }: NodePageViewProps) {
-  const { content } = resolvePageTitleAndContent(node.body, node.title);
-  const emptyMarkdown = isEffectivelyEmptyMarkdown(node.body, node.title);
-  const editorBody = emptyMarkdown ? "" : content;
+  const emptyMarkdown = isDocumentEffectivelyEmpty(node.document);
+  const editorBody = emptyMarkdown ? "" : documentToEditorMarkdown(node.document);
   const showPageActions =
     !isDraftNodeId(node.id) && !isProtectedEditorNode(node.id, protectedNodeIds);
   const [relateOpen, setRelateOpen] = useState(false);

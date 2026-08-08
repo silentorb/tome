@@ -1,7 +1,8 @@
 import type {
   GraphSnapshot,
   GraphLodSnapshot,
-  NodePageDetail,
+  EditorNodePageDetail,
+  NodeBodyDocument,
   NodeSummary,
   DatabaseViewDetail,
   RelationTableSection,
@@ -46,7 +47,10 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
 
   async function saveNode(
     id: string,
-    patch: { body?: string; title?: string },
+    patch: {
+      document?: NodeBodyDocument;
+      title?: string;
+    },
     options?: { keepalive?: boolean },
   ): Promise<void> {
     await fetchJson(`/api/nodes/${id}`, {
@@ -110,7 +114,10 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       );
       return data.node;
     },
-    async getNode(id: string, options?: GetNodeOptions | string): Promise<NodePageDetail> {
+    async getNode(
+      id: string,
+      options?: GetNodeOptions | string,
+    ): Promise<EditorNodePageDetail> {
       const normalized =
         typeof options === "string" ? { tab: options } : (options ?? {});
       const params = new URLSearchParams();
@@ -118,7 +125,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       if (tab) params.set("tab", tab);
       appendTableRowsQueryParams(params, normalized.rows);
       const query = params.toString();
-      const data = await fetchJson<{ node: NodePageDetail }>(
+      const data = await fetchJson<{ node: EditorNodePageDetail }>(
         `/api/nodes/${id}${query ? `?${query}` : ""}`,
       );
       return data.node;
@@ -321,8 +328,8 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       return data.results;
     },
     saveNode,
-    async saveBody(id: string, body: string): Promise<void> {
-      await saveNode(id, { body });
+    async saveDocument(id: string, document: NodeBodyDocument): Promise<void> {
+      await saveNode(id, { document });
     },
     async saveTitle(id: string, title: string): Promise<void> {
       await saveNode(id, { title });

@@ -28,6 +28,10 @@ export type {
 } from "tome-db";
 
 export type {
+  EditorNodePageDetail,
+  EditorNodeSection,
+  NodeBodyDocument,
+  NodeBodySegment,
   NodeDetail,
   NodeSummary,
   TableTabsDetail,
@@ -96,6 +100,8 @@ export function standaloneNodeUrl(nodeId: string, base?: string | URL): string {
   url.searchParams.delete("view");
   url.searchParams.delete("tab");
   url.searchParams.delete("meta");
+  url.searchParams.delete("dynamicTitle");
+  url.searchParams.delete("dynnode");
   stripTableSearchParams(url);
   return url.toString();
 }

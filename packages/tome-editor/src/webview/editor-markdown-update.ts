@@ -1,7 +1,7 @@
 /**
  * Decide how a Milkdown markdownUpdated event should affect autosave.
  * Baseline must be captured at editor create — never from the first user edit —
- * otherwise page-block attr-only changes (e.g. query graph edits) never reach saveBody.
+ * otherwise page-block attr-only changes (e.g. query graph edits) never reach save.
  */
 export function classifyMarkdownUpdate(input: {
   destroyed: boolean;

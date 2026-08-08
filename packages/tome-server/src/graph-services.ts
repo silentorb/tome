@@ -15,6 +15,9 @@ import {
   getDatabaseViewDetail,
   getNodePageDetail,
   getRelationTableSection,
+  storageBodyToDocument,
+  documentToStorageBody,
+  attachPageBlockEditorHtml,
   reorderDatabaseMembers as reorderDatabaseMembersInDb,
   DEFAULT_TABLE_ROW_LIMIT,
   loadSchemaFromContent,
@@ -69,12 +72,14 @@ import {
   ExtensionServerRuntime,
 } from "./extensions/runtime";
 import type {
+  NodeBodyDocument,
   NodeSummary,
   PublicExtensionsManifest,
   TableRowsQuery,
   TomeGraphServices,
   WorkspacePublic,
 } from "tome-graph-interfaces";
+import { formatPageBlockEmbedComment } from "tome-interfaces/page-block";
 
 const EDITOR_TABLE_ROWS: TableRowsQuery = {
   limit: DEFAULT_TABLE_ROW_LIMIT,
@@ -126,7 +131,7 @@ function buildGraphServices(
       const recent = searchNodes(cache, "", 1);
       return recent[0]?.id ?? homeId;
     },
-    getNode(
+    async getNode(
       id: string,
       options?: {
         tabId?: string;
@@ -136,12 +141,35 @@ function buildGraphServices(
       },
     ) {
       const tabId = options?.tabId ?? options?.scopeId ?? options?.databaseView;
-      return getNodePageDetail(cache, id, {
+      const detail = getNodePageDetail(cache, id, {
         tabId,
         contentDir: contentPath,
         includeSchemaEmptySections: true,
         rows: options?.rows ?? EDITOR_TABLE_ROWS,
       });
+      if (!detail) return null;
+
+      let document = storageBodyToDocument(cache, detail.body);
+      await extensionsReady;
+      await extensions.ensureLoaded();
+      document = await attachPageBlockEditorHtml(document, async (componentId, data) => {
+        const html = await extensions.renderPageBlockHtml(id, componentId, data);
+        return `${formatPageBlockEmbedComment({ componentId, data })}\n${html}`;
+      });
+
+      return {
+        id: detail.id,
+        title: detail.title,
+        primaryTypeTitle: detail.primaryTypeTitle,
+        isTypeTable: detail.isTypeTable,
+        archived: detail.archived,
+        document,
+        metadata: detail.metadata,
+        properties: detail.properties,
+        sections: detail.sections.map((section) =>
+          section.type === "markdown" ? { type: "markdown" as const } : section,
+        ),
+      };
     },
     getDatabaseView(id: string, tabId?: string, rows?: TableRowsQuery) {
       return getDatabaseViewDetail(
@@ -246,8 +274,8 @@ function buildGraphServices(
     listRecent(limit?: number): NodeSummary[] {
       return listRecentNodesByModifiedAt(cache, limit);
     },
-    saveBody(id: string, body: string): boolean {
-      return updateNodeBody(writeCtx, id, body);
+    saveDocument(id: string, document: NodeBodyDocument): boolean {
+      return updateNodeBody(writeCtx, id, documentToStorageBody(document));
     },
     saveTitle(id: string, title: string): boolean {
       return updateNodeTitle(writeCtx, id, title);

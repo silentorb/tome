@@ -1,5 +1,10 @@
-import type { TomeGraphServices } from "tome-graph-interfaces";
-import type { NodeLifecycleError, QuickLinkError, ViewSortSpec } from "tome-graph-interfaces";
+import type {
+  NodeBodyDocument,
+  NodeLifecycleError,
+  QuickLinkError,
+  TomeGraphServices,
+  ViewSortSpec,
+} from "tome-graph-interfaces";
 import { isPersistableNodeTitle } from "tome-graph-interfaces";
 import type { UserSettingsPatch } from "./user-settings";
 import { UserSettingsStore } from "./user-settings-store";
@@ -178,7 +183,7 @@ export function createApiHandler(
         const sourceId = linkOptionsMatch[1]!;
         const type = url.searchParams.get("type");
         if (!type?.trim()) return json({ error: "type query parameter required" }, 400);
-        const node = db.getNode(sourceId);
+        const node = await db.getNode(sourceId);
         if (!node) return json({ error: "not found" }, 404);
         return json(db.getRelationshipLinkOptions(sourceId, type));
       }
@@ -216,19 +221,28 @@ export function createApiHandler(
             url.searchParams.get("view") ??
             undefined;
           const rows = tableRowsQueryFromSearchParams(url.searchParams);
-          const node = db.getNode(id, { tabId: tab ?? undefined, rows });
+          const node = await db.getNode(id, { tabId: tab ?? undefined, rows });
           if (!node) return json({ error: "not found" }, 404);
           return json({ node });
         }
         if (req.method === "PUT") {
-          const payload = (await req.json()) as { body?: string; title?: string };
-          const hasBody = typeof payload.body === "string";
+          const payload = (await req.json()) as {
+            document?: unknown;
+            title?: string;
+          };
+          const hasDocument =
+            payload.document !== null &&
+            typeof payload.document === "object" &&
+            Array.isArray((payload.document as { segments?: unknown }).segments);
           const hasTitle = typeof payload.title === "string";
-          if (!hasBody && !hasTitle) {
-            return json({ error: "body or title required" }, 400);
+          if (!hasDocument && !hasTitle) {
+            return json({ error: "document or title required" }, 400);
           }
-          if (hasBody) {
-            const ok = db.saveBody(id, payload.body!);
+          if (hasDocument) {
+            const ok = db.saveDocument(
+              id,
+              payload.document as NodeBodyDocument,
+            );
             if (!ok) return json({ error: "not found" }, 404);
           }
           if (hasTitle) {

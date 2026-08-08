@@ -18,7 +18,10 @@ import {
 } from "tome-db";
 import { EditorPageBlockHostImpl, ServerPageBlockHostImpl } from "./hosts";
 import { HtmlPageBlockHostImpl } from "./html-host";
-import { prepareEditorBodyWithPageBlocks } from "./page-block-markdown";
+import {
+  prepareEditorBodyWithPageBlocks,
+  renderPageBlockHtmlForEditor,
+} from "./page-block-markdown";
 import { resolveExtensionModulePath } from "./resolve-extension-module";
 import { editorBundleWatchRoot, maxSourceMtimeMs } from "./editor-bundle-mtime";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
@@ -297,6 +300,29 @@ export class ExtensionServerRuntime {
       this.#contentPath,
       this.#htmlHost,
       this.#manifest.components,
+      this.#getGraphQueryServices?.(),
+      this.#getSchemaQueryServices?.(),
+      this.#getSqlQueryServices?.(),
+      scale ? { nodeDimensionScale: scale } : undefined,
+      schemaDiagram,
+    );
+  }
+
+  async renderPageBlockHtml(
+    nodeId: string,
+    componentId: string,
+    data: unknown,
+  ): Promise<string> {
+    await this.ensureLoaded();
+    const workspace = loadWorkspaceFromContent(this.#contentPath);
+    const scale = spatialGraphNodeDimensionScale(workspace);
+    const schemaDiagram = schemaDiagramPageBlockServices(workspace);
+    return renderPageBlockHtmlForEditor(
+      nodeId,
+      this.#contentPath,
+      this.#htmlHost,
+      this.#manifest.components,
+      { componentId, data },
       this.#getGraphQueryServices?.(),
       this.#getSchemaQueryServices?.(),
       this.#getSqlQueryServices?.(),

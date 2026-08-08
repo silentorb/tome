@@ -23,16 +23,12 @@ import { installDynamicLinkDecoration } from "../dynamic-node-link-decoration";
 import { installDynamicLinkDemote } from "../dynamic-node-link-demote";
 import { installBlockHandleMenu } from "../block-handle-menu";
 import { installListItemDeleteKeymap } from "../list-item-delete-keymap";
-import { resolveDynamicLinkTitles, titleResolverFromMap } from "../dynamic-link-titles";
 import { installMentionSync } from "../mention-sync";
 import {
   activeMentionRangeAtSelection,
   resolveMentionInsertRange,
 } from "../mention-range";
-import {
-  formatEditorDynamicNodeLink,
-  prepareEditorMarkdown,
-} from "../standalone-markdown";
+import { formatEditorDynamicNodeLink } from "../standalone-markdown";
 import { classifyMarkdownUpdate } from "../editor-markdown-update";
 import "./editor.css";
 
@@ -124,10 +120,8 @@ export function TomeEditor({
     root.replaceChildren();
 
     void (async () => {
-      let editorDefault = "";
       let blockMenuBuilder = buildCalloutSlashMenu;
       try {
-        let markdown = initialBody;
         const manifest = await api.getExtensionsManifest();
         if (destroyed) return;
         await loadEditorBundles(manifest);
@@ -137,7 +131,6 @@ export function TomeEditor({
           api.invokeExtension(componentId, input, invokeNodeId),
         );
         if (manifest.components.length > 0) {
-          markdown = await api.prepareEditorBody(nodeId, markdown);
           blockMenuBuilder = composeBlockEditMenus(
             buildCalloutSlashMenu,
             buildPageBlockSlashMenu(manifest.components, {
@@ -145,9 +138,6 @@ export function TomeEditor({
             }),
           );
         }
-        const titleMap = await resolveDynamicLinkTitles(api, markdown);
-        if (destroyed) return;
-        editorDefault = prepareEditorMarkdown(markdown, titleResolverFromMap(titleMap));
       } catch (err: unknown) {
         if (!destroyed) {
           setInitError(err instanceof Error ? err.message : String(err));
@@ -159,7 +149,7 @@ export function TomeEditor({
 
       crepe = new Crepe({
       root,
-      defaultValue: editorDefault,
+      defaultValue: initialBody,
       features: {
         [Crepe.Feature.Toolbar]: true,
         [Crepe.Feature.LinkTooltip]: true,

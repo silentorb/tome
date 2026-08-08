@@ -87,3 +87,31 @@ export async function prepareEditorBodyWithPageBlocks(
     ),
   );
 }
+
+/** Render one page block to editor HTML (without the round-trip comment wrapper). */
+export async function renderPageBlockHtmlForEditor(
+  nodeId: string,
+  contentPath: string,
+  host: HtmlPageBlockHostImpl,
+  components: ResolvedExtensionComponent[],
+  payload: PageBlockPayload,
+  graphQuery: ExtensionGraphQueryServices | undefined,
+  schemaQuery: ExtensionSchemaQueryServices | undefined,
+  sqlQuery?: ExtensionSqlQueryServices,
+  spatialGraph?: SpatialGraphPageBlockServices,
+  schemaDiagram?: SchemaDiagramPageBlockServices,
+): Promise<string> {
+  const componentsById = new Map(components.map((component) => [component.id, component]));
+  return renderBlockHtml(
+    host,
+    componentsById,
+    nodeId,
+    contentPath,
+    graphQuery,
+    schemaQuery,
+    sqlQuery,
+    spatialGraph,
+    schemaDiagram,
+    payload,
+  );
+}

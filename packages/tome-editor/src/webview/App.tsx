@@ -8,13 +8,15 @@ import { createEditorApi } from "./api/client";
 import { UserSettingsProvider, useUserSettings } from "./hooks/useUserSettings";
 import { nodeTableTabKey } from "../shared/user-settings";
 import type { GetNodeOptions } from "../shared/http-client";
+import { documentToStorageBody } from "tome-db";
 import {
   isPersistableNodeTitle,
   standaloneNodeUrl,
   type AppView,
   type DatabaseViewDetail,
-  type NodePageDetail,
-  } from "../shared/types";
+  type EditorNodePageDetail,
+  type NodeBodyDocument,
+} from "../shared/types";
 import {
   anchorFromLocation,
   metadataExpandedFromLocation,
@@ -28,11 +30,13 @@ import {
   standaloneViewUrl,
 } from "./node-links";
 import { DRAFT_NODE_ID, isDraftNodeId, makeDraftNodePageDetail } from "./draft-page";
-import { resolvePageTitleAndContent } from "./markdown-body";
+import {
+  documentToEditorMarkdown,
+} from "./body-document-projection";
 import {
   bodyNeedsSave,
   buildPendingSavePayload,
-  normalizeEditorBody,
+  editorMarkdownToSaveDocument,
   titleNeedsSave,
 } from "./editor-save";
 import { buildQuickLinkIconMaps } from "./quick-links-nav";
@@ -65,7 +69,7 @@ const saveDebounceDelay: number = 2000
 
 function nodeFromLocation(): string | null {
   const params = new URLSearchParams(window.location.search);
-  return params.get("node") ?? params.get("dynnode");
+  return params.get("node");
 }
 
 function viewFromLocation(): AppView {
@@ -85,12 +89,14 @@ function viewToQueryParam(view: AppView): string | null {
   return null;
 }
 
-function activeTabIdFromNode(node: NodePageDetail): string | undefined {
+function activeTabIdFromNode(node: EditorNodePageDetail): string | undefined {
   for (const section of node.sections) {
     if (section.type === "database") return section.databaseView.tabs.activeTabId;
   }
   return undefined;
 }
+
+const EMPTY_DOCUMENT: NodeBodyDocument = { segments: [{ type: "prose", markdown: "" }] };
 
 export function App() {
   const api = useMemo(() => createEditorApi(), []);
@@ -105,7 +111,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const { ready: userSettingsReady, getTableTab, setTableTab } = useUserSettings();
   const { workspace, error: workspaceError, refreshWorkspace } = useWorkspace(api);
   const [view, setView] = useState<AppView>(() => viewFromLocation());
-  const [node, setNode] = useState<NodePageDetail | null>(null);
+  const [node, setNode] = useState<EditorNodePageDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [metadataExpanded, setMetadataExpanded] = useState(() => metadataExpandedFromLocation());
@@ -127,7 +133,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const [toolPanelSession, setToolPanelSession] = useState<ToolPanelSession | null>(null);
   const pendingBody = useRef<string | null>(null);
   const pendingTitle = useRef<string | null>(null);
-  const savedBody = useRef<string | null>(null);
+  const savedDocument = useRef<NodeBodyDocument | null>(null);
   const savedTitle = useRef<string | null>(null);
   const nodeIdRef = useRef<string | null>(null);
   const saveTimer = useRef<number | null>(null);
@@ -245,6 +251,8 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       else url.searchParams.delete("view");
       if (nodeId) url.searchParams.set("node", nodeId);
       else url.searchParams.delete("node");
+      url.searchParams.delete("dynamicTitle");
+      url.searchParams.delete("dynnode");
       if (options?.tab ?? options?.scope ?? options?.view) {
         url.searchParams.set("tab", options.tab ?? options.scope ?? options.view!);
       } else {
@@ -264,23 +272,16 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   );
 
   const applyLoadedNode = useCallback(
-    (detail: NodePageDetail, options?: GetNodeOptions) => {
-      const { title, content } = resolvePageTitleAndContent(detail.body, detail.title);
-      const normalizedNode = {
-        ...detail,
-        title,
-        body: content,
-        sections: detail.sections.map((section) =>
-          section.type === "markdown" ? { ...section, body: content } : section,
-        ),
-      };
+    (detail: EditorNodePageDetail, options?: GetNodeOptions) => {
+      const title = detail.title;
+      const editorMarkdown = documentToEditorMarkdown(detail.document);
       nodeIdRef.current = detail.id;
-      setNode(normalizedNode);
+      setNode(detail);
       setView("node-page");
       setMetadataExpanded(false);
-      pendingBody.current = content;
+      pendingBody.current = editorMarkdown;
       pendingTitle.current = title;
-      savedBody.current = content;
+      savedDocument.current = detail.document;
       savedTitle.current = title;
       setSaveState("idle");
       syncStandaloneUrl("node-page", detail.id, options);
@@ -297,17 +298,18 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       const title = (pendingTitle.current ?? "").trim();
       if (!isPersistableNodeTitle(title)) return;
       const body = pendingBody.current ?? "";
-      const normalizedBody = normalizeEditorBody(body, title);
+      const document = editorMarkdownToSaveDocument(body, title);
+      const storageBody = documentToStorageBody(document);
 
       if (options?.keepalive) {
         void api
-          .createNode({ title, body: normalizedBody || undefined })
+          .createNode({ title, body: storageBody || undefined })
           .then((created) => {
             nodeIdRef.current = created.id;
             savedTitle.current = title;
-            savedBody.current = normalizedBody;
+            savedDocument.current = document;
             pendingTitle.current = title;
-            pendingBody.current = normalizedBody;
+            pendingBody.current = body;
             replaceStandaloneHistory(standaloneNodeUrl(created.id));
           })
           .catch(() => {});
@@ -318,7 +320,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       try {
         const created = await api.createNode({
           title,
-          body: normalizedBody || undefined,
+          body: storageBody || undefined,
         });
         bumpRecentNodes();
         const detail = await api.getNode(created.id);
@@ -344,16 +346,18 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         return;
       }
 
+      const pageTitle = pendingTitle.current ?? savedTitle.current ?? "";
       const patch = buildPendingSavePayload(
         pendingBody.current,
         pendingTitle.current,
-        savedBody.current,
+        savedDocument.current,
         savedTitle.current,
+        pageTitle,
       );
       if (!patch) return;
 
       if (options?.keepalive) {
-        if (patch.body !== undefined) savedBody.current = patch.body;
+        if (patch.document !== undefined) savedDocument.current = patch.document;
         if (patch.title !== undefined) savedTitle.current = patch.title;
         void api.saveNode(id, patch, { keepalive: true }).catch(() => {});
         return;
@@ -362,7 +366,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       setSaveState("saving");
       try {
         await api.saveNode(id, patch);
-        if (patch.body !== undefined) savedBody.current = patch.body;
+        if (patch.document !== undefined) savedDocument.current = patch.document;
         if (patch.title !== undefined) savedTitle.current = patch.title;
         setSaveState("saved");
       } catch {
@@ -413,7 +417,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     setMetadataExpanded(false);
     pendingBody.current = "";
     pendingTitle.current = "";
-    savedBody.current = "";
+    savedDocument.current = EMPTY_DOCUMENT;
     savedTitle.current = "";
     setSaveState("idle");
     syncCreatePageUrl();
@@ -483,7 +487,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       view,
       nodeId: node?.id ?? urlNodeId,
       primaryTypeTitle: node?.primaryTypeTitle,
-      recordBody: node?.body,
+      recordDocument: node?.document,
       isTypeTable: node?.isTypeTable,
       homeId,
       defaultDocumentIcon: workspace?.branding?.defaultDocumentIcon,
@@ -495,7 +499,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     node?.id,
     node?.title,
     node?.primaryTypeTitle,
-    node?.body,
+    node?.document,
     node?.isTypeTable,
     homeId,
     workspace?.branding?.appTitle,
@@ -515,9 +519,8 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const syncEditorBaseline = useCallback(
     (markdown: string) => {
       if (!node) return;
-      const normalized = normalizeEditorBody(markdown, node.title);
-      savedBody.current = normalized;
-      pendingBody.current = normalized;
+      savedDocument.current = editorMarkdownToSaveDocument(markdown, node.title);
+      pendingBody.current = markdown;
     },
     [node],
   );
@@ -525,9 +528,8 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const scheduleSave = useCallback(
     (body: string) => {
       if (!node) return;
-      const normalizedBody = normalizeEditorBody(body, node.title);
-      if (!bodyNeedsSave(body, savedBody.current, node.title)) return;
-      pendingBody.current = normalizedBody;
+      if (!bodyNeedsSave(body, savedDocument.current, node.title)) return;
+      pendingBody.current = body;
       setSaveState("dirty");
       if (isDraftNodeId(nodeIdRef.current)) {
         if (!isPersistableNodeTitle(pendingTitle.current ?? node.title)) return;
@@ -549,7 +551,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       if (isDraftNodeId(nodeIdRef.current)) {
         if (!isPersistableNodeTitle(trimmed)) {
           setSaveState(
-            bodyNeedsSave(pendingBody.current ?? "", savedBody.current, title) ? "dirty" : "idle",
+            bodyNeedsSave(pendingBody.current ?? "", savedDocument.current, title) ? "dirty" : "idle",
           );
           return;
         }
@@ -832,7 +834,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
                   view: "node-page",
                   nodeId: node.id,
                   primaryTypeTitle: node.primaryTypeTitle,
-                  recordBody: node.body,
+                  recordDocument: node.document,
                   isTypeTable: node.isTypeTable,
                   homeId,
                   defaultDocumentIcon: workspace.branding?.defaultDocumentIcon,

@@ -89,7 +89,7 @@ export function makeMockEditorApi(): EditorApi {
     search: async (_query, _limit, _allowedTypeIds, _options) => [],
     listRecent: async () => [],
     saveNode: async () => {},
-    saveBody: async () => {},
+    saveDocument: async () => {},
     saveTitle: async () => {},
     updateDatabaseRowProperty: async () => {},
     updateOutgoingRelationshipProperty: async () => {},

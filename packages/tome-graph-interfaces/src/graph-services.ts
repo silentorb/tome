@@ -17,7 +17,8 @@ import type {
   CreateNodeResult,
 } from "./node-create";
 import type { NodeLifecycleError } from "./node-lifecycle";
-import type { NodePageDetail, RelationTableSection } from "./node-page-sections";
+import type { NodeBodyDocument } from "./node-body-document";
+import type { EditorNodePageDetail, RelationTableSection } from "./node-page-sections";
 import type { NodeSummary } from "./queries";
 import type {
   LinkOutgoingRelationshipError,
@@ -47,7 +48,7 @@ export interface TomeGraphServices {
       scopeId?: string;
       rows?: TableRowsQuery;
     },
-  ): NodePageDetail | null;
+  ): Promise<EditorNodePageDetail | null>;
   getDatabaseView(
     id: string,
     tabId?: string,
@@ -107,7 +108,7 @@ export interface TomeGraphServices {
     options?: { includeBody?: boolean },
   ): NodeSummary[];
   listRecent(limit?: number): NodeSummary[];
-  saveBody(id: string, body: string): boolean;
+  saveDocument(id: string, document: NodeBodyDocument): boolean;
   saveTitle(id: string, title: string): boolean;
   updateDatabaseRowProperty(
     databaseId: string,

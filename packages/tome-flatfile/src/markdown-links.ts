@@ -16,8 +16,7 @@ function hasDynamicLinkMarker(href: string): boolean {
   }
   try {
     const url = trimmed.startsWith("?") ? new URL(trimmed, "http://local/") : new URL(trimmed);
-    if (NODE_ID_PATTERN.test(url.searchParams.get("dynnode") ?? "")) return true;
-    return url.searchParams.get("dynamic") === "1";
+    return url.searchParams.get("dynamicTitle") === "1";
   } catch {
     return false;
   }
@@ -33,8 +32,7 @@ function resolveNodeIdFromUrl(href: string): string | null {
     const url = new URL(href.replace(/\\&/g, "&"));
     return (
       nodeIdFromQueryParam(url.searchParams.get("node")) ??
-      nodeIdFromQueryParam(url.searchParams.get("record")) ??
-      nodeIdFromQueryParam(url.searchParams.get("dynnode"))
+      nodeIdFromQueryParam(url.searchParams.get("record"))
     );
   } catch {
     return null;
@@ -47,8 +45,7 @@ function resolveNodeIdFromQueryOnlyHref(href: string): string | null {
   const params = new URLSearchParams(trimmed);
   return (
     nodeIdFromQueryParam(params.get("node")) ??
-    nodeIdFromQueryParam(params.get("record")) ??
-    nodeIdFromQueryParam(params.get("dynnode"))
+    nodeIdFromQueryParam(params.get("record"))
   );
 }
 

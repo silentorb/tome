@@ -190,7 +190,7 @@ describe("dynamic link demotion", () => {
         }
       });
       expect(href).toBe(`?node=${TARGET_ID}`);
-      expect(href).not.toContain("dynamic=1");
+      expect(href).not.toContain("dynamicTitle=");
     });
 
     await editor.destroy();

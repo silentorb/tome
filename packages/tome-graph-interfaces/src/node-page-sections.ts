@@ -1,4 +1,5 @@
 import type { DatabaseColumnDef, DatabaseViewDetail } from "./database-view";
+import type { NodeBodyDocument } from "./node-body-document";
 import type { NodeDetail } from "./queries";
 import type { NodePageMetadata } from "./node-metadata";
 import type { PropertiesSection } from "./node-type-properties";
@@ -7,6 +8,11 @@ import type { TableRowsWindow } from "./table-rows-window";
 export interface MarkdownSection {
   type: "markdown";
   body: string;
+}
+
+/** Editor HTTP markdown section — body content lives in {@link EditorNodePageDetail.document}. */
+export interface EditorMarkdownSection {
+  type: "markdown";
 }
 
 export interface DatabaseTableSection {
@@ -46,10 +52,23 @@ export type NodeSection =
   | DatabaseTableSection
   | RelationTableSection;
 
+export type EditorNodeSection =
+  | EditorMarkdownSection
+  | DatabaseTableSection
+  | RelationTableSection;
+
 export interface NodePageDetail extends NodeDetail {
   metadata: NodePageMetadata;
   properties: PropertiesSection | null;
   sections: NodeSection[];
+}
+
+/** Node page DTO for the editor HTTP use case (structured body document). */
+export interface EditorNodePageDetail extends Omit<NodeDetail, "body"> {
+  document: NodeBodyDocument;
+  metadata: NodePageMetadata;
+  properties: PropertiesSection | null;
+  sections: EditorNodeSection[];
 }
 
 export type { PropertiesSection } from "./node-type-properties";

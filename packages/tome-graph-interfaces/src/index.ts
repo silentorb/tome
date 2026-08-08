@@ -140,13 +140,21 @@ export type { NodeBacklink, NodePageMetadata } from "./node-metadata";
 export type { PropertiesSection } from "./node-type-properties";
 
 export type {
+  NodeBodyDocument,
+  NodeBodySegment,
+} from "./node-body-document";
+
+export type {
   MarkdownSection,
+  EditorMarkdownSection,
   DatabaseTableSection,
   RelationRow,
   RelationTableAddMode,
   RelationTableSection,
   NodeSection,
+  EditorNodeSection,
   NodePageDetail,
+  EditorNodePageDetail,
 } from "./node-page-sections";
 
 export type {

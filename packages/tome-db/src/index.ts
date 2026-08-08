@@ -168,6 +168,12 @@ export type {
   RelationTableSection,
 } from "./node-page-sections";
 export {
+  attachPageBlockEditorHtml,
+  documentToStorageBody,
+  storageBodyToDocument,
+} from "./node-body-document";
+export type { NodeBodyDocument, NodeBodySegment, EditorNodePageDetail } from "tome-graph-interfaces";
+export {
   relationSectionSupportsLinkExisting,
   associationRuleContext,
   associationRulesFromRegistry,

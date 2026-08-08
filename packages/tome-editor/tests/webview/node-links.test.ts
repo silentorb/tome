@@ -79,6 +79,18 @@ describe("node-links", () => {
     ).toBe("00000000000000000000000014");
   });
 
+  test("standaloneNodeUrl strips dynamicTitle and dynnode params", () => {
+    window.history.replaceState(
+      {},
+      "",
+      "http://127.0.0.1:5173/?dynnode=AAAAAAAAAAAAAAAAAAAAAAAAAA&dynamicTitle=1&node=BBBBBBBBBBBBBBBBBBBBBBBBBB",
+    );
+    const url = new URL(standaloneNodeUrl("CCCCCCCCCCCCCCCCCCCCCCCCCC"));
+    expect(url.searchParams.get("node")).toBe("CCCCCCCCCCCCCCCCCCCCCCCCCC");
+    expect(url.searchParams.get("dynamicTitle")).toBeNull();
+    expect(url.searchParams.get("dynnode")).toBeNull();
+  });
+
   test("standaloneNodeUrl strips meta param", () => {
     expect(
       standaloneNodeUrl("00000000000000000000000014", "http://127.0.0.1:5173/?meta=1"),

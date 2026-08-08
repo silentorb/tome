@@ -5,7 +5,6 @@ import {
   standaloneNodeUrl,
   type AppView,
 } from "../shared/types";
-import { DYNAMIC_NODE_EDITOR_QUERY_PARAM } from "tome-flatfile/dynamic-node-links";
 import { resolveMarkdownHrefTarget } from "tome-flatfile/markdown-links";
 import { NODE_ID_PATTERN } from "tome-flatfile/node-id";
 
@@ -36,8 +35,7 @@ export function resolveNodePageTarget(href: string, base?: string | URL): string
   if (typeof window !== "undefined" && isStandaloneNodeHref(href, base)) {
     try {
       const url = new URL(href, base ?? window.location.href);
-      const nodeParam =
-        url.searchParams.get("node") ?? url.searchParams.get(DYNAMIC_NODE_EDITOR_QUERY_PARAM);
+      const nodeParam = url.searchParams.get("node");
       if (nodeParam && isNodeId(nodeParam)) return nodeParam;
     } catch {
       /* fall through */
@@ -53,8 +51,7 @@ export function isStandaloneNodeHref(href: string, base?: string | URL): boolean
   if (typeof window === "undefined") return false;
   try {
     const url = new URL(href, base ?? window.location.href);
-    const nodeParam =
-      url.searchParams.get("node") ?? url.searchParams.get(DYNAMIC_NODE_EDITOR_QUERY_PARAM);
+    const nodeParam = url.searchParams.get("node");
     return nodeParam !== null && NODE_ID_PATTERN.test(nodeParam);
   } catch {
     return false;

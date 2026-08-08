@@ -1,4 +1,4 @@
-import type { NodePageDetail } from "../shared/types";
+import type { EditorNodePageDetail } from "tome-graph-interfaces";
 
 /** Client-only id for New page drafts before createNode runs. */
 export const DRAFT_NODE_ID = "__draft__";
@@ -7,14 +7,14 @@ export function isDraftNodeId(nodeId: string | null | undefined): boolean {
   return nodeId === DRAFT_NODE_ID;
 }
 
-export function makeDraftNodePageDetail(): NodePageDetail {
+export function makeDraftNodePageDetail(): EditorNodePageDetail {
   return {
     id: DRAFT_NODE_ID,
     title: "",
-    body: "",
     primaryTypeTitle: null,
     isTypeTable: false,
     archived: false,
+    document: { segments: [{ type: "prose", markdown: "" }] },
     metadata: {
       createdAt: null,
       modifiedAt: null,
@@ -22,6 +22,6 @@ export function makeDraftNodePageDetail(): NodePageDetail {
       backlinks: [],
     },
     properties: null,
-    sections: [{ type: "markdown", body: "" }],
+    sections: [{ type: "markdown" }],
   };
 }

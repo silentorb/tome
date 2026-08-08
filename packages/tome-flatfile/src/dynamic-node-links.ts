@@ -7,11 +7,9 @@ import { NODE_ID_PATTERN, NODE_ID_RE_SRC } from "./node-id";
 
 const DYNAMIC_NODE_LINK = new RegExp(`\\[\\[(${NODE_ID_RE_SRC})\\]\\]`, "g");
 const MD_LINK = /\[([^\]]*)\]\(([^)]+)\)/g;
-/** Ephemeral editor query param for dynamic-titled links (avoids `&` which GFM escapes on save). */
-export const DYNAMIC_NODE_EDITOR_QUERY_PARAM = "dynnode";
-/** @deprecated Legacy dynamic marker; still recognized when collapsing editor markdown. */
-export const DYNAMIC_NODE_LINK_QUERY_PARAM = "dynamic";
-export const DYNAMIC_NODE_LINK_QUERY_VALUE = "1";
+/** Crepe-projection query flag: link label is bound to the target node's title (`[[id]]` in storage). */
+export const DYNAMIC_TITLE_EDITOR_QUERY_PARAM = "dynamicTitle";
+export const DYNAMIC_TITLE_EDITOR_QUERY_VALUE = "1";
 
 function unescapeMarkdownHref(href: string): string {
   return href.replace(/\\&/g, "&").replace(/&amp;/g, "&");
@@ -66,10 +64,7 @@ export function isDynamicEditorHref(href: string): boolean {
   }
   try {
     const url = trimmed.startsWith("?") ? new URL(trimmed, "http://local/") : new URL(trimmed);
-    if (NODE_ID_PATTERN.test(url.searchParams.get(DYNAMIC_NODE_EDITOR_QUERY_PARAM) ?? "")) {
-      return true;
-    }
-    return url.searchParams.get(DYNAMIC_NODE_LINK_QUERY_PARAM) === DYNAMIC_NODE_LINK_QUERY_VALUE;
+    return url.searchParams.get(DYNAMIC_TITLE_EDITOR_QUERY_PARAM) === DYNAMIC_TITLE_EDITOR_QUERY_VALUE;
   } catch {
     return false;
   }
@@ -81,8 +76,7 @@ function stripDynamicQueryParam(href: string): string {
   try {
     const isQueryOnly = trimmed.startsWith("?");
     const url = isQueryOnly ? new URL(trimmed, "http://local/") : new URL(trimmed);
-    url.searchParams.delete(DYNAMIC_NODE_EDITOR_QUERY_PARAM);
-    url.searchParams.delete(DYNAMIC_NODE_LINK_QUERY_PARAM);
+    url.searchParams.delete(DYNAMIC_TITLE_EDITOR_QUERY_PARAM);
     if (isQueryOnly) {
       const params = url.searchParams.toString();
       return params ? `?${params}` : "?";
@@ -93,8 +87,9 @@ function stripDynamicQueryParam(href: string): string {
   }
 }
 
+/** Crepe-projection href for a dynamic-title node link. */
 export function editorDynamicNodeHref(nodeId: string): string {
-  return `?${DYNAMIC_NODE_EDITOR_QUERY_PARAM}=${nodeId}`;
+  return `?node=${nodeId}&${DYNAMIC_TITLE_EDITOR_QUERY_PARAM}=${DYNAMIC_TITLE_EDITOR_QUERY_VALUE}`;
 }
 
 /** Expand `[[id]]` to titled markdown links (outside code fences). */
@@ -112,7 +107,7 @@ export function expandDynamicNodeLinks(
   );
 }
 
-/** Expand `[[id]]` to editor display links with ephemeral dynamic marker. */
+/** Expand `[[id]]` to editor display links with ephemeral dynamic-title marker. */
 export function expandDynamicNodeLinksForEditor(
   body: string,
   titleForId: (nodeId: string) => string,
@@ -120,7 +115,7 @@ export function expandDynamicNodeLinksForEditor(
   return expandDynamicNodeLinks(body, titleForId, editorDynamicNodeHref);
 }
 
-/** Collapse editor dynamic links to `[[id]]`; strip dynamic param from remaining node links. */
+/** Collapse editor dynamic-title links to `[[id]]`; strip dynamic flag from remaining node links. */
 export function collapseDynamicEditorLinks(body: string): string {
   return transformOutsideCodeFences(body, (segment) =>
     segment.replace(MD_LINK, (match, text: string, href: string) => {

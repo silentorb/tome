@@ -10,7 +10,7 @@ import { normalizeEditorBody } from "../../src/webview/editor-save";
 const TARGET = "0000000000000000000000002X";
 
 describe("dynamic link milkdown serialization", () => {
-  test("GFM getMarkdown preserves dynnode href and save collapses to [[id]]", async () => {
+  test("GFM getMarkdown preserves dynamicTitle flag and save collapses to [[id]]", async () => {
     const link = formatEditorDynamicNodeLink(TARGET, "Cozy horror");
     const root = document.createElement("div");
     document.body.appendChild(root);
@@ -26,14 +26,14 @@ describe("dynamic link milkdown serialization", () => {
     await editor.action((ctx) => {
       md = getMarkdown()(ctx);
     });
-    expect(md).toContain("dynnode=");
-    expect(md).not.toContain("\\&");
+    expect(md).toContain("dynamicTitle=");
+    expect(md).toContain(`node=${TARGET}`);
     expect(normalizeEditorBody(md.trim(), "Page")).toBe(`[[${TARGET}]]`);
     await editor.destroy();
   });
 
-  test("legacy GFM-escaped &dynamic=1 still collapses on save", () => {
-    const md = `[Cozy horror](?node=${TARGET}\\&dynamic=1)`;
+  test("GFM-escaped &dynamicTitle=1 still collapses on save", () => {
+    const md = `[Cozy horror](?node=${TARGET}\\&dynamicTitle=1)`;
     expect(normalizeEditorBody(md, "Page")).toBe(`[[${TARGET}]]`);
   });
 
@@ -42,7 +42,7 @@ describe("dynamic link milkdown serialization", () => {
     expect(normalizeEditorBody(md, "Page")).toBe(`[Cozy horror](./${TARGET}.md)`);
   });
 
-  test("dynnode href format", () => {
-    expect(editorDynamicNodeHref(TARGET)).toBe(`?dynnode=${TARGET}`);
+  test("dynamicTitle href format", () => {
+    expect(editorDynamicNodeHref(TARGET)).toBe(`?node=${TARGET}&dynamicTitle=1`);
   });
 });

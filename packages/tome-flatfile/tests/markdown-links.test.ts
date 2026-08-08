@@ -29,7 +29,7 @@ describe("resolveMarkdownHrefTarget", () => {
   test("resolves query-only node and record params", () => {
     expect(resolveMarkdownHrefTarget(`?node=${TARGET}`)).toBe(TARGET);
     expect(resolveMarkdownHrefTarget(`?record=${TARGET}`)).toBe(TARGET);
-    expect(resolveMarkdownHrefTarget(`?dynnode=${TARGET}`)).toBe(TARGET);
+    expect(resolveMarkdownHrefTarget(`?node=${TARGET}&dynamicTitle=1`)).toBe(TARGET);
   });
 
   test("resolves absolute editor URLs with node or record param", () => {

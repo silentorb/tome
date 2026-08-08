@@ -76,7 +76,7 @@ describe("NodePageView", () => {
   test("page actions menu includes Relate for linking existing records", () => {
     const api = makeMockEditorApi();
     const node = makeNodePageDetail({
-      sections: [{ type: "markdown", body: "# Solo page\n" }],
+      sections: [{ type: "markdown" }],
     });
 
     render(
@@ -109,7 +109,7 @@ describe("NodePageView", () => {
     const node = makeNodePageDetail({
       isTypeTable: true,
       sections: [
-        { type: "markdown", body: "# Database page\n" },
+        { type: "markdown" },
         { type: "database", databaseView: makeDatabaseViewDetail() },
       ],
     });
@@ -359,7 +359,7 @@ describe("NodePageView IS_A relation section", () => {
               cells: { priority: "Low" },
             },
             sections: [
-              { type: "markdown", body: "# Example\n" },
+              { type: "markdown" },
               makeRelationSection({
                 label: projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
                 title: "Membership",
