@@ -31,7 +31,7 @@ The content root is a directory conventionally named `content/`. Tools discover 
     table-schemas.json
     views.json
     dynamic-properties.json
-    ordered-collections.json
+    table-presentation.json
     extensions.json
 ```
 
@@ -415,24 +415,33 @@ Bindings for computed type-table columns. Parser validates the wrapper; entry fi
 
 **Column-set entry:** same pattern with `columnKeyPattern` / `columnNamePattern` instead of fixed keys/names.
 
-### `ordered-collections.json` (version 1)
+### `table-presentation.json` (version 1)
 
-Configs for ordered part/group associations (e.g. scenes by book).
+Compositions that layer scope tabs, row groups, and reordering onto a type table's Items section (e.g. scenes by book).
 
 ```json
 {
   "version": 1,
-  "configs": [
+  "compositions": [
     {
       "id": "scenes-by-book",
       "typeDatabaseId": "01EXAMPLESCENETYPENODE000001",
-      "scopeCompositeType": "01EXAMPLEASSOCIATIONID00003",
-      "groupCompositeType": "01EXAMPLEASSOCIATIONID00004",
-      "partProductCompositeType": "01EXAMPLEASSOCIATIONID00005",
-      "groupTypeDatabaseId": "01EXAMPLECHAPTERTYPENODE0001",
-      "unassignedGroupTitle": "Unassigned",
-      "columnViewName": "all",
-      "excludedColumnKeys": ["internal"]
+      "scope": {
+        "memberToScopeComposite": "01EXAMPLEASSOCIATIONID00003",
+        "excludeColumnKeys": ["product"]
+      },
+      "groups": {
+        "memberToGroupComposite": "01EXAMPLEASSOCIATIONID00004",
+        "groupTypeDatabaseId": "01EXAMPLECHAPTERTYPENODE0001",
+        "groupToScopeComposite": "01EXAMPLEASSOCIATIONID00005",
+        "unassignedGroupTitle": "Unassigned",
+        "canonicalGroupByTitle": true,
+        "excludeColumnKeys": ["part"]
+      },
+      "reorder": {
+        "excludeColumnKeys": ["order"]
+      },
+      "excludeColumnKeys": ["status"]
     }
   ]
 }
@@ -441,11 +450,17 @@ Configs for ordered part/group associations (e.g. scenes by book).
 | Field | Notes |
 | --- | --- |
 | `version` | must be `1` |
-| `configs` | array; `id` unique |
+| `compositions` | array; `id` unique |
 
-**Config fields:** `id`, `typeDatabaseId`, `scopeCompositeType`, `groupCompositeType`, `partProductCompositeType`, `groupTypeDatabaseId`, `unassignedGroupTitle`; optional `columnViewName`, `excludedColumnKeys`.
+**Composition fields:** `id`, `typeDatabaseId` (node id); optional `scope`, `groups`, `reorder`, `excludeColumnKeys`, `columnViewName` (deprecated).
 
-Both `typeDatabaseId` and `groupTypeDatabaseId` must be set nodes whose set association (from views / `setRolePerspectivesForNode`) has the **ordered** trait in `associations.json`.
+| Layer | Fields |
+| --- | --- |
+| `scope` | `memberToScopeComposite` (association id, required); optional `excludeColumnKeys` |
+| `groups` | `memberToGroupComposite` (association id), `groupTypeDatabaseId` (node id), `unassignedGroupTitle` (all required); optional `groupToScopeComposite`, `canonicalGroupByTitle`, `excludeColumnKeys` |
+| `reorder` | optional `excludeColumnKeys` |
+
+Layers are independent: any subset may be present. A composition takes effect when `views.json` has a generated view record whose `generator` equals the composition `id`. The `reorder` layer requires that the type database's set association carries the **ordered** trait in `associations.json`.
 
 ### `extensions.json` (version 1)
 
@@ -497,7 +512,7 @@ Runtime extension registration. Version defaults to `1` if omitted on read.
 | `model/table-schemas.json` | optional | Needed for type-table columns |
 | `model/views.json` | optional | Needed for custom/generated table tabs |
 | `model/dynamic-properties.json` | optional | Computed columns |
-| `model/ordered-collections.json` | optional | Ordered collection UIs |
+| `model/table-presentation.json` | optional | Scope tabs, row groups, reorderable Items tables |
 | `model/extensions.json` | optional | Extension packages |
 
 A Tome-compatible writer should:
@@ -536,9 +551,9 @@ Normative parsers and path helpers in this package:
 | Views | `src/content/views-file.ts` |
 | Workspace | `src/workspace/workspace-file.ts` |
 | Dynamic properties | `src/content/dynamic-properties-file.ts` |
-| Ordered collections | `src/ordered-collections-config/ordered-collections-file.ts` |
+| Table presentation | `src/table-presentation/table-presentation-file.ts` |
 | Extensions | `src/extensions/extensions-file.ts` |
 | Body link forms | `src/markdown-links.ts`, `src/dynamic-node-links.ts` |
 | Set / ordered traits | `src/association-traits.ts` |
 
-Related behavioral docs (not format contracts): `docs/features/tome-db.md`, `sets.md`, `schema.md`, `views.md`, `table-schemas.md`, `ordered-collections.md`, `extensions.md`, `dynamic-properties.md`.
+Related behavioral docs (not format contracts): `docs/features/tome-db.md`, `sets.md`, `schema.md`, `views.md`, `table-schemas.md`, `table-presentation.md`, `extensions.md`, `dynamic-properties.md`.

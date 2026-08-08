@@ -4,14 +4,13 @@ import type {
   NodePageDetail,
   NodeSummary,
   DatabaseViewDetail,
-  OrderedCollectionViewDetail,
   RelationTableSection,
+  ReorderDatabaseMembersParams,
   TableRowsQuery,
 } from "tome-graph-interfaces";
 import type { UserSettings, UserSettingsPatch } from "./user-settings";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
 import type { SchemaFile } from "tome-graph-interfaces";
-import type { OrderedCollectionMoveParams } from "tome-graph-interfaces";
 import type {
   CreateNodeResponse,
   TomeHttpClient,
@@ -93,7 +92,13 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     },
     async createDatabaseRow(
       databaseId: string,
-      input: { title: string; view?: string; properties?: Record<string, string> },
+      input: {
+        title: string;
+        view?: string;
+        properties?: Record<string, string>;
+        relations?: Array<{ type: string; targetId: string }>;
+        orderScopeRelations?: Array<{ type: string; targetId: string }>;
+      },
     ): Promise<CreateNodeResponse> {
       const data = await fetchJson<{ node: CreateNodeResponse }>(
         `/api/databases/${databaseId}/rows`,
@@ -131,20 +136,6 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         `/api/databases/${id}${query ? `?${query}` : ""}`,
       );
       return data.databaseView;
-    },
-    async getOrderedCollectionView(
-      configId: string,
-      tabId?: string,
-      rows?: TableRowsQuery,
-    ): Promise<OrderedCollectionViewDetail> {
-      const params = new URLSearchParams();
-      if (tabId) params.set("tab", tabId);
-      appendTableRowsQueryParams(params, rows);
-      const query = params.toString();
-      const data = await fetchJson<{ view: OrderedCollectionViewDetail }>(
-        `/api/ordered-collections/${encodeURIComponent(configId)}${query ? `?${query}` : ""}`,
-      );
-      return data.view;
     },
     async getRelationTable(
       nodeId: string,
@@ -290,19 +281,19 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       );
       return data.typeTables;
     },
-    async moveOrderedCollection(
-      configId: string,
-      params: OrderedCollectionMoveParams,
-    ): Promise<OrderedCollectionViewDetail> {
-      const data = await fetchJson<{ view: OrderedCollectionViewDetail }>(
-        `/api/ordered-collections/${encodeURIComponent(configId)}/move`,
+    async reorderDatabaseMembers(
+      databaseId: string,
+      params: ReorderDatabaseMembersParams,
+    ): Promise<DatabaseViewDetail> {
+      const data = await fetchJson<{ databaseView: DatabaseViewDetail }>(
+        `/api/databases/${databaseId}/members/reorder`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(params),
         },
       );
-      return data.view;
+      return data.databaseView;
     },
     async search(
       query: string,

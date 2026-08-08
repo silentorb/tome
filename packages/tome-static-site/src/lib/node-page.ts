@@ -2,7 +2,6 @@ import type {
   SiteNode,
   StaticDatabaseSection,
   StaticNodeSection,
-  StaticOrderedCollectionSection,
   TabItemsPayload,
 } from "./site-types";
 
@@ -34,6 +33,7 @@ export function buildSectionsForTab(
           columns: tabPayload.databaseView.columns,
           rows: tabPayload.databaseView.rows,
           columnDefs: tabPayload.databaseView.columnDefs,
+          groups: tabPayload.databaseView.groups,
           tabs: {
             ...section.databaseView.tabs,
             activeTabId,
@@ -41,20 +41,6 @@ export function buildSectionsForTab(
         },
         defaultSort: tabPayload.defaultSort,
       } satisfies StaticDatabaseSection;
-    }
-    if (section.type === "ordered-collection" && tabPayload.kind === "ordered-collection") {
-      return {
-        type: "ordered-collection",
-        configId: section.configId,
-        view: {
-          ...tabPayload.view,
-          tabs: {
-            ...tabPayload.view.tabs,
-            activeTabId,
-          },
-        },
-        defaultSort: tabPayload.defaultSort,
-      } satisfies StaticOrderedCollectionSection;
     }
     return section;
   });

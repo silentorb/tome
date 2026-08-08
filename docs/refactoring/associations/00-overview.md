@@ -107,7 +107,7 @@ These files concentrate type-name special casing:
 | [`content/model/table-schemas.json`](../../../../marloth-story/content/model/table-schemas.json) | Type-table column defs; relation columns carry `perspective` and `targetTypeId`. Keys are set node IDs. |
 | [`content/model/workspace.json`](../../../../marloth-story/content/model/workspace.json) | `archiveNodeId` (archive hub set node). |
 | [`content/model/schema.json`](../../../../marloth-story/content/model/schema.json) | `relationshipRules` — allowed target types per source type + perspective. |
-| [`content/model/ordered-collections.json`](../../../../marloth-story/content/model/ordered-collections.json) | Ordered views; `membershipEdgeType` must be `member_of`. |
+| [`content/model/table-presentation.json`](../../../../marloth-story/content/model/table-presentation.json) | Composed table presentation (scope tabs, groups, reorder). |
 
 Domain values above are from the Marloth corpus; `silentorb-web` has an empty `associations.json` registry.
 
@@ -116,7 +116,7 @@ Domain values above are from the Marloth corpus; `silentorb-web` has an empty `a
 ## Related feature docs
 
 - [Set membership](../../features/sets.md)
-- [Ordered collections](../../features/ordered-collections.md)
+- [Table presentation](../../features/table-presentation.md)
 - [tome-db](../../features/tome-db.md)
 - [Table schemas](../../features/table-schemas.md)
 

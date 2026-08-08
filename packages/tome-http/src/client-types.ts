@@ -4,19 +4,18 @@ import type {
   NodePageDetail,
   NodeSummary,
   DatabaseViewDetail,
-  OrderedCollectionViewDetail,
   RelationTableSection,
+  ReorderDatabaseMembersParams,
   TableRowsQuery,
 } from "tome-graph-interfaces";
 import type { UserSettings, UserSettingsPatch } from "./user-settings";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
 import type { SchemaFile } from "tome-graph-interfaces";
-import type { OrderedCollectionMoveParams, WorkspaceFile } from "tome-graph-interfaces";
+import type { WorkspaceFile } from "tome-graph-interfaces";
 
 export type WorkspacePublic = WorkspaceFile & { archiveNodeTitle?: string };
 
 export type { GraphRelationship, GraphNode, GraphSnapshot, GraphLodSnapshot, DatabaseViewDetail } from "tome-graph-interfaces";
-export type { OrderedCollectionViewDetail } from "tome-graph-interfaces";
 export type { TableRowsQuery } from "tome-graph-interfaces";
 
 export interface GetNodeOptions {
@@ -48,7 +47,13 @@ export interface TomeHttpClient {
   ): Promise<CreateNodeResponse>;
   createDatabaseRow(
     databaseId: string,
-    input: { title: string; view?: string; properties?: Record<string, string> },
+    input: {
+      title: string;
+      view?: string;
+      properties?: Record<string, string>;
+      relations?: Array<{ type: string; targetId: string }>;
+      orderScopeRelations?: Array<{ type: string; targetId: string }>;
+    },
   ): Promise<CreateNodeResponse>;
   getNode(id: string, options?: GetNodeOptions | string): Promise<NodePageDetail>;
   getDatabaseView(
@@ -56,11 +61,6 @@ export interface TomeHttpClient {
     tabId?: string,
     rows?: TableRowsQuery,
   ): Promise<DatabaseViewDetail>;
-  getOrderedCollectionView(
-    configId: string,
-    tabId?: string,
-    rows?: TableRowsQuery,
-  ): Promise<OrderedCollectionViewDetail>;
   getRelationTable(
     nodeId: string,
     perspective: string,
@@ -134,10 +134,10 @@ export interface TomeHttpClient {
     valuesCleared: number;
   }>;
   listTypeTables(): Promise<{ id: string; title: string }[]>;
-  moveOrderedCollection(
-    configId: string,
-    params: OrderedCollectionMoveParams,
-  ): Promise<OrderedCollectionViewDetail>;
+  reorderDatabaseMembers(
+    databaseId: string,
+    params: ReorderDatabaseMembersParams,
+  ): Promise<DatabaseViewDetail>;
   search(
     query: string,
     limit?: number,

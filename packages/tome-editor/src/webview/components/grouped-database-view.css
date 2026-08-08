@@ -1,38 +1,38 @@
-.tome-ordered-collection-view {
+.tome-grouped-database-view {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.tome-ordered-collection-view.is-moving {
+.tome-grouped-database-view.is-moving {
   opacity: 0.85;
 }
 
-.tome-ordered-collection-scope-tabs {
+.tome-grouped-database-scope-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
 }
 
-.tome-ordered-collection-groups {
+.tome-grouped-database-groups {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.tome-ordered-collection-group-title {
+.tome-grouped-database-group-title {
   margin: 0 0 0.5rem;
   font-size: 1rem;
   font-weight: 600;
 }
 
-.tome-ordered-collection-drag-col,
-.tome-ordered-collection-drag-cell {
+.tome-grouped-database-drag-col,
+.tome-grouped-database-drag-cell {
   width: 2rem;
   padding-inline: 0.25rem;
 }
 
-.tome-ordered-collection-drag-handle {
+.tome-grouped-database-drag-handle {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -46,23 +46,23 @@
   touch-action: none;
 }
 
-.tome-ordered-collection-drag-handle:active {
+.tome-grouped-database-drag-handle:active {
   cursor: grabbing;
 }
 
-.tome-ordered-collection-empty-row td {
+.tome-grouped-database-empty-row td {
   color: var(--tome-muted);
   font-style: italic;
 }
 
-.tome-ordered-collection-drag-overlay {
+.tome-grouped-database-drag-overlay {
   padding: 0.5rem 0.75rem;
   border-radius: 0.375rem;
   background: var(--tome-surface);
   box-shadow: 0 4px 16px rgb(0 0 0 / 0.12);
 }
 
-.tome-ordered-collection-error {
+.tome-grouped-database-error {
   color: #b00020;
 }
 

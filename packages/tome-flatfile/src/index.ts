@@ -104,7 +104,7 @@ export {
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
-  ORDERED_COLLECTIONS_FILENAME,
+  TABLE_PRESENTATION_FILENAME,
   EXTENSIONS_FILENAME,
   NODE_FILE_PATTERN,
   NODE_ID_PATTERN,
@@ -127,7 +127,7 @@ export {
   viewsFilePath,
   tableSchemasFilePath,
   workspaceFilePath,
-  orderedCollectionsFilePath,
+  tablePresentationFilePath,
   extensionsFilePath,
   isNodeId,
   nodeFileName,
@@ -320,15 +320,22 @@ export {
 } from "./table-relation-column";
 
 export {
-  emptyOrderedCollectionsFile,
-  parseOrderedCollectionsFile,
-  serializeOrderedCollectionsFile,
-  ORDERED_COLLECTIONS_FILE_VERSION,
-} from "./ordered-collections-config/ordered-collections-file";
+  emptyTablePresentationFile,
+  parseTablePresentationFile,
+  serializeTablePresentationFile,
+  TABLE_PRESENTATION_FILE_VERSION,
+} from "./table-presentation/table-presentation-file";
+export type {
+  RelationGroupsLayerConfig,
+  RelationScopeLayerConfig,
+  ReorderLayerConfig,
+  TablePresentationComposition,
+  TablePresentationFile,
+} from "./table-presentation/table-presentation-file";
 export {
-  loadOrderedCollectionsFromContent,
-  invalidateOrderedCollectionsCache,
-} from "./ordered-collections-config/load";
+  loadTablePresentationFromContent,
+  invalidateTablePresentationCache,
+} from "./table-presentation/load";
 
 export {
   loadAssociationsFromContent,

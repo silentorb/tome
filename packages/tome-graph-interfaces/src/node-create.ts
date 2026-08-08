@@ -20,6 +20,13 @@ export type CreateNodeLink =
       properties?: Properties;
       /** Set-side or member-side perspective for the row edge; defaults from views. */
       perspective?: string;
+      /** Extra edges from the new node after membership is created. */
+      relations?: Array<{ type: string; targetId: string; properties?: Properties }>;
+      /**
+       * When stamping ordered membership `order`, only consider members that share
+       * these relations (e.g. same Product scope).
+       */
+      orderScopeRelations?: Array<{ type: string; targetId: string }>;
     };
 
 export interface CreateNodeInput {

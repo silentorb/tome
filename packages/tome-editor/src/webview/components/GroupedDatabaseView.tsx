@@ -11,11 +11,8 @@ import {
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { TableRowsQuery } from "tome-graph-interfaces";
-import type {
-  OrderedCollectionGroup,
-  OrderedCollectionViewDetail,
-} from "../../shared/types";
+import type { DatabaseRow, DatabaseRowGroup, DatabaseViewDetail, TableRowsQuery } from "tome-graph-interfaces";
+import { UNASSIGNED_GROUP_ID } from "tome-graph-interfaces";
 import type { EditorApi } from "../api/client";
 import { isProtectedEditorNode } from "../../shared/types";
 import { nodePageHref } from "../node-links";
@@ -27,17 +24,18 @@ import { TableRowActionsCell, type TableRowMoveConfig } from "./TableRowActionsC
 import { renderTableCell } from "./table-cell-render";
 import { TableSearchInput } from "./TableSearchInput";
 import { TableUtilityBar } from "./TableUtilityBar";
+import { TableAddRow, TableAddRowFooter } from "./TableAddRowFooter";
 import { ColumnEditorDialog, type ColumnEditorState } from "./ColumnEditorDialog";
 import { SortableDataColumnHeaders, columnLabelFor, moveColumnOrderItem } from "./SortableDataColumnHeaders";
 import { TableRowsSentinel } from "./TableRowsSentinel";
-import "./ordered-collection-view.css";
+import "./grouped-database-view.css";
 import "./section-data-table.css";
 
-function mergeOrderedGroups(
-  existing: OrderedCollectionGroup[],
-  incoming: OrderedCollectionGroup[],
-): OrderedCollectionGroup[] {
-  const byId = new Map<string, OrderedCollectionGroup>();
+function mergeGroups(
+  existing: DatabaseRowGroup[],
+  incoming: DatabaseRowGroup[],
+): DatabaseRowGroup[] {
+  const byId = new Map<string, DatabaseRowGroup>();
   for (const group of existing) {
     byId.set(group.groupId, { ...group, rows: [...group.rows] });
   }
@@ -47,9 +45,9 @@ function mergeOrderedGroups(
       byId.set(group.groupId, { ...group, rows: [...group.rows] });
       continue;
     }
-    const seen = new Set(prior.rows.map((row) => row.sceneId));
+    const seen = new Set(prior.rows.map((row) => row.nodeId));
     for (const row of group.rows) {
-      if (!seen.has(row.sceneId)) prior.rows.push(row);
+      if (!seen.has(row.nodeId)) prior.rows.push(row);
     }
   }
   const order: string[] = [];
@@ -62,13 +60,12 @@ function mergeOrderedGroups(
   return order.map((id) => byId.get(id)!).filter(Boolean);
 }
 
-interface OrderedCollectionViewProps {
+interface GroupedDatabaseViewProps {
   api: EditorApi;
   nodeId: string;
-  configId: string;
-  view: OrderedCollectionViewDetail;
+  view: DatabaseViewDetail;
   onTabSelect: (tabId: string) => void;
-  onViewChange: (view: OrderedCollectionViewDetail) => void;
+  onViewChange: (view: DatabaseViewDetail) => void;
   onCellUpdated?: () => void;
   onArchiveNode?: (nodeId: string) => Promise<void>;
   onDeleteNode?: (nodeId: string) => Promise<void>;
@@ -76,12 +73,74 @@ interface OrderedCollectionViewProps {
   archiveHubTitle?: string;
 }
 
-interface SortableOrderedRowProps {
-  row: OrderedCollectionGroup["rows"][number];
+function groupDropId(groupId: string): string {
+  return `group:${groupId}`;
+}
+
+function resolveDropTarget(
+  groups: DatabaseRowGroup[],
+  overId: string,
+): { targetGroupId: string; targetIndex: number } | null {
+  if (overId.startsWith("group:")) {
+    const targetGroupId = overId.slice("group:".length);
+    const group = groups.find((entry) => entry.groupId === targetGroupId);
+    return { targetGroupId, targetIndex: group?.rows.length ?? 0 };
+  }
+
+  for (const group of groups) {
+    const index = group.rows.findIndex((row) => row.nodeId === overId);
+    if (index >= 0) {
+      return { targetGroupId: group.groupId, targetIndex: index };
+    }
+  }
+
+  return null;
+}
+
+function flattenGroupRows(groups: DatabaseRowGroup[]): string[] {
+  const ids: string[] = [];
+  for (const group of groups) {
+    for (const row of group.rows) ids.push(row.nodeId);
+  }
+  return ids;
+}
+
+function applyMoveToGroups(
+  groups: DatabaseRowGroup[],
+  memberId: string,
+  targetGroupId: string,
+  targetIndex: number,
+): DatabaseRowGroup[] {
+  const nextGroups = groups.map((group) => ({
+    ...group,
+    rows: [...group.rows],
+  }));
+
+  let movedRow: DatabaseRow | null = null;
+  for (const group of nextGroups) {
+    const index = group.rows.findIndex((row) => row.nodeId === memberId);
+    if (index >= 0) {
+      movedRow = group.rows.splice(index, 1)[0] ?? null;
+      break;
+    }
+  }
+  if (!movedRow) return groups;
+
+  const targetGroup = nextGroups.find((group) => group.groupId === targetGroupId);
+  if (!targetGroup) return groups;
+
+  const safeIndex = Math.max(0, Math.min(targetIndex, targetGroup.rows.length));
+  targetGroup.rows.splice(safeIndex, 0, movedRow);
+  return nextGroups;
+}
+
+interface SortableGroupedProps {
+  row: DatabaseRow;
   groupId: string;
   index: number;
   columns: string[];
-  renderCell: (column: string, row: OrderedCollectionGroup["rows"][number]) => ReactNode;
+  reorderable: boolean;
+  renderCell: (column: string, row: DatabaseRow) => ReactNode;
   renderNameCell: (rowId: string, name: string) => ReactNode;
   rowPageActions?: {
     onArchiveNode: (nodeId: string) => Promise<void>;
@@ -93,44 +152,22 @@ interface SortableOrderedRowProps {
   archiveHubTitle?: string;
 }
 
-function groupDropId(groupId: string): string {
-  return `group:${groupId}`;
-}
-
-function resolveDropTarget(
-  groups: OrderedCollectionGroup[],
-  overId: string,
-): { targetGroupId: string; targetIndex: number } | null {
-  if (overId.startsWith("group:")) {
-    const targetGroupId = overId.slice("group:".length);
-    const group = groups.find((entry) => entry.groupId === targetGroupId);
-    return { targetGroupId, targetIndex: group?.rows.length ?? 0 };
-  }
-
-  for (const group of groups) {
-    const index = group.rows.findIndex((row) => row.sceneId === overId);
-    if (index >= 0) {
-      return { targetGroupId: group.groupId, targetIndex: index };
-    }
-  }
-
-  return null;
-}
-
-function SortableOrderedRow({
+function SortableGroupedRow({
   row,
   groupId,
   index,
   columns,
+  reorderable,
   renderCell,
   renderNameCell,
   rowPageActions,
   protectedNodeIds = [],
   archiveHubTitle,
-}: SortableOrderedRowProps) {
+}: SortableGroupedProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: row.sceneId,
+    id: row.nodeId,
     data: { groupId, index, type: "ordered-row" },
+    disabled: !reorderable,
   });
 
   const style = {
@@ -143,60 +180,41 @@ function SortableOrderedRow({
       ref={setNodeRef}
       style={style}
       className={isDragging ? "is-dragging" : undefined}
-      data-row-id={row.sceneId}
+      data-row-id={row.nodeId}
     >
-      <td className="tome-ordered-collection-drag-cell">
-        <button
-          type="button"
-          className="tome-ordered-collection-drag-handle"
-          aria-label={`Reorder ${row.name}`}
-          {...attributes}
-          {...listeners}
-        >
-          ⋮⋮
-        </button>
-      </td>
+      {reorderable ? (
+        <td className="tome-grouped-database-drag-cell">
+          <button
+            type="button"
+            className="tome-grouped-database-drag-handle"
+            aria-label={`Reorder ${row.name}`}
+            {...attributes}
+            {...listeners}
+          >
+            ⋮⋮
+          </button>
+        </td>
+      ) : null}
       {rowPageActions ? (
         <td className="tome-table-row-actions-col">
-          {!isProtectedEditorNode(row.sceneId, protectedNodeIds) ? (
+          {!isProtectedEditorNode(row.nodeId, protectedNodeIds) ? (
             <TableRowActionsCell
               recordTitle={row.name}
               archiveHubTitle={archiveHubTitle}
-              onArchive={() => rowPageActions.onArchiveNode(row.sceneId)}
-              onRemove={() => rowPageActions.onRemoveNode(row.sceneId)}
-              onDelete={() => rowPageActions.onDeleteNode(row.sceneId)}
-              move={rowPageActions.getMoveConfig?.(row.sceneId)}
+              onArchive={() => rowPageActions.onArchiveNode(row.nodeId)}
+              onRemove={() => rowPageActions.onRemoveNode(row.nodeId)}
+              onDelete={() => rowPageActions.onDeleteNode(row.nodeId)}
+              move={rowPageActions.getMoveConfig?.(row.nodeId)}
             />
           ) : null}
         </td>
       ) : null}
-      <th scope="row">{renderNameCell(row.sceneId, row.name)}</th>
+      <th scope="row">{renderNameCell(row.nodeId, row.name)}</th>
       {columns.map((column) => (
         <td key={column}>{renderCell(column, row)}</td>
       ))}
     </tr>
   );
-}
-
-interface GroupTableProps {
-  group: OrderedCollectionGroup;
-  columns: string[];
-  columnLabels: Record<string, string>;
-  renderCell: (column: string, row: OrderedCollectionGroup["rows"][number]) => ReactNode;
-  renderNameCell: (rowId: string, name: string) => ReactNode;
-  rowPageActions?: {
-    onArchiveNode: (nodeId: string) => Promise<void>;
-    onRemoveNode: (nodeId: string) => Promise<void>;
-    onDeleteNode: (nodeId: string) => Promise<void>;
-    getMoveConfig?: (rowNodeId: string) => TableRowMoveConfig | undefined;
-  };
-  onColumnsReorder?: (nextColumns: string[]) => void | Promise<void>;
-  canManageColumn?: (column: string) => boolean;
-  isRelationColumn?: (column: string) => boolean;
-  onColumnEdit?: (column: string) => void;
-  onColumnDelete?: (column: string) => void | Promise<void>;
-  protectedNodeIds?: readonly string[];
-  archiveHubTitle?: string;
 }
 
 function formatColumnLabel(key: string): string {
@@ -207,16 +225,32 @@ function formatColumnLabel(key: string): string {
     .join(" ");
 }
 
-function columnSortablePrefix(groupId: string): string {
-  return `col:${groupId}:`;
+interface GroupTableProps {
+  group: DatabaseRowGroup;
+  columns: string[];
+  columnLabels: Record<string, string>;
+  reorderable: boolean;
+  renderCell: (column: string, row: DatabaseRow) => ReactNode;
+  renderNameCell: (rowId: string, name: string) => ReactNode;
+  onAddRow: (groupId: string, title: string) => Promise<void>;
+  rowPageActions?: SortableGroupedProps["rowPageActions"];
+  onColumnsReorder?: (nextColumns: string[]) => void | Promise<void>;
+  canManageColumn?: (column: string) => boolean;
+  isRelationColumn?: (column: string) => boolean;
+  onColumnEdit?: (column: string) => void;
+  onColumnDelete?: (column: string) => void | Promise<void>;
+  protectedNodeIds?: readonly string[];
+  archiveHubTitle?: string;
 }
 
 function GroupTable({
   group,
   columns,
   columnLabels,
+  reorderable,
   renderCell,
   renderNameCell,
+  onAddRow,
   rowPageActions,
   onColumnsReorder,
   canManageColumn,
@@ -226,73 +260,85 @@ function GroupTable({
   protectedNodeIds,
   archiveHubTitle,
 }: GroupTableProps) {
-  const itemIds = useMemo(() => group.rows.map((row) => row.sceneId), [group.rows]);
+  const itemIds = useMemo(() => group.rows.map((row) => row.nodeId), [group.rows]);
   const { setNodeRef } = useDroppable({
     id: groupDropId(group.groupId),
     data: { groupId: group.groupId, type: "group" },
+    disabled: !reorderable,
   });
 
   return (
-    <section className="tome-ordered-collection-group">
-      <h3 className="tome-ordered-collection-group-title">{group.title}</h3>
-      <div className="tome-database-table-wrap">
-        <table className="tome-database-table">
-          <thead>
-            <tr>
-              <th scope="col" aria-label="Reorder" className="tome-ordered-collection-drag-col" />
-              {rowPageActions ? (
-                <th scope="col" className="tome-table-row-actions-col" aria-label="Row actions" />
-              ) : null}
-              <th scope="col">Name</th>
-              <SortableDataColumnHeaders
-                columns={columns}
-                columnLabels={columnLabels}
-                formatLabel={formatColumnLabel}
-                renderHeader={(_column, label) => label}
-                reorderable={Boolean(onColumnsReorder)}
-                useDragOverlay={Boolean(onColumnsReorder)}
-                sortableIdPrefix={columnSortablePrefix(group.groupId)}
-                canManageColumn={canManageColumn}
-                isRelationColumn={isRelationColumn}
-                onColumnEdit={onColumnEdit}
-                onColumnDelete={onColumnDelete}
-              />
-            </tr>
-          </thead>
-          <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-            <tbody ref={setNodeRef}>
-              {group.rows.length === 0 ? (
-                <tr className="tome-ordered-collection-empty-row">
-                  <td colSpan={columns.length + 2 + (rowPageActions ? 1 : 0)}>Drop rows here</td>
-                </tr>
-              ) : (
-                group.rows.map((row, index) => (
-                  <SortableOrderedRow
-                    key={row.sceneId}
-                    row={row}
-                    groupId={group.groupId}
-                    index={index}
-                    columns={columns}
-                    renderCell={renderCell}
-                    renderNameCell={renderNameCell}
-                    rowPageActions={rowPageActions}
-                    protectedNodeIds={protectedNodeIds}
-                    archiveHubTitle={archiveHubTitle}
-                  />
-                ))
-              )}
-            </tbody>
-          </SortableContext>
-        </table>
-      </div>
-    </section>
+    <TableAddRow label="New row" onSubmit={(title) => onAddRow(group.groupId, title)}>
+      <section className="tome-grouped-database-group">
+        <h3 className="tome-grouped-database-group-title">{group.title}</h3>
+        <div className="tome-database-table-wrap">
+          <table className="tome-database-table">
+            <thead>
+              <tr>
+                {reorderable ? (
+                  <th scope="col" aria-label="Reorder" className="tome-grouped-database-drag-col" />
+                ) : null}
+                {rowPageActions ? (
+                  <th scope="col" className="tome-table-row-actions-col" aria-label="Row actions" />
+                ) : null}
+                <th scope="col">Name</th>
+                <SortableDataColumnHeaders
+                  columns={columns}
+                  columnLabels={columnLabels}
+                  formatLabel={formatColumnLabel}
+                  renderHeader={(_column, label) => label}
+                  reorderable={Boolean(onColumnsReorder)}
+                  useDragOverlay={Boolean(onColumnsReorder)}
+                  sortableIdPrefix={`col:${group.groupId}:`}
+                  canManageColumn={canManageColumn}
+                  isRelationColumn={isRelationColumn}
+                  onColumnEdit={onColumnEdit}
+                  onColumnDelete={onColumnDelete}
+                />
+              </tr>
+            </thead>
+            <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+              <tbody ref={setNodeRef}>
+                {group.rows.length === 0 ? (
+                  <tr className="tome-grouped-database-empty-row">
+                    <td
+                      colSpan={
+                        columns.length + 1 + (reorderable ? 1 : 0) + (rowPageActions ? 1 : 0)
+                      }
+                    >
+                      {reorderable ? "Drop rows here" : "No rows"}
+                    </td>
+                  </tr>
+                ) : (
+                  group.rows.map((row, index) => (
+                    <SortableGroupedRow
+                      key={row.nodeId}
+                      row={row}
+                      groupId={group.groupId}
+                      index={index}
+                      columns={columns}
+                      reorderable={reorderable}
+                      renderCell={renderCell}
+                      renderNameCell={renderNameCell}
+                      rowPageActions={rowPageActions}
+                      protectedNodeIds={protectedNodeIds}
+                      archiveHubTitle={archiveHubTitle}
+                    />
+                  ))
+                )}
+              </tbody>
+            </SortableContext>
+          </table>
+        </div>
+        <TableAddRowFooter />
+      </section>
+    </TableAddRow>
   );
 }
 
-export function OrderedCollectionView({
+export function GroupedDatabaseView({
   api,
   nodeId,
-  configId,
   view,
   onTabSelect,
   onViewChange,
@@ -301,7 +347,7 @@ export function OrderedCollectionView({
   onDeleteNode,
   protectedNodeIds,
   archiveHubTitle,
-}: OrderedCollectionViewProps) {
+}: GroupedDatabaseViewProps) {
   const [searchQuery, setSearchQuery] = useTableSearch(itemsTableSearchParamKey());
   const [activeRowId, setActiveRowId] = useState<string | null>(null);
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
@@ -312,7 +358,7 @@ export function OrderedCollectionView({
 
   const seed = useMemo(
     () => ({
-      rows: view.groups,
+      rows: view.groups ?? [],
       rowsWindow: view.rowsWindow,
     }),
     [view.groups, view.rowsWindow],
@@ -320,14 +366,10 @@ export function OrderedCollectionView({
 
   const fetchPage = useCallback(
     async (query: TableRowsQuery) => {
-      const next = await api.getOrderedCollectionView(
-        configId,
-        view.tabs.activeTabId,
-        query,
-      );
-      return { rows: next.groups, rowsWindow: next.rowsWindow };
+      const next = await api.getDatabaseView(view.id, view.tabs.activeTabId, query);
+      return { rows: next.groups ?? [], rowsWindow: next.rowsWindow };
     },
-    [api, configId, view.tabs.activeTabId],
+    [api, view.id, view.tabs.activeTabId],
   );
 
   const {
@@ -336,26 +378,29 @@ export function OrderedCollectionView({
     loadingMore,
     sentinelRef,
   } = useWindowedTableRows({
-    seedKey: `${configId}:${view.tabs.activeTabId}`,
+    seedKey: `${view.id}:${view.tabs.activeTabId}`,
     seed,
     q: searchQuery,
     fetchPage,
-    mergeRows: mergeOrderedGroups,
+    mergeRows: mergeGroups,
   });
 
   useEffect(() => {
     setDisplayColumns(view.columns);
   }, [view.columns]);
 
+  const reorderable = Boolean(view.presentation?.reorderable);
+  const presentation = view.presentation;
+
   const handleColumnsReorder = useCallback(
     async (columnOrder: string[]) => {
       setDisplayColumns(columnOrder);
-      await api.patchRelationshipViews(view.typeDatabaseId, view.viewAssociation, {
+      await api.patchRelationshipViews(view.id, view.viewAssociation, {
         properties: columnOrder,
       });
       onCellUpdated?.();
     },
-    [api, onCellUpdated, view.typeDatabaseId, view.viewAssociation],
+    [api, onCellUpdated, view.id, view.viewAssociation],
   );
 
   const canManageColumn = useCallback(
@@ -371,19 +416,6 @@ export function OrderedCollectionView({
     [view.columnDefs],
   );
 
-  const handleColumnEdit = useCallback((key: string) => {
-    setColumnEditorState({ mode: "edit", columnKey: key });
-  }, []);
-
-  const handleColumnDelete = useCallback(
-    async (key: string) => {
-      await api.deleteDatabaseColumn(view.typeDatabaseId, key);
-      setDisplayColumns((current) => current.filter((column) => column !== key));
-      onCellUpdated?.();
-    },
-    [api, onCellUpdated, view.typeDatabaseId],
-  );
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -391,7 +423,7 @@ export function OrderedCollectionView({
   );
 
   const columnLabels = useMemo(() => {
-    if (!view.columnDefs?.length) return undefined;
+    if (!view.columnDefs?.length) return {};
     return Object.fromEntries(view.columnDefs.map((col) => [col.key, col.name]));
   }, [view.columnDefs]);
 
@@ -404,7 +436,7 @@ export function OrderedCollectionView({
               await api.unlinkOutgoingRelationship(
                 rowId,
                 view.memberSidePerspective,
-                view.typeDatabaseId,
+                view.id,
               );
               onCellUpdated?.();
             },
@@ -416,7 +448,7 @@ export function OrderedCollectionView({
                 await api.moveRelationshipConnection({
                   type: view.memberSidePerspective,
                   oldSourceId: rowNodeId,
-                  oldTargetId: view.typeDatabaseId,
+                  oldTargetId: view.id,
                   newSourceId: rowNodeId,
                   newTargetId: selectedId,
                 });
@@ -432,14 +464,14 @@ export function OrderedCollectionView({
       onCellUpdated,
       onDeleteNode,
       view.memberSidePerspective,
-      view.typeDatabaseId,
+      view.id,
     ],
   );
 
   const activeRow = useMemo(() => {
     if (!activeRowId) return null;
     for (const group of windowedGroups) {
-      const row = group.rows.find((entry) => entry.sceneId === activeRowId);
+      const row = group.rows.find((entry) => entry.nodeId === activeRowId);
       if (row) return row;
     }
     return null;
@@ -458,7 +490,7 @@ export function OrderedCollectionView({
   );
 
   const renderCell = useCallback(
-    (column: string, row: OrderedCollectionGroup["rows"][number]) => {
+    (column: string, row: DatabaseRow) => {
       const def = view.columnDefs?.find((col) => col.key === column);
       const value = row.cells[column] ?? "";
 
@@ -471,13 +503,13 @@ export function OrderedCollectionView({
             columnName={def.name}
             allowedTypeIds={def.targetDatabaseId ? [def.targetDatabaseId] : undefined}
             onAdd={async (targetId) => {
-              await api.linkOutgoingRelationship(row.sceneId, {
+              await api.linkOutgoingRelationship(row.nodeId, {
                 type: def.relationType!,
                 targetId,
               });
             }}
             onRemove={async (targetId) => {
-              await api.unlinkOutgoingRelationship(row.sceneId, def.relationType!, targetId);
+              await api.unlinkOutgoingRelationship(row.nodeId, def.relationType!, targetId);
             }}
             onEditingComplete={onCellUpdated}
           />
@@ -490,26 +522,70 @@ export function OrderedCollectionView({
         columnDef: def,
       });
     },
-    [api, onCellUpdated, view.columnDefs, view.typeDatabaseId],
+    [api, onCellUpdated, view.columnDefs],
+  );
+
+  const handleAddRow = useCallback(
+    async (groupId: string, title: string) => {
+      const relations: Array<{ type: string; targetId: string }> = [];
+      const orderScopeRelations: Array<{ type: string; targetId: string }> = [];
+      if (presentation?.scopeRelationType && presentation.scopeId) {
+        relations.push({
+          type: presentation.scopeRelationType,
+          targetId: presentation.scopeId,
+        });
+        orderScopeRelations.push({
+          type: presentation.scopeRelationType,
+          targetId: presentation.scopeId,
+        });
+      }
+      if (
+        presentation?.groupRelationType &&
+        groupId !== UNASSIGNED_GROUP_ID
+      ) {
+        relations.push({
+          type: presentation.groupRelationType,
+          targetId: groupId,
+        });
+      }
+      await api.createDatabaseRow(view.id, {
+        title,
+        view: view.view,
+        relations,
+        orderScopeRelations: orderScopeRelations.length ? orderScopeRelations : undefined,
+      });
+      const next = await api.getDatabaseView(view.id, view.tabs.activeTabId);
+      onViewChange(next);
+    },
+    [api, onViewChange, presentation, view.id, view.tabs.activeTabId, view.view],
   );
 
   const handleRowDragEnd = useCallback(
     async (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveRowId(null);
-      if (!over || active.id === over.id) return;
+      if (!over || active.id === over.id || !reorderable) return;
 
       const target = resolveDropTarget(windowedGroups, String(over.id));
       if (!target) return;
 
+      const nextGroups = applyMoveToGroups(
+        windowedGroups,
+        String(active.id),
+        target.targetGroupId,
+        target.targetIndex,
+      );
+
       setMoveError(null);
       setIsMoving(true);
       try {
-        const nextView = await api.moveOrderedCollection(configId, {
-          scopeId: view.tabs.activeTabId,
-          sceneId: String(active.id),
-          targetGroupId: target.targetGroupId,
-          targetIndex: target.targetIndex,
+        const nextView = await api.reorderDatabaseMembers(view.id, {
+          orderedMemberIds: flattenGroupRows(nextGroups),
+          tabId: view.tabs.activeTabId,
+          groupChange: {
+            memberId: String(active.id),
+            targetGroupId: target.targetGroupId,
+          },
         });
         onViewChange(nextView);
       } catch (err) {
@@ -518,7 +594,7 @@ export function OrderedCollectionView({
         setIsMoving(false);
       }
     },
-    [api, configId, onViewChange, view.tabs.activeTabId, windowedGroups],
+    [api, onViewChange, reorderable, view.id, view.tabs.activeTabId, windowedGroups],
   );
 
   const handleColumnDragEnd = useCallback(
@@ -577,7 +653,7 @@ export function OrderedCollectionView({
   }
 
   return (
-    <div className={`tome-ordered-collection-view${isMoving ? " is-moving" : ""}`}>
+    <div className={`tome-grouped-database-view${isMoving ? " is-moving" : ""}`}>
       <TableUtilityBar
         tabs={view.tabs}
         onTabSelect={onTabSelect}
@@ -593,49 +669,55 @@ export function OrderedCollectionView({
         }
       />
 
-      {moveError ? <div className="tome-ordered-collection-error">{moveError}</div> : null}
+      {moveError ? <div className="tome-grouped-database-error">{moveError}</div> : null}
 
       {hasActiveSearch && rowsWindow.total === 0 ? (
         <div className="tome-database-empty">No rows match “{searchQuery.trim()}”.</div>
       ) : (
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCenter}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
-        onDragCancel={handleDragCancel}
-      >
-        <div className="tome-ordered-collection-groups">
-          {windowedGroups.map((group) => (
-            <GroupTable
-              key={group.groupId}
-              group={group}
-              columns={displayColumns}
-              columnLabels={columnLabels ?? {}}
-              renderCell={renderCell}
-              renderNameCell={renderNameCell}
-              rowPageActions={rowPageActions}
-              onColumnsReorder={handleColumnsReorder}
-              canManageColumn={canManageColumn}
-              isRelationColumn={isRelationColumn}
-              onColumnEdit={handleColumnEdit}
-              onColumnDelete={handleColumnDelete}
-              protectedNodeIds={protectedNodeIds}
-              archiveHubTitle={archiveHubTitle}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+          onDragCancel={handleDragCancel}
+        >
+          <div className="tome-grouped-database-groups">
+            {windowedGroups.map((group) => (
+              <GroupTable
+                key={group.groupId}
+                group={group}
+                columns={displayColumns}
+                columnLabels={columnLabels}
+                reorderable={reorderable}
+                renderCell={renderCell}
+                renderNameCell={renderNameCell}
+                onAddRow={handleAddRow}
+                rowPageActions={rowPageActions}
+                onColumnsReorder={handleColumnsReorder}
+                canManageColumn={canManageColumn}
+                isRelationColumn={isRelationColumn}
+                onColumnEdit={(key) => setColumnEditorState({ mode: "edit", columnKey: key })}
+                onColumnDelete={async (key) => {
+                  await api.deleteDatabaseColumn(view.id, key);
+                  setDisplayColumns((current) => current.filter((column) => column !== key));
+                  onCellUpdated?.();
+                }}
+                protectedNodeIds={protectedNodeIds}
+                archiveHubTitle={archiveHubTitle}
+              />
+            ))}
+          </div>
 
-        <DragOverlay>
-          {activeRow ? (
-            <div className="tome-ordered-collection-drag-overlay">{activeRow.name}</div>
-          ) : activeColumnId ? (
-            <div className="tome-column-drag-overlay">
-              {columnLabelFor(activeColumnId, columnLabels, formatColumnLabel)}
-            </div>
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay>
+            {activeRow ? (
+              <div className="tome-grouped-database-drag-overlay">{activeRow.name}</div>
+            ) : activeColumnId ? (
+              <div className="tome-column-drag-overlay">
+                {columnLabelFor(activeColumnId, columnLabels, formatColumnLabel)}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
       <TableRowsSentinel
         sentinelRef={sentinelRef}
@@ -647,7 +729,7 @@ export function OrderedCollectionView({
       <ColumnEditorDialog
         api={api}
         open={columnEditorState != null}
-        databaseId={view.typeDatabaseId}
+        databaseId={view.id}
         state={columnEditorState}
         columnDefs={view.columnDefs}
         onClose={() => setColumnEditorState(null)}

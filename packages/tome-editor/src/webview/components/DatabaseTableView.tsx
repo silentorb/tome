@@ -21,6 +21,7 @@ import { TableUtilityBar } from "./TableUtilityBar";
 import { ColumnVisibilityMenu } from "./ColumnVisibilityMenu";
 import { ColumnEditorDialog, type ColumnEditorState } from "./ColumnEditorDialog";
 import { TableRowsSentinel } from "./TableRowsSentinel";
+import { GroupedDatabaseView } from "./GroupedDatabaseView";
 import "./database-table-view.css";
 
 interface DatabaseTableViewProps {
@@ -30,6 +31,7 @@ interface DatabaseTableViewProps {
   embedded?: boolean;
   onTabSelect: (tabId: string) => void;
   onTabsUpdated?: () => void;
+  onViewChange?: (view: DatabaseViewDetail) => void;
   onCellUpdated?: () => void;
   onArchiveNode?: (nodeId: string) => Promise<void>;
   onDeleteNode?: (nodeId: string) => Promise<void>;
@@ -46,7 +48,27 @@ function toTableRows(rows: DatabaseRow[]): SectionDataTableRow[] {
   }));
 }
 
-export function DatabaseTableView({
+export function DatabaseTableView(props: DatabaseTableViewProps) {
+  if (props.databaseView.groups) {
+    return (
+      <GroupedDatabaseView
+        api={props.api}
+        nodeId={props.nodeId}
+        view={props.databaseView}
+        onTabSelect={props.onTabSelect}
+        onViewChange={props.onViewChange ?? (() => props.onCellUpdated?.())}
+        onCellUpdated={props.onCellUpdated}
+        onArchiveNode={props.onArchiveNode}
+        onDeleteNode={props.onDeleteNode}
+        protectedNodeIds={props.protectedNodeIds}
+        archiveHubTitle={props.archiveHubTitle}
+      />
+    );
+  }
+  return <FlatDatabaseTableView {...props} />;
+}
+
+function FlatDatabaseTableView({
   api,
   nodeId,
   databaseView,

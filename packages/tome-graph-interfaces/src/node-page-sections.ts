@@ -2,7 +2,6 @@ import type { DatabaseColumnDef, DatabaseViewDetail } from "./database-view";
 import type { NodeDetail } from "./queries";
 import type { NodePageMetadata } from "./node-metadata";
 import type { PropertiesSection } from "./node-type-properties";
-import type { OrderedCollectionViewDetail } from "./ordered-collections";
 import type { TableRowsWindow } from "./table-rows-window";
 
 export interface MarkdownSection {
@@ -13,12 +12,6 @@ export interface MarkdownSection {
 export interface DatabaseTableSection {
   type: "database";
   databaseView: DatabaseViewDetail;
-}
-
-export interface OrderedCollectionSection {
-  type: "ordered-collection";
-  configId: string;
-  view: OrderedCollectionViewDetail;
 }
 
 export interface RelationRow {
@@ -51,7 +44,6 @@ export interface RelationTableSection {
 export type NodeSection =
   | MarkdownSection
   | DatabaseTableSection
-  | OrderedCollectionSection
   | RelationTableSection;
 
 export interface NodePageDetail extends NodeDetail {

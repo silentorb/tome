@@ -1,12 +1,21 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
-import {
-  applyOrderedCollectionMove,
-  getOrderedCollectionView,
-  UNASSIGNED_GROUP_ID,
-} from "../src/ordered-collections";
+import { getDatabaseViewDetail } from "../src/database-view";
+import { createNode } from "../src/node-create";
+import { reorderDatabaseMembers } from "../src/table-presentation/reorder-members";
+import { UNASSIGNED_GROUP_ID } from "tome-graph-interfaces";
 import { getNodePageDetail } from "../src/node-page-sections";
-import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestRelationships, seedTestNode, seedTestViews, seedTestDynamicProperties, seedTestTableSchema, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
+import {
+  createTestContentFixture,
+  destroyTestContentFixture,
+  seedTestCompositeRelationships,
+  seedTestRelationships,
+  seedTestNode,
+  seedTestViews,
+  seedTestDynamicProperties,
+  seedTestTableSchema,
+  TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+} from "../src/content/test-helpers";
 import { VIEWS_FILE_VERSION, projectionTypeForEndpoint } from "tome-flatfile";
 import { firstRelatedNodeId } from "../src/relationship-traverse";
 
@@ -14,7 +23,7 @@ const SCENES_DB = "0000000000000000000000000D";
 const PARTS_DB = "0000000000000000000000000Z";
 const PRODUCTS_DB = "0000000000000000000000000S";
 const CHARACTERS_DB = "00000000000000000000000035";
-const CONFIG_ID = "scenes-by-book";
+const COMPOSITION_ID = "scenes-by-book";
 
 const bookA = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 const bookB = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -25,26 +34,19 @@ const scene2 = "44444444444444444444444444";
 const scene3 = "55555555555555555555555555";
 const character1 = "77777777777777777777777777";
 
-describe("ordered-collections", () => {
-  const fixture = createTestContentFixture("tome-ordered-");
+describe("table-presentation", () => {
+  const fixture = createTestContentFixture("tome-table-presentation-");
 
   seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
   seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
   seedTestNode(fixture, { id: CHARACTERS_DB, properties: typeTableMarkerProperties("Characters") });
-  seedTestTableSchema(
-    fixture,
-    PRODUCTS_DB,
-    [],
-  );
+  seedTestTableSchema(fixture, PRODUCTS_DB, []);
   seedTestTableSchema(fixture, PARTS_DB, []);
   seedTestNode(fixture, {
     id: SCENES_DB,
     properties: typeTableMarkerProperties("Scenes"),
   });
-  seedTestTableSchema(
-    fixture,
-    SCENES_DB,
-    [
+  seedTestTableSchema(fixture, SCENES_DB, [
     {
       key: "product",
       name: "Product",
@@ -76,8 +78,7 @@ describe("ordered-collections", () => {
       association: "000000000000000000000000BA",
     },
     { key: "order", name: "Order", type: "number" },
-  ],
-  );
+  ]);
   seedTestNode(fixture, { id: bookA, properties: { title: "Book A" } });
   seedTestNode(fixture, { id: bookB, properties: { title: "Book B" } });
   seedTestNode(fixture, { id: part1, properties: { title: "Part 1" } });
@@ -179,17 +180,17 @@ describe("ordered-collections", () => {
       {
         nodeId: SCENES_DB,
         association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: CONFIG_ID,
+        generator: COMPOSITION_ID,
       },
       {
         nodeId: PARTS_DB,
         association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: CONFIG_ID,
+        generator: COMPOSITION_ID,
       },
       {
         nodeId: PRODUCTS_DB,
         association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: CONFIG_ID,
+        generator: COMPOSITION_ID,
       },
     ],
   });
@@ -197,37 +198,48 @@ describe("ordered-collections", () => {
 
   const db = () => fixture.ctx.cache;
   const contentDir = () => fixture.ctx.store.contentDir;
+  const view = (tabId?: string) => getDatabaseViewDetail(db(), SCENES_DB, tabId, contentDir());
 
-  test("builds scopes from products that have scenes", () => {
-    const view = getOrderedCollectionView(db(), CONFIG_ID, undefined, contentDir());
-    expect(view?.tabs.items.map((tab) => tab.label)).toEqual(["Book A", "Book B"]);
-    expect(view?.tabs.activeTabId).toBe(bookA);
+  test("scope layer builds tabs from products that have scenes", () => {
+    const detail = view();
+    expect(detail?.tabs.items.map((tab) => tab.label)).toEqual(["Book A", "Book B"]);
+    expect(detail?.tabs.activeTabId).toBe(bookA);
+    expect(detail?.presentation).toMatchObject({
+      compositionId: COMPOSITION_ID,
+      scopeId: bookA,
+      reorderable: true,
+    });
   });
 
-  test("groups scenes by part within active scope", () => {
-    const view = getOrderedCollectionView(db(), CONFIG_ID, bookA, contentDir());
-    expect(view?.groups.map((group) => group.title)).toEqual([
+  test("groups layer partitions scenes by part within the active scope", () => {
+    const detail = view(bookA);
+    expect(detail?.groups?.map((group) => group.title)).toEqual([
       "Part 1",
       "Part 2",
       "Unassigned",
     ]);
-    expect(view?.groups[0]?.rows.map((row) => row.name)).toEqual(["Scene One", "Scene Two"]);
-    expect(view?.columns).toEqual(["solutions", "characters", "location"]);
-    expect(view?.columnDefs?.map((col) => col.key)).toEqual(["solutions", "characters", "location"]);
-    expect(view?.columnDefs?.some((col) => col.key === "status")).toBe(false);
+    expect(detail?.groups?.[0]?.rows.map((row) => row.name)).toEqual(["Scene One", "Scene Two"]);
+    expect(detail?.columns).toEqual(["solutions", "characters", "location"]);
+    expect(detail?.columnDefs?.map((col) => col.key)).toEqual([
+      "solutions",
+      "characters",
+      "location",
+    ]);
+    expect(detail?.columnDefs?.some((col) => col.key === "status")).toBe(false);
 
-    const sceneOne = view?.groups[0]?.rows[0];
+    const sceneOne = detail?.groups?.[0]?.rows[0];
     expect(sceneOne?.cells.characters).toBe("Hero");
     expect(sceneOne?.relationCells?.characters?.[0]?.title).toBe("Hero");
   });
 
-  test("sorts part subsections by order property", () => {
-    const view = getOrderedCollectionView(db(), CONFIG_ID, bookA, contentDir());
-    const partGroups = view?.groups.filter((group) => group.groupId !== UNASSIGNED_GROUP_ID) ?? [];
+  test("group headers sort by group membership order", () => {
+    const detail = view(bookA);
+    const partGroups =
+      detail?.groups?.filter((group) => group.groupId !== UNASSIGNED_GROUP_ID) ?? [];
     expect(partGroups.map((group) => group.title)).toEqual(["Part 1", "Part 2"]);
   });
 
-  test("places scenes without part in Unassigned group", () => {
+  test("members without a group relation land in the Unassigned group", () => {
     const unassigned = "66666666666666666666666666";
     seedTestNode(fixture, { id: unassigned, properties: { title: "Loose Scene" } });
     seedTestRelationships(fixture, [
@@ -237,38 +249,36 @@ describe("ordered-collections", () => {
       { a: unassigned, b: bookA, typeFromA: "Scenes", typeFromB: "Product", associationId: "000000000000000000000000A3", properties: { ordinal: 0 } },
     ]);
 
-    const view = getOrderedCollectionView(db(), CONFIG_ID, bookA, contentDir());
-    const group = view?.groups.find((entry) => entry.groupId === UNASSIGNED_GROUP_ID);
+    const detail = view(bookA);
+    const group = detail?.groups?.find((entry) => entry.groupId === UNASSIGNED_GROUP_ID);
     expect(group?.rows.map((row) => row.name)).toEqual(["Loose Scene"]);
   });
 
-  test("reorders scenes within a part and renumbers order values", () => {
-    const updated = applyOrderedCollectionMove(fixture.ctx, CONFIG_ID, {
-      scopeId: bookA,
-      sceneId: scene2,
-      targetGroupId: part1,
-      targetIndex: 0,
+  test("reorderDatabaseMembers renumbers membership order", () => {
+    const updated = reorderDatabaseMembers(fixture.ctx, SCENES_DB, {
+      orderedMemberIds: [scene2, scene1],
+      tabId: bookA,
     });
 
-    const partGroup = updated?.groups.find((group) => group.groupId === part1);
-    expect(partGroup?.rows.map((row) => row.sceneId)).toEqual([scene2, scene1]);
+    const partGroup = updated?.groups?.find((group) => group.groupId === part1);
+    expect(partGroup?.rows.map((row) => row.nodeId)).toEqual([scene2, scene1]);
 
-    const edge1 = db().getRelationship(`${scene1}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1)}:${SCENES_DB}`);
-    const edge2 = db().getRelationship(`${scene2}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1)}:${SCENES_DB}`);
+    const memberProjection = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1);
+    const edge1 = db().getRelationship(`${scene1}:${memberProjection}:${SCENES_DB}`);
+    const edge2 = db().getRelationship(`${scene2}:${memberProjection}:${SCENES_DB}`);
     expect(edge1?.properties.order).toBe("20");
     expect(edge2?.properties.order).toBe("10");
   });
 
-  test("moves scene to a different part", () => {
-    const updated = applyOrderedCollectionMove(fixture.ctx, CONFIG_ID, {
-      scopeId: bookA,
-      sceneId: scene1,
-      targetGroupId: part2,
-      targetIndex: 0,
+  test("groupChange moves a member to a different group", () => {
+    const updated = reorderDatabaseMembers(fixture.ctx, SCENES_DB, {
+      orderedMemberIds: [scene2, scene1],
+      tabId: bookA,
+      groupChange: { memberId: scene1, targetGroupId: part2 },
     });
 
-    const part2Group = updated?.groups.find((group) => group.groupId === part2);
-    expect(part2Group?.rows.some((row) => row.sceneId === scene1)).toBe(true);
+    const part2Group = updated?.groups?.find((group) => group.groupId === part2);
+    expect(part2Group?.rows.some((row) => row.nodeId === scene1)).toBe(true);
     expect(firstRelatedNodeId(db(), scene1, "000000000000000000000000A4")).toBe(part2);
 
     const entry = fixture.ctx.store
@@ -283,24 +293,50 @@ describe("ordered-collections", () => {
     expect(entry?.b).toBe(part2);
   });
 
-  test("moving to Unassigned removes PART edge", () => {
-    applyOrderedCollectionMove(fixture.ctx, CONFIG_ID, {
-      scopeId: bookA,
-      sceneId: scene2,
-      targetGroupId: UNASSIGNED_GROUP_ID,
-      targetIndex: 0,
+  test("groupChange to Unassigned removes the group relation", () => {
+    reorderDatabaseMembers(fixture.ctx, SCENES_DB, {
+      orderedMemberIds: [scene2, scene1],
+      tabId: bookA,
+      groupChange: { memberId: scene2, targetGroupId: UNASSIGNED_GROUP_ID },
     });
 
     expect(firstRelatedNodeId(db(), scene2, "000000000000000000000000A4")).toBeNull();
   });
 
-  test("Scenes database record page emits ordered-collection section", () => {
+  test("Scenes database page emits a composed database section", () => {
     const detail = getNodePageDetail(db(), SCENES_DB, { tabId: bookA, contentDir: contentDir() });
-    const section = detail?.sections.find((s) => s.type === "ordered-collection");
-    expect(section).toMatchObject({
-      type: "ordered-collection",
-      configId: CONFIG_ID,
+    const section = detail?.sections.find((s) => s.type === "database");
+    expect(section?.type).toBe("database");
+    expect(section?.type === "database" ? section.databaseView.presentation : undefined).
+      toMatchObject({ compositionId: COMPOSITION_ID, scopeId: bookA });
+    expect(
+      section?.type === "database" ? section.databaseView.groups?.map((g) => g.title) : undefined,
+    ).toEqual(["Part 1", "Part 2", "Unassigned"]);
+  });
+
+  test("createDatabaseRow with scope and group relations appears in the target group", () => {
+    const productProjection = projectionTypeForEndpoint("000000000000000000000000A3", 0);
+    const partProjection = projectionTypeForEndpoint("000000000000000000000000A4", 0);
+    const created = createNode(fixture.ctx, {
+      title: "Brand New Scene",
+      link: {
+        kind: "database-row",
+        databaseId: SCENES_DB,
+        relations: [
+          { type: productProjection, targetId: bookA },
+          { type: partProjection, targetId: part1 },
+        ],
+        orderScopeRelations: [{ type: productProjection, targetId: bookA }],
+      },
     });
+    expect(typeof created).not.toBe("string");
+    if (typeof created === "string") return;
+
+    const detail = view(bookA);
+    const partGroup = detail?.groups?.find((group) => group.groupId === part1);
+    expect(partGroup?.rows.some((row) => row.nodeId === created.id)).toBe(true);
+    expect(firstRelatedNodeId(db(), created.id, "000000000000000000000000A3")).toBe(bookA);
+    expect(firstRelatedNodeId(db(), created.id, "000000000000000000000000A4")).toBe(part1);
   });
 
   afterAll(() => {

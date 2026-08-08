@@ -4,7 +4,6 @@ import type { TabItemsPayload } from "../lib/site-types";
 import type { NodeUrlResolver } from "../lib/node-urls";
 import NodeMetadata from "./NodeMetadata.astro";
 import DatabaseSection from "./DatabaseSection.astro";
-import OrderedCollectionSection from "./OrderedCollectionSection.astro";
 import RelationSection from "./RelationSection.astro";
 import { buildSectionsForTab, resolveActiveTabId } from "../lib/node-page";
 import {
@@ -65,18 +64,6 @@ const emptyMarkdown = !prepared.markdown.trim() && !bodyHtml.trim();
         if (section.type === "database") {
           return (
             <DatabaseSection
-              section={section}
-              nodeId={node.id}
-              activeTabId={activeTabId}
-              itemsTabs={node.itemsTabs}
-              pagePath={urls.pagePath}
-              tabPath={urls.tabPath}
-            />
-          );
-        }
-        if (section.type === "ordered-collection") {
-          return (
-            <OrderedCollectionSection
               section={section}
               nodeId={node.id}
               activeTabId={activeTabId}

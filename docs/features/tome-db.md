@@ -156,7 +156,7 @@ Consolidate legacy dual directed edges with `bun scripts/consolidate-relationshi
 - `upsertNode(id, properties)` — create or merge node
 - `listRelationshipsFromSource` / `listRelationshipsToTarget` — query projection table by local perspective type
 - `getNodeDetail` / `getNodePageDetail` — inspection; the latter adds **metadata** and ordered **sections** (markdown, database table, relation tables). Optional `rows` (`limit`/`offset`/`q`/`sorts`) windows multi-row sections for the editor.
-- `getDatabaseViewDetail` / `getOrderedCollectionView` / `getRelationTableSection` — multi-row tables with the same optional window query; responses include `rowsWindow` (see [views.md](./views.md) § Lazy-loaded rows)
+- `getDatabaseViewDetail` / `getRelationTableSection` — multi-row tables with the same optional window query; responses include `rowsWindow` (see [views.md](./views.md) § Lazy-loaded rows)
 - `finalize()` — `PRAGMA optimize` + `VACUUM`
 - Constructor `{ clean: true }` — delete existing file before open
 
@@ -215,7 +215,7 @@ db.close();
 | `packages/tome-db/src/graph-export.ts` | Full graph and Graph Explorer LOD export |
 | `packages/tome-db/src/node-page-sections.ts` | Universal page sections |
 | `packages/tome-db/src/database-view-relations.ts` | Relation-column hydration |
-| `packages/tome-db/src/ordered-collections.ts` | Ordered collection config, view query, move mutation |
+| `packages/tome-db/src/table-presentation/` | Scope / group / reorder layers composed onto database views |
 | `packages/tome-flatfile/src/table-schemas/load.ts` | `table-schemas.json` loader |
 
 ## See also
@@ -223,7 +223,7 @@ db.close();
 - [sets.md](./sets.md) — set trait, type tables, archive hub
 - [schema.md](./schema.md) — workspace model config in `content/model/schema.json`
 - [graph-explorer.md](./graph-explorer.md) — anchor-scoped LOD graph visualization
-- [ordered-collections.md](./ordered-collections.md) — automatic sequence for associations (scenes-first)
+- [table-presentation.md](./table-presentation.md) — scope tabs, row groups, and automatic sequence on Items tables
 - [`../ontology.md`](../ontology.md) — design domain model (storage-agnostic)
 - [`packages/tome-db/AGENTS.md`](../../packages/tome-db/AGENTS.md)
 - [`AGENTS.md`](../../AGENTS.md) — project purpose, terminology, modeling direction

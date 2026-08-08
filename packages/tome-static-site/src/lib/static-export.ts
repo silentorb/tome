@@ -2,14 +2,12 @@ import type { GraphDatabase, CustomTabDefinition, SchemaFile } from "tome-db";
 import {
   getDatabaseViewDetail,
   getNodePageDetail,
-  getOrderedCollectionView,
   type NodePageDetail,
   type NodeSection,
 } from "tome-db";
 import {
   type DatabaseTabPayload,
   type ItemsTabsMeta,
-  type OrderedCollectionTabPayload,
   type SiteNode,
   type StaticNodeSection,
   type TabItemsPayload,
@@ -32,11 +30,9 @@ function defaultSortForTab(
 
 function findItemsSection(
   sections: NodeSection[],
-): Extract<NodeSection, { type: "database" } | { type: "ordered-collection" }> | null {
+): Extract<NodeSection, { type: "database" }> | null {
   for (const section of sections) {
-    if (section.type === "database" || section.type === "ordered-collection") {
-      return section;
-    }
+    if (section.type === "database") return section;
   }
   return null;
 }
@@ -58,76 +54,42 @@ function toStaticSections(
       });
       continue;
     }
-    if (section.type === "ordered-collection") {
-      out.push({
-        type: "ordered-collection",
-        configId: section.configId,
-        view: section.view,
-        defaultSort: defaultSortForTab(
-          section.view.tabs.customDefinitions,
-          section.view.tabs.activeTabId,
-        ),
-      });
-      continue;
-    }
     out.push(section);
   }
   return out;
 }
 
 function buildItemsTabsMeta(
-  itemsSection: Extract<NodeSection, { type: "database" } | { type: "ordered-collection" }>,
+  itemsSection: Extract<NodeSection, { type: "database" }>,
 ): ItemsTabsMeta {
-  if (itemsSection.type === "database") {
-    const { tabs, id } = itemsSection.databaseView;
-    return {
-      items: tabs.items,
-      defaultTabId: tabs.activeTabId,
-      sectionKind: "database",
-      databaseId: id,
-    };
-  }
+  const { tabs, id } = itemsSection.databaseView;
   return {
-    items: itemsSection.view.tabs.items,
-    defaultTabId: itemsSection.view.tabs.activeTabId,
-    sectionKind: "ordered-collection",
-    configId: itemsSection.configId,
-    databaseId: itemsSection.view.typeDatabaseId,
+    items: tabs.items,
+    defaultTabId: tabs.activeTabId,
+    databaseId: id,
   };
 }
 
 function buildExtraTabPayload(
   db: GraphDatabase,
   nodeId: string,
-  itemsTabs: ItemsTabsMeta,
   tabId: string,
   contentDir: string,
 ): TabItemsPayload | null {
-  if (itemsTabs.sectionKind === "database") {
-    const databaseView = getDatabaseViewDetail(db, nodeId, tabId, contentDir);
-    if (!databaseView) return null;
-    return {
-      kind: "database",
-      databaseView: {
-        id: databaseView.id,
-        title: databaseView.title,
-        columns: databaseView.columns,
-        rows: databaseView.rows,
-        columnDefs: databaseView.columnDefs,
-      },
-      defaultSort: defaultSortForTab(databaseView.tabs.customDefinitions, tabId),
-    } satisfies DatabaseTabPayload;
-  }
-  const configId = itemsTabs.configId;
-  if (!configId) return null;
-  const view = getOrderedCollectionView(db, configId, tabId, contentDir);
-  if (!view) return null;
+  const databaseView = getDatabaseViewDetail(db, nodeId, tabId, contentDir);
+  if (!databaseView) return null;
   return {
-    kind: "ordered-collection",
-    configId,
-    view,
-    defaultSort: defaultSortForTab(view.tabs.customDefinitions, tabId),
-  } satisfies OrderedCollectionTabPayload;
+    kind: "database",
+    databaseView: {
+      id: databaseView.id,
+      title: databaseView.title,
+      columns: databaseView.columns,
+      rows: databaseView.rows,
+      columnDefs: databaseView.columnDefs,
+      groups: databaseView.groups,
+    },
+    defaultSort: defaultSortForTab(databaseView.tabs.customDefinitions, tabId),
+  } satisfies DatabaseTabPayload;
 }
 
 export function buildSiteNode(
@@ -141,11 +103,7 @@ export function buildSiteNode(
 
   const itemsSection = findItemsSection(detail.sections);
   const itemsTabs =
-    detail.isTypeTable && itemsSection && itemsSection.type === "database"
-      ? buildItemsTabsMeta(itemsSection)
-      : detail.isTypeTable && itemsSection && itemsSection.type === "ordered-collection"
-        ? buildItemsTabsMeta(itemsSection)
-        : undefined;
+    detail.isTypeTable && itemsSection ? buildItemsTabsMeta(itemsSection) : undefined;
 
   const multiTab = itemsTabs !== undefined && itemsTabs.items.length > 1;
   const urlAlias = readUrlAlias(db.getNode(id)?.properties ?? null) ?? undefined;
@@ -178,7 +136,7 @@ export function buildExtraTabPayloadsAndRoutes(
     const { items, defaultTabId } = node.itemsTabs;
     for (const tab of items) {
       if (tab.id === defaultTabId) continue;
-      const payload = buildExtraTabPayload(db, node.id, node.itemsTabs, tab.id, contentDir);
+      const payload = buildExtraTabPayload(db, node.id, tab.id, contentDir);
       if (!payload) continue;
       const key = tabPayloadKey(node.id, tab.id);
       tabItemsPayloads[key] = payload;

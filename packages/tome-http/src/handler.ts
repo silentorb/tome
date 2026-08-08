@@ -421,6 +421,8 @@ export function createApiHandler(
           title?: string;
           view?: string;
           properties?: Record<string, string>;
+          relations?: Array<{ type: string; targetId: string }>;
+          orderScopeRelations?: Array<{ type: string; targetId: string }>;
         };
         if (typeof payload.title !== "string") {
           return json({ error: "title required" }, 400);
@@ -432,11 +434,45 @@ export function createApiHandler(
             databaseId,
             view: typeof payload.view === "string" ? payload.view : undefined,
             properties: payload.properties,
+            relations: Array.isArray(payload.relations) ? payload.relations : undefined,
+            orderScopeRelations: Array.isArray(payload.orderScopeRelations)
+              ? payload.orderScopeRelations
+              : undefined,
           },
         });
         if (result === "invalid_title") return json({ error: "invalid title" }, 400);
         if (result === "database_not_found") return json({ error: "not found" }, 404);
         return json({ node: result });
+      }
+
+      const reorderMembersMatch =
+        /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/members\/reorder$/i.exec(path);
+      if (reorderMembersMatch && req.method === "PATCH") {
+        const databaseId = reorderMembersMatch[1]!;
+        const payload = (await req.json()) as {
+          orderedMemberIds?: string[];
+          tabId?: string;
+          groupChange?: { memberId?: string; targetGroupId?: string };
+        };
+        if (!Array.isArray(payload.orderedMemberIds)) {
+          return json({ error: "orderedMemberIds required" }, 400);
+        }
+        const groupChange =
+          payload.groupChange &&
+          typeof payload.groupChange.memberId === "string" &&
+          typeof payload.groupChange.targetGroupId === "string"
+            ? {
+                memberId: payload.groupChange.memberId,
+                targetGroupId: payload.groupChange.targetGroupId,
+              }
+            : undefined;
+        const databaseView = db.reorderDatabaseMembers(databaseId, {
+          orderedMemberIds: payload.orderedMemberIds.filter((id) => typeof id === "string"),
+          tabId: typeof payload.tabId === "string" ? payload.tabId : undefined,
+          groupChange,
+        });
+        if (!databaseView) return json({ error: "not found" }, 404);
+        return json({ databaseView });
       }
 
       const databaseRowMatch =
@@ -650,46 +686,6 @@ export function createApiHandler(
         if (error === "not_found") return json({ error: "not found" }, 404);
         if (error === "invalid_value") return json({ error: "invalid value" }, 400);
         return json({ ok: true });
-      }
-
-      const orderedCollectionMatch = /^\/api\/ordered-collections\/([a-z0-9-]+)$/i.exec(path);
-      if (orderedCollectionMatch && req.method === "GET") {
-        const configId = orderedCollectionMatch[1]!;
-        const tab =
-          url.searchParams.get("tab") ??
-          url.searchParams.get("scope") ??
-          undefined;
-        const rows = tableRowsQueryFromSearchParams(url.searchParams);
-        const view = db.getOrderedCollectionView(configId, tab ?? undefined, rows);
-        if (!view) return json({ error: "not found" }, 404);
-        return json({ view });
-      }
-
-      const moveMatch = /^\/api\/ordered-collections\/([a-z0-9-]+)\/move$/i.exec(path);
-      if (moveMatch && req.method === "PATCH") {
-        const configId = moveMatch[1]!;
-        const payload = (await req.json()) as {
-          scopeId?: string;
-          sceneId?: string;
-          targetGroupId?: string;
-          targetIndex?: number;
-        };
-        if (
-          typeof payload.scopeId !== "string" ||
-          typeof payload.sceneId !== "string" ||
-          typeof payload.targetGroupId !== "string" ||
-          typeof payload.targetIndex !== "number"
-        ) {
-          return json({ error: "scopeId, sceneId, targetGroupId, and targetIndex required" }, 400);
-        }
-        const view = db.moveOrderedCollection(configId, {
-          scopeId: payload.scopeId,
-          sceneId: payload.sceneId,
-          targetGroupId: payload.targetGroupId,
-          targetIndex: payload.targetIndex,
-        });
-        if (!view) return json({ error: "not found" }, 404);
-        return json({ view });
       }
 
       if (path === "/api/extensions") {

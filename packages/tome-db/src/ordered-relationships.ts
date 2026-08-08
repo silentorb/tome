@@ -55,9 +55,23 @@ export function maxOrderAtSet(
   setId: string,
   contentDir?: string,
 ): number {
+  return maxOrderAmongMembers(db, setId, null, contentDir);
+}
+
+/**
+ * Max membership order among set members. When `memberFilter` is set, only those
+ * member ids are considered (e.g. members in the active Product scope).
+ */
+export function maxOrderAmongMembers(
+  db: GraphDatabase,
+  setId: string,
+  memberFilter: ReadonlySet<string> | null,
+  contentDir?: string,
+): number {
   const dir = contentDir ?? resolveContentPath();
   let max = -1;
   for (const connection of listOrderedMemberConnections(db, setId, dir)) {
+    if (memberFilter && !memberFilter.has(connection.sourceNodeId)) continue;
     const registry = loadAssociationsFromContent(dir);
     const composite =
       associationIdFromTypeOrProjection(registry, connection.type) ?? connection.type;
@@ -74,6 +88,7 @@ export function stampOrderIfMissing(
   memberId: string,
   props: Properties,
   projectionType?: string,
+  memberFilter?: ReadonlySet<string> | null,
 ): Properties {
   const dir = ctx.store.contentDir;
   const registry = loadAssociationsFromContent(dir);
@@ -83,7 +98,8 @@ export function stampOrderIfMissing(
   if (!composite || !isOrderedTraitComposite(registry, composite)) return props;
   const property = orderedPropertyName(registry.associations[composite]);
   if (property in props) return props;
-  return { ...props, [property]: maxOrderAtSet(ctx.cache, setId, dir) + 1 };
+  const max = maxOrderAmongMembers(ctx.cache, setId, memberFilter ?? null, dir);
+  return { ...props, [property]: max + 1 };
 }
 
 export interface SparseOrderRewriteEdge {

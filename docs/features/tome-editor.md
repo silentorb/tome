@@ -103,13 +103,13 @@ Pointer handlers (click, context menu, drag affordances) **must** cover the **fu
 
 - **New page** (sidebar **New page** or `?view=create`) **must** open a client-only draft page (empty title with placeholder `Untitled`, empty body, URL stays `?view=create`) **without** writing to content. Persistence (`POST /api/nodes`) **must** run only once the title is non-empty and not literally `Untitled`; the draft body (if any) is included in that create. After create, the URL **must** become `?node={id}` and further edits use normal autosave. Navigating away with no persistable title **must** leave nothing on disk. Stored titles **must not** be empty or `Untitled` (`createNode` / title PUT reject those).
 - **Database (IS_A) table add row** — type-table **Items** sections (`section.type === "database"`) **must** offer an inline **New row** control that creates a new type instance and links it via `is_a` (`POST /api/databases/:id/rows`). The new row **must** appear after reload.
-- **Associative relation table link** — many-to-many outgoing relation sections (`addMode: "link-existing"`, e.g. Features, Inspirations, Characters) **must** offer an inline **Link** control that picks an **existing** record (`POST /api/nodes/:id/connections`), scoped by `allowedTargetTypeIds` from `schema.json` when a rule matches. Structural one-to-many relation sections (`addMode: "none"`, e.g. Part) **must not** show a table-level add control; ordered-collection tables are unchanged.
+- **Associative relation table link** — many-to-many outgoing relation sections (`addMode: "link-existing"`, e.g. Features, Inspirations, Characters) **must** offer an inline **Link** control that picks an **existing** record (`POST /api/nodes/:id/connections`), scoped by `allowedTargetTypeIds` from `schema.json` when a rule matches. Structural one-to-many relation sections (`addMode: "none"`, e.g. Part) **must not** show a table-level add control. Grouped Items tables add rows per group (see [table-presentation.md](./table-presentation.md)).
 - Relation table sections appear when the page has at least one outgoing edge for that label **or** when the instance's type table defines a matching `type: relation` column in `table-schemas.json` (editor only; the static site still omits empty relation sections). Every non-protected node page **must** offer **Relate** in the page actions menu (⋯ to the right of the page title) to open a dialog linking the current page to an **existing** target: searchable relationship type (`GET /api/associations`, all types present in data) and searchable target node (`GET /api/nodes/search`, optionally filtered via `GET /api/nodes/:id/relationship-link-options?type=…` from `schema.json`). Linking uses `POST /api/nodes/:id/connections`; the page reloads so new relation sections appear when applicable.
 - Database table **relation columns** (`type: relation` in the table schema) **must** be editable in the UI (link/unlink existing rows via the same connections API).
 
 ### Out of scope (v0.1)
 
-- Editing relationships from the UI beyond: ordered-collection reorder/part moves (see [ordered-collections.md](./ordered-collections.md)), stored type-membership scalars in the Properties section, type-membership link/unlink in the `IS_A` relation table section, **create** flows that mint new IS_A type instances (database add row), **link existing targets** (Relate dialog, includes relation table **Link**, database relation columns), and enum/scalar patches on existing edges
+- Editing relationships from the UI beyond: grouped-table reorder and group moves (see [table-presentation.md](./table-presentation.md)), stored type-membership scalars in the Properties section, type-membership link/unlink in the `IS_A` relation table section, **create** flows that mint new IS_A type instances (database add row), **link existing targets** (Relate dialog, includes relation table **Link**, database relation columns), and enum/scalar patches on existing edges
 - Weighted relationships or typed link metadata in the editor
 
 ## Design rationale
@@ -185,7 +185,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 | Requirement | Primary tests |
 | --- | --- |
 | Database table assembly (`getDatabaseViewDetail`) | `packages/tome-db/tests/database-view.test.ts`, `database-view-relations.test.ts` |
-| Ordered-association part tables | `packages/tome-db/tests/ordered-collections.test.ts` |
+| Composed scope / group / reorder tables | `packages/tome-db/tests/table-presentation.test.ts`, `packages/tome-editor/tests/webview/components/GroupedDatabaseView.test.tsx` |
 | Dynamic computed columns | `packages/tome-db/tests/dynamic-properties/dynamic-properties.test.ts` |
 | Composite relationship traversal | `packages/tome-db/tests/relationship-traverse.test.ts` |
 | Database table UI | `packages/tome-editor/tests/webview/components/DatabaseTableView.test.tsx` |
@@ -233,6 +233,6 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 
 - [tome-db.md](./tome-db.md)
 - [graph-explorer.md](./graph-explorer.md)
-- [ordered-collections.md](./ordered-collections.md)
+- [table-presentation.md](./table-presentation.md)
 - [`../ontology.md`](../ontology.md)
 - [`packages/tome-editor/AGENTS.md`](../../packages/tome-editor/AGENTS.md)

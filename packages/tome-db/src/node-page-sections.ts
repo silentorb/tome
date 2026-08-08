@@ -1,10 +1,6 @@
 import type { GraphDatabase, Relationship } from "tome-sqlite";
 import { getDatabaseViewDetail } from "./database-view";
 import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./property-enums";
-import {
-  getConfigByProvider,
-  getOrderedCollectionView,
-} from "./ordered-collections";
 import { getNodeDetail } from "./queries";
 import { getNodePageMetadata } from "./node-metadata";
 import { buildPropertiesSection } from "./node-type-properties";
@@ -27,8 +23,6 @@ import {
   associationIdFromTypeOrProjection,
   setRoleAssociationForNode,
 } from "tome-flatfile";
-import { generatedProviderId } from "./views/resolve-tabs";
-import { loadViewsFromContent } from "tome-flatfile";
 import { loadTableSchemasFromContent } from "tome-flatfile";
 import type { TableRelationColumn } from "tome-flatfile";
 import { getTableSchema, relationColumns } from "tome-flatfile";
@@ -54,7 +48,6 @@ export type {
   NodePageDetail,
   NodePageMetadata,
   NodeSection,
-  OrderedCollectionSection,
   PropertiesSection,
   RelationRow,
   RelationTableAddMode,
@@ -457,43 +450,20 @@ export function getNodePageDetail(
   if (!node) return null;
 
   const tabId = options?.tabId ?? options?.scopeId ?? options?.databaseView;
-  const views = loadViewsFromContent(contentDir);
   const rowsQuery = options?.rows;
 
   const sections: NodeSection[] = [{ type: "markdown", body: node.body }];
 
   if (node.isTypeTable) {
-    const sectionKey = setRoleAssociationForNode(id, contentDir);
-    const provider = generatedProviderId(views, id, sectionKey);
-    if (provider) {
-      const config = getConfigByProvider(provider, contentDir);
-      if (config) {
-        const orderedView = getOrderedCollectionView(
-          db,
-          config.id,
-          tabId,
-          contentDir,
-          rowsQuery,
-        );
-        if (orderedView) {
-          sections.push({
-            type: "ordered-collection",
-            configId: config.id,
-            view: orderedView,
-          });
-        }
-      }
-    } else {
-      const databaseSection = getDatabaseViewDetail(
-        db,
-        id,
-        tabId,
-        contentDir,
-        rowsQuery,
-      );
-      if (databaseSection) {
-        sections.push({ type: "database", databaseView: databaseSection });
-      }
+    const databaseSection = getDatabaseViewDetail(
+      db,
+      id,
+      tabId,
+      contentDir,
+      rowsQuery,
+    );
+    if (databaseSection) {
+      sections.push({ type: "database", databaseView: databaseSection });
     }
   }
 

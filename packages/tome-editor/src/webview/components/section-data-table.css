@@ -11,8 +11,8 @@
 }
 
 /* Drag column already provides inner spacing; don't pad again on the actions column. */
-.tome-ordered-collection-drag-cell + .tome-table-row-actions-col,
-.tome-ordered-collection-drag-col + .tome-table-row-actions-col {
+.tome-grouped-database-drag-cell + .tome-table-row-actions-col,
+.tome-grouped-database-drag-col + .tome-table-row-actions-col {
   padding-left: 0;
 }
 
@@ -73,7 +73,7 @@
 }
 
 .tome-database-table thead th:hover:not(.tome-table-row-actions-col):not(
-    .tome-ordered-collection-drag-col
+    .tome-grouped-database-drag-col
   ) {
   color: var(--tome-text);
 }

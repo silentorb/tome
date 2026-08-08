@@ -54,14 +54,17 @@ export type {
 } from "./graph-export";
 
 export type {
-  OrderedCollectionConfig,
-  OrderedCollectionsFile,
-  OrderedCollectionScope,
-  OrderedCollectionRow,
-  OrderedCollectionGroup,
-  OrderedCollectionViewDetail,
-  OrderedCollectionMoveParams,
-} from "./ordered-collections";
+  RelationScopeLayerConfig,
+  RelationGroupsLayerConfig,
+  ReorderLayerConfig,
+  TablePresentationComposition,
+  TablePresentationFile,
+  RelationScopeTab,
+  DatabaseRowGroup,
+  DatabaseViewPresentation,
+  ReorderDatabaseMembersParams,
+} from "./table-presentation";
+export { UNASSIGNED_GROUP_ID } from "./table-presentation";
 
 export type {
   WorkspaceQuickLink,
@@ -139,7 +142,6 @@ export type { PropertiesSection } from "./node-type-properties";
 export type {
   MarkdownSection,
   DatabaseTableSection,
-  OrderedCollectionSection,
   RelationRow,
   RelationTableAddMode,
   RelationTableSection,

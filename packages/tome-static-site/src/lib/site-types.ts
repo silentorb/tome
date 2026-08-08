@@ -3,7 +3,6 @@ import type {
   DatabaseRow,
   DatabaseViewDetail,
   NodePageMetadata,
-  OrderedCollectionViewDetail,
   PropertiesSection,
   RelationTableSection,
   ResolvedTab,
@@ -16,8 +15,6 @@ export interface TableSortSpec {
 export interface ItemsTabsMeta {
   items: ResolvedTab[];
   defaultTabId: string;
-  sectionKind: "database" | "ordered-collection";
-  configId?: string;
   databaseId?: string;
 }
 
@@ -27,17 +24,7 @@ export interface StaticDatabaseSection {
   defaultSort?: TableSortSpec;
 }
 
-export interface StaticOrderedCollectionSection {
-  type: "ordered-collection";
-  configId: string;
-  view: OrderedCollectionViewDetail;
-  defaultSort?: TableSortSpec;
-}
-
-export type StaticNodeSection =
-  | StaticDatabaseSection
-  | StaticOrderedCollectionSection
-  | RelationTableSection;
+export type StaticNodeSection = StaticDatabaseSection | RelationTableSection;
 
 export interface SiteNode {
   id: string;
@@ -58,18 +45,14 @@ export interface SiteNode {
 
 export interface DatabaseTabPayload {
   kind: "database";
-  databaseView: Pick<DatabaseViewDetail, "id" | "title" | "columns" | "rows" | "columnDefs">;
+  databaseView: Pick<
+    DatabaseViewDetail,
+    "id" | "title" | "columns" | "rows" | "columnDefs" | "groups"
+  >;
   defaultSort?: TableSortSpec;
 }
 
-export interface OrderedCollectionTabPayload {
-  kind: "ordered-collection";
-  configId: string;
-  view: OrderedCollectionViewDetail;
-  defaultSort?: TableSortSpec;
-}
-
-export type TabItemsPayload = DatabaseTabPayload | OrderedCollectionTabPayload;
+export type TabItemsPayload = DatabaseTabPayload;
 
 export interface TabRoute {
   nodeId: string;

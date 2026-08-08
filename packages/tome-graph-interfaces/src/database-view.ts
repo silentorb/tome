@@ -1,5 +1,9 @@
 import type { RelationLink } from "./relation-link";
 import type { TableRowsWindow } from "./table-rows-window";
+import type {
+  DatabaseRowGroup,
+  DatabaseViewPresentation,
+} from "./table-presentation";
 import type { TableTabsDetail } from "./views";
 
 export interface DatabaseRow {
@@ -55,4 +59,11 @@ export interface DatabaseViewDetail {
   columnDefs?: DatabaseColumnDef[];
   /** Ordered column defs before per-view visibility filtering. */
   allColumnDefs?: DatabaseColumnDef[];
+  /**
+   * When a relation-groups presentation layer is active, rows are partitioned into
+   * subsections. Top-level `rows` remains the flat windowed sequence (same order).
+   */
+  groups?: DatabaseRowGroup[];
+  /** Metadata for scope/group/reorder presentation layers (add-row, DnD). */
+  presentation?: DatabaseViewPresentation;
 }

@@ -161,7 +161,6 @@ export { getNodePageDetail, getRelationTableSection } from "./node-page-sections
 export type {
   DatabaseTableSection,
   MarkdownSection,
-  OrderedCollectionSection,
   NodePageDetail,
   NodeSection,
   RelationRow,
@@ -177,21 +176,20 @@ export type {
   AssociationRuleContext,
   AssociationRuleEntry,
 } from "./association-endpoints";
+export { UNASSIGNED_GROUP_ID } from "tome-graph-interfaces";
 export {
-  applyOrderedCollectionMove,
-  getConfigByProvider,
-  getOrderedCollectionConfigForDatabase,
-  getOrderedCollectionView,
-  UNASSIGNED_GROUP_ID,
-} from "./ordered-collections";
+  getCompositionById,
+  getCompositionForDatabase,
+} from "./table-presentation/load";
+export { buildComposedDatabaseView } from "./table-presentation/compose";
+export { reorderDatabaseMembers } from "./table-presentation/reorder-members";
 export type {
-  OrderedCollectionConfig,
-  OrderedCollectionGroup,
-  OrderedCollectionMoveParams,
-  OrderedCollectionRow,
-  OrderedCollectionScope,
-  OrderedCollectionViewDetail,
-} from "./ordered-collections";
+  TablePresentationComposition,
+  TablePresentationFile,
+  DatabaseRowGroup,
+  DatabaseViewPresentation,
+  ReorderDatabaseMembersParams,
+} from "tome-graph-interfaces";
 export type { TomeWriteContext } from "./content/write-context";
 export {
   mergeNodePropertiesOnContent,
@@ -278,8 +276,8 @@ export {
   loadWorkspaceFromContent,
   loadWorkspace,
   invalidateWorkspaceCache,
-  loadOrderedCollectionsFromContent,
-  invalidateOrderedCollectionsCache,
+  loadTablePresentationFromContent,
+  invalidateTablePresentationCache,
   resolveWorkspace,
   archiveNodeId,
   protectedNodeIds,
@@ -315,12 +313,11 @@ export {
   type QuickLinkError,
 } from "./workspace/quick-links";
 export {
-  parseOrderedCollectionsFile,
-  serializeOrderedCollectionsFile,
-  emptyOrderedCollectionsFile,
-  ORDERED_COLLECTIONS_FILE_VERSION,
+  parseTablePresentationFile,
+  serializeTablePresentationFile,
+  emptyTablePresentationFile,
+  TABLE_PRESENTATION_FILE_VERSION,
 } from "tome-flatfile";
-export type { OrderedCollectionsFile } from "tome-flatfile";
 export {
   resolveCustomTabs,
   resolveCustomTabsForNode,

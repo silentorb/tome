@@ -208,7 +208,7 @@ export const reorderSectionTabs = reorderViews;
 /**
  * Update shared properties on a generated view record, or create/update a default
  * custom view when the association uses custom views and none exist yet.
- * Used by ordered-collection / generated tabs (shared allowlist).
+ * Used by composed / generated tabs (shared allowlist).
  */
 export function updateRelationshipViewProperties(
   store: ContentStore,

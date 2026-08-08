@@ -1,6 +1,6 @@
 /**
  * Remap association registry keys from semantic slugs to ULIDs, and rewrite
- * every content reference (relationships, table-schemas, ordered-collections,
+ * every content reference (relationships, table-schemas, table-presentation,
  * dynamic-properties).
  *
  * Usage:
@@ -13,7 +13,7 @@ import { monotonicFactory } from "ulid";
 import {
   associationsFilePath,
   dynamicPropertiesFilePath,
-  orderedCollectionsFilePath,
+  tablePresentationFilePath,
   relationshipsFilePath,
   tableSchemasFilePath,
   isAssociationId,
@@ -126,29 +126,28 @@ export function migrateAssociationIdsToUlid(contentDir: string): {
     "utf-8",
   );
 
-  const orderedPath = orderedCollectionsFilePath(contentDir);
-  const orderedRaw = JSON.parse(readFileSync(orderedPath, "utf-8")) as {
+  const presentationPath = tablePresentationFilePath(contentDir);
+  const presentationRaw = JSON.parse(readFileSync(presentationPath, "utf-8")) as {
     version: number;
-    configs: Array<Record<string, unknown>>;
+    compositions: Array<Record<string, unknown>>;
   };
-  for (const config of orderedRaw.configs) {
-    for (const field of [
-      "scopeCompositeType",
-      "groupCompositeType",
-      "partProductCompositeType",
-    ] as const) {
-      if (typeof config[field] === "string") {
-        config[field] = remapAssociationRef(
-          config[field] as string,
-          slugToUlid,
-          `ordered-collections.${String(config.id)}.${field}`,
-        );
-      }
+  const layerAssociationFields: Array<[layer: string, field: string]> = [
+    ["scope", "memberToScopeComposite"],
+    ["groups", "memberToGroupComposite"],
+    ["groups", "groupToScopeComposite"],
+  ];
+  for (const composition of presentationRaw.compositions) {
+    for (const [layerKey, field] of layerAssociationFields) {
+      const layer = composition[layerKey] as Record<string, unknown> | undefined;
+      if (!layer || typeof layer[field] !== "string") continue;
+      layer[field] = remapAssociationRef(
+        layer[field] as string,
+        slugToUlid,
+        `table-presentation.${String(composition.id)}.${layerKey}.${field}`,
+      );
     }
   }
-  writeFileSync(orderedPath, `${JSON.stringify(orderedRaw, null, 2)}\n`, "utf-8");
-  // Skip full parseOrderedCollectionsFile here: it loads views/set perspectives and
-  // can fail on cache timing mid-migration. Structural remap is enough.
+  writeFileSync(presentationPath, `${JSON.stringify(presentationRaw, null, 2)}\n`, "utf-8");
 
   const dynamicPath = dynamicPropertiesFilePath(contentDir);
   const dynamicRaw = JSON.parse(readFileSync(dynamicPath, "utf-8")) as {

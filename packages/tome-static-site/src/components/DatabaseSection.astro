@@ -19,12 +19,16 @@ const { databaseView, defaultSort } = section;
 const tableKey = `records/${nodeId}/database/${databaseView.id}/${activeTabId}`;
 const typeNodeId = nodeId === databaseView.id ? null : databaseView.id;
 
-const rows = databaseView.rows.map((row) => ({
+const toDataRow = (row: (typeof databaseView.rows)[number]) => ({
   id: row.nodeId,
   name: row.name,
   cells: row.cells,
   relationCells: row.relationCells,
-}));
+});
+
+const rows = databaseView.rows.map(toDataRow);
+const groups = databaseView.groups;
+const hasGroupedRows = groups?.some((group) => group.rows.length > 0) ?? false;
 ---
 
 <section class="tome-record-section tome-database-section">
@@ -40,7 +44,25 @@ const rows = databaseView.rows.map((row) => ({
       />
     ) : null}
     {
-      rows.length === 0 ? (
+      groups ? (
+        !hasGroupedRows ? (
+          <p class="tome-database-empty">No items in this view.</p>
+        ) : (
+          groups.map((group) => (
+            <div class="tome-database-group">
+              <h3 class="tome-database-group-title">{group.title}</h3>
+              <DataTable
+                tableKey={`${tableKey}/${group.groupId}`}
+                columns={databaseView.columns}
+                rows={group.rows.map(toDataRow)}
+                columnDefs={databaseView.columnDefs}
+                defaultSort={defaultSort}
+                pagePath={pagePath}
+              />
+            </div>
+          ))
+        )
+      ) : rows.length === 0 ? (
         <p class="tome-database-empty">No items in this view.</p>
       ) : (
         <DataTable

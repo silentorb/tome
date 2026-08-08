@@ -139,16 +139,48 @@ export function createNode(
   }
 
   if (input.link?.kind === "database-row") {
-    const { databaseId, properties: rowProps = {}, perspective } = input.link;
+    const {
+      databaseId,
+      properties: rowProps = {},
+      perspective,
+      relations = [],
+      orderScopeRelations = [],
+    } = input.link;
     const memberProjection = memberProjectionForSetLink(ctx, databaseId, perspective);
+
+    let memberFilter: Set<string> | null = null;
+    if (orderScopeRelations.length > 0) {
+      memberFilter = new Set<string>();
+      for (const edge of ctx.cache.listRelationshipsToTarget(databaseId, memberProjection)) {
+        const memberId = edge.sourceNodeId;
+        const matches = orderScopeRelations.every((scopeRel) =>
+          ctx.cache
+            .listRelationshipsFromSource(memberId, scopeRel.type)
+            .some((rel) => rel.targetNodeId === scopeRel.targetId),
+        );
+        if (matches) memberFilter.add(memberId);
+      }
+    }
+
     const relProps = stampOrderIfMissing(
       ctx,
       databaseId,
       id,
       { ...rowProps },
       memberProjection,
+      memberFilter,
     );
     ctx.store.upsertRelationship(id, databaseId, memberProjection, relProps);
+
+    for (const relation of relations) {
+      const nextOrdinal = nextOutgoingOrdinal(ctx, id, relation.type);
+      const linkProps: Properties = { ...(relation.properties ?? {}) };
+      if (nextOrdinal !== undefined && linkProps.ordinal === undefined) {
+        linkProps.ordinal = nextOrdinal;
+      }
+      ctx.store.upsertRelationship(id, relation.targetId, relation.type, linkProps);
+    }
+
     syncAfterRelationshipsWrite(ctx);
   }
 

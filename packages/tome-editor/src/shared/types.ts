@@ -22,7 +22,6 @@ export type {
   NodePageDetail,
   NodePageMetadata,
   NodeSection,
-  OrderedCollectionSection,
   PropertiesSection,
   RelationRow,
   RelationTableSection,
@@ -31,9 +30,6 @@ export type {
 export type {
   NodeDetail,
   NodeSummary,
-  OrderedCollectionGroup,
-  OrderedCollectionRow,
-  OrderedCollectionViewDetail,
   TableTabsDetail,
   ViewSortSpec,
   GraphRelationship,
@@ -42,6 +38,7 @@ export type {
   GraphLodSnapshot,
   DatabaseColumnDef,
   DatabaseRow,
+  DatabaseRowGroup,
   DatabaseViewDetail,
   RelationLink,
 } from "tome-graph-interfaces";

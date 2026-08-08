@@ -30,7 +30,7 @@ Table view configuration for type-table member relationships lives in [`content/
 
 - **`association`**: set-trait association ULID from `associations.json` (not a display label).
 - **Custom views**: require `id`, `name`, `sorts` (array, may be empty).
-- **Generated views**: use `generator` (e.g. `scenes-by-book`); computed at runtime from ordered-collections config.
+- **Generated views**: use `generator` (e.g. `scenes-by-book`); tabs are computed at runtime from the matching composition in [`table-presentation.json`](./table-presentation.md).
 - **`properties`**: optional string array of visible column keys in display order (additive allowlist).
   - Absent → all columns visible, default order.
   - Present → only listed keys are visible, in listed order (unknown keys ignored; missing keys are not appended).
@@ -46,15 +46,15 @@ Table view configuration for type-table member relationships lives in [`content/
 - Column order and visibility for a custom view are updated via `PATCH .../views/:viewId` with `{ properties: string[] }`.
 - Shared properties for a generated association are updated via `PATCH .../associations/:associationId` with `{ properties: string[] }`.
 - Adding a stored column via the UI passes `viewId` so the new key is appended only to the active custom view’s `properties` (when that allowlist already exists). Sibling custom views are unchanged.
-- Generated views (Scenes) switch scope only; no CRUD chrome.
+- Generated views (Scenes) switch scope only; no CRUD chrome. Grouped rows and drag-and-drop for a generated view come from its composition — see [table-presentation.md](./table-presentation.md).
 
 ## Lazy-loaded rows (infinite scroll)
 
 Multi-row Items tables **must not** block page load on the full member set. The editor requests rows in batches (default **`limit=50`**) with **`offset`**, optional name filter **`q`**, and optional **`sorts`** JSON. There is **no paging UI** (no page numbers): the client appends the next batch when the user scrolls the **page shell** (`.tome-main`) near the table sentinel—not an inner table scroll box. Tables size to their loaded rows (natural page height).
 
-- Responses include `rowsWindow: { offset, limit, total, hasMore }` on `DatabaseViewDetail`, `OrderedCollectionViewDetail`, and `RelationTableSection`.
+- Responses include `rowsWindow: { offset, limit, total, hasMore }` on `DatabaseViewDetail` and `RelationTableSection`.
 - Name filter and column sorts are applied **server-side** before slicing. Relation-cell hydration runs for the returned window only (dynamic columns still evaluate over the full set when needed for sort correctness).
-- Endpoints: `GET /api/databases/:id`, `GET /api/ordered-collections/:configId`, `GET /api/nodes/:id/relation-tables/:perspective`, and the multi-row sections embedded in `GET /api/nodes/:id` (editor default limit). Omit `limit` for a full result (static site export).
+- Endpoints: `GET /api/databases/:id`, `GET /api/nodes/:id/relation-tables/:perspective`, and the multi-row sections embedded in `GET /api/nodes/:id` (editor default limit). Omit `limit` for a full result (static site export).
 
 ## Migration
 

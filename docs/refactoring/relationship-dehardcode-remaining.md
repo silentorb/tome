@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Tracks residual relationship-type hardcoding after the critical-path dehardcode work. For how relationships work today, see [tome-db](../features/tome-db.md), [sets](../features/sets.md), and [ordered collections](../features/ordered-collections.md).
+Tracks residual relationship-type hardcoding after the critical-path dehardcode work. For how relationships work today, see [tome-db](../features/tome-db.md), [sets](../features/sets.md), and [table presentation](../features/table-presentation.md).
 
 ---
 
@@ -51,7 +51,7 @@ Relationship type hardcoding is removed from production tome package source when
 - No `membershipComposite` (or equivalent) on `table-schemas.json`
 - Write path is only: **set-trait → table-schema column → registry scan → error**
 - Presentation and link-existing policy read registry traits / perspective labels only
-- Archive, ordered-collections, and SQL cache queries derive set edges from `set` trait
+- Archive, table-presentation, and SQL cache queries derive set edges from `set` trait
 - View payloads carry set/member perspectives so the editor does not invent type names
 
 ---
@@ -62,6 +62,6 @@ Relationship type hardcoding is removed from production tome package source when
 | --- | --- |
 | [tome-db](../features/tome-db.md) | Feature spec |
 | [sets](../features/sets.md) | Set trait semantics |
-| [ordered-collections](../features/ordered-collections.md) | Grouped ordered views |
+| [table-presentation](../features/table-presentation.md) | Scope tabs, row groups, ordered views |
 | [relationship-behaviors/](relationship-behaviors/) | Descriptive inventory (optional reference) |
 | [associations/](associations/) | Superseded includes-collapse-era inventory |

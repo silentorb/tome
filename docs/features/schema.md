@@ -96,5 +96,5 @@ The long-term goal is a **user-configured model**: enums, types, relationship ru
 
 - [tome-db.md](./tome-db.md)
 - [ontology.md](../ontology.md)
-- [ordered-collections.md](./ordered-collections.md)
+- [table-presentation.md](./table-presentation.md)
 - [inspirations.weighted-use.md](../dynamic-properties/inspirations.weighted-use.md)

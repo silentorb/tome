@@ -22,7 +22,7 @@ export const SCHEMA_FILENAME = "schema.json";
 export const VIEWS_FILENAME = "views.json";
 export const TABLE_SCHEMAS_FILENAME = "table-schemas.json";
 export const WORKSPACE_FILENAME = "workspace.json";
-export const ORDERED_COLLECTIONS_FILENAME = "ordered-collections.json";
+export const TABLE_PRESENTATION_FILENAME = "table-presentation.json";
 export const EXTENSIONS_FILENAME = "extensions.json";
 export { NODE_ID_PATTERN, NODE_FILE_PATTERN, isNodeId };
 
@@ -151,8 +151,8 @@ export function workspaceFilePath(contentRoot: string): string {
   return resolve(contentModelDir(contentRoot), WORKSPACE_FILENAME);
 }
 
-export function orderedCollectionsFilePath(contentRoot: string): string {
-  return resolve(contentModelDir(contentRoot), ORDERED_COLLECTIONS_FILENAME);
+export function tablePresentationFilePath(contentRoot: string): string {
+  return resolve(contentModelDir(contentRoot), TABLE_PRESENTATION_FILENAME);
 }
 
 export function extensionsFilePath(contentRoot: string): string {

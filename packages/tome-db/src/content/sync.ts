@@ -14,7 +14,7 @@ import {
   invalidateAssociationsCache,
   invalidateWorkspaceCache,
   loadWorkspaceFromContent,
-  invalidateOrderedCollectionsCache,
+  invalidateTablePresentationCache,
   invalidateExtensionsCache,
   loadAssociationsFromContent,
   setTraitProjectionTypes,
@@ -25,7 +25,7 @@ import {
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
-  ORDERED_COLLECTIONS_FILENAME,
+  TABLE_PRESENTATION_FILENAME,
   EXTENSIONS_FILENAME,
   RELATIONSHIP_FILE_PATTERN,
   dynamicPropertiesFilePath,
@@ -171,7 +171,7 @@ export class CacheSync {
     scanFile(modelDir, SCHEMA_FILENAME);
     scanFile(modelDir, VIEWS_FILENAME);
     scanFile(modelDir, WORKSPACE_FILENAME);
-    scanFile(modelDir, ORDERED_COLLECTIONS_FILENAME);
+    scanFile(modelDir, TABLE_PRESENTATION_FILENAME);
     scanFile(modelDir, EXTENSIONS_FILENAME);
     try {
       for (const id of this.store.listNodeIds()) {
@@ -347,8 +347,8 @@ export class CacheSync {
       return;
     }
 
-    if (relativeName === ORDERED_COLLECTIONS_FILENAME) {
-      invalidateOrderedCollectionsCache();
+    if (relativeName === TABLE_PRESENTATION_FILENAME) {
+      invalidateTablePresentationCache();
       this.updateCacheMarkers();
       return;
     }

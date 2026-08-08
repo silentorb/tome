@@ -63,7 +63,7 @@ export type StoreChangeKind =
   | "dynamic-properties"
   | "views"
   | "workspace"
-  | "ordered-collections"
+  | "table-presentation"
   | "extensions"
   | "table-schemas"
   | "unknown";

@@ -10,6 +10,7 @@ import {
   resolveCustomTabsForNode,
   activeTabName,
   getSectionTabsConfig,
+  generatedProviderId,
 } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "tome-flatfile";
 import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
@@ -32,6 +33,8 @@ import type {
   TableRowsQuery,
   ViewSortSpec,
 } from "tome-graph-interfaces";
+import { getCompositionById } from "./table-presentation/load";
+import { buildComposedDatabaseView } from "./table-presentation/compose";
 
 const ROW_META_KEYS = ORDER_META_KEYS;
 const DEFAULT_SET_SECTION_TITLE = "Contents";
@@ -260,7 +263,11 @@ export function getDatabaseViewDetail(
   const sectionConfig = getSectionTabsConfig(views, databaseId, sectionKey);
 
   if (sectionConfig?.kind === "generated") {
-    return null;
+    const provider = generatedProviderId(views, databaseId, sectionKey);
+    if (!provider) return null;
+    const composition = getCompositionById(provider, dir);
+    if (!composition) return null;
+    return buildComposedDatabaseView(db, composition, requestedTabId, dir, rowsQuery);
   }
 
   return buildCustomViewDetail(

@@ -31,9 +31,6 @@ export function makeMockEditorApi(): EditorApi {
       void tabId;
       return makeDatabaseViewDetail();
     },
-    getOrderedCollectionView: async () => {
-      throw new Error("not implemented in mock");
-    },
     getRelationTable: async () => {
       throw new Error("not implemented in mock");
     },
@@ -128,7 +125,7 @@ export function makeMockEditorApi(): EditorApi {
     getRelationshipLinkOptions: async () => ({ allowedTargetTypeIds: null }),
     getUserSettings: async () => emptyUserSettings(),
     patchUserSettings: async () => emptyUserSettings(),
-    moveOrderedCollection: async () => {
+    reorderDatabaseMembers: async () => {
       throw new Error("not implemented in mock");
     },
     getExtensionsManifest: async () => ({ components: [], editorBundles: [] }),

@@ -1,14 +1,13 @@
 import { useState } from "react";
 import { DatabaseTableView } from "./DatabaseTableView";
 import { TomeEditor } from "./TomeEditor";
-import { OrderedCollectionView } from "./OrderedCollectionView";
 import { PageActionsMenu } from "./PageActionsMenu";
 import { PageTitle } from "./PageTitle";
 import { NodeMetadataPanel } from "./NodeMetadataPanel";
 import { RelationSectionView } from "./RelationSectionView";
 import { AddRelationshipDialog } from "./AddRelationshipDialog";
 import type { EditorApi } from "../api/client";
-import type { OrderedCollectionViewDetail, NodePageDetail } from "../../shared/types";
+import type { DatabaseViewDetail, NodePageDetail } from "../../shared/types";
 import { isProtectedEditorNode } from "../../shared/types";
 import { isDraftNodeId } from "../draft-page";
 import { isEffectivelyEmptyMarkdown, resolvePageTitleAndContent } from "../markdown-body";
@@ -26,7 +25,7 @@ interface NodePageViewProps {
   onEditorBaseline?: (body: string) => void;
   onTitleChange: (title: string) => void;
   onTabSelect: (tabId: string) => void;
-  onOrderedCollectionViewChange: (view: OrderedCollectionViewDetail) => void;
+  onDatabaseViewChange: (view: DatabaseViewDetail) => void;
   onArchiveNode: (nodeId: string) => Promise<void>;
   onUnarchiveNode: (nodeId: string) => Promise<void>;
   onDeleteNode: (nodeId: string) => Promise<void>;
@@ -51,7 +50,7 @@ export function NodePageView({
   onEditorBaseline,
   onTitleChange,
   onTabSelect,
-  onOrderedCollectionViewChange,
+  onDatabaseViewChange,
   onArchiveNode,
   onUnarchiveNode,
   onDeleteNode,
@@ -176,35 +175,7 @@ export function NodePageView({
                   embedded
                   onTabSelect={onTabSelect}
                   onTabsUpdated={onTableCellUpdated}
-                  onCellUpdated={onTableCellUpdated}
-                  onArchiveNode={onArchiveNode}
-                  onDeleteNode={onDeleteNode}
-                  protectedNodeIds={protectedNodeIds}
-                  archiveHubTitle={archiveHubTitle}
-                />
-              </section>
-            );
-          }
-          if (section.type === "ordered-collection") {
-            return (
-              <section
-                key={`ordered-collection-${section.configId}-${section.view.tabs.activeTabId}`}
-                className="tome-record-section"
-              >
-                <SectionTitle
-                  api={api}
-                  title={section.view.sectionTitle}
-                  typeNodeId={
-                    node.id === section.view.typeDatabaseId ? null : section.view.typeDatabaseId
-                  }
-                />
-                <OrderedCollectionView
-                  api={api}
-                  nodeId={node.id}
-                  configId={section.configId}
-                  view={section.view}
-                  onTabSelect={onTabSelect}
-                  onViewChange={onOrderedCollectionViewChange}
+                  onViewChange={onDatabaseViewChange}
                   onCellUpdated={onTableCellUpdated}
                   onArchiveNode={onArchiveNode}
                   onDeleteNode={onDeleteNode}

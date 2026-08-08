@@ -1,5 +1,4 @@
 import {
-  applyOrderedCollectionMove,
   archiveNode as archiveNodeInDb,
   unarchiveNode as unarchiveNodeInDb,
   addWorkspaceQuickLink,
@@ -15,8 +14,8 @@ import {
   createExtensionSqlQueryServices,
   getDatabaseViewDetail,
   getNodePageDetail,
-  getOrderedCollectionView as getOrderedCollectionViewDetail,
   getRelationTableSection,
+  reorderDatabaseMembers as reorderDatabaseMembersInDb,
   DEFAULT_TABLE_ROW_LIMIT,
   loadSchemaFromContent,
   loadAssociationsFromContent,
@@ -44,8 +43,7 @@ import {
   type CreateNodeResult,
   type GraphLodSnapshot,
   type GraphSnapshot,
-  type OrderedCollectionMoveParams,
-  type OrderedCollectionViewDetail,
+  type ReorderDatabaseMembersParams,
   type NodeLifecycleError,
   type SchemaFile,
   type ViewSortSpec,
@@ -154,15 +152,6 @@ function buildGraphServices(
         rows ?? EDITOR_TABLE_ROWS,
       );
     },
-    getOrderedCollectionView(configId: string, tabId?: string, rows?: TableRowsQuery) {
-      return getOrderedCollectionViewDetail(
-        cache,
-        configId,
-        tabId,
-        contentPath,
-        rows ?? EDITOR_TABLE_ROWS,
-      );
-    },
     getRelationTable(nodeId: string, perspective: string, rows?: TableRowsQuery) {
       return getRelationTableSection(cache, nodeId, perspective, {
         contentDir: contentPath,
@@ -240,11 +229,11 @@ function buildGraphServices(
         allowedTargetTypeIds: rule ? [...rule.allowedTargetTypeIds] : null,
       };
     },
-    moveOrderedCollection(
-      configId: string,
-      params: OrderedCollectionMoveParams,
-    ): OrderedCollectionViewDetail | null {
-      return applyOrderedCollectionMove(writeCtx, configId, params);
+    reorderDatabaseMembers(
+      databaseId: string,
+      params: ReorderDatabaseMembersParams,
+    ) {
+      return reorderDatabaseMembersInDb(writeCtx, databaseId, params);
     },
     search(
       query: string,

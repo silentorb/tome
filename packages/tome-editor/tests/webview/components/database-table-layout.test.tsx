@@ -73,7 +73,7 @@ describe("database table layout CSS", () => {
 
   test("column header hover highlight applies to full thead cell", () => {
     expect(sectionTableCss).toMatch(
-      /\.tome-database-table thead th:hover:not\(\.tome-table-row-actions-col\):not\([\s\S]*\.tome-ordered-collection-drag-col[\s\S]*\)[\s\S]*color:\s*var\(--tome-text\)/,
+      /\.tome-database-table thead th:hover:not\(\.tome-table-row-actions-col\):not\([\s\S]*\.tome-grouped-database-drag-col[\s\S]*\)[\s\S]*color:\s*var\(--tome-text\)/,
     );
     expect(sectionTableCss).not.toMatch(/\.tome-table-sort-button:hover/);
   });

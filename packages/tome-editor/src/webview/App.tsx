@@ -14,8 +14,7 @@ import {
   type AppView,
   type DatabaseViewDetail,
   type NodePageDetail,
-  type OrderedCollectionViewDetail,
-} from "../shared/types";
+  } from "../shared/types";
 import {
   anchorFromLocation,
   metadataExpandedFromLocation,
@@ -89,7 +88,6 @@ function viewToQueryParam(view: AppView): string | null {
 function activeTabIdFromNode(node: NodePageDetail): string | undefined {
   for (const section of node.sections) {
     if (section.type === "database") return section.databaseView.tabs.activeTabId;
-    if (section.type === "ordered-collection") return section.view.tabs.activeTabId;
   }
   return undefined;
 }
@@ -613,18 +611,6 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     writeGraphShowRelevanceDiagnostics(value);
   }, []);
 
-  const updateOrderedCollectionView = useCallback((view: OrderedCollectionViewDetail) => {
-    setNode((prev) => {
-      if (!prev) return prev;
-      return {
-        ...prev,
-        sections: prev.sections.map((section) =>
-          section.type === "ordered-collection" ? { ...section, view } : section,
-        ),
-      };
-    });
-  }, []);
-
   const updateDatabaseView = useCallback((databaseView: DatabaseViewDetail) => {
     setNode((prev) => {
       if (!prev) return prev;
@@ -655,25 +641,9 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         return;
       }
 
-      const orderedSection = node.sections.find(
-        (section) => section.type === "ordered-collection",
-      );
-      if (orderedSection?.type === "ordered-collection") {
-        try {
-          const nextView = await api.getOrderedCollectionView(
-            orderedSection.configId,
-            tabId,
-          );
-          updateOrderedCollectionView(nextView);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-        return;
-      }
-
       void loadNode(node.id, { tab: tabId });
     },
-    [api, loadNode, node, setTableTab, syncStandaloneUrl, updateDatabaseView, updateOrderedCollectionView],
+    [api, loadNode, node, setTableTab, syncStandaloneUrl, updateDatabaseView],
   );
 
   const archiveCurrentNode = useCallback(
@@ -843,7 +813,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
             onEditorBaseline={syncEditorBaseline}
             onTitleChange={scheduleSaveTitle}
             onTabSelect={(tabId) => void selectTab(tabId)}
-            onOrderedCollectionViewChange={updateOrderedCollectionView}
+            onDatabaseViewChange={updateDatabaseView}
             onArchiveNode={archiveCurrentNode}
             onUnarchiveNode={unarchiveCurrentNode}
             onDeleteNode={deleteCurrentNode}

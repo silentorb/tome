@@ -1,26 +1,28 @@
 import { describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { OrderedCollectionView } from "../../../src/webview/components/OrderedCollectionView";
+import { GroupedDatabaseView } from "../../../src/webview/components/GroupedDatabaseView";
 import { makeMockEditorApi } from "../test-fixtures/mock-api";
-import type { OrderedCollectionViewDetail } from "../../../src/shared/types";
+import type { DatabaseViewDetail } from "../../../src/shared/types";
 
 const TYPE_DB = "0000000000000000000000000D";
 const SCENE_ID = "scene111111111111111111111111111";
+const BOOK_A = "bookaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 
-const view: OrderedCollectionViewDetail = {
-  configId: "scenes-by-book",
-  typeDatabaseId: TYPE_DB,
-  typeDatabaseTitle: "Scenes",
+const view: DatabaseViewDetail = {
+  id: TYPE_DB,
+  title: "Scenes",
+  view: "TWOLD",
+  views: ["TWOLD", "Fairytale"],
   viewAssociation: "000000000000000000000000A2",
   memberSidePerspective: "000000000000000000000000A2:1",
   sectionTitle: "Contents",
   tabs: {
     kind: "generated",
     items: [
-      { id: "bookaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", label: "TWOLD", kind: "generated" },
+      { id: BOOK_A, label: "TWOLD", kind: "generated" },
       { id: "bookbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", label: "Fairytale", kind: "generated" },
     ],
-    activeTabId: "bookaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    activeTabId: BOOK_A,
   },
   groups: [
     {
@@ -28,7 +30,8 @@ const view: OrderedCollectionViewDetail = {
       title: "Part 1",
       rows: [
         {
-          sceneId: SCENE_ID,
+          rowIndex: 0,
+          nodeId: SCENE_ID,
           name: "Opening",
           cells: { characters: "Hero" },
           relationCells: {
@@ -43,24 +46,40 @@ const view: OrderedCollectionViewDetail = {
       rows: [],
     },
   ],
+  rows: [
+    {
+      rowIndex: 0,
+      nodeId: SCENE_ID,
+      name: "Opening",
+      cells: { characters: "Hero" },
+    },
+  ],
   rowsWindow: { offset: 0, limit: 50, total: 1, hasMore: false },
+  allColumns: ["solutions", "characters", "location"],
   columns: ["solutions", "characters", "location"],
   columnDefs: [
     { key: "solutions", name: "Solutions", type: "relation", relationType: "solutions" },
     { key: "characters", name: "📁 Characters", type: "relation", relationType: "characters" },
     { key: "location", name: "📁 Location", type: "relation", relationType: "location" },
   ],
+  presentation: {
+    compositionId: "scenes-by-book",
+    scopeId: BOOK_A,
+    scopeRelationType: "product:0",
+    groupRelationType: "part:0",
+    groupCompositeType: "part",
+    reorderable: true,
+  },
 };
 
-describe("OrderedCollectionView", () => {
-  test("renders book tabs and schema-driven column headers", () => {
+describe("GroupedDatabaseView", () => {
+  test("renders scope tabs, group headings, and schema-driven column headers", () => {
     const api = makeMockEditorApi();
 
     const { getByRole, getAllByText, queryByRole } = render(
-      <OrderedCollectionView
+      <GroupedDatabaseView
         api={api}
-        nodeId="bookaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        configId="scenes-by-book"
+        nodeId={BOOK_A}
         view={view}
         onTabSelect={() => {}}
         onViewChange={() => {}}
@@ -78,26 +97,27 @@ describe("OrderedCollectionView", () => {
     expect(queryByRole("columnheader", { name: "Status" })).toBeNull();
   });
 
-  test("filters scene rows via server window query", async () => {
+  test("filters grouped rows via the server window query", async () => {
     window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=abc");
-    const getOrderedCollectionView = mock(async (_configId: string, _tabId?: string, query?: { q?: string }) => {
-      expect(query?.q).toBe("opening");
-      return {
-        ...view,
-        groups: [view.groups[0]!],
-        rowsWindow: { offset: 0, limit: 50, total: 1, hasMore: false },
-      };
-    });
+    const getDatabaseView = mock(
+      async (_databaseId: string, _tabId?: string, query?: { q?: string }) => {
+        expect(query?.q).toBe("opening");
+        return {
+          ...view,
+          groups: [view.groups![0]!],
+          rowsWindow: { offset: 0, limit: 50, total: 1, hasMore: false },
+        };
+      },
+    );
     const api = {
       ...makeMockEditorApi(),
-      getOrderedCollectionView,
+      getDatabaseView,
     };
 
     const { getByRole, queryByRole } = render(
-      <OrderedCollectionView
+      <GroupedDatabaseView
         api={api}
-        nodeId="bookaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        configId="scenes-by-book"
+        nodeId={BOOK_A}
         view={view}
         onTabSelect={() => {}}
         onViewChange={() => {}}
@@ -108,29 +128,29 @@ describe("OrderedCollectionView", () => {
       target: { value: "opening" },
     });
 
-    await waitFor(() => expect(getOrderedCollectionView).toHaveBeenCalled());
+    await waitFor(() => expect(getDatabaseView).toHaveBeenCalled());
     expect(getByRole("link", { name: "Opening" })).toBeTruthy();
     expect(queryByRole("heading", { name: "Unassigned", level: 3 })).toBeNull();
     expect(window.location.search).toContain("search_items=opening");
   });
 
-  test("shows empty match message when no scenes match", async () => {
+  test("shows an empty match message when no rows match", async () => {
     window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=abc&search_items=missing");
-    const getOrderedCollectionView = mock(async () => ({
+    const getDatabaseView = mock(async () => ({
       ...view,
       groups: [],
+      rows: [],
       rowsWindow: { offset: 0, limit: 50, total: 0, hasMore: false },
     }));
     const api = {
       ...makeMockEditorApi(),
-      getOrderedCollectionView,
+      getDatabaseView,
     };
 
     const { getByText } = render(
-      <OrderedCollectionView
+      <GroupedDatabaseView
         api={api}
-        nodeId="bookaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        configId="scenes-by-book"
+        nodeId={BOOK_A}
         view={view}
         onTabSelect={() => {}}
         onViewChange={() => {}}
@@ -140,23 +160,67 @@ describe("OrderedCollectionView", () => {
     await waitFor(() => expect(getByText('No rows match “missing”.')).toBeTruthy());
   });
 
+  test("creates a row in a group with scope and group relations", async () => {
+    window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=abc");
+    const createDatabaseRow = mock(async () => ({
+      id: "FFFFFFFFFFFFFFFFFFFFFFFFFF",
+      title: "New Scene",
+    }));
+    const getDatabaseView = mock(async () => view);
+    const onViewChange = mock(() => {});
+    const api = {
+      ...makeMockEditorApi(),
+      createDatabaseRow,
+      getDatabaseView,
+    };
+
+    render(
+      <GroupedDatabaseView
+        api={api}
+        nodeId={BOOK_A}
+        view={view}
+        onTabSelect={() => {}}
+        onViewChange={onViewChange}
+      />,
+    );
+
+    const triggers = screen.getAllByRole("button", { name: "+ New row" });
+    expect(triggers.length).toBeGreaterThanOrEqual(2);
+    fireEvent.click(triggers[0]!);
+    fireEvent.change(screen.getByRole("textbox"), { target: { value: "New Scene" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add" }));
+
+    await waitFor(() =>
+      expect(createDatabaseRow).toHaveBeenCalledWith(TYPE_DB, {
+        title: "New Scene",
+        view: "TWOLD",
+        relations: [
+          { type: "product:0", targetId: BOOK_A },
+          { type: "part:0", targetId: "part1111111111111111111111111111" },
+        ],
+        orderScopeRelations: [{ type: "product:0", targetId: BOOK_A }],
+      }),
+    );
+    await waitFor(() => expect(onViewChange).toHaveBeenCalled());
+  });
+
   test("unlinks rows with memberSidePerspective from the view payload", async () => {
+    window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=abc");
     const unlinkOutgoingRelationship = mock(async () => {});
     const api = {
       ...makeMockEditorApi(),
       unlinkOutgoingRelationship,
     };
-    const customView: OrderedCollectionViewDetail = {
+    const customView: DatabaseViewDetail = {
       ...view,
       viewAssociation: "000000000000000000000000B6",
       memberSidePerspective: "000000000000000000000000B6:1",
     };
 
     render(
-      <OrderedCollectionView
+      <GroupedDatabaseView
         api={api}
-        nodeId="bookaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        configId="scenes-by-book"
+        nodeId={BOOK_A}
         view={customView}
         onTabSelect={() => {}}
         onViewChange={() => {}}

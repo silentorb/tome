@@ -14,11 +14,11 @@ import type { SeedDynamicColumnSetInput, SeedDynamicPropertyInput } from "tome-f
 import { invalidateDynamicPropertiesCache } from "./sync";
 import { invalidateViewsCache } from "tome-flatfile";
 import { invalidateWorkspaceCache } from "tome-flatfile";
-import { invalidateOrderedCollectionsCache } from "tome-flatfile";
+import { invalidateTablePresentationCache } from "tome-flatfile";
 import {
-  serializeOrderedCollectionsFile,
-  type OrderedCollectionsFile,
-  ORDERED_COLLECTIONS_FILE_VERSION,
+  serializeTablePresentationFile,
+  type TablePresentationFile,
+  TABLE_PRESENTATION_FILE_VERSION,
 } from "tome-flatfile";
 import { openContentGraph } from "./sync";
 import type { TomeWriteContext } from "./write-context";
@@ -42,7 +42,7 @@ import {
 import {
   contentModelDir,
   nodeFilePath,
-  orderedCollectionsFilePath,
+  tablePresentationFilePath,
   associationsFilePath,
   workspaceFilePath,
 } from "tome-flatfile";
@@ -115,20 +115,29 @@ export function seedTestWorkspace(
   invalidateWorkspaceCache();
 }
 
-export function defaultTestOrderedCollectionsFile(): OrderedCollectionsFile {
+export function defaultTestTablePresentationFile(): TablePresentationFile {
   return {
-    version: ORDERED_COLLECTIONS_FILE_VERSION,
-    configs: [
+    version: TABLE_PRESENTATION_FILE_VERSION,
+    compositions: [
       {
         id: "scenes-by-book",
         typeDatabaseId: "0000000000000000000000000D",
-        scopeCompositeType: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
-        groupCompositeType: TEST_SCENES_PART_ASSOCIATION_ID,
-        partProductCompositeType: TEST_PRODUCTS_PARTS_ASSOCIATION_ID,
-        groupTypeDatabaseId: "0000000000000000000000000Z",
-        unassignedGroupTitle: "Unassigned",
+        scope: {
+          memberToScopeComposite: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+          excludeColumnKeys: ["product"],
+        },
+        groups: {
+          memberToGroupComposite: TEST_SCENES_PART_ASSOCIATION_ID,
+          groupTypeDatabaseId: "0000000000000000000000000Z",
+          groupToScopeComposite: TEST_PRODUCTS_PARTS_ASSOCIATION_ID,
+          unassignedGroupTitle: "Unassigned",
+          excludeColumnKeys: ["part"],
+        },
+        reorder: {
+          excludeColumnKeys: ["order"],
+        },
         columnViewName: "TWOLD Active",
-        excludedColumnKeys: ["order", "product", "part", "status"],
+        excludeColumnKeys: ["status"],
       },
     ],
   };
@@ -183,7 +192,7 @@ export function writeTestSetAssociations(contentDir: string): void {
   invalidateAssociationsCache();
 }
 
-export function seedDefaultOrderedCollectionTableSchemas(fixture: TestContentFixture): void {
+export function seedDefaultTablePresentationTableSchemas(fixture: TestContentFixture): void {
   const scenesDb = "0000000000000000000000000D";
   const partsDb = "0000000000000000000000000Z";
   const productsDb = "0000000000000000000000000S";
@@ -210,18 +219,18 @@ export function seedDefaultOrderedCollectionTableSchemas(fixture: TestContentFix
   invalidateViewsCache();
 }
 
-export function seedTestOrderedCollections(
+export function seedTestTablePresentation(
   fixture: TestContentFixture,
-  overrides?: Partial<OrderedCollectionsFile>,
+  overrides?: Partial<TablePresentationFile>,
 ): void {
-  const file = { ...defaultTestOrderedCollectionsFile(), ...overrides };
+  const file = { ...defaultTestTablePresentationFile(), ...overrides };
   mkdirSync(contentModelDir(fixture.ctx.store.contentDir), { recursive: true });
   writeFileSync(
-    orderedCollectionsFilePath(fixture.ctx.store.contentDir),
-    serializeOrderedCollectionsFile(file),
+    tablePresentationFilePath(fixture.ctx.store.contentDir),
+    serializeTablePresentationFile(file),
     "utf-8",
   );
-  invalidateOrderedCollectionsCache();
+  invalidateTablePresentationCache();
 }
 
 export function createTestContentFixture(prefix = "tome-content-test-"): TestContentFixture {
@@ -241,8 +250,8 @@ export function createTestContentFixture(prefix = "tome-content-test-"): TestCon
   ctx.store.writeDynamicPropertiesFile(fileFromSeedInputs([], []));
   invalidateDynamicPropertiesCache();
   seedDefaultAssociations(fixture);
-  seedDefaultOrderedCollectionTableSchemas(fixture);
-  seedTestOrderedCollections(fixture);
+  seedDefaultTablePresentationTableSchemas(fixture);
+  seedTestTablePresentation(fixture);
   return fixture;
 }
 

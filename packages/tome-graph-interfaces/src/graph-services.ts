@@ -18,10 +18,6 @@ import type {
 } from "./node-create";
 import type { NodeLifecycleError } from "./node-lifecycle";
 import type { NodePageDetail, RelationTableSection } from "./node-page-sections";
-import type {
-  OrderedCollectionMoveParams,
-  OrderedCollectionViewDetail,
-} from "./ordered-collections";
 import type { NodeSummary } from "./queries";
 import type {
   LinkOutgoingRelationshipError,
@@ -30,6 +26,7 @@ import type {
 } from "./relationship-link-mutations";
 import type { RelationshipPropertyUpdateError } from "./relationship-property-update";
 import type { SchemaFile } from "./schema";
+import type { ReorderDatabaseMembersParams } from "./table-presentation";
 import type { TableRowsQuery } from "./table-rows-window";
 import type {
   ViewDefinition,
@@ -56,11 +53,6 @@ export interface TomeGraphServices {
     tabId?: string,
     rows?: TableRowsQuery,
   ): DatabaseViewDetail | null;
-  getOrderedCollectionView(
-    configId: string,
-    tabId?: string,
-    rows?: TableRowsQuery,
-  ): OrderedCollectionViewDetail | null;
   getRelationTable(
     nodeId: string,
     perspective: string,
@@ -104,10 +96,10 @@ export interface TomeGraphServices {
     sourceId: string,
     type: string,
   ): { allowedTargetTypeIds: string[] | null };
-  moveOrderedCollection(
-    configId: string,
-    params: OrderedCollectionMoveParams,
-  ): OrderedCollectionViewDetail | null;
+  reorderDatabaseMembers(
+    databaseId: string,
+    params: ReorderDatabaseMembersParams,
+  ): DatabaseViewDetail | null;
   search(
     query: string,
     limit?: number,
