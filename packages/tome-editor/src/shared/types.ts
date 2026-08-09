@@ -25,9 +25,6 @@ export type {
   PropertiesSection,
   RelationRow,
   RelationTableSection,
-} from "tome-db";
-
-export type {
   EditorNodePageDetail,
   EditorNodeSection,
   NodeBodyDocument,

@@ -1,6 +1,17 @@
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { resolve } from "node:path";
+import { readdirSync, readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+
+function listFilesRecursive(dir: string): string[] {
+  const out: string[] = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) out.push(...listFilesRecursive(path));
+    else out.push(path);
+  }
+  return out;
+}
 
 describe("webview build", () => {
   test(
@@ -23,6 +34,14 @@ describe("webview build", () => {
 
       expect(result.status).toBe(0);
       expect(result.stderr).not.toContain("bun:sqlite");
+
+      const distDir = join(packageDir, "dist-webview");
+      const bundled = listFilesRecursive(distDir)
+        .filter((path) => path.endsWith(".js") || path.endsWith(".mjs"))
+        .map((path) => readFileSync(path, "utf8"))
+        .join("\n");
+      expect(bundled).not.toContain("bun:sqlite");
+      expect(bundled).not.toContain("tome-sqlite");
     },
     { timeout: 30_000 },
   );

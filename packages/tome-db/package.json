@@ -10,8 +10,10 @@
     "./content/test-helpers": "./src/content/test-helpers.ts",
     "./enum-codec": "./src/enum-codec.ts",
     "./association-label": "./src/association-label.ts",
+    "./document-to-storage-body": "./src/document-to-storage-body.ts",
     "./row-sort-helpers": "./src/row-sort-helpers.ts",
-    "./search-relevance": "./src/search-relevance.ts"
+    "./search-relevance": "./src/search-relevance.ts",
+    "./table-rows-window": "./src/table-rows-window.ts"
   },
   "scripts": {
     "test": "bun test tests"

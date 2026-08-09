@@ -167,9 +167,9 @@ export type {
   RelationTableAddMode,
   RelationTableSection,
 } from "./node-page-sections";
+export { documentToStorageBody } from "./document-to-storage-body";
 export {
   attachPageBlockEditorHtml,
-  documentToStorageBody,
   storageBodyToDocument,
 } from "./node-body-document";
 export type { NodeBodyDocument, NodeBodySegment, EditorNodePageDetail } from "tome-graph-interfaces";

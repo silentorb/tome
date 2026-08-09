@@ -47,6 +47,8 @@ Editor hosts **editor** page-block UI. Server-side extension runtime lives in **
 
 The webview talks to the Bun REST API on `http://127.0.0.1:3847` (proxied as `/api` in dev).
 
+**Do not import the `tome-db` barrel from webview code.** `tome-db` re-exports `tome-sqlite` (`bun:sqlite`), which Vite cannot run in the browser. Use browser-safe subpaths only (`tome-db/document-to-storage-body`, `tome-db/table-rows-window`, `tome-db/association-label`, `tome-db/enum-codec`, `tome-db/row-sort-helpers`, `tome-db/search-relevance`) or types from `tome-graph-interfaces`.
+
 **Data transport:** webview → REST (`tome-http` client via `src/shared/http-client.ts`).
 
 **Link/navigation convention (read [`docs/features/tome-editor.md`](../../../docs/features/tome-editor.md) § Cross-linking):** stored markdown bodies use `./{nodeId}.md`; markdown passed to Milkdown uses `?node=` display hrefs (`prepareEditorMarkdown` / `normalizeEditorBody`). The editor is an **SPA for same-tab hops** (`pushState` + `loadNode` / `hydrateFromLocation`; `popstate` for back/forward). Prefer real `<a href="?node=…">` so right-click / shift-click / middle-click stay native; plain clicks may `preventDefault` via `attachStandaloneChromeNavigation` or `navigateStandaloneNode`. Emulate hard-open on non-anchor controls (`openStandaloneNodeInNewTab` / `openStandaloneNodeInNewWindow`). Milkdown: `editor-link-navigation.ts`. Graph Explorer: `api.navigate`. Helpers: `nodePageHref()` / soft-nav APIs in `src/webview/node-links.ts`.

@@ -1,4 +1,4 @@
 export {
   filterRowsByName,
   matchesTableNameFilter,
-} from "tome-db";
+} from "tome-db/table-rows-window";

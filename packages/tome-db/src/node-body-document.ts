@@ -1,17 +1,11 @@
-import {
-  canonicalNodeMarkdownHref,
-  resolveMarkdownHrefTarget,
-} from "tome-flatfile/markdown-links";
-import {
-  formatDynamicNodeLink,
-} from "tome-flatfile/dynamic-node-links";
+import { resolveMarkdownHrefTarget } from "tome-flatfile/markdown-links";
 import { NODE_ID_RE_SRC } from "tome-flatfile/node-id";
-import {
-  parsePageBlockFences,
-  serializePageBlock,
-} from "tome-interfaces/page-block";
+import { parsePageBlockFences } from "tome-interfaces/page-block";
 import type { NodeBodyDocument, NodeBodySegment } from "tome-graph-interfaces";
 import type { GraphDatabase } from "tome-sqlite";
+import { documentToStorageBody } from "./document-to-storage-body";
+
+export { documentToStorageBody };
 
 const DYNAMIC_LINK = new RegExp(`\\[\\[(${NODE_ID_RE_SRC})\\]\\]`);
 const MD_LINK = /\[([^\]]*)\]\(([^)]+)\)/;
@@ -155,24 +149,6 @@ export function storageBodyToDocument(
     }
   });
   return { segments };
-}
-
-/** Structured document → storage markdown. */
-export function documentToStorageBody(document: NodeBodyDocument): string {
-  return document.segments
-    .map((segment) => {
-      switch (segment.type) {
-        case "prose":
-          return segment.markdown;
-        case "dynamic_link":
-          return formatDynamicNodeLink(segment.nodeId);
-        case "static_link":
-          return `[${segment.label}](${canonicalNodeMarkdownHref(segment.nodeId)})`;
-        case "page_block":
-          return serializePageBlock(segment.componentId, segment.data);
-      }
-    })
-    .join("");
 }
 
 export async function attachPageBlockEditorHtml(

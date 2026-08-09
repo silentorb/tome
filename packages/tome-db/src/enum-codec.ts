@@ -1,4 +1,4 @@
-import type { Properties } from "tome-sqlite";
+import type { Properties } from "tome-graph-interfaces";
 import { resolvePropertyEnum } from "tome-flatfile/property-enums-core";
 import type { EnumDefinition, SchemaFile } from "tome-flatfile/schema-file";
 

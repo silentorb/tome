@@ -1,4 +1,4 @@
-import { documentToStorageBody } from "tome-db";
+import { documentToStorageBody } from "tome-db/document-to-storage-body";
 import type { NodeBodyDocument } from "tome-graph-interfaces";
 import { isPersistableNodeTitle } from "../shared/types";
 import { stripLeadingTitleHeading } from "./markdown-body";

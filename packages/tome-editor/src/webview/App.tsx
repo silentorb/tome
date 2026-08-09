@@ -8,7 +8,7 @@ import { createEditorApi } from "./api/client";
 import { UserSettingsProvider, useUserSettings } from "./hooks/useUserSettings";
 import { nodeTableTabKey } from "../shared/user-settings";
 import type { GetNodeOptions } from "../shared/http-client";
-import { documentToStorageBody } from "tome-db";
+import { documentToStorageBody } from "tome-db/document-to-storage-body";
 import {
   isPersistableNodeTitle,
   standaloneNodeUrl,
