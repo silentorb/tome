@@ -33,6 +33,8 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Schema diagram (Mermaid ER meta-model) | [schema-diagram.md](./schema-diagram.md) |
 | Imp → Tome SQL binder | [tome-imp-sql.md](./tome-imp-sql.md) |
 | Imp query page block | [tome-query.md](./tome-query.md) |
+| Relative event sequencing (timeline) | [tome-sequencing.md](./tome-sequencing.md) |
+| Sequencing constraint resolution | [tome-sequencing-resolution.md](./tome-sequencing-resolution.md) |
 
 ## Split of concerns
 

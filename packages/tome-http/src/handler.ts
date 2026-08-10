@@ -714,7 +714,8 @@ export function createApiHandler(
         if (!bundle) return json({ error: "not found" }, 404);
         return new Response(bundle, {
           headers: {
-            "Content-Type": "application/javascript",
+            // ESM dynamic import() is picky about JS MIME in some browsers.
+            "Content-Type": "text/javascript; charset=utf-8",
             "Cache-Control": "no-store",
             "Access-Control-Allow-Origin": "*",
           },

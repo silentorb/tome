@@ -26,6 +26,7 @@ import {
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
   TABLE_PRESENTATION_FILENAME,
+  SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
   RELATIONSHIP_FILE_PATTERN,
   dynamicPropertiesFilePath,
@@ -172,6 +173,7 @@ export class CacheSync {
     scanFile(modelDir, VIEWS_FILENAME);
     scanFile(modelDir, WORKSPACE_FILENAME);
     scanFile(modelDir, TABLE_PRESENTATION_FILENAME);
+    scanFile(modelDir, SEQUENCING_FILENAME);
     scanFile(modelDir, EXTENSIONS_FILENAME);
     try {
       for (const id of this.store.listNodeIds()) {

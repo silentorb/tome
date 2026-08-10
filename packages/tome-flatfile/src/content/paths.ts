@@ -23,6 +23,7 @@ export const VIEWS_FILENAME = "views.json";
 export const TABLE_SCHEMAS_FILENAME = "table-schemas.json";
 export const WORKSPACE_FILENAME = "workspace.json";
 export const TABLE_PRESENTATION_FILENAME = "table-presentation.json";
+export const SEQUENCING_FILENAME = "sequencing.json";
 export const EXTENSIONS_FILENAME = "extensions.json";
 export { NODE_ID_PATTERN, NODE_FILE_PATTERN, isNodeId };
 
@@ -153,6 +154,10 @@ export function workspaceFilePath(contentRoot: string): string {
 
 export function tablePresentationFilePath(contentRoot: string): string {
   return resolve(contentModelDir(contentRoot), TABLE_PRESENTATION_FILENAME);
+}
+
+export function sequencingFilePath(contentRoot: string): string {
+  return resolve(contentModelDir(contentRoot), SEQUENCING_FILENAME);
 }
 
 export function extensionsFilePath(contentRoot: string): string {

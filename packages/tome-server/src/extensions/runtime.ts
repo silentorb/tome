@@ -22,6 +22,7 @@ import {
   prepareEditorBodyWithPageBlocks,
   renderPageBlockHtmlForEditor,
 } from "./page-block-markdown";
+import { buildEditorBundleInSubprocess } from "./build-editor-bundle";
 import { resolveExtensionModulePath } from "./resolve-extension-module";
 import { editorBundleWatchRoot, maxSourceMtimeMs } from "./editor-bundle-mtime";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
@@ -73,6 +74,18 @@ async function importServerModule(modulePath: string, host: ServerPageBlockHostI
   register(host);
 }
 
+/** Serialize Bun.build across extensions — concurrent builds are flaky in long-lived server processes. */
+let editorBuildChain: Promise<unknown> = Promise.resolve();
+
+function enqueueEditorBuild<T>(fn: () => Promise<T>): Promise<T> {
+  const run = editorBuildChain.then(fn, fn);
+  editorBuildChain = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
 export class ExtensionServerRuntime {
   readonly #contentPath: string;
   readonly #getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined;
@@ -120,8 +133,9 @@ export class ExtensionServerRuntime {
   async ensureLoaded(): Promise<void> {
     const mtime = this.configMtime();
     if (mtime === this.#lastConfigMtime) return;
-    this.#lastConfigMtime = mtime;
+    // Only advance mtime after a successful reload so a failed load can retry.
     await this.reload();
+    this.#lastConfigMtime = mtime;
   }
 
   async reload(): Promise<void> {
@@ -135,6 +149,7 @@ export class ExtensionServerRuntime {
     this.#loadedModules = [];
 
     const loadedHtmlExtensionIds = new Set<string>();
+    const loadErrors: string[] = [];
     for (const extension of this.#manifest.extensions) {
       const record: LoadedExtensionModules = {
         extensionId: extension.id,
@@ -144,15 +159,32 @@ export class ExtensionServerRuntime {
       };
       this.#loadedModules.push(record);
 
-      if (extension.editorModule) {
-        await importEditorModule(extension.editorModule, this.#editorHost);
+      try {
+        if (extension.editorModule) {
+          await importEditorModule(extension.editorModule, this.#editorHost);
+        }
+        if (extension.htmlModule && !loadedHtmlExtensionIds.has(extension.id)) {
+          loadedHtmlExtensionIds.add(extension.id);
+          await importHtmlModule(extension.htmlModule, this.#htmlHost);
+        }
+        if (extension.serverModule) {
+          await importServerModule(extension.serverModule, this.#serverHost);
+        }
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        loadErrors.push(`${extension.id}: ${message}`);
+        console.error(`[tome-server] Failed to load extension ${extension.id}:`, err);
       }
-      if (extension.htmlModule && !loadedHtmlExtensionIds.has(extension.id)) {
-        loadedHtmlExtensionIds.add(extension.id);
-        await importHtmlModule(extension.htmlModule, this.#htmlHost);
-      }
-      if (extension.serverModule) {
-        await importServerModule(extension.serverModule, this.#serverHost);
+    }
+    if (loadErrors.length > 0 && this.#manifest.extensions.length > 0) {
+      const loadedAny = this.#manifest.components.some(
+        (c) =>
+          this.#editorHost.get(c.implementationId) ||
+          this.#htmlHost.get(c.implementationId) ||
+          this.#serverHost.get(c.implementationId),
+      );
+      if (!loadedAny) {
+        throw new Error(`All extensions failed to load:\n${loadErrors.join("\n")}`);
       }
     }
   }
@@ -242,44 +274,19 @@ export class ExtensionServerRuntime {
     entrypoint: string,
     sourceMtimeMs: number,
   ): Promise<string | null> {
-    let result: Awaited<ReturnType<typeof Bun.build>>;
-    try {
-      result = await Bun.build({
-        entrypoints: [entrypoint],
-        target: "browser",
-        format: "esm",
-        define: {
-          "process.env.NODE_ENV": '"production"',
-        },
-        jsx: {
-          runtime: "automatic",
-          importSource: "react",
-          development: false,
-        },
-        external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
-      });
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : String(err);
-      throw new Error(`Bun.build threw for ${extensionId} (${entrypoint}): ${message}`);
+    return enqueueEditorBuild(() => this.#buildEditorModuleUnlocked(extensionId, entrypoint, sourceMtimeMs));
+  }
+
+  async #buildEditorModuleUnlocked(
+    extensionId: string,
+    entrypoint: string,
+    sourceMtimeMs: number,
+  ): Promise<string | null> {
+    const built = await buildEditorBundleInSubprocess(extensionId, entrypoint);
+    if (!built.ok) {
+      throw new Error(`Bun.build failed for ${extensionId} (${entrypoint}): ${built.error}`);
     }
-    if (!result.success || result.outputs.length === 0) {
-      throw new Error(
-        result.logs.map((log) => log.message).join("\n") || "Failed to bundle editor extension",
-      );
-    }
-    // Prefer the JS entry; CSS assets (e.g. @xyflow) are separate BuildArtifacts.
-    const jsOutput =
-      result.outputs.find((output) => output.kind === "entry-point") ??
-      result.outputs.find((output) => output.path.endsWith(".js")) ??
-      result.outputs[0]!;
-    const js = await jsOutput.text();
-    const cssParts: string[] = [];
-    for (const output of result.outputs) {
-      if (output === jsOutput) continue;
-      if (output.type.startsWith("text/css") || output.path.endsWith(".css")) {
-        cssParts.push(await output.text());
-      }
-    }
+    const { js, css: cssParts } = built;
     const bundle =
       cssParts.length === 0
         ? js

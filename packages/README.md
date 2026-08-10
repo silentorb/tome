@@ -19,6 +19,9 @@ Each subdirectory is a **workspace package** in the Tome monorepo. Packages are 
 | [`tome-spatial-graph`](./tome-spatial-graph/) | Compound spatial graph page block (cytoscape SVG) |
 | [`tome-imp-sql`](./tome-imp-sql/) | Imp → Tome SQL schema/registry binder (above tome-db) |
 | [`tome-query`](./tome-query/) | Imp-backed custom table page block (React Flow → SQL) |
+| [`tome-sequencing-interfaces`](./tome-sequencing-interfaces/) | Shared sequencing domain types |
+| [`tome-sequencing-resolution`](./tome-sequencing-resolution/) | Relative chronology constraint resolution |
+| [`tome-sequencing`](./tome-sequencing/) | Timeline page block (Imp query + visx) |
 | [`tome-functional-tests`](./tome-functional-tests/) | Cross-package functional tests (dev-only; not a runtime library) |
 
 ```mermaid

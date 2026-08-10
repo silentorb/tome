@@ -39,6 +39,15 @@ For HTTP use-case / no client fan-out rules, read [`web-api-design.md`](./web-ap
 - Database table sections on type-table nodes **must** use tab definitions from [`views.json`](./views.md): **custom** tabs (name + sorts, editable in UI) or **generated** tabs (e.g. Scenes book scope via `scenes-by-book`). Column typing comes from [`table-schemas.json`](./table-schemas.md). Optional per-view **`properties`** allowlist in `views.json` controls visible columns and order; users can drag column headers to reorder and toggle visibility (persisted on the active custom view, or shared on a generated record). Stored columns **must** be addable/editable/deletable in the UI via **+ Column** and the column header context menu (`POST`/`PATCH`/`DELETE` `/api/databases/:id/columns…`); dynamic columns stay read-only.
 - Database table **relation columns** (`type: relation` in the table schema) **must** be editable in the UI: the cell shows a compact summary (max width `14rem`, ~6 lines) of **inline wrapping navigable links** (outline page icon prefix, off-white text—not pill badges) for visible records, with overflow as `N+` when more links exist. Links use `<a href="?node=…">` (same-tab SPA navigation; hard open via modifiers / context menu). An **edit control** in a fixed column immediately right of the links box (shown on cell hover or focus) opens a popup listing all links (remove per row) plus a searchable add control (filtered by the relation property’s target database when `config.database_id` is present). Linking uses `POST /api/nodes/:rowId/connections`; unlinking uses `DELETE /api/nodes/:rowId/connections/:label/:targetId`. Relation scope is inferred from the row's `is_a` membership in the table database (see [tome-db.md](./tome-db.md)).
 
+### View settings control
+
+For panels and canvases that expose **view/visualization toggles** (not page content edits), use a **settings gear / cog** control rather than a text “View options” button:
+
+- Place the control in the **upper-right** of the panel chrome when that is the natural corner for overlay controls.
+- Trigger is an icon button (⚙ or equivalent) with `aria-label` / `title` naming the surface (e.g. “Graph settings”, “Timeline settings”).
+- The menu holds checkboxes / selects for display options; prefer **session UI state** unless the feature already persists preferences (Graph Explorer uses `localStorage`).
+- Reference implementations: Graph Explorer (`GraphView` settings), sequencing timeline (`tome-sequencing` settings).
+
 ### Cross-linking and navigation links
 
 The editor is an **SPA for same-tab navigation**. Unmodified primary clicks soft-navigate via `history.pushState` + in-session load (`navigateStandaloneNode` / `hydrateFromLocation`); they **must not** full-reload the document. Browser back/forward use `popstate` to re-hydrate from the URL. The static site remains the classic multi-page surface.

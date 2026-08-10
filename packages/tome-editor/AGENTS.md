@@ -15,6 +15,10 @@ Browser editor for design corpus nodes. **Client-only** — talks to `tome-serve
 
 The editor is **dark-first** and uses the **Midnight** theme from `tome-theme-midnight` (`import "tome-theme-midnight/tokens"` in `main.tsx`). Milkdown loads `frame-dark.css`; code blocks use Crepe’s One Dark CodeMirror theme. New UI should use `--tome-*` tokens (add tokens to `tome-theme-midnight/src/tokens.css` rather than hardcoding colors). Editor shell and interactive overrides live in `src/webview/styles.css` and component CSS.
 
+## View settings control
+
+View/visualization toggles use a **⚙ gear** in the upper-right (not a “View options” text button). See [`docs/features/tome-editor.md`](../../../docs/features/tome-editor.md) § View settings control. Reference: Graph Explorer `GraphView`, sequencing timeline.
+
 ## Interaction targets
 
 Pointer handlers **must** match the **full visual box** (header cell, tab, row), not shrink-wrapped label text. Avoid `onContextMenu` / `onClick` on `inline-flex` wrappers inside padded table cells.

@@ -5,6 +5,8 @@
   "type": "module",
   "exports": {
     "./config": "./src/config.ts",
+    "./execute": "./src/execute.ts",
+    "./query-editor": "./src/query-editor.tsx",
     "./editor": "./src/editor.tsx",
     "./html": "./src/html.ts",
     "./server": "./src/server.ts"

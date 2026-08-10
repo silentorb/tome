@@ -64,6 +64,7 @@ export type StoreChangeKind =
   | "views"
   | "workspace"
   | "table-presentation"
+  | "sequencing"
   | "extensions"
   | "table-schemas"
   | "unknown";

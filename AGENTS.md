@@ -18,6 +18,9 @@
 | `packages/tome-interfaces/` | Extension / page-block integration contracts |
 | `packages/tome-imp-sql/` | Imp → Tome SQL schema/registry binder (above tome-db) |
 | `packages/tome-query/` | Imp-backed custom table page block (React Flow → SQL) |
+| `packages/tome-sequencing-interfaces/` | Shared sequencing domain types |
+| `packages/tome-sequencing-resolution/` | Relative chronology constraint resolution |
+| `packages/tome-sequencing/` | Timeline page block (Imp query + visx) |
 | `packages/tome-extension-*/` | Optional extensions (e.g. `tome-extension-fixture` for tests) |
 
 Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to work in the package). See [`packages/README.md`](./packages/README.md).

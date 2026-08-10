@@ -75,6 +75,7 @@ import {
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
   TABLE_PRESENTATION_FILENAME,
+  SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
   RELATIONSHIPS_SYNC_MARKER,
   RELATIONSHIP_FILE_PATTERN,
@@ -198,6 +199,7 @@ function storeChangeKindForFilename(filename: string): StoreChangeKind {
   if (base === TABLE_SCHEMAS_FILENAME) return "table-schemas";
   if (base === WORKSPACE_FILENAME) return "workspace";
   if (base === TABLE_PRESENTATION_FILENAME) return "table-presentation";
+  if (base === SEQUENCING_FILENAME) return "sequencing";
   if (base === EXTENSIONS_FILENAME) return "extensions";
   return "unknown";
 }
@@ -364,6 +366,7 @@ export class ContentStore implements TomeDataStore {
       base === TABLE_SCHEMAS_FILENAME ||
       base === WORKSPACE_FILENAME ||
       base === TABLE_PRESENTATION_FILENAME ||
+      base === SEQUENCING_FILENAME ||
       base === EXTENSIONS_FILENAME
     );
   }

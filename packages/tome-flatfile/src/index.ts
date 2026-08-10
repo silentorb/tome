@@ -105,6 +105,7 @@ export {
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
   TABLE_PRESENTATION_FILENAME,
+  SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
   NODE_FILE_PATTERN,
   NODE_ID_PATTERN,
@@ -128,6 +129,7 @@ export {
   tableSchemasFilePath,
   workspaceFilePath,
   tablePresentationFilePath,
+  sequencingFilePath,
   extensionsFilePath,
   isNodeId,
   nodeFileName,
@@ -335,6 +337,21 @@ export {
   loadTablePresentationFromContent,
   invalidateTablePresentationCache,
 } from "./table-presentation/load";
+
+export {
+  emptySequencingFile,
+  parseSequencingFile,
+  serializeSequencingFile,
+  SEQUENCING_FILE_VERSION,
+} from "./sequencing/sequencing-file";
+export type {
+  SequencingFile,
+  SequencingTableConfig,
+} from "./sequencing/sequencing-file";
+export {
+  loadSequencingFromContent,
+  invalidateSequencingCache,
+} from "./sequencing/load";
 
 export {
   loadAssociationsFromContent,

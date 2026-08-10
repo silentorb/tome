@@ -185,6 +185,39 @@
   margin: 12px 0;
 }
 
+.tome-editor-body .milkdown .ProseMirror .tome-page-block-interactive-error {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--tome-danger, #c44);
+  border-radius: 8px;
+  background: var(--tome-surface);
+  color: var(--tome-text, #eee);
+}
+
+.tome-editor-body .milkdown .ProseMirror .tome-page-block-interactive-error p {
+  margin: 0 0 0.5rem;
+}
+
+.tome-editor-body .milkdown .ProseMirror .tome-page-block-interactive-error p:last-child {
+  margin-bottom: 0;
+  color: var(--tome-muted, #999);
+  font-size: 0.85rem;
+}
+
+.tome-editor-body .milkdown .ProseMirror .tome-page-block-interactive-error-detail {
+  margin: 0 0 0.75rem;
+  padding: 8px 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.8rem;
+  color: var(--tome-danger, #c44);
+  background: rgba(204, 68, 68, 0.08);
+  border-radius: 4px;
+  max-height: 12rem;
+  overflow: auto;
+}
+
 .tome-editor-body .milkdown .ProseMirror .tome-spatial-graph,
 .tome-editor-body .milkdown .ProseMirror .tome-page-block-unknown {
   box-sizing: border-box;

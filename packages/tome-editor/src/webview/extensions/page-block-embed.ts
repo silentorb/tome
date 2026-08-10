@@ -12,10 +12,9 @@ import type { EditorPageBlockProps } from "tome-interfaces/page-block/editor";
 import { destroySchemaDiagramPanZoom, scheduleSchemaDiagramViewportInit } from "./schema-diagram-viewport";
 import {
   closePageBlockToolPanel,
-  getInteractivePageBlockRegistration,
-  getPublicExtensionComponent,
   invokePageBlockExtension,
   openPageBlockToolPanel,
+  resolveInteractivePageBlockMount,
 } from "./page-block-registry";
 
 const PAGE_BLOCK_COMMENT_RE = /^<!-- tome-page-block /;
@@ -168,11 +167,38 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
     scheduleSchemaDiagramViewportInit(htmlHost);
   };
 
+  const renderInteractiveUnavailable = (label: string, error: string) => {
+    destroySchemaDiagramPanZoom(htmlHost);
+    root?.unmount();
+    root = null;
+    reactHost.replaceChildren();
+    htmlHost.hidden = false;
+    const safeLabel = label.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const safeError = error.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    htmlHost.innerHTML =
+      `<figure class="tome-page-block-interactive-error" data-tome-interactive-error="1">` +
+      `<p><strong>${safeLabel} failed to load</strong></p>` +
+      `<pre class="tome-page-block-interactive-error-detail" tabindex="0">${safeError}</pre>` +
+      `<p>This block requires its interactive editor bundle. Static HTML is not shown so a broken load is obvious.</p>` +
+      `</figure>`;
+  };
+
   const renderInteractive = (payload: PageBlockPayload) => {
-    const registration = getInteractivePageBlockRegistration(payload.componentId);
-    const publicComponent = getPublicExtensionComponent(payload.componentId);
-    if (!registration?.Component || !publicComponent) {
+    const mount = resolveInteractivePageBlockMount(payload.componentId);
+    if (mount.kind === "interactive-unavailable") {
+      renderInteractiveUnavailable(mount.component.label, mount.error);
+      return;
+    }
+    if (mount.kind !== "interactive") {
       renderHtmlFallback(currentHtml);
+      return;
+    }
+    const { registration, component: publicComponent } = mount;
+    if (!registration.Component) {
+      renderInteractiveUnavailable(
+        publicComponent.label,
+        "Interactive registration is missing a Component export.",
+      );
       return;
     }
 
@@ -235,7 +261,12 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
     currentHtml = html;
     dom.dataset.comment = comment;
     const payload = payloadFromComment(comment);
-    if (payload && getInteractivePageBlockRegistration(payload.componentId)) {
+    if (!payload) {
+      renderHtmlFallback(html);
+      return;
+    }
+    const mount = resolveInteractivePageBlockMount(payload.componentId);
+    if (mount.kind === "interactive" || mount.kind === "interactive-unavailable") {
       renderInteractive(payload);
       return;
     }
