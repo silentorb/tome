@@ -128,7 +128,12 @@ export {
   nodeShardDir,
   resolveContentPath,
 } from "./paths";
-export { ContentStore } from "./store";
+export { ContentStore, DEFAULT_CORPUS_ID } from "./store";
+export {
+  CompositeStore,
+  CorpusReadonlyError,
+  CorpusConflictError,
+} from "./composite-store";
 export { LinkResolutionError, resolveAssociationIdForLink } from "./resolve-composite-for-link";
 export {
   emptyViewsFile,

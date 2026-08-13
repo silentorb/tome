@@ -10,7 +10,7 @@ The design corpus is a **git-tracked content store** under `content/` (`content/
 | `tome-sqlite` | SQLite `GraphDatabase` / `TomeQueryCache` |
 | `tome-db` | Domain queries/mutations + `CacheSync` / `TomeWriteContext` bridge |
 
-`tome-server` loads store + cache as singular config modules and injects them into `tome-db`.
+`tome-server` loads store + cache as singular config modules and injects them into `tome-db`. The flatfile store may be a **composite** over multiple corpora (union read, origin / dual-write); see [`multi-corpus.md`](./multi-corpus.md). Solo mode is still one `content/` root + one `data/tome.sqlite`.
 
 ## When to read this
 
@@ -64,7 +64,7 @@ Canonical on-disk layout and file formats: [`packages/tome-flatfile/docs/storage
 | `content/model/*.json` | Workspace model (relationship types, schema, views, table schemas, workspace, etc.) — see storage-format doc |
 | `data/tome.sqlite` | Local query cache (gitignored; default path via `TOME_DB_PATH`; legacy `data/marloth.sqlite` / `MARLOTH_DB_PATH` still read when present) |
 
-- `TOME_CONTENT_PATH` (or legacy `MARLOTH_CONTENT_PATH`) **must** point at the **content root** (`./content`), not `content/data`.
+- `TOME_CONTENT_PATH` (or legacy `MARLOTH_CONTENT_PATH`) **must** point at the **content root** (`./content`), not `content/data`, for solo sessions. Multi-corpus sessions use `TOME_CORPORA` / `store.options.corpora` and a dedicated session `TOME_DB_PATH` — see [`multi-corpus.md`](./multi-corpus.md).
 - SQLite WAL sidecar files (`*.sqlite-wal`, `*.sqlite-shm`) **must not** be committed.
 
 ### Legacy compatibility

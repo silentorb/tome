@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { WorkspaceQuickLink } from "tome-graph-interfaces";
+import type { TomeCorpusPublic } from "../../shared/http-client";
 import type { AppView } from "../../shared/types";
 import type { EditorApi } from "../api/client";
 import { nodePageHref } from "../node-links";
@@ -29,6 +30,10 @@ interface SidePanelProps {
   activeView: AppView;
   activeNodeId?: string | null;
   homeNodeId?: string | null;
+  corpora?: readonly TomeCorpusPublic[];
+  activeCorpusId?: string | null;
+  onCorpusChange?: (corpusId: string) => void;
+  corpusReadonly?: boolean;
   onViewChange: (view: AppView) => void;
   onNewPage: () => void;
   onOpenSearch: () => void;
@@ -86,6 +91,10 @@ export function SidePanel({
   activeView,
   activeNodeId,
   homeNodeId,
+  corpora = [],
+  activeCorpusId = null,
+  onCorpusChange,
+  corpusReadonly = false,
   onViewChange,
   onNewPage,
   onOpenSearch,
@@ -108,12 +117,35 @@ export function SidePanel({
     standaloneUrls?.home ??
     (homeNodeId ? nodePageHref(homeNodeId, pageBase) : undefined);
 
+  const showCorpusSwitcher = corpora.length > 1;
+
   return (
     <aside
       className={`tome-side-panel${collapsed ? " is-collapsed" : ""}`}
       aria-label="Navigation"
     >
       <div className="tome-side-panel-header">
+        {showCorpusSwitcher && !collapsed ? (
+          <label className="tome-side-panel-corpus">
+            <span className="tome-side-panel-corpus-label">Corpus</span>
+            <select
+              className="tome-side-panel-corpus-select"
+              value={activeCorpusId ?? ""}
+              aria-label="Active corpus"
+              onChange={(event) => {
+                const next = event.target.value;
+                if (next) onCorpusChange?.(next);
+              }}
+            >
+              {corpora.map((corpus) => (
+                <option key={corpus.id} value={corpus.id}>
+                  {corpus.label}
+                  {corpus.access === "readonly" ? " (read-only)" : ""}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <button
           type="button"
           className="tome-side-panel-toggle"
@@ -150,14 +182,16 @@ export function SidePanel({
           href={standaloneUrls?.explorer}
           onClick={standaloneUrls ? undefined : () => onViewChange("graph-explorer")}
         />
-        <NavItem
-          active={false}
-          title="New page"
-          icon="+"
-          label="New page"
-          href={standaloneUrls?.create}
-          onClick={standaloneUrls ? undefined : onNewPage}
-        />
+        {!corpusReadonly ? (
+          <NavItem
+            active={false}
+            title="New page"
+            icon="+"
+            label="New page"
+            href={standaloneUrls?.create}
+            onClick={standaloneUrls ? undefined : onNewPage}
+          />
+        ) : null}
         <QuickLinksPanel
           api={api}
           quickLinks={quickLinks}
@@ -169,11 +203,11 @@ export function SidePanel({
           pageBase={pageBase}
           protectedNodeIds={protectedNodeIds}
           archiveHubTitle={archiveHubTitle}
-          onRemoveQuickLink={onRemoveQuickLink}
-          onQuickLinksReorder={onQuickLinksReorder}
-          onArchiveNode={onArchiveNode}
-          onUnarchiveNode={onUnarchiveNode}
-          onDeleteNode={onDeleteNode}
+          onRemoveQuickLink={corpusReadonly ? undefined : onRemoveQuickLink}
+          onQuickLinksReorder={corpusReadonly ? undefined : onQuickLinksReorder}
+          onArchiveNode={corpusReadonly ? undefined : onArchiveNode}
+          onUnarchiveNode={corpusReadonly ? undefined : onUnarchiveNode}
+          onDeleteNode={corpusReadonly ? undefined : onDeleteNode}
         />
         <RecentNodesPanel
           api={api}

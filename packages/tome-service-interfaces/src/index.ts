@@ -124,7 +124,7 @@ export interface AssociationDefinition {
 
 export interface AssociationsFile {
   version: number;
-  types: Record<string, AssociationDefinition>;
+  associations: Record<string, AssociationDefinition>;
 }
 
 export interface DynamicPropertyFileEntry {
@@ -190,16 +190,46 @@ export interface TomeQueryCacheOpenOptions {
   memberPerspectives?: () => readonly string[];
 }
 
-export interface TomeDataStoreOpenOptions {
+export type CorpusAccess = "readwrite" | "readonly";
+
+export interface TomeCorpusConfig {
+  /** Stable slug (e.g. `marloth`, `translucence`). */
+  id: string;
   /** Content root (`content/`). */
+  contentPath: string;
+  /** Defaults to `readwrite`. */
+  access?: CorpusAccess;
+}
+
+export interface TomeCorpusInfo {
+  id: string;
+  contentDir: string;
+  access: CorpusAccess;
+  workspace: WorkspaceFile;
+}
+
+export interface TomeDataStoreOpenOptions {
+  /** Content root (`content/`) for a solo corpus. */
   contentPath?: string;
+  /**
+   * Two or more corpora for a composite session.
+   * When set, `contentPath` is ignored (primary is `corpora[0]`).
+   */
+  corpora?: TomeCorpusConfig[];
 }
 
 /**
  * Canonical data store (flatfile today). Owns change notifications.
+ * Solo stores expose a single corpus; composites front many.
  */
 export interface TomeDataStore {
+  /** Primary corpus content root (`content/`). */
   readonly contentDir: string;
+
+  /** Resolve which corpus owns a node id, or null if unknown. */
+  locateNode(id: string): string | null;
+  /** Configured corpora (one entry for solo). */
+  listCorpora(): readonly TomeCorpusInfo[];
 
   listNodeIds(): string[];
   readNode(id: string): Node | null;
@@ -291,7 +321,10 @@ export interface TomeQueryCache {
   getRelationship(id: string): Relationship | null;
 
   listArchiveMemberIds(archiveId: string, memberPerspectives?: readonly string[]): string[];
-  recomputeArchivedFlags(archiveId: string, memberPerspectives?: readonly string[]): void;
+  recomputeArchivedFlags(
+    archiveId: string | readonly string[],
+    memberPerspectives?: readonly string[],
+  ): void;
 
   counts(): GraphCounts;
   searchNodesByTitle(

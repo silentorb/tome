@@ -45,8 +45,8 @@ For panels and canvases that expose **view/visualization toggles** (not page con
 
 - Place the control in the **upper-right** of the panel chrome when that is the natural corner for overlay controls.
 - Trigger is an icon button (⚙ or equivalent) with `aria-label` / `title` naming the surface (e.g. “Graph settings”, “Timeline settings”).
-- The menu holds checkboxes / selects for display options; prefer **session UI state** unless the feature already persists preferences (Graph Explorer uses `localStorage`).
-- Reference implementations: Graph Explorer (`GraphView` settings), sequencing timeline (`tome-sequencing` settings).
+- The menu holds checkboxes / selects for display options; prefer **session UI state** unless the feature already persists preferences (Graph Explorer uses `localStorage`; Imp graph `parameter` values use `.tome/user-settings.json` `blockParameters`).
+- Reference implementations: Graph Explorer (`GraphView` settings), sequencing timeline (`tome-sequencing` settings), query table parameter gear (`tome-query`).
 
 ### Cross-linking and navigation links
 
@@ -151,6 +151,8 @@ Design work in Marloth is relational and markdown-heavy. A web editor with `@` l
 The webview calls this REST API directly (via shared client in `src/shared/http-client.ts`).
 
 **Workspace config:** `GET /api/workspace` returns parsed `content/model/workspace.json` (home/archive/protected node ids, quick links, branding, graph explorer default anchor). The webview loads this on boot; `GET /api/home` still resolves the effective home node id (workspace home when present, else most recent node).
+
+**Multi-corpus sessions:** when the host opens multiple corpora, the sidebar shows a corpus dropdown; chrome (Home / quick links) is scoped to the **active** corpus. Navigating to a node follows that node’s corpus; switching the dropdown navigates to that corpus’s home. See [`multi-corpus.md`](./multi-corpus.md).
 
 ## Behavior / pipeline
 

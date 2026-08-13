@@ -7,6 +7,10 @@ export interface NodeSummary {
   title: string;
   primaryTypeTitle: string | null;
   matchPreview?: SearchMatchPreview;
+  /** Owning corpus id when the session has multiple corpora. */
+  corpusId?: string;
+  /** True when the owning corpus is readonly. */
+  corpusReadonly?: boolean;
 }
 
 export interface NodeDetail extends NodeSummary {

@@ -13,6 +13,7 @@ import type {
   TomeDataStore,
   TomeQueryCache,
   TomeQueryCacheOpenOptions,
+  TomeCorpusConfig,
 } from "tome-service-interfaces";
 import type { TomeGraphServices } from "tome-graph-interfaces";
 
@@ -123,11 +124,56 @@ export async function loadConfiguredStore(
   }
   const storeModule: TomeStoreModule = { ...created, id: entry.id || created.id };
   const opts = optionsRecord(entry.options);
+  const corporaFromOptions = parseCorporaOption(opts.corpora);
+  const corporaFromEnv = parseTomeCorporaEnv(readEnv("TOME_CORPORA"));
+  const corpora = corporaFromOptions ?? corporaFromEnv;
+  if (corpora && corpora.length > 0) {
+    return storeModule.open({ corpora });
+  }
   const contentPath =
     typeof opts.contentPath === "string" && opts.contentPath.trim()
       ? opts.contentPath.trim()
       : defaultContentPath;
   return storeModule.open({ contentPath });
+}
+
+function parseCorporaOption(raw: unknown): TomeCorpusConfig[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  const out: TomeCorpusConfig[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const e = entry as Record<string, unknown>;
+    if (typeof e.id !== "string" || !e.id.trim()) continue;
+    if (typeof e.contentPath !== "string" || !e.contentPath.trim()) continue;
+    out.push({
+      id: e.id.trim(),
+      contentPath: e.contentPath.trim(),
+      access: e.access === "readonly" ? "readonly" : "readwrite",
+    });
+  }
+  return out.length > 0 ? out : undefined;
+}
+
+/** Parse `id=/abs/path[:readonly]` pairs separated by commas. */
+export function parseTomeCorporaEnv(raw: string | undefined): TomeCorpusConfig[] | undefined {
+  if (!raw?.trim()) return undefined;
+  const out: TomeCorpusConfig[] = [];
+  for (const part of raw.split(",")) {
+    const trimmed = part.trim();
+    if (!trimmed) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq <= 0) continue;
+    const id = trimmed.slice(0, eq).trim();
+    let pathPart = trimmed.slice(eq + 1).trim();
+    let access: "readwrite" | "readonly" = "readwrite";
+    if (pathPart.endsWith(":readonly")) {
+      access = "readonly";
+      pathPart = pathPart.slice(0, -":readonly".length);
+    }
+    if (!id || !pathPart) continue;
+    out.push({ id, contentPath: pathPart, access });
+  }
+  return out.length > 0 ? out : undefined;
 }
 
 export async function loadConfiguredCache(

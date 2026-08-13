@@ -12,9 +12,11 @@ import {
 import { basename, dirname, resolve } from "node:path";
 import type { Node, Properties } from "tome-graph-interfaces";
 import type {
+  CorpusAccess,
   StoreChangeEvent,
   StoreChangeKind,
   StoreChangeListener,
+  TomeCorpusInfo,
   TomeDataStore,
 } from "tome-service-interfaces";
 import { relationshipId } from "../relationship-id";
@@ -96,6 +98,8 @@ import {
   nodeFilePath,
   NODE_FILE_PATTERN,
 } from "./paths";
+
+export const DEFAULT_CORPUS_ID = "default";
 
 const DEBOUNCE_MS = 200;
 
@@ -260,6 +264,8 @@ function writeRelationshipEntryFile(
 export class ContentStore implements TomeDataStore {
   /** Content root (`content/`), not `content/data`. */
   readonly contentDir: string;
+  readonly corpusId: string;
+  readonly access: CorpusAccess;
 
   private dataWatcher: FSWatcher | null = null;
   private archiveWatcher: FSWatcher | null = null;
@@ -269,14 +275,38 @@ export class ContentStore implements TomeDataStore {
   private readonly listeners = new Set<StoreChangeListener>();
   private readonly onWatchError?: (err: Error) => void;
 
-  constructor(contentDir: string, options?: { onWatchError?: (err: Error) => void }) {
+  constructor(
+    contentDir: string,
+    options?: {
+      onWatchError?: (err: Error) => void;
+      corpusId?: string;
+      access?: CorpusAccess;
+    },
+  ) {
     this.contentDir = contentDir;
+    this.corpusId = options?.corpusId?.trim() || DEFAULT_CORPUS_ID;
+    this.access = options?.access === "readonly" ? "readonly" : "readwrite";
     this.onWatchError = options?.onWatchError;
     mkdirSync(contentNodesDir(contentDir), { recursive: true });
     mkdirSync(contentRelationshipsDir(contentDir), { recursive: true });
     mkdirSync(contentNodesArchiveDir(contentDir), { recursive: true });
     mkdirSync(contentRelationshipsArchiveDir(contentDir), { recursive: true });
     mkdirSync(contentModelDir(contentDir), { recursive: true });
+  }
+
+  locateNode(id: string): string | null {
+    return this.readNode(id) ? this.corpusId : null;
+  }
+
+  listCorpora(): readonly TomeCorpusInfo[] {
+    return [
+      {
+        id: this.corpusId,
+        contentDir: this.contentDir,
+        access: this.access,
+        workspace: this.readWorkspaceFile(),
+      },
+    ];
   }
 
   subscribe(listener: StoreChangeListener): () => void {
@@ -429,6 +459,14 @@ export class ContentStore implements TomeDataStore {
       nodeFilePath(this.contentDir, node.id, archived),
       serializeNodeFile(toWrite, markdownBody),
     );
+  }
+
+  /** Write a node into this corpus (solo store ignores mismatched ids only when equal). */
+  writeNodeToCorpus(corpusId: string, node: Node, body?: string): void {
+    if (corpusId !== this.corpusId) {
+      throw new Error(`ContentStore corpus is "${this.corpusId}", not "${corpusId}"`);
+    }
+    this.writeNode(node, body);
   }
 
   deleteNodeFile(id: string): void {

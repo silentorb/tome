@@ -45,7 +45,7 @@ import {
 } from "./editor-save";
 import { buildQuickLinkIconMaps } from "./quick-links-nav";
 import { resolveDocumentIcon } from "./document-icon";
-import { useWorkspace } from "./useWorkspace";
+import { useCorpora } from "./useCorpora";
 import {
   readGraphExplorerLayerDepth,
   readGraphExplorerMode,
@@ -113,7 +113,15 @@ export function App() {
 
 function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const { ready: userSettingsReady, getTableTab, setTableTab } = useUserSettings();
-  const { workspace, error: workspaceError, refreshWorkspace } = useWorkspace(api);
+  const {
+    corpora,
+    activeCorpusId,
+    corpusReadonly,
+    workspace,
+    error: workspaceError,
+    refreshWorkspace,
+    setActiveCorpus,
+  } = useCorpora(api);
   const [view, setView] = useState<AppView>(() => viewFromLocation());
   const [node, setNode] = useState<EditorNodePageDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -288,9 +296,15 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       savedDocument.current = detail.document;
       savedTitle.current = title;
       setSaveState("idle");
+      if (detail.corpusId) {
+        setActiveCorpus(detail.corpusId);
+        setHomeId(
+          corpora.find((c) => c.id === detail.corpusId)?.homeNodeId ?? homeId,
+        );
+      }
       syncStandaloneUrl("node-page", detail.id, options);
     },
-    [syncStandaloneUrl],
+    [corpora, homeId, setActiveCorpus, syncStandaloneUrl],
   );
 
   const bumpRecentNodes = useCallback(() => {
@@ -307,7 +321,11 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
 
       if (options?.keepalive) {
         void api
-          .createNode({ title, body: storageBody || undefined })
+          .createNode({
+            title,
+            body: storageBody || undefined,
+            corpusId: activeCorpusId ?? undefined,
+          })
           .then((created) => {
             nodeIdRef.current = created.id;
             savedTitle.current = title;
@@ -325,6 +343,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         const created = await api.createNode({
           title,
           body: storageBody || undefined,
+          corpusId: activeCorpusId ?? undefined,
         });
         bumpRecentNodes();
         const detail = await api.getNode(created.id);
@@ -335,7 +354,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [api, applyLoadedNode, bumpRecentNodes],
+    [activeCorpusId, api, applyLoadedNode, bumpRecentNodes],
   );
 
   const flushPendingSaves = useCallback(
@@ -486,7 +505,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   const bootstrap = useCallback(async () => {
     if (!userSettingsReady || !workspace) return;
     try {
-      const home = await api.getHomeId();
+      const home = await api.getHomeId(activeCorpusId ?? undefined);
       setHomeId(home);
       await hydrateFromLocation({ homeId: home });
     } catch (err) {
@@ -496,7 +515,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
           : "Could not reach the Tome editor API. Start it with: bun run editor:dev",
       );
     }
-  }, [api, hydrateFromLocation, userSettingsReady, workspace]);
+  }, [activeCorpusId, api, hydrateFromLocation, userSettingsReady, workspace]);
 
   useEffect(() => {
     void bootstrap();
@@ -763,6 +782,18 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     [api, refreshWorkspace],
   );
 
+  const switchCorpus = useCallback(
+    async (corpusId: string) => {
+      const target = corpora.find((c) => c.id === corpusId);
+      if (!target) return;
+      await flushPendingSaves();
+      setActiveCorpus(corpusId);
+      setHomeId(target.homeNodeId);
+      navigateStandaloneNode(target.homeNodeId);
+    },
+    [corpora, flushPendingSaves, setActiveCorpus],
+  );
+
   const removeQuickLinkForNode = useCallback(
     async (nodeId: string) => {
       try {
@@ -807,6 +838,10 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
               : null
         }
         homeNodeId={homeId}
+        corpora={corpora}
+        activeCorpusId={activeCorpusId}
+        onCorpusChange={switchCorpus}
+        corpusReadonly={corpusReadonly || node?.corpusReadonly === true}
         onViewChange={changeView}
         onNewPage={() => navigateStandaloneCreate()}
         onOpenSearch={() => setGlobalSearchOpen(true)}

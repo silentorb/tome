@@ -162,4 +162,4 @@ export type {
   PublicExtensionsManifest,
 } from "./extensions";
 
-export type { WorkspacePublic, TomeGraphServices } from "./graph-services";
+export type { WorkspacePublic, TomeCorpusPublic, TomeGraphServices } from "./graph-services";

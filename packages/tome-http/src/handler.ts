@@ -81,11 +81,17 @@ export function createApiHandler(
       }
 
       if (path === "/api/home") {
-        return json({ id: db.getHomeId() });
+        const corpusId = url.searchParams.get("corpusId") ?? undefined;
+        return json({ id: db.getHomeId(corpusId || undefined) });
+      }
+
+      if (path === "/api/corpora" && req.method === "GET") {
+        return json({ corpora: db.listCorpora() });
       }
 
       if (path === "/api/workspace") {
-        return json(db.getWorkspace());
+        const corpusId = url.searchParams.get("corpusId") ?? undefined;
+        return json(db.getWorkspace(corpusId || undefined));
       }
 
       if (path === "/api/workspace/quick-links/order" && req.method === "PUT") {
@@ -154,6 +160,7 @@ export function createApiHandler(
         const payload = (await req.json()) as {
           title?: string;
           body?: string;
+          corpusId?: string;
         };
         if (typeof payload.title !== "string") {
           return json({ error: "title required" }, 400);
@@ -161,8 +168,11 @@ export function createApiHandler(
         const result = db.createNode({
           title: payload.title,
           body: typeof payload.body === "string" ? payload.body : undefined,
+          corpusId: typeof payload.corpusId === "string" ? payload.corpusId : undefined,
         });
         if (result === "invalid_title") return json({ error: "invalid title" }, 400);
+        if (result === "corpus_not_found") return json({ error: "corpus not found" }, 404);
+        if (result === "corpus_readonly") return json({ error: "corpus readonly" }, 403);
         return json({ node: result });
       }
 

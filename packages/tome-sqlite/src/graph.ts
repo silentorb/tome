@@ -312,14 +312,24 @@ export class GraphDatabase implements TomeQueryCache {
     return this.listArchiveMemberIds(archiveId, memberPerspectives);
   }
 
-  recomputeArchivedFlags(archiveId: string, memberPerspectives?: readonly string[]): void {
+  recomputeArchivedFlags(
+    archiveId: string | readonly string[],
+    memberPerspectives?: readonly string[],
+  ): void {
     this.db.exec("UPDATE nodes SET is_archived = 0");
-    const memberIds = this.listArchiveMemberIds(archiveId, memberPerspectives);
-    if (memberIds.length === 0) return;
-    const placeholders = memberIds.map(() => "?").join(", ");
+    const hubs = typeof archiveId === "string" ? [archiveId] : [...archiveId];
+    const memberIds = new Set<string>();
+    for (const hub of hubs) {
+      for (const id of this.listArchiveMemberIds(hub, memberPerspectives)) {
+        memberIds.add(id);
+      }
+    }
+    if (memberIds.size === 0) return;
+    const ids = [...memberIds];
+    const placeholders = ids.map(() => "?").join(", ");
     this.db
       .prepare(`UPDATE nodes SET is_archived = 1 WHERE id IN (${placeholders})`)
-      .run(...memberIds);
+      .run(...ids);
   }
 
   getRelationshipRecord(id: string): RelationshipRecordRow | null {

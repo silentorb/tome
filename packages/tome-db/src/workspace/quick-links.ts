@@ -1,5 +1,7 @@
 import type { TomeWriteContext } from "../content/write-context";
+import { contentDirForNode } from "../content/write-context";
 import {
+  CompositeStore,
   invalidateWorkspaceCache,
   loadWorkspaceFromContent,
   type WorkspaceFile,
@@ -27,6 +29,23 @@ function nodeTitle(ctx: TomeWriteContext, nodeId: string): string | null {
   return "Untitled";
 }
 
+function writeWorkspaceForNode(
+  ctx: TomeWriteContext,
+  nodeId: string,
+  workspace: WorkspaceFile,
+): void {
+  const corpusId = ctx.store.locateNode(nodeId);
+  if (corpusId && ctx.store instanceof CompositeStore) {
+    ctx.store.writeWorkspaceFileForCorpus(corpusId, workspace);
+    return;
+  }
+  ctx.store.writeWorkspaceFile(workspace);
+}
+
+function workspaceForNode(ctx: TomeWriteContext, nodeId: string): WorkspaceFile {
+  return loadWorkspaceFromContent(contentDirForNode(ctx.store, nodeId));
+}
+
 export function addWorkspaceQuickLink(
   ctx: TomeWriteContext,
   nodeId: string,
@@ -35,7 +54,7 @@ export function addWorkspaceQuickLink(
   const normalizedId = nodeId;
   if (!ctx.store.readNode(normalizedId)) return "not_found";
 
-  const workspace = loadWorkspaceFromContent(ctx.store.contentDir);
+  const workspace = workspaceForNode(ctx, normalizedId);
   if (isWorkspaceQuickLink(workspace, normalizedId)) return "already_exists";
 
   const label = options?.label?.trim() || nodeTitle(ctx, normalizedId);
@@ -57,7 +76,7 @@ export function addWorkspaceQuickLink(
     quickLinks: [...workspace.quickLinks, entry],
   };
 
-  ctx.store.writeWorkspaceFile(next);
+  writeWorkspaceForNode(ctx, normalizedId, next);
   invalidateWorkspaceCache();
   return null;
 }
@@ -67,7 +86,7 @@ export function removeWorkspaceQuickLink(
   nodeId: string,
 ): QuickLinkError | null {
   const normalizedId = nodeId;
-  const workspace = loadWorkspaceFromContent(ctx.store.contentDir);
+  const workspace = workspaceForNode(ctx, normalizedId);
   if (!isWorkspaceQuickLink(workspace, normalizedId)) return "not_a_quick_link";
 
   const next: WorkspaceFile = {
@@ -75,7 +94,7 @@ export function removeWorkspaceQuickLink(
     quickLinks: workspace.quickLinks.filter((link) => link.nodeId !== normalizedId),
   };
 
-  ctx.store.writeWorkspaceFile(next);
+  writeWorkspaceForNode(ctx, normalizedId, next);
   invalidateWorkspaceCache();
   return null;
 }
@@ -84,7 +103,9 @@ export function reorderWorkspaceQuickLinks(
   ctx: TomeWriteContext,
   nodeIds: readonly string[],
 ): QuickLinkError | null {
-  const workspace = loadWorkspaceFromContent(ctx.store.contentDir);
+  if (nodeIds.length === 0) return "invalid_order";
+  // Reorder applies to the corpus of the first listed quick-link node.
+  const workspace = workspaceForNode(ctx, nodeIds[0]!);
   const currentIds = workspace.quickLinks.map((link) => link.nodeId);
   const normalized = [...nodeIds];
 
@@ -104,7 +125,7 @@ export function reorderWorkspaceQuickLinks(
     quickLinks,
   };
 
-  ctx.store.writeWorkspaceFile(next);
+  writeWorkspaceForNode(ctx, nodeIds[0]!, next);
   invalidateWorkspaceCache();
   return null;
 }

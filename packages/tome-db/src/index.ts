@@ -196,12 +196,14 @@ export type {
   DatabaseViewPresentation,
   ReorderDatabaseMembersParams,
 } from "tome-graph-interfaces";
-export type { TomeWriteContext } from "./content/write-context";
+export type { TomeWriteContext, FlatfileStore } from "./content/write-context";
 export {
   mergeNodePropertiesOnContent,
   openTomeWriteContext,
   syncAfterRelationshipsWrite,
   syncAfterNodeWrite,
+  contentDirForNode,
+  primaryCorpusId,
 } from "./content/write-context";
 export { openContentGraph } from "./content/sync";
 export {

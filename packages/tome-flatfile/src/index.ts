@@ -1,4 +1,9 @@
-export { ContentStore } from "./content/store";
+export { ContentStore, DEFAULT_CORPUS_ID } from "./content/store";
+export {
+  CompositeStore,
+  CorpusReadonlyError,
+  CorpusConflictError,
+} from "./content/composite-store";
 export { createFlatfileModule } from "./module";
 export { relationshipId } from "./relationship-id";
 export { collectSetNodeIds } from "./set-nodes";

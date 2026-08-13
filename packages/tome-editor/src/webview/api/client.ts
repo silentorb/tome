@@ -24,6 +24,7 @@ export function createEditorApi(): EditorApi {
 
   return {
     getWorkspace: rest.getWorkspace.bind(rest),
+    listCorpora: rest.listCorpora.bind(rest),
     getHomeId: rest.getHomeId.bind(rest),
     createNode: rest.createNode.bind(rest),
     createRelationRow: rest.createRelationRow.bind(rest),

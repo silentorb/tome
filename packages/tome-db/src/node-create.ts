@@ -9,7 +9,7 @@ import {
   setRoleProjectionTypesForNode,
 } from "tome-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
-import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
+import { contentDirForNode, primaryCorpusId, syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
 import { stampOrderIfMissing } from "./ordered-relationships";
 import {
@@ -19,6 +19,7 @@ import {
   type CreateNodeLink,
   type CreateNodeResult,
 } from "tome-graph-interfaces";
+import { CorpusReadonlyError } from "tome-flatfile";
 
 export type {
   CreateNodeError,
@@ -39,6 +40,23 @@ function allocateNodeId(ctx: TomeWriteContext): string {
   return generateNodeId();
 }
 
+function resolveCreateCorpusId(ctx: TomeWriteContext, input: CreateNodeInput): string | "corpus_not_found" {
+  if (input.corpusId?.trim()) {
+    const id = input.corpusId.trim();
+    if (!ctx.store.listCorpora().some((c) => c.id === id)) return "corpus_not_found";
+    return id;
+  }
+  if (input.link?.kind === "outgoing") {
+    const fromSource = ctx.store.locateNode(input.link.sourceId);
+    if (fromSource) return fromSource;
+  }
+  if (input.link?.kind === "database-row") {
+    const fromDb = ctx.store.locateNode(input.link.databaseId);
+    if (fromDb) return fromDb;
+  }
+  return primaryCorpusId(ctx.store);
+}
+
 function ordinalFromProperties(properties: Record<string, unknown>): number | null {
   const raw = properties.ordinal;
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
@@ -47,7 +65,7 @@ function ordinalFromProperties(properties: Record<string, unknown>): number | nu
 }
 
 function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: string): number | undefined {
-  const registry = loadAssociationsFromContent(ctx.store.contentDir);
+  const registry = loadAssociationsFromContent(contentDirForNode(ctx.store, sourceId));
   const composite = associationIdFromTypeOrProjection(registry, type);
   const parsed = parseProjectionType(type);
   const outgoing = ctx.cache.listRelationshipsFromSource(sourceId).filter((c) => {
@@ -72,7 +90,7 @@ function memberProjectionForSetLink(
   setId: string,
   typeOrProjection?: string,
 ): string {
-  const dir = ctx.store.contentDir;
+  const dir = contentDirForNode(ctx.store, setId);
   const registry = loadAssociationsFromContent(dir);
   if (typeOrProjection) {
     if (isMemberSideProjectionType(registry, typeOrProjection)) return typeOrProjection;
@@ -94,29 +112,36 @@ export function createNode(
   }
   if (input.link?.kind === "database-row") {
     const database = ctx.store.readNode(input.link.databaseId);
-    if (
-      !database ||
-      !isTypeTableNode(ctx.cache, input.link.databaseId, ctx.store.contentDir)
-    ) {
+    const dbDir = contentDirForNode(ctx.store, input.link.databaseId);
+    if (!database || !isTypeTableNode(ctx.cache, input.link.databaseId, dbDir)) {
       return "database_not_found";
     }
   }
+
+  const corpusId = resolveCreateCorpusId(ctx, input);
+  if (corpusId === "corpus_not_found") return corpusId;
 
   const id = allocateNodeId(ctx);
   const timestamp = nowIso();
   const body = input.body ?? "";
 
-  ctx.store.writeNode(
-    {
-      id,
-      properties: {
-        title,
-        created_at: timestamp,
-        modified_at: timestamp,
+  try {
+    ctx.store.writeNodeToCorpus(
+      corpusId,
+      {
+        id,
+        properties: {
+          title,
+          created_at: timestamp,
+          modified_at: timestamp,
+        },
       },
-    },
-    body,
-  );
+      body,
+    );
+  } catch (err) {
+    if (err instanceof CorpusReadonlyError) return "corpus_readonly";
+    throw err;
+  }
   syncAfterNodeWrite(ctx, id);
 
   if (input.link?.kind === "outgoing") {

@@ -6,7 +6,8 @@ import {
   type TableSchemasFile,
 } from "../content/table-schemas-file";
 
-let cachedTableSchemas: { mtimeMs: number; file: TableSchemasFile } | null = null;
+let cachedTableSchemas: { contentDir: string; mtimeMs: number; file: TableSchemasFile } | null =
+  null;
 
 export function invalidateTableSchemasCache(): void {
   cachedTableSchemas = null;
@@ -19,7 +20,11 @@ export function loadTableSchemasFromContent(contentDir: string): TableSchemasFil
     mtimeMs = statSync(path).mtimeMs;
   }
 
-  if (cachedTableSchemas && cachedTableSchemas.mtimeMs === mtimeMs) {
+  if (
+    cachedTableSchemas &&
+    cachedTableSchemas.contentDir === contentDir &&
+    cachedTableSchemas.mtimeMs === mtimeMs
+  ) {
     return cachedTableSchemas.file;
   }
 
@@ -34,7 +39,7 @@ export function loadTableSchemasFromContent(contentDir: string): TableSchemasFil
     }
   }
 
-  cachedTableSchemas = { mtimeMs, file };
+  cachedTableSchemas = { contentDir, mtimeMs, file };
   return file;
 }
 

@@ -37,9 +37,19 @@ import type { QuickLinkError, WorkspaceFile } from "./workspace";
 
 export type WorkspacePublic = WorkspaceFile & { archiveNodeTitle?: string };
 
+export interface TomeCorpusPublic {
+  id: string;
+  access: "readwrite" | "readonly";
+  label: string;
+  homeNodeId: string;
+  archiveNodeId: string;
+  workspace: WorkspacePublic;
+}
+
 export interface TomeGraphServices {
-  getWorkspace(): WorkspacePublic;
-  getHomeId(): string;
+  getWorkspace(corpusId?: string): WorkspacePublic;
+  listCorpora(): TomeCorpusPublic[];
+  getHomeId(corpusId?: string): string;
   getNode(
     id: string,
     options?: {

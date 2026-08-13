@@ -1,5 +1,9 @@
 import type { TomeWriteContext } from "./content/write-context";
-import { syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
+import {
+  contentDirForNode,
+  syncAfterNodeWrite,
+  syncAfterRelationshipsWrite,
+} from "./content/write-context";
 import { isArchivedNode } from "./archive-status";
 import {
   listArchiveMemberIdsFromStore,
@@ -17,7 +21,7 @@ export function isProtectedNodeId(id: string, contentDir?: string): boolean {
 }
 
 export function deleteNode(ctx: TomeWriteContext, id: string): NodeLifecycleError | null {
-  const contentDir = ctx.store.contentDir;
+  const contentDir = contentDirForNode(ctx.store, id);
   if (isProtectedNodeId(id, contentDir)) return "protected";
   if (!ctx.store.readNode(id)) return "not_found";
   ctx.store.deleteNodeFile(id);
@@ -29,7 +33,7 @@ export function deleteNode(ctx: TomeWriteContext, id: string): NodeLifecycleErro
 }
 
 export function archiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleError | null {
-  const contentDir = ctx.store.contentDir;
+  const contentDir = contentDirForNode(ctx.store, id);
   const hubId = archiveNodeId(contentDir);
   if (isProtectedNodeId(id, contentDir)) return "protected";
   if (!ctx.store.readNode(id)) return "not_found";
@@ -45,7 +49,7 @@ export function archiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleErr
 }
 
 export function unarchiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleError | null {
-  const contentDir = ctx.store.contentDir;
+  const contentDir = contentDirForNode(ctx.store, id);
   const hubId = archiveNodeId(contentDir);
   if (isProtectedNodeId(id, contentDir)) return "protected";
   if (!ctx.store.readNode(id)) return "not_found";

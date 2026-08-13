@@ -20,9 +20,36 @@
 
 .tome-side-panel-header {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
+  gap: 8px;
   padding: 8px;
   border-bottom: 1px solid var(--tome-border);
+}
+
+.tome-side-panel-corpus {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.tome-side-panel-corpus-label {
+  font-size: 0.7rem;
+  color: var(--tome-muted, #888);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tome-side-panel-corpus-select {
+  width: 100%;
+  border: 1px solid var(--tome-border);
+  border-radius: 6px;
+  background: var(--tome-bg);
+  color: inherit;
+  font: inherit;
+  padding: 4px 6px;
 }
 
 .tome-side-panel.is-collapsed .tome-side-panel-header {

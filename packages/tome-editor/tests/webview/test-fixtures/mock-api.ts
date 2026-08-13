@@ -13,6 +13,16 @@ export function makeMockEditorApi(): EditorApi {
 
   return {
     getWorkspace: async () => workspace,
+    listCorpora: async () => [
+      {
+        id: "default",
+        access: "readwrite" as const,
+        label: "Tome",
+        homeNodeId: workspace.homeNodeId,
+        archiveNodeId: workspace.archiveNodeId,
+        workspace,
+      },
+    ],
     getHomeId: async () => "AAAAAAAAAAAAAAAAAAAAAAAAAA",
     createNode: async (input) => ({ id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: input.title }),
     createRelationRow: async (_sourceId, input) => ({

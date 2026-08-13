@@ -57,7 +57,7 @@ import {
 import {
   openContentGraph,
   openTomeWriteContext,
-  type ContentStore,
+  type FlatfileStore,
 } from "tome-db/content";
 import type { TomeDataStore, TomeQueryCache } from "tome-service-interfaces";
 import { resolveContentPath, resolveDbPath } from "./paths";
@@ -92,7 +92,7 @@ export type { PublicExtensionsManifest, WorkspacePublic, TomeGraphServices };
 export type EditorDatabase = TomeGraphServices;
 
 export type OpenTomeGraphServicesArgs = {
-  store: TomeDataStore | ContentStore;
+  store: TomeDataStore | FlatfileStore;
   cache: TomeQueryCache;
 };
 
@@ -115,21 +115,57 @@ function buildGraphServices(
 
   const schema = () => loadSchemaFromContent(contentPath);
 
+  const corpusMeta = (nodeId: string) => {
+    const corpusId = writeCtx.store.locateNode(nodeId) ?? undefined;
+    const info = corpusId
+      ? writeCtx.store.listCorpora().find((c) => c.id === corpusId)
+      : undefined;
+    return {
+      corpusId,
+      corpusReadonly: info ? info.access === "readonly" : undefined,
+    };
+  };
+
+  const workspaceForCorpus = (corpusId?: string): WorkspacePublic => {
+    const corpora = writeCtx.store.listCorpora();
+    const match = corpusId
+      ? corpora.find((c) => c.id === corpusId)
+      : corpora[0];
+    const contentDir = match?.contentDir ?? contentPath;
+    const ws = match?.workspace ?? loadWorkspaceFromContent(contentDir);
+    const archivePage = getNodePageDetail(cache, ws.archiveNodeId, { contentDir });
+    return {
+      ...ws,
+      archiveNodeTitle: archivePage?.title ?? "Archive",
+    };
+  };
+
   return {
-    getWorkspace(): WorkspacePublic {
-      const ws = loadWorkspaceFromContent(contentPath);
-      const archivePage = getNodePageDetail(cache, ws.archiveNodeId, { contentDir: contentPath });
-      return {
-        ...ws,
-        archiveNodeTitle: archivePage?.title ?? "Archive",
-      };
+    getWorkspace(corpusId?: string): WorkspacePublic {
+      return workspaceForCorpus(corpusId);
     },
-    getHomeId(): string {
-      const homeId = loadWorkspaceFromContent(contentPath).homeNodeId;
-      const home = getNodePageDetail(cache, homeId, { contentDir: contentPath });
-      if (home) return homeId;
+    listCorpora() {
+      return writeCtx.store.listCorpora().map((c) => {
+        const workspace = workspaceForCorpus(c.id);
+        return {
+          id: c.id,
+          access: c.access,
+          label: c.workspace.branding?.appTitle?.trim() || c.id,
+          homeNodeId: c.workspace.homeNodeId,
+          archiveNodeId: c.workspace.archiveNodeId,
+          workspace,
+        };
+      });
+    },
+    getHomeId(corpusId?: string): string {
+      const ws = workspaceForCorpus(corpusId);
+      const contentDir =
+        writeCtx.store.listCorpora().find((c) => c.workspace.homeNodeId === ws.homeNodeId)
+          ?.contentDir ?? contentPath;
+      const home = getNodePageDetail(cache, ws.homeNodeId, { contentDir });
+      if (home) return ws.homeNodeId;
       const recent = searchNodes(cache, "", 1);
-      return recent[0]?.id ?? homeId;
+      return recent[0]?.id ?? ws.homeNodeId;
     },
     async getNode(
       id: string,
@@ -141,9 +177,12 @@ function buildGraphServices(
       },
     ) {
       const tabId = options?.tabId ?? options?.scopeId ?? options?.databaseView;
+      const nodeContentDir =
+        writeCtx.store.listCorpora().find((c) => c.id === writeCtx.store.locateNode(id))
+          ?.contentDir ?? contentPath;
       const detail = getNodePageDetail(cache, id, {
         tabId,
-        contentDir: contentPath,
+        contentDir: nodeContentDir,
         includeSchemaEmptySections: true,
         rows: options?.rows ?? EDITOR_TABLE_ROWS,
       });
@@ -157,12 +196,15 @@ function buildGraphServices(
         return `${formatPageBlockEmbedComment({ componentId, data })}\n${html}`;
       });
 
+      const meta = corpusMeta(id);
       return {
         id: detail.id,
         title: detail.title,
         primaryTypeTitle: detail.primaryTypeTitle,
         isTypeTable: detail.isTypeTable,
         archived: detail.archived,
+        corpusId: meta.corpusId,
+        corpusReadonly: meta.corpusReadonly,
         document,
         metadata: detail.metadata,
         properties: detail.properties,
@@ -269,10 +311,16 @@ function buildGraphServices(
       allowedTypeIds?: string[],
       options?: { includeBody?: boolean },
     ): NodeSummary[] {
-      return searchNodes(cache, query, limit, allowedTypeIds, options);
+      return searchNodes(cache, query, limit, allowedTypeIds, options).map((row) => ({
+        ...row,
+        ...corpusMeta(row.id),
+      }));
     },
     listRecent(limit?: number): NodeSummary[] {
-      return listRecentNodesByModifiedAt(cache, limit);
+      return listRecentNodesByModifiedAt(cache, limit).map((row) => ({
+        ...row,
+        ...corpusMeta(row.id),
+      }));
     },
     saveDocument(id: string, document: NodeBodyDocument): boolean {
       return updateNodeBody(writeCtx, id, documentToStorageBody(document));
@@ -427,7 +475,7 @@ export function openTomeGraphServices(
   contentPath = resolveContentPath(),
 ): TomeGraphServices {
   if (typeof args === "object" && args !== null && "store" in args && "cache" in args) {
-    const writeCtx = openTomeWriteContext(args.store as ContentStore, args.cache);
+    const writeCtx = openTomeWriteContext(args.store as FlatfileStore, args.cache);
     return buildGraphServices(writeCtx, args.store.contentDir);
   }
   const writeCtx = openContentGraph(contentPath, args);

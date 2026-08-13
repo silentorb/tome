@@ -2,9 +2,10 @@
 
 ## What it is
 
-- **Store module:** `createFlatfileModule()` → `TomeStoreModule` (`open` → `ContentStore`)
+- **Store module:** `createFlatfileModule()` → `TomeStoreModule` (`open` → `ContentStore` or `CompositeStore` when `corpora` is set)
 - Flatfile canonical store: `content/data/{nodes,relationships}/`, `content/archive/{nodes,relationships}/`, and `content/model/`
 - Implements `TomeDataStore` from `tome-service-interfaces`, including change notifications via `subscribe` / `startWatching`
+- **Multi-corpus:** see [`docs/features/multi-corpus.md`](../../docs/features/multi-corpus.md) — composite fronts N content roots with a node→corpus routing map
 - **On-disk format:** [docs/storage-format.md](./docs/storage-format.md) — normative content layout for interoperable storage and agent reference
 
 ## Dependency rules

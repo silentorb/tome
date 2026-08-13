@@ -6,7 +6,7 @@ import {
   type AssociationsFile,
 } from "../content/associations-file";
 
-let cachedTypes: { mtimeMs: number; file: AssociationsFile } | null = null;
+let cachedTypes: { contentDir: string; mtimeMs: number; file: AssociationsFile } | null = null;
 
 export function invalidateAssociationsCache(): void {
   cachedTypes = null;
@@ -19,7 +19,7 @@ export function loadAssociationsFromContent(contentDir: string): AssociationsFil
     mtimeMs = statSync(path).mtimeMs;
   }
 
-  if (cachedTypes && cachedTypes.mtimeMs === mtimeMs) {
+  if (cachedTypes && cachedTypes.contentDir === contentDir && cachedTypes.mtimeMs === mtimeMs) {
     return cachedTypes.file;
   }
 
@@ -34,6 +34,6 @@ export function loadAssociationsFromContent(contentDir: string): AssociationsFil
     }
   }
 
-  cachedTypes = { mtimeMs, file };
+  cachedTypes = { contentDir, mtimeMs, file };
   return file;
 }

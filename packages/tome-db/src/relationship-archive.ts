@@ -1,7 +1,9 @@
-import type { ContentStore } from "tome-flatfile";
+import type { ContentStore, CompositeStore } from "tome-flatfile";
 import type { RelationshipEntry } from "tome-flatfile";
 import { isSetTraitComposite, loadAssociationsFromContent } from "tome-flatfile";
 import { archiveNodeId } from "tome-flatfile";
+
+type FlatfileStoreLike = ContentStore | CompositeStore;
 
 export function isArchiveSetEntry(
   entry: RelationshipEntry,
@@ -43,7 +45,7 @@ export function filterEntriesForCacheSync(entries: readonly RelationshipEntry[])
 }
 
 export function markIncidentRelationshipsArchived(
-  store: ContentStore,
+  store: FlatfileStoreLike,
   nodeId: string,
   archiveHubId: string,
 ): number {
@@ -61,7 +63,7 @@ export function markIncidentRelationshipsArchived(
 }
 
 export function unmarkIncidentRelationshipsArchived(
-  store: ContentStore,
+  store: FlatfileStoreLike,
   nodeId: string,
   stillArchivedIds: ReadonlySet<string>,
   archiveHubId: string,
@@ -83,7 +85,7 @@ export function unmarkIncidentRelationshipsArchived(
   return changed;
 }
 
-export function listArchiveMemberIdsFromStore(store: ContentStore, archiveHubId?: string): string[] {
+export function listArchiveMemberIdsFromStore(store: FlatfileStoreLike, archiveHubId?: string): string[] {
   const hubId = archiveHubId ?? archiveNodeId(store.contentDir);
   return listArchiveMemberIds(store.readRelationshipsFile().relationships, hubId, store.contentDir);
 }

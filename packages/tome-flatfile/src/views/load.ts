@@ -2,7 +2,7 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import { viewsFilePath } from "../content/paths";
 import { emptyViewsFile, parseViewsFile, type ViewsFile } from "../content/views-file";
 
-let cachedViews: { mtimeMs: number; file: ViewsFile } | null = null;
+let cachedViews: { contentDir: string; mtimeMs: number; file: ViewsFile } | null = null;
 
 export function invalidateViewsCache(): void {
   cachedViews = null;
@@ -15,7 +15,7 @@ export function loadViewsFromContent(contentDir: string): ViewsFile {
     mtimeMs = statSync(path).mtimeMs;
   }
 
-  if (cachedViews && cachedViews.mtimeMs === mtimeMs) {
+  if (cachedViews && cachedViews.contentDir === contentDir && cachedViews.mtimeMs === mtimeMs) {
     return cachedViews.file;
   }
 
@@ -30,6 +30,6 @@ export function loadViewsFromContent(contentDir: string): ViewsFile {
     }
   }
 
-  cachedViews = { mtimeMs, file };
+  cachedViews = { contentDir, mtimeMs, file };
   return file;
 }

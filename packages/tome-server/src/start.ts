@@ -1,7 +1,6 @@
 import {
   decodeEnumProperties,
   encodeEnumProperties,
-  loadAssociationsFromContent,
   loadSchemaFromContent,
   setTraitProjectionTypes,
 } from "tome-db";
@@ -31,14 +30,19 @@ export async function startTomeServer(options?: {
 
   const store = await loadConfiguredStore(config.store, contentPath);
   const contentDir = store.contentDir;
+  console.log(
+    `[tome-server] corpora=${store
+      .listCorpora()
+      .map((c) => `${c.id}:${c.access}`)
+      .join(",")}`,
+  );
   const propertyCodec = {
     encode: (properties: Parameters<typeof encodeEnumProperties>[0]) =>
       encodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
     decode: (properties: Parameters<typeof decodeEnumProperties>[0]) =>
       decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
   };
-  const memberPerspectives = () =>
-    setTraitProjectionTypes(loadAssociationsFromContent(contentDir));
+  const memberPerspectives = () => setTraitProjectionTypes(store.readAssociationsFile());
   const cache = await loadConfiguredCache(config.cache, dbPath, {
     propertyCodec,
     memberPerspectives,

@@ -43,7 +43,7 @@ import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
 import { expandAllRelationships } from "./relationship-sync-expand";
 import type { TomeDataStore } from "tome-service-interfaces";
-import type { TomeWriteContext } from "./write-context";
+import type { FlatfileStore, TomeWriteContext } from "./write-context";
 
 /** Wire store change notifications into cache sync (file watching / external edits). */
 export function subscribeStoreToCacheSync(
@@ -133,7 +133,7 @@ export class CacheSync {
   private applying = false;
 
   constructor(
-    readonly store: ContentStore,
+    readonly store: FlatfileStore,
     readonly cache: TomeQueryCache,
   ) {}
 
@@ -143,6 +143,10 @@ export class CacheSync {
 
   isApplying(): boolean {
     return this.applying;
+  }
+
+  private corpusContentDirs(): string[] {
+    return this.store.listCorpora().map((c) => c.contentDir);
   }
 
   contentSnapshotMtime(): number {
@@ -164,21 +168,26 @@ export class CacheSync {
         }
       }
     };
-    const modelDir = contentModelDir(this.contentDir);
-    scanRelationshipTree(contentRelationshipsDir(this.contentDir));
-    scanRelationshipTree(contentRelationshipsArchiveDir(this.contentDir));
-    scanFile(modelDir, ASSOCIATIONS_FILENAME);
-    scanFile(modelDir, DYNAMIC_PROPERTIES_FILENAME);
-    scanFile(modelDir, SCHEMA_FILENAME);
-    scanFile(modelDir, VIEWS_FILENAME);
-    scanFile(modelDir, WORKSPACE_FILENAME);
-    scanFile(modelDir, TABLE_PRESENTATION_FILENAME);
-    scanFile(modelDir, SEQUENCING_FILENAME);
-    scanFile(modelDir, EXTENSIONS_FILENAME);
+    for (const contentDir of this.corpusContentDirs()) {
+      const modelDir = contentModelDir(contentDir);
+      scanRelationshipTree(contentRelationshipsDir(contentDir));
+      scanRelationshipTree(contentRelationshipsArchiveDir(contentDir));
+      scanFile(modelDir, ASSOCIATIONS_FILENAME);
+      scanFile(modelDir, DYNAMIC_PROPERTIES_FILENAME);
+      scanFile(modelDir, SCHEMA_FILENAME);
+      scanFile(modelDir, VIEWS_FILENAME);
+      scanFile(modelDir, WORKSPACE_FILENAME);
+      scanFile(modelDir, TABLE_PRESENTATION_FILENAME);
+      scanFile(modelDir, SEQUENCING_FILENAME);
+      scanFile(modelDir, EXTENSIONS_FILENAME);
+    }
     try {
       for (const id of this.store.listNodeIds()) {
+        const corpusId = this.store.locateNode(id);
+        const contentDir =
+          this.store.listCorpora().find((c) => c.id === corpusId)?.contentDir ?? this.contentDir;
         const archived = this.store.isNodeFileArchived(id);
-        max = Math.max(max, statSync(nodeFilePath(this.contentDir, id, archived)).mtimeMs);
+        max = Math.max(max, statSync(nodeFilePath(contentDir, id, archived)).mtimeMs);
       }
     } catch {
       /* empty dir */
@@ -191,14 +200,19 @@ export class CacheSync {
     const cacheMarker = this.cache.getMeta("content_mtime_ms");
     const contentMtime = String(this.contentSnapshotMtime());
     if (cacheMarker !== contentMtime) return true;
-    const schema = loadSchemaFromContent(this.contentDir);
+    const schema = this.mergedSchemaForFingerprint();
     const storedFingerprint = this.cache.getMeta(ENUM_CONFIG_FINGERPRINT_META_KEY) ?? "";
     return enumConfigFingerprint(schema) !== storedFingerprint;
   }
 
+  private mergedSchemaForFingerprint() {
+    // Fingerprint primary schema; conflicts across corpora fail at composite boot.
+    return loadSchemaFromContent(this.contentDir);
+  }
+
   private updateCacheMarkers(): void {
     this.cache.setMeta("content_mtime_ms", String(this.contentSnapshotMtime()));
-    const schema = loadSchemaFromContent(this.contentDir);
+    const schema = this.mergedSchemaForFingerprint();
     this.cache.setMeta(ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint(schema));
   }
 
@@ -226,8 +240,8 @@ export class CacheSync {
   }
 
   recomputeArchivedFlags(): void {
-    const archiveId = loadWorkspaceFromContent(this.contentDir).archiveNodeId;
-    this.cache.recomputeArchivedFlags(archiveId);
+    const archiveIds = this.store.listCorpora().map((c) => c.workspace.archiveNodeId);
+    this.cache.recomputeArchivedFlags(archiveIds);
   }
 
   fullRebuild(): void {

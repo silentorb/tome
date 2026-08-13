@@ -113,10 +113,12 @@ export {
   projectionTypeForEndpoint,
 } from "./test-helpers";
 export type { TestContentFixture } from "./test-helpers";
-export type { TomeWriteContext } from "./write-context";
+export type { TomeWriteContext, FlatfileStore } from "./write-context";
 export {
   mergeNodePropertiesOnContent,
   openTomeWriteContext,
   syncAfterRelationshipsWrite,
   syncAfterNodeWrite,
+  contentDirForNode,
+  primaryCorpusId,
 } from "./write-context";

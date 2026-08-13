@@ -1,6 +1,11 @@
 import type { Properties } from "./graph";
 
-export type CreateNodeError = "invalid_title" | "source_not_found" | "database_not_found";
+export type CreateNodeError =
+  | "invalid_title"
+  | "source_not_found"
+  | "database_not_found"
+  | "corpus_not_found"
+  | "corpus_readonly";
 
 export type CreateNodeLink =
   | {
@@ -33,6 +38,8 @@ export interface CreateNodeInput {
   title: string;
   body?: string;
   link?: CreateNodeLink;
+  /** Target corpus for the new node (defaults to primary / link-endpoint corpus). */
+  corpusId?: string;
 }
 
 export interface CreateNodeResult {

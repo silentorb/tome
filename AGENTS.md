@@ -37,8 +37,9 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 
 | Variable | Purpose |
 | -------- | ------- |
-| `TOME_CONTENT_PATH` | Content root (`content/`) |
-| `TOME_DB_PATH` | SQLite cache (default: `{content}/../data/tome.sqlite`) |
+| `TOME_CONTENT_PATH` | Content root (`content/`) for solo sessions |
+| `TOME_CORPORA` | Multi-corpus session: `id=/abs/path[:readonly]` pairs (comma-separated); see [`docs/features/multi-corpus.md`](./docs/features/multi-corpus.md) |
+| `TOME_DB_PATH` | SQLite cache (default: `{content}/../data/tome.sqlite`; mixed sessions must use a dedicated session path) |
 | `TOME_EDITOR_API_PORT` | HTTP API port (default 3847; historical name) |
 | `TOME_EDITOR_DEV_HOST` | Vite bind host (default `127.0.0.1`; use `0.0.0.0` in containers) |
 | `TOME_SERVER_CONFIG` | Path to `tome-server.json` (service module list) |

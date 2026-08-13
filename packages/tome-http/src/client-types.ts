@@ -16,6 +16,15 @@ import type { WorkspaceFile } from "tome-graph-interfaces";
 
 export type WorkspacePublic = WorkspaceFile & { archiveNodeTitle?: string };
 
+export interface TomeCorpusPublic {
+  id: string;
+  access: "readwrite" | "readonly";
+  label: string;
+  homeNodeId: string;
+  archiveNodeId: string;
+  workspace: WorkspacePublic;
+}
+
 export type { GraphRelationship, GraphNode, GraphSnapshot, GraphLodSnapshot, DatabaseViewDetail } from "tome-graph-interfaces";
 export type { TableRowsQuery } from "tome-graph-interfaces";
 
@@ -39,9 +48,14 @@ export interface CreateNodeResponse {
 }
 
 export interface TomeHttpClient {
-  getWorkspace(): Promise<WorkspacePublic>;
-  getHomeId(): Promise<string>;
-  createNode(input: { title: string; body?: string }): Promise<CreateNodeResponse>;
+  getWorkspace(corpusId?: string): Promise<WorkspacePublic>;
+  listCorpora(): Promise<TomeCorpusPublic[]>;
+  getHomeId(corpusId?: string): Promise<string>;
+  createNode(input: {
+    title: string;
+    body?: string;
+    corpusId?: string;
+  }): Promise<CreateNodeResponse>;
   createRelationRow(
     sourceId: string,
     input: { type: string; title: string; properties?: Record<string, string> },

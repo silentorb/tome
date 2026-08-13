@@ -4,6 +4,8 @@
 
 **tome-server** is the process **host** for the design graph: it loads a singular **data store** and **query cache** from JSON config, wires them through `tome-db` into `TomeGraphServices`, then starts **zero or more** **service modules** (default: `tome-http`). The editor webview is a client of the HTTP service, not part of this package.
 
+The store module remains singular, but flatfile may open **one corpus** (`contentPath` / `TOME_CONTENT_PATH`) or a **composite of corpora** (`store.options.corpora` / `TOME_CORPORA`) — see [`multi-corpus.md`](./multi-corpus.md). Mixed sessions must use a dedicated session `TOME_DB_PATH`, not any corpus’s own SQLite cache.
+
 ## When to read this
 
 - Running or configuring the API without the editor UI
@@ -55,10 +57,10 @@ File: `packages/tome-server/config/tome-server.json` (override with `TOME_SERVER
 }
 ```
 
-- **`store` and `cache` are required** (singular each).
+- **`store` and `cache` are required** (singular each). The store may still front multiple corpora via composite options.
 - `services` may be **empty**: the host logs a warning and stays up.
 - Multiple services are allowed (each typically binds its own port in v1).
-- Path defaults (`TOME_CONTENT_PATH`, `TOME_DB_PATH`) are merged into module options by the host when omitted.
+- Path defaults (`TOME_CONTENT_PATH`, `TOME_DB_PATH`) are merged into module options by the host when omitted. Pass `corpora` in `store.options` (or `TOME_CORPORA`) for a multi-corpus session.
 
 Bootstrap order: open store → open cache (with enum codec + set perspectives from content) → open graph services (subscribe to store changes, `store.startWatching()`) → start service modules.
 
@@ -77,3 +79,4 @@ Requires `TOME_CONTENT_PATH` (and usually a populated content tree). Historical 
 - [`tome-editor.md`](./tome-editor.md) — client UI
 - [`tome-db.md`](./tome-db.md) — domain + sync; store/cache packages
 - [`extensions.md`](./extensions.md) — page-block extensions (server runtime in `tome-server`)
+- [`multi-corpus.md`](./multi-corpus.md) — multiple content roots in one session

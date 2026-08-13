@@ -18,6 +18,7 @@ import type {
   GetNodeOptions,
   GraphExplorerLodOptions,
   WorkspacePublic,
+  TomeCorpusPublic,
 } from "./client-types";
 import { appendTableRowsQueryParams } from "./table-rows-query";
 
@@ -62,16 +63,23 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
   }
 
   return {
-    async getWorkspace(): Promise<WorkspacePublic> {
-      return fetchJson<WorkspacePublic>("/api/workspace");
+    async getWorkspace(corpusId?: string): Promise<WorkspacePublic> {
+      const qs = corpusId ? `?corpusId=${encodeURIComponent(corpusId)}` : "";
+      return fetchJson<WorkspacePublic>(`/api/workspace${qs}`);
     },
-    async getHomeId(): Promise<string> {
-      const data = await fetchJson<{ id: string }>("/api/home");
+    async listCorpora(): Promise<TomeCorpusPublic[]> {
+      const data = await fetchJson<{ corpora: TomeCorpusPublic[] }>("/api/corpora");
+      return data.corpora;
+    },
+    async getHomeId(corpusId?: string): Promise<string> {
+      const qs = corpusId ? `?corpusId=${encodeURIComponent(corpusId)}` : "";
+      const data = await fetchJson<{ id: string }>(`/api/home${qs}`);
       return data.id;
     },
     async createNode(input: {
       title: string;
       body?: string;
+      corpusId?: string;
     }): Promise<CreateNodeResponse> {
       const data = await fetchJson<{ node: CreateNodeResponse }>("/api/nodes", {
         method: "POST",
