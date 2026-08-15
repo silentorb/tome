@@ -112,7 +112,7 @@ Store options (via `tome-server.json` `store.options` or env):
 
 Env convenience: `TOME_CORPORA` as `id=/abs/path[:readonly]` pairs (comma-separated). Solo: `TOME_CONTENT_PATH` only.
 
-Session cache: set `TOME_DB_PATH` to a path outside any corpus (e.g. workbench `data/tome-session.sqlite`).
+Session cache: set `TOME_DB_PATH` to a path outside every corpus **and inside a tree the host process can write** — in the workbench devcontainer the `tome` service mounts only the corpus repos plus `tome` and `imp`, so use `/workspaces/tome/data/tome-session.sqlite` (gitignored). A path in an unmounted repo fails at boot with `EACCES` from `mkdir`.
 
 ## Verification
 
