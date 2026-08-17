@@ -1,5 +1,14 @@
-import { navigateStandaloneNode, resolveNodePageTarget } from "./node-links";
+import { navigateStandaloneNode, openStandaloneNodeInNewTab, resolveNodePageTarget } from "./node-links";
 import { isHardOpenLinkGesture } from "./standalone-navigation";
+import { isNewTabLinkGesture, linkAnchorFromEventTarget } from "./editor-link-hard-open";
+
+function openHrefInNewTab(href: string): void {
+  const opener = document.createElement("a");
+  opener.href = href;
+  opener.target = "_blank";
+  opener.rel = "noopener noreferrer";
+  opener.click();
+}
 
 /** Handle pointer activation on a node cross-link inside the Milkdown editor root. */
 export function handleEditorLinkPointerEvent(
@@ -7,15 +16,29 @@ export function handleEditorLinkPointerEvent(
   root: ParentNode,
   baseHref: string = window.location.href,
 ): boolean {
-  const target = event.target as HTMLElement | null;
-  const anchor = target?.closest("a") as HTMLAnchorElement | null;
+  const anchor = linkAnchorFromEventTarget(event.target);
   if (!anchor || !root.contains(anchor)) return false;
+
+  if (event.button === 2) return false;
+
+  // ProseMirror claims Ctrl/Cmd+click for node selection, so emulate new-tab here.
+  if (isNewTabLinkGesture(event)) {
+    event.preventDefault();
+    event.stopPropagation();
+    const nodeId = resolveNodePageTarget(anchor.getAttribute("href") ?? "", baseHref);
+    if (nodeId) {
+      openStandaloneNodeInNewTab(nodeId, baseHref);
+    } else {
+      openHrefInNewTab(anchor.href);
+    }
+    return true;
+  }
+
+  // Shift / middle / alt: leave native anchor behavior.
+  if (isHardOpenLinkGesture(event)) return false;
 
   const nodeId = resolveNodePageTarget(anchor.getAttribute("href") ?? "", baseHref);
   if (!nodeId) return false;
-
-  // Right-click / modified clicks / middle-click: leave native anchor behavior.
-  if (event.button === 2 || isHardOpenLinkGesture(event)) return false;
 
   event.preventDefault();
   event.stopPropagation();

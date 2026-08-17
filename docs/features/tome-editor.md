@@ -73,7 +73,7 @@ Applies to: sidebar nav, **Recent**, global search result rows, database relatio
 | --- | --- |
 | Browser editor (display) | `?node={id}` (see `standaloneNodeUrl` in `src/webview/node-links.ts`) |
 
-**Milkdown body links.** Use Crepe/Milkdown defaults unless there is a product reason not to — **`LinkTooltip` enabled** (hover preview, edit/remove). Cross-link navigation uses JS on the Milkdown root (`handleEditorLinkPointerEvent` in `src/webview/editor-link-navigation.ts`): plain click soft-navigates; modified / middle / right-click leave the real anchor to the browser. Do not add custom ProseMirror plugins whose goal is to force full document navigation inside contenteditable.
+**Milkdown body links.** Use Crepe/Milkdown defaults unless there is a product reason not to — **`LinkTooltip` enabled** (hover preview, edit/remove). Cross-link navigation uses JS on the Milkdown root (`handleEditorLinkPointerEvent` in `src/webview/editor-link-navigation.ts`): plain click soft-navigates; Ctrl/Cmd+click is JS-emulated (`openStandaloneNodeInNewTab`) because ProseMirror claims that gesture for node selection (`handleClick` in `editor-link-hard-open.ts`); shift / middle / right-click leave the real anchor to the browser. Do not add custom ProseMirror plugins whose goal is to force full document navigation inside contenteditable.
 
 Keyboard shortcuts in combobox-style pickers (global search, Relate, record link picker) may simulate anchor clicks on **Enter** when focus is in the search field; result rows themselves remain anchors for pointer navigation.
 
@@ -86,7 +86,7 @@ Keyboard shortcuts in combobox-style pickers (global search, Relate, record link
 - `@` autocomplete **must** search existing nodes by title and insert a **dynamic-title** link (`formatEditorDynamicNodeLink` → `dynamic_link` segment → `[[{nodeId}]]` in storage).
 - Dynamic-title links **must** show the same file icon as relation table cells (prefix before the link in Milkdown). Static-titled links do not show the icon.
 - If the user edits the text of a dynamic-title link in Milkdown, the link **must** demote to a `static_link` segment on save.
-- Clicking a cross-link in the Milkdown body: plain click → soft same-tab (`navigateStandaloneNode`); Ctrl/Cmd/shift/middle-click and right-click → native hard open / context menu on the real `href`.
+- Clicking a cross-link in the Milkdown body: plain click → soft same-tab (`navigateStandaloneNode`); Ctrl/Cmd+click → JS-emulated new tab (ProseMirror would otherwise select the enclosing block); shift/middle-click and right-click → native hard open / context menu on the real `href`.
 - **Global search** result rows **should** be `<a href="…">` elements using `?node=` URLs so hard-open gestures stay native; same-tab activation is soft via the chrome interceptor.
 - Database relation column cell labels, edit-popup row links, section table name cells, and sidebar nav follow the **native-link behavior parity** rule above.
 - ProseMirror plugins handle dynamic-title icon decoration and demotion on text edit only — not storage parsing.

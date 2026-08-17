@@ -7,21 +7,37 @@ const BASE = "http://127.0.0.1:5173/?node=AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
 describe("handleEditorLinkPointerEvent", () => {
   let originalAssign: typeof window.location.assign;
+  let originalCreateElement: typeof document.createElement;
   let assignedUrl: string | null = null;
+  let newTabHref: string | null = null;
   let softNavCalls = 0;
 
   beforeEach(() => {
     originalAssign = window.location.assign.bind(window.location);
+    originalCreateElement = document.createElement.bind(document);
     assignedUrl = null;
+    newTabHref = null;
     softNavCalls = 0;
     setStandaloneNavigationHandler(null);
     window.history.replaceState({}, "", BASE);
+
+    document.createElement = ((tag: string) => {
+      const el = originalCreateElement(tag);
+      if (tag === "a") {
+        el.click = () => {
+          newTabHref = (el as HTMLAnchorElement).href;
+        };
+      }
+      return el;
+    }) as typeof document.createElement;
   });
 
   afterEach(() => {
     window.location.assign = originalAssign;
+    document.createElement = originalCreateElement;
     setStandaloneNavigationHandler(null);
     assignedUrl = null;
+    newTabHref = null;
     softNavCalls = 0;
   });
 
@@ -76,7 +92,7 @@ describe("handleEditorLinkPointerEvent", () => {
     root.remove();
   });
 
-  test("ctrl+click leaves native hard open (no preventDefault)", () => {
+  test("ctrl+click opens the node in a new tab", () => {
     mockAssign();
     const { root, anchor } = setupRoot();
     const event = new MouseEvent("click", {
@@ -88,9 +104,49 @@ describe("handleEditorLinkPointerEvent", () => {
     Object.defineProperty(event, "target", { value: anchor, configurable: true });
 
     const handled = handleEditorLinkPointerEvent(event, root, BASE);
-    expect(handled).toBe(false);
-    expect(event.defaultPrevented).toBe(false);
+    expect(handled).toBe(true);
+    expect(event.defaultPrevented).toBe(true);
     expect(assignedUrl).toBeNull();
+    expect(newTabHref).toContain(`node=${TARGET_ID}`);
+    root.remove();
+  });
+
+  test("meta+click opens the node in a new tab", () => {
+    mockAssign();
+    const { root, anchor } = setupRoot();
+    const event = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      metaKey: true,
+    });
+    Object.defineProperty(event, "target", { value: anchor, configurable: true });
+
+    const handled = handleEditorLinkPointerEvent(event, root, BASE);
+    expect(handled).toBe(true);
+    expect(event.defaultPrevented).toBe(true);
+    expect(assignedUrl).toBeNull();
+    expect(newTabHref).toContain(`node=${TARGET_ID}`);
+    root.remove();
+  });
+
+  test("ctrl+click on an external anchor opens the href in a new tab", () => {
+    const root = document.createElement("div");
+    root.innerHTML = `<a href="https://example.com/docs">External</a>`;
+    document.body.appendChild(root);
+    const anchor = root.querySelector("a") as HTMLAnchorElement;
+    const event = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+      ctrlKey: true,
+    });
+    Object.defineProperty(event, "target", { value: anchor, configurable: true });
+
+    const handled = handleEditorLinkPointerEvent(event, root, BASE);
+    expect(handled).toBe(true);
+    expect(event.defaultPrevented).toBe(true);
+    expect(newTabHref).toContain("https://example.com/docs");
     root.remove();
   });
 

@@ -16,6 +16,7 @@ import { loadEditorBundles, setPageBlockInvokeExtension } from "../extensions/pa
 import { scheduleSchemaDiagramViewportInit } from "../extensions/schema-diagram-viewport";
 import { installCalloutCursor } from "../callout-cursor";
 import { attachEditorLinkNavigation } from "../editor-link-navigation";
+import { installLinkHardOpen } from "../editor-link-hard-open";
 import { installLinkCursor } from "../link-cursor";
 import { installCalloutDecoration } from "../callout-decoration";
 import { installCalloutPaste } from "../callout-paste";
@@ -220,6 +221,7 @@ export function TomeEditor({
         installCalloutPaste(view);
         installCalloutCursor(view);
         installLinkCursor(view);
+        installLinkHardOpen(view);
         installDynamicLinkDecoration(view);
         installDynamicLinkDemote(view);
         installListItemDeleteKeymap(view);
