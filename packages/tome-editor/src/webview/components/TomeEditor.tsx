@@ -11,6 +11,7 @@ import {
   buildPageBlockSlashMenu,
   composeBlockEditMenus,
 } from "../extensions/page-block-menu";
+import { replaceBlockquoteInputRule } from "../blockquote-input-rule";
 import { pageBlockEmbed, setPageBlockEmbedNodeId } from "../extensions/page-block-embed";
 import { loadEditorBundles, setPageBlockInvokeExtension } from "../extensions/page-block-registry";
 import { scheduleSchemaDiagramViewportInit } from "../extensions/schema-diagram-viewport";
@@ -173,6 +174,8 @@ export function TomeEditor({
       },
     });
     crepe.editor.use(pageBlockEmbed);
+    await replaceBlockquoteInputRule(crepe.editor);
+    if (destroyed) return;
 
     detachEditorLinkNavigation = attachEditorLinkNavigation(root);
 
