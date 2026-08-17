@@ -1,17 +1,29 @@
 import { resolveMarkdownHrefTarget } from "tome-flatfile/markdown-links";
-import { Plugin, PluginKey } from "@milkdown/prose/state";
+import type { Node as ProseNode } from "@milkdown/prose/model";
+import { Plugin, PluginKey, type Transaction } from "@milkdown/prose/state";
+import { Mapping } from "@milkdown/prose/transform";
 import type { EditorView } from "@milkdown/prose/view";
 import { isDynamicEditorHref, transactionHasDynamicTitleRefresh } from "./dynamic-node-link-decoration";
 import { standaloneEditorNodeHref } from "./standalone-markdown";
 
 const dynamicLinkDemoteKey = new PluginKey("tome-dynamic-link-demote");
 
-function dynamicLinkTextAt(doc: import("@milkdown/prose/model").Node, pos: number): string | null {
+function dynamicLinkAt(
+  doc: ProseNode,
+  pos: number,
+): { text: string; href: string } | null {
+  if (pos < 0 || pos > doc.content.size) return null;
   const node = doc.nodeAt(pos);
   if (!node?.isText) return null;
   const href = node.marks.find((mark) => mark.type.name === "link")?.attrs.href;
   if (typeof href !== "string" || !isDynamicEditorHref(href)) return null;
-  return node.text ?? "";
+  return { text: node.text ?? "", href };
+}
+
+function mappingToOldDocument(transactions: readonly Transaction[]): Mapping {
+  const mapping = new Mapping();
+  for (const tr of transactions) mapping.appendMapping(tr.mapping);
+  return mapping.invert();
 }
 
 export function createDynamicLinkDemotePlugin(): Plugin {
@@ -21,6 +33,7 @@ export function createDynamicLinkDemotePlugin(): Plugin {
       if (!transactions.some((tr) => tr.docChanged)) return null;
       if (transactions.some((tr) => transactionHasDynamicTitleRefresh(tr))) return null;
 
+      const toOld = mappingToOldDocument(transactions);
       let tr = newState.tr;
       let changed = false;
 
@@ -31,9 +44,12 @@ export function createDynamicLinkDemotePlugin(): Plugin {
         const href = linkMark.attrs.href;
         if (typeof href !== "string" || !isDynamicEditorHref(href)) return;
 
-        const oldText = dynamicLinkTextAt(oldState.doc, pos);
+        const mapped = toOld.mapResult(pos, -1);
+        if (mapped.deleted) return;
+
+        const oldLink = dynamicLinkAt(oldState.doc, mapped.pos);
         const newText = node.text ?? "";
-        if (oldText === null || oldText === newText) return;
+        if (!oldLink || oldLink.href !== href || oldLink.text === newText) return;
 
         const nodeId = resolveMarkdownHrefTarget(href);
         if (!nodeId) return;
