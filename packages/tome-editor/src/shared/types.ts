@@ -97,6 +97,7 @@ export function standaloneNodeUrl(nodeId: string, base?: string | URL): string {
   url.searchParams.delete("view");
   url.searchParams.delete("tab");
   url.searchParams.delete("meta");
+  url.searchParams.delete("corpus");
   url.searchParams.delete("dynamicTitle");
   url.searchParams.delete("dynnode");
   stripTableSearchParams(url);

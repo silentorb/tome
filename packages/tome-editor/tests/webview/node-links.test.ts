@@ -39,9 +39,36 @@ describe("node-links", () => {
     expect(
       standaloneViewUrl("node-page", "00000000000000000000000014", "http://127.0.0.1:5173/"),
     ).toBe("http://127.0.0.1:5173/?node=00000000000000000000000014");
-    expect(standaloneCreatePageUrl("http://127.0.0.1:5173/")).toBe(
+    expect(standaloneCreatePageUrl(null, "http://127.0.0.1:5173/")).toBe(
       "http://127.0.0.1:5173/?view=create",
     );
+  });
+
+  test("standaloneCreatePageUrl pins the active corpus", () => {
+    expect(standaloneCreatePageUrl("translucence", "http://127.0.0.1:5173/")).toBe(
+      "http://127.0.0.1:5173/?view=create&corpus=translucence",
+    );
+    expect(
+      standaloneCreatePageUrl("marloth", "http://127.0.0.1:5173/?view=create&corpus=translucence"),
+    ).toBe("http://127.0.0.1:5173/?view=create&corpus=marloth");
+  });
+
+  test("node and view URLs drop the create-page corpus pin", () => {
+    expect(
+      standaloneNodeUrl(
+        "00000000000000000000000014",
+        "http://127.0.0.1:5173/?view=create&corpus=translucence",
+      ),
+    ).toBe("http://127.0.0.1:5173/?node=00000000000000000000000014");
+    expect(
+      standaloneViewUrl(
+        "graph-explorer",
+        null,
+        "http://127.0.0.1:5173/?corpus=translucence",
+        null,
+        "0000000000000000000000002V",
+      ),
+    ).toBe("http://127.0.0.1:5173/?view=explorer&anchor=0000000000000000000000002V");
   });
 
   test("metadataExpandedFromLocation reads meta query param", () => {

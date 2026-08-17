@@ -19,6 +19,7 @@ import {
 } from "../shared/types";
 import {
   anchorFromLocation,
+  corpusFromLocation,
   metadataExpandedFromLocation,
   isStandaloneCreatePageUrl,
   navigateStandaloneCreate,
@@ -28,6 +29,7 @@ import {
   resolveGraphExplorerAnchor,
   setStandaloneNavigationHandler,
   standaloneCreatePageUrl,
+  stripCorpusParamFromUrl,
   stripMetadataParamFromUrl,
   syncMetadataExpandedParam,
   standaloneViewUrl,
@@ -250,10 +252,10 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         explorerAnchorId,
         defaultGraphAnchorId,
       ),
-      create: standaloneCreatePageUrl(),
+      create: standaloneCreatePageUrl(activeCorpusId),
       nodes,
     };
-  }, [defaultGraphAnchorId, explorerAnchorId, homeId, workspace]);
+  }, [activeCorpusId, defaultGraphAnchorId, explorerAnchorId, homeId, workspace]);
 
   const syncStandaloneUrl = useCallback(
     (nextView: AppView, nodeId?: string | null, options?: GetNodeOptions) => {
@@ -273,6 +275,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       url.searchParams.delete("scope");
       url.searchParams.delete("dbView");
       stripMetadataParamFromUrl(url);
+      stripCorpusParamFromUrl(url);
       if (nextView === "graph-explorer") {
         url.searchParams.set("anchor", explorerAnchorId);
       } else {
@@ -417,16 +420,8 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
   );
 
   const syncCreatePageUrl = useCallback(() => {
-    const url = new URL(window.location.href);
-    url.searchParams.set("view", "create");
-    url.searchParams.delete("node");
-    url.searchParams.delete("tab");
-    url.searchParams.delete("scope");
-    url.searchParams.delete("dbView");
-    url.searchParams.delete("anchor");
-    stripMetadataParamFromUrl(url);
-    replaceStandaloneHistory(url.toString());
-  }, []);
+    replaceStandaloneHistory(standaloneCreatePageUrl(activeCorpusId));
+  }, [activeCorpusId]);
 
   const openDraftPage = useCallback(
     async (options?: { syncUrl?: "replace" | "none" }) => {
@@ -465,6 +460,8 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       setExplorerAnchorStack([]);
 
       if (isStandaloneCreatePageUrl()) {
+        const pinnedCorpusId = corpusFromLocation();
+        if (pinnedCorpusId) setActiveCorpus(pinnedCorpusId);
         if (!isDraftNodeId(nodeIdRef.current)) {
           await openDraftPage({ syncUrl: "none" });
         }
@@ -498,6 +495,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
       homeId,
       loadNode,
       openDraftPage,
+      setActiveCorpus,
       workspace,
     ],
   );
@@ -843,7 +841,7 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
         onCorpusChange={switchCorpus}
         corpusReadonly={corpusReadonly || node?.corpusReadonly === true}
         onViewChange={changeView}
-        onNewPage={() => navigateStandaloneCreate()}
+        onNewPage={() => navigateStandaloneCreate(activeCorpusId)}
         onOpenSearch={() => setGlobalSearchOpen(true)}
         standaloneUrls={standaloneUrls}
         recentNodesRefreshKey={recentNodesRefreshKey}

@@ -18,8 +18,8 @@ const createdNode = makeNodePageDetail({
   body: "",
 });
 
-let createNodeCalls: { title: string; body?: string }[] = [];
-const createNode = async (input: { title: string; body?: string }) => {
+let createNodeCalls: { title: string; body?: string; corpusId?: string }[] = [];
+const createNode = async (input: { title: string; body?: string; corpusId?: string }) => {
   createNodeCalls.push(input);
   return { id: createdId, title: input.title };
 };
@@ -30,11 +30,21 @@ const getNode = async (id: string) => {
 };
 
 mock.module("../../src/webview/api/client", () => ({
-  createEditorApi: () => ({
-    ...makeMockEditorApi(),
-    createNode,
-    getNode,
-  }),
+  createEditorApi: () => {
+    const base = makeMockEditorApi();
+    return {
+      ...base,
+      listCorpora: async () => {
+        const [corpus] = await base.listCorpora();
+        return [
+          { ...corpus, id: "marloth", label: "Marloth" },
+          { ...corpus, id: "translucence", label: "Translucence" },
+        ];
+      },
+      createNode,
+      getNode,
+    };
+  },
 }));
 
 import { App } from "../../src/webview/App";
@@ -80,9 +90,36 @@ describe("App new page draft", () => {
 
     await waitFor(
       () => {
-        expect(createNodeCalls).toEqual([{ title: "Fresh idea", body: undefined }]);
+        expect(createNodeCalls).toEqual([
+          { title: "Fresh idea", body: undefined, corpusId: "marloth" },
+        ]);
         expect(window.location.search).toContain(`node=${createdId}`);
         expect(window.location.search).not.toContain("view=create");
+      },
+      { timeout: 3500 },
+    );
+  });
+
+  test("?corpus= pins the draft to that corpus instead of the first one", async () => {
+    window.history.replaceState({}, "", "/?view=create&corpus=translucence");
+    const { container } = render(<App />);
+
+    await waitFor(() => {
+      expect(
+        container.querySelector('textarea[aria-label="Page title"]'),
+      ).toBeTruthy();
+    });
+
+    const title = container.querySelector(
+      'textarea[aria-label="Page title"]',
+    ) as HTMLTextAreaElement;
+    fireEvent.change(title, { target: { value: "Fresh idea" } });
+
+    await waitFor(
+      () => {
+        expect(createNodeCalls).toEqual([
+          { title: "Fresh idea", body: undefined, corpusId: "translucence" },
+        ]);
       },
       { timeout: 3500 },
     );

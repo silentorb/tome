@@ -79,6 +79,18 @@ export function rewriteStandaloneNodeLinks(root: ParentNode, base?: string | URL
   rewriteEditorNodeLinks(root, base);
 }
 
+/** Query param pinning the active corpus on URLs that carry no node id. */
+export const CORPUS_PARAM = "corpus";
+
+export function corpusFromLocation(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get(CORPUS_PARAM);
+}
+
+export function stripCorpusParamFromUrl(url: URL): void {
+  url.searchParams.delete(CORPUS_PARAM);
+}
+
 export function metadataExpandedFromLocation(): boolean {
   if (typeof window === "undefined") return false;
   return new URLSearchParams(window.location.search).get("meta") === "1";
@@ -170,6 +182,7 @@ export function standaloneViewUrl(
   if (nodeId) url.searchParams.set("node", nodeId);
   else url.searchParams.delete("node");
   stripMetadataParamFromUrl(url);
+  stripCorpusParamFromUrl(url);
   if (view !== "graph-explorer") url.searchParams.delete("anchor");
   return url.toString();
 }
@@ -193,14 +206,22 @@ export function navigateStandaloneView(
   navigateStandaloneUrl(standaloneViewUrl(view, nodeId, base, anchorId, defaultAnchorId), base);
 }
 
-export function navigateStandaloneCreate(base?: string | URL): void {
-  navigateStandaloneUrl(standaloneCreatePageUrl(base), base);
+export function navigateStandaloneCreate(corpusId?: string | null, base?: string | URL): void {
+  navigateStandaloneUrl(standaloneCreatePageUrl(corpusId, base), base);
 }
 
-/** URL that triggers automatic new-page creation on load (`?view=create`). */
-export function standaloneCreatePageUrl(base?: string | URL): string {
+/**
+ * URL that triggers automatic new-page creation on load (`?view=create`).
+ * Carries `corpus` because a create page has no node to infer the corpus from.
+ */
+export function standaloneCreatePageUrl(
+  corpusId?: string | null,
+  base?: string | URL,
+): string {
   const url = base instanceof URL ? new URL(base.href) : new URL(base ?? window.location.href);
   url.searchParams.set("view", "create");
+  if (corpusId) url.searchParams.set(CORPUS_PARAM, corpusId);
+  else url.searchParams.delete(CORPUS_PARAM);
   url.searchParams.delete("node");
   url.searchParams.delete("tab");
   url.searchParams.delete("scope");

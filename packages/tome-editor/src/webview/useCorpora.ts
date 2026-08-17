@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { TomeCorpusPublic, WorkspacePublic } from "../shared/http-client";
 import type { EditorApi } from "./api/client";
+import { corpusFromLocation } from "./node-links";
 
 export function useCorpora(api: EditorApi) {
   const [corpora, setCorpora] = useState<TomeCorpusPublic[]>([]);
@@ -43,7 +44,7 @@ export function useCorpora(api: EditorApi) {
         const list = await api.listCorpora();
         if (cancelled) return;
         setCorpora(list);
-        applyCorpus(list, null);
+        applyCorpus(list, corpusFromLocation());
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err));

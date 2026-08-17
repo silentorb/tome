@@ -80,7 +80,7 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 - Sidebar: corpus dropdown at the top; Home / quick links / branding from the active corpus only.
 - Navigating to a node sets active corpus to that node’s `corpusId`.
 - Changing the dropdown **always** navigates to the selected corpus’s `homeNodeId`.
-- New nodes are created in the active corpus.
+- New nodes are created in the active corpus. The New page URL carries `corpus={corpusId}` (`?view=create&corpus=…`) because it has no node to infer the corpus from; opening it in a new tab must not fall back to the first configured corpus.
 - Readonly corpus / page → view-only chrome.
 - Search / graph may query the union so cross-links resolve; create and chrome stay corpus-scoped.
 
