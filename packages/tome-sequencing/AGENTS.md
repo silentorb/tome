@@ -13,11 +13,11 @@ Do not import `tome-editor` / `tome-db`.
 
 ## Page-scoped Imp query
 
-Block fence `data.reactFlow` is canonical. At execute time, string literals equal to `$pageNodeId` are replaced with the host page node id (unlike tome-query v1).
+Block fence `data.reactFlow` is canonical. At execute time, string literals equal to `$pageNodeId` are replaced with the host page node id (unlike tome-query v1). Imp `parameter` node values are bound from user settings / invoke `parameters` before compile.
 
 ## Timeline settings
 
-Upper-right **⚙** opens session view settings (chronology units on by default; dependency edges off). Follow the gear-menu convention in [`tome-editor.md`](../../docs/features/tome-editor.md) § View settings control.
+Upper-right **⚙** opens view settings (chronology units on by default; dependency edges off — session only) plus any graph `parameter` controls (persisted in user settings). Follow the gear-menu convention in [`tome-editor.md`](../../docs/features/tome-editor.md) § View settings control. Timeline chrome is dark by default for contrast. Layout comes from `tome-sequencing-resolution` (`layoutEvents`); this package does not invent macro tracks or ALAP range bars.
 
 ## Static HTML vs editor
 

@@ -89,12 +89,13 @@ function formatInputValue(value: PrimitiveValue | undefined): string {
 }
 
 function parseInputValue(raw: string, portId: string): PrimitiveValue {
-  if (portId === "count") {
+  if (portId === "count" || portId === "direction") {
     const n = Number(raw);
     return Number.isFinite(n) ? n : 0;
   }
   if (raw === "true") return true;
   if (raw === "false") return false;
+  if (raw === "null") return null;
   const asNumber = Number(raw);
   if (raw.trim() !== "" && Number.isFinite(asNumber) && String(asNumber) === raw.trim()) {
     return asNumber;

@@ -42,6 +42,7 @@ describe("tome-imp-sql schema", () => {
     expect(tomeLiveNodesSchema.edges?.sourceColumn).toBe("source_node_id");
     expect(tomeLiveNodesSchema.edges?.targetColumn).toBe("target_node_id");
     expect(tomeLiveNodesSchema.edges?.typeColumn).toBe("type");
+    expect(tomeLiveNodesSchema.edges?.propertiesColumn).toBe("properties");
     expect(tomeLiveNodesSchema.edgeType?.(VALID_ASSOCIATION, 0)).toBe(
       `${VALID_ASSOCIATION}:0`,
     );

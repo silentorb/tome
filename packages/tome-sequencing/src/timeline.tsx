@@ -1,10 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Group } from "@visx/group";
-import { AxisBottom, AxisLeft } from "@visx/axis";
-import { scaleLinear, scaleBand } from "@visx/scale";
+import { AxisBottom } from "@visx/axis";
+import { scaleLinear } from "@visx/scale";
 import { Bar } from "@visx/shape";
 import { ParentSize } from "@visx/responsive";
 import { Zoom } from "@visx/zoom";
+import type { TransformMatrix } from "@visx/zoom/lib/types";
+import { GraphParameterControls } from "tome-query/graph-parameter-controls";
+import type {
+  GraphParameterSpec,
+  GraphParameterValue,
+} from "tome-query/parameters";
+import { eventBarRect } from "./bar-geometry";
 import type { TimelineLayout } from "./layout";
 import { sequencingNodePageHref } from "./node-links";
 
@@ -19,8 +26,22 @@ const DEFAULT_VIEW_OPTIONS: TimelineViewOptions = {
   showChronologyUnits: true,
 };
 
+/** Timeline color tokens — also set as SVG presentation attrs so bars stay dark
+ * even if extension CSS injection races or fails. */
+const TIMELINE_COLORS = {
+  canvas: "#12151a",
+  core: "#1f6b75",
+  label: "#e8eef2",
+  muted: "#9aa3ad",
+  axis: "#6b7380",
+  edge: "rgba(210, 170, 90, 0.75)",
+} as const;
+
 /** Gear / cog for view settings menus (matches Graph Explorer convention). */
 const SETTINGS_ICON = "⚙";
+
+/** Fixed lane height so concurrent events stay readable. */
+export const LANE_HEIGHT = 48;
 
 function rescaleX(
   scale: ReturnType<typeof scaleLinear<number>>,
@@ -33,34 +54,55 @@ function rescaleX(
   return scale.copy().domain(domain);
 }
 
-function rescaleYBand(
-  scale: ReturnType<typeof scaleBand<string>>,
-  transform: { translateY: number; scaleY: number },
-  tracks: string[],
-) {
-  const bandwidth = (scale.bandwidth() || 1) * transform.scaleY;
-  const step = (scale.step() || 1) * transform.scaleY;
+/** Lock vertical transform so zoom/pan only affect the time axis. */
+function constrainHorizontalZoom(matrix: TransformMatrix): TransformMatrix {
   return {
-    position(track: string): number {
-      const base = scale(track) ?? 0;
-      return base * transform.scaleY + transform.translateY;
-    },
-    bandwidth,
-    step,
-    tracks,
+    ...matrix,
+    scaleY: 1,
+    translateY: 0,
   };
+}
+
+export interface LaneYLayout {
+  laneCount: number;
+  contentHeight: number;
+  eventY(lane: number): number;
+}
+
+/** Flat concurrency lanes (no macro tracks). */
+export function buildLaneYLayout(layout: TimelineLayout): LaneYLayout {
+  const laneCount = Math.max(1, layout.laneCount || 1);
+  return {
+    laneCount,
+    contentHeight: laneCount * LANE_HEIGHT,
+    eventY(lane: number) {
+      return lane * LANE_HEIGHT;
+    },
+  };
+}
+
+/** @deprecated Use buildLaneYLayout — kept name alias for older test imports. */
+export function buildTrackYLayout(layout: TimelineLayout): LaneYLayout {
+  return buildLaneYLayout(layout);
+}
+
+export function timelineSvgHeight(
+  contentHeight: number,
+  showChronologyUnits: boolean,
+): number {
+  const top = 16;
+  const bottom = showChronologyUnits ? 36 : 12;
+  return top + bottom + contentHeight;
 }
 
 function TimelineCanvas({
   layout,
   width,
-  height,
   viewOptions,
   nodePageHref,
 }: {
   layout: TimelineLayout;
   width: number;
-  height: number;
   viewOptions: TimelineViewOptions;
   nodePageHref: (id: string) => string;
 }) {
@@ -68,10 +110,14 @@ function TimelineCanvas({
     top: 16,
     right: 16,
     bottom: viewOptions.showChronologyUnits ? 36 : 12,
-    left: 100,
+    left: 16,
   };
+  const yLayout = useMemo(() => buildLaneYLayout(layout), [layout]);
+  const svgH = timelineSvgHeight(yLayout.contentHeight, viewOptions.showChronologyUnits);
   const innerW = Math.max(40, width - margin.left - margin.right);
-  const innerH = Math.max(40, height - margin.top - margin.bottom);
+  const axisBottomY = yLayout.contentHeight;
+  const barPad = LANE_HEIGHT * 0.1;
+  const barH = Math.max(2, LANE_HEIGHT - barPad * 2);
 
   const xScale = useMemo(
     () =>
@@ -83,16 +129,6 @@ function TimelineCanvas({
     [layout.timeMin, layout.timeMax, innerW],
   );
 
-  const yScale = useMemo(
-    () =>
-      scaleBand<string>({
-        domain: layout.tracks.length > 0 ? layout.tracks : ["default"],
-        range: [0, innerH],
-        padding: 0.25,
-      }),
-    [layout.tracks, innerH],
-  );
-
   const byId = useMemo(
     () => new Map(layout.events.map((e) => [e.id, e])),
     [layout.events],
@@ -101,35 +137,35 @@ function TimelineCanvas({
   return (
     <Zoom<SVGSVGElement>
       width={width}
-      height={height}
+      height={svgH}
       scaleXMin={0.25}
       scaleXMax={16}
-      scaleYMin={0.25}
-      scaleYMax={8}
+      scaleYMin={1}
+      scaleYMax={1}
+      constrain={constrainHorizontalZoom}
       wheelDelta={(event) => {
-        // Plain wheel → X; Shift+wheel → Y (independent axes).
         const factor = event.deltaY > 0 ? 0.95 : 1.05;
-        if (event.shiftKey) {
-          return { scaleX: 1, scaleY: factor };
-        }
         return { scaleX: factor, scaleY: 1 };
       }}
     >
       {(zoom) => {
         const x = rescaleX(xScale, zoom.transformMatrix);
-        const y = rescaleYBand(yScale, zoom.transformMatrix, layout.tracks);
         return (
           <svg
             width={width}
-            height={height}
+            height={svgH}
             className="tome-sequencing-svg"
             ref={zoom.containerRef}
-            style={{ cursor: zoom.isDragging ? "grabbing" : "grab", touchAction: "none" }}
+            style={{
+              cursor: zoom.isDragging ? "grabbing" : "grab",
+              touchAction: "none",
+              background: TIMELINE_COLORS.canvas,
+            }}
           >
             <rect
               width={width}
-              height={height}
-              fill="transparent"
+              height={svgH}
+              fill={TIMELINE_COLORS.canvas}
               onMouseDown={zoom.dragStart}
               onMouseMove={zoom.dragMove}
               onMouseUp={zoom.dragEnd}
@@ -138,27 +174,14 @@ function TimelineCanvas({
               }}
             />
             <Group left={margin.left} top={margin.top}>
-              <AxisLeft
-                scale={yScale}
-                tickFormat={(v) => String(v)}
-                stroke="var(--tome-border, #888)"
-                tickStroke="var(--tome-border, #888)"
-                tickLabelProps={() => ({
-                  fill: "var(--tome-fg, #ccc)",
-                  fontSize: 11,
-                  textAnchor: "end",
-                  dx: -4,
-                  dy: 4,
-                })}
-              />
               {viewOptions.showChronologyUnits && (
                 <AxisBottom
-                  top={innerH}
+                  top={axisBottomY}
                   scale={x}
-                  stroke="var(--tome-border, #888)"
-                  tickStroke="var(--tome-border, #888)"
+                  stroke={TIMELINE_COLORS.axis}
+                  tickStroke={TIMELINE_COLORS.axis}
                   tickLabelProps={() => ({
-                    fill: "var(--tome-fg, #ccc)",
+                    fill: TIMELINE_COLORS.muted,
                     fontSize: 11,
                     textAnchor: "middle",
                   })}
@@ -169,11 +192,10 @@ function TimelineCanvas({
                   const from = byId.get(edge.prerequisiteId);
                   const to = byId.get(edge.dependentId);
                   if (!from || !to) return null;
-                  const x1 = x(from.earliestEnd);
-                  const x2 = x(to.earliestStart);
-                  const y1 =
-                    y.position(from.track) + y.bandwidth / 2;
-                  const y2 = y.position(to.track) + y.bandwidth / 2;
+                  const x1 = x(from.end);
+                  const x2 = x(to.start);
+                  const y1 = yLayout.eventY(from.lane) + LANE_HEIGHT / 2;
+                  const y2 = yLayout.eventY(to.lane) + LANE_HEIGHT / 2;
                   return (
                     <line
                       key={`${edge.prerequisiteId}-${edge.dependentId}`}
@@ -182,18 +204,14 @@ function TimelineCanvas({
                       x2={x2}
                       y2={y2}
                       className="tome-sequencing-depends-edge"
+                      stroke={TIMELINE_COLORS.edge}
+                      strokeWidth={1.5}
                     />
                   );
                 })}
               {layout.events.map((event) => {
-                const barY = y.position(event.track);
-                const rangeX = x(event.earliestStart);
-                const rangeW = Math.max(2, x(event.latestEnd) - rangeX);
-                const coreX = x(event.earliestStart);
-                const coreW = Math.max(
-                  2,
-                  x(event.earliestEnd) - coreX,
-                );
+                const barY = yLayout.eventY(event.lane) + barPad;
+                const { x: barX, width: barW } = eventBarRect(x, event.start, event.end);
                 const href = nodePageHref(event.id);
                 return (
                   <a
@@ -202,26 +220,21 @@ function TimelineCanvas({
                     className="tome-sequencing-event-link"
                   >
                     <Bar
-                      x={rangeX}
+                      x={barX}
                       y={barY}
-                      width={rangeW}
-                      height={y.bandwidth}
-                      className="tome-sequencing-event-range"
+                      width={barW}
+                      height={barH}
+                      className="tome-sequencing-event-core"
+                      fill={TIMELINE_COLORS.core}
                       rx={3}
                     />
-                    <Bar
-                      x={coreX}
-                      y={barY + y.bandwidth * 0.15}
-                      width={coreW}
-                      height={y.bandwidth * 0.7}
-                      className="tome-sequencing-event-core"
-                      rx={2}
-                    />
                     <text
-                      x={rangeX + 6}
-                      y={barY + y.bandwidth / 2}
+                      x={barX + 6}
+                      y={barY + barH / 2}
                       dy="0.35em"
                       className="tome-sequencing-event-label"
+                      fill={TIMELINE_COLORS.label}
+                      fontSize={11}
                     >
                       {event.title}
                     </text>
@@ -240,9 +253,15 @@ function TimelineCanvas({
 export function SequencingTimelineView({
   layout,
   nodePageHref = sequencingNodePageHref,
+  graphParameters = [],
+  parameterValues = {},
+  onParameterChange,
 }: {
   layout: TimelineLayout;
   nodePageHref?: (id: string) => string;
+  graphParameters?: GraphParameterSpec[];
+  parameterValues?: Record<string, GraphParameterValue>;
+  onParameterChange?: (paramId: string, value: GraphParameterValue) => void;
 }) {
   const [viewOptions, setViewOptions] = useState<TimelineViewOptions>(DEFAULT_VIEW_OPTIONS);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -312,20 +331,29 @@ export function SequencingTimelineView({
                 />
                 <span>Show dependency edges</span>
               </label>
+              {graphParameters.length > 0 && onParameterChange ? (
+                <GraphParameterControls
+                  parameters={graphParameters}
+                  values={parameterValues}
+                  onChange={onParameterChange}
+                  className="tome-sequencing-graph-parameters"
+                />
+              ) : null}
             </div>
           )}
         </div>
       </div>
       <div className="tome-sequencing-canvas">
-        <ParentSize>
-          {({ width, height }) => {
+        <ParentSize
+          parentSizeStyles={{ width: "100%", height: "auto" }}
+          ignoreDimensions={["height", "top", "left"]}
+        >
+          {({ width }) => {
             const w = width > 0 ? width : 640;
-            const h = height > 0 ? height : 240;
             return (
               <TimelineCanvas
                 layout={layout}
                 width={w}
-                height={h}
                 viewOptions={viewOptions}
                 nodePageHref={nodePageHref}
               />

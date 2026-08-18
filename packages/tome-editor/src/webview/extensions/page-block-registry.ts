@@ -11,6 +11,19 @@ export type PageBlockToolPanelHandlers = {
   close: () => void;
 };
 
+export type PageBlockParameterHandlers = {
+  getBlockParameters: (
+    nodeId: string,
+    componentId: string,
+  ) => Record<string, string | number | boolean | null>;
+  setBlockParameter: (
+    nodeId: string,
+    componentId: string,
+    paramId: string,
+    value: string | number | boolean | null,
+  ) => void;
+};
+
 export type InteractivePageBlockMount =
   | {
       kind: "interactive";
@@ -49,6 +62,7 @@ let invokeExtensionFn:
   | ((componentId: string, input?: unknown, nodeId?: string) => Promise<unknown>)
   | null = null;
 let toolPanelHandlers: PageBlockToolPanelHandlers | null = null;
+let parameterHandlers: PageBlockParameterHandlers | null = null;
 
 export function setPageBlockInvokeExtension(
   fn: ((componentId: string, input?: unknown, nodeId?: string) => Promise<unknown>) | null,
@@ -58,6 +72,16 @@ export function setPageBlockInvokeExtension(
 
 export function setPageBlockToolPanelHandlers(handlers: PageBlockToolPanelHandlers | null): void {
   toolPanelHandlers = handlers;
+}
+
+export function setPageBlockParameterHandlers(
+  handlers: PageBlockParameterHandlers | null,
+): void {
+  parameterHandlers = handlers;
+}
+
+export function getPageBlockParameterHandlers(): PageBlockParameterHandlers | null {
+  return parameterHandlers;
 }
 
 export function openPageBlockToolPanel(session: EditorToolPanelSession): void {

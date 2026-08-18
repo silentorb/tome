@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   type MouseEvent,
@@ -18,6 +19,12 @@ import {
 } from "./config";
 import { QueryFlowEditor } from "./query-editor";
 import type { QueryResultTable } from "./execute";
+import { GraphParameterControls } from "./graph-parameter-controls";
+import {
+  listGraphParameters,
+  resolveGraphParameterValues,
+  type GraphParameterValue,
+} from "./parameters";
 import { formatCellText } from "./render";
 import { queryNodePageHref } from "./node-links";
 import "./query-block.css";
@@ -46,6 +53,8 @@ export function QueryToolPanelContent({
   );
 }
 
+const SETTINGS_ICON = "⚙";
+
 export function QueryBlockComponent({
   ctx,
   blockData,
@@ -63,6 +72,11 @@ export function QueryBlockComponent({
       onClose?: () => void;
     }) => void;
     closeToolPanel?: () => void;
+    getBlockParameters?: () => Record<string, GraphParameterValue>;
+    setBlockParameter?: (
+      paramId: string,
+      value: string | number | boolean | null,
+    ) => Promise<void>;
   };
   blockData: unknown;
   onBlockDataChange: (data: unknown) => void;
@@ -73,11 +87,21 @@ export function QueryBlockComponent({
   const [table, setTable] = useState<QueryResultTable | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [paramTick, setParamTick] = useState(0);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const next = parseQueryBlockData(blockData);
     setGraph(next.reactFlow);
   }, [blockData]);
+
+  const parameterSpecs = useMemo(() => listGraphParameters(graph), [graph]);
+  const parameterValues = useMemo(() => {
+    void paramTick;
+    const overrides = ctx.getBlockParameters?.() ?? {};
+    return resolveGraphParameterValues(graph, overrides);
+  }, [ctx, graph, paramTick]);
 
   const persistGraph = useCallback(
     (next: ReactFlowGraph) => {
@@ -95,9 +119,11 @@ export function QueryBlockComponent({
     setLoading(true);
     setError(null);
     try {
+      const overrides = ctx.getBlockParameters?.() ?? {};
       const result = await ctx.invoke({
         action: "execute",
         data: toBlockData(graph),
+        parameters: resolveGraphParameterValues(graph, overrides),
       });
       const record =
         result && typeof result === "object" && !Array.isArray(result)
@@ -121,14 +147,45 @@ export function QueryBlockComponent({
     } finally {
       setLoading(false);
     }
-  }, [ctx.invoke, graph]);
+  }, [ctx, graph]);
 
   const runQueryRef = useRef(runQuery);
   runQueryRef.current = runQuery;
 
   useEffect(() => {
     void runQuery();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps -- run on mount; Refresh / panel close for re-run
+  }, [paramTick]); // eslint-disable-line react-hooks/exhaustive-deps -- mount + param change
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handlePointerDown = (event: globalThis.MouseEvent) => {
+      if (!settingsRef.current?.contains(event.target as Node)) setMenuOpen(false);
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
+
+  const handleParameterChange = useCallback(
+    async (paramId: string, value: GraphParameterValue) => {
+      const spec = parameterSpecs.find((p) => p.id === paramId);
+      if (ctx.setBlockParameter) {
+        if (spec && Object.is(value, spec.defaultValue)) {
+          await ctx.setBlockParameter(paramId, null);
+        } else {
+          await ctx.setBlockParameter(paramId, value);
+        }
+      }
+      setParamTick((n) => n + 1);
+    },
+    [ctx, parameterSpecs],
+  );
 
   const openQueryEditor = useCallback(() => {
     if (!ctx.openToolPanel) {
@@ -160,16 +217,42 @@ export function QueryBlockComponent({
         >
           Edit query
         </button>
-        <button
-          type="button"
-          className="tome-query-run"
-          onClick={() => void runQuery()}
-          disabled={loading}
-          aria-label={loading ? "Running…" : "Refresh"}
-          title={loading ? "Running…" : "Refresh"}
-        >
-          <RefreshCwIcon className={loading ? "is-spinning" : undefined} />
-        </button>
+        <div className="tome-query-toolbar-end">
+          {parameterSpecs.length > 0 ? (
+            <div className="tome-query-settings" ref={settingsRef}>
+              <button
+                type="button"
+                className="tome-query-settings-trigger"
+                aria-haspopup="menu"
+                aria-expanded={menuOpen}
+                aria-label="Query settings"
+                title="Query settings"
+                onClick={() => setMenuOpen((v) => !v)}
+              >
+                <span aria-hidden="true">{SETTINGS_ICON}</span>
+              </button>
+              {menuOpen ? (
+                <div className="tome-query-settings-menu" role="menu">
+                  <GraphParameterControls
+                    parameters={parameterSpecs}
+                    values={parameterValues}
+                    onChange={handleParameterChange}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+          <button
+            type="button"
+            className="tome-query-run"
+            onClick={() => void runQuery()}
+            disabled={loading}
+            aria-label={loading ? "Running…" : "Refresh"}
+            title={loading ? "Running…" : "Refresh"}
+          >
+            <RefreshCwIcon className={loading ? "is-spinning" : undefined} />
+          </button>
+        </div>
       </div>
 
       <div className="tome-query-table-panel">

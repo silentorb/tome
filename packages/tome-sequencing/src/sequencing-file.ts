@@ -9,8 +9,8 @@ const ASSOCIATION_ID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
 export interface SequencingTableConfig {
   dependsAssociation: string;
-  dependsPerspective?: string;
-  dependsOnPerspective?: string;
+  dependentsPerspective?: string;
+  dependenciesPerspective?: string;
   defaultDuration: number;
   trackProperty?: string | null;
   /** When set with trackProperty, read track from hub→member membership edges. */
@@ -63,16 +63,18 @@ function parseTableConfig(raw: unknown, path: string): SequencingTableConfig {
     dependsAssociation: parseAssociationId(obj.dependsAssociation, `${path}.dependsAssociation`),
     defaultDuration: obj.defaultDuration,
   };
-  const dependsPerspective = parseOptionalString(
-    obj.dependsPerspective,
-    `${path}.dependsPerspective`,
+  const dependentsPerspective = parseOptionalString(
+    obj.dependentsPerspective,
+    `${path}.dependentsPerspective`,
   );
-  if (dependsPerspective !== undefined) config.dependsPerspective = dependsPerspective;
-  const dependsOnPerspective = parseOptionalString(
-    obj.dependsOnPerspective,
-    `${path}.dependsOnPerspective`,
+  if (dependentsPerspective !== undefined) config.dependentsPerspective = dependentsPerspective;
+  const dependenciesPerspective = parseOptionalString(
+    obj.dependenciesPerspective,
+    `${path}.dependenciesPerspective`,
   );
-  if (dependsOnPerspective !== undefined) config.dependsOnPerspective = dependsOnPerspective;
+  if (dependenciesPerspective !== undefined) {
+    config.dependenciesPerspective = dependenciesPerspective;
+  }
   if (obj.trackProperty !== undefined) {
     if (obj.trackProperty === null) config.trackProperty = null;
     else config.trackProperty = parseOptionalString(obj.trackProperty, `${path}.trackProperty`);

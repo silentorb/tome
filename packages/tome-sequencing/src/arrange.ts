@@ -1,4 +1,3 @@
-import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
@@ -7,37 +6,14 @@ import { projectionType } from "tome-imp-sql";
 import type { DependsConstraint, SequencingProblem } from "tome-sequencing-interfaces";
 import { resolve as resolveSequence } from "tome-sequencing-resolution";
 import { compileReactFlowQuery } from "tome-query/execute";
+import {
+  bindGraphParameters,
+  resolveGraphParameterValues,
+  type GraphParameterValue,
+} from "tome-query/parameters";
 import { bindPageNodeId, parseSequencingBlockData } from "./config";
-import { buildTimelineLayout, type TimelineLayout } from "./layout";
+import { buildTimelineLayoutFromResolved, type TimelineLayout } from "./layout";
 import { loadTableSequencingConfig } from "./sequencing-file";
-
-function loadEnumOptions(
-  contentDir: string,
-  enumId: string,
-): string[] | null {
-  const path = resolve(contentDir, "model", "schema.json");
-  if (!existsSync(path)) return null;
-  try {
-    const schema = JSON.parse(readFileSync(path, "utf-8")) as {
-      enums?: Record<string, { options?: string[] }>;
-    };
-    const options = schema.enums?.[enumId]?.options;
-    return Array.isArray(options) ? options.filter((o): o is string => typeof o === "string") : null;
-  } catch {
-    return null;
-  }
-}
-
-function decodeTrackValue(
-  value: unknown,
-  enumOptions: string[] | null,
-): string | null {
-  if (typeof value === "string" && value.trim()) return value.trim();
-  if (typeof value === "number" && enumOptions && enumOptions[value] !== undefined) {
-    return enumOptions[value]!;
-  }
-  return null;
-}
 
 function contentDirFromEnv(): string {
   const fromEnv = process.env.TOME_CONTENT_PATH;
@@ -49,8 +25,11 @@ export async function runEventQuery(input: {
   sqlQuery: ExtensionSqlQueryServices;
   reactFlow: ReactFlowGraph;
   pageNodeId: string;
+  parameters?: Record<string, GraphParameterValue>;
 }): Promise<Record<string, unknown>[]> {
-  const bound = bindPageNodeId(input.reactFlow, input.pageNodeId);
+  const values = resolveGraphParameterValues(input.reactFlow, input.parameters);
+  const withParams = bindGraphParameters(input.reactFlow, values);
+  const bound = bindPageNodeId(withParams, input.pageNodeId);
   const { sql, parameters } = compileReactFlowQuery(bound);
   return input.sqlQuery.queryAll(sql, parameters);
 }
@@ -109,24 +88,13 @@ function titleFromRow(row: Record<string, unknown>, id: string): string {
   return id;
 }
 
-function trackFromRow(
-  row: Record<string, unknown>,
-  trackProperty: string | null | undefined,
-  enumOptions: string[] | null = null,
-): string {
-  if (!trackProperty) return "default";
-  const direct = decodeTrackValue(row[trackProperty], enumOptions);
-  if (direct) return direct;
-  const props = propertiesFromRow(row);
-  return decodeTrackValue(props[trackProperty], enumOptions) ?? "default";
-}
-
 export async function arrangeTimeline(input: {
   pageNodeId: string;
   blockData: unknown;
   sqlQuery: ExtensionSqlQueryServices;
   graphQuery?: ExtensionGraphQueryServices;
   contentDir?: string;
+  parameters?: Record<string, GraphParameterValue>;
 }): Promise<TimelineLayout> {
   const contentDir = input.contentDir ?? contentDirFromEnv();
   const config = loadTableSequencingConfig(input.pageNodeId, contentDir);
@@ -142,37 +110,16 @@ export async function arrangeTimeline(input: {
     sqlQuery: input.sqlQuery,
     reactFlow: parsed.reactFlow,
     pageNodeId: input.pageNodeId,
+    parameters: input.parameters,
   });
 
-  const trackEnumOptions = config.trackProperty
-    ? loadEnumOptions(contentDir, config.trackProperty)
-    : null;
-
   const titles = new Map<string, string>();
-  const trackById = new Map<string, string>();
   const eventIds: string[] = [];
   for (const row of rows) {
     const id = typeof row.id === "string" ? row.id : null;
     if (!id) continue;
     eventIds.push(id);
     titles.set(id, titleFromRow(row, id));
-    trackById.set(id, trackFromRow(row, config.trackProperty, trackEnumOptions));
-  }
-
-  // Prefer track values from membership-edge properties when configured (e.g. Arcs `layer`).
-  if (config.trackProperty && config.membershipAssociation) {
-    const type0 = projectionType(config.membershipAssociation, 0);
-    const membershipRows = await input.sqlQuery.queryAll(
-      `select target_node_id as id, properties from relationship_projections
-       where source_node_id = ? and type = ?`,
-      [input.pageNodeId, type0],
-    );
-    for (const m of membershipRows) {
-      const id = typeof m.id === "string" ? m.id : null;
-      if (!id || !trackById.has(id)) continue;
-      const track = trackFromRow(m, config.trackProperty, trackEnumOptions);
-      if (track !== "default") trackById.set(id, track);
-    }
   }
 
   const depends = await dependsFromGraphEdgesAsync(
@@ -192,10 +139,9 @@ export async function arrangeTimeline(input: {
     throw new Error(resolved.error.message);
   }
 
-  return buildTimelineLayout({
+  return buildTimelineLayoutFromResolved({
     resolved: resolved.events,
     titles,
-    trackById,
     depends,
   });
 }

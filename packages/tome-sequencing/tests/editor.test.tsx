@@ -8,15 +8,13 @@ const sampleLayout: TimelineLayout = {
     {
       id: "e1",
       title: "Arc One",
-      track: "Primary",
-      earliestStart: 0,
-      latestStart: 0,
-      earliestEnd: 1,
-      latestEnd: 1,
+      lane: 0,
+      start: 0,
+      end: 1,
     },
   ],
   depends: [],
-  tracks: ["Primary"],
+  laneCount: 1,
   timeMin: 0,
   timeMax: 1,
 };
@@ -85,5 +83,74 @@ describe("SequencingBlockComponent", () => {
     expect(document.querySelector(".tome-sequencing-settings-menu")).toBeTruthy();
     fireEvent.mouseDown(document.body);
     expect(document.querySelector(".tome-sequencing-settings-menu")).toBeNull();
+  });
+
+  test("graph parameter checkbox calls setBlockParameter and re-invokes", async () => {
+    const setBlockParameter = async () => {};
+    const calls: unknown[] = [];
+    const invoke = async (input: unknown) => {
+      calls.push(input);
+      return { ok: true, layout: sampleLayout };
+    };
+    const blockData = {
+      version: 1,
+      reactFlow: {
+        nodes: [
+          {
+            id: "includeConsiderations",
+            type: "parameter",
+            position: { x: 0, y: 0 },
+            data: {
+              inputValues: {
+                label: "Include Consideration arcs",
+                value: true,
+              },
+            },
+          },
+        ],
+        edges: [],
+      },
+    };
+    let paramStore: Record<string, boolean | null> = {};
+    render(
+      <SequencingBlockComponent
+        ctx={{
+          component: { id: "tome-sequencing.block", label: "Timeline" },
+          nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
+          invoke,
+          getBlockParameters: () => {
+            const out: Record<string, boolean> = {};
+            for (const [k, v] of Object.entries(paramStore)) {
+              if (typeof v === "boolean") out[k] = v;
+            }
+            return out;
+          },
+          setBlockParameter: async (id, value) => {
+            expect(id).toBe("includeConsiderations");
+            paramStore = {
+              ...paramStore,
+              [id]: value as boolean | null,
+            };
+            await setBlockParameter();
+          },
+        }}
+        blockData={blockData}
+        onBlockDataChange={() => {}}
+      />,
+    );
+    const trigger = await waitFor(() =>
+      screen.getByRole("button", { name: "Timeline settings" }),
+    );
+    fireEvent.click(trigger);
+    const checkbox = await waitFor(() =>
+      screen.getByLabelText("Include Consideration arcs"),
+    );
+    expect((checkbox as HTMLInputElement).checked).toBe(true);
+    const before = calls.length;
+    fireEvent.click(checkbox);
+    await waitFor(() => expect(paramStore.includeConsiderations).toBe(false));
+    await waitFor(() => expect(calls.length).toBeGreaterThan(before));
+    const last = calls[calls.length - 1] as { parameters?: { includeConsiderations?: boolean } };
+    expect(last.parameters?.includeConsiderations).toBe(false);
   });
 });

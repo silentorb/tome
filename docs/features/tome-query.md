@@ -30,7 +30,8 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 - The host tool panel is user-resizable (drag the left edge; width persists in localStorage)
 - Closing the panel re-runs the table query; Refresh re-runs while the panel is closed
 - Graph edits update fence `data` via `onBlockDataChange`
-- Table invokes `POST /api/extensions/tome-query.block/invoke` with `{ action: "execute", data }`
+- Table invokes `POST /api/extensions/tome-query.block/invoke` with `{ action: "execute", data, parameters? }`
+- When the Imp graph declares **`parameter` nodes**, a settings gear appears; values persist in user settings (`blockParameters`) and are sent as `parameters` on invoke
 - Table errors are shown in a readonly field so they can be selected/copied inside the Milkdown embed
 - No page-node / type-table scope in v1 — `nodeId` is ignored for the collection source
 - Wiring a new edge onto an occupied input port replaces the previous inbound edge; output ports may fan out

@@ -1,51 +1,78 @@
 import type { DependsConstraint } from "tome-sequencing-interfaces";
-import type { ResolvedEvent } from "tome-sequencing-resolution";
+import { layoutEvents, type LaidOutEvent } from "tome-sequencing-resolution";
 
 export interface TimelineEventLayout {
   id: string;
   title: string;
-  track: string;
-  earliestStart: number;
-  latestStart: number;
-  earliestEnd: number;
-  latestEnd: number;
+  /** ASAP start — exclusive layout box. */
+  start: number;
+  /** ASAP end — exclusive layout box. */
+  end: number;
+  /** 0-based concurrency lane (flat timeline; no macro tracks). */
+  lane: number;
+  /** Slack metadata only; not drawn as exclusive width. */
+  latestStart?: number;
+  latestEnd?: number;
 }
 
 export interface TimelineLayout {
   events: TimelineEventLayout[];
   depends: DependsConstraint[];
-  tracks: string[];
+  /** Concurrency lanes used (at least 1 when there is any event). */
+  laneCount: number;
   timeMin: number;
   timeMax: number;
 }
 
+/** Map resolution placements + titles into the timeline DTO (no macro tracks). */
 export function buildTimelineLayout(input: {
-  resolved: ResolvedEvent[];
+  laidOut: LaidOutEvent[];
+  laneCount: number;
   titles: Map<string, string>;
-  trackById: Map<string, string>;
   depends: DependsConstraint[];
 }): TimelineLayout {
-  const tracksSet = new Set<string>();
-  const events: TimelineEventLayout[] = input.resolved.map((r) => {
-    const track = input.trackById.get(r.id) ?? "default";
-    tracksSet.add(track);
-    return {
-      id: r.id,
-      title: input.titles.get(r.id) ?? r.id,
-      track,
-      earliestStart: r.earliestStart,
-      latestStart: r.latestStart,
-      earliestEnd: r.earliestEnd,
-      latestEnd: r.latestEnd,
-    };
-  });
-  const tracks = [...tracksSet].sort((a, b) => a.localeCompare(b));
+  const events: TimelineEventLayout[] = input.laidOut.map((e) => ({
+    id: e.id,
+    title: input.titles.get(e.id) ?? e.id,
+    start: e.start,
+    end: e.end,
+    lane: e.lane,
+    latestStart: e.latestStart,
+    latestEnd: e.latestEnd,
+  }));
+
   let timeMin = 0;
   let timeMax = 1;
-  for (const e of events) {
-    timeMin = Math.min(timeMin, e.earliestStart);
-    timeMax = Math.max(timeMax, e.latestEnd);
+  if (events.length > 0) {
+    timeMin = Infinity;
+    timeMax = -Infinity;
+    for (const e of events) {
+      timeMin = Math.min(timeMin, e.start);
+      timeMax = Math.max(timeMax, e.end);
+    }
   }
   if (timeMax <= timeMin) timeMax = timeMin + 1;
-  return { events, depends: input.depends, tracks, timeMin, timeMax };
+
+  return {
+    events,
+    depends: input.depends,
+    laneCount: events.length === 0 ? 0 : Math.max(1, input.laneCount),
+    timeMin,
+    timeMax,
+  };
+}
+
+/** Resolve windows → non-overlapping placements → timeline DTO. */
+export function buildTimelineLayoutFromResolved(input: {
+  resolved: Parameters<typeof layoutEvents>[0];
+  titles: Map<string, string>;
+  depends: DependsConstraint[];
+}): TimelineLayout {
+  const { events: laidOut, laneCount } = layoutEvents(input.resolved);
+  return buildTimelineLayout({
+    laidOut,
+    laneCount,
+    titles: input.titles,
+    depends: input.depends,
+  });
 }

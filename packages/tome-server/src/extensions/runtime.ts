@@ -287,10 +287,14 @@ export class ExtensionServerRuntime {
       throw new Error(`Bun.build failed for ${extensionId} (${entrypoint}): ${built.error}`);
     }
     const { js, css: cssParts } = built;
+    // Replace any prior style tag for this extension so stale CSS cannot linger
+    // across remounts / re-imports of editor.js.
     const bundle =
       cssParts.length === 0
         ? js
-        : `;(function(){var s=document.createElement("style");s.setAttribute("data-tome-ext",${JSON.stringify(extensionId)});` +
+        : `;(function(){var id=${JSON.stringify(extensionId)};` +
+          `document.querySelectorAll('style[data-tome-ext="'+id+'"]').forEach(function(n){n.remove();});` +
+          `var s=document.createElement("style");s.setAttribute("data-tome-ext",id);` +
           `s.textContent=${JSON.stringify(cssParts.join("\n"))};document.head.appendChild(s);})();\n${js}`;
     this.#editorBundleCache.set(extensionId, { js: bundle, sourceMtimeMs });
     return bundle;

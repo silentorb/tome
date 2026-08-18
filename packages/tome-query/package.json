@@ -6,6 +6,8 @@
   "exports": {
     "./config": "./src/config.ts",
     "./execute": "./src/execute.ts",
+    "./parameters": "./src/parameters.ts",
+    "./graph-parameter-controls": "./src/graph-parameter-controls.tsx",
     "./query-editor": "./src/query-editor.tsx",
     "./editor": "./src/editor.tsx",
     "./html": "./src/html.ts",

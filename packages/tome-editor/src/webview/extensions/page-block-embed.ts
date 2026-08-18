@@ -1,7 +1,7 @@
 import type { MilkdownPlugin } from "@milkdown/kit/ctx";
 import { $nodeSchema, $remark, $view } from "@milkdown/kit/utils";
 import type { Node as MdastNode, Root as MdastRoot } from "mdast";
-import { createElement, type ReactNode } from "react";
+import { createElement } from "react";
 import { createRoot, type Root as ReactRoot } from "react-dom/client";
 import {
   formatPageBlockEmbedComment,
@@ -16,7 +16,7 @@ import {
   openPageBlockToolPanel,
   resolveInteractivePageBlockMount,
 } from "./page-block-registry";
-
+import { PageBlockWithUserSettings } from "./page-block-with-user-settings";
 const PAGE_BLOCK_COMMENT_RE = /^<!-- tome-page-block /;
 
 interface TomePageBlockMdastNode extends MdastNode {
@@ -252,9 +252,12 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
       },
     };
 
-    const Component = registration.Component as (p: EditorPageBlockProps) => ReactNode;
-    root.render(createElement(Component, props));
-  };
+    root.render(
+      createElement(PageBlockWithUserSettings, {
+        Component: registration.Component,
+        props,
+      }),
+    );  };
 
   const remount = (comment: string, html: string) => {
     currentComment = comment;

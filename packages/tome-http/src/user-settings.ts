@@ -22,12 +22,21 @@ export interface SidebarSettings {
   recentMaxItems?: number;
 }
 
+/** Primitive values for Imp graph parameter overrides. */
+export type BlockParameterValue = string | number | boolean | null;
+
 export interface UserSettings {
   version: typeof USER_SETTINGS_VERSION;
   /** Sparse overrides keyed by table id (see `tableSortKey` helpers). */
   tableSorts?: Record<string, TableSortSpec>;
   /** Active table tab id per node page (see `nodeTableTabKey`). */
   tableTabs?: Record<string, string>;
+  /**
+   * Sparse Imp graph parameter overrides per page block.
+   * Outer key: `blockParametersKey(nodeId, componentId)`.
+   * Inner key: parameter node id → value.
+   */
+  blockParameters?: Record<string, Record<string, BlockParameterValue>>;
   globalSearch?: GlobalSearchSettings;
   sidebar?: SidebarSettings;
 }
@@ -35,6 +44,8 @@ export interface UserSettings {
 export type UserSettingsPatch = {
   tableSorts?: Record<string, TableSortSpec | null>;
   tableTabs?: Record<string, string | null>;
+  /** Per-block map patches; inner `null` deletes a param; outer `null` clears the block. */
+  blockParameters?: Record<string, Record<string, BlockParameterValue | null> | null>;
   globalSearch?: GlobalSearchSettings | null;
   sidebar?: SidebarSettings | null;
 };
@@ -76,6 +87,42 @@ function normalizeGlobalSearch(
 ): GlobalSearchSettings | undefined {
   if (!value || value.includeBody !== true) return undefined;
   return { includeBody: true };
+}
+
+/** Stable key for Imp graph parameter overrides on a page block. */
+export function blockParametersKey(nodeId: string, componentId: string): string {
+  return `blocks/${nodeId}/${componentId}`;
+}
+
+export function blockParametersForKey(
+  settings: UserSettings,
+  key: string,
+): Record<string, BlockParameterValue> {
+  const stored = settings.blockParameters?.[key];
+  if (!stored || typeof stored !== "object") return {};
+  return { ...stored };
+}
+
+function isBlockParameterValue(value: unknown): value is BlockParameterValue {
+  return (
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  );
+}
+
+function normalizeBlockParameterMap(
+  value: Record<string, unknown> | undefined,
+): Record<string, BlockParameterValue> | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return undefined;
+  const parsed: Record<string, BlockParameterValue> = {};
+  for (const [paramId, raw] of Object.entries(value)) {
+    if (!paramId || !isBlockParameterValue(raw)) continue;
+    if (typeof raw === "number" && !Number.isFinite(raw)) continue;
+    parsed[paramId] = raw;
+  }
+  return Object.keys(parsed).length > 0 ? parsed : undefined;
 }
 
 export function relationTableSortKey(nodeId: string, relationLabel: string): string {
@@ -201,6 +248,11 @@ export function applyUserSettingsPatch(
     version: USER_SETTINGS_VERSION,
     tableSorts: current.tableSorts ? { ...current.tableSorts } : undefined,
     tableTabs: current.tableTabs ? { ...current.tableTabs } : undefined,
+    blockParameters: current.blockParameters
+      ? Object.fromEntries(
+          Object.entries(current.blockParameters).map(([key, map]) => [key, { ...map }]),
+        )
+      : undefined,
     globalSearch: current.globalSearch ? { ...current.globalSearch } : undefined,
     sidebar: current.sidebar ? { ...current.sidebar } : undefined,
   };
@@ -231,6 +283,36 @@ export function applyUserSettingsPatch(
     }
     if (Object.keys(next.tableTabs).length === 0) {
       delete next.tableTabs;
+    }
+  }
+
+  if (patch.blockParameters) {
+    if (!next.blockParameters) next.blockParameters = {};
+    for (const [blockKey, value] of Object.entries(patch.blockParameters)) {
+      if (value === null) {
+        delete next.blockParameters[blockKey];
+        continue;
+      }
+      const currentMap = { ...(next.blockParameters[blockKey] ?? {}) };
+      for (const [paramId, paramValue] of Object.entries(value)) {
+        if (paramValue === null) {
+          delete currentMap[paramId];
+        } else if (isBlockParameterValue(paramValue)) {
+          if (typeof paramValue === "number" && !Number.isFinite(paramValue)) {
+            delete currentMap[paramId];
+          } else {
+            currentMap[paramId] = paramValue;
+          }
+        }
+      }
+      if (Object.keys(currentMap).length === 0) {
+        delete next.blockParameters[blockKey];
+      } else {
+        next.blockParameters[blockKey] = currentMap;
+      }
+    }
+    if (Object.keys(next.blockParameters).length === 0) {
+      delete next.blockParameters;
     }
   }
 
@@ -294,6 +376,19 @@ export function parseUserSettings(raw: unknown): UserSettings {
     }
     if (Object.keys(parsed).length > 0) {
       settings.tableTabs = parsed;
+    }
+  }
+
+  const blockParameters = record.blockParameters;
+  if (blockParameters && typeof blockParameters === "object" && !Array.isArray(blockParameters)) {
+    const parsed: Record<string, Record<string, BlockParameterValue>> = {};
+    for (const [key, value] of Object.entries(blockParameters)) {
+      if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+      const map = normalizeBlockParameterMap(value as Record<string, unknown>);
+      if (map) parsed[key] = map;
+    }
+    if (Object.keys(parsed).length > 0) {
+      settings.blockParameters = parsed;
     }
   }
 

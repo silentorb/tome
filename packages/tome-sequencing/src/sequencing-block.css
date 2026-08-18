@@ -1,19 +1,26 @@
 .tome-sequencing-block {
+  --tome-sequencing-canvas-bg: #12151a;
+  --tome-sequencing-range: #3d4f63;
+  --tome-sequencing-core: #1f6b75;
+  --tome-sequencing-label: #e8eef2;
+  --tome-sequencing-muted: #9aa3ad;
+  --tome-sequencing-edge: rgba(210, 170, 90, 0.75);
+  --tome-sequencing-axis: #6b7380;
+
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  min-height: 280px;
-  border: 1px solid var(--tome-border, #444);
+  border: 1px solid var(--tome-border, #2a3038);
   border-radius: 6px;
   padding: 0.5rem;
-  background: var(--tome-panel-bg, transparent);
-  color: var(--tome-fg, #eee);
+  background: var(--tome-sequencing-canvas-bg);
+  color: var(--tome-sequencing-label);
 }
 
 .tome-sequencing-meta {
   margin: 0;
   font-size: 0.85rem;
-  color: var(--tome-muted, #999);
+  color: var(--tome-sequencing-muted);
 }
 
 .tome-sequencing-toolbar {
@@ -25,10 +32,19 @@
 .tome-sequencing-toolbar button {
   font: inherit;
   cursor: pointer;
+  color: var(--tome-sequencing-label);
+  background: #1a1f27;
+  border: 1px solid #343b46;
+  border-radius: 4px;
+  padding: 0.25rem 0.55rem;
+}
+
+.tome-sequencing-toolbar button:hover {
+  border-color: #556070;
 }
 
 .tome-sequencing-error {
-  color: var(--tome-danger, #c44);
+  color: var(--tome-danger, #e07070);
   font-size: 0.9rem;
   white-space: pre-wrap;
 }
@@ -36,8 +52,6 @@
 .tome-sequencing-timeline {
   display: flex;
   flex-direction: column;
-  flex: 1;
-  min-height: 240px;
 }
 
 .tome-sequencing-chrome {
@@ -60,17 +74,17 @@
   width: 28px;
   height: 28px;
   font-size: 0.85rem;
-  color: var(--tome-muted, #999);
-  background: transparent;
-  border: 1px solid var(--tome-border, #555);
+  color: var(--tome-sequencing-muted);
+  background: #1a1f27;
+  border: 1px solid #343b46;
   border-radius: 4px;
   padding: 0;
   cursor: pointer;
 }
 
 .tome-sequencing-settings-trigger:hover {
-  color: var(--tome-text, #eee);
-  border-color: var(--tome-muted, #999);
+  color: var(--tome-sequencing-label);
+  border-color: #556070;
 }
 
 .tome-sequencing-settings-icon {
@@ -85,50 +99,55 @@
   z-index: 10;
   min-width: 14rem;
   padding: 8px;
-  background: var(--tome-surface, #1e1e1e);
-  border: 1px solid var(--tome-border, #555);
+  background: #1a1f27;
+  border: 1px solid #343b46;
   border-radius: 6px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
 }
 
-.tome-sequencing-settings-item {
+.tome-sequencing-settings-item,
+.tome-sequencing-graph-parameters .tome-graph-parameter-item {
   display: flex;
   gap: 8px;
   align-items: center;
   padding: 6px 4px;
   font-size: 0.85rem;
-  color: var(--tome-text, #eee);
+  color: var(--tome-sequencing-label);
   cursor: pointer;
   user-select: none;
 }
 
-.tome-sequencing-settings-item input {
+.tome-sequencing-settings-item input,
+.tome-sequencing-graph-parameters .tome-graph-parameter-item input {
   margin: 0;
-  accent-color: var(--tome-link, #7eb6ff);
+  accent-color: #5a9fb0;
+}
+
+.tome-sequencing-graph-parameters {
+  border-top: 1px solid #343b46;
+  margin-top: 4px;
+  padding-top: 4px;
 }
 
 .tome-sequencing-canvas {
-  flex: 1;
-  min-height: 220px;
   position: relative;
+  background: var(--tome-sequencing-canvas-bg);
+  border-radius: 4px;
 }
 
 .tome-sequencing-svg {
   display: block;
   width: 100%;
-  height: 100%;
-}
-
-.tome-sequencing-event-range {
-  fill: var(--tome-sequencing-range, rgba(100, 140, 200, 0.35));
+  height: auto;
+  background: var(--tome-sequencing-canvas-bg);
 }
 
 .tome-sequencing-event-core {
-  fill: var(--tome-sequencing-core, rgba(100, 160, 220, 0.85));
+  fill: var(--tome-sequencing-core) !important;
 }
 
 .tome-sequencing-event-label {
-  fill: var(--tome-fg, #eee);
+  fill: var(--tome-sequencing-label) !important;
   font-size: 11px;
   pointer-events: none;
 }
@@ -138,7 +157,7 @@
 }
 
 .tome-sequencing-depends-edge {
-  stroke: var(--tome-sequencing-edge, rgba(220, 180, 100, 0.7));
+  stroke: var(--tome-sequencing-edge);
   stroke-width: 1.5;
   fill: none;
 }

@@ -12,6 +12,8 @@ import type { SchemaFile } from "tome-graph-interfaces";
 import { emptySchemaFile } from "tome-flatfile/schema-file";
 import {
   applyUserSettingsPatch,
+  blockParametersForKey,
+  blockParametersKey,
   emptyUserSettings,
   globalSearchIncludeBody,
   sidebarRecentMaxItems,
@@ -21,6 +23,7 @@ import {
   effectiveTableSort,
   tableSortOverrideForKey,
   tableTabOverrideForKey,
+  type BlockParameterValue,
   type SortColumn,
   type TableSortSpec,
   type UserSettings,
@@ -39,6 +42,16 @@ interface UserSettingsContextValue {
   ) => void;
   getTableTab: (tabKey: string) => string | undefined;
   setTableTab: (tabKey: string, tabId: string | null) => void;
+  getBlockParameters: (
+    nodeId: string,
+    componentId: string,
+  ) => Record<string, BlockParameterValue>;
+  setBlockParameter: (
+    nodeId: string,
+    componentId: string,
+    paramId: string,
+    value: BlockParameterValue | null,
+  ) => void;
   globalSearchIncludeBody: boolean;
   setGlobalSearchIncludeBody: (includeBody: boolean) => void;
   sidebarRecentMaxItems: number;
@@ -155,6 +168,32 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
     [api],
   );
 
+  const getBlockParameters = useCallback(
+    (nodeId: string, componentId: string): Record<string, BlockParameterValue> =>
+      blockParametersForKey(settings, blockParametersKey(nodeId, componentId)),
+    [settings],
+  );
+
+  const setBlockParameter = useCallback(
+    (
+      nodeId: string,
+      componentId: string,
+      paramId: string,
+      value: BlockParameterValue | null,
+    ) => {
+      const key = blockParametersKey(nodeId, componentId);
+      const patch = { blockParameters: { [key]: { [paramId]: value } } };
+      setSettings((current) => {
+        const next = applyUserSettingsPatch(current, patch);
+        void api.patchUserSettings(patch).catch(() => {
+          /* keep optimistic local state */
+        });
+        return next;
+      });
+    },
+    [api],
+  );
+
   const value = useMemo(
     (): UserSettingsContextValue => ({
       ready,
@@ -165,6 +204,8 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
       toggleTableSortColumn,
       getTableTab,
       setTableTab,
+      getBlockParameters,
+      setBlockParameter,
       globalSearchIncludeBody: globalSearchIncludeBody(settings),
       setGlobalSearchIncludeBody,
       sidebarRecentMaxItems: sidebarRecentMaxItems(settings),
@@ -179,6 +220,8 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
       toggleTableSortColumn,
       getTableTab,
       setTableTab,
+      getBlockParameters,
+      setBlockParameter,
       setGlobalSearchIncludeBody,
     ],
   );

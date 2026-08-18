@@ -11,7 +11,8 @@
 ## Exports
 
 - `resolve(problem) → ResolutionResult`
-- `ResolvedEvent`, `ResolutionResult`, `ResolutionError` (resolution-only)
+- `layoutEvents(resolved) → LayoutResult` (non-overlapping ASAP placements + lanes)
+- `ResolvedEvent`, `LaidOutEvent`, `LayoutResult`, `ResolutionResult`, `ResolutionError`
 
 ## Run
 

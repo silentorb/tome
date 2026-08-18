@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
 import type { ReactFlowGraph } from "imp-react-flow";
 import { QueryFlowEditor } from "tome-query/query-editor";
+import {
+  listGraphParameters,
+  resolveGraphParameterValues,
+  type GraphParameterValue,
+} from "tome-query/parameters";
 import {
   COMPONENT_ID,
   IMPLEMENTATION_ID,
@@ -54,6 +59,11 @@ export function SequencingBlockComponent({
       onClose?: () => void;
     }) => void;
     closeToolPanel?: () => void;
+    getBlockParameters?: () => Record<string, GraphParameterValue>;
+    setBlockParameter?: (
+      paramId: string,
+      value: string | number | boolean | null,
+    ) => Promise<void>;
   };
   blockData: unknown;
   onBlockDataChange: (data: unknown) => void;
@@ -64,11 +74,19 @@ export function SequencingBlockComponent({
   const [layout, setLayout] = useState<TimelineLayout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [paramTick, setParamTick] = useState(0);
 
   useEffect(() => {
     const next = parseSequencingBlockData(blockData);
     setGraph(next.reactFlow);
   }, [blockData]);
+
+  const parameterSpecs = useMemo(() => listGraphParameters(graph), [graph]);
+  const parameterValues = useMemo(() => {
+    void paramTick;
+    const overrides = ctx.getBlockParameters?.() ?? {};
+    return resolveGraphParameterValues(graph, overrides);
+  }, [ctx, graph, paramTick]);
 
   const persistGraph = useCallback(
     (next: ReactFlowGraph) => {
@@ -86,10 +104,12 @@ export function SequencingBlockComponent({
     setLoading(true);
     setError(null);
     try {
+      const overrides = ctx.getBlockParameters?.() ?? {};
       const result = await ctx.invoke({
         action: "arrange",
         nodeId: ctx.nodeId,
         data: toBlockData(graph),
+        parameters: resolveGraphParameterValues(graph, overrides),
       });
       const record =
         result && typeof result === "object" && !Array.isArray(result)
@@ -117,7 +137,22 @@ export function SequencingBlockComponent({
 
   useEffect(() => {
     void runArrange();
-  }, [ctx.nodeId]); // eslint-disable-line react-hooks/exhaustive-deps -- initial + node change
+  }, [ctx.nodeId, paramTick]); // eslint-disable-line react-hooks/exhaustive-deps -- initial + node/param change
+
+  const handleParameterChange = useCallback(
+    async (paramId: string, value: GraphParameterValue) => {
+      const spec = parameterSpecs.find((p) => p.id === paramId);
+      if (ctx.setBlockParameter) {
+        if (spec && Object.is(value, spec.defaultValue)) {
+          await ctx.setBlockParameter(paramId, null);
+        } else {
+          await ctx.setBlockParameter(paramId, value);
+        }
+      }
+      setParamTick((n) => n + 1);
+    },
+    [ctx, parameterSpecs],
+  );
 
   const openEditor = () => {
     if (!ctx.openToolPanel) return;
@@ -152,7 +187,14 @@ export function SequencingBlockComponent({
           {error}
         </pre>
       )}
-      {layout && !error && <SequencingTimelineView layout={layout} />}
+      {layout && !error && (
+        <SequencingTimelineView
+          layout={layout}
+          graphParameters={parameterSpecs}
+          parameterValues={parameterValues}
+          onParameterChange={handleParameterChange}
+        />
+      )}
       {!layout && !error && !loading && (
         <p className="tome-sequencing-empty">No timeline events.</p>
       )}

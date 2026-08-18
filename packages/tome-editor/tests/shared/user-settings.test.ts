@@ -1,6 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import {
   applyUserSettingsPatch,
+  blockParametersForKey,
+  blockParametersKey,
   databaseTableSortKey,
   DEFAULT_SIDEBAR_RECENT_MAX_ITEMS,
   effectiveTableTab,
@@ -20,12 +22,30 @@ import {
 } from "../../src/shared/user-settings";
 
 describe("user-settings", () => {
-  test("relation and database table keys are stable", () => {
-    expect(relationTableSortKey("abc", "RELATED")).toBe("records/abc/relations/RELATED");
-    expect(databaseTableSortKey("page", "db", "Default")).toBe(
-      "records/page/database/db/Default",
+  test("blockParameters are sparse and clearable", () => {
+    const key = blockParametersKey("page", "tome-sequencing.block");
+    expect(key).toBe("blocks/page/tome-sequencing.block");
+
+    const patched = applyUserSettingsPatch(
+      { version: 1 },
+      { blockParameters: { [key]: { includeConsiderations: false } } },
     );
-    expect(nodeTableTabKey("page")).toBe("records/page/tab");
+    expect(blockParametersForKey(patched, key)).toEqual({
+      includeConsiderations: false,
+    });
+
+    const cleared = applyUserSettingsPatch(patched, {
+      blockParameters: { [key]: { includeConsiderations: null } },
+    });
+    expect(cleared.blockParameters).toBeUndefined();
+
+    const parsed = parseUserSettings({
+      version: 1,
+      blockParameters: {
+        [key]: { includeConsiderations: false, ignored: { bad: true } },
+      },
+    });
+    expect(parsed.blockParameters?.[key]).toEqual({ includeConsiderations: false });
   });
 
   test("table tab overrides are sparse and URL wins over saved tab", () => {

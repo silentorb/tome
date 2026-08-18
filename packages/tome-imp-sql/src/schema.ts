@@ -38,6 +38,7 @@ export const tomeLiveNodesSchema: RelationalSchema = {
     sourceColumn: "source_node_id",
     targetColumn: "target_node_id",
     typeColumn: "type",
+    propertiesColumn: "properties",
   },
   edgeType(association, direction) {
     if (direction !== 0 && direction !== 1) {

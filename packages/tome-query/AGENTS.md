@@ -23,6 +23,7 @@ Among Tome packages: `tome-interfaces` + `tome-imp-sql` (schema/registry/compile
 - Result tables always lead with a title-link column; compile ensures `id` + `title` plumbing (`ensureIdentityTitleProjection` / `ensureTitleColumnInSelectStar`).
 - RF port literal inputs: only scalar ports without an inbound edge (`shouldShowPortLiteralInput`).
 - Path hops use Imp `traverse` with `association` + `direction`; `tome-imp-sql` maps those to projection types at SQL bind time.
+- Imp `parameter` nodes are discovered for settings UI; values persist in user settings and bind at execute via `bindGraphParameters` (not stored in fence `data`).
 
 ## Tests
 

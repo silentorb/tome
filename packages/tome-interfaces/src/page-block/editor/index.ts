@@ -26,6 +26,13 @@ export interface EditorPageBlockContext {
   openToolPanel?(session: EditorToolPanelSession): void;
   /** Close the host right tool panel if open. */
   closeToolPanel?(): void;
+  /** Sparse user overrides for Imp graph parameter nodes on this block. */
+  getBlockParameters?(): Record<string, string | number | boolean | null>;
+  /** Persist a graph parameter override (null clears the override). */
+  setBlockParameter?(
+    paramId: string,
+    value: string | number | boolean | null,
+  ): Promise<void>;
 }
 
 export interface EditorPageBlockProps {

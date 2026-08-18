@@ -65,7 +65,7 @@ import {
 } from "./graph-preferences";
 import { syncDocumentTitle } from "./document-title";
 import { syncDocumentIcon } from "./document-icon";
-import { setPageBlockToolPanelHandlers } from "./extensions/page-block-registry";
+import { setPageBlockParameterHandlers, setPageBlockToolPanelHandlers } from "./extensions/page-block-registry";
 
 export type { AppView };
 
@@ -114,7 +114,13 @@ export function App() {
 }
 
 function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> }) {
-  const { ready: userSettingsReady, getTableTab, setTableTab } = useUserSettings();
+  const {
+    ready: userSettingsReady,
+    getTableTab,
+    setTableTab,
+    getBlockParameters,
+    setBlockParameter,
+  } = useUserSettings();
   const {
     corpora,
     activeCorpusId,
@@ -185,6 +191,14 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     setPageBlockToolPanelHandlers({ open: openToolPanel, close: closeToolPanel });
     return () => setPageBlockToolPanelHandlers(null);
   }, [openToolPanel, closeToolPanel]);
+
+  useEffect(() => {
+    setPageBlockParameterHandlers({
+      getBlockParameters,
+      setBlockParameter,
+    });
+    return () => setPageBlockParameterHandlers(null);
+  }, [getBlockParameters, setBlockParameter]);
 
   const syncExplorerAnchorUrl = useCallback(
     (anchorId: string) => {

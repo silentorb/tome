@@ -18,8 +18,9 @@
 | --- | --- |
 | Node collection (`schema.table`) | `nodes` |
 | Property columns | `id` / `is_archived` as columns; others via `json_extract(properties, '$.name')` |
-| Edges (`schema.edges`) | `relationship_projections` with `source_node_id`, `target_node_id`, `type` |
+| Edges (`schema.edges`) | `relationship_projections` with `source_node_id`, `target_node_id`, `type`, `properties` (`propertiesColumn`) |
 | Traverse hop | Imp `association` + `direction` (0\|1) → `schema.edgeType` → `{associationId}:{direction}` for `relationship_projections.type` |
+| Optional edge property filter | When `traverse.edge_property` + `edge_equals` are set: `json_extract(path_edges.properties, '$.{edge_property}') = edge_equals` |
 
 ### Live nodes
 
