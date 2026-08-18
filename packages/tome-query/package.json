@@ -19,6 +19,7 @@
     "imp-registry": "workspace:*",
     "imp-spec": "workspace:*",
     "react": "19.0.0",
+    "tome-flatfile": "workspace:*",
     "tome-imp-sql": "workspace:*",
     "tome-interfaces": "workspace:*"
   },

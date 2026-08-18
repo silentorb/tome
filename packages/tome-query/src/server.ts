@@ -1,4 +1,6 @@
 import type { ServerPageBlockHost } from "tome-interfaces/page-block/server";
+import { loadSchemaFromContent } from "tome-flatfile/schema-load";
+import { resolve } from "node:path";
 import { IMPLEMENTATION_ID, parseQueryBlockData } from "./config";
 import type { GraphParameterValue } from "./parameters";
 import { executeQueryBlock } from "./render";
@@ -17,6 +19,12 @@ function parseParameterOverrides(raw: unknown): Record<string, GraphParameterVal
     }
   }
   return out;
+}
+
+function schemaFromEnv(): ReturnType<typeof loadSchemaFromContent> | undefined {
+  const fromEnv = process.env.TOME_CONTENT_PATH;
+  if (!fromEnv?.trim()) return undefined;
+  return loadSchemaFromContent(resolve(fromEnv.trim()));
 }
 
 export function register(host: ServerPageBlockHost): void {
@@ -40,6 +48,7 @@ export function register(host: ServerPageBlockHost): void {
           ctx.services.sqlQuery,
           parsed.reactFlow,
           parameters,
+          schemaFromEnv(),
         );
         return { ok: true, ...table };
       } catch (err: unknown) {

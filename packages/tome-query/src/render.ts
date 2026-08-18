@@ -1,5 +1,6 @@
 import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
 import type { ReactFlowGraph } from "imp-react-flow";
+import type { SchemaFile } from "tome-flatfile/schema-file";
 import { compileReactFlowQuery, rowsToTable, type QueryResultTable } from "./execute";
 import { parseQueryBlockData } from "./config";
 import {
@@ -13,13 +14,14 @@ export async function executeQueryBlock(
   sqlQuery: ExtensionSqlQueryServices | undefined,
   reactFlow: ReactFlowGraph,
   parameters?: Record<string, GraphParameterValue>,
+  schema?: SchemaFile,
 ): Promise<QueryResultTable> {
   if (!sqlQuery) {
     throw new Error("sqlQuery host service is not available");
   }
   const values = resolveGraphParameterValues(reactFlow, parameters);
   const bound = bindGraphParameters(reactFlow, values);
-  const { sql, parameters: sqlParams } = compileReactFlowQuery(bound);
+  const { sql, parameters: sqlParams } = compileReactFlowQuery(bound, { schema });
   const rows = await sqlQuery.queryAll(sql, sqlParams);
   return rowsToTable(rows);
 }
@@ -28,9 +30,10 @@ export async function executeQueryBlockData(
   sqlQuery: ExtensionSqlQueryServices | undefined,
   data: unknown,
   parameters?: Record<string, GraphParameterValue>,
+  schema?: SchemaFile,
 ): Promise<QueryResultTable> {
   const parsed = parseQueryBlockData(data);
-  return executeQueryBlock(sqlQuery, parsed.reactFlow, parameters);
+  return executeQueryBlock(sqlQuery, parsed.reactFlow, parameters, schema);
 }
 
 export function escapeHtml(value: string): string {

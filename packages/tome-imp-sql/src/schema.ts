@@ -1,4 +1,7 @@
+import type { PrimitiveValue } from "imp-spec";
 import type { RelationalSchema } from "imp-sql";
+import { encodePropertyLiteral as encodeEnumPropertyLiteral } from "tome-flatfile/enum-property-codec";
+import type { SchemaFile } from "tome-flatfile/schema-file";
 
 const IDENT_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const ASSOCIATION_ID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
@@ -30,7 +33,7 @@ export function projectionType(associationId: string, direction: 0 | 1): string 
 }
 
 /** Imp RelationalSchema for live Tome nodes + relationship projection edges. */
-export const tomeLiveNodesSchema: RelationalSchema = {
+const tomeLiveNodesSchemaBase = {
   table: "nodes",
   column: tomeNodesColumnExpression,
   edges: {
@@ -40,13 +43,27 @@ export const tomeLiveNodesSchema: RelationalSchema = {
     typeColumn: "type",
     propertiesColumn: "properties",
   },
-  edgeType(association, direction) {
+  edgeType(association: string, direction: number) {
     if (direction !== 0 && direction !== 1) {
       throw new Error(`direction must be 0 or 1, got ${String(direction)}`);
     }
-    return projectionType(association, direction);
+    return projectionType(association, direction as 0 | 1);
   },
-};
+} satisfies RelationalSchema;
+
+/** Default schema without workspace enum binding (tests / callers without schema.json). */
+export const tomeLiveNodesSchema: RelationalSchema = tomeLiveNodesSchemaBase;
+
+/** Workspace-aware schema: encodes enum property literals to cache indices at compile time. */
+export function createTomeLiveNodesSchema(schema?: SchemaFile): RelationalSchema {
+  if (!schema) return tomeLiveNodesSchema;
+  return {
+    ...tomeLiveNodesSchemaBase,
+    encodePropertyLiteral(propertyKey: string, authorValue: PrimitiveValue): PrimitiveValue {
+      return encodeEnumPropertyLiteral(propertyKey, authorValue, schema) as PrimitiveValue;
+    },
+  };
+}
 
 const LIVE_NODES_SUBQUERY = '(select * from "nodes" where "is_archived" = 0)';
 

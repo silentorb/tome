@@ -22,6 +22,7 @@
     "react": "19.0.0",
     "tome-imp-sql": "workspace:*",
     "tome-interfaces": "workspace:*",
+    "tome-flatfile": "workspace:*",
     "tome-query": "workspace:*",
     "tome-sequencing-interfaces": "workspace:*",
     "tome-sequencing-resolution": "workspace:*"

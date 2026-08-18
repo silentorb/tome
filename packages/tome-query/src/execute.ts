@@ -1,5 +1,6 @@
 import type { Graph } from "imp-spec";
 import type { ReactFlowGraph } from "imp-react-flow";
+import type { SchemaFile } from "tome-flatfile/schema-file";
 import { reactFlowToImp } from "imp-react-flow";
 import {
   compileImpGraphToTomeSql,
@@ -55,10 +56,17 @@ export function ensureTitleColumnInSelectStar(sql: string): string {
   return sql.replace(/^\s*select\s+\*\s+from\b/i, `select *, ${TITLE_EXTRACT} from`);
 }
 
-export function compileReactFlowQuery(reactFlow: ReactFlowGraph): CompiledTomeQuery {
+export interface CompileReactFlowQueryOptions {
+  schema?: SchemaFile;
+}
+
+export function compileReactFlowQuery(
+  reactFlow: ReactFlowGraph,
+  options?: CompileReactFlowQueryOptions,
+): CompiledTomeQuery {
   const edges = dedupeInboundReactFlowEdges(reactFlow.edges);
   const graph = ensureIdentityTitleProjection(reactFlowToImp(reactFlow.nodes, edges));
-  const compiled = compileImpGraphToTomeSql(graph);
+  const compiled = compileImpGraphToTomeSql(graph, { schema: options?.schema });
   return {
     sql: ensureTitleColumnInSelectStar(compiled.sql),
     parameters: compiled.parameters,

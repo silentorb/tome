@@ -759,6 +759,7 @@ export function createApiHandler(
       return json({ error: "not found" }, 404);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      console.error(`[tome-http] ${req.method} ${path} → 500:`, err);
       return json({ error: message }, 500);
     }
   };

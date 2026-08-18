@@ -24,6 +24,10 @@ export function PageBlockWithUserSettings({
     return getPageBlockParameterHandlers()?.getBlockParameters(nodeId, componentId) ?? {};
   }, [nodeId, componentId]);
 
+  const getParamsRevision = useCallback(() => {
+    return getPageBlockParameterHandlers()?.getBlockParametersRevision() ?? 0;
+  }, []);
+
   const setParam = useCallback(
     async (paramId: string, value: string | number | boolean | null) => {
       getPageBlockParameterHandlers()?.setBlockParameter(
@@ -43,9 +47,10 @@ export function PageBlockWithUserSettings({
         ...props.ctx,
         getBlockParameters: getParams,
         setBlockParameter: setParam,
+        getBlockParametersRevision: getParamsRevision,
       },
     }),
-    [props, getParams, setParam],
+    [props, getParams, setParam, getParamsRevision],
   );
 
   const C = Component as (p: EditorPageBlockProps) => ReactNode;

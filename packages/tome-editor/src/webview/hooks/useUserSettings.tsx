@@ -52,6 +52,7 @@ interface UserSettingsContextValue {
     paramId: string,
     value: BlockParameterValue | null,
   ) => void;
+  getBlockParametersRevision: () => number;
   globalSearchIncludeBody: boolean;
   setGlobalSearchIncludeBody: (includeBody: boolean) => void;
   sidebarRecentMaxItems: number;
@@ -68,6 +69,7 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
   const [settings, setSettings] = useState<UserSettings>(() => emptyUserSettings());
   const [schema, setSchema] = useState<SchemaFile>(() => emptySchemaFile());
   const [ready, setReady] = useState(false);
+  const [blockParametersRevision, setBlockParametersRevision] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,9 +83,13 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
           setSettings(loaded);
           setSchema(loadedSchema);
           setReady(true);
+          setBlockParametersRevision((n) => n + 1);
         }
       } catch {
-        if (!cancelled) setReady(true);
+        if (!cancelled) {
+          setReady(true);
+          setBlockParametersRevision((n) => n + 1);
+        }
       }
     })();
     return () => {
@@ -190,8 +196,14 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
         });
         return next;
       });
+      setBlockParametersRevision((n) => n + 1);
     },
     [api],
+  );
+
+  const getBlockParametersRevision = useCallback(
+    () => blockParametersRevision,
+    [blockParametersRevision],
   );
 
   const value = useMemo(
@@ -206,6 +218,7 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
       setTableTab,
       getBlockParameters,
       setBlockParameter,
+      getBlockParametersRevision,
       globalSearchIncludeBody: globalSearchIncludeBody(settings),
       setGlobalSearchIncludeBody,
       sidebarRecentMaxItems: sidebarRecentMaxItems(settings),
@@ -222,6 +235,7 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
       setTableTab,
       getBlockParameters,
       setBlockParameter,
+      getBlockParametersRevision,
       setGlobalSearchIncludeBody,
     ],
   );

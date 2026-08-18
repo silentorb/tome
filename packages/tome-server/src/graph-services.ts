@@ -199,12 +199,24 @@ function buildGraphServices(
       if (!detail) return null;
 
       let document = storageBodyToDocument(cache, detail.body);
-      await extensionsReady;
-      await extensions.ensureLoaded();
-      document = await attachPageBlockEditorHtml(document, async (componentId, data) => {
-        const html = await extensions.renderPageBlockHtml(id, componentId, data);
-        return `${formatPageBlockEmbedComment({ componentId, data })}\n${html}`;
-      });
+      const needsPageBlockExtensions = document.segments.some(
+        (segment) => segment.type === "page_block",
+      );
+      if (needsPageBlockExtensions) {
+        await extensionsReady;
+        try {
+          await extensions.ensureLoaded();
+          document = await attachPageBlockEditorHtml(document, async (componentId, data) => {
+            const html = await extensions.renderPageBlockHtml(id, componentId, data);
+            return `${formatPageBlockEmbedComment({ componentId, data })}\n${html}`;
+          });
+        } catch (err: unknown) {
+          console.error(
+            `[tome-server] getNode page-block extensions unavailable for ${id}:`,
+            err,
+          );
+        }
+      }
 
       const meta = corpusMeta(id);
       return {

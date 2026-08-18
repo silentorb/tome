@@ -64,6 +64,7 @@ export function SequencingBlockComponent({
       paramId: string,
       value: string | number | boolean | null,
     ) => Promise<void>;
+    getBlockParametersRevision?: () => number;
   };
   blockData: unknown;
   onBlockDataChange: (data: unknown) => void;
@@ -81,12 +82,15 @@ export function SequencingBlockComponent({
     setGraph(next.reactFlow);
   }, [blockData]);
 
+  const blockParametersRevision = ctx.getBlockParametersRevision?.() ?? 0;
+
   const parameterSpecs = useMemo(() => listGraphParameters(graph), [graph]);
   const parameterValues = useMemo(() => {
     void paramTick;
+    void blockParametersRevision;
     const overrides = ctx.getBlockParameters?.() ?? {};
     return resolveGraphParameterValues(graph, overrides);
-  }, [ctx, graph, paramTick]);
+  }, [ctx, graph, paramTick, blockParametersRevision]);
 
   const persistGraph = useCallback(
     (next: ReactFlowGraph) => {
@@ -137,7 +141,7 @@ export function SequencingBlockComponent({
 
   useEffect(() => {
     void runArrange();
-  }, [ctx.nodeId, paramTick]); // eslint-disable-line react-hooks/exhaustive-deps -- initial + node/param change
+  }, [ctx.nodeId, paramTick, blockParametersRevision]); // eslint-disable-line react-hooks/exhaustive-deps -- initial + node/param change
 
   const handleParameterChange = useCallback(
     async (paramId: string, value: GraphParameterValue) => {

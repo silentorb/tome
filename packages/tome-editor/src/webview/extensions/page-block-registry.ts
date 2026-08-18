@@ -22,6 +22,7 @@ export type PageBlockParameterHandlers = {
     paramId: string,
     value: string | number | boolean | null,
   ) => void;
+  getBlockParametersRevision: () => number;
 };
 
 export type InteractivePageBlockMount =

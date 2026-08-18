@@ -120,6 +120,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     setTableTab,
     getBlockParameters,
     setBlockParameter,
+    getBlockParametersRevision,
   } = useUserSettings();
   const {
     corpora,
@@ -196,9 +197,10 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     setPageBlockParameterHandlers({
       getBlockParameters,
       setBlockParameter,
+      getBlockParametersRevision,
     });
     return () => setPageBlockParameterHandlers(null);
-  }, [getBlockParameters, setBlockParameter]);
+  }, [getBlockParameters, setBlockParameter, getBlockParametersRevision]);
 
   const syncExplorerAnchorUrl = useCallback(
     (anchorId: string) => {

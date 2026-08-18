@@ -1,4 +1,5 @@
 import type { HtmlPageBlockHost } from "tome-interfaces/page-block/html";
+import { loadSchemaFromContent } from "tome-flatfile/schema-load";
 import { IMPLEMENTATION_ID, parseQueryBlockData } from "./config";
 import {
   executeQueryBlock,
@@ -15,7 +16,8 @@ export function register(host: HtmlPageBlockHost): void {
         return renderQueryPlaceholderHtml("Query results require the editor or static-site host.");
       }
       try {
-        const table = await executeQueryBlock(ctx.services.sqlQuery, parsed.reactFlow);
+        const schema = ctx.contentDir ? loadSchemaFromContent(ctx.contentDir) : undefined;
+        const table = await executeQueryBlock(ctx.services.sqlQuery, parsed.reactFlow, undefined, schema);
         const nodePageHref = ctx.services.nodePageHref;
         return renderQueryTableHtml(table, nodePageHref);
       } catch (err: unknown) {

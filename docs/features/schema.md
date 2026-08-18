@@ -63,6 +63,8 @@ Types are identified by **stable node id**, not display names.
 
 **Storage:** relationship shard files store enum properties as **labels** (e.g. `"priority": "Medium"`). The SQLite cache stores the same properties as **integer indices** into `options` (see [tome-db.md](./tome-db.md)). Table sorts use **index order**, not `values`.
 
+**Imp SQL compile:** Imp query graphs also use labels in filter literals. Hosts that compile Imp graphs against the SQLite cache (`tome-query`, `tome-sequencing`) must pass `schema.json` into `compileImpGraphToTomeSql` so literals are encoded to indices before SQL bind — see [tome-imp-sql.md](./tome-imp-sql.md).
+
 For `priority`, `values` are interpreted as numeric **weights** by `priorityWeight()` and the [`inspirations.weightedUse`](../../docs/dynamic-properties/inspirations.weighted-use.md) dynamic field only — not for table sorting. Other enums may use `values` differently or omit them when only labels matter for UI dropdowns.
 
 `GET /api/schema` returns the parsed file including `enums`.
@@ -83,7 +85,7 @@ For `priority`, `values` are interpreted as numeric **weights** by `priorityWeig
 | --- | --- |
 | `packages/tome-db/src/schema-rules/schema-file.ts` | Parse/serialize `schema.json` |
 | `packages/tome-db/src/schema-rules/resolve.ts` | Match rules to source node + type |
-| `packages/tome-db/src/enum-codec.ts` | Label ↔ index encode/decode (injected as cache `propertyCodec`) |
+| `packages/tome-db/src/enum-codec.ts` | Label ↔ index encode/decode (injected as cache `propertyCodec`; delegates to `tome-flatfile/enum-property-codec`) |
 | `packages/tome-db/src/enum-config-fingerprint.ts` | Detect enum option-order changes for cache invalidation |
 | `packages/tome-db/src/property-enums.ts` | Resolve enums from schema; priority helpers |
 | `packages/tome-db/src/node-page-sections.ts` | Embeds `allowedTargetTypeIds` on relation sections |

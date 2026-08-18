@@ -41,7 +41,6 @@ export function register(host: ServerPageBlockHost): void {
       }
 
       const data = "data" in record ? record.data : record;
-      parseSequencingBlockData(data);
       const parameters = parseParameterOverrides(record.parameters);
 
       if (!ctx.services.sqlQuery) {
@@ -49,6 +48,7 @@ export function register(host: ServerPageBlockHost): void {
       }
 
       try {
+        parseSequencingBlockData(data);
         const layout = await arrangeTimeline({
           pageNodeId,
           blockData: data,

@@ -153,4 +153,64 @@ describe("SequencingBlockComponent", () => {
     const last = calls[calls.length - 1] as { parameters?: { includeConsiderations?: boolean } };
     expect(last.parameters?.includeConsiderations).toBe(false);
   });
+
+  test("re-arranges when block parameter settings revision changes after mount", async () => {
+    const calls: unknown[] = [];
+    const invoke = async (input: unknown) => {
+      calls.push(input);
+      return { ok: true, layout: sampleLayout };
+    };
+    const blockData = {
+      version: 1,
+      reactFlow: {
+        nodes: [
+          {
+            id: "includeConsiderations",
+            type: "parameter",
+            position: { x: 0, y: 0 },
+            data: {
+              inputValues: {
+                label: "Include Consideration arcs",
+                value: true,
+              },
+            },
+          },
+        ],
+        edges: [],
+      },
+    };
+    let revision = 0;
+    const { rerender } = render(
+      <SequencingBlockComponent
+        ctx={{
+          component: { id: "tome-sequencing.block", label: "Timeline" },
+          nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
+          invoke,
+          getBlockParameters: () => ({ includeConsiderations: false }),
+          getBlockParametersRevision: () => revision,
+        }}
+        blockData={blockData}
+        onBlockDataChange={() => {}}
+      />,
+    );
+    await waitFor(() => expect(calls.length).toBeGreaterThan(0));
+    const before = calls.length;
+    revision = 1;
+    rerender(
+      <SequencingBlockComponent
+        ctx={{
+          component: { id: "tome-sequencing.block", label: "Timeline" },
+          nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
+          invoke,
+          getBlockParameters: () => ({ includeConsiderations: false }),
+          getBlockParametersRevision: () => revision,
+        }}
+        blockData={blockData}
+        onBlockDataChange={() => {}}
+      />,
+    );
+    await waitFor(() => expect(calls.length).toBeGreaterThan(before));
+    const last = calls[calls.length - 1] as { parameters?: { includeConsiderations?: boolean } };
+    expect(last.parameters?.includeConsiderations).toBe(false);
+  });
 });

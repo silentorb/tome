@@ -33,6 +33,8 @@ export interface EditorPageBlockContext {
     paramId: string,
     value: string | number | boolean | null,
   ): Promise<void>;
+  /** Monotonic counter bumped when block parameter settings load or change. */
+  getBlockParametersRevision?(): number;
 }
 
 export interface EditorPageBlockProps {

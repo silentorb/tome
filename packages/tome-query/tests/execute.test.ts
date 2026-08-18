@@ -19,6 +19,20 @@ import {
   rowsToTable,
 } from "../src/execute";
 import { executeQueryBlock, renderQueryTableHtml } from "../src/render";
+import type { SchemaFile } from "tome-flatfile/schema-file";
+
+const MARLOTH_LIKE_SCHEMA: SchemaFile = {
+  version: 1,
+  relationshipRules: [],
+  enums: {
+    priority: {
+      options: ["Consideration", "Low", "Medium", "High"],
+      default: "Low",
+      defaultOrder: "desc",
+      values: { Low: 1, Medium: 2, High: 4, Consideration: 0 },
+    },
+  },
+};
 
 describe("tome-query config", () => {
   test("default block data has input → output react flow graph", () => {
@@ -743,5 +757,106 @@ describe("tome-query compile + execute", () => {
 
     const ids = table.rows.map((row) => row.id);
     expect(ids).toEqual(["orphan"]);
+  });
+
+  test("except excludes consideration membership when schema encodes enum edge_equals", async () => {
+    const association = "00000000000000000000000001";
+    const memberType = projectionType(association, 0);
+    const db = new Database(":memory:");
+    db.run(`
+      CREATE TABLE nodes (
+        id TEXT PRIMARY KEY NOT NULL,
+        properties TEXT NOT NULL DEFAULT '{}',
+        is_archived INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE relationship_projections (
+        id TEXT PRIMARY KEY NOT NULL,
+        record_id TEXT NOT NULL,
+        source_node_id TEXT NOT NULL,
+        target_node_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        properties TEXT NOT NULL DEFAULT '{}'
+      );
+    `);
+    for (const [id, title] of [
+      ["hub", "Arcs"],
+      ["consideration", "Consideration arc"],
+      ["regular", "Regular arc"],
+    ] as const) {
+      db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, 0)`, [
+        id,
+        JSON.stringify({ title }),
+      ]);
+    }
+    db.run(
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      ["p0", "r0", "hub", "consideration", memberType, JSON.stringify({ priority: 0 })],
+    );
+    db.run(
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      ["p1", "r1", "hub", "regular", memberType, JSON.stringify({ priority: 2 })],
+    );
+
+    const reactFlow = {
+      nodes: [
+        { id: "in", type: "input", position: { x: 0, y: 0 }, data: { inputValues: {} } },
+        { id: "col", type: "column", position: { x: 0, y: 0 }, data: { inputValues: { name: "id" } } },
+        { id: "lit", type: "literal", position: { x: 0, y: 0 }, data: { inputValues: { value: "hub" } } },
+        { id: "eq", type: "equals", position: { x: 0, y: 0 }, data: { inputValues: {} } },
+        { id: "filter", type: "filter", position: { x: 0, y: 0 }, data: { inputValues: {} } },
+        {
+          id: "hop",
+          type: "traverse",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { association, direction: 0 } },
+        },
+        {
+          id: "hopCons",
+          type: "traverse",
+          position: { x: 0, y: 0 },
+          data: {
+            inputValues: {
+              association,
+              direction: 0,
+              edge_property: "priority",
+              edge_equals: "Consideration",
+            },
+          },
+        },
+        { id: "except", type: "except", position: { x: 0, y: 0 }, data: { inputValues: {} } },
+        { id: "out", type: "output", position: { x: 0, y: 0 }, data: { inputValues: {} } },
+      ],
+      edges: [
+        { id: "e1", source: "in", sourceHandle: "value", target: "filter", targetHandle: "collection" },
+        { id: "e2", source: "col", sourceHandle: "value", target: "eq", targetHandle: "left" },
+        { id: "e3", source: "lit", sourceHandle: "value", target: "eq", targetHandle: "right" },
+        { id: "e4", source: "eq", sourceHandle: "value", target: "filter", targetHandle: "predicate" },
+        { id: "e5", source: "filter", sourceHandle: "collection", target: "hop", targetHandle: "collection" },
+        { id: "e6", source: "hop", sourceHandle: "collection", target: "except", targetHandle: "collection" },
+        { id: "e7", source: "filter", sourceHandle: "collection", target: "hopCons", targetHandle: "collection" },
+        {
+          id: "e8",
+          source: "hopCons",
+          sourceHandle: "collection",
+          target: "except",
+          targetHandle: "exclude",
+        },
+        { id: "e9", source: "except", sourceHandle: "collection", target: "out", targetHandle: "value" },
+      ],
+    };
+
+    const sqlQuery = {
+      queryAll(sql: string, params: unknown[] = []) {
+        return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
+      },
+    };
+
+    const withoutSchema = await executeQueryBlock(sqlQuery, reactFlow);
+    expect(withoutSchema.rows.map((row) => row.id).sort()).toEqual(["consideration", "regular"]);
+
+    const withSchema = await executeQueryBlock(sqlQuery, reactFlow, undefined, MARLOTH_LIKE_SCHEMA);
+    expect(withSchema.rows.map((row) => row.id)).toEqual(["regular"]);
   });
 });

@@ -11,7 +11,8 @@
     "imp-pathing": "workspace:*",
     "imp-registry": "workspace:*",
     "imp-spec": "workspace:*",
-    "imp-sql": "workspace:*"
+    "imp-sql": "workspace:*",
+    "tome-flatfile": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",

@@ -20,7 +20,19 @@
 | Property columns | `id` / `is_archived` as columns; others via `json_extract(properties, '$.name')` |
 | Edges (`schema.edges`) | `relationship_projections` with `source_node_id`, `target_node_id`, `type`, `properties` (`propertiesColumn`) |
 | Traverse hop | Imp `association` + `direction` (0\|1) → `schema.edgeType` → `{associationId}:{direction}` for `relationship_projections.type` |
-| Optional edge property filter | When `traverse.edge_property` + `edge_equals` are set: `json_extract(path_edges.properties, '$.{edge_property}') = edge_equals` |
+| Optional edge property filter | When `traverse.edge_property` + `edge_equals` are set: `json_extract(path_edges.properties, '$.{edge_property}') = edge_equals`. When `compileImpGraphToTomeSql` is called with workspace `schema`, enum literals in `edge_equals` (and in `equals` / ordering comparisons against enum columns) are encoded to cache indices via `encodePropertyLiteral` — same mapping as cache sync ([schema.md](./schema.md)). |
+
+### Enum property literals (Imp SQL compile)
+
+Imp query graphs use **string labels** for enum property literals (e.g. `edge_equals: "Consideration"`, `equals` on a `priority` column). The SQLite cache stores enum values as **option indices** ([tome-db.md](./tome-db.md)).
+
+Hosts executing against the Tome cache **must** pass `schema` from `content/model/schema.json`:
+
+```ts
+compileImpGraphToTomeSql(graph, { schema: loadSchemaFromContent(contentDir) })
+```
+
+`createTomeLiveNodesSchema(schema)` wires `RelationalSchema.encodePropertyLiteral` to the shared codec in `tome-flatfile/enum-property-codec` (same rules as cache `propertyCodec`). Without `schema`, literals bind unchanged (identity hook).
 
 ### Live nodes
 
@@ -38,9 +50,10 @@ Compiled SQL that selects from `"nodes"` **must** be rewritten so the base relat
 
 | Operation | Behavior |
 | --- | --- |
-| `compileImpGraphToTomeSql(graph)` | `graphToKysely` + `compileSql` + live-nodes rewrite |
+| `compileImpGraphToTomeSql(graph, options?)` | `graphToKysely` + `compileSql` + live-nodes rewrite; optional `{ schema }` for enum literal encoding |
+| `createTomeLiveNodesSchema(schema?)` | `RelationalSchema` with edges, `edgeType`, and optional `encodePropertyLiteral` |
 | `createTomeImpRegistry()` | Standard Imp registry for Tome hosts |
-| `tomeLiveNodesSchema` | `RelationalSchema` with edges + `edgeType` binder |
+| `tomeLiveNodesSchema` | Default schema without workspace enum binding |
 | `applyLiveNodesConstraint(sql, parameters)` | Rewrite `FROM "nodes"` |
 
 ### Dependencies
@@ -56,7 +69,7 @@ Must not depend on `tome-db`. Hosts execute SQL via `queryAll` (or equivalent).
 ## Behavior / pipeline
 
 1. Host builds an Imp graph (`input` → transforms / `traverse` → `output`) with separate `association` and `direction` on each hop.
-2. `compileImpGraphToTomeSql` lowers with `tomeLiveNodesSchema` (composing projection types via `edgeType`).
+2. `compileImpGraphToTomeSql` lowers with `createTomeLiveNodesSchema(schema)` (composing projection types via `edgeType` and encoding enum literals when `schema` is supplied).
 3. Host runs SQL via cache `queryAll`.
 
 ## Inputs / outputs / artifacts
@@ -72,7 +85,9 @@ Must not depend on `tome-db`. Hosts execute SQL via `queryAll` (or equivalent).
 import { compileImpGraphToTomeSql } from "tome-imp-sql"
 
 // traverse node inputs: { association: associationId, direction: 0 | 1 }
-const { sql, parameters } = compileImpGraphToTomeSql(graph)
+const { sql, parameters } = compileImpGraphToTomeSql(graph, {
+  schema: loadSchemaFromContent(contentDir),
+})
 ```
 
 ## Configuration

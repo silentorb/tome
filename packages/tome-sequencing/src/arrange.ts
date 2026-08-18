@@ -6,6 +6,7 @@ import { projectionType } from "tome-imp-sql";
 import type { DependsConstraint, SequencingProblem } from "tome-sequencing-interfaces";
 import { resolve as resolveSequence } from "tome-sequencing-resolution";
 import { compileReactFlowQuery } from "tome-query/execute";
+import { loadSchemaFromContent } from "tome-flatfile/schema-load";
 import {
   bindGraphParameters,
   resolveGraphParameterValues,
@@ -21,16 +22,25 @@ function contentDirFromEnv(): string {
   throw new Error("TOME_CONTENT_PATH is required to load sequencing.json");
 }
 
+function schemaFromContentDir(contentDir?: string) {
+  if (contentDir) return loadSchemaFromContent(contentDir);
+  const fromEnv = process.env.TOME_CONTENT_PATH;
+  if (fromEnv?.trim()) return loadSchemaFromContent(resolve(fromEnv.trim()));
+  return undefined;
+}
+
 export async function runEventQuery(input: {
   sqlQuery: ExtensionSqlQueryServices;
   reactFlow: ReactFlowGraph;
   pageNodeId: string;
   parameters?: Record<string, GraphParameterValue>;
+  contentDir?: string;
 }): Promise<Record<string, unknown>[]> {
   const values = resolveGraphParameterValues(input.reactFlow, input.parameters);
   const withParams = bindGraphParameters(input.reactFlow, values);
   const bound = bindPageNodeId(withParams, input.pageNodeId);
-  const { sql, parameters } = compileReactFlowQuery(bound);
+  const schema = schemaFromContentDir(input.contentDir);
+  const { sql, parameters } = compileReactFlowQuery(bound, { schema });
   return input.sqlQuery.queryAll(sql, parameters);
 }
 
@@ -111,6 +121,7 @@ export async function arrangeTimeline(input: {
     reactFlow: parsed.reactFlow,
     pageNodeId: input.pageNodeId,
     parameters: input.parameters,
+    contentDir,
   });
 
   const titles = new Map<string, string>();
