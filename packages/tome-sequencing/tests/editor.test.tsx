@@ -25,7 +25,7 @@ const linkedLayout: TimelineLayout = {
     { id: "e2", title: "Arc Two", lane: 1, start: 1, end: 2 },
     { id: "e3", title: "Arc Three", lane: 2, start: 2, end: 3 },
   ],
-  depends: [{ prerequisiteId: "e1", dependentId: "e2" }],
+  depends: [{ prerequisiteId: "e1", dependentId: "e2", from: "end", to: "start" }],
   laneCount: 3,
   timeMin: 0,
   timeMax: 3,
@@ -307,8 +307,8 @@ describe("timeline dependency popup", () => {
     document.removeEventListener("click", onDocumentClick);
     expect(documentSawClick).toBe(false);
     expect(screen.getByRole("dialog", { name: "Dependencies for Arc Two" })).toBeTruthy();
-    expect(screen.getByRole("dialog", { name: "Dependencies for Arc Two" })).toBeTruthy();
     expect(screen.getByRole("dialog").textContent).toContain("Arc One");
+    expect(screen.getByRole("dialog").textContent).toContain("end → start");
   });
 
   test("delete and add-via-pick invoke depends mutations and reopen the popup", async () => {
@@ -316,7 +316,13 @@ describe("timeline dependency popup", () => {
     let layout = linkedLayout;
     const invoke = async (input: unknown) => {
       calls.push(input);
-      const record = input as { action?: string; prerequisiteId?: string; dependentId?: string };
+      const record = input as {
+        action?: string;
+        prerequisiteId?: string;
+        dependentId?: string;
+        from?: string;
+        to?: string;
+      };
       if (record.action === "removeDepends") {
         layout = { ...layout, depends: [] };
       }
@@ -325,7 +331,12 @@ describe("timeline dependency popup", () => {
           ...layout,
           depends: [
             ...layout.depends,
-            { prerequisiteId: record.prerequisiteId!, dependentId: record.dependentId! },
+            {
+              prerequisiteId: record.prerequisiteId!,
+              dependentId: record.dependentId!,
+              from: (record.from as "start" | "end") ?? "end",
+              to: (record.to as "start" | "end") ?? "start",
+            },
           ],
         };
       }
@@ -343,26 +354,39 @@ describe("timeline dependency popup", () => {
       />,
     );
     fireEvent.click(await eventLink("e2"));
-    fireEvent.click(screen.getByRole("button", { name: "Remove dependency Arc One" }));
+    fireEvent.click(screen.getByRole("button", { name: "Remove dependency Arc One end → start" }));
     await waitFor(() =>
       expect(calls.some((c) => (c as { action?: string }).action === "removeDepends")).toBe(true),
     );
     await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
 
-    fireEvent.click(screen.getByRole("button", { name: "Add dependency" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add start dependency" }));
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
+    expect(screen.getByText("Click a start or end to add a dependency")).toBeTruthy();
+    expect(
+      document.querySelector('a.tome-sequencing-event-link[href*="node=e3"]')?.textContent,
+    ).toContain("Arc Three");
 
-    fireEvent.click(await eventLink("e3"));
+    fireEvent.click(screen.getByRole("button", { name: "Pick end of Arc Three" }));
     await waitFor(() =>
       expect(
-        calls.some(
-          (c) =>
-            (c as { action?: string; prerequisiteId?: string; dependentId?: string }).action ===
-              "addDepends" &&
-            (c as { prerequisiteId?: string }).prerequisiteId === "e3" &&
-            (c as { dependentId?: string }).dependentId === "e2",
-        ),
+        calls.some((c) => {
+          const record = c as {
+            action?: string;
+            prerequisiteId?: string;
+            dependentId?: string;
+            from?: string;
+            to?: string;
+          };
+          return (
+            record.action === "addDepends" &&
+            record.prerequisiteId === "e3" &&
+            record.dependentId === "e2" &&
+            record.from === "end" &&
+            record.to === "start"
+          );
+        }),
       ).toBe(true),
     );
     await waitFor(() =>
@@ -388,8 +412,8 @@ describe("timeline dependency popup", () => {
       />,
     );
     fireEvent.click(await eventLink("e1"));
-    fireEvent.click(screen.getByRole("button", { name: "Add dependent" }));
-    expect(screen.getByText("Click an event to add a dependent")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Add start dependent" }));
+    expect(screen.getByText("Click a start or end to add a dependent")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(screen.getByRole("dialog", { name: "Dependencies for Arc One" })).toBeTruthy();
     expect(calls.every((c) => (c as { action?: string }).action === "arrange")).toBe(true);
@@ -409,7 +433,7 @@ describe("timeline dependency popup", () => {
       />,
     );
     fireEvent.click(await eventLink("e1"));
-    fireEvent.click(screen.getByRole("button", { name: "Add dependent" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add start dependent" }));
     fireEvent.keyDown(document, { key: "Escape" });
     expect(screen.getByRole("dialog", { name: "Dependencies for Arc One" })).toBeTruthy();
   });

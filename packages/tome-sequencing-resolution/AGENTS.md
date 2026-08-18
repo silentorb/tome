@@ -7,6 +7,7 @@
 - Depends on `tome-sequencing-interfaces` only among Tome packages.
 - Do **not** define general sequencing vocabulary here — import it from interfaces.
 - No Tome/Imp runtime.
+- `resolve` solves a start/end timepoint graph (`from` / `to` on each depends edge).
 
 ## Exports
 

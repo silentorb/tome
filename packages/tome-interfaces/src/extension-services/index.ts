@@ -13,5 +13,6 @@ export type { ExtensionSqlQueryServices } from "./sql-query";
 export type {
   ExtensionGraphMutateServices,
   GraphMutateLinkError,
+  GraphMutateReplacePropertiesError,
   GraphMutateUnlinkError,
 } from "./graph-mutate";

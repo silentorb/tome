@@ -1,6 +1,6 @@
 # tome-sequencing-resolution
 
-Constraint **resolution** for relative event sequencing: depends edges, parallel eligibility, stretchable durations, and earliest/latest possibility ranges.
+Constraint **resolution** for relative event sequencing: start/end depends edges, parallel eligibility, stretchable durations, and earliest/latest possibility ranges.
 
 Depends on `tome-sequencing-interfaces` for problem types. Exports only resolution types + `resolve`.
 

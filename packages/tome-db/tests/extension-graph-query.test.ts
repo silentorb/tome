@@ -88,5 +88,8 @@ describe("createExtensionGraphQueryServices", () => {
     expect(types).toEqual(
       [neighbor0, neighbor1, parents0, parents0, parents1, parents1].sort(),
     );
+    expect(edges.every((edge) => edge.properties && typeof edge.properties === "object")).toBe(
+      true,
+    );
   });
 });

@@ -19,7 +19,7 @@ const sampleLayout: TimelineLayout = {
       end: 4,
     },
   ],
-  depends: [{ prerequisiteId: "e1", dependentId: "e2" }],
+  depends: [{ prerequisiteId: "e1", dependentId: "e2", from: "end", to: "start" }],
   laneCount: 1,
   timeMin: 0,
   timeMax: 4,

@@ -2,7 +2,9 @@ import type { ServerPageBlockHost } from "tome-interfaces/page-block/server";
 import { IMPLEMENTATION_ID, parseSequencingBlockData } from "./config";
 import { arrangeTimeline } from "./arrange";
 import { mutateTimelineDepends, type DependsMutationAction } from "./depends";
+import { isSequenceEndpoint } from "./depends-endpoints";
 import type { GraphParameterValue } from "tome-query/parameters";
+import type { SequenceEndpoint } from "tome-sequencing-interfaces";
 
 function parseParameterOverrides(raw: unknown): Record<string, GraphParameterValue> | undefined {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return undefined;
@@ -20,15 +22,20 @@ function parseParameterOverrides(raw: unknown): Record<string, GraphParameterVal
   return out;
 }
 
-function parseDependsEndpoints(record: Record<string, unknown>): {
+function parseDependsMutationInput(record: Record<string, unknown>): {
   prerequisiteId: string;
   dependentId: string;
+  from: SequenceEndpoint;
+  to: SequenceEndpoint;
 } | null {
   const prerequisiteId =
     typeof record.prerequisiteId === "string" ? record.prerequisiteId : "";
   const dependentId = typeof record.dependentId === "string" ? record.dependentId : "";
+  const from = record.from;
+  const to = record.to;
   if (!prerequisiteId || !dependentId) return null;
-  return { prerequisiteId, dependentId };
+  if (!isSequenceEndpoint(from) || !isSequenceEndpoint(to)) return null;
+  return { prerequisiteId, dependentId, from, to };
 }
 
 export function register(host: ServerPageBlockHost): void {
@@ -65,9 +72,12 @@ export function register(host: ServerPageBlockHost): void {
       }
 
       if (action === "addDepends" || action === "removeDepends") {
-        const endpoints = parseDependsEndpoints(record);
+        const endpoints = parseDependsMutationInput(record);
         if (!endpoints) {
-          return { ok: false, error: "prerequisiteId and dependentId are required" };
+          return {
+            ok: false,
+            error: "prerequisiteId, dependentId, from, and to are required",
+          };
         }
         if (!ctx.services.graphQuery) {
           return { ok: false, error: "graphQuery host service is not available" };
@@ -82,6 +92,8 @@ export function register(host: ServerPageBlockHost): void {
             pageNodeId,
             prerequisiteId: endpoints.prerequisiteId,
             dependentId: endpoints.dependentId,
+            from: endpoints.from,
+            to: endpoints.to,
             blockData: data,
             sqlQuery: ctx.services.sqlQuery,
             graphQuery: ctx.services.graphQuery,

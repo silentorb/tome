@@ -8,6 +8,7 @@ export interface GraphQueryEdge {
   sourceId: string;
   targetId: string;
   type: string;
+  properties?: Record<string, unknown>;
 }
 
 export interface ExtensionGraphQueryServices {

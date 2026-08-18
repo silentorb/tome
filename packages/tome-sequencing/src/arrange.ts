@@ -13,6 +13,7 @@ import {
   type GraphParameterValue,
 } from "tome-query/parameters";
 import { bindPageNodeId, parseSequencingBlockData } from "./config";
+import { expandDependsConstraints } from "./depends-endpoints";
 import { buildTimelineLayoutFromResolved, type TimelineLayout } from "./layout";
 import { loadTableSequencingConfig } from "./sequencing-file";
 
@@ -59,16 +60,19 @@ export async function loadDependsEdges(
   );
   const idSet = new Set(eventIds);
   const depends: DependsConstraint[] = [];
-  const seen = new Set<string>();
+  const seenRows = new Set<string>();
   for (const edge of edges) {
     if (!idSet.has(edge.sourceId) || !idSet.has(edge.targetId)) continue;
-    const key = `${edge.sourceId}\0${edge.targetId}`;
-    if (seen.has(key)) continue;
-    seen.add(key);
-    depends.push({
-      prerequisiteId: edge.sourceId,
-      dependentId: edge.targetId,
-    });
+    const rowKey = `${edge.sourceId}\0${edge.targetId}`;
+    if (seenRows.has(rowKey)) continue;
+    seenRows.add(rowKey);
+    const expanded = expandDependsConstraints(edge.sourceId, edge.targetId, edge.properties);
+    if (!expanded) {
+      throw new Error(
+        `Depends edge ${edge.sourceId} → ${edge.targetId} is missing start/end endpoints`,
+      );
+    }
+    depends.push(...expanded);
   }
   return depends;
 }

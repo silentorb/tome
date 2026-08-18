@@ -15,7 +15,7 @@ import {
   parseSequencingBlockData,
   type SequencingBlockData,
 } from "./config";
-import type { DependsConstraint } from "tome-sequencing-interfaces";
+import type { DependsConstraint, SequenceEndpoint } from "tome-sequencing-interfaces";
 import { SequencingTimelineView } from "./timeline";
 import type { TimelineLayout } from "./layout";
 import "./sequencing-block.css";
@@ -178,7 +178,13 @@ export function SequencingBlockComponent({
   );
 
   const mutateDepends = useCallback(
-    async (action: "addDepends" | "removeDepends", prerequisiteId: string, dependentId: string) => {
+    async (
+      action: "addDepends" | "removeDepends",
+      prerequisiteId: string,
+      dependentId: string,
+      from: SequenceEndpoint,
+      to: SequenceEndpoint,
+    ) => {
       if (!ctx.invoke) {
         setError("Sequencing invoke is not available");
         return;
@@ -194,6 +200,8 @@ export function SequencingBlockComponent({
           parameters: resolveGraphParameterValues(graph, overrides),
           prerequisiteId,
           dependentId,
+          from,
+          to,
         });
         applyInvokeResult(result, previous);
       } catch (err: unknown) {
@@ -257,14 +265,14 @@ export function SequencingBlockComponent({
           onAddDepends={
             readOnly
               ? undefined
-              : (prerequisiteId, dependentId) =>
-                  mutateDepends("addDepends", prerequisiteId, dependentId)
+              : (prerequisiteId, dependentId, from, to) =>
+                  mutateDepends("addDepends", prerequisiteId, dependentId, from, to)
           }
           onRemoveDepends={
             readOnly
               ? undefined
-              : (prerequisiteId, dependentId) =>
-                  mutateDepends("removeDepends", prerequisiteId, dependentId)
+              : (prerequisiteId, dependentId, from, to) =>
+                  mutateDepends("removeDepends", prerequisiteId, dependentId, from, to)
           }
           readOnly={readOnly}
         />

@@ -2,10 +2,13 @@ import type {
   CanRunParallel,
   DependsConstraint,
   DurationSpec,
+  SequenceEndpoint,
   SequenceEvent,
   SequencingProblem,
 } from "tome-sequencing-interfaces";
 import type { ResolutionResult, ResolvedEvent } from "./types";
+
+type LaggedSucc = { to: string; lag: number };
 
 function minDuration(event: SequenceEvent, defaultDuration: number): number {
   const spec: DurationSpec | undefined = event.duration;
@@ -23,6 +26,19 @@ function minDuration(event: SequenceEvent, defaultDuration: number): number {
 
 function isFlex(event: SequenceEvent): boolean {
   return event.duration === "flex" || event.duration === undefined;
+}
+
+function timepoint(eventId: string, endpoint: SequenceEndpoint): string {
+  return `${eventId}:${endpoint}`;
+}
+
+function eventIdFromTimepoint(tp: string): string {
+  const sep = tp.lastIndexOf(":");
+  return sep === -1 ? tp : tp.slice(0, sep);
+}
+
+function isSequenceEndpoint(value: string): value is SequenceEndpoint {
+  return value === "start" || value === "end";
 }
 
 function findCycle(ids: string[], edges: Map<string, string[]>): string[] | null {
@@ -85,47 +101,119 @@ function defaultCanRunParallel(): CanRunParallel {
   return () => true;
 }
 
-/** Build successor map from depends + implicit sequential pairs. */
-function buildSuccessors(
+function pairKey(a: string, b: string): string {
+  return a < b ? `${a}\0${b}` : `${b}\0${a}`;
+}
+
+function unweightedSuccessors(lagged: Map<string, LaggedSucc[]>): Map<string, string[]> {
+  const successors = new Map<string, string[]>();
+  for (const [from, edges] of lagged) {
+    successors.set(
+      from,
+      edges.map((edge) => edge.to),
+    );
+  }
+  return successors;
+}
+
+function addLaggedEdge(successors: Map<string, LaggedSucc[]>, from: string, to: string, lag: number) {
+  const list = successors.get(from);
+  if (!list) {
+    successors.set(from, [{ to, lag }]);
+    return;
+  }
+  const existing = list.find((edge) => edge.to === to);
+  if (!existing) {
+    list.push({ to, lag });
+    return;
+  }
+  if (lag > existing.lag) existing.lag = lag;
+}
+
+/** Build lagged timepoint successors from duration, depends, and implicit FS pairs. */
+function buildTimepointSuccessors(
   ids: string[],
   depends: DependsConstraint[],
+  duration: Map<string, number>,
   canRunParallel: CanRunParallel,
-): Map<string, string[]> {
+): Map<string, LaggedSucc[]> {
   const idSet = new Set(ids);
-  const successors = new Map<string, string[]>();
-  const ensure = (id: string) => {
-    if (!successors.has(id)) successors.set(id, []);
-  };
-  for (const id of ids) ensure(id);
-
-  const addEdge = (from: string, to: string) => {
-    const list = successors.get(from)!;
-    if (!list.includes(to)) list.push(to);
-  };
-
-  for (const edge of depends) {
-    if (!idSet.has(edge.prerequisiteId) || !idSet.has(edge.dependentId)) {
-      continue;
-    }
-    addEdge(edge.prerequisiteId, edge.dependentId);
+  const successors = new Map<string, LaggedSucc[]>();
+  for (const id of ids) {
+    successors.set(timepoint(id, "start"), []);
+    successors.set(timepoint(id, "end"), []);
   }
 
-  // Non-parallel pairs without an explicit depends edge get a stable FS order.
+  for (const id of ids) {
+    addLaggedEdge(
+      successors,
+      timepoint(id, "start"),
+      timepoint(id, "end"),
+      duration.get(id)!,
+    );
+  }
+
+  const linkedPairs = new Set<string>();
+  for (const edge of depends) {
+    if (!idSet.has(edge.prerequisiteId) || !idSet.has(edge.dependentId)) continue;
+    if (!isSequenceEndpoint(edge.from) || !isSequenceEndpoint(edge.to)) {
+      throw new Error(
+        `Depends edge ${edge.prerequisiteId} → ${edge.dependentId} has invalid endpoints`,
+      );
+    }
+    addLaggedEdge(
+      successors,
+      timepoint(edge.prerequisiteId, edge.from),
+      timepoint(edge.dependentId, edge.to),
+      0,
+    );
+    linkedPairs.add(pairKey(edge.prerequisiteId, edge.dependentId));
+  }
+
   for (let i = 0; i < ids.length; i++) {
     for (let j = i + 1; j < ids.length; j++) {
       const a = ids[i]!;
       const b = ids[j]!;
       if (canRunParallel(a, b) || canRunParallel(b, a)) continue;
-      const hasAb = (successors.get(a) ?? []).includes(b);
-      const hasBa = (successors.get(b) ?? []).includes(a);
-      if (hasAb || hasBa) continue;
-      // Stable: lexicographically smaller id finishes before the larger.
-      if (a < b) addEdge(a, b);
-      else addEdge(b, a);
+      if (linkedPairs.has(pairKey(a, b))) continue;
+      const first = a < b ? a : b;
+      const second = a < b ? b : a;
+      addLaggedEdge(successors, timepoint(first, "end"), timepoint(second, "start"), 0);
     }
   }
 
   return successors;
+}
+
+function predecessorLags(successors: Map<string, LaggedSucc[]>): Map<string, LaggedSucc[]> {
+  const predecessors = new Map<string, LaggedSucc[]>();
+  for (const from of successors.keys()) predecessors.set(from, []);
+  for (const [from, edges] of successors) {
+    for (const edge of edges) {
+      const list = predecessors.get(edge.to);
+      if (!list) {
+        predecessors.set(edge.to, [{ to: from, lag: edge.lag }]);
+      } else {
+        list.push({ to: from, lag: edge.lag });
+      }
+    }
+  }
+  return predecessors;
+}
+
+function propagateEarliest(
+  order: string[],
+  predecessors: Map<string, LaggedSucc[]>,
+  earliest: Map<string, number>,
+) {
+  for (const tp of order) {
+    const preds = predecessors.get(tp) ?? [];
+    let value = earliest.get(tp) ?? 0;
+    for (const pred of preds) {
+      value = Math.max(value, (earliest.get(pred.to) ?? 0) + pred.lag);
+    }
+    earliest.set(tp, value);
+  }
 }
 
 function intersectWindow(
@@ -179,77 +267,91 @@ export function resolve(problem: SequencingProblem): ResolutionResult {
           },
         };
       }
+      if (!isSequenceEndpoint(edge.from) || !isSequenceEndpoint(edge.to)) {
+        return {
+          ok: false,
+          error: {
+            code: "unsatisfiable",
+            message: `Depends edge ${edge.prerequisiteId} → ${edge.dependentId} has invalid endpoints`,
+            eventIds: [edge.prerequisiteId, edge.dependentId],
+          },
+        };
+      }
     }
 
     const byId = new Map(events.map((e) => [e.id, e]));
-    const canRunParallel = problem.canRunParallel ?? defaultCanRunParallel();
-    const successors = buildSuccessors(ids, problem.depends, canRunParallel);
-
-    const cycle = findCycle(ids, successors);
-    if (cycle) {
-      return {
-        ok: false,
-        error: {
-          code: "cycle",
-          message: `Depends graph contains a cycle: ${cycle.join(" → ")}`,
-          eventIds: [...new Set(cycle)],
-        },
-      };
-    }
-
-    const order = topoSort(ids, successors);
     const duration = new Map<string, number>();
     for (const id of ids) {
       duration.set(id, minDuration(byId.get(id)!, problem.defaultDuration));
     }
 
-    const predecessors = new Map<string, string[]>();
-    for (const id of ids) predecessors.set(id, []);
-    for (const [from, tos] of successors) {
-      for (const to of tos) {
-        predecessors.get(to)!.push(from);
+    const canRunParallel = problem.canRunParallel ?? defaultCanRunParallel();
+    const lagged = buildTimepointSuccessors(ids, problem.depends, duration, canRunParallel);
+    const successors = unweightedSuccessors(lagged);
+    const timepoints = [...lagged.keys()];
+
+    const cycle = findCycle(timepoints, successors);
+    if (cycle) {
+      const eventIds = [...new Set(cycle.map(eventIdFromTimepoint))];
+      return {
+        ok: false,
+        error: {
+          code: "cycle",
+          message: `Depends graph contains a cycle: ${cycle.join(" → ")}`,
+          eventIds,
+        },
+      };
+    }
+
+    const order = topoSort(timepoints, successors);
+    const predecessors = predecessorLags(lagged);
+    const earliest = new Map<string, number>();
+    for (const tp of timepoints) earliest.set(tp, 0);
+    propagateEarliest(order, predecessors, earliest);
+
+    for (let pass = 0; pass <= ids.length; pass++) {
+      let changed = false;
+      for (const id of ids) {
+        if (isFlex(byId.get(id)!)) continue;
+        const startTp = timepoint(id, "start");
+        const endTp = timepoint(id, "end");
+        const d = duration.get(id)!;
+        const start = earliest.get(startTp)!;
+        const end = earliest.get(endTp)!;
+        if (end > start + d + 1e-9) {
+          earliest.set(startTp, end - d);
+          changed = true;
+        }
       }
+      if (!changed) break;
+      propagateEarliest(order, predecessors, earliest);
     }
 
-    const es = new Map<string, number>();
-    const ef = new Map<string, number>();
-    for (const id of order) {
-      const preds = predecessors.get(id) ?? [];
-      const start = preds.length === 0 ? 0 : Math.max(...preds.map((p) => ef.get(p)!));
-      const d = duration.get(id)!;
-      es.set(id, start);
-      ef.set(id, start + d);
+    const projectEnd =
+      ids.length === 0 ? 0 : Math.max(...ids.map((id) => earliest.get(timepoint(id, "end"))!));
+
+    const latest = new Map<string, number>();
+    for (const tp of [...order].reverse()) {
+      const succs = lagged.get(tp) ?? [];
+      if (succs.length === 0) {
+        latest.set(tp, projectEnd);
+        continue;
+      }
+      let value = Infinity;
+      for (const succ of succs) {
+        value = Math.min(value, (latest.get(succ.to) ?? projectEnd) - succ.lag);
+      }
+      latest.set(tp, value);
     }
 
-    const projectEnd = ids.length === 0 ? 0 : Math.max(...ids.map((id) => ef.get(id)!));
-
-    const lf = new Map<string, number>();
-    const ls = new Map<string, number>();
-    for (const id of [...order].reverse()) {
-      const succs = successors.get(id) ?? [];
-      const finish = succs.length === 0 ? projectEnd : Math.min(...succs.map((s) => ls.get(s)!));
-      const d = duration.get(id)!;
-      lf.set(id, finish);
-      ls.set(id, finish - d);
-    }
-
-    // Flex events may stretch into their float: widen latestEnd to LF while keeping min duration.
-    for (const id of ids) {
-      const event = byId.get(id)!;
-      if (!isFlex(event)) continue;
-      // latestEnd already LF; earliest window uses min duration — nothing else required for v1.
-      void event;
-    }
-
-    // Containment: tighten children to parent windows (M2M → intersection).
-    let windows = new Map(
+    const windows = new Map(
       ids.map((id) => [
         id,
         {
-          es: es.get(id)!,
-          ls: ls.get(id)!,
-          ef: ef.get(id)!,
-          lf: lf.get(id)!,
+          es: earliest.get(timepoint(id, "start"))!,
+          ls: latest.get(timepoint(id, "start"))!,
+          ef: earliest.get(timepoint(id, "end"))!,
+          lf: latest.get(timepoint(id, "end"))!,
         },
       ]),
     );

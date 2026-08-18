@@ -36,4 +36,35 @@ describe("createExtensionGraphMutateServices", () => {
     expect(services.unlinkOutgoing(sourceId, targetId, assoc)).toBeNull();
     expect(fixture.ctx.store.findRelationship(sourceId, targetId, assoc)).toBeNull();
   });
+
+  test("stores and replaces relationship properties", () => {
+    const services = createExtensionGraphMutateServices(fixture.ctx);
+    expect(
+      services.linkOutgoing({
+        sourceId,
+        targetId,
+        type: assoc,
+        properties: {
+          endpoints: [{ from: "end", to: "start" }],
+        },
+      }),
+    ).toBeNull();
+    const created = fixture.ctx.store.findRelationship(sourceId, targetId, assoc);
+    expect(created?.properties.endpoints).toEqual([{ from: "end", to: "start" }]);
+
+    expect(
+      services.replaceOutgoingProperties(sourceId, targetId, assoc, {
+        endpoints: [
+          { from: "end", to: "start" },
+          { from: "start", to: "start" },
+        ],
+      }),
+    ).toBeNull();
+    const replaced = fixture.ctx.store.findRelationship(sourceId, targetId, assoc);
+    expect(replaced?.properties.endpoints).toEqual([
+      { from: "end", to: "start" },
+      { from: "start", to: "start" },
+    ]);
+    expect(services.unlinkOutgoing(sourceId, targetId, assoc)).toBeNull();
+  });
 });

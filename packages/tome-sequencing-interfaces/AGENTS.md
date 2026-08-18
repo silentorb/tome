@@ -4,6 +4,8 @@
 
 Shared **sequencing domain types** only. No algorithm, no Tome/Imp runtime.
 
+Depends edges are `DependsConstraint` with `from` / `to` (`SequenceEndpoint`: `"start"` | `"end"`), not an FS/SS/FF/SF enum.
+
 ## Dependency rules
 
 - **No** dependencies on other tome packages.

@@ -31,9 +31,15 @@ describe("extension graph query types", () => {
       unlinkOutgoing() {
         return "not_found";
       },
+      replaceOutgoingProperties() {
+        return "not_found";
+      },
     };
     expect(services.linkOutgoing({ sourceId: "a", targetId: "b", type: "assoc" })).toBeNull();
     expect(services.unlinkOutgoing("a", "b", "assoc")).toBe("not_found");
+    expect(
+      services.replaceOutgoingProperties("a", "b", "assoc", { endpoints: [] }),
+    ).toBe("not_found");
   });
 
   test("async html renderer return type is accepted", async () => {

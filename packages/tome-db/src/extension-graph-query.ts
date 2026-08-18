@@ -50,6 +50,7 @@ function listIncidentEdges(
       sourceId,
       targetId,
       type: relationship.type,
+      properties: relationship.properties,
     });
   }
 

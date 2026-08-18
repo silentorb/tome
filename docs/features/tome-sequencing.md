@@ -43,14 +43,15 @@
 - When the Imp query graph declares **`parameter` nodes**, those appear in the same settings menu and persist in `.tome/user-settings.json` (`blockParameters`) per page node + component id
 - Timeline chrome uses a **dark** palette by default (dark canvas, teal event bars, light labels)
 - **Flat concurrency lanes** only (no Epic/Primary/Secondary macro bands). Each event is one ASAP bar `[start, end)`; same-lane bars do not overlap. ALAP slack is not drawn as occupying geometry.
-- Event bars keep `<a href="?node=…">` for Ctrl/Cmd / middle / shift-click. Unmodified left click `preventDefault`s and `stopPropagation`s so Milkdown/chrome link interceptors do not navigate, then opens a two-column **dependency popup** (Dependencies / Dependents). The popup title is a node link. **Add** enters pick mode (click another event or Cancel / Escape); delete removes that depends edge. Mutations use invoke actions `addDepends` / `removeDepends`. `readOnly` popups are view-only.
+- Event bars keep `<a href="?node=…">` for Ctrl/Cmd / middle / shift-click. Unmodified left click `preventDefault`s and `stopPropagation`s so Milkdown/chrome link interceptors do not navigate, then opens a two-column **dependency popup** (Dependencies / Dependents). The popup title is a node link. Each listed edge shows the other event plus `${from} → ${to}` (e.g. `end → start`). **Add Start** / **Add End** enter pick mode for that endpoint of the current event; other events split **left (start) / right (end)** behind the still-visible title (Cancel / Escape). Delete removes that endpoint combo. Mutations use invoke actions `addDepends` / `removeDepends`. `readOnly` popups are view-only.
+- **Show dependency edges** cubics attach to the chosen bar ends (left = start, right = end), not always finish-to-start.
 
 ### Editor UX
 
 - `interactive: true` embed with Refresh + **Edit query** (host tool panel React Flow editor); shows an explicit load error if the browser bundle is unavailable
 - Server `invoke` actions:
   - `arrange` / `execute` — layout DTO
-  - `addDepends` / `removeDepends` — `{ prerequisiteId, dependentId, data, parameters? }` mutates the `dependsAssociation` edge (direction 0 = prerequisite → dependent) then re-arranges. On resolve failure, returns `{ ok: false, error, depends }` so the client can keep previous placements and still list the new edge.
+  - `addDepends` / `removeDepends` — `{ prerequisiteId, dependentId, from, to, data, parameters? }` mutates one start/end combo on the `dependsAssociation` row (direction 0 = prerequisite → dependent; `properties.endpoints` is `{ from, to }[]`) then re-arranges. Missing `endpoints` fails arrange. On resolve failure, returns `{ ok: false, error, depends }` so the client can keep previous placements and still list the new edge.
 - Client may pass `parameters` (resolved graph parameter values) on invoke
 - At execute time, Imp/React Flow string literals equal to `$pageNodeId` are replaced with the host page node id, and `parameter` node values are bound from user settings (defaults from the graph when unset)
 
@@ -62,7 +63,7 @@ Notion-style absolute dates are a poor fit for story chronology. Relative depend
 
 1. Run block Imp query with page `nodeId` bound → event rows (`id`, title)
 2. Load `sequencing.json` for that page id
-3. Load depends edges among result ids (association direction 0 = prerequisite → dependent)
+3. Load depends edges among result ids (association direction 0 = prerequisite → dependent; expand `properties.endpoints` into `DependsConstraint` rows with `from` / `to`)
 4. `resolve` → constraint windows
 5. `layoutEvents` → non-overlapping ASAP placements + lanes
 6. Render visx / static SVG from placements only

@@ -264,12 +264,35 @@
   padding: 0.15rem 0;
 }
 
+.tome-sequencing-pick-start,
+.tome-sequencing-pick-end {
+  cursor: pointer;
+}
+
+.tome-sequencing-depends-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.tome-sequencing-depends-kind {
+  color: var(--tome-sequencing-muted);
+  font-size: 0.75rem;
+}
+
+.tome-sequencing-depends-add-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
 .tome-sequencing-depends-empty {
   color: var(--tome-sequencing-muted);
 }
 
 .tome-sequencing-depends-column li button,
-.tome-sequencing-depends-column > button {
+.tome-sequencing-depends-add-row button {
   font: inherit;
   cursor: pointer;
   color: var(--tome-sequencing-label);

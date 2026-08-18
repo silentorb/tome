@@ -24,7 +24,7 @@ describe("buildTimelineLayoutFromResolved", () => {
         ["a", "Alpha"],
         ["b", "Beta"],
       ]),
-      depends: [{ prerequisiteId: "a", dependentId: "b" }],
+      depends: [{ prerequisiteId: "a", dependentId: "b", from: "end", to: "start" }],
     });
     expect(layout.timeMax).toBe(2);
     expect(layout.events[0]?.title).toBe("Alpha");

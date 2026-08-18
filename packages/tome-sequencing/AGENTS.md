@@ -19,7 +19,7 @@ Block fence `data.reactFlow` is canonical. At execute time, string literals equa
 
 Upper-right **⚙** opens view settings (chronology units on by default — session only; dependency edges off by default — persisted in user settings) plus any graph `parameter` controls (persisted in user settings). Follow the gear-menu convention in [`tome-editor.md`](../../docs/features/tome-editor.md) § View settings control. Timeline chrome is dark by default for contrast. Layout comes from `tome-sequencing-resolution` (`layoutEvents`); this package does not invent macro tracks or ALAP range bars.
 
-Unmodified left click on an event opens a dependency popup (add via click-to-pick, remove via delete). Invoke actions `addDepends` / `removeDepends` mutate graph edges through host `graphMutate`.
+Unmodified left click on an event opens a dependency popup. **Add Start** / **Add End** pick another event’s start or end; the list shows `${from} → ${to}`. Invoke actions `addDepends` / `removeDepends` mutate `properties.endpoints` on the depends association through host `graphMutate` (`linkOutgoing` properties, `replaceOutgoingProperties`, `unlinkOutgoing`).
 
 ## Static HTML vs editor
 

@@ -62,8 +62,8 @@ Factories in `tome-db`: `createExtensionGraphQueryServices`, `createExtensionGra
 
 | Service | Purpose |
 | --- | --- |
-| `graphQuery.listTypeMembers` / `listEdges` | Read-only graph selection for diagram blocks |
-| `graphMutate.linkOutgoing` / `unlinkOutgoing` | Host-mediated relationship create/delete (e.g. timeline depends) |
+| `graphQuery.listTypeMembers` / `listEdges` | Read-only graph selection for diagram blocks (`listEdges` includes relationship `properties`) |
+| `graphMutate.linkOutgoing` / `unlinkOutgoing` / `replaceOutgoingProperties` | Host-mediated relationship create/delete/property replace (e.g. timeline depends) |
 | `schemaQuery` | Schema / type-table metadata for schema-diagram |
 | `sqlQuery.queryAll(sql, params)` | Parameterized SQL from trusted compilers (e.g. Imp → SQL) |
 

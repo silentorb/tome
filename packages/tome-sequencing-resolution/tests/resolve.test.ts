@@ -34,8 +34,8 @@ describe("resolve", () => {
         { id: "c", duration: 1 },
       ],
       depends: [
-        { prerequisiteId: "a", dependentId: "b" },
-        { prerequisiteId: "b", dependentId: "c" },
+        { prerequisiteId: "a", dependentId: "b", from: "end", to: "start" },
+        { prerequisiteId: "b", dependentId: "c", from: "end", to: "start" },
       ],
       defaultDuration: 1,
     };
@@ -59,10 +59,10 @@ describe("resolve", () => {
         { id: "end", duration: 1 },
       ],
       depends: [
-        { prerequisiteId: "start", dependentId: "short" },
-        { prerequisiteId: "start", dependentId: "long" },
-        { prerequisiteId: "short", dependentId: "end" },
-        { prerequisiteId: "long", dependentId: "end" },
+        { prerequisiteId: "start", dependentId: "short", from: "end", to: "start" },
+        { prerequisiteId: "start", dependentId: "long", from: "end", to: "start" },
+        { prerequisiteId: "short", dependentId: "end", from: "end", to: "start" },
+        { prerequisiteId: "long", dependentId: "end", from: "end", to: "start" },
       ],
       defaultDuration: 1,
     });
@@ -111,8 +111,8 @@ describe("resolve", () => {
         { id: "b", duration: 1 },
       ],
       depends: [
-        { prerequisiteId: "a", dependentId: "b" },
-        { prerequisiteId: "b", dependentId: "a" },
+        { prerequisiteId: "a", dependentId: "b", from: "end", to: "start" },
+        { prerequisiteId: "b", dependentId: "a", from: "end", to: "start" },
       ],
       defaultDuration: 1,
     });
@@ -124,7 +124,7 @@ describe("resolve", () => {
   test("unknown depends endpoint fails", () => {
     const result = resolve({
       events: [{ id: "a", duration: 1 }],
-      depends: [{ prerequisiteId: "a", dependentId: "missing" }],
+      depends: [{ prerequisiteId: "a", dependentId: "missing", from: "end", to: "start" }],
       defaultDuration: 1,
     });
     expect(result.ok).toBe(false);
@@ -158,5 +158,89 @@ describe("resolve", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.events[0]?.earliestEnd).toBe(3);
+  });
+
+  test("start → start lets the dependent start with the prerequisite", () => {
+    const result = resolve({
+      events: [
+        { id: "a", duration: 3 },
+        { id: "b", duration: 1 },
+      ],
+      depends: [{ prerequisiteId: "a", dependentId: "b", from: "start", to: "start" }],
+      defaultDuration: 1,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const byId = Object.fromEntries(result.events.map((e) => [e.id, e]));
+    expect(byId.a?.earliestStart).toBe(0);
+    expect(byId.b?.earliestStart).toBe(0);
+    expect(byId.b?.earliestEnd).toBe(1);
+  });
+
+  test("end → end stretches a flex dependent to cover the prerequisite finish", () => {
+    const result = resolve({
+      events: [
+        { id: "a", duration: 3 },
+        { id: "b", duration: "flex" },
+      ],
+      depends: [{ prerequisiteId: "a", dependentId: "b", from: "end", to: "end" }],
+      defaultDuration: 1,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const byId = Object.fromEntries(result.events.map((e) => [e.id, e]));
+    expect(byId.b?.earliestStart).toBe(0);
+    expect(byId.b?.earliestEnd).toBe(3);
+  });
+
+  test("end → end shifts a fixed dependent later instead of stretching", () => {
+    const result = resolve({
+      events: [
+        { id: "a", duration: 3 },
+        { id: "b", duration: 1 },
+      ],
+      depends: [{ prerequisiteId: "a", dependentId: "b", from: "end", to: "end" }],
+      defaultDuration: 1,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const byId = Object.fromEntries(result.events.map((e) => [e.id, e]));
+    expect(byId.b?.earliestStart).toBe(2);
+    expect(byId.b?.earliestEnd).toBe(3);
+  });
+
+  test("start → end waits for the prerequisite start before the dependent can finish", () => {
+    const result = resolve({
+      events: [
+        { id: "a", duration: 3 },
+        { id: "b", duration: 1 },
+      ],
+      depends: [{ prerequisiteId: "a", dependentId: "b", from: "start", to: "end" }],
+      defaultDuration: 1,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const byId = Object.fromEntries(result.events.map((e) => [e.id, e]));
+    expect(byId.b?.earliestStart).toBe(0);
+    expect(byId.b?.earliestEnd).toBe(1);
+  });
+
+  test("boxing start → start and end → end aligns a flex inner event to the outer range", () => {
+    const result = resolve({
+      events: [
+        { id: "outer", duration: 4 },
+        { id: "inner", duration: "flex" },
+      ],
+      depends: [
+        { prerequisiteId: "outer", dependentId: "inner", from: "start", to: "start" },
+        { prerequisiteId: "outer", dependentId: "inner", from: "end", to: "end" },
+      ],
+      defaultDuration: 1,
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const byId = Object.fromEntries(result.events.map((e) => [e.id, e]));
+    expect(byId.inner?.earliestStart).toBe(0);
+    expect(byId.inner?.earliestEnd).toBe(4);
   });
 });

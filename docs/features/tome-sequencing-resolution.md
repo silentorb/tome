@@ -13,8 +13,9 @@
 
 - Must import general sequencing vocabulary from `tome-sequencing-interfaces` only (events, depends, duration specs, problem).
 - Must export resolution/layout types: `ResolvedEvent`, `LaidOutEvent`, `LayoutResult`, `ResolutionResult`, `ResolutionError`, `resolve`, and `layoutEvents`.
-- Depends edges are hard finish-to-start unless overridden by parallel eligibility rules for non-edge pairs.
-- Flex / omitted durations use `defaultDuration` as the minimum length; fixed numeric durations are exact.
+- Depends edges attach to event **start** or **end** (`DependsConstraint.from` / `.to`), not to the event as a whole. Display as `${from} → ${to}` (e.g. `end → start`). There is no FS/SS/FF/SF enum.
+- Flex / omitted durations use `defaultDuration` as the minimum length; fixed numeric durations are exact. End-side constraints may stretch a flex event’s ASAP end.
+- Implicit sequential order for non-parallel pairs without any depends row is still **end → start**.
 - Cycles and unsatisfiable containment must fail with structured errors.
 - Chronology units are abstract relative numbers (not calendar dates).
 - **Exclusive placement** per event is the ASAP interval `[start, end) = [earliestStart, earliestEnd)`. Same-lane intervals must not overlap (abut OK). ALAP fields are slack metadata only—they must not claim lane space.
@@ -25,10 +26,10 @@ Hosts specify relationships (and durations); this package **arranges** events au
 
 ## Behavior / pipeline
 
-1. Validate event ids and depends endpoints.
-2. Build successor DAG from depends + implicit FS edges for non-parallel pairs.
-3. Detect cycles.
-4. Forward pass (earliest) and backward pass (latest).
+1. Validate event ids and depends `from` / `to` endpoints.
+2. Build a **timepoint** DAG (`id:start`, `id:end`): duration edges start→end, each depends `prereq[from] → dependent[to]`, plus implicit end→start for non-parallel pairs with no depends row.
+3. Detect cycles on that timepoint graph.
+4. Forward pass (earliest) and backward pass (latest); shift fixed-duration starts later when an end-side constraint would otherwise stretch them.
 5. Tighten children into parent windows when `parentIds` are set.
 6. Return per-event windows via `resolve`.
 7. `layoutEvents(resolved)` packs ASAP intervals into concurrency `lane`s → `LaidOutEvent[]`.
