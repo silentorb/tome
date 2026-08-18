@@ -37,18 +37,21 @@
 - **htmlModule** renders a **static SVG timeline** for the static site (and other non-interactive hosts)
 - In the editor, the block is **`interactive: true`**: if `editor.js` fails to load, the embed shows an **error** (not the static SVG), so a broken load is obvious
 - Interactive visx canvas adds **horizontal zoom only** (wheel / pinch on the time axis; drag pans time). Vertical scale is fixed; the block **grows with lane content** (no inner vertical scroll viewport)
-- Upper-right **settings gear** (⚙) opens a view-settings menu (see [tome-editor.md](./tome-editor.md) § View settings control). Session UI state for chrome options (not persisted):
-  - **Show chronology units** — relative-time axis ticks/labels (default **on**)
-  - **Show dependency edges** — depends lines between events (default **off**; static HTML omits edges)
+- Upper-right **settings gear** (⚙) opens a view-settings menu (see [tome-editor.md](./tome-editor.md) § View settings control):
+  - **Show chronology units** — relative-time axis ticks/labels (default **on**; session only)
+  - **Show dependency edges** — cubic depends curves between visual bar endpoints (default **off**; persisted in `.tome/user-settings.json` as `sequencing.showDependencyEdges`; static HTML omits edges)
 - When the Imp query graph declares **`parameter` nodes**, those appear in the same settings menu and persist in `.tome/user-settings.json` (`blockParameters`) per page node + component id
 - Timeline chrome uses a **dark** palette by default (dark canvas, teal event bars, light labels)
 - **Flat concurrency lanes** only (no Epic/Primary/Secondary macro bands). Each event is one ASAP bar `[start, end)`; same-lane bars do not overlap. ALAP slack is not drawn as occupying geometry.
-- Event glyphs are `<a href="?node=…">` for same-tab / new-tab navigation
+- Event bars keep `<a href="?node=…">` for Ctrl/Cmd / middle / shift-click. Unmodified left click `preventDefault`s and `stopPropagation`s so Milkdown/chrome link interceptors do not navigate, then opens a two-column **dependency popup** (Dependencies / Dependents). The popup title is a node link. **Add** enters pick mode (click another event or Cancel / Escape); delete removes that depends edge. Mutations use invoke actions `addDepends` / `removeDepends`. `readOnly` popups are view-only.
 
 ### Editor UX
 
 - `interactive: true` embed with Refresh + **Edit query** (host tool panel React Flow editor); shows an explicit load error if the browser bundle is unavailable
-- Server `invoke` action `arrange` returns layout DTO; client may pass `parameters` (resolved graph parameter values) on invoke
+- Server `invoke` actions:
+  - `arrange` / `execute` — layout DTO
+  - `addDepends` / `removeDepends` — `{ prerequisiteId, dependentId, data, parameters? }` mutates the `dependsAssociation` edge (direction 0 = prerequisite → dependent) then re-arranges. On resolve failure, returns `{ ok: false, error, depends }` so the client can keep previous placements and still list the new edge.
+- Client may pass `parameters` (resolved graph parameter values) on invoke
 - At execute time, Imp/React Flow string literals equal to `$pageNodeId` are replaced with the host page node id, and `parameter` node values are bound from user settings (defaults from the graph when unset)
 
 ## Design rationale

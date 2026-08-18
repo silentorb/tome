@@ -1,6 +1,7 @@
 import type { ServerPageBlockHost } from "tome-interfaces/page-block/server";
 import { IMPLEMENTATION_ID, parseSequencingBlockData } from "./config";
 import { arrangeTimeline } from "./arrange";
+import { mutateTimelineDepends, type DependsMutationAction } from "./depends";
 import type { GraphParameterValue } from "tome-query/parameters";
 
 function parseParameterOverrides(raw: unknown): Record<string, GraphParameterValue> | undefined {
@@ -19,6 +20,17 @@ function parseParameterOverrides(raw: unknown): Record<string, GraphParameterVal
   return out;
 }
 
+function parseDependsEndpoints(record: Record<string, unknown>): {
+  prerequisiteId: string;
+  dependentId: string;
+} | null {
+  const prerequisiteId =
+    typeof record.prerequisiteId === "string" ? record.prerequisiteId : "";
+  const dependentId = typeof record.dependentId === "string" ? record.dependentId : "";
+  if (!prerequisiteId || !dependentId) return null;
+  return { prerequisiteId, dependentId };
+}
+
 export function register(host: ServerPageBlockHost): void {
   host.registerPageBlockHandler({
     implementationId: IMPLEMENTATION_ID,
@@ -28,7 +40,12 @@ export function register(host: ServerPageBlockHost): void {
           ? (input as Record<string, unknown>)
           : {};
       const action = typeof record.action === "string" ? record.action : "arrange";
-      if (action !== "arrange" && action !== "execute") {
+      if (
+        action !== "arrange" &&
+        action !== "execute" &&
+        action !== "addDepends" &&
+        action !== "removeDepends"
+      ) {
         throw new Error(`Unknown tome-sequencing action "${action}"`);
       }
 
@@ -45,6 +62,36 @@ export function register(host: ServerPageBlockHost): void {
 
       if (!ctx.services.sqlQuery) {
         return { ok: false, error: "sqlQuery host service is not available" };
+      }
+
+      if (action === "addDepends" || action === "removeDepends") {
+        const endpoints = parseDependsEndpoints(record);
+        if (!endpoints) {
+          return { ok: false, error: "prerequisiteId and dependentId are required" };
+        }
+        if (!ctx.services.graphQuery) {
+          return { ok: false, error: "graphQuery host service is not available" };
+        }
+        if (!ctx.services.graphMutate) {
+          return { ok: false, error: "graphMutate host service is not available" };
+        }
+        try {
+          parseSequencingBlockData(data);
+          return mutateTimelineDepends({
+            action: action as DependsMutationAction,
+            pageNodeId,
+            prerequisiteId: endpoints.prerequisiteId,
+            dependentId: endpoints.dependentId,
+            blockData: data,
+            sqlQuery: ctx.services.sqlQuery,
+            graphQuery: ctx.services.graphQuery,
+            graphMutate: ctx.services.graphMutate,
+            parameters,
+          });
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { ok: false, error: message };
+        }
       }
 
       try {

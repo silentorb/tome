@@ -28,6 +28,14 @@ export function PageBlockWithUserSettings({
     return getPageBlockParameterHandlers()?.getBlockParametersRevision() ?? 0;
   }, []);
 
+  const getShowDependencyEdges = useCallback(() => {
+    return getPageBlockParameterHandlers()?.getSequencingShowDependencyEdges?.() ?? false;
+  }, []);
+
+  const setShowDependencyEdges = useCallback(async (value: boolean) => {
+    getPageBlockParameterHandlers()?.setSequencingShowDependencyEdges?.(value);
+  }, []);
+
   const setParam = useCallback(
     async (paramId: string, value: string | number | boolean | null) => {
       getPageBlockParameterHandlers()?.setBlockParameter(
@@ -48,9 +56,11 @@ export function PageBlockWithUserSettings({
         getBlockParameters: getParams,
         setBlockParameter: setParam,
         getBlockParametersRevision: getParamsRevision,
+        getSequencingShowDependencyEdges: getShowDependencyEdges,
+        setSequencingShowDependencyEdges: setShowDependencyEdges,
       },
     }),
-    [props, getParams, setParam, getParamsRevision],
+    [props, getParams, setParam, getParamsRevision, getShowDependencyEdges, setShowDependencyEdges],
   );
 
   const C = Component as (p: EditorPageBlockProps) => ReactNode;

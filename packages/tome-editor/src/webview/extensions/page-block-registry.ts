@@ -23,6 +23,8 @@ export type PageBlockParameterHandlers = {
     value: string | number | boolean | null,
   ) => void;
   getBlockParametersRevision: () => number;
+  getSequencingShowDependencyEdges?: () => boolean;
+  setSequencingShowDependencyEdges?: (value: boolean) => void;
 };
 
 export type InteractivePageBlockMount =

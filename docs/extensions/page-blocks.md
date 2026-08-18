@@ -54,15 +54,16 @@ A logical block **may** implement editor only, html only, server only, or any co
 
 - Loads `serverModule` at API startup.
 - `POST /api/extensions/:componentId/invoke` dispatches to registered handler (stub-friendly).
-- Handlers receive `ServerHostServices` including optional `graphQuery`, `schemaQuery`, and `sqlQuery` for host-mediated reads.
+- Handlers receive `ServerHostServices` including optional `graphQuery`, `graphMutate`, `schemaQuery`, and `sqlQuery`.
 
 ## Host query services
 
-Factories in `tome-db`: `createExtensionGraphQueryServices`, `createExtensionSchemaQueryServices`, `createExtensionSqlQueryServices`.
+Factories in `tome-db`: `createExtensionGraphQueryServices`, `createExtensionGraphMutateServices`, `createExtensionSchemaQueryServices`, `createExtensionSqlQueryServices`.
 
 | Service | Purpose |
 | --- | --- |
 | `graphQuery.listTypeMembers` / `listEdges` | Read-only graph selection for diagram blocks |
+| `graphMutate.linkOutgoing` / `unlinkOutgoing` | Host-mediated relationship create/delete (e.g. timeline depends) |
 | `schemaQuery` | Schema / type-table metadata for schema-diagram |
 | `sqlQuery.queryAll(sql, params)` | Parameterized SQL from trusted compilers (e.g. Imp → SQL) |
 

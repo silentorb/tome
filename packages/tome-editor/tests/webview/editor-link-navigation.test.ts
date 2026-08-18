@@ -185,6 +185,46 @@ describe("handleEditorLinkPointerEvent", () => {
     root.remove();
   });
 
+  test("does not navigate when default is already prevented", () => {
+    setStandaloneNavigationHandler(() => {
+      softNavCalls += 1;
+    });
+    const { root, anchor } = setupRoot();
+    const event = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    event.preventDefault();
+    Object.defineProperty(event, "target", { value: anchor, configurable: true });
+
+    expect(handleEditorLinkPointerEvent(event, root, BASE)).toBe(false);
+    expect(softNavCalls).toBe(0);
+    expect(window.location.search).not.toContain(`node=${TARGET_ID}`);
+    root.remove();
+  });
+
+  test("ignores anchors inside interactive page blocks", () => {
+    setStandaloneNavigationHandler(() => {
+      softNavCalls += 1;
+    });
+    const root = document.createElement("div");
+    root.innerHTML = `<div data-type="tome-page-block-react"><a href="?node=${TARGET_ID}">Event</a></div>`;
+    document.body.appendChild(root);
+    const anchor = root.querySelector("a") as HTMLAnchorElement;
+    const event = new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      button: 0,
+    });
+    Object.defineProperty(event, "target", { value: anchor, configurable: true });
+
+    expect(handleEditorLinkPointerEvent(event, root, BASE)).toBe(false);
+    expect(event.defaultPrevented).toBe(false);
+    expect(softNavCalls).toBe(0);
+    root.remove();
+  });
+
   test("ignores non-node links", () => {
     const root = document.createElement("div");
     root.innerHTML = `<a href="https://example.com">External</a>`;

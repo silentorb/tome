@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import type {
+  ExtensionGraphMutateServices,
   ExtensionGraphQueryServices,
   GraphQueryEdge,
   GraphQueryNode,
-} from "tome-interfaces/extension-services/graph-query";
+} from "tome-interfaces/extension-services";
 import type { HtmlPageBlockRenderer } from "tome-interfaces/page-block/html";
 
 describe("extension graph query types", () => {
@@ -20,6 +21,19 @@ describe("extension graph query types", () => {
     };
     expect(services.listTypeMembers("type1")).toEqual(nodes);
     expect(services.listEdges({ nodeIds: ["a"] })).toEqual(edges);
+  });
+
+  test("graph mutate services satisfy the contract", async () => {
+    const services: ExtensionGraphMutateServices = {
+      linkOutgoing() {
+        return null;
+      },
+      unlinkOutgoing() {
+        return "not_found";
+      },
+    };
+    expect(services.linkOutgoing({ sourceId: "a", targetId: "b", type: "assoc" })).toBeNull();
+    expect(services.unlinkOutgoing("a", "b", "assoc")).toBe("not_found");
   });
 
   test("async html renderer return type is accepted", async () => {

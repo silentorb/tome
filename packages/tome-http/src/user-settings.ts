@@ -22,6 +22,11 @@ export interface SidebarSettings {
   recentMaxItems?: number;
 }
 
+/** Timeline chrome overrides (sparse; omit defaults). */
+export interface SequencingSettings {
+  showDependencyEdges?: boolean;
+}
+
 /** Primitive values for Imp graph parameter overrides. */
 export type BlockParameterValue = string | number | boolean | null;
 
@@ -39,6 +44,7 @@ export interface UserSettings {
   blockParameters?: Record<string, Record<string, BlockParameterValue>>;
   globalSearch?: GlobalSearchSettings;
   sidebar?: SidebarSettings;
+  sequencing?: SequencingSettings;
 }
 
 export type UserSettingsPatch = {
@@ -48,6 +54,7 @@ export type UserSettingsPatch = {
   blockParameters?: Record<string, Record<string, BlockParameterValue | null> | null>;
   globalSearch?: GlobalSearchSettings | null;
   sidebar?: SidebarSettings | null;
+  sequencing?: SequencingSettings | null;
 };
 
 export const DEFAULT_SIDEBAR_RECENT_MAX_ITEMS = 8;
@@ -63,6 +70,10 @@ export function emptyUserSettings(): UserSettings {
 
 export function globalSearchIncludeBody(settings: UserSettings): boolean {
   return settings.globalSearch?.includeBody === true;
+}
+
+export function sequencingShowDependencyEdges(settings: UserSettings): boolean {
+  return settings.sequencing?.showDependencyEdges === true;
 }
 
 export function sidebarRecentMaxItems(settings: UserSettings): number {
@@ -87,6 +98,13 @@ function normalizeGlobalSearch(
 ): GlobalSearchSettings | undefined {
   if (!value || value.includeBody !== true) return undefined;
   return { includeBody: true };
+}
+
+function normalizeSequencing(
+  value: SequencingSettings | undefined,
+): SequencingSettings | undefined {
+  if (!value || value.showDependencyEdges !== true) return undefined;
+  return { showDependencyEdges: true };
 }
 
 /** Stable key for Imp graph parameter overrides on a page block. */
@@ -255,6 +273,7 @@ export function applyUserSettingsPatch(
       : undefined,
     globalSearch: current.globalSearch ? { ...current.globalSearch } : undefined,
     sidebar: current.sidebar ? { ...current.sidebar } : undefined,
+    sequencing: current.sequencing ? { ...current.sequencing } : undefined,
   };
 
   if (patch.tableSorts) {
@@ -342,6 +361,19 @@ export function applyUserSettingsPatch(
     }
   }
 
+  if (patch.sequencing !== undefined) {
+    if (patch.sequencing === null) {
+      delete next.sequencing;
+    } else {
+      const normalized = normalizeSequencing(patch.sequencing);
+      if (normalized) {
+        next.sequencing = normalized;
+      } else {
+        delete next.sequencing;
+      }
+    }
+  }
+
   return next;
 }
 
@@ -405,6 +437,14 @@ export function parseUserSettings(raw: unknown): UserSettings {
     const normalized = normalizeSidebar(sidebar as SidebarSettings);
     if (normalized) {
       settings.sidebar = normalized;
+    }
+  }
+
+  const sequencing = record.sequencing;
+  if (sequencing && typeof sequencing === "object" && !Array.isArray(sequencing)) {
+    const normalized = normalizeSequencing(sequencing as SequencingSettings);
+    if (normalized) {
+      settings.sequencing = normalized;
     }
   }
 

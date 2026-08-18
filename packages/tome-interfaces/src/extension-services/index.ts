@@ -10,3 +10,8 @@ export type {
   SchemaQueryTypeTable,
 } from "./schema-query";
 export type { ExtensionSqlQueryServices } from "./sql-query";
+export type {
+  ExtensionGraphMutateServices,
+  GraphMutateLinkError,
+  GraphMutateUnlinkError,
+} from "./graph-mutate";

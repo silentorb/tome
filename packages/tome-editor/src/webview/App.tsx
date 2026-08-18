@@ -121,6 +121,8 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     getBlockParameters,
     setBlockParameter,
     getBlockParametersRevision,
+    sequencingShowDependencyEdges,
+    setSequencingShowDependencyEdges,
   } = useUserSettings();
   const {
     corpora,
@@ -198,9 +200,17 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
       getBlockParameters,
       setBlockParameter,
       getBlockParametersRevision,
+      getSequencingShowDependencyEdges: () => sequencingShowDependencyEdges,
+      setSequencingShowDependencyEdges,
     });
     return () => setPageBlockParameterHandlers(null);
-  }, [getBlockParameters, setBlockParameter, getBlockParametersRevision]);
+  }, [
+    getBlockParameters,
+    setBlockParameter,
+    getBlockParametersRevision,
+    sequencingShowDependencyEdges,
+    setSequencingShowDependencyEdges,
+  ]);
 
   const syncExplorerAnchorUrl = useCallback(
     (anchorId: string) => {

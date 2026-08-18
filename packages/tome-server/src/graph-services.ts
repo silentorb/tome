@@ -10,6 +10,7 @@ import {
   exportExplorerLodGraph,
   exportFullGraph,
   createExtensionGraphQueryServices,
+  createExtensionGraphMutateServices,
   createExtensionSchemaQueryServices,
   createExtensionSqlQueryServices,
   getDatabaseViewDetail,
@@ -109,6 +110,7 @@ function buildGraphServices(
     () => createExtensionGraphQueryServices(cache, contentPath),
     () => createExtensionSchemaQueryServices(cache, contentPath),
     () => createExtensionSqlQueryServices(cache),
+    () => createExtensionGraphMutateServices(writeCtx),
   );
   const extensionsReady = extensions.ensureLoaded().catch((err: unknown) => {
     console.error("[tome-extensions] failed to load:", err);

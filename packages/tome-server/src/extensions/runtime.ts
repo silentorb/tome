@@ -1,5 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { extensionsFilePath } from "tome-db/content";
+import type { ExtensionGraphMutateServices } from "tome-interfaces/extension-services/graph-mutate";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
 import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
@@ -91,6 +92,7 @@ export class ExtensionServerRuntime {
   readonly #getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined;
   readonly #getSchemaQueryServices?: () => ExtensionSchemaQueryServices | undefined;
   readonly #getSqlQueryServices?: () => ExtensionSqlQueryServices | undefined;
+  readonly #getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined;
   readonly #editorHost = new EditorPageBlockHostImpl();
   readonly #htmlHost = new HtmlPageBlockHostImpl();
   readonly #serverHost = new ServerPageBlockHostImpl();
@@ -105,11 +107,13 @@ export class ExtensionServerRuntime {
     getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined,
     getSchemaQueryServices?: () => ExtensionSchemaQueryServices | undefined,
     getSqlQueryServices?: () => ExtensionSqlQueryServices | undefined,
+    getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined,
   ) {
     this.#contentPath = contentPath;
     this.#getGraphQueryServices = getGraphQueryServices;
     this.#getSchemaQueryServices = getSchemaQueryServices;
     this.#getSqlQueryServices = getSqlQueryServices;
+    this.#getGraphMutateServices = getGraphMutateServices;
   }
 
   get editorHost(): EditorPageBlockHostImpl {
@@ -236,6 +240,7 @@ export class ExtensionServerRuntime {
         nodeId,
         services: {
           graphQuery: this.#getGraphQueryServices?.(),
+          graphMutate: this.#getGraphMutateServices?.(),
           schemaQuery: this.#getSchemaQueryServices?.(),
           sqlQuery: this.#getSqlQueryServices?.(),
         },

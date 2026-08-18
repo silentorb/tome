@@ -61,6 +61,11 @@
   margin-bottom: 0.25rem;
   position: relative;
   z-index: 2;
+  gap: 0.5rem;
+}
+
+.tome-sequencing-chrome-spacer {
+  flex: 1;
 }
 
 .tome-sequencing-settings {
@@ -156,10 +161,122 @@
   cursor: pointer;
 }
 
+.tome-sequencing-event-link-selected .tome-sequencing-event-core {
+  stroke: #d2aa5a;
+  stroke-width: 1.5;
+}
+
 .tome-sequencing-depends-edge {
   stroke: var(--tome-sequencing-edge);
   stroke-width: 1.5;
   fill: none;
+  pointer-events: none;
+}
+
+.tome-sequencing-pick-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  font-size: 0.85rem;
+  color: var(--tome-sequencing-label);
+}
+
+.tome-sequencing-pick-banner button {
+  font: inherit;
+  cursor: pointer;
+  color: var(--tome-sequencing-label);
+  background: #1a1f27;
+  border: 1px solid #343b46;
+  border-radius: 4px;
+  padding: 0.15rem 0.5rem;
+}
+
+.tome-sequencing-depends-popup {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 8px;
+  z-index: 6;
+  background: #1a1f27;
+  border: 1px solid #343b46;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  padding: 0.75rem;
+  color: var(--tome-sequencing-label);
+}
+
+.tome-sequencing-depends-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tome-sequencing-depends-popup-title {
+  color: var(--tome-sequencing-label);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.tome-sequencing-depends-popup-title:hover {
+  text-decoration: underline;
+}
+
+.tome-sequencing-depends-popup-close {
+  font: inherit;
+  cursor: pointer;
+  color: var(--tome-sequencing-muted);
+  background: transparent;
+  border: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.1rem 0.35rem;
+}
+
+.tome-sequencing-depends-popup-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.tome-sequencing-depends-column h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--tome-sequencing-muted);
+}
+
+.tome-sequencing-depends-column ul {
+  list-style: none;
+  margin: 0 0 0.4rem;
+  padding: 0;
+  min-height: 1.5rem;
+}
+
+.tome-sequencing-depends-column li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  padding: 0.15rem 0;
+}
+
+.tome-sequencing-depends-empty {
+  color: var(--tome-sequencing-muted);
+}
+
+.tome-sequencing-depends-column li button,
+.tome-sequencing-depends-column > button {
+  font: inherit;
+  cursor: pointer;
+  color: var(--tome-sequencing-label);
+  background: #1a1f27;
+  border: 1px solid #343b46;
+  border-radius: 4px;
+  padding: 0.1rem 0.4rem;
 }
 
 .tome-sequencing-tool-panel {

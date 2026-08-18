@@ -15,6 +15,7 @@ import {
   parseSequencingBlockData,
   type SequencingBlockData,
 } from "./config";
+import type { DependsConstraint } from "tome-sequencing-interfaces";
 import { SequencingTimelineView } from "./timeline";
 import type { TimelineLayout } from "./layout";
 import "./sequencing-block.css";
@@ -65,6 +66,8 @@ export function SequencingBlockComponent({
       value: string | number | boolean | null,
     ) => Promise<void>;
     getBlockParametersRevision?: () => number;
+    getSequencingShowDependencyEdges?: () => boolean;
+    setSequencingShowDependencyEdges?: (value: boolean) => Promise<void>;
   };
   blockData: unknown;
   onBlockDataChange: (data: unknown) => void;
@@ -100,6 +103,37 @@ export function SequencingBlockComponent({
     [onBlockDataChange],
   );
 
+  const applyInvokeResult = useCallback(
+    (result: unknown, previous: TimelineLayout | null): boolean => {
+      const record =
+        result && typeof result === "object" && !Array.isArray(result)
+          ? (result as Record<string, unknown>)
+          : {};
+      if (record.ok === false) {
+        const message = typeof record.error === "string" ? record.error : "Arrange failed";
+        setError(message);
+        const depends = record.depends;
+        if (previous && Array.isArray(depends)) {
+          setLayout({
+            ...previous,
+            depends: depends as DependsConstraint[],
+          });
+        }
+        return false;
+      }
+      const layoutValue = record.layout;
+      if (!layoutValue || typeof layoutValue !== "object") {
+        setLayout(null);
+        setError("Arrange returned no layout");
+        return false;
+      }
+      setError(null);
+      setLayout(layoutValue as TimelineLayout);
+      return true;
+    },
+    [],
+  );
+
   const runArrange = useCallback(async () => {
     if (!ctx.invoke) {
       setError("Sequencing invoke is not available");
@@ -115,29 +149,14 @@ export function SequencingBlockComponent({
         data: toBlockData(graph),
         parameters: resolveGraphParameterValues(graph, overrides),
       });
-      const record =
-        result && typeof result === "object" && !Array.isArray(result)
-          ? (result as Record<string, unknown>)
-          : {};
-      if (record.ok === false) {
-        setLayout(null);
-        setError(typeof record.error === "string" ? record.error : "Arrange failed");
-        return;
-      }
-      const layoutValue = record.layout;
-      if (!layoutValue || typeof layoutValue !== "object") {
-        setLayout(null);
-        setError("Arrange returned no layout");
-        return;
-      }
-      setLayout(layoutValue as TimelineLayout);
+      applyInvokeResult(result, null);
     } catch (err: unknown) {
       setLayout(null);
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
-  }, [ctx, graph]);
+  }, [applyInvokeResult, ctx, graph]);
 
   useEffect(() => {
     void runArrange();
@@ -157,6 +176,36 @@ export function SequencingBlockComponent({
     },
     [ctx, parameterSpecs],
   );
+
+  const mutateDepends = useCallback(
+    async (action: "addDepends" | "removeDepends", prerequisiteId: string, dependentId: string) => {
+      if (!ctx.invoke) {
+        setError("Sequencing invoke is not available");
+        return;
+      }
+      const previous = layout;
+      setLoading(true);
+      try {
+        const overrides = ctx.getBlockParameters?.() ?? {};
+        const result = await ctx.invoke({
+          action,
+          nodeId: ctx.nodeId,
+          data: toBlockData(graph),
+          parameters: resolveGraphParameterValues(graph, overrides),
+          prerequisiteId,
+          dependentId,
+        });
+        applyInvokeResult(result, previous);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [applyInvokeResult, ctx, graph, layout],
+  );
+
+  const showDependencyEdges = ctx.getSequencingShowDependencyEdges?.() ?? false;
 
   const openEditor = () => {
     if (!ctx.openToolPanel) return;
@@ -191,12 +240,33 @@ export function SequencingBlockComponent({
           {error}
         </pre>
       )}
-      {layout && !error && (
+      {layout && (
         <SequencingTimelineView
           layout={layout}
           graphParameters={parameterSpecs}
           parameterValues={parameterValues}
           onParameterChange={handleParameterChange}
+          showDependencyEdges={showDependencyEdges}
+          onShowDependencyEdgesChange={
+            ctx.setSequencingShowDependencyEdges
+              ? (value) => {
+                  void ctx.setSequencingShowDependencyEdges?.(value);
+                }
+              : undefined
+          }
+          onAddDepends={
+            readOnly
+              ? undefined
+              : (prerequisiteId, dependentId) =>
+                  mutateDepends("addDepends", prerequisiteId, dependentId)
+          }
+          onRemoveDepends={
+            readOnly
+              ? undefined
+              : (prerequisiteId, dependentId) =>
+                  mutateDepends("removeDepends", prerequisiteId, dependentId)
+          }
+          readOnly={readOnly}
         />
       )}
       {!layout && !error && !loading && (

@@ -19,6 +19,18 @@ const sampleLayout: TimelineLayout = {
   timeMax: 1,
 };
 
+const linkedLayout: TimelineLayout = {
+  events: [
+    { id: "e1", title: "Arc One", lane: 0, start: 0, end: 1 },
+    { id: "e2", title: "Arc Two", lane: 1, start: 1, end: 2 },
+    { id: "e3", title: "Arc Three", lane: 2, start: 2, end: 3 },
+  ],
+  depends: [{ prerequisiteId: "e1", dependentId: "e2" }],
+  laneCount: 3,
+  timeMin: 0,
+  timeMax: 3,
+};
+
 describe("SequencingBlockComponent", () => {
   test("renders event link from arrange invoke", async () => {
     const invoke = async () => ({ ok: true, layout: sampleLayout });
@@ -59,8 +71,55 @@ describe("SequencingBlockComponent", () => {
       expect(screen.getByRole("button", { name: "Timeline settings" })).toBeTruthy(),
     );
     expect(document.querySelector(".tome-sequencing-depends-edge")).toBeNull();
-    // Chronology axis is present by default (visx bottom axis text).
     expect(document.querySelector(".tome-sequencing-svg")).toBeTruthy();
+  });
+
+  test("enabling Show dependency edges draws cubic paths", async () => {
+    const invoke = async () => ({ ok: true, layout: linkedLayout });
+    render(
+      <SequencingBlockComponent
+        ctx={{
+          component: { id: "tome-sequencing.block", label: "Timeline" },
+          nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
+          invoke,
+        }}
+        blockData={{ version: 1, reactFlow: { nodes: [], edges: [] } }}
+        onBlockDataChange={() => {}}
+      />,
+    );
+    const trigger = await waitFor(() =>
+      screen.getByRole("button", { name: "Timeline settings" }),
+    );
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByLabelText("Show dependency edges"));
+    const edge = await waitFor(() => document.querySelector("path.tome-sequencing-depends-edge"));
+    expect(edge?.getAttribute("d") ?? "").toContain("C ");
+  });
+
+  test("Show dependency edges checkbox persists via user settings", async () => {
+    const saved: boolean[] = [];
+    const invoke = async () => ({ ok: true, layout: sampleLayout });
+    render(
+      <SequencingBlockComponent
+        ctx={{
+          component: { id: "tome-sequencing.block", label: "Timeline" },
+          nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
+          invoke,
+          getSequencingShowDependencyEdges: () => false,
+          setSequencingShowDependencyEdges: async (value) => {
+            saved.push(value);
+          },
+        }}
+        blockData={{ version: 1, reactFlow: { nodes: [], edges: [] } }}
+        onBlockDataChange={() => {}}
+      />,
+    );
+    const trigger = await waitFor(() =>
+      screen.getByRole("button", { name: "Timeline settings" }),
+    );
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByLabelText("Show dependency edges"));
+    expect(saved).toEqual([true]);
   });
 
   test("settings menu closes on outside click", async () => {
@@ -212,5 +271,146 @@ describe("SequencingBlockComponent", () => {
     await waitFor(() => expect(calls.length).toBeGreaterThan(before));
     const last = calls[calls.length - 1] as { parameters?: { includeConsiderations?: boolean } };
     expect(last.parameters?.includeConsiderations).toBe(false);
+  });
+});
+
+async function eventLink(id: string): Promise<Element> {
+  await waitFor(() => {
+    expect(
+      document.querySelector(`a.tome-sequencing-event-link[href*="node=${id}"]`),
+    ).toBeTruthy();
+  });
+  return document.querySelector(`a.tome-sequencing-event-link[href*="node=${id}"]`)!;
+}
+
+describe("timeline dependency popup", () => {
+  test("left click opens popup instead of navigating", async () => {
+    const invoke = async () => ({ ok: true, layout: linkedLayout });
+    render(
+      <SequencingBlockComponent
+        ctx={{
+          component: { id: "tome-sequencing.block", label: "Timeline" },
+          nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
+          invoke,
+        }}
+        blockData={{ version: 1, reactFlow: { nodes: [], edges: [] } }}
+        onBlockDataChange={() => {}}
+      />,
+    );
+    const link = await eventLink("e2");
+    let documentSawClick = false;
+    const onDocumentClick = () => {
+      documentSawClick = true;
+    };
+    document.addEventListener("click", onDocumentClick);
+    expect(fireEvent.click(link)).toBe(false);
+    document.removeEventListener("click", onDocumentClick);
+    expect(documentSawClick).toBe(false);
+    expect(screen.getByRole("dialog", { name: "Dependencies for Arc Two" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Dependencies for Arc Two" })).toBeTruthy();
+    expect(screen.getByRole("dialog").textContent).toContain("Arc One");
+  });
+
+  test("delete and add-via-pick invoke depends mutations and reopen the popup", async () => {
+    const calls: unknown[] = [];
+    let layout = linkedLayout;
+    const invoke = async (input: unknown) => {
+      calls.push(input);
+      const record = input as { action?: string; prerequisiteId?: string; dependentId?: string };
+      if (record.action === "removeDepends") {
+        layout = { ...layout, depends: [] };
+      }
+      if (record.action === "addDepends") {
+        layout = {
+          ...layout,
+          depends: [
+            ...layout.depends,
+            { prerequisiteId: record.prerequisiteId!, dependentId: record.dependentId! },
+          ],
+        };
+      }
+      return { ok: true, layout };
+    };
+    render(
+      <SequencingBlockComponent
+        ctx={{
+          component: { id: "tome-sequencing.block", label: "Timeline" },
+          nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
+          invoke,
+        }}
+        blockData={{ version: 1, reactFlow: { nodes: [], edges: [] } }}
+        onBlockDataChange={() => {}}
+      />,
+    );
+    fireEvent.click(await eventLink("e2"));
+    fireEvent.click(screen.getByRole("button", { name: "Remove dependency Arc One" }));
+    await waitFor(() =>
+      expect(calls.some((c) => (c as { action?: string }).action === "removeDepends")).toBe(true),
+    );
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "Add dependency" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeTruthy();
+
+    fireEvent.click(await eventLink("e3"));
+    await waitFor(() =>
+      expect(
+        calls.some(
+          (c) =>
+            (c as { action?: string; prerequisiteId?: string; dependentId?: string }).action ===
+              "addDepends" &&
+            (c as { prerequisiteId?: string }).prerequisiteId === "e3" &&
+            (c as { dependentId?: string }).dependentId === "e2",
+        ),
+      ).toBe(true),
+    );
+    await waitFor(() =>
+      expect(screen.getByRole("dialog", { name: "Dependencies for Arc Two" })).toBeTruthy(),
+    );
+  });
+
+  test("Cancel restores the popup without mutating", async () => {
+    const calls: unknown[] = [];
+    const invoke = async (input: unknown) => {
+      calls.push(input);
+      return { ok: true, layout: linkedLayout };
+    };
+    render(
+      <SequencingBlockComponent
+        ctx={{
+          component: { id: "tome-sequencing.block", label: "Timeline" },
+          nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
+          invoke,
+        }}
+        blockData={{ version: 1, reactFlow: { nodes: [], edges: [] } }}
+        onBlockDataChange={() => {}}
+      />,
+    );
+    fireEvent.click(await eventLink("e1"));
+    fireEvent.click(screen.getByRole("button", { name: "Add dependent" }));
+    expect(screen.getByText("Click an event to add a dependent")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("dialog", { name: "Dependencies for Arc One" })).toBeTruthy();
+    expect(calls.every((c) => (c as { action?: string }).action === "arrange")).toBe(true);
+  });
+
+  test("Escape restores the popup from pick mode", async () => {
+    const invoke = async () => ({ ok: true, layout: linkedLayout });
+    render(
+      <SequencingBlockComponent
+        ctx={{
+          component: { id: "tome-sequencing.block", label: "Timeline" },
+          nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
+          invoke,
+        }}
+        blockData={{ version: 1, reactFlow: { nodes: [], edges: [] } }}
+        onBlockDataChange={() => {}}
+      />,
+    );
+    fireEvent.click(await eventLink("e1"));
+    fireEvent.click(screen.getByRole("button", { name: "Add dependent" }));
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.getByRole("dialog", { name: "Dependencies for Arc One" })).toBeTruthy();
   });
 });

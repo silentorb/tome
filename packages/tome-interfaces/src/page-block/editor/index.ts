@@ -35,6 +35,9 @@ export interface EditorPageBlockContext {
   ): Promise<void>;
   /** Monotonic counter bumped when block parameter settings load or change. */
   getBlockParametersRevision?(): number;
+  /** Persisted timeline chrome: show depends curves (default off). */
+  getSequencingShowDependencyEdges?(): boolean;
+  setSequencingShowDependencyEdges?(value: boolean): Promise<void>;
 }
 
 export interface EditorPageBlockProps {

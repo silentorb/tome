@@ -44,7 +44,7 @@ export async function runEventQuery(input: {
   return input.sqlQuery.queryAll(sql, parameters);
 }
 
-async function dependsFromGraphEdgesAsync(
+export async function loadDependsEdges(
   graphQuery: ExtensionGraphQueryServices,
   eventIds: string[],
   dependsAssociation: string,
@@ -133,7 +133,7 @@ export async function arrangeTimeline(input: {
     titles.set(id, titleFromRow(row, id));
   }
 
-  const depends = await dependsFromGraphEdgesAsync(
+  const depends = await loadDependsEdges(
     input.graphQuery,
     eventIds,
     config.dependsAssociation,

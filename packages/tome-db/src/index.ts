@@ -394,6 +394,7 @@ export {
   findComponentById,
 } from "tome-flatfile";
 export { createExtensionGraphQueryServices } from "./extension-graph-query";
+export { createExtensionGraphMutateServices } from "./extension-graph-mutate";
 export { createExtensionSchemaQueryServices } from "./extension-schema-query";
 export { createExtensionSqlQueryServices } from "./extension-sql-query";
 export type {

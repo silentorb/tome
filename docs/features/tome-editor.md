@@ -45,7 +45,7 @@ For panels and canvases that expose **view/visualization toggles** (not page con
 
 - Place the control in the **upper-right** of the panel chrome when that is the natural corner for overlay controls.
 - Trigger is an icon button (⚙ or equivalent) with `aria-label` / `title` naming the surface (e.g. “Graph settings”, “Timeline settings”).
-- The menu holds checkboxes / selects for display options; prefer **session UI state** unless the feature already persists preferences (Graph Explorer uses `localStorage`; Imp graph `parameter` values use `.tome/user-settings.json` `blockParameters`).
+- The menu holds checkboxes / selects for display options; prefer **session UI state** unless the feature already persists preferences (Graph Explorer uses `localStorage`; Imp graph `parameter` values use `.tome/user-settings.json` `blockParameters`; sequencing **Show dependency edges** uses `.tome/user-settings.json` `sequencing.showDependencyEdges`).
 - Reference implementations: Graph Explorer (`GraphView` settings), sequencing timeline (`tome-sequencing` settings), query table parameter gear (`tome-query`).
 
 ### Cross-linking and navigation links
@@ -73,7 +73,7 @@ Applies to: sidebar nav, **Recent**, global search result rows, database relatio
 | --- | --- |
 | Browser editor (display) | `?node={id}` (see `standaloneNodeUrl` in `src/webview/node-links.ts`) |
 
-**Milkdown body links.** Use Crepe/Milkdown defaults unless there is a product reason not to — **`LinkTooltip` enabled** (hover preview, edit/remove). Cross-link navigation uses JS on the Milkdown root (`handleEditorLinkPointerEvent` in `src/webview/editor-link-navigation.ts`): plain click soft-navigates; Ctrl/Cmd+click is JS-emulated (`openStandaloneNodeInNewTab`) because ProseMirror claims that gesture for node selection (`handleClick` in `editor-link-hard-open.ts`); shift / middle / right-click leave the real anchor to the browser. Do not add custom ProseMirror plugins whose goal is to force full document navigation inside contenteditable.
+**Milkdown body links.** Use Crepe/Milkdown defaults unless there is a product reason not to — **`LinkTooltip` enabled** (hover preview, edit/remove). Cross-link navigation uses JS on the Milkdown root (`handleEditorLinkPointerEvent` in `src/webview/editor-link-navigation.ts`): plain click soft-navigates; Ctrl/Cmd+click is JS-emulated (`openStandaloneNodeInNewTab`) because ProseMirror claims that gesture for node selection (`handleClick` in `editor-link-hard-open.ts`); shift / middle / right-click leave the real anchor to the browser. Skip when `defaultPrevented` is already set, and skip anchors inside `[data-type="tome-page-block-react"]` (interactive page blocks own those clicks; chrome soft-nav still applies if the event bubbles). Do not add custom ProseMirror plugins whose goal is to force full document navigation inside contenteditable.
 
 Keyboard shortcuts in combobox-style pickers (global search, Relate, record link picker) may simulate anchor clicks on **Enter** when focus is in the search field; result rows themselves remain anchors for pointer navigation.
 

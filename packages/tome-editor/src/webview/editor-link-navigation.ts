@@ -10,14 +10,24 @@ function openHrefInNewTab(href: string): void {
   opener.click();
 }
 
+/** True when the anchor lives in a React page-block host, not Milkdown prose. */
+function isPageBlockReactAnchor(anchor: Element): boolean {
+  return anchor.closest('[data-type="tome-page-block-react"]') !== null;
+}
+
 /** Handle pointer activation on a node cross-link inside the Milkdown editor root. */
 export function handleEditorLinkPointerEvent(
   event: MouseEvent,
   root: ParentNode,
   baseHref: string = window.location.href,
 ): boolean {
+  if (event.defaultPrevented) return false;
+
   const anchor = linkAnchorFromEventTarget(event.target);
   if (!anchor || !root.contains(anchor)) return false;
+  // Interactive page blocks own their anchors (popup, timeline bars, query tables).
+  // Chrome soft-nav still handles unmodified clicks that bubble to document.
+  if (isPageBlockReactAnchor(anchor)) return false;
 
   if (event.button === 2) return false;
 

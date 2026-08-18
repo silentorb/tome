@@ -12,6 +12,7 @@ import type {
   GraphParameterValue,
 } from "tome-query/parameters";
 import { eventBarRect } from "./bar-geometry";
+import { dependsEdgePath } from "./depends-edge-path";
 import type { TimelineLayout } from "./layout";
 import { sequencingNodePageHref } from "./node-links";
 
@@ -42,6 +43,20 @@ const SETTINGS_ICON = "⚙";
 
 /** Fixed lane height so concurrent events stay readable. */
 export const LANE_HEIGHT = 48;
+
+export type DependsPickDirection = "dependency" | "dependent";
+
+function isUnmodifiedPrimaryClick(
+  event: { button: number; metaKey: boolean; ctrlKey: boolean; shiftKey: boolean; altKey: boolean },
+): boolean {
+  return (
+    event.button === 0 &&
+    !event.metaKey &&
+    !event.ctrlKey &&
+    !event.shiftKey &&
+    !event.altKey
+  );
+}
 
 function rescaleX(
   scale: ReturnType<typeof scaleLinear<number>>,
@@ -100,11 +115,17 @@ function TimelineCanvas({
   width,
   viewOptions,
   nodePageHref,
+  selectedEventId,
+  pickModeEventId,
+  onEventActivate,
 }: {
   layout: TimelineLayout;
   width: number;
   viewOptions: TimelineViewOptions;
   nodePageHref: (id: string) => string;
+  selectedEventId: string | null;
+  pickModeEventId: string | null;
+  onEventActivate: (eventId: string) => void;
 }) {
   const margin = {
     top: 16,
@@ -157,7 +178,11 @@ function TimelineCanvas({
             className="tome-sequencing-svg"
             ref={zoom.containerRef}
             style={{
-              cursor: zoom.isDragging ? "grabbing" : "grab",
+              cursor: pickModeEventId
+                ? "pointer"
+                : zoom.isDragging
+                  ? "grabbing"
+                  : "grab",
               touchAction: "none",
               background: TIMELINE_COLORS.canvas,
             }}
@@ -188,24 +213,26 @@ function TimelineCanvas({
                 />
               )}
               {viewOptions.showDependencyEdges &&
-                layout.depends.map((edge) => {
+                layout.depends.map((edge, index) => {
                   const from = byId.get(edge.prerequisiteId);
                   const to = byId.get(edge.dependentId);
                   if (!from || !to) return null;
-                  const x1 = x(from.end);
-                  const x2 = x(to.start);
+                  const fromRect = eventBarRect(x, from.start, from.end);
+                  const toRect = eventBarRect(x, to.start, to.end);
+                  const x1 = fromRect.x + fromRect.width;
+                  const x2 = toRect.x;
                   const y1 = yLayout.eventY(from.lane) + LANE_HEIGHT / 2;
                   const y2 = yLayout.eventY(to.lane) + LANE_HEIGHT / 2;
+                  const bulgeSign = index % 2 === 0 ? 1 : -1;
                   return (
-                    <line
+                    <path
                       key={`${edge.prerequisiteId}-${edge.dependentId}`}
-                      x1={x1}
-                      y1={y1}
-                      x2={x2}
-                      y2={y2}
+                      d={dependsEdgePath(x1, y1, x2, y2, bulgeSign)}
                       className="tome-sequencing-depends-edge"
                       stroke={TIMELINE_COLORS.edge}
                       strokeWidth={1.5}
+                      fill="none"
+                      pointerEvents="none"
                     />
                   );
                 })}
@@ -213,11 +240,22 @@ function TimelineCanvas({
                 const barY = yLayout.eventY(event.lane) + barPad;
                 const { x: barX, width: barW } = eventBarRect(x, event.start, event.end);
                 const href = nodePageHref(event.id);
+                const isSource = pickModeEventId === event.id || selectedEventId === event.id;
                 return (
                   <a
                     key={event.id}
                     href={href}
-                    className="tome-sequencing-event-link"
+                    className={
+                      "tome-sequencing-event-link" +
+                      (isSource ? " tome-sequencing-event-link-selected" : "")
+                    }
+                    data-event-id={event.id}
+                    onClick={(clickEvent) => {
+                      if (!isUnmodifiedPrimaryClick(clickEvent)) return;
+                      clickEvent.preventDefault();
+                      clickEvent.stopPropagation();
+                      onEventActivate(event.id);
+                    }}
                   >
                     <Bar
                       x={barX}
@@ -250,22 +288,153 @@ function TimelineCanvas({
   );
 }
 
+function DependsPopup({
+  layout,
+  eventId,
+  nodePageHref,
+  readOnly,
+  onClose,
+  onAdd,
+  onRemove,
+}: {
+  layout: TimelineLayout;
+  eventId: string;
+  nodePageHref: (id: string) => string;
+  readOnly: boolean;
+  onClose: () => void;
+  onAdd: (direction: DependsPickDirection) => void;
+  onRemove: (prerequisiteId: string, dependentId: string) => void;
+}) {
+  const event = layout.events.find((item) => item.id === eventId);
+  const titleById = useMemo(
+    () => new Map(layout.events.map((item) => [item.id, item.title])),
+    [layout.events],
+  );
+  const dependencies = layout.depends.filter((edge) => edge.dependentId === eventId);
+  const dependents = layout.depends.filter((edge) => edge.prerequisiteId === eventId);
+  const title = event?.title ?? eventId;
+
+  return (
+    <div
+      className="tome-sequencing-depends-popup"
+      role="dialog"
+      aria-label={`Dependencies for ${title}`}
+    >
+      <div className="tome-sequencing-depends-popup-header">
+        <a href={nodePageHref(eventId)} className="tome-sequencing-depends-popup-title">
+          {title}
+        </a>
+        <button
+          type="button"
+          className="tome-sequencing-depends-popup-close"
+          aria-label="Close dependency editor"
+          onClick={onClose}
+        >
+          ×
+        </button>
+      </div>
+      <div className="tome-sequencing-depends-popup-columns">
+        <div className="tome-sequencing-depends-column">
+          <h3>Dependencies</h3>
+          <ul>
+            {dependencies.length === 0 && (
+              <li className="tome-sequencing-depends-empty">None</li>
+            )}
+            {dependencies.map((edge) => (
+              <li key={`${edge.prerequisiteId}-${edge.dependentId}`}>
+                <span>{titleById.get(edge.prerequisiteId) ?? edge.prerequisiteId}</span>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    aria-label={`Remove dependency ${titleById.get(edge.prerequisiteId) ?? edge.prerequisiteId}`}
+                    onClick={() => onRemove(edge.prerequisiteId, edge.dependentId)}
+                  >
+                    ×
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          {!readOnly && (
+            <button type="button" aria-label="Add dependency" onClick={() => onAdd("dependency")}>
+              Add
+            </button>
+          )}
+        </div>
+        <div className="tome-sequencing-depends-column">
+          <h3>Dependents</h3>
+          <ul>
+            {dependents.length === 0 && (
+              <li className="tome-sequencing-depends-empty">None</li>
+            )}
+            {dependents.map((edge) => (
+              <li key={`${edge.prerequisiteId}-${edge.dependentId}`}>
+                <span>{titleById.get(edge.dependentId) ?? edge.dependentId}</span>
+                {!readOnly && (
+                  <button
+                    type="button"
+                    aria-label={`Remove dependent ${titleById.get(edge.dependentId) ?? edge.dependentId}`}
+                    onClick={() => onRemove(edge.prerequisiteId, edge.dependentId)}
+                  >
+                    ×
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          {!readOnly && (
+            <button type="button" aria-label="Add dependent" onClick={() => onAdd("dependent")}>
+              Add
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SequencingTimelineView({
   layout,
   nodePageHref = sequencingNodePageHref,
   graphParameters = [],
   parameterValues = {},
   onParameterChange,
+  showDependencyEdges: showDependencyEdgesProp,
+  onShowDependencyEdgesChange,
+  onAddDepends,
+  onRemoveDepends,
+  readOnly,
 }: {
   layout: TimelineLayout;
   nodePageHref?: (id: string) => string;
   graphParameters?: GraphParameterSpec[];
   parameterValues?: Record<string, GraphParameterValue>;
   onParameterChange?: (paramId: string, value: GraphParameterValue) => void;
+  showDependencyEdges?: boolean;
+  onShowDependencyEdgesChange?: (value: boolean) => void;
+  onAddDepends?: (prerequisiteId: string, dependentId: string) => Promise<void> | void;
+  onRemoveDepends?: (prerequisiteId: string, dependentId: string) => Promise<void> | void;
+  readOnly?: boolean;
 }) {
-  const [viewOptions, setViewOptions] = useState<TimelineViewOptions>(DEFAULT_VIEW_OPTIONS);
+  const [showChronologyUnits, setShowChronologyUnits] = useState(
+    DEFAULT_VIEW_OPTIONS.showChronologyUnits,
+  );
+  const [showDependencyEdges, setShowDependencyEdges] = useState(
+    () => showDependencyEdgesProp ?? DEFAULT_VIEW_OPTIONS.showDependencyEdges,
+  );
   const [menuOpen, setMenuOpen] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [pickMode, setPickMode] = useState<{
+    eventId: string;
+    direction: DependsPickDirection;
+  } | null>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
+  const viewOnly = Boolean(readOnly) || !onAddDepends || !onRemoveDepends;
+
+  useEffect(() => {
+    if (showDependencyEdgesProp === undefined) return;
+    setShowDependencyEdges(showDependencyEdgesProp);
+  }, [showDependencyEdgesProp]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -285,10 +454,72 @@ export function SequencingTimelineView({
     };
   }, [menuOpen]);
 
+  useEffect(() => {
+    if (!selectedEventId && !pickMode) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (pickMode) {
+        setPickMode(null);
+        setSelectedEventId(pickMode.eventId);
+        return;
+      }
+      setSelectedEventId(null);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [selectedEventId, pickMode]);
+
+  const viewOptions: TimelineViewOptions = {
+    showChronologyUnits,
+    showDependencyEdges,
+  };
+
+  const handleEventActivate = (eventId: string) => {
+    if (pickMode) {
+      if (eventId === pickMode.eventId) return;
+      const prerequisiteId =
+        pickMode.direction === "dependency" ? eventId : pickMode.eventId;
+      const dependentId =
+        pickMode.direction === "dependency" ? pickMode.eventId : eventId;
+      const originId = pickMode.eventId;
+      setPickMode(null);
+      setSelectedEventId(originId);
+      void onAddDepends?.(prerequisiteId, dependentId);
+      return;
+    }
+    setSelectedEventId(eventId);
+  };
+
+  const startPick = (direction: DependsPickDirection) => {
+    if (!selectedEventId) return;
+    setPickMode({ eventId: selectedEventId, direction });
+  };
+
+  const cancelPick = () => {
+    if (!pickMode) return;
+    setSelectedEventId(pickMode.eventId);
+    setPickMode(null);
+  };
+
   return (
     <div className="tome-sequencing-timeline">
       <div className="tome-sequencing-chrome">
-        <div className="tome-sequencing-chrome-spacer" />
+        {pickMode ? (
+          <div className="tome-sequencing-pick-banner">
+            <span>
+              {pickMode.direction === "dependency"
+                ? "Click an event to add a dependency"
+                : "Click an event to add a dependent"}
+            </span>
+            <button type="button" onClick={cancelPick}>
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <div className="tome-sequencing-chrome-spacer" />
+        )}
         <div className="tome-sequencing-settings" ref={settingsRef}>
           <button
             type="button"
@@ -308,26 +539,20 @@ export function SequencingTimelineView({
               <label className="tome-sequencing-settings-item">
                 <input
                   type="checkbox"
-                  checked={viewOptions.showChronologyUnits}
-                  onChange={(e) =>
-                    setViewOptions((prev) => ({
-                      ...prev,
-                      showChronologyUnits: e.target.checked,
-                    }))
-                  }
+                  checked={showChronologyUnits}
+                  onChange={(e) => setShowChronologyUnits(e.target.checked)}
                 />
                 <span>Show chronology units</span>
               </label>
               <label className="tome-sequencing-settings-item">
                 <input
                   type="checkbox"
-                  checked={viewOptions.showDependencyEdges}
-                  onChange={(e) =>
-                    setViewOptions((prev) => ({
-                      ...prev,
-                      showDependencyEdges: e.target.checked,
-                    }))
-                  }
+                  checked={showDependencyEdges}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setShowDependencyEdges(checked);
+                    onShowDependencyEdgesChange?.(checked);
+                  }}
                 />
                 <span>Show dependency edges</span>
               </label>
@@ -344,6 +569,19 @@ export function SequencingTimelineView({
         </div>
       </div>
       <div className="tome-sequencing-canvas">
+        {selectedEventId && !pickMode && (
+          <DependsPopup
+            layout={layout}
+            eventId={selectedEventId}
+            nodePageHref={nodePageHref}
+            readOnly={viewOnly}
+            onClose={() => setSelectedEventId(null)}
+            onAdd={startPick}
+            onRemove={(prerequisiteId, dependentId) => {
+              void onRemoveDepends?.(prerequisiteId, dependentId);
+            }}
+          />
+        )}
         <ParentSize
           parentSizeStyles={{ width: "100%", height: "auto" }}
           ignoreDimensions={["height", "top", "left"]}
@@ -356,6 +594,9 @@ export function SequencingTimelineView({
                 width={w}
                 viewOptions={viewOptions}
                 nodePageHref={nodePageHref}
+                selectedEventId={selectedEventId}
+                pickModeEventId={pickMode?.eventId ?? null}
+                onEventActivate={handleEventActivate}
               />
             );
           }}
