@@ -11,6 +11,8 @@ export interface NodeSummary {
   corpusId?: string;
   /** True when the owning corpus is readonly. */
   corpusReadonly?: boolean;
+  /** Display title of the owning corpus when it differs from the caller's activeCorpusId. */
+  corpusLabel?: string;
 }
 
 export interface NodeDetail extends NodeSummary {
@@ -21,4 +23,6 @@ export interface NodeDetail extends NodeSummary {
 
 export interface SearchNodesOptions {
   includeBody?: boolean;
+  /** Editor active corpus; used to decide which hits get corpusLabel. */
+  activeCorpusId?: string;
 }

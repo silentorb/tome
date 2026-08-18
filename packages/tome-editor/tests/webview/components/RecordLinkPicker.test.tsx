@@ -46,7 +46,7 @@ describe("RecordLinkPicker", () => {
 
     const view = render(
       <RecordLinkPicker
-        api={api}
+        api={api as EditorApi}
         embedded
         excludedIds={[]}
         ariaLabel="Search records"
@@ -61,6 +61,43 @@ describe("RecordLinkPicker", () => {
     });
     const options = await view.findAllByRole("option");
     expect(options.map((option) => option.textContent)).toEqual(["Zeta", "Alpha", "Mike"]);
+  });
+
+  test("shows corpus label suffix when present on a result", async () => {
+    const search = mock(async () => [
+      {
+        id: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+        title: "Alpha",
+        primaryTypeTitle: null,
+        corpusLabel: "Corpus B",
+      },
+      {
+        id: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+        title: "Beta",
+        primaryTypeTitle: null,
+      },
+    ]);
+    const api = {
+      ...makeMockEditorApi(),
+      search,
+    };
+
+    const view = render(
+      <RecordLinkPicker
+        api={api as EditorApi}
+        embedded
+        excludedIds={[]}
+        ariaLabel="Search records"
+        onSelect={async () => {}}
+        onClose={() => {}}
+      />,
+    );
+
+    await waitFor(() => expect(search).toHaveBeenCalled());
+    const suffix = await view.findByText("Corpus B");
+    expect(suffix.className).toContain("tome-corpus-suffix");
+    const options = await view.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["AlphaCorpus B", "Beta"]);
   });
 
   test("omits excluded ids from search results", async () => {

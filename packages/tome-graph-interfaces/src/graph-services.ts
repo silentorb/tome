@@ -19,7 +19,7 @@ import type {
 import type { NodeLifecycleError } from "./node-lifecycle";
 import type { NodeBodyDocument } from "./node-body-document";
 import type { EditorNodePageDetail, RelationTableSection } from "./node-page-sections";
-import type { NodeSummary } from "./queries";
+import type { NodeSummary, SearchNodesOptions } from "./queries";
 import type {
   LinkOutgoingRelationshipError,
   MoveRelationshipConnectionError,
@@ -115,7 +115,7 @@ export interface TomeGraphServices {
     query: string,
     limit?: number,
     allowedTypeIds?: string[],
-    options?: { includeBody?: boolean },
+    options?: SearchNodesOptions,
   ): NodeSummary[];
   listRecent(limit?: number): NodeSummary[];
   saveDocument(id: string, document: NodeBodyDocument): boolean;

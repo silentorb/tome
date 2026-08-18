@@ -75,6 +75,7 @@ import type {
   NodeBodyDocument,
   NodeSummary,
   PublicExtensionsManifest,
+  SearchNodesOptions,
   TableRowsQuery,
   TomeGraphServices,
   WorkspacePublic,
@@ -115,14 +116,23 @@ function buildGraphServices(
 
   const schema = () => loadSchemaFromContent(contentPath);
 
-  const corpusMeta = (nodeId: string) => {
+  const corpusMeta = (nodeId: string, activeCorpusId?: string) => {
+    const corpora = writeCtx.store.listCorpora();
     const corpusId = writeCtx.store.locateNode(nodeId) ?? undefined;
     const info = corpusId
-      ? writeCtx.store.listCorpora().find((c) => c.id === corpusId)
+      ? corpora.find((c) => c.id === corpusId)
       : undefined;
+    const corpusLabel =
+      corpora.length > 1 &&
+      activeCorpusId &&
+      corpusId &&
+      corpusId !== activeCorpusId
+        ? info?.workspace.branding?.appTitle?.trim() || corpusId
+        : undefined;
     return {
       corpusId,
       corpusReadonly: info ? info.access === "readonly" : undefined,
+      ...(corpusLabel ? { corpusLabel } : {}),
     };
   };
 
@@ -309,11 +319,13 @@ function buildGraphServices(
       query: string,
       limit?: number,
       allowedTypeIds?: string[],
-      options?: { includeBody?: boolean },
+      options?: SearchNodesOptions,
     ): NodeSummary[] {
-      return searchNodes(cache, query, limit, allowedTypeIds, options).map((row) => ({
+      return searchNodes(cache, query, limit, allowedTypeIds, {
+        includeBody: options?.includeBody,
+      }).map((row) => ({
         ...row,
-        ...corpusMeta(row.id),
+        ...corpusMeta(row.id, options?.activeCorpusId),
       }));
     },
     listRecent(limit?: number): NodeSummary[] {

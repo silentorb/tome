@@ -6,6 +6,7 @@ import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame-dark.css";
 import type { EditorApi } from "../api/client";
 import type { NodeSummary } from "../../shared/types";
+import { CorpusSuffix } from "./CorpusSuffix";
 import { buildCalloutSlashMenu } from "../callout-block";
 import {
   buildPageBlockSlashMenu,
@@ -377,7 +378,10 @@ export function TomeEditor({
                   insertMention(item);
                 }}
               >
-                <span className="tome-mention-title">{item.title}</span>
+                <span className="tome-mention-title">
+                  {item.title}
+                  <CorpusSuffix label={item.corpusLabel} />
+                </span>
               </button>
             ))
           )}

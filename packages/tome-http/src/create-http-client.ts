@@ -314,7 +314,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       query: string,
       limit = 20,
       allowedTypeIds?: string[],
-      options?: { includeBody?: boolean },
+      options?: { includeBody?: boolean; activeCorpusId?: string },
     ): Promise<NodeSummary[]> {
       const params = new URLSearchParams({ q: query, limit: String(limit) });
       if (allowedTypeIds?.length) {
@@ -322,6 +322,9 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       }
       if (options?.includeBody) {
         params.set("includeBody", "1");
+      }
+      if (options?.activeCorpusId) {
+        params.set("activeCorpusId", options.activeCorpusId);
       }
       const data = await fetchJson<{ results: NodeSummary[] }>(
         `/api/nodes/search?${params}`,

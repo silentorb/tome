@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EditorApi } from "../api/client";
 import type { NodeSummary } from "../../shared/types";
+import { CorpusSuffix } from "./CorpusSuffix";
 import "./record-link-picker.css";
 
 const DEFAULT_SEARCH_LIMIT = 25;
@@ -192,7 +193,10 @@ export function RecordLinkPicker({
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => void pick(item.id)}
               >
-                <span className="tome-record-link-picker-title">{item.title}</span>
+                <span className="tome-record-link-picker-title">
+                  {item.title}
+                  <CorpusSuffix label={item.corpusLabel} />
+                </span>
               </button>
             );
           })

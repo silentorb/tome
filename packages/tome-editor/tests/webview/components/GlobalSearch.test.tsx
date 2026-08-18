@@ -173,4 +173,37 @@ describe("GlobalSearch", () => {
     fireEvent.keyDown(window, { key: "Escape" });
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
+
+  test("shows muted corpus label suffix when present on a result", async () => {
+    const results: NodeSummary[] = [
+      {
+        id: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+        title: "Alpha Scene",
+        primaryTypeTitle: null,
+        corpusId: "other",
+        corpusLabel: "Translucence",
+      },
+      {
+        id: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+        title: "Beta Feature",
+        primaryTypeTitle: null,
+        corpusId: "active",
+      },
+    ];
+    const { container } = renderGlobalSearch({
+      open: true,
+      onOpenChange: () => {},
+      results,
+    });
+
+    await waitFor(() => {
+      expect(container.querySelector(".tome-corpus-suffix")?.textContent).toBe("Translucence");
+    });
+
+    const titles = [...container.querySelectorAll(".tome-global-search-title")].map(
+      (el) => el.textContent,
+    );
+    expect(titles[0]).toBe("Alpha SceneTranslucence");
+    expect(titles[1]).toBe("Beta Feature");
+  });
 });

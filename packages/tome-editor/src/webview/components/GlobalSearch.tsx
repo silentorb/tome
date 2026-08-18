@@ -3,6 +3,7 @@ import type { EditorApi } from "../api/client";
 import type { NodeSummary } from "../../shared/types";
 import { useUserSettings } from "../hooks/useUserSettings";
 import { nodePageHref } from "../node-links";
+import { CorpusSuffix } from "./CorpusSuffix";
 import "./global-search.css";
 
 interface GlobalSearchProps {
@@ -178,7 +179,10 @@ export function GlobalSearch({ api, open, onOpenChange }: GlobalSearchProps) {
                   className={`tome-global-search-item${isActive ? " is-active" : ""}`}
                   onMouseEnter={() => setActiveIndex(index)}
                 >
-                  <span className="tome-global-search-title">{item.title}</span>
+                  <span className="tome-global-search-title">
+                    {item.title}
+                    <CorpusSuffix label={item.corpusLabel} />
+                  </span>
                   {globalSearchIncludeBody && item.matchPreview ? (
                     <span className="tome-global-search-preview">
                       {item.matchPreview.parts.map((part, partIndex) =>

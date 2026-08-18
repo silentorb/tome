@@ -83,11 +83,13 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 - New nodes are created in the active corpus. The New page URL carries `corpus={corpusId}` (`?view=create&corpus=…`) because it has no node to infer the corpus from; opening it in a new tab must not fall back to the first configured corpus.
 - Readonly corpus / page → view-only chrome.
 - Search / graph may query the union so cross-links resolve; create and chrome stay corpus-scoped.
+- Node search (`GET /api/nodes/search`) accepts optional `activeCorpusId`. Hits whose owning corpus differs from that id include `corpusLabel` (workspace `branding.appTitle`, else the corpus id). The editor injects the active corpus into search and shows `corpusLabel` as a muted title suffix in global search, record link pickers, and `@` mentions.
 
 ### HTTP
 
 - `GET /api/corpora` — id, label, home, archive, `access`.
 - Node page and search hits include `corpusId` (and whether the corpus is readonly).
+- Search hits may also include `corpusLabel` when `activeCorpusId` is passed and the hit is foreign.
 - `GET /api/nodes/:id` stays id-only; create may take optional `corpusId`.
 
 ## Design rationale

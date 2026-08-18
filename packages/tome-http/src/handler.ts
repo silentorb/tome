@@ -146,8 +146,13 @@ export function createApiHandler(
         const includeBodyParam = url.searchParams.get("includeBody");
         const includeBody =
           includeBodyParam === "1" || includeBodyParam === "true";
+        const activeCorpusId =
+          url.searchParams.get("activeCorpusId") ?? undefined;
         return json({
-          results: db.search(q, limit, allowedTypeIds, { includeBody }),
+          results: db.search(q, limit, allowedTypeIds, {
+            includeBody,
+            activeCorpusId,
+          }),
         });
       }
 

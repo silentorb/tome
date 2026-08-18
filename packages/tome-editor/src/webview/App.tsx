@@ -113,7 +113,7 @@ export function App() {
   );
 }
 
-function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
+function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> }) {
   const { ready: userSettingsReady, getTableTab, setTableTab } = useUserSettings();
   const {
     corpora,
@@ -123,7 +123,23 @@ function AppInner({ api }: { api: ReturnType<typeof createEditorApi> }) {
     error: workspaceError,
     refreshWorkspace,
     setActiveCorpus,
-  } = useCorpora(api);
+  } = useCorpora(baseApi);
+  const api = useMemo(
+    () => ({
+      ...baseApi,
+      search: (
+        query: string,
+        limit?: number,
+        allowedTypeIds?: string[],
+        options?: { includeBody?: boolean; activeCorpusId?: string },
+      ) =>
+        baseApi.search(query, limit, allowedTypeIds, {
+          ...options,
+          activeCorpusId: activeCorpusId ?? undefined,
+        }),
+    }),
+    [activeCorpusId, baseApi],
+  );
   const [view, setView] = useState<AppView>(() => viewFromLocation());
   const [node, setNode] = useState<EditorNodePageDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
