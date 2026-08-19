@@ -19,6 +19,7 @@
 | `tome-interfaces/page-block/html` | `HtmlPageBlockRenderer`, `HtmlPageBlockHost` |
 | `tome-interfaces/page-block/server` | `ServerPageBlockHandler`, `ServerPageBlockHost` |
 | `tome-interfaces/extension-services/graph-query` | `ExtensionGraphQueryServices` for host-provided graph reads |
+| `tome-interfaces/extension-services/corpus-query` | `ExtensionCorpusQueryServices` for store corpus routing (pre-SQL) |
 | `tome-interfaces/extension-services/graph-mutate` | `ExtensionGraphMutateServices` for host-provided relationship writes |
 
 ## Run / test

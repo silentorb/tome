@@ -65,23 +65,29 @@ export function createTomeLiveNodesSchema(schema?: SchemaFile): RelationalSchema
   };
 }
 
-const LIVE_NODES_SUBQUERY = '(select * from "nodes" where "is_archived" = 0)';
+function liveNodesSubquery(corpusPredicate = ""): string {
+  const extra = corpusPredicate.trim() ? ` ${corpusPredicate.trim()}` : "";
+  return `(select * from "nodes" where "is_archived" = 0${extra})`;
+}
 
 /**
  * Restrict Imp-compiled SQL to live (non-archived) nodes by rewriting
  * `FROM "nodes"` / `JOIN "nodes"` (including aliased joins from path ops).
+ * Optional `corpusPredicate` (e.g. `and "id" in ('a')`) is pre-SQL corpus scoping.
  */
 export function applyLiveNodesConstraint(
   sql: string,
   parameters: readonly unknown[],
+  corpusPredicate?: string,
 ): { sql: string; parameters: unknown[] } {
   if (!/\b(?:from|join)\s+"nodes"/i.test(sql)) {
     throw new Error('Expected Imp query to select from or join "nodes"');
   }
+  const subquery = liveNodesSubquery(corpusPredicate);
   const replaced = sql.replace(
     /\b(from|join)\s+"nodes"(\s+as\s+(?:"[^"]+"|[A-Za-z_][A-Za-z0-9_]*))?/gi,
     (_match, keyword: string, asClause?: string) =>
-      `${keyword} ${LIVE_NODES_SUBQUERY}${asClause ?? ' as "nodes"'}`,
+      `${keyword} ${subquery}${asClause ?? ' as "nodes"'}`,
   );
   return { sql: replaced, parameters: [...parameters] };
 }

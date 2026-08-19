@@ -17,7 +17,13 @@ export function register(host: HtmlPageBlockHost): void {
       }
       try {
         const schema = ctx.contentDir ? loadSchemaFromContent(ctx.contentDir) : undefined;
-        const table = await executeQueryBlock(ctx.services.sqlQuery, parsed.reactFlow, undefined, schema);
+        const table = await executeQueryBlock(
+          ctx.services.sqlQuery,
+          parsed.reactFlow,
+          undefined,
+          schema,
+          { pageNodeId: ctx.nodeId, lookup: ctx.services.corpusQuery },
+        );
         const nodePageHref = ctx.services.nodePageHref;
         return renderQueryTableHtml(table, nodePageHref);
       } catch (err: unknown) {

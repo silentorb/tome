@@ -36,11 +36,15 @@ compileImpGraphToTomeSql(graph, { schema: loadSchemaFromContent(contentDir) })
 
 ### Live nodes
 
-Compiled SQL that selects from `"nodes"` **must** be rewritten so the base relation is live-only (`is_archived = 0`).
+- Compiled SQL that selects from `"nodes"` **must** be rewritten so the base relation is live-only (`is_archived = 0`). When a `corpus` operator resolved a corpus, the same subquery also constrains `"id"`.
 
 ### Registry
 
-`createTomeImpRegistry()` **must** load `imp.core`, `imp.collection.transforms`, and `imp.pathing`.
+`createTomeImpRegistry()` **must** load `imp.core`, `imp.collection.transforms`, `imp.pathing`, and Tome `tome.corpus` (`corpus` operator).
+
+### Corpus operator (pre-SQL)
+
+`corpus` is **not** lowered by `imp-sql`. `compileImpGraphToTomeSql` splices it out, then applies the live-nodes rewrite plus optional `id IN (…)` from the host corpus map (`pageNodeId` + `corpus` lookup). Specs: `"page"` (page node’s corpus), a corpus slug, or `"all"` (no extra filter).
 
 ### Projection type helper
 
@@ -50,7 +54,7 @@ Compiled SQL that selects from `"nodes"` **must** be rewritten so the base relat
 
 | Operation | Behavior |
 | --- | --- |
-| `compileImpGraphToTomeSql(graph, options?)` | `graphToKysely` + `compileSql` + live-nodes rewrite; optional `{ schema }` for enum literal encoding |
+| `compileImpGraphToTomeSql(graph, options?)` | `graphToKysely` + `compileSql` + live-nodes rewrite; optional `{ schema }` for enum literal encoding; optional `{ pageNodeId, corpus }` for pre-SQL `corpus` operators |
 | `createTomeLiveNodesSchema(schema?)` | `RelationalSchema` with edges, `edgeType`, and optional `encodePropertyLiteral` |
 | `createTomeImpRegistry()` | Standard Imp registry for Tome hosts |
 | `tomeLiveNodesSchema` | Default schema without workspace enum binding |

@@ -1,6 +1,7 @@
 import type { ExtensionGraphMutateServices } from "../../extension-services/graph-mutate";
 import type { ExtensionGraphQueryServices } from "../../extension-services/graph-query";
 import type { ExtensionSchemaQueryServices } from "../../extension-services/schema-query";
+import type { ExtensionCorpusQueryServices } from "../../extension-services/corpus-query";
 import type { ExtensionSqlQueryServices } from "../../extension-services/sql-query";
 import type { PageBlockComponentRef } from "../types";
 
@@ -10,6 +11,7 @@ export interface ServerHostServices {
   graphMutate?: ExtensionGraphMutateServices;
   schemaQuery?: ExtensionSchemaQueryServices;
   sqlQuery?: ExtensionSqlQueryServices;
+  corpusQuery?: ExtensionCorpusQueryServices;
   invokeExtensionRoute?(componentId: string, input: unknown): Promise<unknown>;
 }
 

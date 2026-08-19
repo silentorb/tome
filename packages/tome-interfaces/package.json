@@ -13,6 +13,7 @@
     "./extension-services/graph-query": "./src/extension-services/graph-query.ts",
     "./extension-services/schema-query": "./src/extension-services/schema-query.ts",
     "./extension-services/sql-query": "./src/extension-services/sql-query.ts",
+    "./extension-services/corpus-query": "./src/extension-services/corpus-query.ts",
     "./extension-services/graph-mutate": "./src/extension-services/graph-mutate.ts"
   },
   "scripts": {

@@ -13,6 +13,7 @@ import {
   createExtensionGraphMutateServices,
   createExtensionSchemaQueryServices,
   createExtensionSqlQueryServices,
+  createExtensionCorpusQueryServices,
   getDatabaseViewDetail,
   getNodePageDetail,
   getRelationTableSection,
@@ -111,6 +112,7 @@ function buildGraphServices(
     () => createExtensionSchemaQueryServices(cache, contentPath),
     () => createExtensionSqlQueryServices(cache),
     () => createExtensionGraphMutateServices(writeCtx),
+    () => createExtensionCorpusQueryServices(writeCtx.store),
   );
   const extensionsReady = extensions.ensureLoaded().catch((err: unknown) => {
     console.error("[tome-extensions] failed to load:", err);

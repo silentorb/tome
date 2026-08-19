@@ -1,5 +1,6 @@
 import { existsSync, statSync } from "node:fs";
 import { extensionsFilePath } from "tome-db/content";
+import type { ExtensionCorpusQueryServices } from "tome-interfaces/extension-services/corpus-query";
 import type { ExtensionGraphMutateServices } from "tome-interfaces/extension-services/graph-mutate";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
@@ -92,6 +93,7 @@ export class ExtensionServerRuntime {
   readonly #getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined;
   readonly #getSchemaQueryServices?: () => ExtensionSchemaQueryServices | undefined;
   readonly #getSqlQueryServices?: () => ExtensionSqlQueryServices | undefined;
+  readonly #getCorpusQueryServices?: () => ExtensionCorpusQueryServices | undefined;
   readonly #getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined;
   readonly #editorHost = new EditorPageBlockHostImpl();
   readonly #htmlHost = new HtmlPageBlockHostImpl();
@@ -108,12 +110,14 @@ export class ExtensionServerRuntime {
     getSchemaQueryServices?: () => ExtensionSchemaQueryServices | undefined,
     getSqlQueryServices?: () => ExtensionSqlQueryServices | undefined,
     getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined,
+    getCorpusQueryServices?: () => ExtensionCorpusQueryServices | undefined,
   ) {
     this.#contentPath = contentPath;
     this.#getGraphQueryServices = getGraphQueryServices;
     this.#getSchemaQueryServices = getSchemaQueryServices;
     this.#getSqlQueryServices = getSqlQueryServices;
     this.#getGraphMutateServices = getGraphMutateServices;
+    this.#getCorpusQueryServices = getCorpusQueryServices;
   }
 
   get editorHost(): EditorPageBlockHostImpl {
@@ -243,6 +247,7 @@ export class ExtensionServerRuntime {
           graphMutate: this.#getGraphMutateServices?.(),
           schemaQuery: this.#getSchemaQueryServices?.(),
           sqlQuery: this.#getSqlQueryServices?.(),
+          corpusQuery: this.#getCorpusQueryServices?.(),
         },
       },
       input,
@@ -319,6 +324,7 @@ export class ExtensionServerRuntime {
       this.#getGraphQueryServices?.(),
       this.#getSchemaQueryServices?.(),
       this.#getSqlQueryServices?.(),
+      this.#getCorpusQueryServices?.(),
       scale ? { nodeDimensionScale: scale } : undefined,
       schemaDiagram,
     );
@@ -342,6 +348,7 @@ export class ExtensionServerRuntime {
       this.#getGraphQueryServices?.(),
       this.#getSchemaQueryServices?.(),
       this.#getSqlQueryServices?.(),
+      this.#getCorpusQueryServices?.(),
       scale ? { nodeDimensionScale: scale } : undefined,
       schemaDiagram,
     );

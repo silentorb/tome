@@ -5,6 +5,7 @@ import {
   createExtensionGraphQueryServices,
   createExtensionSchemaQueryServices,
   createExtensionSqlQueryServices,
+  createExtensionCorpusQueryServices,
   loadSchemaFromContent,
   loadWorkspaceFromContent,
   schemaDiagramPageBlockServices,
@@ -52,6 +53,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
   const graphQuery = createExtensionGraphQueryServices(cache, config.contentDir);
   const schemaQuery = createExtensionSchemaQueryServices(cache, config.contentDir);
   const sqlQuery = createExtensionSqlQueryServices(cache);
+  const corpusQuery = createExtensionCorpusQueryServices(store);
   const spatialGraphScale = spatialGraphNodeDimensionScale(workspace);
   const spatialGraphServices = spatialGraphScale
     ? { nodeDimensionScale: spatialGraphScale }
@@ -69,6 +71,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
         schemaQuery,
         schemaDiagram,
         sqlQuery,
+        corpusQuery,
       );
       node.bodyHtml = await renderNodeBodyHtml(
         node.body,

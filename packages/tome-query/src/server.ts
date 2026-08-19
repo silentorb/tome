@@ -49,6 +49,7 @@ export function register(host: ServerPageBlockHost): void {
           parsed.reactFlow,
           parameters,
           schemaFromEnv(),
+          { pageNodeId: ctx.nodeId, lookup: ctx.services.corpusQuery },
         );
         return { ok: true, ...table };
       } catch (err: unknown) {

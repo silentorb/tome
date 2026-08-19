@@ -16,6 +16,8 @@ import {
   compileReactFlowQuery,
   ensureIdentityTitleProjection,
   ensureTitleColumnInSelectStar,
+  findTerminalGroupSpecFromReactFlow,
+  partitionRowsIntoGroups,
   rowsToTable,
 } from "../src/execute";
 import { executeQueryBlock, renderQueryTableHtml } from "../src/render";
@@ -380,6 +382,88 @@ describe("tome-query compile + execute", () => {
     expect(ids).not.toContain("arch1");
     expect(table.columns[0]).toBe("title");
     expect(table.columns).not.toContain("id");
+  });
+
+  test("executeQueryBlock corpus page excludes other corpus ids", async () => {
+    const db = new Database(":memory:");
+    db.run(`
+      CREATE TABLE nodes (
+        id TEXT PRIMARY KEY NOT NULL,
+        properties TEXT NOT NULL DEFAULT '{}',
+        is_archived INTEGER NOT NULL DEFAULT 0
+      );
+    `);
+    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+      "tl1",
+      JSON.stringify({ title: "Translucence article" }),
+      0,
+    ]);
+    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+      "ml1",
+      JSON.stringify({ title: "Marloth scene" }),
+      0,
+    ]);
+
+    const reactFlow = {
+      nodes: [
+        {
+          id: "in",
+          type: "input",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+        {
+          id: "corpus",
+          type: "corpus",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { id: "page" } },
+        },
+        {
+          id: "out",
+          type: "output",
+          position: { x: 0, y: 0 },
+          data: { inputValues: {} },
+        },
+      ],
+      edges: [
+        {
+          id: "e1",
+          source: "in",
+          sourceHandle: "value",
+          target: "corpus",
+          targetHandle: "collection",
+        },
+        {
+          id: "e2",
+          source: "corpus",
+          sourceHandle: "collection",
+          target: "out",
+          targetHandle: "value",
+        },
+      ],
+    };
+
+    const table = await executeQueryBlock(
+      {
+        queryAll(sql, params = []) {
+          return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
+        },
+      },
+      reactFlow,
+      undefined,
+      undefined,
+      {
+        pageNodeId: "home",
+        lookup: {
+          corpusIdForNode: (id) => (id === "home" ? "translucence" : null),
+          nodeIdsInCorpus: (corpusId) => (corpusId === "translucence" ? ["tl1"] : ["ml1"]),
+        },
+      },
+    );
+
+    const ids = table.rows.map((row) => row.id);
+    expect(ids).toEqual(["tl1"]);
+    expect(table.rows[0]?.title).toBe("Translucence article");
   });
 
   test("project id-only execute yields title-only visible columns", async () => {
@@ -858,5 +942,135 @@ describe("tome-query compile + execute", () => {
 
     const withSchema = await executeQueryBlock(sqlQuery, reactFlow, undefined, MARLOTH_LIKE_SCHEMA);
     expect(withSchema.rows.map((row) => row.id)).toEqual(["regular"]);
+  });
+});
+
+describe("query grouping", () => {
+  const schema: SchemaFile = {
+    version: 1,
+    relationshipRules: [],
+    enums: {
+      priority: {
+        options: ["Consideration", "Low", "Medium", "High", "Primary"],
+        default: "Low",
+        defaultOrder: "desc",
+        values: { Low: 1, Medium: 2, High: 4, Consideration: 0, Primary: 8 },
+      },
+    },
+  };
+
+  test("findTerminalGroupSpecFromReactFlow reads a terminal group node", () => {
+    const spec = findTerminalGroupSpecFromReactFlow({
+      nodes: [
+        { id: "in", type: "input", position: { x: 0, y: 0 }, data: { inputValues: {} } },
+        {
+          id: "group",
+          type: "group",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { column: "priority", direction: "desc" } },
+        },
+        { id: "out", type: "output", position: { x: 0, y: 0 }, data: { inputValues: {} } },
+      ],
+      edges: [
+        {
+          id: "e1",
+          source: "in",
+          sourceHandle: "value",
+          target: "group",
+          targetHandle: "collection",
+        },
+        {
+          id: "e2",
+          source: "group",
+          sourceHandle: "collection",
+          target: "out",
+          targetHandle: "value",
+        },
+      ],
+    });
+    expect(spec).toEqual({ column: "priority", direction: "desc" });
+  });
+
+  test("findTerminalGroupSpecFromReactFlow is null without a terminal group", () => {
+    expect(findTerminalGroupSpecFromReactFlow(defaultReactFlowGraph())).toBeNull();
+  });
+
+  test("partitionRowsIntoGroups sorts priority groups by values descending", () => {
+    const grouped = partitionRowsIntoGroups(
+      [
+        { id: "a", priority: "Low" },
+        { id: "b", priority: "Primary" },
+        { id: "c", priority: "High" },
+        { id: "d", priority: "Primary" },
+        { id: "e", priority: "Consideration" },
+      ],
+      { column: "priority", direction: "desc" },
+      schema,
+    );
+    expect(grouped.groups.map((group) => group.key)).toEqual([
+      "Primary",
+      "High",
+      "Low",
+      "Consideration",
+    ]);
+    expect(grouped.groups[0]?.rows.map((row) => row.id)).toEqual(["b", "d"]);
+  });
+
+  test("partitionRowsIntoGroups decodes stored enum indices", () => {
+    const grouped = partitionRowsIntoGroups(
+      [
+        { id: "a", priority: 0 },
+        { id: "b", priority: 4 },
+      ],
+      { column: "priority", direction: "desc" },
+      schema,
+    );
+    expect(grouped.groups.map((group) => group.key)).toEqual(["Primary", "Consideration"]);
+  });
+
+  test("compileReactFlowQuery with group emits ORDER BY", () => {
+    const { sql } = compileReactFlowQuery({
+      nodes: [
+        { id: "in", type: "input", position: { x: 0, y: 0 }, data: { inputValues: {} } },
+        {
+          id: "project",
+          type: "project",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { columns: "priority" } },
+        },
+        {
+          id: "group",
+          type: "group",
+          position: { x: 0, y: 0 },
+          data: { inputValues: { column: "priority", direction: "desc" } },
+        },
+        { id: "out", type: "output", position: { x: 0, y: 0 }, data: { inputValues: {} } },
+      ],
+      edges: [
+        {
+          id: "e1",
+          source: "in",
+          sourceHandle: "value",
+          target: "project",
+          targetHandle: "collection",
+        },
+        {
+          id: "e2",
+          source: "project",
+          sourceHandle: "collection",
+          target: "group",
+          targetHandle: "collection",
+        },
+        {
+          id: "e3",
+          source: "group",
+          sourceHandle: "collection",
+          target: "out",
+          targetHandle: "value",
+        },
+      ],
+    });
+    expect(sql.toLowerCase()).toContain("order by");
+    expect(sql.toLowerCase()).toContain("desc");
   });
 });

@@ -33,7 +33,7 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 - Table invokes `POST /api/extensions/tome-query.block/invoke` with `{ action: "execute", data, parameters? }`
 - When the Imp graph declares **`parameter` nodes**, a settings gear appears; values persist in user settings (`blockParameters`) and are sent as `parameters` on invoke
 - Table errors are shown in a readonly field so they can be selected/copied inside the Milkdown embed
-- No page-node / type-table scope in v1 — `nodeId` is ignored for the collection source
+- No page-node / type-table scope in v1 — `nodeId` is ignored for the collection source **except** as the `"page"` target of a `corpus` operator
 - Wiring a new edge onto an occupied input port replaces the previous inbound edge; output ports may fan out
 - Literal text fields on operator ports appear only for scalar ports (`string` / `number` / `any`) that have **no** inbound edge; `collection` and `boolean` ports never show text inputs
 - Selected nodes/edges are removable with **Backspace** or **Delete** (disabled when the block is read-only)
@@ -42,7 +42,8 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 ### Query semantics
 
 - Input = unresolved enumeration of all live nodes (IEnumerable-style pipeline; corpus rows are not RF nodes)
-- Supported transforms: Imp collection library (`filter`, `except`, `sort`, `limit`, `offset`, `project`, predicates, `column`, `literal`)
+- **`corpus` operator (Tome-only, pre-SQL):** pin the input collection to one corpus before Imp SQL lowering. Port `id` is `"page"` (default: corpus that owns the page node), a corpus slug (`translucence`, `marloth`), or `"all"` (session union). The host resolves ids via the store routing map (`locateNode` / `listNodeIds`) and rewrites live `FROM nodes` with `id IN (…)`. `imp-sql` never sees this node type.
+- Supported transforms: Imp collection library (`filter`, `except`, `sort`, `limit`, `offset`, `project`, `group`, predicates, `column`, `literal`)
 - Supported path ops: Imp `traverse` (single hop via `relationship_projections`; Imp inputs are separate `association` + `direction` — Tome binds them to projection types at SQL time)
 - `except` is declarative set difference by `id`; SQL lowering uses `NOT EXISTS` over the exclude subquery (not an in-memory subtract)
 - Columns: Imp `project` with comma-separated logical names; `id` / `is_archived` are table columns; other names map to `json_extract(properties, '$.name')`
@@ -52,6 +53,7 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 ### Host services
 
 - Extensions receive `services.sqlQuery.queryAll(sql, params)` (parameterized SQL from Imp compile only)
+- Extensions receive `services.corpusQuery` (`corpusIdForNode`, `nodeIdsInCorpus`) so query compile can pin a corpus without a SQLite `corpus_id` column
 - Editor page-block context may expose `openToolPanel` / `closeToolPanel` for the host right panel
 
 ## Design rationale

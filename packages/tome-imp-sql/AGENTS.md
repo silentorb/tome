@@ -15,6 +15,7 @@ Compile/schema binder from Imp graphs to Tome SQLite cache SQL. Owns `Relational
 | Path | Role |
 | --- | --- |
 | `src/schema.ts` | `tomeLiveNodesSchema`, column map, live rewrite, `projectionType` |
+| `src/corpus.ts` | Tome `corpus` library + pre-SQL splice / id constraint |
 | `src/registry.ts` | `createTomeImpRegistry` |
 | `src/compile.ts` | `compileImpGraphToTomeSql` |
 | `tests/` | Schema + traverse compile tests |

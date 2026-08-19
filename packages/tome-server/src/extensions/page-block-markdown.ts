@@ -1,3 +1,4 @@
+import type { ExtensionCorpusQueryServices } from "tome-interfaces/extension-services/corpus-query";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
 import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
@@ -28,6 +29,7 @@ async function renderBlockHtml(
   graphQuery: ExtensionGraphQueryServices | undefined,
   schemaQuery: ExtensionSchemaQueryServices | undefined,
   sqlQuery: ExtensionSqlQueryServices | undefined,
+  corpusQuery: ExtensionCorpusQueryServices | undefined,
   spatialGraph: SpatialGraphPageBlockServices | undefined,
   schemaDiagram: SchemaDiagramPageBlockServices | undefined,
   payload: PageBlockPayload,
@@ -50,6 +52,7 @@ async function renderBlockHtml(
         graphQuery,
         schemaQuery,
         sqlQuery,
+        corpusQuery,
         nodePageHref: (targetNodeId) => `?node=${targetNodeId}`,
         ...(spatialGraph ? { spatialGraph } : {}),
         ...(schemaDiagram ? { schemaDiagram } : {}),
@@ -68,6 +71,7 @@ export async function prepareEditorBodyWithPageBlocks(
   graphQuery: ExtensionGraphQueryServices | undefined,
   schemaQuery: ExtensionSchemaQueryServices | undefined,
   sqlQuery?: ExtensionSqlQueryServices,
+  corpusQuery?: ExtensionCorpusQueryServices,
   spatialGraph?: SpatialGraphPageBlockServices,
   schemaDiagram?: SchemaDiagramPageBlockServices,
 ): Promise<string> {
@@ -81,6 +85,7 @@ export async function prepareEditorBodyWithPageBlocks(
       graphQuery,
       schemaQuery,
       sqlQuery,
+      corpusQuery,
       spatialGraph,
       schemaDiagram,
       payload,
@@ -98,6 +103,7 @@ export async function renderPageBlockHtmlForEditor(
   graphQuery: ExtensionGraphQueryServices | undefined,
   schemaQuery: ExtensionSchemaQueryServices | undefined,
   sqlQuery?: ExtensionSqlQueryServices,
+  corpusQuery?: ExtensionCorpusQueryServices,
   spatialGraph?: SpatialGraphPageBlockServices,
   schemaDiagram?: SchemaDiagramPageBlockServices,
 ): Promise<string> {
@@ -110,6 +116,7 @@ export async function renderPageBlockHtmlForEditor(
     graphQuery,
     schemaQuery,
     sqlQuery,
+    corpusQuery,
     spatialGraph,
     schemaDiagram,
     payload,

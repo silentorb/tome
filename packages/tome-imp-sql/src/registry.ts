@@ -2,14 +2,18 @@ import { collectionTransformsLibrary } from "imp-collection-transforms";
 import { pathingLibrary } from "imp-pathing";
 import { createRegistry, loadLibrary } from "imp-registry";
 import { coreNodeLibrary } from "imp-spec";
+import { tomeCorpusLibrary } from "./corpus";
 
-/** Registry with core + collection transforms + pathing for Tome Imp hosts. */
+/** Registry with core + collection transforms + pathing + Tome corpus for Tome Imp hosts. */
 export function createTomeImpRegistry() {
   return loadLibrary(
     loadLibrary(
-      loadLibrary(createRegistry(), coreNodeLibrary),
-      collectionTransformsLibrary,
+      loadLibrary(
+        loadLibrary(createRegistry(), coreNodeLibrary),
+        collectionTransformsLibrary,
+      ),
+      pathingLibrary,
     ),
-    pathingLibrary,
+    tomeCorpusLibrary,
   );
 }
