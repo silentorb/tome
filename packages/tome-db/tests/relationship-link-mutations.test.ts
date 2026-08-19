@@ -5,12 +5,17 @@ import {
   moveRelationshipConnection,
   unlinkOutgoingRelationship,
 } from "../src/relationship-link-mutations";
+import { getDatabaseViewDetail } from "../src/database-view";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestNode,
+  seedTestTableSchema,
+  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
 } from "../src/content/test-helpers";
 import {
+  projectionTypeForEndpoint,
   registerBidirectionalType,
 } from "tome-flatfile";
 import { invalidateAssociationsCache } from "tome-flatfile";
@@ -125,6 +130,69 @@ describe("relationship-link-mutations", () => {
 
     const edge = ctx.store.findRelationship(source3, target3b, featuresAssoc);
     expect(edge?.properties.ordinal).toBe(7);
+  });
+
+  test("unlinks a Members row when the stored edge uses a different set association", () => {
+    const setId = "0000000000000000000000003A";
+    const memberId = "0000000000000000000000003B";
+    seedTestNode(fixture, {
+      id: setId,
+      properties: typeTableMarkerProperties("Arcs"),
+    });
+    seedTestTableSchema(fixture, setId, []);
+    seedTestNode(fixture, { id: memberId, properties: { title: "Adelle as a Barista" } });
+
+    const orderedMemberSide = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1);
+    expect(
+      linkOutgoingRelationship(ctx, {
+        sourceId: memberId,
+        targetId: setId,
+        type: orderedMemberSide,
+      }),
+    ).toBeNull();
+
+    const view = getDatabaseViewDetail(ctx.cache, setId, undefined, ctx.store.contentDir);
+    expect(view?.rows.some((row) => row.nodeId === memberId)).toBe(true);
+    expect(view?.memberSidePerspective).toBe(
+      projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
+    );
+
+    expect(
+      unlinkOutgoingRelationship(ctx, memberId, setId, view!.memberSidePerspective),
+    ).toBeNull();
+    expect(
+      ctx.store.findRelationship(memberId, setId, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID),
+    ).toBeNull();
+  });
+
+  test("unlinks an inverted set-side edge shown as a Members row on the instance", () => {
+    const instanceId = "0000000000000000000000003C";
+    const typeTableId = "0000000000000000000000003D";
+    seedTestNode(fixture, { id: instanceId, properties: { title: "Adelle as a Barista" } });
+    seedTestNode(fixture, {
+      id: typeTableId,
+      properties: typeTableMarkerProperties("Arcs"),
+    });
+    seedTestTableSchema(fixture, typeTableId, []);
+
+    const orderedSetSide = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 0);
+    expect(
+      linkOutgoingRelationship(ctx, {
+        sourceId: instanceId,
+        targetId: typeTableId,
+        type: orderedSetSide,
+      }),
+    ).toBeNull();
+
+    const view = getDatabaseViewDetail(ctx.cache, instanceId, undefined, ctx.store.contentDir);
+    expect(view?.rows.some((row) => row.nodeId === typeTableId)).toBe(true);
+
+    expect(
+      unlinkOutgoingRelationship(ctx, typeTableId, instanceId, view!.memberSidePerspective),
+    ).toBeNull();
+    expect(
+      ctx.store.findRelationship(instanceId, typeTableId, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID),
+    ).toBeNull();
   });
 
   afterAll(() => {

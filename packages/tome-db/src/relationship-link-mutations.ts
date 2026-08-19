@@ -1,13 +1,20 @@
 import type { Properties } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
-import { LinkResolutionError, UnknownAssociationError } from "tome-flatfile";
+import {
+  LinkResolutionError,
+  UnknownAssociationError,
+  connectsEndpoints,
+  isAssociationId,
+  isMemberSideProjectionType,
+  isSetTraitComposite,
+  isSetTraitProjectionType,
+  loadAssociationsFromContent,
+  parseProjectionType,
+} from "tome-flatfile";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
-import { isAssociationId, parseProjectionType } from "tome-flatfile";
 import { associationRuleContext } from "./association-endpoints";
-import { loadAssociationsFromContent } from "tome-flatfile";
 import { stampOrderIfMissing } from "./ordered-relationships";
-import { isMemberSideProjectionType } from "tome-flatfile";
 import type {
   LinkOutgoingRelationshipError,
   LinkOutgoingRelationshipInput,
@@ -107,6 +114,31 @@ export function linkOutgoingRelationship(
   return null;
 }
 
+/**
+ * Members tables list every set-trait edge, while unlink/move often pass the
+ * view-resolved member projection. When those differ, find any set-trait edge
+ * connecting the same pair.
+ */
+function findRelationshipForUnlink(
+  ctx: TomeWriteContext,
+  sourceId: string,
+  targetId: string,
+  type: string,
+) {
+  const found = ctx.store.findRelationship(sourceId, targetId, type);
+  if (found) return found;
+
+  const registry = loadAssociationsFromContent(ctx.store.contentDir);
+  if (!isSetTraitProjectionType(registry, type)) return null;
+
+  for (const entry of ctx.store.readRelationshipsFile().relationships) {
+    if (!connectsEndpoints(entry, sourceId, targetId)) continue;
+    if (!isSetTraitComposite(registry, entry.type)) continue;
+    return ctx.store.findRelationship(sourceId, targetId, entry.type);
+  }
+  return null;
+}
+
 export function unlinkOutgoingRelationship(
   ctx: TomeWriteContext,
   sourceId: string,
@@ -114,10 +146,9 @@ export function unlinkOutgoingRelationship(
   type: string,
 ): UnlinkOutgoingRelationshipError | null {
   const normalizedType = normalizeLinkType(type);
-  if (!ctx.store.findRelationship(sourceId, targetId, normalizedType)) {
-    return "not_found";
-  }
-  ctx.store.deleteRelationship(sourceId, targetId, normalizedType);
+  const existing = findRelationshipForUnlink(ctx, sourceId, targetId, normalizedType);
+  if (!existing) return "not_found";
+  ctx.store.deleteRelationship(sourceId, targetId, existing.type);
   syncAfterRelationshipsWrite(ctx);
   return null;
 }
@@ -129,18 +160,18 @@ export function moveRelationshipConnection(
   const { type, oldSourceId, oldTargetId, newSourceId, newTargetId } = input;
   const normalizedType = normalizeLinkType(type);
 
-  const existing = ctx.store.findRelationship(oldSourceId, oldTargetId, normalizedType);
+  const existing = findRelationshipForUnlink(ctx, oldSourceId, oldTargetId, normalizedType);
   if (!existing) return "not_found";
 
   const linkError = linkOutgoingRelationship(ctx, {
     sourceId: newSourceId,
     targetId: newTargetId,
-    type: normalizedType,
+    type: existing.type,
     properties: { ...existing.properties },
   });
   if (linkError) return linkError;
 
-  ctx.store.deleteRelationship(oldSourceId, oldTargetId, normalizedType);
+  ctx.store.deleteRelationship(oldSourceId, oldTargetId, existing.type);
   syncAfterRelationshipsWrite(ctx);
   return null;
 }

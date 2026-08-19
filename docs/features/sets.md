@@ -120,6 +120,8 @@ Archive membership uses the same set-trait family as type tables (in Marloth: `m
 
 Linking or creating a type-table row **must** use the set association resolved for that set (`setRoleAssociationForNode` / view context). Plain tables get no placement metadata. Ordered tables auto-stamp `order` when missing (`ordered-relationships.ts`).
 
+Removing a Members-table row **must** delete the stored set-trait edge between that member and the set. `listSetMemberRowConnections` lists members from **every** set-trait association, while the view payload's `memberSidePerspective` is the **view-resolved** association. When those differ (plain vs ordered, or an inverted tuple that makes an instance look like a set), unlink / move **must** still find and delete any set-trait relationship connecting the same pair rather than returning `not_found`.
+
 ### Node page sections
 
 | Page kind | Set UI |
