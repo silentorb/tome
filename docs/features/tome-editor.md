@@ -75,6 +75,8 @@ Applies to: sidebar nav, **Recent**, global search result rows, database relatio
 
 **Milkdown body links.** Use Crepe/Milkdown defaults unless there is a product reason not to — **`LinkTooltip` enabled** (hover preview, edit/remove). Cross-link navigation uses JS on the Milkdown root (`handleEditorLinkPointerEvent` in `src/webview/editor-link-navigation.ts`): plain click soft-navigates; Ctrl/Cmd+click is JS-emulated (`openStandaloneNodeInNewTab`) because ProseMirror claims that gesture for node selection (`handleClick` in `editor-link-hard-open.ts`); shift / middle / right-click leave the real anchor to the browser. Skip when `defaultPrevented` is already set, and skip anchors inside `[data-type="tome-page-block-react"]` (interactive page blocks own those clicks; chrome soft-nav still applies if the event bubbles). Do not add custom ProseMirror plugins whose goal is to force full document navigation inside contenteditable.
 
+When the Milkdown body has focus, **Ctrl/Cmd+1–6** turn the current block into heading levels 1–6 (`heading-keymap.ts`; overrides browser tab-switch defaults for those digits).
+
 Keyboard shortcuts in combobox-style pickers (global search, Relate, record link picker) may simulate anchor clicks on **Enter** when focus is in the search field; result rows themselves remain anchors for pointer navigation.
 
 - Internal links **must** be stored in git-tracked markdown in one of two forms:

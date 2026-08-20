@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { editorViewCtx } from "@milkdown/kit/core";
+import { commandsCtx, editorViewCtx } from "@milkdown/kit/core";
+import { wrapInHeadingCommand } from "@milkdown/kit/preset/commonmark";
 import { getMarkdown, replaceRange } from "@milkdown/kit/utils";
 import { Crepe } from "@milkdown/crepe";
 import "@milkdown/crepe/theme/common/style.css";
@@ -25,6 +26,7 @@ import { installCalloutPaste } from "../callout-paste";
 import { installDynamicLinkDecoration } from "../dynamic-node-link-decoration";
 import { installDynamicLinkDemote } from "../dynamic-node-link-demote";
 import { installBlockHandleMenu } from "../block-handle-menu";
+import { installHeadingKeymap } from "../heading-keymap";
 import { installListItemDeleteKeymap } from "../list-item-delete-keymap";
 import { installMentionSync } from "../mention-sync";
 import {
@@ -118,6 +120,7 @@ export function TomeEditor({
     let onKeyDown: ((event: KeyboardEvent) => void) | null = null;
     let detachEditorLinkNavigation: (() => void) | null = null;
     let detachBlockHandleMenu: (() => void) | null = null;
+    let detachHeadingKeymap: (() => void) | null = null;
     setInitError(null);
     setIsEmpty(!initialBody.trim());
     root.replaceChildren();
@@ -229,6 +232,11 @@ export function TomeEditor({
         installDynamicLinkDecoration(view);
         installDynamicLinkDemote(view);
         installListItemDeleteKeymap(view);
+        detachHeadingKeymap = installHeadingKeymap(view, (level) => {
+          activeCrepe.editor.action((ctx) => {
+            ctx.get(commandsCtx).call(wrapInHeadingCommand.key, level);
+          });
+        });
         detachBlockHandleMenu = installBlockHandleMenu(view, root);
 
         const syncMentionMenu = () => {
@@ -259,27 +267,6 @@ export function TomeEditor({
         installMentionSync(view, syncMentionMenu);
 
         onKeyDown = (event: KeyboardEvent) => {
-          const isHeadingShortcut =
-            (event.ctrlKey || event.metaKey) &&
-            event.shiftKey &&
-            !event.altKey &&
-            /^[1-6]$/.test(event.key);
-          if (isHeadingShortcut) {
-            event.preventDefault();
-            event.stopPropagation();
-            const remapped = new KeyboardEvent("keydown", {
-              key: event.key,
-              code: `Digit${event.key}`,
-              ctrlKey: event.ctrlKey,
-              metaKey: event.metaKey,
-              altKey: true,
-              bubbles: true,
-              cancelable: true,
-            });
-            dom.dispatchEvent(remapped);
-            return;
-          }
-
           const state = mentionRef.current;
           if (!state) return;
           if (event.key === "Escape") {
@@ -331,6 +318,7 @@ export function TomeEditor({
         editorDom.removeEventListener("keydown", onKeyDown, true);
       }
       detachEditorLinkNavigation?.();
+      detachHeadingKeymap?.();
       detachBlockHandleMenu?.();
       root.replaceChildren();
       void crepe?.destroy();
