@@ -1,8 +1,12 @@
 import { describe, expect, mock, test, afterEach, beforeEach } from "bun:test";
-import { createEvent, fireEvent, render, within } from "@testing-library/react";
+import { fireEvent, render, within } from "@testing-library/react";
 import type { EditorApi } from "../../../src/webview/api/client";
 import { QuickLinksPanel } from "../../../src/webview/components/QuickLinksPanel";
 import { setStandaloneNavigationHandler } from "../../../src/webview/node-links";
+import {
+  attachStandaloneChromeNavigation,
+  resetStandaloneChromeNavigation,
+} from "../../../src/webview/standalone-navigation";
 
 const mockApi = {} as EditorApi;
 const NODE_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
@@ -16,7 +20,7 @@ function nodeActionMocks() {
   };
 }
 
-function renderReorderableQuickLinks() {
+function renderReorderableQuickLinks(onQuickLinksReorder = mock(async () => {})) {
   return render(
     <QuickLinksPanel
       api={mockApi}
@@ -27,7 +31,7 @@ function renderReorderableQuickLinks() {
       activeView="node-page"
       activeNodeId={null}
       collapsed={false}
-      onQuickLinksReorder={mock(async () => {})}
+      onQuickLinksReorder={onQuickLinksReorder}
       {...nodeActionMocks()}
     />,
   );
@@ -41,14 +45,18 @@ describe("QuickLinksPanel", () => {
     originalAssign = window.location.assign.bind(window.location);
     assignedUrl = null;
     setStandaloneNavigationHandler(null);
+    resetStandaloneChromeNavigation();
     window.location.assign = ((url: string | URL) => {
       assignedUrl = String(url);
     }) as typeof window.location.assign;
+    window.history.replaceState({}, "", "http://127.0.0.1:5173/");
+    attachStandaloneChromeNavigation(document);
   });
 
   afterEach(() => {
     window.location.assign = originalAssign;
     setStandaloneNavigationHandler(null);
+    resetStandaloneChromeNavigation();
   });
 
   test("renders non-reorderable quick links as native anchors", () => {
@@ -113,12 +121,14 @@ describe("QuickLinksPanel", () => {
     expect(queryByRole("button", { name: "Page actions" })).toBeNull();
   });
 
-  test("renders reorderable quick links as buttons", () => {
+  test("renders reorderable quick links as native anchors", () => {
     renderReorderableQuickLinks();
-    const buttons = document.querySelectorAll("button.tome-side-panel-item.is-reorderable");
-    expect(buttons).toHaveLength(2);
-    expect(buttons[0]?.tagName).toBe("BUTTON");
-    expect(document.querySelectorAll("a.tome-side-panel-item")).toHaveLength(0);
+    const links = document.querySelectorAll("a.tome-side-panel-item.is-reorderable");
+    expect(links).toHaveLength(2);
+    expect(links[0]?.tagName).toBe("A");
+    expect(links[0]?.getAttribute("href")).toContain(NODE_A);
+    expect(links[1]?.getAttribute("href")).toContain(NODE_B);
+    expect(document.querySelectorAll("button.tome-side-panel-item")).toHaveLength(0);
   });
 
   test("does not mark links reorderable when only one quick link", () => {
@@ -140,23 +150,13 @@ describe("QuickLinksPanel", () => {
     expect(document.querySelector("a.tome-side-panel-item")).not.toBeNull();
   });
 
-  test("reorderable quick link pointerup navigates when drag did not activate", () => {
+  test("reorderable quick link click navigates when drag did not activate", () => {
     const { getByRole } = renderReorderableQuickLinks();
-    const button = getByRole("button", { name: /^Features$/ });
+    const link = getByRole("link", { name: /^Features$/ });
 
-    fireEvent.pointerUp(button, { button: 0, bubbles: true });
+    fireEvent.click(link);
 
     expect(assignedUrl).toContain(`node=${NODE_A}`);
-  });
-
-  test("reorderable quick link swallows synthetic click", () => {
-    const { getByRole } = renderReorderableQuickLinks();
-    const button = getByRole("button", { name: /^Features$/ });
-    const clickEvent = createEvent.click(button, { bubbles: true, cancelable: true });
-    fireEvent(button, clickEvent);
-
-    expect(clickEvent.defaultPrevented).toBe(true);
-    expect(assignedUrl).toBeNull();
   });
 
   test("reorderable quick links do not show grab cursor until dragging", () => {

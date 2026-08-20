@@ -1,10 +1,5 @@
 import type { WorkspaceQuickLink } from "tome-graph-interfaces";
 import type { AppView } from "../shared/types";
-import {
-  navigateStandaloneNode,
-  openStandaloneNodeInNewTab,
-  openStandaloneNodeInNewWindow,
-} from "./node-links";
 
 export const HOME_ICON = "⌂";
 
@@ -28,41 +23,12 @@ export function buildQuickLinkIconMaps(quickLinks: readonly WorkspaceQuickLink[]
 /** @deprecated Use buildQuickLinkIconMaps */
 export const buildSidebarIconMaps = buildQuickLinkIconMaps;
 
-export interface QuickLinkDragState {
-  didDrag: boolean;
-}
-
-/** Navigate on pointerup when the gesture did not activate drag reorder. */
-export function navigateQuickLinkPointerUp(
-  event: PointerEvent | MouseEvent,
-  nodeId: string,
-  pageBase: string | undefined,
-  dragState: QuickLinkDragState,
-): boolean {
-  if (event.button === 2) return false;
-
-  if (dragState.didDrag) {
-    dragState.didDrag = false;
-    return false;
-  }
-
-  if (event.metaKey || event.ctrlKey || event.button === 1) {
-    openStandaloneNodeInNewTab(nodeId, pageBase);
-  } else if (event.shiftKey) {
-    openStandaloneNodeInNewWindow(nodeId, pageBase);
-  } else {
-    navigateStandaloneNode(nodeId, pageBase);
-  }
-  return true;
-}
-
-export function navigateQuickLinkKeyboard(
-  event: { key: string; preventDefault(): void },
-  nodeId: string,
-  pageBase: string | undefined,
-): boolean {
-  if (event.key !== "Enter" && event.key !== " ") return false;
+/** Suppress anchor navigation when dnd-kit emits a synthetic click after reorder. */
+export function suppressNavigationClickAfterDragReorder(
+  event: Pick<MouseEvent, "preventDefault">,
+  dragCompleted: { current: boolean },
+): void {
+  if (!dragCompleted.current) return;
   event.preventDefault();
-  navigateStandaloneNode(nodeId, pageBase);
-  return true;
+  dragCompleted.current = false;
 }
