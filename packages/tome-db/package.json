@@ -19,11 +19,14 @@
     "test": "bun test tests"
   },
   "dependencies": {
+    "imp-execution": "workspace:*",
     "tome-sqlite": "workspace:*",
     "tome-graph-interfaces": "workspace:*",
     "tome-interfaces": "workspace:*",
     "tome-service-interfaces": "workspace:*",
-    "tome-flatfile": "workspace:*"
+    "tome-flatfile": "workspace:*",
+    "tome-imp-sql": "workspace:*",
+    "tome-imp-flatfile": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",

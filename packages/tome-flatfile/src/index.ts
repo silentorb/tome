@@ -5,6 +5,20 @@ export {
   CorpusConflictError,
 } from "./content/composite-store";
 export { createFlatfileModule } from "./module";
+export {
+  FlatfileGraphStore,
+  openFlatfileGraphStore,
+} from "./graph-store";
+export type { FlatfileStoreBackend } from "./graph-store";
+export {
+  expandAllRelationships,
+  expandRelationshipEntry,
+  toDomainRelationship,
+} from "./relationship-expand";
+export type {
+  RelationshipRecordRow,
+  RelationshipProjectionRow,
+} from "./relationship-expand";
 export { relationshipId } from "./relationship-id";
 export { collectSetNodeIds } from "./set-nodes";
 export { LinkResolutionError, resolveAssociationIdForLink } from "./content/resolve-composite-for-link";

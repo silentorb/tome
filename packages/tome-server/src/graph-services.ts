@@ -27,7 +27,7 @@ import {
   labeledRelationshipTypes,
   associationRuleContext,
   searchNodes,
-  listRecentNodesByModifiedAt,
+  recentNodesGraph,
   updateNodeBody,
   updateNodeTitle,
   deleteDatabaseColumn as deleteDatabaseColumnInDb,
@@ -56,6 +56,7 @@ import {
   type TomeWriteContext,
   type GraphDatabase,
   loadWorkspaceFromContent,
+  primaryTypeTitleForInstance,
 } from "tome-db";
 import {
   openContentGraph,
@@ -104,12 +105,12 @@ function buildGraphServices(
   writeCtx: TomeWriteContext,
   contentPath: string,
 ): TomeGraphServices {
-  writeCtx.store.startWatching();
+  writeCtx.graphStore.startWatching();
   const cache = writeCtx.cache as GraphDatabase;
 
   const extensions = new ExtensionServerRuntime(
     contentPath,
-    () => createExtensionGraphQueryServices(cache, contentPath),
+    () => createExtensionGraphQueryServices(writeCtx.graphStore, contentPath),
     () => createExtensionSchemaQueryServices(cache, contentPath),
     () => createExtensionSqlQueryServices(cache),
     () => createExtensionGraphMutateServices(writeCtx),
@@ -350,10 +351,18 @@ function buildGraphServices(
       }));
     },
     listRecent(limit?: number): NodeSummary[] {
-      return listRecentNodesByModifiedAt(cache, limit).map((row) => ({
-        ...row,
-        ...corpusMeta(row.id),
-      }));
+      const cap = Math.max(1, Math.min(limit ?? 20, 100));
+      const executed = writeCtx.graphStore.executeImp(recentNodesGraph(cap));
+      const rows = executed instanceof Promise ? [] : executed.rows;
+      return rows.map((row) => {
+        const id = String(row.id);
+        return {
+          id,
+          title: typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Untitled",
+          primaryTypeTitle: primaryTypeTitleForInstance(cache, id),
+          ...corpusMeta(id),
+        };
+      });
     },
     saveDocument(id: string, document: NodeBodyDocument): boolean {
       return updateNodeBody(writeCtx, id, documentToStorageBody(document));
@@ -490,9 +499,7 @@ function buildGraphServices(
       return extensionsReady.then(() => extensions.bundleEditorModule(extensionId));
     },
     close(): void {
-      writeCtx.store.stopWatching();
-      writeCtx.store.close();
-      writeCtx.cache.close();
+      writeCtx.graphStore.close();
     },
   };
 }

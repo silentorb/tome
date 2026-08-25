@@ -168,3 +168,18 @@ export type {
   TomeGraphServices,
   RelationshipTypeOption,
 } from "./graph-services";
+
+export type {
+  ImpGraph,
+  ImpExecutionBackend,
+  GraphStoreCapabilities,
+  ImpCollectionResult,
+  ExecuteImpContext,
+  TomeCorpusInfo,
+  RelationshipRecordRef,
+  TomeGraphStoreBase,
+  TomeGraphStoreQueryable,
+  StoreChangeEvent,
+  StoreChangeListener,
+} from "./graph-store";
+export { isQueryableGraphStore } from "./graph-store";

@@ -36,6 +36,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Relative event sequencing (timeline) | [tome-sequencing.md](./tome-sequencing.md) |
 | Sequencing constraint resolution | [tome-sequencing-resolution.md](./tome-sequencing-resolution.md) |
 | Multi-corpus editor sessions | [multi-corpus.md](./multi-corpus.md) |
+| Graph store API (Base / Queryable, executeImp) | [graph-store.md](./graph-store.md) |
 
 ## Split of concerns
 

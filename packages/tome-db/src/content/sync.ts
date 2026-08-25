@@ -17,7 +17,6 @@ import {
   invalidateTablePresentationCache,
   invalidateExtensionsCache,
   loadAssociationsFromContent,
-  setTraitProjectionTypes,
   RELATIONSHIPS_SYNC_MARKER,
   ASSOCIATIONS_FILENAME,
   DYNAMIC_PROPERTIES_FILENAME,
@@ -42,6 +41,7 @@ import { GraphDatabase, type TomeQueryCache } from "tome-sqlite";
 import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum-config-fingerprint";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
 import { expandAllRelationships } from "./relationship-sync-expand";
+import { openComposedGraphStore } from "../graph-store/open-graph-store";
 import type { TomeDataStore } from "tome-service-interfaces";
 import type { FlatfileStore, TomeWriteContext } from "./write-context";
 
@@ -394,17 +394,6 @@ export class CacheSync {
  * perspectives, ensure the cache is ready, and wire store→sync subscriptions.
  */
 export function openContentGraph(contentDir: string, dbPath: string): TomeWriteContext {
-  const store = new ContentStore(contentDir);
-  const cache = new GraphDatabase(dbPath, {
-    propertyCodec: {
-      encode: (properties) => encodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
-      decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
-    },
-    memberPerspectives: () =>
-      setTraitProjectionTypes(loadAssociationsFromContent(contentDir)),
-  });
-  const sync = new CacheSync(store, cache);
-  sync.ensureReady();
-  subscribeStoreToCacheSync(store, sync);
-  return { store, sync, cache };
+  const { writeContext } = openComposedGraphStore(contentDir, dbPath);
+  return writeContext;
 }

@@ -16,6 +16,19 @@
         "typescript": "5.8.2",
       },
     },
+    "../imp/packages/imp-execution": {
+      "name": "imp-execution",
+      "version": "0.1.0",
+      "dependencies": {
+        "imp-collection-transforms": "workspace:*",
+        "imp-pathing": "workspace:*",
+        "imp-registry": "workspace:*",
+        "imp-spec": "workspace:*",
+      },
+      "devDependencies": {
+        "typescript": "5.8.2",
+      },
+    },
     "../imp/packages/imp-pathing": {
       "name": "imp-pathing",
       "version": "0.1.0",
@@ -78,8 +91,11 @@
       "name": "tome-db",
       "version": "0.1.0",
       "dependencies": {
+        "imp-execution": "workspace:*",
         "tome-flatfile": "workspace:*",
         "tome-graph-interfaces": "workspace:*",
+        "tome-imp-flatfile": "workspace:*",
+        "tome-imp-sql": "workspace:*",
         "tome-interfaces": "workspace:*",
         "tome-service-interfaces": "workspace:*",
         "tome-sqlite": "workspace:*",
@@ -186,6 +202,19 @@
       "dependencies": {
         "tome-graph-interfaces": "workspace:*",
         "tome-service-interfaces": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "1.2.23",
+        "typescript": "5.8.2",
+      },
+    },
+    "packages/tome-imp-flatfile": {
+      "name": "tome-imp-flatfile",
+      "version": "0.1.0",
+      "dependencies": {
+        "imp-execution": "workspace:*",
+        "tome-flatfile": "workspace:*",
+        "tome-graph-interfaces": "workspace:*",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -1224,6 +1253,8 @@
 
     "imp-collection-transforms": ["imp-collection-transforms@workspace:../imp/packages/imp-collection-transforms"],
 
+    "imp-execution": ["imp-execution@workspace:../imp/packages/imp-execution"],
+
     "imp-pathing": ["imp-pathing@workspace:../imp/packages/imp-pathing"],
 
     "imp-react-flow": ["imp-react-flow@workspace:../imp/packages/imp-react-flow"],
@@ -1655,6 +1686,8 @@
     "tome-graph-interfaces": ["tome-graph-interfaces@workspace:packages/tome-graph-interfaces"],
 
     "tome-http": ["tome-http@workspace:packages/tome-http"],
+
+    "tome-imp-flatfile": ["tome-imp-flatfile@workspace:packages/tome-imp-flatfile"],
 
     "tome-imp-sql": ["tome-imp-sql@workspace:packages/tome-imp-sql"],
 

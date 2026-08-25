@@ -1,30 +1,40 @@
 import type { ContentStore, CompositeStore } from "tome-flatfile";
-import { nodeRelativePath } from "tome-flatfile";
+import { FlatfileGraphStore, nodeRelativePath } from "tome-flatfile";
 import type { TomeQueryCache } from "tome-service-interfaces";
-import type { Properties } from "tome-sqlite";
+import type { TomeGraphStoreQueryable } from "tome-graph-interfaces";
+import type { GraphDatabase, Properties } from "tome-sqlite";
+import { ComposedGraphStore } from "../graph-store/composed-graph-store";
 import { CacheSync, subscribeStoreToCacheSync } from "./sync";
 
 /** Solo or composite flatfile store used by domain write/sync paths. */
 export type FlatfileStore = ContentStore | CompositeStore;
 
 export interface TomeWriteContext {
+  /** Unified graph store facade (Base + Queryable when composed). */
+  graphStore: TomeGraphStoreQueryable;
+  /** Flatfile backend for sync and legacy callers. */
   store: FlatfileStore;
   sync: CacheSync;
+  /** SQLite query cache — prefer graphStore.executeImp for reads. */
   cache: TomeQueryCache;
 }
 
 /**
  * Inject existing store + cache instances, create sync, and wire subscriptions.
- * Prefer {@link openContentGraph} when opening from content/db paths.
+ * Prefer {@link openContentGraph} or {@link openComposedGraphStore} when opening from paths.
  */
 export function openTomeWriteContext(
   store: FlatfileStore,
   cache: TomeQueryCache,
+  graphStore?: TomeGraphStoreQueryable,
 ): TomeWriteContext {
   const sync = new CacheSync(store, cache);
   sync.ensureReady();
   subscribeStoreToCacheSync(store, sync);
-  return { store, sync, cache };
+  const resolvedGraphStore =
+    graphStore ??
+    new ComposedGraphStore(new FlatfileGraphStore(store), cache as GraphDatabase, sync);
+  return { graphStore: resolvedGraphStore, store, sync, cache };
 }
 
 export function syncAfterNodeWrite(ctx: TomeWriteContext, id: string): void {

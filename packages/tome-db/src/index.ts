@@ -402,6 +402,19 @@ export { createExtensionGraphMutateServices } from "./extension-graph-mutate";
 export { createExtensionSchemaQueryServices } from "./extension-schema-query";
 export { createExtensionSqlQueryServices } from "./extension-sql-query";
 export { createExtensionCorpusQueryServices } from "./extension-corpus-query";
+export {
+  ComposedGraphStore,
+  FlatfileQueryableGraphStore,
+  openComposedGraphStore,
+  openFlatfileQueryableGraphStore,
+  runExecuteImp,
+  runExecuteImpSql,
+  recentNodesGraph,
+  typeMembersGraph,
+  standardImpGraphs,
+  standardGraphs,
+} from "./graph-store";
+export type { RunExecuteImpOptions } from "./graph-store";
 export type {
   ExtensionComponentEntry,
   ExtensionComponentKind,
