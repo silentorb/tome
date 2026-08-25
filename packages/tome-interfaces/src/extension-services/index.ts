@@ -10,6 +10,7 @@ export type {
   SchemaQueryTypeTable,
 } from "./schema-query";
 export type { ExtensionSqlQueryServices } from "./sql-query";
+export type { ExtensionExecuteImpServices } from "./execute-imp";
 export type { ExtensionCorpusQueryServices } from "./corpus-query";
 export type {
   ExtensionGraphMutateServices,

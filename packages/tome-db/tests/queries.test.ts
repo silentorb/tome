@@ -61,7 +61,7 @@ describe("queries", () => {
     expect(hits.map((row) => row.id)).toEqual([exactId, longerId]);
   });
 
-  test("searchNodes with includeBody lists title matches before body-only matches", () => {
+  test("performTomeTextSearch lists title matches before body-only matches", () => {
     const titleMatchId = "0000000000000000000000002F";
     const bodyOnlyId = "0000000000000000000000002R";
     seedTestNode(fixture, {
@@ -79,15 +79,13 @@ describe("queries", () => {
       },
     });
 
-    const hits = searchNodes(fixture.ctx.cache, "surreal", 10, undefined, {
-      includeBody: true,
-    });
+    const hits = searchNodes(fixture.ctx.cache, "surreal", 10);
     expect(hits.map((row) => row.id).indexOf(titleMatchId)).toBeLessThan(
       hits.map((row) => row.id).indexOf(bodyOnlyId),
     );
   });
 
-  test("searchNodes matches body when includeBody is enabled", () => {
+  test("performTomeTextSearch matches body text", () => {
     const bodyOnlyId = "0000000000000000000000000N";
     seedTestNode(fixture, {
       id: bodyOnlyId,
@@ -97,15 +95,10 @@ describe("queries", () => {
       },
     });
     const titleOnly = searchNodes(fixture.ctx.cache, "unique-body-marker", 10);
-    expect(titleOnly.some((h) => h.id === bodyOnlyId)).toBe(false);
-
-    const withBody = searchNodes(fixture.ctx.cache, "unique-body-marker", 10, undefined, {
-      includeBody: true,
-    });
-    expect(withBody.some((h) => h.id === bodyOnlyId)).toBe(true);
+    expect(titleOnly.some((h) => h.id === bodyOnlyId)).toBe(true);
   });
 
-  test("searchNodes attaches matchPreview for body matches when includeBody is enabled", () => {
+  test("performTomeTextSearch attaches matchPreview for body-only matches", () => {
     const bodyOnlyId = "0000000000000000000000000Q";
     seedTestNode(fixture, {
       id: bodyOnlyId,
@@ -114,9 +107,7 @@ describe("queries", () => {
         body: "prefix unique-preview-marker suffix",
       },
     });
-    const hits = searchNodes(fixture.ctx.cache, "unique-preview-marker", 10, undefined, {
-      includeBody: true,
-    });
+    const hits = searchNodes(fixture.ctx.cache, "unique-preview-marker", 10);
     const hit = hits.find((h) => h.id === bodyOnlyId);
     expect(hit).toBeDefined();
     expect(hit?.matchPreview).toBeDefined();
@@ -134,9 +125,7 @@ describe("queries", () => {
         body: "body without the search term",
       },
     });
-    const hits = searchNodes(fixture.ctx.cache, "title-only-marker", 10, undefined, {
-      includeBody: true,
-    });
+    const hits = searchNodes(fixture.ctx.cache, "title-only-marker", 10);
     const hit = hits.find((h) => h.id === titleOnlyId);
     expect(hit).toBeDefined();
     expect(hit?.matchPreview).toBeUndefined();

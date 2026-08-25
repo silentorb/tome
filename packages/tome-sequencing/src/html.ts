@@ -17,14 +17,14 @@ export function register(host: HtmlPageBlockHost): void {
     implementationId: IMPLEMENTATION_ID,
     async renderHtml(ctx, data) {
       parseSequencingBlockData(data);
-      if (!ctx.services?.sqlQuery || !ctx.nodeId) {
+      if (!ctx.services?.executeImp || !ctx.nodeId) {
         return `<figure class="tome-sequencing-block"><p>Timeline requires editor host services.</p></figure>`;
       }
       try {
         const layout = await arrangeTimeline({
           pageNodeId: ctx.nodeId,
           blockData: data,
-          sqlQuery: ctx.services.sqlQuery,
+          executeImp: ctx.services.executeImp,
           graphQuery: ctx.services.graphQuery,
           contentDir: ctx.contentDir,
         });

@@ -105,6 +105,16 @@ type GraphStoreCapabilities =
 | Imp execution spec | [`imp/docs/features/execution.md`](../../../imp/docs/features/execution.md) |
 | Legacy store/cache | [`packages/tome-service-interfaces/`](../../packages/tome-service-interfaces/) |
 
+## Migration phases
+
+| Phase | Status | Scope |
+| --- | --- | --- |
+| **1 — Infrastructure** | Done | `TomeGraphStoreBase` / `Queryable`, `ComposedGraphStore`, `tome-imp-flatfile`, `recentNodesGraph`, `typeMembersGraph` |
+| **2 — Read-path migration** | Done | Imp `contains` + `search`; editor search + extensions on `executeImp`; drop `includeBody` toggle; `searchNodesGraph` |
+| **3+ — Remaining cache reads** | Planned | `getNodePageDetail`, table views, graph explorer; public REST `executeImp`; Imp mutations |
+
+Phase 2 removes direct `searchNodes(cache)` and extension `sqlQuery.queryAll` for Imp graphs. Search heuristics (title+body, title-first ranking, `matchPreview` on body-only hits) live in Tome adapters (`performTomeTextSearch`, flatfile `textSearch`).
+
 ## See also
 
 - [tome-db.md](./tome-db.md) — storage and sync

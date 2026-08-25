@@ -11,8 +11,6 @@ import {
   typesWithTrait,
   SET_TRAIT,
 } from "tome-flatfile";
-import type { GraphDatabase } from "tome-sqlite";
-import { setMemberIds } from "./set-membership";
 import { typeMembersGraph } from "./graph-store/standard-graphs";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
@@ -91,100 +89,16 @@ function listEdgesFromStore(
   return edges;
 }
 
-function listIncidentEdgesFromCache(
-  db: GraphDatabase,
-  nodeId: string,
-  nodeIdSet: Set<string>,
-  typeSet: Set<string> | null,
-): GraphQueryEdge[] {
-  const incident = [
-    ...db.listRelationshipsFromSource(nodeId),
-    ...db.listRelationshipsToTarget(nodeId),
-  ];
-  const seen = new Set<string>();
-  const edges: GraphQueryEdge[] = [];
-
-  for (const relationship of incident) {
-    if (seen.has(relationship.id)) continue;
-    seen.add(relationship.id);
-
-    const sourceId = relationship.sourceNodeId;
-    const targetId = relationship.targetNodeId;
-    if (!nodeIdSet.has(sourceId) || !nodeIdSet.has(targetId)) continue;
-    if (typeSet && !typeSet.has(relationship.type)) continue;
-
-    edges.push({
-      id: relationship.id,
-      sourceId,
-      targetId,
-      type: relationship.type,
-      properties: relationship.properties,
-    });
-  }
-
-  return edges;
-}
-
-/** @deprecated Pass TomeGraphStoreQueryable — cache-only overload for tests. */
-export function createExtensionGraphQueryServices(
-  db: GraphDatabase,
-  contentDir?: string,
-): ExtensionGraphQueryServices;
-
 export function createExtensionGraphQueryServices(
   graphStore: TomeGraphStoreQueryable,
   contentDir?: string,
-): ExtensionGraphQueryServices;
-
-export function createExtensionGraphQueryServices(
-  storeOrCache: TomeGraphStoreQueryable | GraphDatabase,
-  contentDir?: string,
 ): ExtensionGraphQueryServices {
-  if ("capabilities" in storeOrCache && storeOrCache.capabilities.queryable) {
-    const store = storeOrCache;
-    return {
-      listTypeMembers(typeId: string) {
-        return listTypeMembersFromStore(store, typeId, contentDir);
-      },
-      listEdges(options) {
-        return listEdgesFromStore(store, options);
-      },
-    };
-  }
-
-  const db = storeOrCache as GraphDatabase;
   return {
-    listTypeMembers(typeId: string): GraphQueryNode[] {
-      const members: GraphQueryNode[] = [];
-      for (const memberId of setMemberIds(db, typeId, contentDir)) {
-        if (db.isNodeArchived(memberId)) continue;
-        members.push({
-          id: memberId,
-          title: titleFromProperties(db.getNode(memberId)?.properties ?? {}),
-        });
-      }
-      members.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
-      return members;
+    listTypeMembers(typeId: string) {
+      return listTypeMembersFromStore(graphStore, typeId, contentDir);
     },
-
-    listEdges(options: {
-      nodeIds: readonly string[];
-      types?: readonly string[];
-    }): GraphQueryEdge[] {
-      const nodeIdSet = new Set(options.nodeIds);
-      const typeSet = options.types?.length ? new Set(options.types) : null;
-      const seen = new Set<string>();
-      const edges: GraphQueryEdge[] = [];
-
-      for (const nodeId of options.nodeIds) {
-        for (const edge of listIncidentEdgesFromCache(db, nodeId, nodeIdSet, typeSet)) {
-          if (seen.has(edge.id)) continue;
-          seen.add(edge.id);
-          edges.push(edge);
-        }
-      }
-
-      return edges;
+    listEdges(options) {
+      return listEdgesFromStore(graphStore, options);
     },
   };
 }

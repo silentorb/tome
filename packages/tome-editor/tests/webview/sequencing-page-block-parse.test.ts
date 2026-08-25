@@ -7,7 +7,7 @@ import { gfm } from "@milkdown/preset-gfm";
 import {
   attachPageBlockEditorHtml,
   createExtensionGraphQueryServices,
-  createExtensionSqlQueryServices,
+  createExtensionExecuteImpServices,
   openContentGraph,
   storageBodyToDocument,
 } from "tome-db";
@@ -29,9 +29,9 @@ describe("Arcs sequencing page-block parse", () => {
     const graph = openContentGraph(contentPath, "/tmp/seq-parse.sqlite");
     const runtime = new ExtensionServerRuntime(
       contentPath,
-      () => createExtensionGraphQueryServices(graph.cache, contentPath),
+      () => createExtensionGraphQueryServices(graph.graphStore, contentPath),
       undefined,
-      () => createExtensionSqlQueryServices(graph.cache),
+      () => createExtensionExecuteImpServices(graph.graphStore),
     );
     await runtime.ensureLoaded();
 

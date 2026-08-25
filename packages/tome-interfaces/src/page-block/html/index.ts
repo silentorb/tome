@@ -1,7 +1,7 @@
+import type { ExtensionExecuteImpServices } from "../../extension-services/execute-imp";
 import type { ExtensionGraphQueryServices } from "../../extension-services/graph-query";
 import type { ExtensionSchemaQueryServices } from "../../extension-services/schema-query";
 import type { ExtensionCorpusQueryServices } from "../../extension-services/corpus-query";
-import type { ExtensionSqlQueryServices } from "../../extension-services/sql-query";
 import type { PageBlockComponentRef } from "../types";
 
 export type HtmlPageBlockRenderMode = "editor" | "static";
@@ -15,7 +15,7 @@ export interface HtmlPageBlockContext {
   services?: {
     graphQuery?: ExtensionGraphQueryServices;
     schemaQuery?: ExtensionSchemaQueryServices;
-    sqlQuery?: ExtensionSqlQueryServices;
+    executeImp?: ExtensionExecuteImpServices;
     corpusQuery?: ExtensionCorpusQueryServices;
     nodePageHref?: (nodeId: string) => string;
     spatialGraph?: {

@@ -9,9 +9,12 @@ import {
 } from "../src/config";
 import {
   applyLiveNodesConstraint,
+  compileImpGraphToTomeSql,
   projectionType,
   tomeNodesColumnExpression,
+  type TomeCorpusLookup,
 } from "tome-imp-sql";
+import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
 import {
   compileReactFlowQuery,
   ensureIdentityTitleProjection,
@@ -35,6 +38,31 @@ const MARLOTH_LIKE_SCHEMA: SchemaFile = {
     },
   },
 };
+
+function sqliteExecuteImp(
+  db: Database,
+  options?: {
+    schema?: SchemaFile;
+    pageNodeId?: string;
+    corpus?: TomeCorpusLookup;
+  },
+): ExtensionExecuteImpServices {
+  return {
+    executeImp(graph, context) {
+      const compiled = compileImpGraphToTomeSql(graph, {
+        schema: options?.schema,
+        pageNodeId: context?.pageNodeId ?? options?.pageNodeId,
+        corpus: options?.corpus,
+      });
+      const sql = ensureTitleColumnInSelectStar(compiled.sql);
+      const constrained = applyLiveNodesConstraint(sql, compiled.parameters);
+      const rows = db
+        .prepare(constrained.sql)
+        .all(...(constrained.parameters as never[])) as Record<string, unknown>[];
+      return { columns: rows[0] ? Object.keys(rows[0]) : ["id"], rows };
+    },
+  };
+}
 
 describe("tome-query config", () => {
   test("default block data has input → output react flow graph", () => {
@@ -369,11 +397,7 @@ describe("tome-query compile + execute", () => {
     ]);
 
     const table = await executeQueryBlock(
-      {
-        queryAll(sql, params = []) {
-          return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
-        },
-      },
+      sqliteExecuteImp(db),
       defaultReactFlowGraph(),
     );
 
@@ -444,21 +468,14 @@ describe("tome-query compile + execute", () => {
     };
 
     const table = await executeQueryBlock(
-      {
-        queryAll(sql, params = []) {
-          return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
-        },
-      },
-      reactFlow,
-      undefined,
-      undefined,
-      {
+      sqliteExecuteImp(db, {
         pageNodeId: "home",
-        lookup: {
+        corpus: {
           corpusIdForNode: (id) => (id === "home" ? "translucence" : null),
           nodeIdsInCorpus: (corpusId) => (corpusId === "translucence" ? ["tl1"] : ["ml1"]),
         },
-      },
+      }),
+      reactFlow,
     );
 
     const ids = table.rows.map((row) => row.id);
@@ -519,11 +536,7 @@ describe("tome-query compile + execute", () => {
       ],
     };
     const table = await executeQueryBlock(
-      {
-        queryAll(sql, params = []) {
-          return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
-        },
-      },
+      sqliteExecuteImp(db),
       reactFlow,
     );
     expect(table.columns).toEqual(["title"]);
@@ -683,11 +696,7 @@ describe("tome-query compile + execute", () => {
     };
 
     const table = await executeQueryBlock(
-      {
-        queryAll(sql, params = []) {
-          return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
-        },
-      },
+      sqliteExecuteImp(db),
       reactFlow,
     );
 
@@ -831,11 +840,7 @@ describe("tome-query compile + execute", () => {
     };
 
     const table = await executeQueryBlock(
-      {
-        queryAll(sql, params = []) {
-          return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
-        },
-      },
+      sqliteExecuteImp(db),
       reactFlow,
     );
 
@@ -931,16 +936,15 @@ describe("tome-query compile + execute", () => {
       ],
     };
 
-    const sqlQuery = {
-      queryAll(sql: string, params: unknown[] = []) {
-        return db.prepare(sql).all(...(params as never[])) as Record<string, unknown>[];
-      },
-    };
-
-    const withoutSchema = await executeQueryBlock(sqlQuery, reactFlow);
+    const withoutSchema = await executeQueryBlock(sqliteExecuteImp(db), reactFlow);
     expect(withoutSchema.rows.map((row) => row.id).sort()).toEqual(["consideration", "regular"]);
 
-    const withSchema = await executeQueryBlock(sqlQuery, reactFlow, undefined, MARLOTH_LIKE_SCHEMA);
+    const withSchema = await executeQueryBlock(
+      sqliteExecuteImp(db, { schema: MARLOTH_LIKE_SCHEMA }),
+      reactFlow,
+      undefined,
+      MARLOTH_LIKE_SCHEMA,
+    );
     expect(withSchema.rows.map((row) => row.id)).toEqual(["regular"]);
   });
 });

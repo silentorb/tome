@@ -1,7 +1,7 @@
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
 import type { ExtensionCorpusQueryServices } from "tome-interfaces/extension-services/corpus-query";
-import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
+import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
 import {
   replacePageBlockFencesWithPlaceholders,
   substitutePageBlockPlaceholders,
@@ -31,7 +31,7 @@ export interface PageBlockHtmlContext {
   contentDir: string;
   graphQuery?: ExtensionGraphQueryServices;
   schemaQuery?: ExtensionSchemaQueryServices;
-  sqlQuery?: ExtensionSqlQueryServices;
+  executeImp?: ExtensionExecuteImpServices;
   corpusQuery?: ExtensionCorpusQueryServices;
   spatialGraph?: SpatialGraphPageBlockServices;
   schemaDiagram?: SchemaDiagramPageBlockServices;
@@ -46,7 +46,7 @@ export function createPageBlockHtmlContext(
   spatialGraph?: SpatialGraphPageBlockServices,
   schemaQuery?: ExtensionSchemaQueryServices,
   schemaDiagram?: SchemaDiagramPageBlockServices,
-  sqlQuery?: ExtensionSqlQueryServices,
+  executeImp?: ExtensionExecuteImpServices,
   corpusQuery?: ExtensionCorpusQueryServices,
 ): PageBlockHtmlContext {
   return {
@@ -58,7 +58,7 @@ export function createPageBlockHtmlContext(
     spatialGraph,
     schemaQuery,
     schemaDiagram,
-    sqlQuery,
+    executeImp,
     corpusQuery,
   };
 }
@@ -86,7 +86,7 @@ async function renderBlockHtml(
       services: {
         graphQuery: ctx.graphQuery,
         schemaQuery: ctx.schemaQuery,
-        sqlQuery: ctx.sqlQuery,
+        executeImp: ctx.executeImp,
         corpusQuery: ctx.corpusQuery,
         nodePageHref: (targetNodeId) => urls.pagePath(targetNodeId),
         ...(ctx.spatialGraph ? { spatialGraph: ctx.spatialGraph } : {}),

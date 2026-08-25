@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
 import type { ExtensionGraphMutateServices } from "tome-interfaces/extension-services/graph-mutate";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
-import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
+import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
 import { mutateTimelineDepends } from "../src/depends";
 import { invalidateSequencingCache } from "../src/sequencing-file";
 
@@ -48,6 +48,20 @@ function emptyMutate(
   };
 }
 
+function emptyExecuteImp(): ExtensionExecuteImpServices {
+  return {
+    executeImp: async () => ({ columns: ["id"], rows: [] }),
+  };
+}
+
+function boomExecuteImp(): ExtensionExecuteImpServices {
+  return {
+    executeImp: async () => {
+      throw new Error("query boom");
+    },
+  };
+}
+
 describe("mutateTimelineDepends", () => {
   test("rejects a self-loop without mutating", async () => {
     const calls: unknown[] = [];
@@ -69,7 +83,7 @@ describe("mutateTimelineDepends", () => {
       from: "end",
       to: "start",
       blockData: { version: 1, reactFlow: { nodes: [], edges: [] } },
-      sqlQuery: { queryAll: async () => [] },
+      executeImp: emptyExecuteImp(),
       graphQuery: {
         listTypeMembers: () => [],
         listEdges: () => [],
@@ -90,11 +104,7 @@ describe("mutateTimelineDepends", () => {
         return null;
       },
     });
-    const sqlQuery: ExtensionSqlQueryServices = {
-      queryAll: async () => {
-        throw new Error("query boom");
-      },
-    };
+    const executeImp = boomExecuteImp();
     let listCount = 0;
     const createdEdge = {
       id: "edge-1",
@@ -118,7 +128,7 @@ describe("mutateTimelineDepends", () => {
       from: "end",
       to: "start",
       blockData: { version: 1, reactFlow: { nodes: [], edges: [] } },
-      sqlQuery,
+      executeImp,
       graphQuery,
       graphMutate,
       contentDir: writeSequencingDir(),
@@ -171,11 +181,7 @@ describe("mutateTimelineDepends", () => {
       from: "end",
       to: "end",
       blockData: { version: 1, reactFlow: { nodes: [], edges: [] } },
-      sqlQuery: {
-        queryAll: async () => {
-          throw new Error("query boom");
-        },
-      },
+      executeImp: boomExecuteImp(),
       graphQuery,
       graphMutate,
       contentDir: writeSequencingDir(),
@@ -219,11 +225,7 @@ describe("mutateTimelineDepends", () => {
       from: "end",
       to: "start",
       blockData: { version: 1, reactFlow: { nodes: [], edges: [] } },
-      sqlQuery: {
-        queryAll: async () => {
-          throw new Error("query boom");
-        },
-      },
+      executeImp: boomExecuteImp(),
       graphQuery: {
         listTypeMembers: () => [],
         listEdges: () => {
@@ -271,11 +273,7 @@ describe("mutateTimelineDepends", () => {
       from: "start",
       to: "start",
       blockData: { version: 1, reactFlow: { nodes: [], edges: [] } },
-      sqlQuery: {
-        queryAll: async () => {
-          throw new Error("query boom");
-        },
-      },
+      executeImp: boomExecuteImp(),
       graphQuery: {
         listTypeMembers: () => [],
         listEdges: () => [

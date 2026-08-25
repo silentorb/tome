@@ -67,8 +67,8 @@ export function register(host: ServerPageBlockHost): void {
       const data = "data" in record ? record.data : record;
       const parameters = parseParameterOverrides(record.parameters);
 
-      if (!ctx.services.sqlQuery) {
-        return { ok: false, error: "sqlQuery host service is not available" };
+      if (!ctx.services.executeImp) {
+        return { ok: false, error: "executeImp host service is not available" };
       }
 
       if (action === "addDepends" || action === "removeDepends") {
@@ -95,7 +95,7 @@ export function register(host: ServerPageBlockHost): void {
             from: endpoints.from,
             to: endpoints.to,
             blockData: data,
-            sqlQuery: ctx.services.sqlQuery,
+            executeImp: ctx.services.executeImp,
             graphQuery: ctx.services.graphQuery,
             graphMutate: ctx.services.graphMutate,
             parameters,
@@ -111,7 +111,7 @@ export function register(host: ServerPageBlockHost): void {
         const layout = await arrangeTimeline({
           pageNodeId,
           blockData: data,
-          sqlQuery: ctx.services.sqlQuery,
+          executeImp: ctx.services.executeImp,
           graphQuery: ctx.services.graphQuery,
           parameters,
         });

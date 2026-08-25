@@ -49,6 +49,7 @@ export interface ImpCollectionResult {
 export interface ExecuteImpContext {
   pageNodeId?: string;
   parameters?: Record<string, unknown>;
+  allowedTypeIds?: readonly string[];
 }
 
 export interface TomeCorpusInfo {

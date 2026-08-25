@@ -88,11 +88,42 @@ export function typeMembersGraph(setNodeId: string, setProjectionType: string): 
   };
 }
 
-/** Title substring search — requires SQL backend (LIKE); not valid for execute backend yet. */
-export function searchNodesGraph(pattern: string, limit: number): ImpGraph {
-  void pattern;
-  void limit;
-  throw new Error("searchNodesGraph requires a matches/like Imp operator; use cache searchNodes for now");
+/** Title search via declarative `search` transform — host adapter applies heuristics. */
+export function searchNodesGraph(limit: number): ImpGraph {
+  const queryParam = "query_param";
+  const search = "search";
+  const limitId = "limit";
+  const project = "project";
+  const output = "output";
+  return {
+    nodes: {
+      input: { id: "input", type: "input", inputs: {} },
+      [queryParam]: {
+        id: queryParam,
+        type: "parameter",
+        inputs: { label: "query", value: "" },
+      },
+      [search]: { id: search, type: "search", inputs: {} },
+      [limitId]: {
+        id: limitId,
+        type: "limit",
+        inputs: { count: limit },
+      },
+      project: {
+        id: project,
+        type: "project",
+        inputs: { columns: "id,title" },
+      },
+      [output]: { id: output, type: "output", inputs: {} },
+    },
+    edges: {
+      e1: edge("input", "value", search, "collection"),
+      e2: edge(queryParam, "value", search, "query"),
+      e3: edge(search, "collection", limitId, "collection"),
+      e4: edge(limitId, "collection", project, "collection"),
+      e5: edge(project, "collection", output, "value"),
+    },
+  };
 }
 
 export const standardImpGraphs = {

@@ -22,7 +22,6 @@ export interface NodeDetail extends NodeSummary {
 }
 
 export interface SearchNodesOptions {
-  includeBody?: boolean;
   /** Editor active corpus; used to decide which hits get corpusLabel. */
   activeCorpusId?: string;
 }

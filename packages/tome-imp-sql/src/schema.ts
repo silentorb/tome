@@ -47,6 +47,17 @@ const tomeLiveNodesSchemaBase = {
     if (direction !== 0 && direction !== 1) {
       throw new Error(`direction must be 0 or 1, got ${String(direction)}`);
     }
+    const trimmed = association.trim();
+    const encoded = /^([0-9A-HJKMNP-TV-Z]{26}):([01])$/.exec(trimmed);
+    if (encoded) {
+      const encodedDir = Number(encoded[2]) as 0 | 1;
+      if (encodedDir !== direction) {
+        throw new Error(
+          `traverse direction ${direction} does not match encoded projection "${trimmed}"`,
+        );
+      }
+      return trimmed;
+    }
     return projectionType(association, direction as 0 | 1);
   },
 } satisfies RelationalSchema;

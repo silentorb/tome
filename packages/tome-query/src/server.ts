@@ -45,7 +45,7 @@ export function register(host: ServerPageBlockHost): void {
       const parsed = parseQueryBlockData(data);
       try {
         const table = await executeQueryBlock(
-          ctx.services.sqlQuery,
+          ctx.services.executeImp,
           parsed.reactFlow,
           parameters,
           schemaFromEnv(),

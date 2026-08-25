@@ -12,13 +12,13 @@ export function register(host: HtmlPageBlockHost): void {
     implementationId: IMPLEMENTATION_ID,
     async renderHtml(ctx, data) {
       const parsed = parseQueryBlockData(data);
-      if (!ctx.services?.sqlQuery) {
+      if (!ctx.services?.executeImp) {
         return renderQueryPlaceholderHtml("Query results require the editor or static-site host.");
       }
       try {
         const schema = ctx.contentDir ? loadSchemaFromContent(ctx.contentDir) : undefined;
         const table = await executeQueryBlock(
-          ctx.services.sqlQuery,
+          ctx.services.executeImp,
           parsed.reactFlow,
           undefined,
           schema,

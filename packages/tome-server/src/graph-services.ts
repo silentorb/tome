@@ -12,7 +12,7 @@ import {
   createExtensionGraphQueryServices,
   createExtensionGraphMutateServices,
   createExtensionSchemaQueryServices,
-  createExtensionSqlQueryServices,
+  createExtensionExecuteImpServices,
   createExtensionCorpusQueryServices,
   getDatabaseViewDetail,
   getNodePageDetail,
@@ -26,8 +26,8 @@ import {
   loadAssociationsFromContent,
   labeledRelationshipTypes,
   associationRuleContext,
-  searchNodes,
   recentNodesGraph,
+  searchNodesGraph,
   updateNodeBody,
   updateNodeTitle,
   deleteDatabaseColumn as deleteDatabaseColumnInDb,
@@ -112,7 +112,7 @@ function buildGraphServices(
     contentPath,
     () => createExtensionGraphQueryServices(writeCtx.graphStore, contentPath),
     () => createExtensionSchemaQueryServices(cache, contentPath),
-    () => createExtensionSqlQueryServices(cache),
+    () => createExtensionExecuteImpServices(writeCtx.graphStore),
     () => createExtensionGraphMutateServices(writeCtx),
     () => createExtensionCorpusQueryServices(writeCtx.store),
   );
@@ -180,8 +180,9 @@ function buildGraphServices(
           ?.contentDir ?? contentPath;
       const home = getNodePageDetail(cache, ws.homeNodeId, { contentDir });
       if (home) return ws.homeNodeId;
-      const recent = searchNodes(cache, "", 1);
-      return recent[0]?.id ?? ws.homeNodeId;
+      const recent = writeCtx.graphStore.executeImp(recentNodesGraph(1));
+      const rows = recent instanceof Promise ? [] : recent.rows;
+      return rows[0]?.id ? String(rows[0].id) : ws.homeNodeId;
     },
     async getNode(
       id: string,
@@ -343,12 +344,25 @@ function buildGraphServices(
       allowedTypeIds?: string[],
       options?: SearchNodesOptions,
     ): NodeSummary[] {
-      return searchNodes(cache, query, limit, allowedTypeIds, {
-        includeBody: options?.includeBody,
-      }).map((row) => ({
-        ...row,
-        ...corpusMeta(row.id, options?.activeCorpusId),
-      }));
+      const cap = Math.max(1, Math.min(limit ?? 20, 100));
+      const executed = writeCtx.graphStore.executeImp(searchNodesGraph(cap), {
+        parameters: { query },
+        allowedTypeIds,
+      });
+      const rows = executed instanceof Promise ? [] : executed.rows;
+      return rows.map((row) => {
+        const id = String(row.id);
+        const title =
+          typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Untitled";
+        const matchPreview = row.matchPreview as NodeSummary["matchPreview"];
+        return {
+          id,
+          title,
+          primaryTypeTitle: primaryTypeTitleForInstance(cache, id),
+          ...(matchPreview ? { matchPreview } : {}),
+          ...corpusMeta(id, options?.activeCorpusId),
+        };
+      });
     },
     listRecent(limit?: number): NodeSummary[] {
       const cap = Math.max(1, Math.min(limit ?? 20, 100));

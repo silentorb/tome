@@ -23,10 +23,6 @@ export interface TableSortSpec {
   orderBy: SortColumn[];
 }
 
-export interface GlobalSearchSettings {
-  includeBody?: boolean;
-}
-
 export interface SidebarSettings {
   recentMaxItems?: number;
 }
@@ -51,7 +47,6 @@ export interface UserSettings {
    * Inner key: parameter node id → value.
    */
   blockParameters?: Record<string, Record<string, BlockParameterValue>>;
-  globalSearch?: GlobalSearchSettings;
   sidebar?: SidebarSettings;
   sequencing?: SequencingSettings;
 }
@@ -61,7 +56,6 @@ export type UserSettingsPatch = {
   tableTabs?: Record<string, string | null>;
   /** Per-block map patches; inner `null` deletes a param; outer `null` clears the block. */
   blockParameters?: Record<string, Record<string, BlockParameterValue | null> | null>;
-  globalSearch?: GlobalSearchSettings | null;
   sidebar?: SidebarSettings | null;
   sequencing?: SequencingSettings | null;
 };
@@ -75,10 +69,6 @@ export const DEFAULT_TABLE_SORT: TableSortSpec = {
 
 export function emptyUserSettings(): UserSettings {
   return { version: USER_SETTINGS_VERSION };
-}
-
-export function globalSearchIncludeBody(settings: UserSettings): boolean {
-  return settings.globalSearch?.includeBody === true;
 }
 
 export function sequencingShowDependencyEdges(settings: UserSettings): boolean {
@@ -100,13 +90,6 @@ function normalizeSidebar(value: SidebarSettings | undefined): SidebarSettings |
   const recentMaxItems = sidebarRecentMaxItems({ version: USER_SETTINGS_VERSION, sidebar: value });
   if (recentMaxItems === DEFAULT_SIDEBAR_RECENT_MAX_ITEMS) return undefined;
   return { recentMaxItems };
-}
-
-function normalizeGlobalSearch(
-  value: GlobalSearchSettings | undefined,
-): GlobalSearchSettings | undefined {
-  if (!value || value.includeBody !== true) return undefined;
-  return { includeBody: true };
 }
 
 function normalizeSequencing(
@@ -340,7 +323,6 @@ export function applyUserSettingsPatch(
           Object.entries(current.blockParameters).map(([key, map]) => [key, { ...map }]),
         )
       : undefined,
-    globalSearch: current.globalSearch ? { ...current.globalSearch } : undefined,
     sidebar: current.sidebar ? { ...current.sidebar } : undefined,
     sequencing: current.sequencing ? { ...current.sequencing } : undefined,
   };
@@ -401,19 +383,6 @@ export function applyUserSettingsPatch(
     }
     if (Object.keys(next.blockParameters).length === 0) {
       delete next.blockParameters;
-    }
-  }
-
-  if (patch.globalSearch !== undefined) {
-    if (patch.globalSearch === null) {
-      delete next.globalSearch;
-    } else {
-      const normalized = normalizeGlobalSearch(patch.globalSearch);
-      if (normalized) {
-        next.globalSearch = normalized;
-      } else {
-        delete next.globalSearch;
-      }
     }
   }
 
@@ -490,14 +459,6 @@ export function parseUserSettings(raw: unknown): UserSettings {
     }
     if (Object.keys(parsed).length > 0) {
       settings.blockParameters = parsed;
-    }
-  }
-
-  const globalSearch = record.globalSearch;
-  if (globalSearch && typeof globalSearch === "object" && !Array.isArray(globalSearch)) {
-    const normalized = normalizeGlobalSearch(globalSearch as GlobalSearchSettings);
-    if (normalized) {
-      settings.globalSearch = normalized;
     }
   }
 

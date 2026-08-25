@@ -97,7 +97,7 @@ describe("GlobalSearch", () => {
     expect(link.getAttribute("href")).toContain("node=AAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 
-  test("shows body match preview when search node contents is enabled", async () => {
+  test("shows body match preview when adapter returns matchPreview", async () => {
     const search = mock(async () => resultsWithPreview);
     const api = makeApi(resultsWithPreview, { search });
 
@@ -106,11 +106,6 @@ describe("GlobalSearch", () => {
       open: true,
       onOpenChange: () => {},
     });
-
-    const checkbox = container.querySelector(
-      ".tome-global-search-config-item input",
-    ) as HTMLInputElement;
-    fireEvent.click(checkbox);
 
     await waitFor(() => {
       expect(container.querySelector(".tome-global-search-preview")).toBeTruthy();
@@ -120,46 +115,18 @@ describe("GlobalSearch", () => {
     expect(preview?.querySelector("strong")?.textContent).toBe("needle");
   });
 
-  test("hides body match preview when search node contents is disabled", async () => {
-    const search = mock(async () => resultsWithPreview);
-    const api = makeApi(resultsWithPreview, { search });
-
-    const { container } = renderGlobalSearch({
-      api,
-      open: true,
-      onOpenChange: () => {},
-    });
-
-    await waitFor(() => {
-      expect(container.querySelector(".tome-global-search-title")).toBeTruthy();
-    });
-
-    expect(container.querySelector(".tome-global-search-preview")).toBeNull();
-  });
-
-  test("passes includeBody when search node contents is enabled", async () => {
+  test("calls search without includeBody option", async () => {
     const search = mock(async () => sampleResults);
     const api = makeApi(sampleResults, { search });
 
-    const { container } = renderGlobalSearch({
+    renderGlobalSearch({
       api,
       open: true,
       onOpenChange: () => {},
     });
 
     await waitFor(() => {
-      expect(search).toHaveBeenCalled();
-    });
-
-    const checkbox = container.querySelector(
-      ".tome-global-search-config-item input",
-    ) as HTMLInputElement;
-    expect(checkbox.checked).toBe(false);
-
-    fireEvent.click(checkbox);
-
-    await waitFor(() => {
-      expect(search).toHaveBeenCalledWith("", 25, undefined, { includeBody: true });
+      expect(search).toHaveBeenCalledWith("", 25);
     });
   });
 

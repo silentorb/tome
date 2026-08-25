@@ -154,5 +154,34 @@ export function createFlatfileExecutionHost(
       }
       return out;
     },
+
+    textSearch(rows: ExecutionRow[], query: string): ExecutionRow[] {
+      const trimmed = query.trim().toLowerCase();
+      if (!trimmed) return rows;
+
+      const titleHits: ExecutionRow[] = [];
+      const bodyHits: ExecutionRow[] = [];
+      const seen = new Set<string>();
+
+      for (const row of rows) {
+        const title = String(row.properties.title ?? "");
+        const body = String(row.properties.body ?? "");
+        const titleMatch = title.toLowerCase().includes(trimmed);
+        const bodyMatch = body.toLowerCase().includes(trimmed);
+        if (titleMatch) {
+          if (!seen.has(row.id)) {
+            seen.add(row.id);
+            titleHits.push(row);
+          }
+          continue;
+        }
+        if (bodyMatch && !seen.has(row.id)) {
+          seen.add(row.id);
+          bodyHits.push(row);
+        }
+      }
+
+      return [...titleHits, ...bodyHits];
+    },
   };
 }

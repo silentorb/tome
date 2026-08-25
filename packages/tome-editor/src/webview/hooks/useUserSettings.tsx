@@ -15,7 +15,6 @@ import {
   blockParametersForKey,
   blockParametersKey,
   emptyUserSettings,
-  globalSearchIncludeBody,
   sidebarRecentMaxItems,
   sequencingShowDependencyEdges,
   isDefaultTableSort,
@@ -56,8 +55,6 @@ interface UserSettingsContextValue {
   getBlockParametersRevision: () => number;
   sequencingShowDependencyEdges: boolean;
   setSequencingShowDependencyEdges: (value: boolean) => void;
-  globalSearchIncludeBody: boolean;
-  setGlobalSearchIncludeBody: (includeBody: boolean) => void;
   sidebarRecentMaxItems: number;
 }
 
@@ -144,20 +141,6 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
     [getTableSort, persistTableSort],
   );
 
-  const setGlobalSearchIncludeBody = useCallback(
-    (includeBody: boolean) => {
-      const patch = { globalSearch: includeBody ? { includeBody: true as const } : null };
-      setSettings((current) => {
-        const next = applyUserSettingsPatch(current, patch);
-        void api.patchUserSettings(patch).catch(() => {
-          /* keep optimistic local state */
-        });
-        return next;
-      });
-    },
-    [api],
-  );
-
   const getTableTab = useCallback(
     (tabKey: string): string | undefined => tableTabOverrideForKey(settings, tabKey),
     [settings],
@@ -238,8 +221,6 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
       getBlockParametersRevision,
       sequencingShowDependencyEdges: sequencingShowDependencyEdges(settings),
       setSequencingShowDependencyEdges,
-      globalSearchIncludeBody: globalSearchIncludeBody(settings),
-      setGlobalSearchIncludeBody,
       sidebarRecentMaxItems: sidebarRecentMaxItems(settings),
     }),
     [
@@ -256,7 +237,6 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
       setBlockParameter,
       getBlockParametersRevision,
       setSequencingShowDependencyEdges,
-      setGlobalSearchIncludeBody,
     ],
   );
 

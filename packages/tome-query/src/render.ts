@@ -1,8 +1,8 @@
 import type { ExtensionCorpusQueryServices } from "tome-interfaces/extension-services/corpus-query";
-import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
+import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
 import type { ReactFlowGraph } from "imp-react-flow";
 import type { SchemaFile } from "tome-flatfile/schema-file";
-import { compileReactFlowQuery, rowsToTable, type QueryResultTable } from "./execute";
+import { buildQueryImpGraph, rowsToTable, type QueryResultTable } from "./execute";
 import { parseQueryBlockData } from "./config";
 import {
   bindGraphParameters,
@@ -12,35 +12,40 @@ import {
 import { queryNodePageHref } from "./node-links";
 
 export async function executeQueryBlock(
-  sqlQuery: ExtensionSqlQueryServices | undefined,
+  executeImp: ExtensionExecuteImpServices | undefined,
   reactFlow: ReactFlowGraph,
   parameters?: Record<string, GraphParameterValue>,
   schema?: SchemaFile,
   corpus?: { pageNodeId?: string; lookup?: ExtensionCorpusQueryServices },
 ): Promise<QueryResultTable> {
-  if (!sqlQuery) {
-    throw new Error("sqlQuery host service is not available");
+  if (!executeImp) {
+    throw new Error("executeImp host service is not available");
   }
   const values = resolveGraphParameterValues(reactFlow, parameters);
   const bound = bindGraphParameters(reactFlow, values);
-  const { sql, parameters: sqlParams } = compileReactFlowQuery(bound, {
+  const graph = buildQueryImpGraph(bound, {
     schema,
     pageNodeId: corpus?.pageNodeId,
     corpus: corpus?.lookup,
   });
-  const rows = await sqlQuery.queryAll(sql, sqlParams);
-  return rowsToTable(rows);
+  const executed = await Promise.resolve(
+    executeImp.executeImp(graph, {
+      pageNodeId: corpus?.pageNodeId,
+      parameters: values,
+    }),
+  );
+  return rowsToTable(executed.rows);
 }
 
 export async function executeQueryBlockData(
-  sqlQuery: ExtensionSqlQueryServices | undefined,
+  executeImp: ExtensionExecuteImpServices | undefined,
   data: unknown,
   parameters?: Record<string, GraphParameterValue>,
   schema?: SchemaFile,
   corpus?: { pageNodeId?: string; lookup?: ExtensionCorpusQueryServices },
 ): Promise<QueryResultTable> {
   const parsed = parseQueryBlockData(data);
-  return executeQueryBlock(sqlQuery, parsed.reactFlow, parameters, schema, corpus);
+  return executeQueryBlock(executeImp, parsed.reactFlow, parameters, schema, corpus);
 }
 
 export function escapeHtml(value: string): string {

@@ -165,7 +165,7 @@ export interface TomeHttpClient {
     query: string,
     limit?: number,
     allowedTypeIds?: string[],
-    options?: { includeBody?: boolean; activeCorpusId?: string },
+    options?: { activeCorpusId?: string },
   ): Promise<NodeSummary[]>;
   listRecent(limit?: number): Promise<NodeSummary[]>;
   saveNode(

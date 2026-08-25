@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EditorApi } from "../api/client";
 import type { NodeSummary } from "../../shared/types";
-import { useUserSettings } from "../hooks/useUserSettings";
 import { nodePageHref } from "../node-links";
 import { CorpusSuffix } from "./CorpusSuffix";
 import "./global-search.css";
@@ -13,7 +12,6 @@ interface GlobalSearchProps {
 }
 
 export function GlobalSearch({ api, open, onOpenChange }: GlobalSearchProps) {
-  const { globalSearchIncludeBody, setGlobalSearchIncludeBody } = useUserSettings();
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -53,9 +51,7 @@ export function GlobalSearch({ api, open, onOpenChange }: GlobalSearchProps) {
       setLoading(true);
       setError(null);
       void api
-        .search(query, 25, undefined, {
-          includeBody: globalSearchIncludeBody,
-        })
+        .search(query, 25)
         .then((items) => setResults(items))
         .catch((err) => {
           setResults([]);
@@ -64,7 +60,7 @@ export function GlobalSearch({ api, open, onOpenChange }: GlobalSearchProps) {
         .finally(() => setLoading(false));
     }, 120);
     return () => window.clearTimeout(handle);
-  }, [api, globalSearchIncludeBody, open, query]);
+  }, [api, open, query]);
 
   useEffect(() => {
     if (!open) return;
@@ -116,16 +112,6 @@ export function GlobalSearch({ api, open, onOpenChange }: GlobalSearchProps) {
         aria-label="Search nodes"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="tome-global-search-config">
-          <label className="tome-global-search-config-item">
-            <input
-              type="checkbox"
-              checked={globalSearchIncludeBody}
-              onChange={(event) => setGlobalSearchIncludeBody(event.target.checked)}
-            />
-            <span>Search node contents</span>
-          </label>
-        </div>
         <input
           ref={inputRef}
           type="search"
@@ -183,7 +169,7 @@ export function GlobalSearch({ api, open, onOpenChange }: GlobalSearchProps) {
                     {item.title}
                     <CorpusSuffix label={item.corpusLabel} />
                   </span>
-                  {globalSearchIncludeBody && item.matchPreview ? (
+                  {item.matchPreview ? (
                     <span className="tome-global-search-preview">
                       {item.matchPreview.parts.map((part, partIndex) =>
                         part.highlight ? (

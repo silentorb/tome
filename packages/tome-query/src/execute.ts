@@ -86,12 +86,19 @@ export interface CompileReactFlowQueryOptions {
   corpus?: TomeCorpusLookup;
 }
 
+export function buildQueryImpGraph(
+  reactFlow: ReactFlowGraph,
+  options?: CompileReactFlowQueryOptions,
+): Graph {
+  const edges = dedupeInboundReactFlowEdges(reactFlow.edges);
+  return ensureIdentityTitleProjection(reactFlowToImp(reactFlow.nodes, edges));
+}
+
 export function compileReactFlowQuery(
   reactFlow: ReactFlowGraph,
   options?: CompileReactFlowQueryOptions,
 ): CompiledTomeQuery {
-  const edges = dedupeInboundReactFlowEdges(reactFlow.edges);
-  const graph = ensureIdentityTitleProjection(reactFlowToImp(reactFlow.nodes, edges));
+  const graph = buildQueryImpGraph(reactFlow, options);
   const compiled = compileImpGraphToTomeSql(graph, {
     schema: options?.schema,
     pageNodeId: options?.pageNodeId,

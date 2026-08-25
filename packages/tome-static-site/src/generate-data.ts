@@ -4,7 +4,7 @@ import { openContentGraph } from "tome-db/content";
 import {
   createExtensionGraphQueryServices,
   createExtensionSchemaQueryServices,
-  createExtensionSqlQueryServices,
+  createExtensionExecuteImpServices,
   createExtensionCorpusQueryServices,
   loadSchemaFromContent,
   loadWorkspaceFromContent,
@@ -23,13 +23,13 @@ import { resolveStaticSiteFooter } from "./lib/static-site-footer";
 export type { SiteData, SiteNode } from "./lib/site-types";
 
 export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteData> {
-  const { store, cache: cacheRaw } = openContentGraph(config.contentDir, config.dbPath);
-  const cache = cacheRaw as GraphDatabase;
+  const writeCtx = openContentGraph(config.contentDir, config.dbPath);
+  const cache = writeCtx.cache as GraphDatabase;
   const schema = loadSchemaFromContent(config.contentDir);
   const workspace = loadWorkspaceFromContent(config.contentDir);
   const nodes: SiteNode[] = [];
 
-  for (const id of store.listNodeIds()) {
+  for (const id of writeCtx.store.listNodeIds()) {
     const node = buildSiteNode(cache, id, config.contentDir, schema);
     if (node) nodes.push(node);
   }
@@ -50,10 +50,10 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
 
   const htmlRuntime = new ExtensionHtmlRuntime(config.contentDir);
   await htmlRuntime.ensureLoaded();
-  const graphQuery = createExtensionGraphQueryServices(cache, config.contentDir);
+  const graphQuery = createExtensionGraphQueryServices(writeCtx.graphStore, config.contentDir);
   const schemaQuery = createExtensionSchemaQueryServices(cache, config.contentDir);
-  const sqlQuery = createExtensionSqlQueryServices(cache);
-  const corpusQuery = createExtensionCorpusQueryServices(store);
+  const executeImp = createExtensionExecuteImpServices(writeCtx.graphStore);
+  const corpusQuery = createExtensionCorpusQueryServices(writeCtx.store);
   const spatialGraphScale = spatialGraphNodeDimensionScale(workspace);
   const spatialGraphServices = spatialGraphScale
     ? { nodeDimensionScale: spatialGraphScale }
@@ -70,7 +70,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
         spatialGraphServices,
         schemaQuery,
         schemaDiagram,
-        sqlQuery,
+        executeImp,
         corpusQuery,
       );
       node.bodyHtml = await renderNodeBodyHtml(

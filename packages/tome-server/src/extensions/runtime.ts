@@ -4,7 +4,7 @@ import type { ExtensionCorpusQueryServices } from "tome-interfaces/extension-ser
 import type { ExtensionGraphMutateServices } from "tome-interfaces/extension-services/graph-mutate";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
-import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
+import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
 import type { EditorPageBlockModule } from "tome-interfaces/page-block/editor";
 import type { HtmlPageBlockModule } from "tome-interfaces/page-block/html";
 import type { ServerPageBlockModule } from "tome-interfaces/page-block/server";
@@ -92,7 +92,7 @@ export class ExtensionServerRuntime {
   readonly #contentPath: string;
   readonly #getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined;
   readonly #getSchemaQueryServices?: () => ExtensionSchemaQueryServices | undefined;
-  readonly #getSqlQueryServices?: () => ExtensionSqlQueryServices | undefined;
+  readonly #getExecuteImpServices?: () => ExtensionExecuteImpServices | undefined;
   readonly #getCorpusQueryServices?: () => ExtensionCorpusQueryServices | undefined;
   readonly #getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined;
   readonly #editorHost = new EditorPageBlockHostImpl();
@@ -108,14 +108,14 @@ export class ExtensionServerRuntime {
     contentPath: string,
     getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined,
     getSchemaQueryServices?: () => ExtensionSchemaQueryServices | undefined,
-    getSqlQueryServices?: () => ExtensionSqlQueryServices | undefined,
+    getExecuteImpServices?: () => ExtensionExecuteImpServices | undefined,
     getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined,
     getCorpusQueryServices?: () => ExtensionCorpusQueryServices | undefined,
   ) {
     this.#contentPath = contentPath;
     this.#getGraphQueryServices = getGraphQueryServices;
     this.#getSchemaQueryServices = getSchemaQueryServices;
-    this.#getSqlQueryServices = getSqlQueryServices;
+    this.#getExecuteImpServices = getExecuteImpServices;
     this.#getGraphMutateServices = getGraphMutateServices;
     this.#getCorpusQueryServices = getCorpusQueryServices;
   }
@@ -246,7 +246,7 @@ export class ExtensionServerRuntime {
           graphQuery: this.#getGraphQueryServices?.(),
           graphMutate: this.#getGraphMutateServices?.(),
           schemaQuery: this.#getSchemaQueryServices?.(),
-          sqlQuery: this.#getSqlQueryServices?.(),
+          executeImp: this.#getExecuteImpServices?.(),
           corpusQuery: this.#getCorpusQueryServices?.(),
         },
       },
@@ -323,7 +323,7 @@ export class ExtensionServerRuntime {
       this.#manifest.components,
       this.#getGraphQueryServices?.(),
       this.#getSchemaQueryServices?.(),
-      this.#getSqlQueryServices?.(),
+      this.#getExecuteImpServices?.(),
       this.#getCorpusQueryServices?.(),
       scale ? { nodeDimensionScale: scale } : undefined,
       schemaDiagram,
@@ -347,7 +347,7 @@ export class ExtensionServerRuntime {
       { componentId, data },
       this.#getGraphQueryServices?.(),
       this.#getSchemaQueryServices?.(),
-      this.#getSqlQueryServices?.(),
+      this.#getExecuteImpServices?.(),
       this.#getCorpusQueryServices?.(),
       scale ? { nodeDimensionScale: scale } : undefined,
       schemaDiagram,

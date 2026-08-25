@@ -2,6 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
+import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import { arrangeTimeline } from "../src/arrange";
 import { defaultReactFlowGraph } from "../src/config";
@@ -86,17 +87,23 @@ function emptyGraphQuery(): ExtensionGraphQueryServices {
   };
 }
 
+function mockExecuteImp(
+  rows: Record<string, unknown>[],
+): ExtensionExecuteImpServices {
+  return {
+    executeImp: async () => ({ columns: Object.keys(rows[0] ?? { id: "" }), rows }),
+  };
+}
+
 describe("arrangeTimeline grouping", () => {
   test("flat query still packs overlapping events onto distinct lanes", async () => {
     const layout = await arrangeTimeline({
       pageNodeId: PAGE_ID,
       blockData: { version: 1, reactFlow: defaultReactFlowGraph() },
-      sqlQuery: {
-        queryAll: async () => [
-          { id: "a", title: "A" },
-          { id: "b", title: "B" },
-        ],
-      },
+      executeImp: mockExecuteImp([
+        { id: "a", title: "A" },
+        { id: "b", title: "B" },
+      ]),
       graphQuery: emptyGraphQuery(),
       contentDir: writeSequencingDir(),
     });
@@ -109,13 +116,11 @@ describe("arrangeTimeline grouping", () => {
     const layout = await arrangeTimeline({
       pageNodeId: PAGE_ID,
       blockData: groupedBlockData(),
-      sqlQuery: {
-        queryAll: async () => [
-          { id: "low", title: "Low arc", priority: "Low" },
-          { id: "p1", title: "Primary one", priority: "Primary" },
-          { id: "p2", title: "Primary two", priority: "Primary" },
-        ],
-      },
+      executeImp: mockExecuteImp([
+        { id: "low", title: "Low arc", priority: "Low" },
+        { id: "p1", title: "Primary one", priority: "Primary" },
+        { id: "p2", title: "Primary two", priority: "Primary" },
+      ]),
       graphQuery: emptyGraphQuery(),
       contentDir: writeSequencingDir(),
     });

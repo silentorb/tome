@@ -140,7 +140,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
         query: string,
         limit?: number,
         allowedTypeIds?: string[],
-        options?: { includeBody?: boolean; activeCorpusId?: string },
+        options?: { activeCorpusId?: string },
       ) =>
         baseApi.search(query, limit, allowedTypeIds, {
           ...options,

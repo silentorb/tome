@@ -1,6 +1,6 @@
 import type { ExtensionGraphMutateServices } from "tome-interfaces/extension-services/graph-mutate";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
-import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
+import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
 import type { DependsConstraint, SequenceEndpoint } from "tome-sequencing-interfaces";
 import type { GraphParameterValue } from "tome-query/parameters";
 import { projectionType } from "tome-imp-sql";
@@ -29,13 +29,13 @@ function contentDirFromEnv(): string {
 async function eventIdsForPage(input: {
   pageNodeId: string;
   blockData: unknown;
-  sqlQuery: ExtensionSqlQueryServices;
+  executeImp: ExtensionExecuteImpServices;
   contentDir: string;
   parameters?: Record<string, GraphParameterValue>;
 }): Promise<string[]> {
   const parsed = parseSequencingBlockData(input.blockData);
   const rows = await runEventQuery({
-    sqlQuery: input.sqlQuery,
+    executeImp: input.executeImp,
     reactFlow: parsed.reactFlow,
     pageNodeId: input.pageNodeId,
     parameters: input.parameters,
@@ -81,7 +81,7 @@ export async function mutateTimelineDepends(input: {
   from: SequenceEndpoint;
   to: SequenceEndpoint;
   blockData: unknown;
-  sqlQuery: ExtensionSqlQueryServices;
+  executeImp: ExtensionExecuteImpServices;
   graphQuery: ExtensionGraphQueryServices;
   graphMutate: ExtensionGraphMutateServices;
   contentDir?: string;
@@ -179,7 +179,7 @@ export async function mutateTimelineDepends(input: {
     const layout = await arrangeTimeline({
       pageNodeId: input.pageNodeId,
       blockData: input.blockData,
-      sqlQuery: input.sqlQuery,
+      executeImp: input.executeImp,
       graphQuery: input.graphQuery,
       contentDir,
       parameters: input.parameters,
@@ -192,7 +192,7 @@ export async function mutateTimelineDepends(input: {
       eventIds = await eventIdsForPage({
         pageNodeId: input.pageNodeId,
         blockData: input.blockData,
-        sqlQuery: input.sqlQuery,
+        executeImp: input.executeImp,
         contentDir,
         parameters: input.parameters,
       });

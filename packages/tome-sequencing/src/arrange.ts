@@ -1,13 +1,13 @@
 import { resolve } from "node:path";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
-import type { ExtensionSqlQueryServices } from "tome-interfaces/extension-services/sql-query";
+import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
 import type { ReactFlowGraph } from "imp-react-flow";
 import { projectionType } from "tome-imp-sql";
 import type { DependsConstraint, SequencingProblem } from "tome-sequencing-interfaces";
 import { resolve as resolveSequence } from "tome-sequencing-resolution";
 import type { ResolvedEvent } from "tome-sequencing-resolution";
 import {
-  compileReactFlowQuery,
+  buildQueryImpGraph,
   findTerminalGroupSpecFromReactFlow,
   partitionRowsIntoGroups,
 } from "tome-query/execute";
@@ -53,15 +53,21 @@ function bindEventQuery(input: {
 }
 
 export async function runEventQuery(input: {
-  sqlQuery: ExtensionSqlQueryServices;
+  executeImp: ExtensionExecuteImpServices;
   reactFlow: ReactFlowGraph;
   pageNodeId: string;
   parameters?: Record<string, GraphParameterValue>;
   contentDir?: string;
 }): Promise<Record<string, unknown>[]> {
   const { bound, schema } = bindEventQuery(input);
-  const { sql, parameters } = compileReactFlowQuery(bound, { schema });
-  return input.sqlQuery.queryAll(sql, parameters);
+  const graph = buildQueryImpGraph(bound, { schema, pageNodeId: input.pageNodeId });
+  const executed = await Promise.resolve(
+    input.executeImp.executeImp(graph, {
+      pageNodeId: input.pageNodeId,
+      parameters: input.parameters,
+    }),
+  );
+  return executed.rows;
 }
 
 export async function loadDependsEdges(
@@ -161,7 +167,7 @@ function layoutResolvedGroup(input: {
 export async function arrangeTimeline(input: {
   pageNodeId: string;
   blockData: unknown;
-  sqlQuery: ExtensionSqlQueryServices;
+  executeImp: ExtensionExecuteImpServices;
   graphQuery?: ExtensionGraphQueryServices;
   contentDir?: string;
   parameters?: Record<string, GraphParameterValue>;
@@ -176,14 +182,13 @@ export async function arrangeTimeline(input: {
   }
 
   const parsed = parseSequencingBlockData(input.blockData);
-  const boundQuery = bindEventQuery({
+  const rows = await runEventQuery({
+    executeImp: input.executeImp,
     reactFlow: parsed.reactFlow,
     pageNodeId: input.pageNodeId,
     parameters: input.parameters,
     contentDir,
   });
-  const compiled = compileReactFlowQuery(boundQuery.bound, { schema: boundQuery.schema });
-  const rows = await input.sqlQuery.queryAll(compiled.sql, compiled.parameters);
   const { eventIds, titles } = eventsFromRows(rows);
 
   const depends = await loadDependsEdges(
@@ -192,6 +197,12 @@ export async function arrangeTimeline(input: {
     config.dependsAssociation,
   );
 
+  const boundQuery = bindEventQuery({
+    reactFlow: parsed.reactFlow,
+    pageNodeId: input.pageNodeId,
+    parameters: input.parameters,
+    contentDir,
+  });
   const groupSpec = findTerminalGroupSpecFromReactFlow(boundQuery.bound);
   if (!groupSpec) {
     const problem: SequencingProblem = {
