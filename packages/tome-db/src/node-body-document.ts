@@ -2,7 +2,8 @@ import { resolveMarkdownHrefTarget } from "tome-flatfile/markdown-links";
 import { NODE_ID_RE_SRC } from "tome-flatfile/node-id";
 import { parsePageBlockFences } from "tome-interfaces/page-block";
 import type { NodeBodyDocument, NodeBodySegment } from "tome-graph-interfaces";
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "./graph-store/relationship-read";
+import { readStoreGetNode, readStoreListNodeIds } from "./graph-store/relationship-read";
 import { documentToStorageBody } from "./document-to-storage-body";
 
 export { documentToStorageBody };
@@ -103,7 +104,7 @@ export function parseStorageBodyToUnresolvedDocument(body: string): {
 }
 
 export function titleMapForNodeIds(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   ids: readonly string[],
 ): Map<string, string> {
   const map = new Map<string, string>();
@@ -118,7 +119,7 @@ export function titleMapForNodeIds(
 
 /** Storage markdown → structured document with resolved titles; page_block.editorHtml empty. */
 export function storageBodyToDocument(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   body: string,
 ): NodeBodyDocument {
   const { segments: unresolved, dynamicLinkIds } = parseStorageBodyToUnresolvedDocument(body);

@@ -66,6 +66,11 @@ export interface RelationshipRecordRef {
   properties?: Properties;
 }
 
+export interface ListRelationshipProjectionsOptions {
+  projectionType?: string;
+  direction?: "from" | "to" | "both";
+}
+
 export interface TomeGraphStoreBase {
   readonly capabilities: GraphStoreCapabilities;
   readonly contentDir: string;
@@ -116,6 +121,12 @@ export interface TomeGraphStoreBase {
     fn: (entry: RelationshipRecordRef) => void,
     options?: { includeArchived?: boolean },
   ): void;
+
+  /** Directed projections incident to `nodeId`, expanded from canonical relationship records. */
+  listRelationshipProjections(
+    nodeId: string,
+    options?: ListRelationshipProjectionsOptions,
+  ): Relationship[];
 }
 
 export interface TomeGraphStoreQueryable extends TomeGraphStoreBase {

@@ -14,6 +14,11 @@ import type { UserSettings, UserSettingsPatch } from "./user-settings";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
 import type { SchemaFile } from "tome-graph-interfaces";
 import type { WorkspaceFile } from "tome-graph-interfaces";
+import type {
+  ExecuteImpContext,
+  ImpCollectionResult,
+  ImpGraph,
+} from "tome-graph-interfaces";
 
 export type WorkspacePublic = WorkspaceFile & { archiveNodeTitle?: string };
 
@@ -212,6 +217,7 @@ export interface TomeHttpClient {
   reorderQuickLinks(nodeIds: readonly string[]): Promise<void>;
   getGraphFull(): Promise<GraphSnapshot>;
   getGraphExplorerLod(options?: GraphExplorerLodOptions): Promise<GraphLodSnapshot>;
+  executeImp(graph: ImpGraph, context?: ExecuteImpContext): Promise<ImpCollectionResult>;
   getSchema(): Promise<SchemaFile>;
   listRelationshipTypes(): Promise<RelationshipTypeOption[]>;
   getRelationshipLinkOptions(

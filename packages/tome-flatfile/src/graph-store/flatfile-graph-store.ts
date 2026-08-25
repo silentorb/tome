@@ -12,6 +12,7 @@ import {
   loadViewsFromContent,
   loadWorkspaceFromContent,
 } from "../index";
+import { expandRelationshipEntry, toDomainRelationship } from "../relationship-expand";
 import type {
   GraphStoreCapabilities,
   Node,
@@ -20,6 +21,7 @@ import type {
   RelationshipRecordRef,
   TomeCorpusInfo,
   TomeGraphStoreBase,
+  ListRelationshipProjectionsOptions,
   AssociationsFile,
   DynamicPropertiesFile,
   SchemaFile,
@@ -240,6 +242,36 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
         });
       }
     }
+  }
+
+  listRelationshipProjections(
+    nodeId: string,
+    options?: ListRelationshipProjectionsOptions,
+  ): Relationship[] {
+    const direction = options?.direction ?? "both";
+    const projectionType = options?.projectionType;
+    const registry = this.readAssociations();
+    const seen = new Set<string>();
+    const results: Relationship[] = [];
+
+    const consider = (entry: { a: string; b: string; type: string; properties?: Properties }) => {
+      const { projections } = expandRelationshipEntry(entry, registry);
+      for (const row of projections) {
+        if (projectionType && row.type !== projectionType) continue;
+        const fromMatch = direction !== "to" && row.sourceNodeId === nodeId;
+        const toMatch = direction !== "from" && row.targetNodeId === nodeId;
+        if (!fromMatch && !toMatch) continue;
+        if (seen.has(row.id)) continue;
+        seen.add(row.id);
+        results.push(toDomainRelationship(row));
+      }
+    };
+
+    for (const entry of this.store.readRelationshipsFile().relationships) {
+      if (entry.a !== nodeId && entry.b !== nodeId) continue;
+      consider(entry);
+    }
+    return results;
   }
 }
 

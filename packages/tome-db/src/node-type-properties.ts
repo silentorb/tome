@@ -1,6 +1,11 @@
 import type { DatabaseColumnDef } from "./database-view";
 import { applyDynamicProperties } from "./dynamic-properties";
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "./graph-store/relationship-read";
+import {
+  listRelationshipsFromSource,
+  readStoreGetNode,
+  readStoreListNodeIds,
+} from "./graph-store/relationship-read";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
 import { loadTableSchemaForDatabase } from "./database-column-defs";
@@ -116,16 +121,16 @@ function storedColumnDefsFromTableSchema(databaseId: string): DatabaseColumnDef[
 
 /** Build typed-node Properties from IS_A membership scalars and dynamic fields. */
 export function buildPropertiesSection(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
 ): PropertiesSection | null {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
   // v1: first type membership connection when a node belongs to multiple types.
-  let setRowEdge = null as ReturnType<GraphDatabase["listRelationshipsFromSource"]>[number] | null;
+  let setRowEdge = null as ReturnType<typeof listRelationshipsFromSource>[number] | null;
   for (const type of memberSideProjectionTypes(registry)) {
-    const connections = db.listRelationshipsFromSource(nodeId, type);
+    const connections = listRelationshipsFromSource(db, nodeId, type);
     if (connections.length > 0) {
       setRowEdge = connections[0]!;
       break;
@@ -134,7 +139,7 @@ export function buildPropertiesSection(
   if (!setRowEdge) return null;
 
   const databaseId = setRowEdge.targetNodeId;
-  const database = db.getNode(databaseId);
+  const database = readStoreGetNode(db, databaseId);
   if (!database || !isTypeTableNode(db, databaseId)) return null;
 
   const typeTitle = titleFromProperties(database.properties);

@@ -111,9 +111,26 @@ type GraphStoreCapabilities =
 | --- | --- | --- |
 | **1 — Infrastructure** | Done | `TomeGraphStoreBase` / `Queryable`, `ComposedGraphStore`, `tome-imp-flatfile`, `recentNodesGraph`, `typeMembersGraph` |
 | **2 — Read-path migration** | Done | Imp `contains` + `search`; editor search + extensions on `executeImp`; drop `includeBody` toggle; `searchNodesGraph` |
-| **3+ — Remaining cache reads** | Planned | `getNodePageDetail`, table views, graph explorer; public REST `executeImp`; Imp mutations |
+| **3 — Read-path completion** | Done | Explorer, table views, node page detail on graph store; `listRelationshipProjections`; standard graphs `outgoingRelationships` / `incomingRelationships`; public REST `POST /api/graph/execute-imp` |
+| **4 — Imp mutations** | Planned | Queryable-tier write paths via Imp (v1 Queryable is read-only) |
 
-Phase 2 removes direct `searchNodes(cache)` and extension `sqlQuery.queryAll` for Imp graphs. Search heuristics (title+body, title-first ranking, `matchPreview` on body-only hits) live in Tome adapters (`performTomeTextSearch`, flatfile `textSearch`).
+Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read paths. Editor HTTP use cases stay application-specific ([web-api-design.md](./web-api-design.md)); integrators may call **`POST /api/graph/execute-imp`** with the same `executeImp` surface extensions use.
+
+### Standard Imp graphs (`tome-db`)
+
+| Graph factory | Purpose |
+| --- | --- |
+| `recentNodesGraph` | Recent nodes by `modified_at` |
+| `typeMembersGraph` | Type-table member rows |
+| `searchNodesGraph` | Title/body search |
+| `outgoingRelationshipsGraph` | Outgoing projections from a node |
+| `incomingRelationshipsGraph` | Incoming projections to a node |
+
+### Base-tier relationship reads
+
+`listRelationshipProjections(nodeId, { direction, projectionType })` on **`TomeGraphStoreBase`** expands canonical relationship records via flatfile. Domain modules use helpers in `tome-db/src/graph-store/relationship-read.ts` (`listRelationshipsFromSource`, `readStoreGetNode`, …) so reads work on both graph store and legacy cache during migration.
+
+Phase 2 removes direct `searchNodes(cache)` and extension raw SQL for Imp graphs. Search heuristics (title+body, title-first ranking, `matchPreview` on body-only hits) live in Tome adapters (`performTomeTextSearch`, flatfile `textSearch`).
 
 ## See also
 

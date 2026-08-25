@@ -34,6 +34,11 @@ import type {
   ViewSortSpec,
 } from "./views";
 import type { QuickLinkError, WorkspaceFile } from "./workspace";
+import type {
+  ExecuteImpContext,
+  ImpCollectionResult,
+  ImpGraph,
+} from "./graph-store";
 
 export type WorkspacePublic = WorkspaceFile & { archiveNodeTitle?: string };
 
@@ -176,6 +181,11 @@ export interface TomeGraphServices {
     anchorId?: string;
     layerCount?: number;
   }): GraphLodSnapshot;
+  /** Integrator escape hatch — run read-only Imp graphs against the host graph store. */
+  executeImp(
+    graph: ImpGraph,
+    context?: ExecuteImpContext,
+  ): ImpCollectionResult | Promise<ImpCollectionResult>;
   getExtensionsManifest(): Promise<PublicExtensionsManifest>;
   prepareEditorBody(nodeId: string, markdown: string): Promise<string | null>;
   invokeExtension(

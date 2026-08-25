@@ -4,7 +4,7 @@ import type {
   SchemaQueryRelationshipRule,
   SchemaQueryTypeTable,
 } from "tome-interfaces/extension-services/schema-query";
-import type { GraphDatabase, Node } from "tome-sqlite";
+import type { Node } from "tome-graph-interfaces";
 import { setMemberIds } from "./set-membership";
 import { loadTableSchemasFromContent } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
@@ -13,6 +13,7 @@ import {
   projectionTypeForRelationColumn,
   targetTypeIdForRelationColumn,
 } from "tome-flatfile";
+import { readStoreGetNode, type RelationshipReadStore } from "./graph-store/relationship-read";
 
 function titleFromNode(node: Node | null): string {
   if (!node) return "Untitled";
@@ -24,7 +25,7 @@ function titleFromNode(node: Node | null): string {
 }
 
 export function createExtensionSchemaQueryServices(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   contentDir: string,
 ): ExtensionSchemaQueryServices {
   return {
@@ -34,8 +35,8 @@ export function createExtensionSchemaQueryServices(
       for (const id of Object.keys(schemas.tables)) {
         entries.push({
           id,
-          title: titleFromNode(db.getNode(id)),
-          memberCount: setMemberIds(db, id, contentDir).length,
+          title: titleFromNode(readStoreGetNode(store, id)),
+          memberCount: setMemberIds(store, id, contentDir).length,
         });
       }
       entries.sort((a, b) =>
@@ -59,7 +60,7 @@ export function createExtensionSchemaQueryServices(
       const registry = loadAssociationsFromContent(contentDir);
       const titleByTypeId = new Map<string, string>();
       for (const id of Object.keys(schemas.tables)) {
-        titleByTypeId.set(id, titleFromNode(db.getNode(id)));
+        titleByTypeId.set(id, titleFromNode(readStoreGetNode(store, id)));
       }
 
       const edges: SchemaQueryRelationColumnEdge[] = [];
@@ -87,7 +88,7 @@ export function createExtensionSchemaQueryServices(
         if (sourceCompare !== 0) return sourceCompare;
         const labelCompare = a.label.localeCompare(b.label, undefined, { sensitivity: "base" });
         if (labelCompare !== 0) return labelCompare;
-        return (titleByTypeId.get(a.targetTypeId) ?? a.targetTypeId).localeCompare(
+        return (titleByTypeId.get(a.targetTypeId) ?? b.targetTypeId).localeCompare(
           titleByTypeId.get(b.targetTypeId) ?? b.targetTypeId,
           undefined,
           { sensitivity: "base" },

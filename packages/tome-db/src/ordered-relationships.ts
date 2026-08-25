@@ -1,4 +1,4 @@
-import type { GraphDatabase, Properties, Relationship } from "tome-sqlite";
+import type { RelationshipReadStore, Properties, Relationship } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import {
@@ -36,7 +36,7 @@ function orderPropertyForProjection(
 }
 
 export function listOrderedMemberConnections(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   setId: string,
   contentDir?: string,
 ): Relationship[] {
@@ -51,7 +51,7 @@ export function listOrderedMemberConnections(
 }
 
 export function maxOrderAtSet(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   setId: string,
   contentDir?: string,
 ): number {
@@ -63,7 +63,7 @@ export function maxOrderAtSet(
  * member ids are considered (e.g. members in the active Product scope).
  */
 export function maxOrderAmongMembers(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   setId: string,
   memberFilter: ReadonlySet<string> | null,
   contentDir?: string,

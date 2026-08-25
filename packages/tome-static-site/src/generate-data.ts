@@ -10,7 +10,6 @@ import {
   loadWorkspaceFromContent,
   schemaDiagramPageBlockServices,
   spatialGraphNodeDimensionScale,
-  type GraphDatabase,
 } from "tome-db";
 import type { ResolvedConfig } from "./config";
 import type { SiteData, SiteNode } from "./lib/site-types";
@@ -24,18 +23,18 @@ export type { SiteData, SiteNode } from "./lib/site-types";
 
 export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteData> {
   const writeCtx = openContentGraph(config.contentDir, config.dbPath);
-  const cache = writeCtx.cache as GraphDatabase;
+  const graphStore = writeCtx.graphStore;
   const schema = loadSchemaFromContent(config.contentDir);
   const workspace = loadWorkspaceFromContent(config.contentDir);
   const nodes: SiteNode[] = [];
 
   for (const id of writeCtx.store.listNodeIds()) {
-    const node = buildSiteNode(cache, id, config.contentDir, schema);
+    const node = buildSiteNode(graphStore, id, config.contentDir, schema);
     if (node) nodes.push(node);
   }
 
   const { tabItemsPayloads, tabRoutes } = buildExtraTabPayloadsAndRoutes(
-    cache,
+    graphStore,
     nodes,
     config.contentDir,
   );
@@ -51,7 +50,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
   const htmlRuntime = new ExtensionHtmlRuntime(config.contentDir);
   await htmlRuntime.ensureLoaded();
   const graphQuery = createExtensionGraphQueryServices(writeCtx.graphStore, config.contentDir);
-  const schemaQuery = createExtensionSchemaQueryServices(cache, config.contentDir);
+  const schemaQuery = createExtensionSchemaQueryServices(graphStore, config.contentDir);
   const executeImp = createExtensionExecuteImpServices(writeCtx.graphStore);
   const corpusQuery = createExtensionCorpusQueryServices(writeCtx.store);
   const spatialGraphScale = spatialGraphNodeDimensionScale(workspace);
@@ -83,7 +82,8 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
     }
   }
 
-  cache.close();
+  writeCtx.cache.close();
+  graphStore.close();
 
   const staticSiteFooter = resolveStaticSiteFooter(workspace.branding);
 

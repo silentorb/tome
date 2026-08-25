@@ -1,4 +1,4 @@
-import type { GraphDatabase, Relationship } from "tome-sqlite";
+import type { Relationship } from "tome-graph-interfaces";
 import type { DatabaseColumnDef } from "./database-view";
 import type { RelationLink } from "./relation-link";
 import { relationType } from "tome-flatfile";
@@ -19,6 +19,10 @@ import {
   slugifyPropertyKey,
 } from "tome-flatfile";
 import type { AssociationDefinition, AssociationsFile } from "tome-flatfile";
+import {
+  listRelationshipsFromSource,
+  type RelationshipReadStore,
+} from "./graph-store/relationship-read";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;
@@ -34,7 +38,7 @@ function ordinalFromProperties(properties: Record<string, unknown>): number {
 }
 
 function scopeForRow(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   rowId: string,
   databaseId: string,
   relationships: Relationship[],
@@ -87,7 +91,7 @@ function filterByOutgoingPerspective(
 }
 
 export function listRelationConnectionsForRow(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   connectionType: string,
   databaseId: string,
@@ -109,7 +113,7 @@ export function listRelationConnectionsForRow(
     if (compositeFiltered.length > 0) return compositeFiltered;
   }
 
-  const outgoing = db.listRelationshipsFromSource(nodeId, connectionType);
+  const outgoing = listRelationshipsFromSource(db, nodeId, connectionType);
   const symmetric =
     registry &&
     (() => {
@@ -119,7 +123,8 @@ export function listRelationConnectionsForRow(
       if (!def) return [] as Relationship[];
       if (perspectiveSlugAt(def, 0) !== perspectiveSlugAt(def, 1)) return [] as Relationship[];
       const otherIndex: 0 | 1 = parsed.endpointIndex === 0 ? 1 : 0;
-      return db.listRelationshipsFromSource(
+      return listRelationshipsFromSource(
+        db,
         nodeId,
         projectionTypeForEndpoint(parsed.associationId, otherIndex),
       );
@@ -134,7 +139,7 @@ export function listRelationConnectionsForRow(
 }
 
 function linksFromRelationships(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   relationships: Relationship[],
 ): RelationLink[] {
@@ -159,7 +164,7 @@ function formatRelationCell(links: RelationLink[]): string {
  * Fill relation-type table cells from outgoing graph relationships (not IS_A properties).
  */
 export function hydrateRelationCellsForRows(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   databaseId: string,
   columnDefs: DatabaseColumnDef[],
   rows: EvalRow[],

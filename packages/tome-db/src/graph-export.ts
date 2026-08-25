@@ -1,10 +1,11 @@
-import { type GraphDatabase } from "tome-sqlite";
+import type { TomeGraphStoreBase } from "tome-graph-interfaces";
 import { graphGroupForNode, graphLabelsForNode } from "./node-capabilities";
 import {
   buildHeuristicLodLevels,
   normalizeExplorerLayerCount,
 } from "./graph-lod-cluster";
 import { archiveNodeId, resolveWorkspace } from "tome-flatfile";
+import { listAllRelationshipProjections } from "./graph-store/relationship-read";
 
 import type {
   GraphLodSnapshot,
@@ -31,6 +32,14 @@ export function isGraphClusterNode(node: Pick<GraphNode, "id" | "isCluster">): b
   return node.isCluster === true || node.id.startsWith(GRAPH_CLUSTER_PREFIX);
 }
 
+function titleFromNodeProperties(properties: Record<string, unknown>): string {
+  const title = properties.title;
+  if (typeof title === "string" && title.trim()) return title.trim();
+  const alias = properties.alias;
+  if (typeof alias === "string" && alias.trim()) return alias.trim();
+  return "Untitled";
+}
+
 interface ActiveGraphNode {
   id: string;
   title: string;
@@ -45,34 +54,50 @@ interface ActiveGraphRelationship {
   type: string;
 }
 
-function collectActiveGraphData(db: GraphDatabase, contentDir?: string): {
+function collectActiveGraphData(store: TomeGraphStoreBase, contentDir?: string): {
   nodes: ActiveGraphNode[];
   relationships: ActiveGraphRelationship[];
 } {
-  const allNodes = db.listNodesForGraphExport();
+  const dir = contentDir ?? store.contentDir;
   const excludedIds = new Set<string>();
   try {
-    excludedIds.add(archiveNodeId(contentDir));
+    excludedIds.add(archiveNodeId(dir));
   } catch {
     /* workspace optional */
   }
-  for (const node of allNodes) {
-    if (db.isNodeArchived(node.id)) excludedIds.add(node.id);
+  for (const id of store.listNodeIds()) {
+    if (store.isNodeArchived(id)) excludedIds.add(id);
   }
 
-  const nodes = allNodes
-    .filter((node) => !excludedIds.has(node.id))
-    .map((node) => ({
-      ...node,
-      group: graphGroupForNode(db, node.id),
-      labels: graphLabelsForNode(db, node.id),
-    }));
-  const relationships = db.listRelationshipsForGraphExport().filter(
+  const nodes = store
+    .listNodeIds()
+    .filter((id) => !excludedIds.has(id))
+    .map((id) => {
+      const node = store.getNode(id);
+      const properties = node?.properties ?? {};
+      return {
+        id,
+        title: titleFromNodeProperties(properties),
+        group: graphGroupForNode(store, id),
+        labels: graphLabelsForNode(store, id),
+      };
+    });
+
+  const relationships = listAllRelationshipProjections(store).filter(
     (relationship) =>
-      !excludedIds.has(relationship.sourceNodeId) && !excludedIds.has(relationship.targetNodeId),
+      !excludedIds.has(relationship.sourceNodeId) &&
+      !excludedIds.has(relationship.targetNodeId),
   );
 
-  return { nodes, relationships };
+  return {
+    nodes,
+    relationships: relationships.map((relationship) => ({
+      id: relationship.id,
+      sourceNodeId: relationship.sourceNodeId,
+      targetNodeId: relationship.targetNodeId,
+      type: relationship.type,
+    })),
+  };
 }
 
 function reachableNodeIds(
@@ -122,8 +147,8 @@ function filterActiveGraphByAnchor(
   };
 }
 
-export function exportFullGraph(db: GraphDatabase, contentDir?: string): GraphSnapshot {
-  const { nodes, relationships } = collectActiveGraphData(db, contentDir);
+export function exportFullGraph(store: TomeGraphStoreBase, contentDir?: string): GraphSnapshot {
+  const { nodes, relationships } = collectActiveGraphData(store, contentDir);
 
   const graphNodes: GraphNode[] = nodes.map((node) => ({
     id: node.id,
@@ -143,7 +168,7 @@ export function exportFullGraph(db: GraphDatabase, contentDir?: string): GraphSn
 }
 
 export function exportExplorerLodGraph(
-  db: GraphDatabase,
+  store: TomeGraphStoreBase,
   options?: {
     layerCount?: number;
     anchorId?: string;
@@ -152,7 +177,7 @@ export function exportExplorerLodGraph(
 ): GraphLodSnapshot {
   const contentDir = options?.contentDir;
   const layerCount = normalizeExplorerLayerCount(options?.layerCount);
-  let { nodes, relationships } = collectActiveGraphData(db, contentDir);
+  let { nodes, relationships } = collectActiveGraphData(store, contentDir);
   let anchorId = options?.anchorId;
   if (!anchorId) {
     try {

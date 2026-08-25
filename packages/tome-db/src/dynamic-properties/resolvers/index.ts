@@ -1,9 +1,15 @@
-import type { GraphDatabase, Relationship } from "tome-sqlite";
+import type { Relationship } from "tome-graph-interfaces";
 import { resolveContentPath } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import { setTraitProjectionTypes } from "tome-flatfile";
 import { priorityWeight } from "../../property-enums";
 import type { DynamicResolverContext } from "../registry";
+import {
+  listRelationshipsFromSource,
+  listRelationshipsToTarget,
+  readStoreGetNode,
+  type RelationshipReadStore,
+} from "../../graph-store/relationship-read";
 import {
   listRelationshipsForComposite,
   otherEndpoint,
@@ -15,7 +21,7 @@ function stringParam(params: Record<string, unknown>, key: string): string {
 }
 
 function listRelationshipTypesFromComposite(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   compositeType: string,
 ): Relationship[] {
@@ -25,7 +31,7 @@ function listRelationshipTypesFromComposite(
 
 /** Character→scene links via named composite. */
 function listCharacterSceneConnections(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   params: Record<string, unknown>,
 ): Relationship[] {
@@ -35,7 +41,7 @@ function listCharacterSceneConnections(
 }
 
 function relatedProductIdsFromScene(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   sceneId: string,
   params: Record<string, unknown>,
 ): string[] {
@@ -55,8 +61,7 @@ function relatedProductIdsFromScene(
   }
 
   if (productLabel) {
-    return db
-      .listRelationshipsFromSource(sceneId)
+    return listRelationshipsFromSource(db, sceneId)
       .filter((relationship) => relationship.type === productLabel)
       .map((relationship) => relationship.targetNodeId);
   }
@@ -66,8 +71,8 @@ function relatedProductIdsFromScene(
 
 export { priorityWeight, PRIORITY_WEIGHT } from "../../property-enums";
 
-function titleFromNode(db: GraphDatabase, id: string): string {
-  const node = db.getNode(id);
+function titleFromNode(db: RelationshipReadStore, id: string): string {
+  const node = readStoreGetNode(db, id);
   const title = node?.properties.title;
   return typeof title === "string" && title.trim() ? title.trim() : "Untitled";
 }
@@ -85,7 +90,7 @@ export function buildAllSceneCountPrefetch(
 }
 
 function countCharacterSceneRelationships(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   params: Record<string, unknown>,
 ): number {
@@ -97,8 +102,7 @@ function countCharacterSceneRelationships(
   }
   const scenesLabel = stringParam(params, "scenes_edge_label");
   if (!scenesLabel) return 0;
-  return db
-    .listRelationshipsFromSource(nodeId)
+  return listRelationshipsFromSource(db, nodeId)
     .filter((relationship) => relationship.type === scenesLabel).length;
 }
 
@@ -143,7 +147,7 @@ export function buildSceneCountByProductPrefetch(
     }
 
     if (scenesLabel) {
-      for (const sceneConnection of ctx.db.listRelationshipsFromSource(nodeId)) {
+      for (const sceneConnection of listRelationshipsFromSource(ctx.db, nodeId)) {
         if (sceneConnection.type !== scenesLabel) continue;
         const sceneId = sceneConnection.targetNodeId;
         const products = relatedProductIdsFromScene(ctx.db, sceneId, params);
@@ -194,7 +198,7 @@ export interface WeightedUsePrefetch {
 }
 
 function inspirationFeatureConnections(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   params: Record<string, unknown>,
 ): Relationship[] {
@@ -205,7 +209,7 @@ function inspirationFeatureConnections(
   }
   const featuresLabel = stringParam(params, "features_edge_label");
   if (!featuresLabel) return [];
-  return db.listRelationshipsFromSource(nodeId, featuresLabel);
+  return listRelationshipsFromSource(db, nodeId, featuresLabel);
 }
 
 export function buildWeightedUsePrefetch(
@@ -218,7 +222,7 @@ export function buildWeightedUsePrefetch(
   if (featuresTableId) {
     const registry = loadAssociationsFromContent(resolveContentPath());
     for (const type of setTraitProjectionTypes(registry)) {
-      for (const connection of ctx.db.listRelationshipsToTarget(featuresTableId, type)) {
+      for (const connection of listRelationshipsToTarget(ctx.db, featuresTableId, type)) {
         priorityByFeature.set(connection.sourceNodeId, priorityWeight(connection.properties.priority));
       }
     }
@@ -261,15 +265,15 @@ export function buildWonderPrefetch(
 
   const themedFeatures = new Set<string>();
   if (themeTargetId && themeLabel) {
-    for (const connection of ctx.db.listRelationshipsToTarget(themeTargetId)) {
+    for (const connection of listRelationshipsToTarget(ctx.db, themeTargetId)) {
       if (connection.type === themeLabel) {
         themedFeatures.add(connection.sourceNodeId);
       }
     }
-    for (const connection of ctx.db.listRelationshipsFromSource(themeTargetId, themeLabel)) {
+    for (const connection of listRelationshipsFromSource(ctx.db, themeTargetId, themeLabel)) {
       themedFeatures.add(connection.targetNodeId);
     }
-    for (const connection of ctx.db.listRelationshipsFromSource(themeTargetId)) {
+    for (const connection of listRelationshipsFromSource(ctx.db, themeTargetId)) {
       if (connection.type === themeLabel) {
         themedFeatures.add(connection.targetNodeId);
       }

@@ -1,5 +1,6 @@
 import type { DatabaseColumnDef } from "../database-view";
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "../graph-store/relationship-read";
+import { readStoreGetNode, readStoreListNodeIds } from "../graph-store/relationship-read";
 import type { EvalRow } from "../row-sort";
 import { loadDynamicColumnSets, loadDynamicProperties } from "./overlay";
 import {
@@ -28,7 +29,7 @@ export interface ApplyDynamicPropertiesOptions {
 
 function buildFixedPrefetch(
   resolverId: string,
-  ctx: { db: GraphDatabase; owner: string; viewName: string; rowNodeIds: string[] },
+  ctx: { db: RelationshipReadStore; owner: string; viewName: string; rowNodeIds: string[] },
   params: Record<string, unknown>,
 ): unknown {
   switch (resolverId) {
@@ -44,7 +45,7 @@ function buildFixedPrefetch(
 }
 
 export function applyDynamicProperties(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   owner: string,
   viewName: string,
   evalRows: EvalRow[],

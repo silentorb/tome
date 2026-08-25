@@ -1,4 +1,9 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "../graph-store/relationship-read";
+import {
+  listRelationshipsFromSource,
+  readStoreGetNode,
+  readStoreListNodeIds,
+} from "../graph-store/relationship-read";
 import {
   isOrderedTraitComposite,
   loadAssociationsFromContent,
@@ -14,7 +19,7 @@ import type { RelationScopeLayerConfig, RelationScopeTab } from "tome-graph-inte
 import { numericSortKey, nodeTitle } from "./helpers";
 
 function scopeMembershipSortKey(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   scopeNodeId: string,
   contentDir: string,
 ): number {
@@ -25,7 +30,7 @@ function scopeMembershipSortKey(
     if (!def) continue;
     const memberProjection = memberSideProjectionType(registry, composite);
     const property = orderedPropertyName(def);
-    for (const edge of db.listRelationshipsFromSource(scopeNodeId, memberProjection)) {
+    for (const edge of listRelationshipsFromSource(db, scopeNodeId, memberProjection)) {
       return numericSortKey(edge.properties[property], 999);
     }
   }
@@ -34,7 +39,7 @@ function scopeMembershipSortKey(
 
 /** Discover distinct related scope nodes among type-table members. */
 export function discoverRelationScopes(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   typeDatabaseId: string,
   config: RelationScopeLayerConfig,
   contentDir?: string,
@@ -64,7 +69,7 @@ export function discoverRelationScopes(
 
 /** Whether a member belongs to the given scope tab. */
 export function memberMatchesScope(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   memberId: string,
   config: RelationScopeLayerConfig,
   scopeId: string,

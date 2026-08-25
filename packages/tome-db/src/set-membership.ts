@@ -1,4 +1,4 @@
-import type { GraphDatabase, Relationship } from "tome-sqlite";
+import type { Relationship } from "tome-graph-interfaces";
 import {
   resolveContentPath,
   loadAssociationsFromContent,
@@ -10,35 +10,48 @@ import {
   setSideProjectionType,
   memberSideProjectionType,
 } from "tome-flatfile";
+import {
+  listRelationshipsFromSource,
+  listRelationshipsToTarget,
+  type RelationshipReadStore,
+} from "./graph-store/relationship-read";
 
 export { collectSetNodeIds } from "tome-flatfile";
 
 export type SetKind = "type_table" | "archive";
 
-export function memberSetIds(db: GraphDatabase, memberId: string, contentDir?: string): string[] {
-  const dir = contentDir ?? resolveContentPath();
+export function memberSetIds(
+  store: RelationshipReadStore,
+  memberId: string,
+  contentDir?: string,
+): string[] {
+  const dir = contentDir ?? store.contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     const memberProjection = memberSideProjectionType(registry, composite);
-    for (const rel of db.listRelationshipsFromSource(memberId, memberProjection)) {
+    for (const rel of listRelationshipsFromSource(store, memberId, memberProjection)) {
       ids.add(rel.targetNodeId);
     }
   }
   return [...ids];
 }
 
-export function setMemberIds(db: GraphDatabase, setId: string, contentDir?: string): string[] {
-  const dir = contentDir ?? resolveContentPath();
+export function setMemberIds(
+  store: RelationshipReadStore,
+  setId: string,
+  contentDir?: string,
+): string[] {
+  const dir = contentDir ?? store.contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     const setProjection = setSideProjectionType(registry, composite);
     const memberProjection = memberSideProjectionType(registry, composite);
-    for (const rel of db.listRelationshipsFromSource(setId, setProjection)) {
+    for (const rel of listRelationshipsFromSource(store, setId, setProjection)) {
       ids.add(rel.targetNodeId);
     }
-    for (const rel of db.listRelationshipsToTarget(setId, memberProjection)) {
+    for (const rel of listRelationshipsToTarget(store, setId, memberProjection)) {
       ids.add(rel.sourceNodeId);
     }
   }
@@ -46,37 +59,37 @@ export function setMemberIds(db: GraphDatabase, setId: string, contentDir?: stri
 }
 
 export function setKindForNode(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
 ): SetKind | null {
-  const dir = contentDir ?? resolveContentPath();
+  const dir = contentDir ?? store.contentDir ?? resolveContentPath();
   const archiveId = archiveNodeId(dir);
   if (archiveId && nodeId === archiveId) return "archive";
   if (hasTableSchemaEntry(dir, nodeId)) return "type_table";
-  if (setMemberIds(db, nodeId, dir).length > 0 || memberSetIds(db, nodeId, dir).length > 0) {
+  if (setMemberIds(store, nodeId, dir).length > 0 || memberSetIds(store, nodeId, dir).length > 0) {
     return "type_table";
   }
   return null;
 }
 
-export function isSetNode(db: GraphDatabase, nodeId: string, contentDir?: string): boolean {
-  return setKindForNode(db, nodeId, contentDir) !== null;
+export function isSetNode(store: RelationshipReadStore, nodeId: string, contentDir?: string): boolean {
+  return setKindForNode(store, nodeId, contentDir) !== null;
 }
 
 export function findSetEdge(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   memberId: string,
   setId: string,
   contentDir?: string,
 ): Relationship | null {
-  const dir = contentDir ?? resolveContentPath();
+  const dir = contentDir ?? store.contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     const memberProjection = memberSideProjectionType(registry, composite);
-    const edge = db
-      .listRelationshipsFromSource(memberId, memberProjection)
-      .find((r) => r.targetNodeId === setId);
+    const edge = listRelationshipsFromSource(store, memberId, memberProjection).find(
+      (r) => r.targetNodeId === setId,
+    );
     if (edge) return edge;
   }
   return null;
@@ -84,24 +97,24 @@ export function findSetEdge(
 
 /** Set edges normalized for type-table row building (member as sourceNodeId). */
 export function listSetMemberRowConnections(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   setId: string,
   contentDir?: string,
 ): Relationship[] {
-  const dir = contentDir ?? resolveContentPath();
+  const dir = contentDir ?? store.contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
   const byMember = new Map<string, Relationship>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     const setProjection = setSideProjectionType(registry, composite);
     const memberProjection = memberSideProjectionType(registry, composite);
-    for (const r of db.listRelationshipsFromSource(setId, setProjection)) {
+    for (const r of listRelationshipsFromSource(store, setId, setProjection)) {
       byMember.set(r.targetNodeId, {
         ...r,
         sourceNodeId: r.targetNodeId,
         targetNodeId: setId,
       });
     }
-    for (const r of db.listRelationshipsToTarget(setId, memberProjection)) {
+    for (const r of listRelationshipsToTarget(store, setId, memberProjection)) {
       if (!byMember.has(r.sourceNodeId)) byMember.set(r.sourceNodeId, r);
     }
   }

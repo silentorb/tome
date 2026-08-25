@@ -1,4 +1,9 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "./graph-store/relationship-read";
+import {
+  readStoreCountIncidentRelationships,
+  readStoreGetNode,
+  readStoreListNodesWithBodyLike,
+} from "./graph-store/relationship-read";
 import { findMarkdownLinksToTarget } from "tome-flatfile/markdown-links";
 import { getNodeDetail } from "./queries";
 import type { NodeBacklink, NodePageMetadata } from "tome-graph-interfaces";
@@ -17,14 +22,14 @@ function isoTimestampFromProperties(
   return new Date(parsed).toISOString();
 }
 
-export function getNodePageMetadata(db: GraphDatabase, id: string): NodePageMetadata | null {
-  const node = db.getNode(id);
+export function getNodePageMetadata(db: RelationshipReadStore, id: string): NodePageMetadata | null {
+  const node = readStoreGetNode(db, id);
   if (!node) return null;
 
   const backlinks: NodeBacklink[] = [];
   const seenSources = new Set<string>();
 
-  for (const candidate of db.listNodesWithBodyLike(`%${id}%`)) {
+  for (const candidate of readStoreListNodesWithBodyLike(db, `%${id}%`)) {
     if (candidate.id === id) continue;
     const matches = findMarkdownLinksToTarget(candidate.body, id);
     if (matches.length === 0 || seenSources.has(candidate.id)) continue;
@@ -48,7 +53,7 @@ export function getNodePageMetadata(db: GraphDatabase, id: string): NodePageMeta
   return {
     createdAt: isoTimestampFromProperties(node.properties, "created_at"),
     modifiedAt: isoTimestampFromProperties(node.properties, "modified_at"),
-    relationshipCount: db.countIncidentRelationships(id),
+    relationshipCount: readStoreCountIncidentRelationships(db, id),
     backlinks,
   };
 }

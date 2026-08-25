@@ -126,10 +126,72 @@ export function searchNodesGraph(limit: number): ImpGraph {
   };
 }
 
+/** Outgoing relationships from a source node (one hop, directed projection type). */
+export function outgoingRelationshipsGraph(
+  sourceNodeId: string,
+  projectionType: string,
+): ImpGraph {
+  return relationshipHopGraph(sourceNodeId, projectionType, 0);
+}
+
+/** Incoming relationships to a target node (one hop, directed projection type). */
+export function incomingRelationshipsGraph(
+  targetNodeId: string,
+  projectionType: string,
+): ImpGraph {
+  return relationshipHopGraph(targetNodeId, projectionType, 1);
+}
+
+function relationshipHopGraph(
+  anchorNodeId: string,
+  projectionType: string,
+  direction: 0 | 1,
+): ImpGraph {
+  const anchorLit = "anchor_lit";
+  const typeLit = "type_lit";
+  const dirLit = "dir_lit";
+  const equalsLeft = "equals_left";
+  const equalsRight = "equals_right";
+  const filter = "filter";
+  const equals = "equals";
+  const hop = "hop";
+  const output = "output";
+  return {
+    nodes: {
+      input: { id: "input", type: "input", inputs: {} },
+      [anchorLit]: literalNode(anchorLit, anchorNodeId),
+      [typeLit]: literalNode(typeLit, projectionType),
+      [dirLit]: literalNode(dirLit, direction),
+      [equalsLeft]: { id: equalsLeft, type: "column", inputs: { name: "id" } },
+      [equalsRight]: literalNode(equalsRight, anchorNodeId),
+      [equals]: { id: equals, type: "equals", inputs: {} },
+      [filter]: { id: filter, type: "filter", inputs: {} },
+      [hop]: {
+        id: hop,
+        type: "traverse",
+        inputs: { edge_property: null, edge_equals: null },
+      },
+      [output]: { id: output, type: "output", inputs: {} },
+    },
+    edges: {
+      e1: edge("input", "value", filter, "collection"),
+      e2: edge(filter, "collection", hop, "collection"),
+      e3: edge(hop, "collection", output, "value"),
+      e4: edge(equalsLeft, "value", equals, "left"),
+      e5: edge(equalsRight, "value", equals, "right"),
+      e6: edge(equals, "value", filter, "predicate"),
+      e7: edge(typeLit, "value", hop, "association"),
+      e8: edge(dirLit, "value", hop, "direction"),
+    },
+  };
+}
+
 export const standardImpGraphs = {
   recent: recentNodesGraph,
   typeMembers: typeMembersGraph,
   search: searchNodesGraph,
+  outgoingRelationships: outgoingRelationshipsGraph,
+  incomingRelationships: incomingRelationshipsGraph,
 } as const;
 
 export type StandardImpGraphName = keyof typeof standardImpGraphs;

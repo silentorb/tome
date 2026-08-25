@@ -1,4 +1,5 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "../graph-store/relationship-read";
+import { readStoreGetNode, readStoreListNodeIds } from "../graph-store/relationship-read";
 import {
   loadAssociationsFromContent,
   loadViewsFromContent,
@@ -60,14 +61,14 @@ function excludedKeys(composition: TablePresentationComposition): Set<string> {
  * and reorder presentation layers.
  */
 export function buildComposedDatabaseView(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   composition: TablePresentationComposition,
   requestedTabId?: string,
   contentDir?: string,
   rowsQuery?: TableRowsQuery,
 ): DatabaseViewDetail | null {
   const dir = contentDir ?? resolveContentPath();
-  const database = db.getNode(composition.typeDatabaseId);
+  const database = readStoreGetNode(db, composition.typeDatabaseId);
   if (!database) return null;
 
   const databaseId = composition.typeDatabaseId;

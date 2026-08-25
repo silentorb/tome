@@ -1,5 +1,10 @@
-import type { GraphDatabase, Relationship } from "tome-sqlite";
+import type { Relationship } from "tome-graph-interfaces";
 import { relationshipId } from "tome-sqlite";
+import {
+  listRelationshipsToTarget,
+  readStoreGetRelationship,
+  type RelationshipReadStore,
+} from "../graph-store/relationship-read";
 import {
   ORDERED_PROPERTY_DEFAULT,
   resolveContentPath,
@@ -24,13 +29,17 @@ export interface GroupHeader {
 }
 
 function groupSortKey(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   groupId: string,
   groupTypeDatabaseId: string,
   contentDir: string,
 ): number {
   const [, memberPerspective] = setRoleProjectionTypesForNode(groupTypeDatabaseId, contentDir);
-  const edge = db.getRelationship(relationshipId(groupId, memberPerspective, groupTypeDatabaseId));
+  const edge = readStoreGetRelationship(db, relationshipId(groupId, memberPerspective, groupTypeDatabaseId), {
+    sourceNodeId: groupId,
+    targetNodeId: groupTypeDatabaseId,
+    type: memberPerspective,
+  });
   if (edge) {
     return numericSortKey(edge.properties[ORDERED_PROPERTY_DEFAULT], 999);
   }
@@ -39,7 +48,7 @@ function groupSortKey(
 
 /** Group-table members relevant to the optional active scope. */
 export function groupsForScope(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   config: RelationGroupsLayerConfig,
   scopeId: string | undefined,
   contentDir?: string,
@@ -48,7 +57,8 @@ export function groupsForScope(
   const groups: GroupHeader[] = [];
   const [, memberPerspective] = setRoleProjectionTypesForNode(config.groupTypeDatabaseId, dir);
 
-  for (const connection of db.listRelationshipsToTarget(
+  for (const connection of listRelationshipsToTarget(
+    db,
     config.groupTypeDatabaseId,
     memberPerspective,
   )) {
@@ -85,7 +95,7 @@ function canonicalGroupIdForTitle(
 
 /** Resolve which group a member belongs to, tolerating duplicate group vertices from import. */
 export function resolveMemberGroupId(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   config: RelationGroupsLayerConfig,
   memberId: string,
   scopeGroups: GroupHeader[],
@@ -111,7 +121,7 @@ export function resolveMemberGroupId(
 }
 
 export function buildRelationGroups(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   config: RelationGroupsLayerConfig,
   scopeId: string | undefined,
   rows: DatabaseRow[],

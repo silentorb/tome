@@ -124,6 +124,24 @@ export function createApiHandler(
         });
       }
 
+      if (path === "/api/graph/execute-imp" && req.method === "POST") {
+        const payload = (await req.json()) as {
+          graph?: unknown;
+          context?: unknown;
+        };
+        if (!payload.graph || typeof payload.graph !== "object") {
+          return json({ error: "graph object required" }, 400);
+        }
+        const context =
+          payload.context && typeof payload.context === "object"
+            ? (payload.context as import("tome-graph-interfaces").ExecuteImpContext)
+            : undefined;
+        const result = await Promise.resolve(
+          db.executeImp(payload.graph as import("tome-graph-interfaces").ImpGraph, context),
+        );
+        return json(result);
+      }
+
       if (path === "/api/schema") {
         return json({ schema: db.getSchema() });
       }

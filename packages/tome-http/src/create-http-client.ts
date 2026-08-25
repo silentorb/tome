@@ -447,6 +447,16 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       );
       return data.graph;
     },
+    async executeImp(
+      graph: import("tome-graph-interfaces").ImpGraph,
+      context?: import("tome-graph-interfaces").ExecuteImpContext,
+    ): Promise<import("tome-graph-interfaces").ImpCollectionResult> {
+      return fetchJson("/api/graph/execute-imp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ graph, context }),
+      });
+    },
     async getSchema(): Promise<SchemaFile> {
       const data = await fetchJson<{ schema: SchemaFile }>("/api/schema");
       return data.schema;

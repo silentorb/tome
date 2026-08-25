@@ -1,9 +1,16 @@
-import type { GraphDatabase, Node, Properties } from "tome-sqlite";
+import type { Node, Properties } from "tome-graph-interfaces";
 import { memberSetIds } from "./set-membership";
 import { resolveContentPath } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import { hasTableSchemaEntry, loadTableSchemasFromContent } from "tome-flatfile";
 import { memberSideProjectionTypes, setSideProjectionTypes } from "tome-flatfile";
+import {
+  listRelationshipsFromSource,
+  listRelationshipsToTarget,
+  readStoreGetNode,
+  readStoreListNodeIds,
+  type RelationshipReadStore,
+} from "./graph-store/relationship-read";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;
@@ -13,44 +20,48 @@ function titleFromProperties(properties: Record<string, unknown>): string {
   return "Untitled";
 }
 
-export function hasIncomingIsA(db: GraphDatabase, nodeId: string, contentDir?: string): boolean {
+export function hasIncomingIsA(
+  store: RelationshipReadStore,
+  nodeId: string,
+  contentDir?: string,
+): boolean {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadAssociationsFromContent(dir);
   for (const projection of memberSideProjectionTypes(registry)) {
-    if (db.listRelationshipsToTarget(nodeId, projection).length > 0) return true;
+    if (listRelationshipsToTarget(store, nodeId, projection).length > 0) return true;
   }
   for (const projection of setSideProjectionTypes(registry)) {
-    if (db.listRelationshipsFromSource(nodeId, projection).length > 0) return true;
+    if (listRelationshipsFromSource(store, nodeId, projection).length > 0) return true;
   }
   return false;
 }
 
 export function isTypeTableNode(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
 ): boolean {
   const dir = contentDir ?? resolveContentPath();
   if (hasTableSchemaEntry(dir, nodeId)) return true;
-  return hasIncomingIsA(db, nodeId, dir);
+  return hasIncomingIsA(store, nodeId, dir);
 }
 
 export function typeIdsForInstance(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
 ): string[] {
-  return memberSetIds(db, nodeId, contentDir);
+  return memberSetIds(store, nodeId, contentDir);
 }
 
 /** Lexicographically first IS_A type title for an instance page, when any. */
 export function primaryTypeTitleForInstance(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   nodeId: string,
 ): string | null {
   const titles: string[] = [];
-  for (const typeId of typeIdsForInstance(db, nodeId)) {
-    const typeNode = db.getNode(typeId);
+  for (const typeId of typeIdsForInstance(store, nodeId)) {
+    const typeNode = readStoreGetNode(store, typeId);
     if (!typeNode) continue;
     const title = titleFromProperties(typeNode.properties);
     if (title !== "Untitled") titles.push(title);
@@ -62,19 +73,19 @@ export function primaryTypeTitleForInstance(
 
 export function isTypeTableCandidate(
   node: Pick<Node, "properties"> & { id?: string },
-  db?: GraphDatabase,
+  store?: RelationshipReadStore,
   nodeId?: string,
   contentDir?: string,
 ): boolean {
   if (nodeId && hasTableSchemaEntry(contentDir ?? resolveContentPath(), nodeId)) {
     return true;
   }
-  if (db && nodeId) return hasIncomingIsA(db, nodeId, contentDir);
+  if (store && nodeId) return hasIncomingIsA(store, nodeId, contentDir);
   return false;
 }
 
 export function findTypeNodeByTitle(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   title: string,
   contentDir?: string,
 ): string | null {
@@ -84,45 +95,47 @@ export function findTypeNodeByTitle(
   const dir = contentDir ?? resolveContentPath();
   const schemas = loadTableSchemasFromContent(dir);
   for (const typeId of Object.keys(schemas.tables)) {
-    const node = db.getNode(typeId);
+    const node = readStoreGetNode(store, typeId);
     if (!node) continue;
     if (titleFromProperties(node.properties).toLowerCase() === normalized) return typeId;
   }
 
-  for (const row of db.listNodesForGraphExport()) {
-    if (!isTypeTableCandidate({ properties: db.getNode(row.id)?.properties ?? {} }, db, row.id, dir)) {
+  for (const id of readStoreListNodeIds(store)) {
+    const node = readStoreGetNode(store, id);
+    if (!node) continue;
+    if (!isTypeTableCandidate({ properties: node.properties }, store, id, dir)) {
       continue;
     }
-    if (row.title.trim().toLowerCase() === normalized) return row.id;
+    if (titleFromProperties(node.properties).trim().toLowerCase() === normalized) return id;
   }
   return null;
 }
 
-export function graphGroupForNode(db: GraphDatabase, nodeId: string): string {
-  const node = db.getNode(nodeId);
+export function graphGroupForNode(store: RelationshipReadStore, nodeId: string): string {
+  const node = readStoreGetNode(store, nodeId);
   if (!node) return "Unknown";
 
-  if (isTypeTableNode(db, nodeId)) {
+  if (isTypeTableNode(store, nodeId)) {
     const title = titleFromProperties(node.properties);
     return title === "Untitled" ? "TypeTable" : title;
   }
 
-  const typeTitle = primaryTypeTitleForInstance(db, nodeId);
+  const typeTitle = primaryTypeTitleForInstance(store, nodeId);
   if (typeTitle) return typeTitle;
 
   return "Node";
 }
 
 /** Labels for graph export / visualization (derived from IS_A type and node kind). */
-export function graphLabelsForNode(db: GraphDatabase, nodeId: string): string[] {
-  const node = db.getNode(nodeId);
+export function graphLabelsForNode(store: RelationshipReadStore, nodeId: string): string[] {
+  const node = readStoreGetNode(store, nodeId);
   if (!node) return ["Unknown"];
 
-  if (isTypeTableNode(db, nodeId)) {
+  if (isTypeTableNode(store, nodeId)) {
     return ["TypeTable"];
   }
 
-  const typeTitle = primaryTypeTitleForInstance(db, nodeId);
+  const typeTitle = primaryTypeTitleForInstance(store, nodeId);
   if (typeTitle) return [typeTitle];
 
   return ["Node"];
@@ -134,12 +147,12 @@ export function typeTableMarkerProperties(title: string): Properties {
 }
 
 export function nodeMatchesTargetTypes(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   targetNodeId: string,
   allowedTypeIds: readonly string[],
   contentDir?: string,
 ): boolean {
   if (allowedTypeIds.length === 0) return true;
-  const targetTypes = typeIdsForInstance(db, targetNodeId, contentDir);
+  const targetTypes = typeIdsForInstance(store, targetNodeId, contentDir);
   return targetTypes.some((id) => allowedTypeIds.includes(id));
 }

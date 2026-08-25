@@ -401,7 +401,6 @@ export { createExtensionGraphQueryServices } from "./extension-graph-query";
 export { createExtensionExecuteImpServices } from "./extension-execute-imp";
 export { createExtensionGraphMutateServices } from "./extension-graph-mutate";
 export { createExtensionSchemaQueryServices } from "./extension-schema-query";
-export { createExtensionSqlQueryServices } from "./extension-sql-query";
 export { createExtensionCorpusQueryServices } from "./extension-corpus-query";
 export {
   ComposedGraphStore,
@@ -410,12 +409,18 @@ export {
   openFlatfileQueryableGraphStore,
   runExecuteImp,
   runExecuteImpSql,
+  listDistinctProjectionTypes,
+  readStoreGetNode,
+  readStoreListNodeIds,
   recentNodesGraph,
+  searchNodesGraph,
+  outgoingRelationshipsGraph,
+  incomingRelationshipsGraph,
   typeMembersGraph,
   standardImpGraphs,
   standardGraphs,
 } from "./graph-store";
-export type { RunExecuteImpOptions } from "./graph-store";
+export type { RelationshipReadStore, RunExecuteImpOptions } from "./graph-store";
 export type {
   ExtensionComponentEntry,
   ExtensionComponentKind,

@@ -1,4 +1,4 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { TomeGraphStoreBase } from "tome-graph-interfaces";
 import {
   loadAssociationsFromContent,
   resolveContentPath,
@@ -6,6 +6,10 @@ import {
 } from "tome-flatfile";
 import { findSetEdge, setMemberIds } from "./set-membership";
 import { archiveNodeId, legacyArchivePathPrefix } from "tome-flatfile";
+import {
+  readStoreIsNodeArchived,
+  type RelationshipReadStore,
+} from "./graph-store/relationship-read";
 
 export function isLegacyArchivedPath(path: string | null, contentDir?: string): boolean {
   if (!path) return false;
@@ -24,27 +28,26 @@ function resolveArchiveHubId(contentDir?: string): string | null {
 
 /** True when the node has a set edge on the Archive hub (not the hub itself). */
 export function isArchivedNode(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
 ): boolean {
   const dir = contentDir ?? resolveContentPath();
   const archiveId = resolveArchiveHubId(dir);
   if (archiveId && nodeId === archiveId) return false;
-  if (db.isNodeArchived(nodeId)) return true;
+  if (readStoreIsNodeArchived(store, nodeId)) return true;
   if (!archiveId) return false;
 
   const registry = loadAssociationsFromContent(dir);
   if (setTraitProjectionTypes(registry).length === 0) return false;
 
-  return findSetEdge(db, nodeId, archiveId, dir) !== null;
+  return findSetEdge(store, nodeId, archiveId, dir) !== null;
 }
 
-export function listArchivedNodeIds(db: GraphDatabase, contentDir?: string): string[] {
+export function listArchivedNodeIds(store: RelationshipReadStore, contentDir?: string): string[] {
   const dir = contentDir ?? resolveContentPath();
   const archiveId = resolveArchiveHubId(dir);
   if (!archiveId) return [];
-  const rows = setMemberIds(db, archiveId, dir);
-  if (rows.length > 0) return rows.filter((id) => id !== archiveId);
-  return db.listArchiveMemberIds(archiveId, dir).filter((id) => id !== archiveId);
+  const rows = setMemberIds(store, archiveId, dir);
+  return rows.filter((id) => id !== archiveId);
 }

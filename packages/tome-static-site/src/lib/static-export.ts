@@ -1,7 +1,8 @@
-import type { GraphDatabase, CustomTabDefinition, SchemaFile } from "tome-db";
+import type { CustomTabDefinition, SchemaFile, RelationshipReadStore } from "tome-db";
 import {
   getDatabaseViewDetail,
   getNodePageDetail,
+  readStoreGetNode,
   type NodePageDetail,
   type NodeSection,
 } from "tome-db";
@@ -71,12 +72,12 @@ function buildItemsTabsMeta(
 }
 
 function buildExtraTabPayload(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   nodeId: string,
   tabId: string,
   contentDir: string,
 ): TabItemsPayload | null {
-  const databaseView = getDatabaseViewDetail(db, nodeId, tabId, contentDir);
+  const databaseView = getDatabaseViewDetail(store, nodeId, tabId, contentDir);
   if (!databaseView) return null;
   return {
     kind: "database",
@@ -93,12 +94,12 @@ function buildExtraTabPayload(
 }
 
 export function buildSiteNode(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   id: string,
   contentDir: string,
   schema: SchemaFile,
 ): SiteNode | null {
-  const detail = getNodePageDetail(db, id, { contentDir });
+  const detail = getNodePageDetail(store, id, { contentDir });
   if (!detail) return null;
 
   const itemsSection = findItemsSection(detail.sections);
@@ -106,7 +107,7 @@ export function buildSiteNode(
     detail.isTypeTable && itemsSection ? buildItemsTabsMeta(itemsSection) : undefined;
 
   const multiTab = itemsTabs !== undefined && itemsTabs.items.length > 1;
-  const urlAlias = readUrlAlias(db.getNode(id)?.properties ?? null) ?? undefined;
+  const urlAlias = readUrlAlias(readStoreGetNode(store, id)?.properties ?? null) ?? undefined;
 
   return {
     id: detail.id,
@@ -124,7 +125,7 @@ export function buildSiteNode(
 }
 
 export function buildExtraTabPayloadsAndRoutes(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   nodes: SiteNode[],
   contentDir: string,
 ): { tabItemsPayloads: Record<string, TabItemsPayload>; tabRoutes: TabRoute[] } {
@@ -136,7 +137,7 @@ export function buildExtraTabPayloadsAndRoutes(
     const { items, defaultTabId } = node.itemsTabs;
     for (const tab of items) {
       if (tab.id === defaultTabId) continue;
-      const payload = buildExtraTabPayload(db, node.id, tab.id, contentDir);
+      const payload = buildExtraTabPayload(store, node.id, tab.id, contentDir);
       if (!payload) continue;
       const key = tabPayloadKey(node.id, tab.id);
       tabItemsPayloads[key] = payload;

@@ -151,7 +151,9 @@ Consolidate legacy dual directed edges with `bun scripts/consolidate-relationshi
 
 ## Behavior / API
 
-`GraphDatabase` (`packages/tome-sqlite/src/graph.ts`):
+**Read paths (phase 3):** Editor and static-site read modules accept **`TomeGraphStoreQueryable`** / **`RelationshipReadStore`** (`tome-db/src/graph-store/relationship-read.ts`) — not direct `GraphDatabase` access. SQLite cache remains the **`executeImp` SQL backend** and sync target for mutations via `TomeWriteContext.cache`. See [graph-store.md](./graph-store.md).
+
+`GraphDatabase` (`packages/tome-sqlite/src/graph.ts`) — cache / legacy tests:
 
 - `upsertNode(id, properties)` — create or merge node
 - `listRelationshipsFromSource` / `listRelationshipsToTarget` — query projection table by local perspective type

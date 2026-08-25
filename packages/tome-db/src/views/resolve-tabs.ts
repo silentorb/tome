@@ -1,4 +1,5 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "../graph-store/relationship-read";
+import { readStoreGetNode, readStoreListNodeIds } from "../graph-store/relationship-read";
 import {
   DEFAULT_CUSTOM_TAB,
   type ViewDefinition,
@@ -150,7 +151,7 @@ export function activeTabName(resolved: ResolvedCustomTabs): string {
 }
 
 export function sectionUsesGeneratedTabs(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   contentDir: string,
   nodeId: string,
   association: string,

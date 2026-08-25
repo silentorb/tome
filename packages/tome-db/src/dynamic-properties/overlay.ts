@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import {
   loadDynamicColumnSetsFromContent,
   loadDynamicPropertiesFromContent,
@@ -21,18 +22,6 @@ export type {
   SeedDynamicPropertyInput,
 } from "tome-flatfile";
 
-function parseParams(rows: { param_key: string; param_value: string }[]): Record<string, unknown> {
-  const out: Record<string, unknown> = {};
-  for (const row of rows) {
-    try {
-      out[row.param_key] = JSON.parse(row.param_value);
-    } catch {
-      out[row.param_key] = row.param_value;
-    }
-  }
-  return out;
-}
-
 function contentDirForDynamicProperties(explicit?: string): string | null {
   const dir = explicit ?? readEnv("TOME_CONTENT_PATH") ?? resolveContentPath();
   if (existsSync(dynamicPropertiesFilePath(dir))) return dir;
@@ -40,7 +29,7 @@ function contentDirForDynamicProperties(explicit?: string): string | null {
 }
 
 export function loadDynamicProperties(
-  db: GraphDatabase,
+  _db: RelationshipReadStore,
   owner: string,
   contentDir?: string,
 ): DynamicPropertyRecord[] {
@@ -48,46 +37,11 @@ export function loadDynamicProperties(
   if (fromContent) {
     return loadDynamicPropertiesFromContent(fromContent, owner);
   }
-
-  try {
-    const properties = db.queryAll<{
-      id: string;
-      database_id: string;
-      column_key: string;
-      column_name: string;
-      column_type: string;
-      resolver_id: string;
-    }>(
-      `SELECT id, database_id, column_key, column_name, column_type, resolver_id
-     FROM dynamic_fields
-     WHERE database_id = ? AND enabled = 1`,
-      owner,
-    );
-
-    return properties.map((property) => {
-      const params = parseParams(
-        db.queryAll<{ param_key: string; param_value: string }>(
-          "SELECT param_key, param_value FROM dynamic_field_params WHERE field_id = ?",
-          property.id,
-        ),
-      );
-      return {
-        id: property.id,
-        owner: property.database_id,
-        columnKey: property.column_key,
-        columnName: property.column_name,
-        columnType: property.column_type,
-        resolverId: property.resolver_id,
-        params,
-      };
-    });
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 export function loadDynamicColumnSets(
-  db: GraphDatabase,
+  _db: RelationshipReadStore,
   owner: string,
   contentDir?: string,
 ): DynamicColumnSetRecord[] {
@@ -95,46 +49,7 @@ export function loadDynamicColumnSets(
   if (fromContent) {
     return loadDynamicColumnSetsFromContent(fromContent, owner);
   }
-
-  try {
-    const sets = db.queryAll<{
-      id: string;
-      database_id: string;
-      column_key_pattern: string;
-      column_name_pattern: string;
-      column_type: string;
-      resolver_id: string;
-    }>(
-      `SELECT id, database_id, column_key_pattern, column_name_pattern, column_type, resolver_id
-     FROM dynamic_column_sets
-     WHERE database_id = ? AND enabled = 1`,
-      owner,
-    );
-
-    return sets.map((set) => {
-      const params = parseParams(
-        db.queryAll<{ param_key: string; param_value: string }>(
-          "SELECT param_key, param_value FROM dynamic_column_set_params WHERE set_id = ?",
-          set.id,
-        ),
-      );
-      const hideLegacyKeys = Array.isArray(params.hide_legacy_keys)
-        ? (params.hide_legacy_keys as string[])
-        : [];
-      return {
-        id: set.id,
-        owner: set.database_id,
-        columnKeyPattern: set.column_key_pattern,
-        columnNamePattern: set.column_name_pattern,
-        columnType: set.column_type,
-        resolverId: set.resolver_id,
-        params,
-        hideLegacyKeys,
-      };
-    });
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 export function seedDynamicProperty(db: GraphDatabase, input: SeedDynamicPropertyInput): void {

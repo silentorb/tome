@@ -16,6 +16,7 @@ Read this when adding or changing HTTP routes, graph-service methods exposed ove
 - Multiple requests per page load **may** exist when they serve **separate use cases** (workspace chrome, node page, recent list, search). Do not merge unrelated use cases into one Frankenstein payload.
 - Conversely, do not split one use case across chatty atomic calls when the only reason is “smaller endpoints” — distributed call overhead makes that the wrong default here.
 - Exceptions **may** exist when follow-up data is a clearly separate client concern (e.g. slash-menu preview of a newly inserted page block via `POST …/prepare-editor-body`), not part of the initial page-load document.
+- **Integrator escape hatch:** `POST /api/graph/execute-imp` exposes raw **`executeImp`** (`{ graph, context? }` → `{ columns, rows }`) for tools that need collection queries without editor use-case assembly. This is **not** an editor contract — responses are unassembled Imp results, not node pages or table DTOs. See [graph-store.md](./graph-store.md).
 
 ## Design rationale
 

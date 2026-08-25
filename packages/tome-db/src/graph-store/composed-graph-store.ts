@@ -19,6 +19,7 @@ import type {
   TomeGraphStoreQueryable,
   ViewsFile,
   WorkspaceFile,
+  ListRelationshipProjectionsOptions,
   AssociationsFile,
   DynamicPropertiesFile,
 } from "tome-graph-interfaces";
@@ -213,6 +214,13 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     options?: { includeArchived?: boolean },
   ): void {
     this.flatfile.forEachRelationshipRecord(fn, options);
+  }
+
+  listRelationshipProjections(
+    nodeId: string,
+    options?: ListRelationshipProjectionsOptions,
+  ): Relationship[] {
+    return this.flatfile.listRelationshipProjections(nodeId, options);
   }
 
   executeImp(graph: ImpGraph, context?: ExecuteImpContext): ImpCollectionResult {

@@ -1,4 +1,5 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "./graph-store/relationship-read";
+import { readStoreGetNode, readStoreListNodeIds } from "./graph-store/relationship-read";
 import { typeIdsForInstance } from "./node-capabilities";
 import {
   UnknownAssociationError,
@@ -44,7 +45,7 @@ export interface AssociationRuleContext {
  */
 export function associationRuleContext(
   registry: AssociationsFile,
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   sourceNodeId: string,
   typeOrProjection: string,
   contentDir?: string,
@@ -84,7 +85,7 @@ export function associationRuleContext(
 
 export function endpointsMatchInstances(
   def: AssociationDefinition,
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeA: string,
   nodeB: string,
   contentDir?: string,
@@ -102,7 +103,7 @@ export function endpointsMatchInstances(
 /** Resolve storage composite for an edge from endpoint instance types. */
 export function matchCompositeForInstances(
   registry: AssociationsFile,
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeA: string,
   nodeB: string,
   contentDir?: string,

@@ -1,10 +1,11 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "../graph-store/relationship-read";
+import { readStoreGetNode, readStoreListNodeIds } from "../graph-store/relationship-read";
 import type { EvalRow } from "../row-sort";
 
 export type DynamicPropertyParams = Record<string, unknown>;
 
 export interface DynamicResolverContext {
-  db: GraphDatabase;
+  db: RelationshipReadStore;
   owner: string;
   viewName: string;
   rowNodeIds: string[];

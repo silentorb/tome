@@ -1,9 +1,16 @@
-import type { GraphDatabase, Properties, Relationship } from "tome-sqlite";
+import type { Relationship } from "tome-graph-interfaces";
 import { findSetEdge, setMemberIds } from "./set-membership";
 import { normalizeAssociationId } from "tome-flatfile";
+import {
+  listRelationshipsFromSource,
+  listRelationshipsToTarget,
+  type RelationshipReadStore,
+} from "./graph-store/relationship-read";
+import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
+import type { Properties } from "tome-graph-interfaces";
 
 export function rowBelongsToDatabase(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   rowId: string,
   databaseId: string,
   contentDir?: string,
@@ -13,7 +20,7 @@ export function rowBelongsToDatabase(
 
 /** Keep incident edges when row is a member of the viewing database. */
 export function filterRelationshipsByRowDatabaseContext(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   rowId: string,
   databaseId: string,
   relationships: Relationship[],
@@ -54,13 +61,37 @@ function mapProjectionRows(
   }));
 }
 
+function isGraphStoreBase(store: RelationshipReadStore): store is import("tome-graph-interfaces").TomeGraphStoreBase {
+  return typeof (store as import("tome-graph-interfaces").TomeGraphStoreBase).listRelationshipProjections === "function";
+}
+
 /** All projections for a composite relationship type incident to nodeId. */
 export function listRelationshipsForComposite(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   compositeType: string,
 ): Relationship[] {
   const normalized = normalizeAssociationId(compositeType);
+  if (isGraphStoreBase(db)) {
+    const registry = db.readAssociations();
+    const seen = new Set<string>();
+    const results: Relationship[] = [];
+    db.forEachRelationshipRecord((entry) => {
+      if (normalizeAssociationId(entry.type) !== normalized) return;
+      const { projections } = expandRelationshipEntry(entry, registry);
+      for (const row of projections) {
+        if (row.sourceNodeId !== nodeId && row.targetNodeId !== nodeId) continue;
+        const rel = toDomainRelationship(row);
+        const key = rel.recordId ?? rel.id;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        results.push(rel);
+      }
+    });
+    if (results.length > 0) return dedupeByRecordId(results);
+    return listRelationshipsFromSource(db, nodeId, normalized);
+  }
+
   const rows = db.queryAll<{
     id: string;
     record_id: string;
@@ -82,7 +113,7 @@ export function listRelationshipsForComposite(
   const composite = dedupeByRecordId(mapProjectionRows(rows));
   if (composite.length > 0) return composite;
 
-  return db.listRelationshipsFromSource(nodeId, normalized);
+  return listRelationshipsFromSource(db, nodeId, normalized);
 }
 
 function dedupeByRecordId(relationships: Relationship[]): Relationship[] {
@@ -104,7 +135,7 @@ export function otherEndpoint(relationship: Relationship, nodeId: string): strin
 }
 
 export function relatedNodeIds(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   compositeType: string,
 ): string[] {
@@ -120,7 +151,7 @@ export function relatedNodeIds(
 }
 
 export function firstRelatedNodeId(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   compositeType: string,
 ): string | null {
@@ -128,21 +159,21 @@ export function firstRelatedNodeId(
   return relationships[0] ? otherEndpoint(relationships[0], nodeId) : null;
 }
 
-function databaseMemberIds(db: GraphDatabase, databaseId: string, contentDir?: string): Set<string> {
+function databaseMemberIds(db: RelationshipReadStore, databaseId: string, contentDir?: string): Set<string> {
   return new Set(setMemberIds(db, databaseId, contentDir));
 }
 
 /** Incident relationships whose opposite endpoint belongs to targetDatabaseId. */
 export function listRelationshipsToDatabaseMembers(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   targetDatabaseId: string,
   contentDir?: string,
 ): Relationship[] {
   const members = databaseMemberIds(db, targetDatabaseId, contentDir);
   const incident = uniqueRelationships([
-    ...db.listRelationshipsFromSource(nodeId),
-    ...db.listRelationshipsToTarget(nodeId),
+    ...listRelationshipsFromSource(db, nodeId),
+    ...listRelationshipsToTarget(db, nodeId),
   ]);
   return dedupeByRecordId(
     incident.filter((relationship) => {

@@ -1,4 +1,5 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "./graph-store/relationship-read";
+import { readStoreGetNode, readStoreListNodeIds } from "./graph-store/relationship-read";
 import { isArchivedNode } from "./archive-status";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite } from "./content/write-context";
@@ -45,8 +46,8 @@ function bodyFromProperties(properties: Record<string, unknown>): string {
   return typeof body === "string" ? body : "";
 }
 
-export function getNodeDetail(db: GraphDatabase, id: string, contentDir?: string): NodeDetail | null {
-  const node = db.getNode(id);
+export function getNodeDetail(db: RelationshipReadStore, id: string, contentDir?: string): NodeDetail | null {
+  const node = readStoreGetNode(db, id);
   if (!node) return null;
   return {
     id: node.id,

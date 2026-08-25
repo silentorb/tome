@@ -28,6 +28,7 @@ import {
   associationRuleContext,
   recentNodesGraph,
   searchNodesGraph,
+  listDistinctProjectionTypes,
   updateNodeBody,
   updateNodeTitle,
   deleteDatabaseColumn as deleteDatabaseColumnInDb,
@@ -54,7 +55,6 @@ import {
   type SchemaFile,
   type ViewSortSpec,
   type TomeWriteContext,
-  type GraphDatabase,
   loadWorkspaceFromContent,
   primaryTypeTitleForInstance,
 } from "tome-db";
@@ -106,12 +106,12 @@ function buildGraphServices(
   contentPath: string,
 ): TomeGraphServices {
   writeCtx.graphStore.startWatching();
-  const cache = writeCtx.cache as GraphDatabase;
+  const graphStore = writeCtx.graphStore;
 
   const extensions = new ExtensionServerRuntime(
     contentPath,
     () => createExtensionGraphQueryServices(writeCtx.graphStore, contentPath),
-    () => createExtensionSchemaQueryServices(cache, contentPath),
+    () => createExtensionSchemaQueryServices(graphStore, contentPath),
     () => createExtensionExecuteImpServices(writeCtx.graphStore),
     () => createExtensionGraphMutateServices(writeCtx),
     () => createExtensionCorpusQueryServices(writeCtx.store),
@@ -149,7 +149,7 @@ function buildGraphServices(
       : corpora[0];
     const contentDir = match?.contentDir ?? contentPath;
     const ws = match?.workspace ?? loadWorkspaceFromContent(contentDir);
-    const archivePage = getNodePageDetail(cache, ws.archiveNodeId, { contentDir });
+    const archivePage = getNodePageDetail(graphStore, ws.archiveNodeId, { contentDir });
     return {
       ...ws,
       archiveNodeTitle: archivePage?.title ?? "Archive",
@@ -178,7 +178,7 @@ function buildGraphServices(
       const contentDir =
         writeCtx.store.listCorpora().find((c) => c.workspace.homeNodeId === ws.homeNodeId)
           ?.contentDir ?? contentPath;
-      const home = getNodePageDetail(cache, ws.homeNodeId, { contentDir });
+      const home = getNodePageDetail(graphStore, ws.homeNodeId, { contentDir });
       if (home) return ws.homeNodeId;
       const recent = writeCtx.graphStore.executeImp(recentNodesGraph(1));
       const rows = recent instanceof Promise ? [] : recent.rows;
@@ -197,7 +197,7 @@ function buildGraphServices(
       const nodeContentDir =
         writeCtx.store.listCorpora().find((c) => c.id === writeCtx.store.locateNode(id))
           ?.contentDir ?? contentPath;
-      const detail = getNodePageDetail(cache, id, {
+      const detail = getNodePageDetail(graphStore, id, {
         tabId,
         contentDir: nodeContentDir,
         includeSchemaEmptySections: true,
@@ -205,7 +205,7 @@ function buildGraphServices(
       });
       if (!detail) return null;
 
-      let document = storageBodyToDocument(cache, detail.body);
+      let document = storageBodyToDocument(graphStore, detail.body);
       const needsPageBlockExtensions = document.segments.some(
         (segment) => segment.type === "page_block",
       );
@@ -244,7 +244,7 @@ function buildGraphServices(
     },
     getDatabaseView(id: string, tabId?: string, rows?: TableRowsQuery) {
       return getDatabaseViewDetail(
-        cache,
+        graphStore,
         id,
         tabId,
         contentPath,
@@ -252,7 +252,7 @@ function buildGraphServices(
       );
     },
     getRelationTable(nodeId: string, perspective: string, rows?: TableRowsQuery) {
-      return getRelationTableSection(cache, nodeId, perspective, {
+      return getRelationTableSection(graphStore, nodeId, perspective, {
         contentDir: contentPath,
         includeSchemaEmptySections: true,
         rowsQuery: rows ?? EDITOR_TABLE_ROWS,
@@ -303,7 +303,7 @@ function buildGraphServices(
       const schemas = loadTableSchemasFromContent(writeCtx.store.contentDir);
       const entries: { id: string; title: string }[] = [];
       for (const id of Object.keys(schemas.tables)) {
-        const node = writeCtx.cache.getNode(id);
+        const node = graphStore.getNode(id);
         const title =
           typeof node?.properties.title === "string" && node.properties.title.trim()
             ? node.properties.title.trim()
@@ -318,16 +318,16 @@ function buildGraphServices(
     getSchema(): SchemaFile {
       return schema();
     },
-    listRelationshipTypes() {
+  listRelationshipTypes() {
       const registry = loadAssociationsFromContent(contentPath);
       return labeledRelationshipTypes(
         registry,
-        writeCtx.cache.listDistinctRelationshipTypes(),
+        listDistinctProjectionTypes(graphStore),
       );
     },
     getRelationshipLinkOptions(sourceId: string, type: string) {
       const registry = loadAssociationsFromContent(contentPath);
-      const rule = associationRuleContext(registry, cache, sourceId, type, contentPath);
+      const rule = associationRuleContext(registry, graphStore, sourceId, type, contentPath);
       return {
         allowedTargetTypeIds: rule ? [...rule.allowedTargetTypeIds] : null,
       };
@@ -358,7 +358,7 @@ function buildGraphServices(
         return {
           id,
           title,
-          primaryTypeTitle: primaryTypeTitleForInstance(cache, id),
+          primaryTypeTitle: primaryTypeTitleForInstance(graphStore, id),
           ...(matchPreview ? { matchPreview } : {}),
           ...corpusMeta(id, options?.activeCorpusId),
         };
@@ -373,7 +373,7 @@ function buildGraphServices(
         return {
           id,
           title: typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Untitled",
-          primaryTypeTitle: primaryTypeTitleForInstance(cache, id),
+          primaryTypeTitle: primaryTypeTitleForInstance(graphStore, id),
           ...corpusMeta(id),
         };
       });
@@ -439,7 +439,7 @@ function buildGraphServices(
       const registry = loadAssociationsFromContent(contentPath);
       const rule = associationRuleContext(
         registry,
-        cache,
+        graphStore,
         sourceId,
         input.type,
         contentPath,
@@ -488,10 +488,13 @@ function buildGraphServices(
       });
     },
     getGraphFull(): GraphSnapshot {
-      return exportFullGraph(cache);
+      return exportFullGraph(writeCtx.graphStore, contentPath);
     },
     getGraphExplorerLod(options?: { anchorId?: string; layerCount?: number }): GraphLodSnapshot {
-      return exportExplorerLodGraph(cache, options);
+      return exportExplorerLodGraph(writeCtx.graphStore, { ...options, contentDir: contentPath });
+    },
+    executeImp(graph, context) {
+      return writeCtx.graphStore.executeImp(graph, context);
     },
     async getExtensionsManifest(): Promise<PublicExtensionsManifest> {
       await extensionsReady;
@@ -499,7 +502,7 @@ function buildGraphServices(
       return extensions.getPublicManifest();
     },
     async prepareEditorBody(nodeId: string, markdown: string): Promise<string | null> {
-      if (!writeCtx.cache.getNode(nodeId)) return null;
+      if (!graphStore.getNode(nodeId)) return null;
       await extensionsReady;
       await extensions.ensureLoaded();
       return extensions.prepareEditorBody(nodeId, markdown);

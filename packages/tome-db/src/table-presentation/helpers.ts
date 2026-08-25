@@ -1,4 +1,5 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "../graph-store/relationship-read";
+import { readStoreGetNode, readStoreListNodeIds } from "../graph-store/relationship-read";
 import {
   loadAssociationsFromContent,
   normalizeAssociationId,
@@ -52,7 +53,7 @@ export function memberLinkPerspective(
   return perspective;
 }
 
-export function nodeTitle(db: GraphDatabase, nodeId: string): string {
-  const vertex = db.getNode(nodeId);
+export function nodeTitle(db: RelationshipReadStore, nodeId: string): string {
+  const vertex = readStoreGetNode(db, nodeId);
   return vertex ? titleFromProperties(vertex.properties) : "Untitled";
 }

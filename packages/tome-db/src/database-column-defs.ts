@@ -1,4 +1,5 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { RelationshipReadStore } from "./graph-store/relationship-read";
+import { readStoreGetNode, readStoreListNodeIds } from "./graph-store/relationship-read";
 import type { DatabaseColumnDef } from "./database-view";
 import { resolveContentPath } from "tome-flatfile";
 import type { TableColumnDef, TableSchema } from "tome-flatfile";
@@ -75,7 +76,7 @@ export function mergeDynamicColumnDefs(
 
 /** Build typed column definitions from table-schemas.json. */
 export function buildDatabaseColumnDefs(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   databaseId: string,
   dynamicColumnDefs: DatabaseColumnDef[],
   hiddenColumnKeys: Set<string>,

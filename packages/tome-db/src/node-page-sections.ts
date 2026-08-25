@@ -1,4 +1,4 @@
-import type { GraphDatabase, Relationship } from "tome-sqlite";
+import type { Relationship } from "tome-graph-interfaces";
 import { getDatabaseViewDetail } from "./database-view";
 import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./property-enums";
 import { getNodeDetail } from "./queries";
@@ -40,6 +40,12 @@ import type {
   ViewSortSpec,
 } from "tome-graph-interfaces";
 import { applyNameFilterAndWindow } from "./table-rows-window";
+import {
+  listRelationshipsFromSource,
+  readStoreCompositeTypeForRelationship,
+  readStoreGetNode,
+  type RelationshipReadStore,
+} from "./graph-store/relationship-read";
 
 export type {
   DatabaseTableSection,
@@ -113,7 +119,7 @@ function relationGroupKeyFromColumn(
 }
 
 function tableRelationByGroupKeyForInstance(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   contentDir: string,
 ): Map<string, TableRelationColumn> {
@@ -135,7 +141,7 @@ function tableRelationByGroupKeyForInstance(
 }
 
 function resolveTypeNodeId(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   association: string,
   connections: Relationship[],
   registry: ReturnType<typeof loadAssociationsFromContent>,
@@ -149,13 +155,13 @@ function resolveTypeNodeId(
 }
 
 function sectionTitleForType(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   label: string,
   typeNodeId: string | null,
   registry: ReturnType<typeof loadAssociationsFromContent>,
 ): string {
   if (typeNodeId) {
-    const typeNode = db.getNode(typeNodeId);
+    const typeNode = readStoreGetNode(db, typeNodeId);
     if (typeNode) return titleFromProperties(typeNode.properties);
   }
   return perspectiveDisplayLabel(registry, label);
@@ -166,7 +172,7 @@ function typeTableIdsFromContent(contentDir: string): string[] {
 }
 
 function compositeTypeForRelationSection(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   registry: ReturnType<typeof loadAssociationsFromContent>,
   projectionType: string,
   connections: Relationship[],
@@ -176,15 +182,12 @@ function compositeTypeForRelationSection(
     return relationColumnCompositeType(tableRelation);
   }
   const first = connections[0];
-  if (first?.recordId) {
-    const record = db.getRelationshipRecord(first.recordId);
-    if (record?.compositeType) {
-      const fromRecord = normalizeAssociationId(record.compositeType);
-      if (registry.associations[fromRecord]) {
-        const parsed = parseProjectionType(projectionType);
-        if (!parsed || parsed.associationId === fromRecord) {
-          return fromRecord;
-        }
+  if (first) {
+    const fromRecord = readStoreCompositeTypeForRelationship(db, first);
+    if (fromRecord && registry.associations[fromRecord]) {
+      const parsed = parseProjectionType(projectionType);
+      if (!parsed || parsed.associationId === fromRecord) {
+        return fromRecord;
       }
     }
   }
@@ -207,7 +210,7 @@ function sortRelationRows(rows: RelationRow[], sorts: ViewSortSpec[]): void {
 }
 
 function buildRelationSectionForPerspective(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   perspective: string,
   connections: Relationship[],
@@ -226,7 +229,7 @@ function buildRelationSectionForPerspective(
   const rows: RelationRow[] = [];
 
   for (const connection of connections) {
-    const target = db.getNode(connection.targetNodeId);
+    const target = readStoreGetNode(db, connection.targetNodeId);
     const cells = cellsFromConnectionProperties(connection.properties);
     for (const key of Object.keys(cells)) columnSet.add(key);
 
@@ -343,7 +346,7 @@ function buildRelationSectionForPerspective(
 }
 
 function buildRelationSections(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   options?: {
     contentDir?: string;
@@ -354,7 +357,7 @@ function buildRelationSections(
   const contentDir = options?.contentDir ?? resolveContentPath();
   const typeTableIds = typeTableIdsFromContent(contentDir);
   const associations = loadAssociationsFromContent(contentDir);
-  const outgoing = db.listRelationshipsFromSource(nodeId);
+  const outgoing = listRelationshipsFromSource(db, nodeId);
   const byType = new Map<string, typeof outgoing>();
   const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
 
@@ -393,7 +396,7 @@ function buildRelationSections(
 
 /** Fetch one windowed relation table section by perspective label. */
 export function getRelationTableSection(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   nodeId: string,
   perspective: string,
   options?: {
@@ -403,10 +406,10 @@ export function getRelationTableSection(
   },
 ): RelationTableSection | null {
   const contentDir = options?.contentDir ?? resolveContentPath();
-  if (!db.getNode(nodeId)) return null;
+  if (!readStoreGetNode(db, nodeId)) return null;
 
   const associations = loadAssociationsFromContent(contentDir);
-  const outgoing = db.listRelationshipsFromSource(nodeId).filter(
+  const outgoing = listRelationshipsFromSource(db, nodeId).filter(
     (connection) => relationGroupKey(connection) === perspective,
   );
   const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
@@ -429,7 +432,7 @@ export function getRelationTableSection(
 
 /** Build a universal node page view: markdown first, then database and relation table sections. */
 export function getNodePageDetail(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   id: string,
   options?: {
     /** Active table tab id (custom or generated). */

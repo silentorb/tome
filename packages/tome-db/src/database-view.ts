@@ -1,4 +1,4 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { Relationship } from "tome-graph-interfaces";
 import { listSetMemberRowConnections } from "./set-membership";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
@@ -6,6 +6,10 @@ import { applyDynamicProperties } from "./dynamic-properties";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import { resolveContentPath } from "tome-flatfile";
+import {
+  readStoreGetNode,
+  type RelationshipReadStore,
+} from "./graph-store/relationship-read";
 import {
   resolveCustomTabsForNode,
   activeTabName,
@@ -112,10 +116,10 @@ function sortsNeedRelationHydration(
 }
 
 function buildCustomViewDetail(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   databaseId: string,
   databaseTitle: string,
-  incoming: ReturnType<GraphDatabase["listRelationshipsToTarget"]>,
+  incoming: Relationship[],
   contentDir: string,
   requestedTabId?: string,
   rowsQuery?: TableRowsQuery,
@@ -135,7 +139,7 @@ function buildCustomViewDetail(
 
   const evalRows: EvalRow[] = [];
   for (const connection of incoming) {
-    const page = db.getNode(connection.sourceNodeId);
+    const page = readStoreGetNode(store, connection.sourceNodeId);
     const name = page ? titleFromProperties(page.properties) : "Untitled";
     const rowIndex = ordered
       ? numericOrderValue(connection.properties[ORDERED_PROPERTY_DEFAULT], evalRows.length)
@@ -151,7 +155,7 @@ function buildCustomViewDetail(
   }
 
   const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
-    db,
+    store,
     databaseId,
     tabName,
     evalRows,
@@ -160,7 +164,7 @@ function buildCustomViewDetail(
   );
 
   const mergedColumnDefs = buildDatabaseColumnDefs(
-    db,
+    store,
     databaseId,
     dynamicColumnDefs,
     hiddenColumnKeys,
@@ -173,7 +177,7 @@ function buildCustomViewDetail(
     !q && sortsNeedRelationHydration(sorts, mergedColumnDefs);
 
   if (hydrateBeforeSort) {
-    hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
   }
 
   const sorted = q ? enrichedRows : sortEvalRowsFromViewSorts(enrichedRows, sorts);
@@ -207,7 +211,7 @@ function buildCustomViewDetail(
   );
 
   if (!hydrateBeforeSort) {
-    hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, windowedEvalRows, contentDir);
+    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, windowedEvalRows, contentDir);
   }
 
   const rows: DatabaseRow[] = windowedEvalRows.map((row, index) => ({
@@ -245,17 +249,17 @@ function buildCustomViewDetail(
 
 /** Build a database table view from set edges and linked page titles. */
 export function getDatabaseViewDetail(
-  db: GraphDatabase,
+  store: RelationshipReadStore,
   databaseId: string,
   requestedTabId?: string,
   contentDir?: string,
   rowsQuery?: TableRowsQuery,
 ): DatabaseViewDetail | null {
-  const database = db.getNode(databaseId);
+  const database = readStoreGetNode(store, databaseId);
   const dir = contentDir ?? resolveContentPath();
-  if (!database || !isTypeTableNode(db, databaseId, dir)) return null;
+  if (!database || !isTypeTableNode(store, databaseId, dir)) return null;
 
-  const incoming = listSetMemberRowConnections(db, databaseId, dir);
+  const incoming = listSetMemberRowConnections(store, databaseId, dir);
 
   const title = titleFromProperties(database.properties);
   const views = loadViewsFromContent(dir);
@@ -267,11 +271,11 @@ export function getDatabaseViewDetail(
     if (!provider) return null;
     const composition = getCompositionById(provider, dir);
     if (!composition) return null;
-    return buildComposedDatabaseView(db, composition, requestedTabId, dir, rowsQuery);
+    return buildComposedDatabaseView(store, composition, requestedTabId, dir, rowsQuery);
   }
 
   return buildCustomViewDetail(
-    db,
+    store,
     databaseId,
     title,
     incoming,
