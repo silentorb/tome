@@ -50,6 +50,17 @@ export function perspectiveDisplayLabel(
   return formatAssociationLabel(typeOrProjection);
 }
 
+/** Map projection types to picker options with perspective labels. */
+export function labeledRelationshipTypes(
+  registry: AssociationsFile,
+  types: readonly string[],
+): { type: string; label: string }[] {
+  return types.map((type) => ({
+    type,
+    label: perspectiveDisplayLabel(registry, type),
+  }));
+}
+
 function defaultLinkAddLabel(sectionTitle: string): string {
   const singular = sectionTitle.replace(/s$/i, "") || "record";
   return `Link ${singular}`;

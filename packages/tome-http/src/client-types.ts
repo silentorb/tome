@@ -6,6 +6,7 @@ import type {
   NodeSummary,
   DatabaseViewDetail,
   RelationTableSection,
+  RelationshipTypeOption,
   ReorderDatabaseMembersParams,
   TableRowsQuery,
 } from "tome-graph-interfaces";
@@ -25,7 +26,14 @@ export interface TomeCorpusPublic {
   workspace: WorkspacePublic;
 }
 
-export type { GraphRelationship, GraphNode, GraphSnapshot, GraphLodSnapshot, DatabaseViewDetail } from "tome-graph-interfaces";
+export type {
+  GraphRelationship,
+  GraphNode,
+  GraphSnapshot,
+  GraphLodSnapshot,
+  DatabaseViewDetail,
+  RelationshipTypeOption,
+} from "tome-graph-interfaces";
 export type { TableRowsQuery } from "tome-graph-interfaces";
 
 export interface GetNodeOptions {
@@ -205,7 +213,7 @@ export interface TomeHttpClient {
   getGraphFull(): Promise<GraphSnapshot>;
   getGraphExplorerLod(options?: GraphExplorerLodOptions): Promise<GraphLodSnapshot>;
   getSchema(): Promise<SchemaFile>;
-  listRelationshipTypes(): Promise<string[]>;
+  listRelationshipTypes(): Promise<RelationshipTypeOption[]>;
   getRelationshipLinkOptions(
     sourceId: string,
     type: string,

@@ -6,6 +6,7 @@ import type {
   NodeSummary,
   DatabaseViewDetail,
   RelationTableSection,
+  RelationshipTypeOption,
   ReorderDatabaseMembersParams,
   TableRowsQuery,
 } from "tome-graph-interfaces";
@@ -453,8 +454,10 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       const data = await fetchJson<{ schema: SchemaFile }>("/api/schema");
       return data.schema;
     },
-    async listRelationshipTypes(): Promise<string[]> {
-      const data = await fetchJson<{ types: string[] }>("/api/relationships/types");
+    async listRelationshipTypes(): Promise<RelationshipTypeOption[]> {
+      const data = await fetchJson<{ types: RelationshipTypeOption[] }>(
+        "/api/relationships/types",
+      );
       return data.types;
     },
     async getRelationshipLinkOptions(

@@ -9,12 +9,6 @@ export interface SequencingTableConfig {
   dependentsPerspective?: string;
   dependenciesPerspective?: string;
   defaultDuration: number;
-  trackProperty?: string | null;
-  /**
-   * Optional set-membership association: when set with `trackProperty`, track
-   * values are read from membership-edge properties (hub → member, direction 0).
-   */
-  membershipAssociation?: string | null;
   containmentAssociation?: string | null;
   /** Agent-authored Imp Graph JSON, or null. */
   durationQuery?: unknown | null;
@@ -86,15 +80,6 @@ function parseTableConfig(raw: unknown, path: string): SequencingTableConfig {
   if (dependenciesPerspective !== undefined) {
     config.dependenciesPerspective = dependenciesPerspective;
   }
-  if (obj.trackProperty !== undefined) {
-    if (obj.trackProperty === null) config.trackProperty = null;
-    else config.trackProperty = parseOptionalString(obj.trackProperty, `${path}.trackProperty`);
-  }
-  const membership = parseOptionalAssociation(
-    obj.membershipAssociation,
-    `${path}.membershipAssociation`,
-  );
-  if (membership !== undefined) config.membershipAssociation = membership;
   const containment = parseOptionalAssociation(
     obj.containmentAssociation,
     `${path}.containmentAssociation`,

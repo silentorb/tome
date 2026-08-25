@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { emptyAssociationsFile, projectionTypeForEndpoint } from "tome-flatfile";
 import {
   formatAssociationLabel,
+  labeledRelationshipTypes,
   perspectiveDisplayLabel,
   perspectiveLinkAddLabel,
 } from "../src/association-label";
@@ -21,6 +22,22 @@ describe("association-label", () => {
     expect(
       perspectiveDisplayLabel(registry, projectionTypeForEndpoint(MEMBER_OF, 0)),
     ).toBe("Membership");
+  });
+
+  test("labeledRelationshipTypes maps projection types to perspective titles", () => {
+    const registry = emptyAssociationsFile();
+    registry.associations[MEMBER_OF] = {
+      perspectives: [{ title: "Membership", linkAdd: "Link type table" }, "Members"],
+    };
+    expect(
+      labeledRelationshipTypes(registry, [
+        projectionTypeForEndpoint(MEMBER_OF, 0),
+        projectionTypeForEndpoint(MEMBER_OF, 1),
+      ]),
+    ).toEqual([
+      { type: projectionTypeForEndpoint(MEMBER_OF, 0), label: "Membership" },
+      { type: projectionTypeForEndpoint(MEMBER_OF, 1), label: "Members" },
+    ]);
   });
 
   test("perspectiveDisplayLabel falls back when unconfigured", () => {

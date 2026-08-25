@@ -95,7 +95,7 @@ export interface LaneYLayout {
   eventY(lane: number): number;
 }
 
-/** Flat concurrency lanes (no macro tracks). */
+/** Flat concurrency lanes (query groups occupy stacked bands). */
 export function buildLaneYLayout(layout: TimelineLayout): LaneYLayout {
   const laneCount = Math.max(1, layout.laneCount || 1);
   return {

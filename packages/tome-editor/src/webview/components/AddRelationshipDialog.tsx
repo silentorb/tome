@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { formatAssociationLabel } from "tome-db/association-label";
 import type { EditorApi } from "../api/client";
 import { AssociationPicker } from "./AssociationPicker";
 import { RecordLinkPicker } from "./RecordLinkPicker";
@@ -33,6 +32,7 @@ export function AddRelationshipDialog({
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [allowedTypeIds, setAllowedTypeIds] = useState<string[] | undefined>(undefined);
   const [linking, setLinking] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +41,7 @@ export function AddRelationshipDialog({
   useEffect(() => {
     if (!open) return;
     setSelectedType(null);
+    setSelectedLabel(null);
     setAllowedTypeIds(undefined);
     setLinking(false);
     setError(null);
@@ -77,8 +78,9 @@ export function AddRelationshipDialog({
     };
   }, [api, nodeId, open, selectedType]);
 
-  const handleTypeSelect = useCallback((type: string) => {
+  const handleTypeSelect = useCallback((type: string, label?: string) => {
     setSelectedType(type || null);
+    setSelectedLabel(type ? (label ?? null) : null);
     setError(null);
     setTargetPickerKey((key) => key + 1);
   }, []);
@@ -156,7 +158,7 @@ export function AddRelationshipDialog({
                 closeOnSelect
                 allowedTypeIds={allowedTypeIds}
                 excludedIds={[nodeId]}
-                ariaLabel={`Search target for ${formatAssociationLabel(selectedType)}`}
+                ariaLabel={`Search target for ${selectedLabel ?? selectedType}`}
                 onSelect={handleLink}
                 onClose={() => {}}
               />

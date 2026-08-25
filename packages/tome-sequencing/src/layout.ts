@@ -8,7 +8,7 @@ export interface TimelineEventLayout {
   start: number;
   /** ASAP end — exclusive layout box. */
   end: number;
-  /** 0-based concurrency lane (flat timeline; no macro tracks). */
+  /** 0-based concurrency lane (flat timeline; query groups occupy consecutive bands). */
   lane: number;
   /** Slack metadata only; not drawn as exclusive width. */
   latestStart?: number;
@@ -24,7 +24,7 @@ export interface TimelineLayout {
   timeMax: number;
 }
 
-/** Map resolution placements + titles into the timeline DTO (no macro tracks). */
+/** Map resolution placements + titles into the timeline DTO. */
 export function buildTimelineLayout(input: {
   laidOut: LaidOutEvent[];
   laneCount: number;
@@ -73,6 +73,33 @@ export function buildTimelineLayoutFromResolved(input: {
     laidOut,
     laneCount,
     titles: input.titles,
+    depends: input.depends,
+  });
+}
+
+/** Pack each query group independently, then stack their lanes top-to-bottom. */
+export function buildTimelineLayoutFromGroupedResolved(input: {
+  groups: Array<{
+    resolved: Parameters<typeof layoutEvents>[0];
+    titles: Map<string, string>;
+  }>;
+  depends: DependsConstraint[];
+}): TimelineLayout {
+  const laidOut: LaidOutEvent[] = [];
+  const titles = new Map<string, string>();
+  let offset = 0;
+  for (const group of input.groups) {
+    for (const [id, title] of group.titles) titles.set(id, title);
+    const packed = layoutEvents(group.resolved);
+    for (const event of packed.events) {
+      laidOut.push({ ...event, lane: event.lane + offset });
+    }
+    offset += packed.laneCount;
+  }
+  return buildTimelineLayout({
+    laidOut,
+    laneCount: offset,
+    titles,
     depends: input.depends,
   });
 }

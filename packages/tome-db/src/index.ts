@@ -53,7 +53,11 @@ export {
 export { getDatabaseViewDetail } from "./database-view";
 export { hydrateRelationCellsForRows } from "./database-view-relations";
 export { relationType, normalizeRelationshipType, stripEmojis } from "tome-flatfile";
-export { formatAssociationLabel } from "./association-label";
+export {
+  formatAssociationLabel,
+  labeledRelationshipTypes,
+  perspectiveDisplayLabel,
+} from "./association-label";
 export type {
   DatabaseColumnDef,
   DatabaseRow,

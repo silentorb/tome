@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { buildTimelineLayoutFromResolved } from "../src/layout";
+import { buildTimelineLayoutFromGroupedResolved, buildTimelineLayoutFromResolved } from "../src/layout";
 
 describe("buildTimelineLayoutFromResolved", () => {
   test("assigns ASAP placements and time extent", () => {
@@ -105,6 +105,53 @@ describe("buildTimelineLayoutFromResolved", () => {
     expect(wizards.end).toBe(4);
     // Drawn exclusive boxes do not overlap
     expect(wizards.start).toBeGreaterThanOrEqual(ocean.end);
+  });
+
+  test("grouped resolved events stack lanes by group then overlap", () => {
+    const layout = buildTimelineLayoutFromGroupedResolved({
+      groups: [
+        {
+          resolved: [
+            {
+              id: "p1",
+              earliestStart: 0,
+              latestStart: 0,
+              earliestEnd: 2,
+              latestEnd: 2,
+            },
+            {
+              id: "p2",
+              earliestStart: 0,
+              latestStart: 0,
+              earliestEnd: 1,
+              latestEnd: 1,
+            },
+          ],
+          titles: new Map([
+            ["p1", "Primary A"],
+            ["p2", "Primary B"],
+          ]),
+        },
+        {
+          resolved: [
+            {
+              id: "h1",
+              earliestStart: 0,
+              latestStart: 0,
+              earliestEnd: 1,
+              latestEnd: 1,
+            },
+          ],
+          titles: new Map([["h1", "High A"]]),
+        },
+      ],
+      depends: [],
+    });
+    const byId = new Map(layout.events.map((e) => [e.id, e]));
+    const primaryLanes = [byId.get("p1")?.lane, byId.get("p2")?.lane].sort();
+    expect(primaryLanes).toEqual([0, 1]);
+    expect(byId.get("h1")?.lane).toBe(2);
+    expect(layout.laneCount).toBe(3);
   });
 
   test("same-lane ASAP intervals never overlap", () => {

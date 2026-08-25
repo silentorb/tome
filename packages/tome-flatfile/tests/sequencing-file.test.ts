@@ -19,7 +19,6 @@ describe("sequencing.json", () => {
         "01KWN86X6MFZQAJ1V36T9592A9": {
           dependsAssociation: "01KXBNPNJDENZ9BXN5BYZ7JKPD",
           defaultDuration: 1,
-          trackProperty: "layer",
           durationQuery: null,
           parallelQuery: null,
         },

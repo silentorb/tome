@@ -37,6 +37,14 @@ import type { QuickLinkError, WorkspaceFile } from "./workspace";
 
 export type WorkspacePublic = WorkspaceFile & { archiveNodeTitle?: string };
 
+/** Distinct relationship projection present in data, with its perspective label. */
+export interface RelationshipTypeOption {
+  /** Directed projection type (`ULID:0` / `ULID:1`) used when linking. */
+  type: string;
+  /** User-facing perspective title (e.g. Features). */
+  label: string;
+}
+
 export interface TomeCorpusPublic {
   id: string;
   access: "readwrite" | "readonly";
@@ -102,7 +110,7 @@ export interface TomeGraphServices {
   ): DatabaseColumnMutationResult | DatabaseColumnMutationError;
   listTypeTables(): { id: string; title: string }[];
   getSchema(): SchemaFile;
-  listRelationshipTypes(): string[];
+  listRelationshipTypes(): RelationshipTypeOption[];
   getRelationshipLinkOptions(
     sourceId: string,
     type: string,

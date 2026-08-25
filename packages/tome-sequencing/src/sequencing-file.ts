@@ -12,9 +12,6 @@ export interface SequencingTableConfig {
   dependentsPerspective?: string;
   dependenciesPerspective?: string;
   defaultDuration: number;
-  trackProperty?: string | null;
-  /** When set with trackProperty, read track from hub→member membership edges. */
-  membershipAssociation?: string | null;
   containmentAssociation?: string | null;
   durationQuery?: unknown | null;
   parallelQuery?: unknown | null;
@@ -74,19 +71,6 @@ function parseTableConfig(raw: unknown, path: string): SequencingTableConfig {
   );
   if (dependenciesPerspective !== undefined) {
     config.dependenciesPerspective = dependenciesPerspective;
-  }
-  if (obj.trackProperty !== undefined) {
-    if (obj.trackProperty === null) config.trackProperty = null;
-    else config.trackProperty = parseOptionalString(obj.trackProperty, `${path}.trackProperty`);
-  }
-  if (obj.membershipAssociation !== undefined) {
-    if (obj.membershipAssociation === null) config.membershipAssociation = null;
-    else {
-      config.membershipAssociation = parseAssociationId(
-        obj.membershipAssociation,
-        `${path}.membershipAssociation`,
-      );
-    }
   }
   if (obj.containmentAssociation !== undefined) {
     if (obj.containmentAssociation === null) config.containmentAssociation = null;

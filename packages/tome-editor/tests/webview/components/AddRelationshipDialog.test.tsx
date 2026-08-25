@@ -12,7 +12,9 @@ describe("AddRelationshipDialog", () => {
     const onClose = mock(() => {});
     const api: EditorApi = {
       ...makeMockEditorApi(),
-      listRelationshipTypes: async () => ["features"],
+      listRelationshipTypes: async () => [
+        { type: "000000000000000000000000B2:0", label: "Features" },
+      ],
       getRelationshipLinkOptions: async () => ({ allowedTargetTypeIds: null }),
       search: async () => [
         {
@@ -48,7 +50,7 @@ describe("AddRelationshipDialog", () => {
 
     await waitFor(() => {
       expect(linkOutgoingRelationship).toHaveBeenCalledWith(FIXTURE_PAGE_ID, {
-        type: "features",
+        type: "000000000000000000000000B2:0",
         targetId: FIXTURE_TARGET_ID,
       });
     });

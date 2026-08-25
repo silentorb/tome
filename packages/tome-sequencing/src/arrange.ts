@@ -5,7 +5,12 @@ import type { ReactFlowGraph } from "imp-react-flow";
 import { projectionType } from "tome-imp-sql";
 import type { DependsConstraint, SequencingProblem } from "tome-sequencing-interfaces";
 import { resolve as resolveSequence } from "tome-sequencing-resolution";
-import { compileReactFlowQuery } from "tome-query/execute";
+import type { ResolvedEvent } from "tome-sequencing-resolution";
+import {
+  compileReactFlowQuery,
+  findTerminalGroupSpecFromReactFlow,
+  partitionRowsIntoGroups,
+} from "tome-query/execute";
 import { loadSchemaFromContent } from "tome-flatfile/schema-load";
 import {
   bindGraphParameters,
@@ -14,7 +19,11 @@ import {
 } from "tome-query/parameters";
 import { bindPageNodeId, parseSequencingBlockData } from "./config";
 import { expandDependsConstraints } from "./depends-endpoints";
-import { buildTimelineLayoutFromResolved, type TimelineLayout } from "./layout";
+import {
+  buildTimelineLayoutFromGroupedResolved,
+  buildTimelineLayoutFromResolved,
+  type TimelineLayout,
+} from "./layout";
 import { loadTableSequencingConfig } from "./sequencing-file";
 
 function contentDirFromEnv(): string {
@@ -30,6 +39,19 @@ function schemaFromContentDir(contentDir?: string) {
   return undefined;
 }
 
+function bindEventQuery(input: {
+  reactFlow: ReactFlowGraph;
+  pageNodeId: string;
+  parameters?: Record<string, GraphParameterValue>;
+  contentDir?: string;
+}) {
+  const values = resolveGraphParameterValues(input.reactFlow, input.parameters);
+  const withParams = bindGraphParameters(input.reactFlow, values);
+  const bound = bindPageNodeId(withParams, input.pageNodeId);
+  const schema = schemaFromContentDir(input.contentDir);
+  return { bound, schema };
+}
+
 export async function runEventQuery(input: {
   sqlQuery: ExtensionSqlQueryServices;
   reactFlow: ReactFlowGraph;
@@ -37,10 +59,7 @@ export async function runEventQuery(input: {
   parameters?: Record<string, GraphParameterValue>;
   contentDir?: string;
 }): Promise<Record<string, unknown>[]> {
-  const values = resolveGraphParameterValues(input.reactFlow, input.parameters);
-  const withParams = bindGraphParameters(input.reactFlow, values);
-  const bound = bindPageNodeId(withParams, input.pageNodeId);
-  const schema = schemaFromContentDir(input.contentDir);
+  const { bound, schema } = bindEventQuery(input);
   const { sql, parameters } = compileReactFlowQuery(bound, { schema });
   return input.sqlQuery.queryAll(sql, parameters);
 }
@@ -102,6 +121,43 @@ function titleFromRow(row: Record<string, unknown>, id: string): string {
   return id;
 }
 
+function eventsFromRows(rows: Record<string, unknown>[]): {
+  eventIds: string[];
+  titles: Map<string, string>;
+} {
+  const titles = new Map<string, string>();
+  const eventIds: string[] = [];
+  for (const row of rows) {
+    const id = typeof row.id === "string" ? row.id : null;
+    if (!id) continue;
+    eventIds.push(id);
+    titles.set(id, titleFromRow(row, id));
+  }
+  return { eventIds, titles };
+}
+
+function layoutResolvedGroup(input: {
+  eventIds: string[];
+  titles: Map<string, string>;
+  depends: DependsConstraint[];
+  defaultDuration: number;
+}): { resolved: ResolvedEvent[]; titles: Map<string, string> } {
+  const idSet = new Set(input.eventIds);
+  const groupDepends = input.depends.filter(
+    (edge) => idSet.has(edge.prerequisiteId) && idSet.has(edge.dependentId),
+  );
+  const problem: SequencingProblem = {
+    events: input.eventIds.map((id) => ({ id })),
+    depends: groupDepends,
+    defaultDuration: input.defaultDuration,
+  };
+  const resolved = resolveSequence(problem);
+  if (!resolved.ok) {
+    throw new Error(resolved.error.message);
+  }
+  return { resolved: resolved.events, titles: input.titles };
+}
+
 export async function arrangeTimeline(input: {
   pageNodeId: string;
   blockData: unknown;
@@ -120,22 +176,15 @@ export async function arrangeTimeline(input: {
   }
 
   const parsed = parseSequencingBlockData(input.blockData);
-  const rows = await runEventQuery({
-    sqlQuery: input.sqlQuery,
+  const boundQuery = bindEventQuery({
     reactFlow: parsed.reactFlow,
     pageNodeId: input.pageNodeId,
     parameters: input.parameters,
     contentDir,
   });
-
-  const titles = new Map<string, string>();
-  const eventIds: string[] = [];
-  for (const row of rows) {
-    const id = typeof row.id === "string" ? row.id : null;
-    if (!id) continue;
-    eventIds.push(id);
-    titles.set(id, titleFromRow(row, id));
-  }
+  const compiled = compileReactFlowQuery(boundQuery.bound, { schema: boundQuery.schema });
+  const rows = await input.sqlQuery.queryAll(compiled.sql, compiled.parameters);
+  const { eventIds, titles } = eventsFromRows(rows);
 
   const depends = await loadDependsEdges(
     input.graphQuery,
@@ -143,20 +192,36 @@ export async function arrangeTimeline(input: {
     config.dependsAssociation,
   );
 
-  const problem: SequencingProblem = {
-    events: eventIds.map((id) => ({ id })),
-    depends,
-    defaultDuration: config.defaultDuration,
-  };
-
-  const resolved = resolveSequence(problem);
-  if (!resolved.ok) {
-    throw new Error(resolved.error.message);
+  const groupSpec = findTerminalGroupSpecFromReactFlow(boundQuery.bound);
+  if (!groupSpec) {
+    const problem: SequencingProblem = {
+      events: eventIds.map((id) => ({ id })),
+      depends,
+      defaultDuration: config.defaultDuration,
+    };
+    const resolved = resolveSequence(problem);
+    if (!resolved.ok) {
+      throw new Error(resolved.error.message);
+    }
+    return buildTimelineLayoutFromResolved({
+      resolved: resolved.events,
+      titles,
+      depends,
+    });
   }
 
-  return buildTimelineLayoutFromResolved({
-    resolved: resolved.events,
-    titles,
-    depends,
-  });
+  const grouped = partitionRowsIntoGroups(rows, groupSpec, boundQuery.schema);
+  const groups = grouped.groups
+    .map((group) => eventsFromRows(group.rows))
+    .filter((group) => group.eventIds.length > 0)
+    .map((group) =>
+      layoutResolvedGroup({
+        eventIds: group.eventIds,
+        titles: group.titles,
+        depends,
+        defaultDuration: config.defaultDuration,
+      }),
+    );
+
+  return buildTimelineLayoutFromGroupedResolved({ groups, depends });
 }

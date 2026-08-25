@@ -131,7 +131,10 @@ export function makeMockEditorApi(): EditorApi {
     getGraphFull: async () => ({ nodes: [], relationships: [] }),
     getGraphExplorerLod: async () => makeGraphLodSnapshot(),
     getSchema: async () => emptySchemaFile(),
-    listRelationshipTypes: async () => ["features", "inspirations"],
+    listRelationshipTypes: async () => [
+      { type: "000000000000000000000000B2:0", label: "Features" },
+      { type: "000000000000000000000000B3:0", label: "Inspirations" },
+    ],
     getRelationshipLinkOptions: async () => ({ allowedTargetTypeIds: null }),
     getUserSettings: async () => emptyUserSettings(),
     patchUserSettings: async () => emptyUserSettings(),

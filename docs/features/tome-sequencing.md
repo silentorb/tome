@@ -29,7 +29,7 @@
 ### sequencing.json
 
 - Keyed by type-table / set node id
-- Configures depends association, default duration, optional track/membership fields (reserved; **macro tracks deferred**—layout ignores `trackProperty` / layer banding for now), optional containment association, optional agent-authored Imp duration/parallel graphs
+- Configures depends association, default duration, optional containment association, optional agent-authored Imp duration/parallel graphs
 - Does **not** list which events appear (the block query does)
 
 ### Timeline UI
@@ -42,7 +42,7 @@
   - **Show dependency edges** — cubic depends curves between visual bar endpoints (default **off**; persisted in `.tome/user-settings.json` as `sequencing.showDependencyEdges`; static HTML omits edges)
 - When the Imp query graph declares **`parameter` nodes**, those appear in the same settings menu and persist in `.tome/user-settings.json` (`blockParameters`) per page node + component id
 - Timeline chrome uses a **dark** palette by default (dark canvas, teal event bars, light labels)
-- **Flat concurrency lanes** only (no Epic/Primary/Secondary macro bands). Each event is one ASAP bar `[start, end)`; same-lane bars do not overlap. ALAP slack is not drawn as occupying geometry.
+- **Concurrency lanes** come from the block Imp query when it ends in a `group` node: each query group is a vertical band (group order follows the node’s `direction`; schema enum `values` when the group column is an enum). Overlapping events inside a group still get distinct sub-lanes. Queries without `group` pack all events by overlap only. Each event is one ASAP bar `[start, end)`; same-lane bars do not overlap. ALAP slack is not drawn as occupying geometry.
 - Event bars keep `<a href="?node=…">` for Ctrl/Cmd / middle / shift-click. Unmodified left click `preventDefault`s and `stopPropagation`s so Milkdown/chrome link interceptors do not navigate, then opens a two-column **dependency popup** (Dependencies / Dependents). The popup title is a node link. Each listed edge shows the other event plus `${from} → ${to}` (e.g. `end → start`). **Add Start** / **Add End** enter pick mode for that endpoint of the current event; other events split **left (start) / right (end)** behind the still-visible title (Cancel / Escape). Delete removes that endpoint combo. Mutations use invoke actions `addDepends` / `removeDepends`. `readOnly` popups are view-only.
 - **Show dependency edges** cubics attach to the chosen bar ends (left = start, right = end), not always finish-to-start.
 
@@ -61,12 +61,11 @@ Notion-style absolute dates are a poor fit for story chronology. Relative depend
 
 ## Behavior / pipeline
 
-1. Run block Imp query with page `nodeId` bound → event rows (`id`, title)
+1. Run block Imp query with page `nodeId` bound → event rows (`id`, title, optional group column)
 2. Load `sequencing.json` for that page id
 3. Load depends edges among result ids (association direction 0 = prerequisite → dependent; expand `properties.endpoints` into `DependsConstraint` rows with `from` / `to`)
-4. `resolve` → constraint windows
-5. `layoutEvents` → non-overlapping ASAP placements + lanes
-6. Render visx / static SVG from placements only
+4. If the query ends in Imp `group`, partition rows into groups (enum `values` order when applicable) and `resolve` + `layoutEvents` **per group**, stacking lane bands; otherwise resolve and pack all events together
+5. Render visx / static SVG from placements only
 
 ## Configuration
 

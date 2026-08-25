@@ -24,6 +24,7 @@ import {
   DEFAULT_TABLE_ROW_LIMIT,
   loadSchemaFromContent,
   loadAssociationsFromContent,
+  labeledRelationshipTypes,
   associationRuleContext,
   searchNodes,
   listRecentNodesByModifiedAt,
@@ -315,8 +316,12 @@ function buildGraphServices(
     getSchema(): SchemaFile {
       return schema();
     },
-    listRelationshipTypes(): string[] {
-      return writeCtx.cache.listDistinctRelationshipTypes();
+    listRelationshipTypes() {
+      const registry = loadAssociationsFromContent(contentPath);
+      return labeledRelationshipTypes(
+        registry,
+        writeCtx.cache.listDistinctRelationshipTypes(),
+      );
     },
     getRelationshipLinkOptions(sourceId: string, type: string) {
       const registry = loadAssociationsFromContent(contentPath);

@@ -69,9 +69,10 @@ describe("relationship types API", () => {
   test("GET /api/relationships/types lists distinct types in data", async () => {
     const res = await api.handler(new Request("http://127.0.0.1/api/relationships/types"));
     expect(res.status).toBe(200);
-    const payload = (await res.json()) as { types: string[] };
-    expect(payload.types).toContain(featuresProjection);
-    expect(payload.types).toContain(memberProjection);
+    const payload = (await res.json()) as { types: { type: string; label: string }[] };
+    expect(payload.types).toContainEqual({ type: featuresProjection, label: "Inspirations" });
+    expect(payload.types).toContainEqual({ type: memberProjection, label: "Membership" });
+    expect(payload.types.every((item) => item.label && !item.label.includes(":"))).toBe(true);
   });
 
   test("GET relationship-link-options returns registry endpoint allowed targets", async () => {

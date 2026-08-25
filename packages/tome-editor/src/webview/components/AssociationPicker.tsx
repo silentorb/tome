@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { formatAssociationLabel } from "tome-db/association-label";
 import { sortBySearchRelevanceMulti } from "tome-db/search-relevance";
+import type { RelationshipTypeOption } from "tome-graph-interfaces";
 import type { EditorApi } from "../api/client";
 import "./record-link-picker.css";
 
@@ -8,23 +8,17 @@ interface AssociationPickerProps {
   api: EditorApi;
   selectedType: string | null;
   ariaLabel: string;
-  onSelect: (type: string) => void;
+  onSelect: (type: string, label?: string) => void;
 }
 
 export function filterAndSortAssociations(
-  types: readonly string[],
+  types: readonly RelationshipTypeOption[],
   query: string,
-): string[] {
+): RelationshipTypeOption[] {
   const q = query.trim().toLowerCase();
   if (!q) return [...types];
-  const matches = types.filter((type) => {
-    if (type.toLowerCase().includes(q)) return true;
-    return formatAssociationLabel(type).toLowerCase().includes(q);
-  });
-  return sortBySearchRelevanceMulti(matches, query, (type) => [
-    formatAssociationLabel(type),
-    type,
-  ]);
+  const matches = types.filter((item) => item.label.toLowerCase().includes(q));
+  return sortBySearchRelevanceMulti(matches, query, (item) => [item.label]);
 }
 
 export function AssociationPicker({
@@ -35,7 +29,7 @@ export function AssociationPicker({
 }: AssociationPickerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
-  const [types, setTypes] = useState<string[]>([]);
+  const [types, setTypes] = useState<RelationshipTypeOption[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -62,9 +56,11 @@ export function AssociationPicker({
     setActiveIndex(0);
   }, [query, types.length]);
 
+  const selectedLabel = types.find((item) => item.type === selectedType)?.label;
+
   const pick = useCallback(
-    (type: string) => {
-      onSelect(type);
+    (item: RelationshipTypeOption) => {
+      onSelect(item.type, item.label);
       setQuery("");
       setActiveIndex(0);
     },
@@ -72,7 +68,7 @@ export function AssociationPicker({
   );
 
   const displayValue =
-    selectedType && !query ? formatAssociationLabel(selectedType) : query;
+    selectedType && !query ? (selectedLabel ?? "") : query;
 
   return (
     <div
@@ -123,23 +119,20 @@ export function AssociationPicker({
         {!loading && filtered.length === 0 ? (
           <div className="tome-record-link-picker-empty">No matching types</div>
         ) : (
-          filtered.map((type, index) => {
+          filtered.map((item, index) => {
             const isActive = index === activeIndex;
-            const isSelected = type === selectedType;
+            const isSelected = item.type === selectedType;
             return (
               <button
-                key={type}
+                key={item.type}
                 type="button"
                 role="option"
                 aria-selected={isActive || isSelected}
                 className={`tome-record-link-picker-item${isActive ? " is-active" : ""}${isSelected ? " is-selected" : ""}`}
                 onMouseDown={(event) => event.preventDefault()}
-                onClick={() => pick(type)}
+                onClick={() => pick(item)}
               >
-                <span className="tome-record-link-picker-title">
-                  {formatAssociationLabel(type)}
-                </span>
-                <span className="tome-record-link-picker-path">{type}</span>
+                <span className="tome-record-link-picker-title">{item.label}</span>
               </button>
             );
           })
