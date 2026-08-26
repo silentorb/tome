@@ -1,6 +1,9 @@
 import type { ExtensionGraphMutateServices } from "tome-interfaces/extension-services/graph-mutate";
 import type { Properties } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
+import {
+  writeStoreReplaceRelationshipProperties,
+} from "./graph-store/relationship-write";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
 import {
   linkOutgoingRelationship,
@@ -23,7 +26,8 @@ export function createExtensionGraphMutateServices(
       return unlinkOutgoingRelationship(ctx, sourceId, targetId, type);
     },
     replaceOutgoingProperties(sourceId, targetId, type, properties) {
-      const replaced = ctx.store.replaceRelationshipProperties(
+      const replaced = writeStoreReplaceRelationshipProperties(
+        ctx.graphStore,
         sourceId,
         targetId,
         type,

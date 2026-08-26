@@ -112,6 +112,10 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
     this.store.writeNode(node, body);
   }
 
+  upsertNodeToCorpus(corpusId: string, node: Node, body?: string): void {
+    this.store.writeNodeToCorpus(corpusId, node, body);
+  }
+
   mergeNodeProperties(id: string, patch: Properties): boolean {
     return this.store.mergeNodeProperties(id, patch);
   }
@@ -119,6 +123,14 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
   deleteNode(id: string): void {
     this.store.deleteNodeFile(id);
     this.store.removeIncidentRelationships(id);
+  }
+
+  archiveNodeFile(id: string): boolean {
+    return this.store.moveNodeToArchive(id);
+  }
+
+  unarchiveNodeFile(id: string): boolean {
+    return this.store.moveNodeFromArchive(id);
   }
 
   getRelationshipRecord(a: string, b: string, type: string): RelationshipRecordRef | null {
@@ -166,6 +178,24 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
     return this.store.deleteRelationship(source, target, projectionType);
   }
 
+  mergeRelationshipProperties(
+    source: string,
+    target: string,
+    projectionType: string,
+    patch: Properties,
+  ): void {
+    this.store.mergeRelationshipProperties(source, target, projectionType, patch);
+  }
+
+  replaceRelationshipProperties(
+    source: string,
+    target: string,
+    projectionType: string,
+    properties: Properties,
+  ): boolean {
+    return this.store.replaceRelationshipProperties(source, target, projectionType, properties);
+  }
+
   readAssociations(): AssociationsFile {
     return loadAssociationsFromContent(this.contentDir) as AssociationsFile;
   }
@@ -204,6 +234,10 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
 
   writeWorkspace(file: WorkspaceFile): void {
     this.store.writeWorkspaceFile(file);
+  }
+
+  writeWorkspaceForCorpus(corpusId: string, file: WorkspaceFile): void {
+    this.store.writeWorkspaceFileForCorpus(corpusId, file);
   }
 
   readDynamicProperties(): DynamicPropertiesFile {

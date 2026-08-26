@@ -9,9 +9,25 @@ import {
   setRoleProjectionTypesForNode,
 } from "tome-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
-import { contentDirForNode, primaryCorpusId, syncAfterNodeWrite, syncAfterRelationshipsWrite } from "./content/write-context";
+import {
+  contentDirForGraphStore,
+  primaryCorpusIdFromGraphStore,
+  syncAfterNodeWrite,
+  syncAfterRelationshipsWrite,
+} from "./content/write-context";
 import { isTypeTableNode } from "./node-capabilities";
 import { stampOrderIfMissing } from "./ordered-relationships";
+import {
+  listRelationshipsFromSource,
+  listRelationshipsToTarget,
+} from "./graph-store/relationship-read";
+import {
+  writeStoreGetNode,
+  writeStoreListCorpora,
+  writeStoreLocateNode,
+  writeStoreUpsertNodeToCorpus,
+  writeStoreUpsertRelationship,
+} from "./graph-store/relationship-write";
 import {
   isPersistableNodeTitle,
   type CreateNodeError,
@@ -33,28 +49,30 @@ function nowIso(): string {
 }
 
 function allocateNodeId(ctx: TomeWriteContext): string {
+  const store = ctx.graphStore;
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const id = generateNodeId();
-    if (!ctx.store.readNode(id)) return id;
+    if (!writeStoreGetNode(store, id)) return id;
   }
   return generateNodeId();
 }
 
 function resolveCreateCorpusId(ctx: TomeWriteContext, input: CreateNodeInput): string | "corpus_not_found" {
+  const store = ctx.graphStore;
   if (input.corpusId?.trim()) {
     const id = input.corpusId.trim();
-    if (!ctx.store.listCorpora().some((c) => c.id === id)) return "corpus_not_found";
+    if (!writeStoreListCorpora(store).some((c) => c.id === id)) return "corpus_not_found";
     return id;
   }
   if (input.link?.kind === "outgoing") {
-    const fromSource = ctx.store.locateNode(input.link.sourceId);
+    const fromSource = writeStoreLocateNode(store, input.link.sourceId);
     if (fromSource) return fromSource;
   }
   if (input.link?.kind === "database-row") {
-    const fromDb = ctx.store.locateNode(input.link.databaseId);
+    const fromDb = writeStoreLocateNode(store, input.link.databaseId);
     if (fromDb) return fromDb;
   }
-  return primaryCorpusId(ctx.store);
+  return primaryCorpusIdFromGraphStore(store);
 }
 
 function ordinalFromProperties(properties: Record<string, unknown>): number | null {
@@ -65,10 +83,12 @@ function ordinalFromProperties(properties: Record<string, unknown>): number | nu
 }
 
 function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: string): number | undefined {
-  const registry = loadAssociationsFromContent(contentDirForNode(ctx.store, sourceId));
+  const store = ctx.graphStore;
+  const dir = contentDirForGraphStore(store, sourceId);
+  const registry = loadAssociationsFromContent(dir);
   const composite = associationIdFromTypeOrProjection(registry, type);
   const parsed = parseProjectionType(type);
-  const outgoing = ctx.cache.listRelationshipsFromSource(sourceId).filter((c) => {
+  const outgoing = listRelationshipsFromSource(store, sourceId).filter((c) => {
     if (c.type === type) return true;
     if (composite && associationIdFromTypeOrProjection(registry, c.type) === composite) {
       if (!parsed) return true;
@@ -90,7 +110,8 @@ function memberProjectionForSetLink(
   setId: string,
   typeOrProjection?: string,
 ): string {
-  const dir = contentDirForNode(ctx.store, setId);
+  const store = ctx.graphStore;
+  const dir = contentDirForGraphStore(store, setId);
   const registry = loadAssociationsFromContent(dir);
   if (typeOrProjection) {
     if (isMemberSideProjectionType(registry, typeOrProjection)) return typeOrProjection;
@@ -104,16 +125,17 @@ export function createNode(
   ctx: TomeWriteContext,
   input: CreateNodeInput,
 ): CreateNodeResult | CreateNodeError {
+  const store = ctx.graphStore;
   const title = input.title.trim();
   if (!isPersistableNodeTitle(title)) return "invalid_title";
 
   if (input.link?.kind === "outgoing") {
-    if (!ctx.store.readNode(input.link.sourceId)) return "source_not_found";
+    if (!writeStoreGetNode(store, input.link.sourceId)) return "source_not_found";
   }
   if (input.link?.kind === "database-row") {
-    const database = ctx.store.readNode(input.link.databaseId);
-    const dbDir = contentDirForNode(ctx.store, input.link.databaseId);
-    if (!database || !isTypeTableNode(ctx.cache, input.link.databaseId, dbDir)) {
+    const database = writeStoreGetNode(store, input.link.databaseId);
+    const dbDir = contentDirForGraphStore(store, input.link.databaseId);
+    if (!database || !isTypeTableNode(store, input.link.databaseId, dbDir)) {
       return "database_not_found";
     }
   }
@@ -126,7 +148,8 @@ export function createNode(
   const body = input.body ?? "";
 
   try {
-    ctx.store.writeNodeToCorpus(
+    writeStoreUpsertNodeToCorpus(
+      store,
       corpusId,
       {
         id,
@@ -150,7 +173,7 @@ export function createNode(
     const relProps: Properties = { ...linkProps };
     const nextOrdinal = nextOutgoingOrdinal(ctx, sourceId, type);
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
-    ctx.store.upsertRelationship(sourceId, id, type, relProps);
+    writeStoreUpsertRelationship(store, sourceId, id, type, relProps);
     if (typeTableId) {
       const memberProjection = memberProjectionForSetLink(
         ctx,
@@ -158,7 +181,7 @@ export function createNode(
         typeTablePerspective,
       );
       const setProps = stampOrderIfMissing(ctx, typeTableId, id, {}, memberProjection);
-      ctx.store.upsertRelationship(id, typeTableId, memberProjection, setProps);
+      writeStoreUpsertRelationship(store, id, typeTableId, memberProjection, setProps);
     }
     syncAfterRelationshipsWrite(ctx);
   }
@@ -176,12 +199,12 @@ export function createNode(
     let memberFilter: Set<string> | null = null;
     if (orderScopeRelations.length > 0) {
       memberFilter = new Set<string>();
-      for (const edge of ctx.cache.listRelationshipsToTarget(databaseId, memberProjection)) {
+      for (const edge of listRelationshipsToTarget(store, databaseId, memberProjection)) {
         const memberId = edge.sourceNodeId;
         const matches = orderScopeRelations.every((scopeRel) =>
-          ctx.cache
-            .listRelationshipsFromSource(memberId, scopeRel.type)
-            .some((rel) => rel.targetNodeId === scopeRel.targetId),
+          listRelationshipsFromSource(store, memberId, scopeRel.type).some(
+            (rel) => rel.targetNodeId === scopeRel.targetId,
+          ),
         );
         if (matches) memberFilter.add(memberId);
       }
@@ -195,7 +218,7 @@ export function createNode(
       memberProjection,
       memberFilter,
     );
-    ctx.store.upsertRelationship(id, databaseId, memberProjection, relProps);
+    writeStoreUpsertRelationship(store, id, databaseId, memberProjection, relProps);
 
     for (const relation of relations) {
       const nextOrdinal = nextOutgoingOrdinal(ctx, id, relation.type);
@@ -203,7 +226,7 @@ export function createNode(
       if (nextOrdinal !== undefined && linkProps.ordinal === undefined) {
         linkProps.ordinal = nextOrdinal;
       }
-      ctx.store.upsertRelationship(id, relation.targetId, relation.type, linkProps);
+      writeStoreUpsertRelationship(store, id, relation.targetId, relation.type, linkProps);
     }
 
     syncAfterRelationshipsWrite(ctx);

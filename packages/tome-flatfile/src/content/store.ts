@@ -890,6 +890,13 @@ export class ContentStore implements TomeDataStore {
     atomicWrite(workspaceFilePath(this.contentDir), serializeWorkspaceFile(file));
   }
 
+  writeWorkspaceFileForCorpus(corpusId: string, file: WorkspaceFile): void {
+    if (corpusId !== this.corpusId) {
+      throw new Error(`ContentStore corpus is "${this.corpusId}", not "${corpusId}"`);
+    }
+    this.writeWorkspaceFile(file);
+  }
+
   mergeNodeProperties(id: string, patch: Properties): boolean {
     const node = this.readNode(id);
     if (!node) return false;

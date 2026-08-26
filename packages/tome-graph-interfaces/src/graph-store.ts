@@ -87,8 +87,14 @@ export interface TomeGraphStoreBase {
   listNodeIds(): string[];
   getNode(id: string): Node | null;
   upsertNode(node: Node, body?: string): void;
+  /** Write a node into a specific corpus (multi-corpus hosts). */
+  upsertNodeToCorpus(corpusId: string, node: Node, body?: string): void;
   mergeNodeProperties(id: string, patch: Properties): boolean;
   deleteNode(id: string): void;
+  /** Move node markdown from live tree to archive tree. */
+  archiveNodeFile(id: string): boolean;
+  /** Move node markdown from archive tree back to live tree. */
+  unarchiveNodeFile(id: string): boolean;
 
   getRelationshipRecord(a: string, b: string, type: string): RelationshipRecordRef | null;
   findRelationshipRecord(a: string, b: string, type: string): Relationship | null;
@@ -102,6 +108,18 @@ export interface TomeGraphStoreBase {
     properties?: Properties,
   ): void;
   deleteRelationship(source: string, target: string, projectionType: string): boolean;
+  mergeRelationshipProperties(
+    source: string,
+    target: string,
+    projectionType: string,
+    patch: Properties,
+  ): void;
+  replaceRelationshipProperties(
+    source: string,
+    target: string,
+    projectionType: string,
+    properties: Properties,
+  ): boolean;
 
   readAssociations(): AssociationsFile;
   writeAssociations(file: AssociationsFile): void;
@@ -113,6 +131,8 @@ export interface TomeGraphStoreBase {
   writeTableSchemas(file: TableSchemasFile): void;
   readWorkspace(): WorkspaceFile;
   writeWorkspace(file: WorkspaceFile): void;
+  /** Write workspace JSON for a specific corpus (quick links, etc.). */
+  writeWorkspaceForCorpus(corpusId: string, file: WorkspaceFile): void;
   readDynamicProperties(): DynamicPropertiesFile;
   writeDynamicProperties(file: DynamicPropertiesFile): void;
 

@@ -151,7 +151,9 @@ Consolidate legacy dual directed edges with `bun scripts/consolidate-relationshi
 
 ## Behavior / API
 
-**Read paths (phase 3):** Editor and static-site read modules accept **`TomeGraphStoreQueryable`** / **`RelationshipReadStore`** (`tome-db/src/graph-store/relationship-read.ts`) — not direct `GraphDatabase` access. SQLite cache remains the **`executeImp` SQL backend** and sync target for mutations via `TomeWriteContext.cache`. See [graph-store.md](./graph-store.md).
+**Read paths (phase 3):** Editor and static-site read modules accept **`TomeGraphStoreQueryable`** / **`RelationshipReadStore`** (`tome-db/src/graph-store/relationship-read.ts`) — not direct `GraphDatabase` access.
+
+**Write paths (phase 4):** Domain mutation modules persist and validate through **`ctx.graphStore`** (`tome-db/src/graph-store/relationship-write.ts`) — not `ctx.store` or cache read-assist. SQLite cache remains the **`executeImp` SQL backend** and **`CacheSync`** target via `TomeWriteContext.cache`. See [graph-store.md](./graph-store.md).
 
 `GraphDatabase` (`packages/tome-sqlite/src/graph.ts`) — cache / legacy tests:
 

@@ -1,4 +1,4 @@
-import type { ContentStore } from "tome-flatfile";
+import type { TomeGraphStoreBase } from "tome-graph-interfaces";
 import {
   emptyViewsFile,
   isViewDefinition,
@@ -20,8 +20,8 @@ import type { ViewsMutationError } from "tome-graph-interfaces";
 
 export type { ViewsMutationError } from "tome-graph-interfaces";
 
-function writeViews(store: ContentStore, file: ViewsFile): void {
-  store.writeViewsFile(file);
+function writeViews(store: TomeGraphStoreBase, file: ViewsFile): void {
+  store.writeViews(file);
 }
 
 function normalizeProperties(properties: string[]): string[] {
@@ -71,13 +71,13 @@ function setPropertiesOnRecord(
   }
 }
 
-export function getNodeViews(store: ContentStore, nodeId: string): ViewDefinition[] {
-  const file = store.readViewsFile();
+export function getNodeViews(store: TomeGraphStoreBase, nodeId: string): ViewDefinition[] {
+  const file = store.readViews();
   return viewsForNode(file, nodeId).filter(isViewDefinition);
 }
 
 export function createView(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
@@ -85,7 +85,7 @@ export function createView(
   const trimmed = input.name.trim();
   if (!trimmed) throw new Error("invalid_name");
 
-  const file = store.readViewsFile();
+  const file = store.readViews();
   if (generatedViewForRelationship(file, nodeId, association)) {
     throw new Error("not_custom_views");
   }
@@ -112,7 +112,7 @@ export function createView(
 export const createTab = createView;
 
 export function updateView(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   viewId: string,
@@ -122,7 +122,7 @@ export function updateView(
     properties?: string[];
   },
 ): ViewDefinition {
-  const file = store.readViewsFile();
+  const file = store.readViews();
   const index = findViewIndex(file, nodeId, association, viewId);
   if (index < 0) throw new Error("view_not_found");
 
@@ -147,12 +147,12 @@ export function updateView(
 export const updateTab = updateView;
 
 export function deleteView(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   viewId: string,
 ): void {
-  const file = store.readViewsFile();
+  const file = store.readViews();
   const views = ensureCustomViews(file, nodeId, association);
   if (views.length <= 1) throw new Error("last_view");
 
@@ -166,7 +166,7 @@ export function deleteView(
 export const deleteTab = deleteView;
 
 export function reorderViews(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   viewIds: string[],
@@ -175,7 +175,7 @@ export function reorderViews(
     throw new Error("invalid_view_order");
   }
 
-  const file = store.readViewsFile();
+  const file = store.readViews();
   const views = ensureCustomViews(file, nodeId, association);
   if (viewIds.length !== views.length) {
     throw new Error("invalid_view_order");
@@ -211,7 +211,7 @@ export const reorderSectionTabs = reorderViews;
  * Used by composed / generated tabs (shared allowlist).
  */
 export function updateRelationshipViewProperties(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   properties: string[],
@@ -219,7 +219,7 @@ export function updateRelationshipViewProperties(
   const normalized = normalizeProperties(properties);
   if (normalized.length === 0) throw new Error("invalid_column_order");
 
-  const file = store.readViewsFile();
+  const file = store.readViews();
   const generated = generatedViewForRelationship(file, nodeId, association);
   if (generated) {
     setPropertiesOnRecord(generated, normalized);
@@ -250,7 +250,7 @@ export function updateRelationshipViewProperties(
 
 /** @deprecated Use updateRelationshipViewProperties */
 export function updateSectionColumnOrder(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   columnOrder: string[],
@@ -259,12 +259,12 @@ export function updateSectionColumnOrder(
 }
 
 export function ensureCustomViewsForRelationship(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   definitions: Pick<ViewDefinition, "id" | "name" | "sorts">[],
 ): void {
-  const file = store.readViewsFile();
+  const file = store.readViews();
   const normalized = nodeId;
   file.views = file.views.filter(
     (view) => !(view.nodeId === normalized && view.association === association),
@@ -282,12 +282,12 @@ export function ensureCustomViewsForRelationship(
 }
 
 export function ensureGeneratedView(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   generator: string,
 ): void {
-  const file = store.readViewsFile();
+  const file = store.readViews();
   const normalized = nodeId;
   file.views = file.views.filter(
     (view) => !(view.nodeId === normalized && view.association === association),
@@ -296,13 +296,13 @@ export function ensureGeneratedView(
   writeViews(store, file);
 }
 
-export function replaceViewsFile(store: ContentStore, file: ViewsFile): void {
+export function replaceViewsFile(store: TomeGraphStoreBase, file: ViewsFile): void {
   writeViews(store, file);
 }
 
-export function readViewsFileOrEmpty(store: ContentStore): ViewsFile {
+export function readViewsFileOrEmpty(store: TomeGraphStoreBase): ViewsFile {
   try {
-    return store.readViewsFile();
+    return store.readViews();
   } catch {
     return emptyViewsFile();
   }
@@ -310,12 +310,12 @@ export function readViewsFileOrEmpty(store: ContentStore): ViewsFile {
 
 /** Remove a column key from view properties and reset sorts that reference it. */
 export function purgeColumnFromViews(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   columnKey: string,
 ): void {
-  const file = store.readViewsFile();
+  const file = store.readViews();
   const generated = generatedViewForRelationship(file, nodeId, association);
   let changed = false;
 
@@ -346,13 +346,13 @@ export function purgeColumnFromViews(
 
 /** Rename a column key in view properties and sorts. */
 export function renameColumnInViews(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   oldKey: string,
   newKey: string,
 ): void {
-  const file = store.readViewsFile();
+  const file = store.readViews();
   const generated = generatedViewForRelationship(file, nodeId, association);
   let changed = false;
 
@@ -389,13 +389,13 @@ export function renameColumnInViews(
  * Does not fan out to sibling custom views.
  */
 export function appendColumnToViewsOrder(
-  store: ContentStore,
+  store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
   columnKey: string,
   viewId?: string,
 ): void {
-  const file = store.readViewsFile();
+  const file = store.readViews();
   const generated = generatedViewForRelationship(file, nodeId, association);
 
   if (generated) {

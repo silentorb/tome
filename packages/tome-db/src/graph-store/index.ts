@@ -6,6 +6,7 @@ export {
 export { runExecuteImp, runExecuteImpSql } from "./execute-imp";
 export type { RunExecuteImpOptions } from "./execute-imp";
 export type { RelationshipReadStore } from "./relationship-read";
+export type { GraphWriteStore } from "./relationship-write";
 export {
   listAllRelationshipProjections,
   listDistinctProjectionTypes,
@@ -19,6 +20,21 @@ export {
   readStoreListNodeIds,
   readStoreListNodesWithBodyLike,
 } from "./relationship-read";
+export {
+  writeStoreContentDir,
+  writeStoreDeleteRelationship,
+  writeStoreFindRelationship,
+  writeStoreFindSetTraitRelationship,
+  writeStoreForEachRelationshipRecord,
+  writeStoreGetNode,
+  writeStoreListCorpora,
+  writeStoreLocateNode,
+  writeStoreMergeRelationshipProperties,
+  writeStoreReplaceRelationshipProperties,
+  writeStoreUpsertNodeToCorpus,
+  writeStoreUpsertRelationship,
+  writeStoreWriteWorkspaceForCorpus,
+} from "./relationship-write";
 export { openComposedGraphStore } from "./open-graph-store";
 export {
   buildStandardGraph,

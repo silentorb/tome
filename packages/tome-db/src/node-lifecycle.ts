@@ -1,6 +1,7 @@
 import type { TomeWriteContext } from "./content/write-context";
 import {
-  contentDirForNode,
+  contentDirForGraphStore,
+  flatfileBackendFromContext,
   syncAfterNodeWrite,
   syncAfterRelationshipsWrite,
 } from "./content/write-context";
@@ -12,6 +13,11 @@ import {
 } from "./relationship-archive";
 import { setRoleProjectionTypesForNode } from "tome-flatfile";
 import { archiveNodeId, protectedNodeIds } from "tome-flatfile";
+import {
+  writeStoreDeleteRelationship,
+  writeStoreGetNode,
+  writeStoreUpsertRelationship,
+} from "./graph-store/relationship-write";
 import type { NodeLifecycleError } from "tome-graph-interfaces";
 
 export type { NodeLifecycleError } from "tome-graph-interfaces";
@@ -21,11 +27,11 @@ export function isProtectedNodeId(id: string, contentDir?: string): boolean {
 }
 
 export function deleteNode(ctx: TomeWriteContext, id: string): NodeLifecycleError | null {
-  const contentDir = contentDirForNode(ctx.store, id);
+  const store = ctx.graphStore;
+  const contentDir = contentDirForGraphStore(store, id);
   if (isProtectedNodeId(id, contentDir)) return "protected";
-  if (!ctx.store.readNode(id)) return "not_found";
-  ctx.store.deleteNodeFile(id);
-  ctx.store.removeIncidentRelationships(id);
+  if (!writeStoreGetNode(store, id)) return "not_found";
+  store.deleteNode(id);
   syncAfterNodeWrite(ctx, id);
   syncAfterRelationshipsWrite(ctx);
   ctx.sync.syncNode(id);
@@ -33,33 +39,42 @@ export function deleteNode(ctx: TomeWriteContext, id: string): NodeLifecycleErro
 }
 
 export function archiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleError | null {
-  const contentDir = contentDirForNode(ctx.store, id);
+  const store = ctx.graphStore;
+  const contentDir = contentDirForGraphStore(store, id);
   const hubId = archiveNodeId(contentDir);
   if (isProtectedNodeId(id, contentDir)) return "protected";
-  if (!ctx.store.readNode(id)) return "not_found";
-  if (isArchivedNode(ctx.graphStore, id, contentDir)) return "already_archived";
+  if (!writeStoreGetNode(store, id)) return "not_found";
+  if (isArchivedNode(store, id, contentDir)) return "already_archived";
 
-  markIncidentRelationshipsArchived(ctx.store, id, hubId);
+  markIncidentRelationshipsArchived(flatfileBackendFromContext(ctx), id, hubId);
   const [, memberPerspective] = setRoleProjectionTypesForNode(hubId, contentDir);
-  ctx.store.upsertRelationship(id, hubId, memberPerspective);
-  ctx.store.moveNodeToArchive(id);
+  writeStoreUpsertRelationship(store, id, hubId, memberPerspective);
+  store.archiveNodeFile(id);
   syncAfterNodeWrite(ctx, id);
   syncAfterRelationshipsWrite(ctx);
   return null;
 }
 
 export function unarchiveNode(ctx: TomeWriteContext, id: string): NodeLifecycleError | null {
-  const contentDir = contentDirForNode(ctx.store, id);
+  const store = ctx.graphStore;
+  const contentDir = contentDirForGraphStore(store, id);
   const hubId = archiveNodeId(contentDir);
   if (isProtectedNodeId(id, contentDir)) return "protected";
-  if (!ctx.store.readNode(id)) return "not_found";
-  if (!isArchivedNode(ctx.graphStore, id, contentDir)) return "not_archived";
+  if (!writeStoreGetNode(store, id)) return "not_found";
+  if (!isArchivedNode(store, id, contentDir)) return "not_archived";
 
   const [, memberPerspective] = setRoleProjectionTypesForNode(hubId, contentDir);
-  ctx.store.deleteRelationship(id, hubId, memberPerspective);
-  const stillArchivedIds = new Set(listArchiveMemberIdsFromStore(ctx.store, hubId));
-  unmarkIncidentRelationshipsArchived(ctx.store, id, stillArchivedIds, hubId);
-  ctx.store.moveNodeFromArchive(id);
+  writeStoreDeleteRelationship(store, id, hubId, memberPerspective);
+  const stillArchivedIds = new Set(
+    listArchiveMemberIdsFromStore(flatfileBackendFromContext(ctx), hubId),
+  );
+  unmarkIncidentRelationshipsArchived(
+    flatfileBackendFromContext(ctx),
+    id,
+    stillArchivedIds,
+    hubId,
+  );
+  store.unarchiveNodeFile(id);
   syncAfterNodeWrite(ctx, id);
   syncAfterRelationshipsWrite(ctx);
   return null;

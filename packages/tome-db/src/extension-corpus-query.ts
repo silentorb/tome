@@ -1,9 +1,9 @@
 import type { ExtensionCorpusQueryServices } from "tome-interfaces/extension-services/corpus-query";
-import type { TomeDataStore } from "tome-service-interfaces";
+import type { TomeGraphStoreBase } from "tome-graph-interfaces";
 
-/** Corpus lookup from the store routing map (not SQLite). */
+/** Corpus lookup from the graph store routing map (not SQLite). */
 export function createExtensionCorpusQueryServices(
-  store: TomeDataStore,
+  store: TomeGraphStoreBase,
 ): ExtensionCorpusQueryServices {
   return {
     corpusIdForNode(nodeId: string): string | null {

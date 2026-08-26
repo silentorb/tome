@@ -10,6 +10,7 @@ import { normalizeAssociationId, isAssociationId } from "tome-flatfile";
 import { resolvePropertyEnumFromContent } from "./property-enums";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
+import { writeStoreContentDir } from "./graph-store/relationship-write";
 import { TABLE_SCHEMAS_FILENAME } from "tome-flatfile";
 import { isNodeId } from "tome-flatfile";
 import type {
@@ -69,7 +70,7 @@ function isDynamicColumnKey(
   databaseId: string,
   columnKey: string,
 ): boolean {
-  const dynamicProperties = loadDynamicProperties(ctx.cache, databaseId, ctx.store.contentDir);
+  const dynamicProperties = loadDynamicProperties(ctx.graphStore, databaseId, writeStoreContentDir(ctx.graphStore));
   return dynamicProperties.some((property) => property.columnKey === columnKey);
 }
 
@@ -79,7 +80,7 @@ function validateScalarType(type: string): type is TableColumnScalarType {
 
 function validateEnumId(ctx: TomeWriteContext, enumId: string | undefined): boolean {
   if (!enumId?.trim()) return false;
-  return resolvePropertyEnumFromContent(enumId.trim(), ctx.store.contentDir) !== null;
+  return resolvePropertyEnumFromContent(enumId.trim(), writeStoreContentDir(ctx.graphStore)) !== null;
 }
 
 function buildColumnDef(input: CreateDatabaseColumnInput, key: string): TableColumnDef | null {
@@ -134,7 +135,7 @@ export function createDatabaseColumn(
   databaseId: string,
   input: CreateDatabaseColumnInput,
 ): DatabaseColumnMutationError | DatabaseColumnMutationResult {
-  if (!isTypeTableNode(ctx.cache, databaseId, ctx.store.contentDir)) {
+  if (!isTypeTableNode(ctx.graphStore, databaseId, writeStoreContentDir(ctx.graphStore))) {
     return "database_not_found";
   }
 
@@ -160,25 +161,25 @@ export function createDatabaseColumn(
       if (!validateEnumId(ctx, columnDef.enumId)) return "invalid_enum";
     }
   } else {
-    const registry = ctx.store.readAssociationsFile();
+    const registry = ctx.graphStore.readAssociations();
     if (!registry.associations[columnDef.association]) {
       return "invalid_relation_target";
     }
   }
 
-  const schemasFile = ctx.store.readTableSchemasFile();
+  const schemasFile = ctx.graphStore.readTableSchemas();
   const tableSchema = ensureTableSchema(schemasFile, databaseId);
   if (columnKeysTaken(tableSchema).has(key)) {
     return "column_key_taken";
   }
 
   tableSchema.columns.push(columnDef);
-  ctx.store.writeTableSchemasFile(schemasFile);
+  ctx.graphStore.writeTableSchemas(schemasFile);
   invalidateTableSchemasCache();
   appendColumnToViewsOrder(
-    ctx.store,
+    ctx.graphStore,
     databaseId,
-    setRoleAssociationForNode(databaseId, ctx.store.contentDir),
+    setRoleAssociationForNode(databaseId, writeStoreContentDir(ctx.graphStore)),
     key,
     input.viewId,
   );
@@ -260,11 +261,11 @@ export function updateDatabaseColumn(
     return "column_not_deletable";
   }
 
-  if (!isTypeTableNode(ctx.cache, databaseId, ctx.store.contentDir)) {
+  if (!isTypeTableNode(ctx.graphStore, databaseId, writeStoreContentDir(ctx.graphStore))) {
     return "database_not_found";
   }
 
-  const schemasFile = ctx.store.readTableSchemasFile();
+  const schemasFile = ctx.graphStore.readTableSchemas();
   const tableSchema = schemasFile.tables[databaseId];
   if (!tableSchema) return "column_not_found";
 
@@ -286,7 +287,7 @@ export function updateDatabaseColumn(
       if (!validateEnumId(ctx, patched.enumId)) return "invalid_enum";
     }
   } else {
-    const registry = ctx.store.readAssociationsFile();
+    const registry = ctx.graphStore.readAssociations();
     if (!registry.associations[(patched as TableRelationColumn).association]) {
       return "invalid_relation_target";
     }
@@ -327,14 +328,14 @@ export function updateDatabaseColumn(
   const index = tableSchema.columns.findIndex((col) => col.key === normalizedKey);
   tableSchema.columns[index] = patched;
 
-  ctx.store.writeTableSchemasFile(schemasFile);
+  ctx.graphStore.writeTableSchemas(schemasFile);
   invalidateTableSchemasCache();
 
   if (finalKey !== normalizedKey) {
     renameColumnInViews(
-      ctx.store,
+      ctx.graphStore,
       databaseId,
-      setRoleAssociationForNode(databaseId, ctx.store.contentDir),
+      setRoleAssociationForNode(databaseId, writeStoreContentDir(ctx.graphStore)),
       normalizedKey,
       finalKey,
     );

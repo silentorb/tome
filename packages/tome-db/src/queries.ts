@@ -69,21 +69,21 @@ function touchNodeTimestamps(
   if (typeof existing.created_at !== "string" || !existing.created_at.trim()) {
     patch.created_at = now;
   }
-  ctx.store.mergeNodeProperties(id, patch);
+  ctx.graphStore.mergeNodeProperties(id, patch);
   syncAfterNodeWrite(ctx, id);
 }
 
 export function updateNodeBody(ctx: TomeWriteContext, id: string, body: string): boolean {
-  const node = ctx.store.readNode(id);
+  const node = ctx.graphStore.getNode(id);
   if (!node) return false;
   const { body: _removed, ...props } = node.properties;
-  ctx.store.writeNode({ id: node.id, properties: props }, body);
+  ctx.graphStore.upsertNode({ id: node.id, properties: props }, body);
   touchNodeTimestamps(ctx, id, node.properties);
   return true;
 }
 
 export function updateNodeTitle(ctx: TomeWriteContext, id: string, title: string): boolean {
-  const node = ctx.store.readNode(id);
+  const node = ctx.graphStore.getNode(id);
   if (!node) return false;
   const trimmed = title.trim();
   if (!isPersistableNodeTitle(trimmed)) return false;
@@ -92,7 +92,7 @@ export function updateNodeTitle(ctx: TomeWriteContext, id: string, title: string
   const content = stripLeadingTitleHeadingIfMatches(body, oldTitle);
   const { body: _removed, ...rest } = node.properties;
   const props = { ...rest, title: trimmed };
-  ctx.store.writeNode({ id: node.id, properties: props }, content);
+  ctx.graphStore.upsertNode({ id: node.id, properties: props }, content);
   touchNodeTimestamps(ctx, id, node.properties);
   return true;
 }

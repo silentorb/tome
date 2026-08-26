@@ -27,13 +27,13 @@ describe("views mutations", () => {
   });
 
   test("creates and updates views", () => {
-    const created = createView(fixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, {
+    const created = createView(fixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, {
       name: "Sorted",
       sorts: [{ column: "priority", direction: "desc" }],
     });
     expect(created.name).toBe("Sorted");
 
-    const updated = updateView(fixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, created.id, {
+    const updated = updateView(fixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, created.id, {
       name: "Renamed",
     });
     expect(updated.name).toBe("Renamed");
@@ -41,13 +41,13 @@ describe("views mutations", () => {
 
   test("updates relationship view properties on the first custom view", () => {
     const properties = updateRelationshipViewProperties(
-      fixture.ctx.store,
+      fixture.ctx.graphStore,
       nodeId,
       TEST_MEMBER_OF_ASSOCIATION_ID,
       ["status", "priority"],
     );
     expect(properties).toEqual(["status", "priority"]);
-    const file = fixture.ctx.store.readViewsFile();
+    const file = fixture.ctx.graphStore.readViews();
     const relationshipViews = file.views.filter(
       (view) => view.nodeId === nodeId && "id" in view && view.association === TEST_MEMBER_OF_ASSOCIATION_ID,
     );
@@ -83,7 +83,7 @@ describe("views mutations", () => {
       ],
     });
     try {
-      const reordered = reorderViews(reorderFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, [
+      const reordered = reorderViews(reorderFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, [
         "third",
         "first",
         "second",
@@ -116,13 +116,13 @@ describe("views mutations", () => {
       ],
     });
     try {
-      updateView(propertiesFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "all", {
+      updateView(propertiesFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "all", {
         properties: ["status"],
       });
-      updateView(propertiesFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "extra", {
+      updateView(propertiesFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "extra", {
         properties: ["priority"],
       });
-      const file = propertiesFixture.ctx.store.readViewsFile();
+      const file = propertiesFixture.ctx.graphStore.readViews();
       const allView = file.views.find((view) => "id" in view && view.id === "all");
       const extraView = file.views.find((view) => "id" in view && view.id === "extra");
       expect(allView && "properties" in allView ? allView.properties : undefined).toEqual([
@@ -151,7 +151,7 @@ describe("views mutations", () => {
       ],
     });
     try {
-      expect(() => deleteView(soloFixture.ctx.store, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "all")).toThrow(
+      expect(() => deleteView(soloFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "all")).toThrow(
         "last_view",
       );
     } finally {

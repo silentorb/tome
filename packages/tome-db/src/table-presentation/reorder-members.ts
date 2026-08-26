@@ -10,6 +10,11 @@ import { getCompositionForDatabase } from "./load";
 import { memberLinkPerspective } from "./helpers";
 import { getDatabaseViewDetail } from "../database-view";
 import { DEFAULT_TABLE_ROW_LIMIT } from "../table-rows-window";
+import {
+  writeStoreContentDir,
+  writeStoreDeleteRelationship,
+  writeStoreUpsertRelationship,
+} from "../graph-store/relationship-write";
 
 /**
  * Rewrite membership order for the given member sequence, optionally changing
@@ -20,10 +25,11 @@ export function reorderDatabaseMembers(
   databaseId: string,
   params: ReorderDatabaseMembersParams,
 ): DatabaseViewDetail | null {
-  const contentDir = ctx.store.contentDir;
+  const store = ctx.graphStore;
+  const contentDir = writeStoreContentDir(store);
   const composition = getCompositionForDatabase(databaseId, contentDir);
   const memberIds = new Set(params.orderedMemberIds);
-  const edges = listSetMemberRowConnections(ctx.cache, databaseId, contentDir).filter((edge) =>
+  const edges = listSetMemberRowConnections(store, databaseId, contentDir).filter((edge) =>
     memberIds.has(edge.sourceNodeId),
   );
 
@@ -43,12 +49,13 @@ export function reorderDatabaseMembers(
     const { memberId, targetGroupId } = params.groupChange;
     const groupConfig = composition.groups;
     const existing = listRelationshipsForComposite(
-      ctx.cache,
+      store,
       memberId,
       groupConfig.memberToGroupComposite,
     );
     for (const connection of existing) {
-      ctx.store.deleteRelationship(
+      writeStoreDeleteRelationship(
+        store,
         connection.sourceNodeId,
         connection.targetNodeId,
         connection.type,
@@ -62,7 +69,8 @@ export function reorderDatabaseMembers(
         if (key === "ordinal") continue;
         props[key] = value;
       }
-      ctx.store.upsertRelationship(
+      writeStoreUpsertRelationship(
+        store,
         memberId,
         targetGroupId,
         memberLinkPerspective(
@@ -78,7 +86,7 @@ export function reorderDatabaseMembers(
 
   syncAfterRelationshipsWrite(ctx);
 
-  return getDatabaseViewDetail(ctx.cache, databaseId, params.tabId, contentDir, {
+  return getDatabaseViewDetail(store, databaseId, params.tabId, contentDir, {
     limit: DEFAULT_TABLE_ROW_LIMIT,
     offset: 0,
   });

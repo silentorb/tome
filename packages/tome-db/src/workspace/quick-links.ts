@@ -1,12 +1,16 @@
 import type { TomeWriteContext } from "../content/write-context";
-import { contentDirForNode } from "../content/write-context";
+import { contentDirForGraphStore } from "../content/write-context";
 import {
-  CompositeStore,
   invalidateWorkspaceCache,
   loadWorkspaceFromContent,
   type WorkspaceFile,
   type WorkspaceQuickLink,
 } from "tome-flatfile";
+import {
+  writeStoreGetNode,
+  writeStoreLocateNode,
+  writeStoreWriteWorkspaceForCorpus,
+} from "../graph-store/relationship-write";
 import type { QuickLinkError } from "tome-graph-interfaces";
 
 export type { QuickLinkError } from "tome-graph-interfaces";
@@ -22,7 +26,7 @@ function defaultQuickLinkIcon(workspace: WorkspaceFile): string {
 }
 
 function nodeTitle(ctx: TomeWriteContext, nodeId: string): string | null {
-  const node = ctx.store.readNode(nodeId);
+  const node = writeStoreGetNode(ctx.graphStore, nodeId);
   if (!node) return null;
   const title = node.properties.title;
   if (typeof title === "string" && title.trim()) return title.trim();
@@ -34,16 +38,16 @@ function writeWorkspaceForNode(
   nodeId: string,
   workspace: WorkspaceFile,
 ): void {
-  const corpusId = ctx.store.locateNode(nodeId);
-  if (corpusId && ctx.store instanceof CompositeStore) {
-    ctx.store.writeWorkspaceFileForCorpus(corpusId, workspace);
+  const corpusId = writeStoreLocateNode(ctx.graphStore, nodeId);
+  if (corpusId) {
+    writeStoreWriteWorkspaceForCorpus(ctx.graphStore, corpusId, workspace);
     return;
   }
-  ctx.store.writeWorkspaceFile(workspace);
+  ctx.graphStore.writeWorkspace(workspace);
 }
 
 function workspaceForNode(ctx: TomeWriteContext, nodeId: string): WorkspaceFile {
-  return loadWorkspaceFromContent(contentDirForNode(ctx.store, nodeId));
+  return loadWorkspaceFromContent(contentDirForGraphStore(ctx.graphStore, nodeId));
 }
 
 export function addWorkspaceQuickLink(
@@ -52,7 +56,7 @@ export function addWorkspaceQuickLink(
   options?: { label?: string; icon?: string },
 ): QuickLinkError | null {
   const normalizedId = nodeId;
-  if (!ctx.store.readNode(normalizedId)) return "not_found";
+  if (!writeStoreGetNode(ctx.graphStore, normalizedId)) return "not_found";
 
   const workspace = workspaceForNode(ctx, normalizedId);
   if (isWorkspaceQuickLink(workspace, normalizedId)) return "already_exists";

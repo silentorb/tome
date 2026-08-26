@@ -112,9 +112,9 @@ type GraphStoreCapabilities =
 | **1 — Infrastructure** | Done | `TomeGraphStoreBase` / `Queryable`, `ComposedGraphStore`, `tome-imp-flatfile`, `recentNodesGraph`, `typeMembersGraph` |
 | **2 — Read-path migration** | Done | Imp `contains` + `search`; editor search + extensions on `executeImp`; drop `includeBody` toggle; `searchNodesGraph` |
 | **3 — Read-path completion** | Done | Explorer, table views, node page detail on graph store; `listRelationshipProjections`; standard graphs `outgoingRelationships` / `incomingRelationships`; public REST `POST /api/graph/execute-imp` |
-| **4 — Imp mutations** | Planned | Queryable-tier write paths via Imp (v1 Queryable is read-only) |
+| **4 — Write-path migration** | Done | Domain mutations via imperative `TomeGraphStoreBase` (`graphStore`); `relationship-write.ts` helpers; no Imp write graphs |
 
-Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read paths. Editor HTTP use cases stay application-specific ([web-api-design.md](./web-api-design.md)); integrators may call **`POST /api/graph/execute-imp`** with the same `executeImp` surface extensions use.
+Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read paths. Phase 4 routes domain mutations through **`ctx.graphStore`** (Base tier) instead of parallel `ctx.store` persistence and `ctx.cache` read-assist during validation. **`executeImp` remains read-only** — Imp mutation operators are not part of the Tome host v1 design. Editor HTTP use cases stay application-specific ([web-api-design.md](./web-api-design.md)); integrators may call **`POST /api/graph/execute-imp`** with the same `executeImp` surface extensions use.
 
 ### Standard Imp graphs (`tome-db`)
 
@@ -125,6 +125,10 @@ Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read 
 | `searchNodesGraph` | Title/body search |
 | `outgoingRelationshipsGraph` | Outgoing projections from a node |
 | `incomingRelationshipsGraph` | Incoming projections to a node |
+
+### Base-tier relationship writes
+
+`relationship-write.ts` (`tome-db/src/graph-store/relationship-write.ts`) wraps **`TomeGraphStoreBase`** for domain mutations: upsert/delete/merge/replace projections, corpus-targeted node upsert, archive file moves. Domain modules (`relationship-link-mutations`, `node-create`, `node-lifecycle`, database column mutations, …) call these helpers — not `ctx.store` or cache read-assist.
 
 ### Base-tier relationship reads
 

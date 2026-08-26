@@ -4,17 +4,23 @@ import { syncAfterRelationshipsWrite } from "./content/write-context";
 import {
   LinkResolutionError,
   UnknownAssociationError,
-  connectsEndpoints,
   isAssociationId,
   isMemberSideProjectionType,
-  isSetTraitComposite,
-  isSetTraitProjectionType,
   loadAssociationsFromContent,
   parseProjectionType,
 } from "tome-flatfile";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
 import { associationRuleContext } from "./association-endpoints";
 import { stampOrderIfMissing } from "./ordered-relationships";
+import { listRelationshipsFromSource } from "./graph-store/relationship-read";
+import {
+  writeStoreContentDir,
+  writeStoreDeleteRelationship,
+  writeStoreFindRelationship,
+  writeStoreFindSetTraitRelationship,
+  writeStoreGetNode,
+  writeStoreUpsertRelationship,
+} from "./graph-store/relationship-write";
 import type {
   LinkOutgoingRelationshipError,
   LinkOutgoingRelationshipInput,
@@ -38,7 +44,6 @@ function normalizeLinkType(type: string): string {
   return trimmed;
 }
 
-
 function ordinalFromProperties(properties: Record<string, unknown>): number | null {
   const raw = properties.ordinal;
   if (typeof raw === "number" && Number.isFinite(raw)) return raw;
@@ -51,7 +56,7 @@ function nextOutgoingOrdinal(
   sourceId: string,
   type: string,
 ): number | undefined {
-  const outgoing = ctx.cache.listRelationshipsFromSource(sourceId).filter((c) => c.type === type);
+  const outgoing = listRelationshipsFromSource(ctx.graphStore, sourceId, type);
   if (outgoing.length === 0) return undefined;
   const ordinals = outgoing
     .map((c) => ordinalFromProperties(c.properties))
@@ -66,26 +71,28 @@ export function linkOutgoingRelationship(
 ): LinkOutgoingRelationshipError | null {
   const { sourceId, targetId, type, properties = {} } = input;
   const normalizedType = normalizeLinkType(type);
+  const store = ctx.graphStore;
+  const contentDir = writeStoreContentDir(store);
 
-  if (!ctx.store.readNode(sourceId)) return "source_not_found";
-  if (!ctx.store.readNode(targetId)) return "target_not_found";
+  if (!writeStoreGetNode(store, sourceId)) return "source_not_found";
+  if (!writeStoreGetNode(store, targetId)) return "target_not_found";
 
-  if (ctx.store.findRelationship(sourceId, targetId, normalizedType)) {
+  if (writeStoreFindRelationship(store, sourceId, targetId, normalizedType)) {
     return "duplicate";
   }
 
-  const registry = loadAssociationsFromContent(ctx.store.contentDir);
+  const registry = loadAssociationsFromContent(contentDir);
   const ruleContext = associationRuleContext(
     registry,
-    ctx.cache,
+    store,
     sourceId,
     normalizedType,
-    ctx.store.contentDir,
+    contentDir,
   );
   if (
     ruleContext &&
     ruleContext.allowedTargetTypeIds.length > 0 &&
-    !nodeMatchesTargetTypes(ctx.cache, targetId, ruleContext.allowedTargetTypeIds, ctx.store.contentDir)
+    !nodeMatchesTargetTypes(store, targetId, ruleContext.allowedTargetTypeIds, contentDir)
   ) {
     return "target_type_not_allowed";
   }
@@ -96,14 +103,14 @@ export function linkOutgoingRelationship(
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
   }
 
-  if (isTypeTableNode(ctx.cache, targetId, ctx.store.contentDir)) {
+  if (isTypeTableNode(store, targetId, contentDir)) {
     if (isMemberSideProjectionType(registry, normalizedType)) {
       relProps = stampOrderIfMissing(ctx, targetId, sourceId, relProps, normalizedType);
     }
   }
 
   try {
-    ctx.store.upsertRelationship(sourceId, targetId, normalizedType, relProps);
+    writeStoreUpsertRelationship(store, sourceId, targetId, normalizedType, relProps);
   } catch (err) {
     if (err instanceof LinkResolutionError || err instanceof UnknownAssociationError) {
       return "unresolvable_type";
@@ -114,31 +121,6 @@ export function linkOutgoingRelationship(
   return null;
 }
 
-/**
- * Members tables list every set-trait edge, while unlink/move often pass the
- * view-resolved member projection. When those differ, find any set-trait edge
- * connecting the same pair.
- */
-function findRelationshipForUnlink(
-  ctx: TomeWriteContext,
-  sourceId: string,
-  targetId: string,
-  type: string,
-) {
-  const found = ctx.store.findRelationship(sourceId, targetId, type);
-  if (found) return found;
-
-  const registry = loadAssociationsFromContent(ctx.store.contentDir);
-  if (!isSetTraitProjectionType(registry, type)) return null;
-
-  for (const entry of ctx.store.readRelationshipsFile().relationships) {
-    if (!connectsEndpoints(entry, sourceId, targetId)) continue;
-    if (!isSetTraitComposite(registry, entry.type)) continue;
-    return ctx.store.findRelationship(sourceId, targetId, entry.type);
-  }
-  return null;
-}
-
 export function unlinkOutgoingRelationship(
   ctx: TomeWriteContext,
   sourceId: string,
@@ -146,9 +128,17 @@ export function unlinkOutgoingRelationship(
   type: string,
 ): UnlinkOutgoingRelationshipError | null {
   const normalizedType = normalizeLinkType(type);
-  const existing = findRelationshipForUnlink(ctx, sourceId, targetId, normalizedType);
+  const store = ctx.graphStore;
+  const registry = loadAssociationsFromContent(writeStoreContentDir(store));
+  const existing = writeStoreFindSetTraitRelationship(
+    store,
+    registry,
+    sourceId,
+    targetId,
+    normalizedType,
+  );
   if (!existing) return "not_found";
-  ctx.store.deleteRelationship(sourceId, targetId, existing.type);
+  writeStoreDeleteRelationship(store, sourceId, targetId, existing.type);
   syncAfterRelationshipsWrite(ctx);
   return null;
 }
@@ -159,8 +149,16 @@ export function moveRelationshipConnection(
 ): MoveRelationshipConnectionError | null {
   const { type, oldSourceId, oldTargetId, newSourceId, newTargetId } = input;
   const normalizedType = normalizeLinkType(type);
+  const store = ctx.graphStore;
+  const registry = loadAssociationsFromContent(writeStoreContentDir(store));
 
-  const existing = findRelationshipForUnlink(ctx, oldSourceId, oldTargetId, normalizedType);
+  const existing = writeStoreFindSetTraitRelationship(
+    store,
+    registry,
+    oldSourceId,
+    oldTargetId,
+    normalizedType,
+  );
   if (!existing) return "not_found";
 
   const linkError = linkOutgoingRelationship(ctx, {
@@ -171,7 +169,7 @@ export function moveRelationshipConnection(
   });
   if (linkError) return linkError;
 
-  ctx.store.deleteRelationship(oldSourceId, oldTargetId, existing.type);
+  writeStoreDeleteRelationship(store, oldSourceId, oldTargetId, existing.type);
   syncAfterRelationshipsWrite(ctx);
   return null;
 }

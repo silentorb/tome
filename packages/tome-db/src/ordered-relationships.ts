@@ -2,6 +2,10 @@ import type { RelationshipReadStore, Properties, Relationship } from "tome-sqlit
 import type { TomeWriteContext } from "./content/write-context";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import {
+  writeStoreContentDir,
+  writeStoreMergeRelationshipProperties,
+} from "./graph-store/relationship-write";
+import {
   associationIdFromTypeOrProjection,
   isOrderedTraitComposite,
   isOrderedSetProjectionType,
@@ -90,7 +94,7 @@ export function stampOrderIfMissing(
   projectionType?: string,
   memberFilter?: ReadonlySet<string> | null,
 ): Properties {
-  const dir = ctx.store.contentDir;
+  const dir = writeStoreContentDir(ctx.graphStore);
   const registry = loadAssociationsFromContent(dir);
   const resolvedProjection =
     projectionType ?? setRoleProjectionTypesForNode(setId, dir)[1];
@@ -98,7 +102,7 @@ export function stampOrderIfMissing(
   if (!composite || !isOrderedTraitComposite(registry, composite)) return props;
   const property = orderedPropertyName(registry.associations[composite]);
   if (property in props) return props;
-  const max = maxOrderAmongMembers(ctx.cache, setId, memberFilter ?? null, dir);
+  const max = maxOrderAmongMembers(ctx.graphStore, setId, memberFilter ?? null, dir);
   return { ...props, [property]: max + 1 };
 }
 
@@ -115,7 +119,7 @@ export function applySparseOrderRewrite(
   edges: SparseOrderRewriteEdge[],
   orderedMemberIds: string[],
 ): void {
-  const dir = ctx.store.contentDir;
+  const dir = writeStoreContentDir(ctx.graphStore);
   const [, memberProjection] = setRoleProjectionTypesForNode(setId, dir);
   const property = orderPropertyForProjection(dir, memberProjection);
   if (!property) return;
@@ -128,7 +132,8 @@ export function applySparseOrderRewrite(
     const edge = edgeByMemberId.get(memberId);
     if (!edge) continue;
     const newOrder = (index + 1) * 10;
-    ctx.store.mergeRelationshipProperties(
+    writeStoreMergeRelationshipProperties(
+      ctx.graphStore,
       edge.sourceNodeId,
       edge.targetNodeId,
       edge.type,

@@ -114,7 +114,7 @@ function buildGraphServices(
     () => createExtensionSchemaQueryServices(graphStore, contentPath),
     () => createExtensionExecuteImpServices(writeCtx.graphStore),
     () => createExtensionGraphMutateServices(writeCtx),
-    () => createExtensionCorpusQueryServices(writeCtx.store),
+    () => createExtensionCorpusQueryServices(writeCtx.graphStore),
   );
   const extensionsReady = extensions.ensureLoaded().catch((err: unknown) => {
     console.error("[tome-extensions] failed to load:", err);
@@ -123,8 +123,8 @@ function buildGraphServices(
   const schema = () => loadSchemaFromContent(contentPath);
 
   const corpusMeta = (nodeId: string, activeCorpusId?: string) => {
-    const corpora = writeCtx.store.listCorpora();
-    const corpusId = writeCtx.store.locateNode(nodeId) ?? undefined;
+    const corpora = writeCtx.graphStore.listCorpora();
+    const corpusId = writeCtx.graphStore.locateNode(nodeId) ?? undefined;
     const info = corpusId
       ? corpora.find((c) => c.id === corpusId)
       : undefined;
@@ -143,7 +143,7 @@ function buildGraphServices(
   };
 
   const workspaceForCorpus = (corpusId?: string): WorkspacePublic => {
-    const corpora = writeCtx.store.listCorpora();
+    const corpora = writeCtx.graphStore.listCorpora();
     const match = corpusId
       ? corpora.find((c) => c.id === corpusId)
       : corpora[0];
@@ -161,7 +161,7 @@ function buildGraphServices(
       return workspaceForCorpus(corpusId);
     },
     listCorpora() {
-      return writeCtx.store.listCorpora().map((c) => {
+      return writeCtx.graphStore.listCorpora().map((c) => {
         const workspace = workspaceForCorpus(c.id);
         return {
           id: c.id,
@@ -176,7 +176,7 @@ function buildGraphServices(
     getHomeId(corpusId?: string): string {
       const ws = workspaceForCorpus(corpusId);
       const contentDir =
-        writeCtx.store.listCorpora().find((c) => c.workspace.homeNodeId === ws.homeNodeId)
+        writeCtx.graphStore.listCorpora().find((c) => c.workspace.homeNodeId === ws.homeNodeId)
           ?.contentDir ?? contentPath;
       const home = getNodePageDetail(graphStore, ws.homeNodeId, { contentDir });
       if (home) return ws.homeNodeId;
@@ -195,7 +195,7 @@ function buildGraphServices(
     ) {
       const tabId = options?.tabId ?? options?.scopeId ?? options?.databaseView;
       const nodeContentDir =
-        writeCtx.store.listCorpora().find((c) => c.id === writeCtx.store.locateNode(id))
+        writeCtx.graphStore.listCorpora().find((c) => c.id === writeCtx.graphStore.locateNode(id))
           ?.contentDir ?? contentPath;
       const detail = getNodePageDetail(graphStore, id, {
         tabId,
@@ -300,7 +300,7 @@ function buildGraphServices(
       return updateDatabaseColumnInDb(writeCtx, databaseId, columnKey, input);
     },
     listTypeTables() {
-      const schemas = loadTableSchemasFromContent(writeCtx.store.contentDir);
+      const schemas = loadTableSchemasFromContent(writeCtx.graphStore.contentDir);
       const entries: { id: string; title: string }[] = [];
       for (const id of Object.keys(schemas.tables)) {
         const node = graphStore.getNode(id);

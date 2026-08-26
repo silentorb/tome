@@ -120,12 +120,24 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     this.flatfile.upsertNode(node, body);
   }
 
+  upsertNodeToCorpus(corpusId: string, node: Node, body?: string): void {
+    this.flatfile.upsertNodeToCorpus(corpusId, node, body);
+  }
+
   mergeNodeProperties(id: string, patch: Properties): boolean {
     return this.flatfile.mergeNodeProperties(id, patch);
   }
 
   deleteNode(id: string): void {
     this.flatfile.deleteNode(id);
+  }
+
+  archiveNodeFile(id: string): boolean {
+    return this.flatfile.archiveNodeFile(id);
+  }
+
+  unarchiveNodeFile(id: string): boolean {
+    return this.flatfile.unarchiveNodeFile(id);
   }
 
   getRelationshipRecord(a: string, b: string, type: string): RelationshipRecordRef | null {
@@ -155,6 +167,24 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
 
   deleteRelationship(source: string, target: string, projectionType: string): boolean {
     return this.flatfile.deleteRelationship(source, target, projectionType);
+  }
+
+  mergeRelationshipProperties(
+    source: string,
+    target: string,
+    projectionType: string,
+    patch: Properties,
+  ): void {
+    this.flatfile.mergeRelationshipProperties(source, target, projectionType, patch);
+  }
+
+  replaceRelationshipProperties(
+    source: string,
+    target: string,
+    projectionType: string,
+    properties: Properties,
+  ): boolean {
+    return this.flatfile.replaceRelationshipProperties(source, target, projectionType, properties);
   }
 
   readAssociations(): AssociationsFile {
@@ -195,6 +225,10 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
 
   writeWorkspace(file: WorkspaceFile): void {
     this.flatfile.writeWorkspace(file);
+  }
+
+  writeWorkspaceForCorpus(corpusId: string, file: WorkspaceFile): void {
+    this.flatfile.writeWorkspaceForCorpus(corpusId, file);
   }
 
   readDynamicProperties(): DynamicPropertiesFile {

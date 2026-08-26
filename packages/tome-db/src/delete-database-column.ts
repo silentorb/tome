@@ -7,6 +7,7 @@ import {
 import { isTypeTableNode } from "./node-capabilities";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
+import { writeStoreContentDir } from "./graph-store/relationship-write";
 import { TABLE_SCHEMAS_FILENAME } from "tome-flatfile";
 import type { TableSchemasFile } from "tome-flatfile";
 import { findColumnByKey } from "tome-flatfile";
@@ -47,16 +48,17 @@ export function deleteDatabaseColumn(
     return "column_not_deletable";
   }
 
-  if (!isTypeTableNode(ctx.cache, databaseId, ctx.store.contentDir)) {
+  const contentDir = writeStoreContentDir(ctx.graphStore);
+  if (!isTypeTableNode(ctx.graphStore, databaseId, contentDir)) {
     return "database_not_found";
   }
 
-  const dynamicProperties = loadDynamicProperties(ctx.cache, databaseId, ctx.store.contentDir);
+  const dynamicProperties = loadDynamicProperties(ctx.graphStore, databaseId, contentDir);
   if (dynamicProperties.some((property) => property.columnKey === normalizedKey)) {
     return "column_not_deletable";
   }
 
-  const schemasFile = ctx.store.readTableSchemasFile();
+  const schemasFile = ctx.graphStore.readTableSchemas();
   const tableSchema = schemasFile.tables[databaseId];
   if (!tableSchema) {
     return "column_not_found";
@@ -80,12 +82,12 @@ export function deleteDatabaseColumn(
     return "column_not_found";
   }
 
-  ctx.store.writeTableSchemasFile(schemasFile);
+  ctx.graphStore.writeTableSchemas(schemasFile);
   invalidateTableSchemasCache();
   purgeColumnFromViews(
-    ctx.store,
+    ctx.graphStore,
     databaseId,
-    setRoleAssociationForNode(databaseId, ctx.store.contentDir),
+    setRoleAssociationForNode(databaseId, contentDir),
     normalizedKey,
   );
 

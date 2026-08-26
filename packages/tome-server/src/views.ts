@@ -18,7 +18,7 @@ export interface ViewMutationInput {
 
 export function readNodeViews(ctx: TomeWriteContext, nodeId: string) {
   invalidateViewsCache();
-  return getNodeViews(ctx.store, nodeId);
+  return getNodeViews(ctx.graphStore, nodeId);
 }
 
 export function createRelationshipView(
@@ -29,7 +29,7 @@ export function createRelationshipView(
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
-  return createView(ctx.store, nodeId, association, input);
+  return createView(ctx.graphStore, nodeId, association, input);
 }
 
 export function updateRelationshipView(
@@ -41,7 +41,7 @@ export function updateRelationshipView(
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
-  return updateView(ctx.store, nodeId, association, viewId, input);
+  return updateView(ctx.graphStore, nodeId, association, viewId, input);
 }
 
 export function deleteRelationshipView(
@@ -52,7 +52,7 @@ export function deleteRelationshipView(
 ) {
   invalidateViewsCache();
   ctx.sync.syncFile("views.json");
-  deleteView(ctx.store, nodeId, association, viewId);
+  deleteView(ctx.graphStore, nodeId, association, viewId);
 }
 
 export function patchRelationshipViews(
@@ -68,11 +68,11 @@ export function patchRelationshipViews(
     properties?: string[];
   } = {};
   if (input.viewOrder) {
-    response.views = reorderViews(ctx.store, nodeId, association, input.viewOrder);
+    response.views = reorderViews(ctx.graphStore, nodeId, association, input.viewOrder);
   }
   if (input.properties) {
     response.properties = updateRelationshipViewProperties(
-      ctx.store,
+      ctx.graphStore,
       nodeId,
       association,
       input.properties,
