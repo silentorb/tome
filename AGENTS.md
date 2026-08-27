@@ -30,6 +30,7 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 - Run tests: `bun test` at repo root.
 - Feature specs: [`docs/features/`](./docs/features/) (read only the doc matching your task).
 - Package notes: each package's `README.md` (context) and `AGENTS.md` (implementation).
+- TypeScript-to-TypeScript imports are extensionless (no `.ts` suffix).
 - **Regression tests:** When fixing table views, dynamic fields, or related API bugs, add a regression test in the same change.
 - **UI tests:** New or changed React UI (editor webview, interactive page blocks, extension components) should include tests using **`bun:test`**, **`@testing-library/react`**, and **happy-dom** (`@happy-dom/global-registrator` via `--preload`). Follow the setup in `tome-editor` or `tome-query` (`tests/test-setup.ts`). Do not introduce a different DOM test runner for Tome UI packages.
 

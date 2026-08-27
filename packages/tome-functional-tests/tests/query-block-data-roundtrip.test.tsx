@@ -12,7 +12,7 @@ import {
   seedTestWorkspace,
   TEST_HOME_NODE_ID,
 } from "tome-db/content/test-helpers";
-import { normalizeEditorBody } from "tome-editor/src/webview/editor-save.ts";
+import { normalizeEditorBody } from "tome-editor/src/webview/editor-save";
 import {
   formatPageBlockEmbedComment,
   parsePageBlockFences,
@@ -20,8 +20,8 @@ import {
   serializePageBlock,
 } from "tome-interfaces/page-block";
 import { defaultBlockData, defaultReactFlowGraph, parseQueryBlockData } from "tome-query/config";
-import { createTestApiFromContent } from "../src/harness/create-test-api.ts";
-import { createHandlerClient } from "../src/harness/handler-client.ts";
+import { createTestApiFromContent } from "../src/harness/create-test-api";
+import { createHandlerClient } from "../src/harness/handler-client";
 
 const queryEditorPath = fileURLToPath(
   new URL("../../tome-query/src/query-editor.tsx", import.meta.url),
