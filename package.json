@@ -12,6 +12,7 @@
     "editor:api": "bun run server:dev",
     "editor:build": "bun run --filter tome-editor build",
     "web:build": "bun run --filter tome-static-site build",
+    "typecheck": "bun run --filter '*' typecheck",
     "test": "bun run --filter tome-theme-midnight test && bun run --filter tome-interfaces test && bun run --filter tome-graph-interfaces test && bun run --filter tome-service-interfaces test && bun run --filter tome-db test && bun run --filter tome-http test && bun run --filter tome-server test && bun run --filter tome-editor test && bun run --filter tome-static-site test && bun run --filter tome-spatial-graph test && bun run --filter tome-schema-diagram test && bun run --filter tome-imp-sql test && bun run --filter tome-query test && bun run --filter tome-sequencing-interfaces test && bun run --filter tome-sequencing-resolution test && bun run --filter tome-sequencing test && bun run --filter tome-functional-tests test",
     "test:functional": "bun run --filter tome-functional-tests test"
   },

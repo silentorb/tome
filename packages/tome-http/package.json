@@ -9,7 +9,8 @@
     "./user-settings": "./src/user-settings.ts"
   },
   "scripts": {
-    "test": "bun test tests"
+    "test": "bun test tests",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "tome-graph-interfaces": "workspace:*",

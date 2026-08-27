@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Cross-package functional tests (virtualized client↔API); not a production package",
   "scripts": {
-    "test": "bun test --preload ./tests/test-setup.ts tests"
+    "test": "bun test --preload ./tests/test-setup.ts tests",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "react": "19.0.0",

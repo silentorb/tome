@@ -16,7 +16,8 @@
     "./table-rows-window": "./src/table-rows-window.ts"
   },
   "scripts": {
-    "test": "bun test tests"
+    "test": "bun test tests",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "imp-execution": "workspace:*",

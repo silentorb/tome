@@ -28,6 +28,7 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 ## Project context
 
 - Run tests: `bun test` at repo root.
+- Typecheck: `bun run typecheck` at repo root (all workspace packages with a `typecheck` script, including Imp via `../imp/packages/*`).
 - Feature specs: [`docs/features/`](./docs/features/) (read only the doc matching your task).
 - Package notes: each package's `README.md` (context) and `AGENTS.md` (implementation).
 - TypeScript-to-TypeScript imports are extensionless (no `.ts` suffix).

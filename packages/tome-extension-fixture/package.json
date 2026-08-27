@@ -12,6 +12,9 @@
     "tome-interfaces": "workspace:*",
     "react": "19.0.0"
   },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
   "devDependencies": {
     "@types/react": "19.0.12",
     "typescript": "5.8.2"

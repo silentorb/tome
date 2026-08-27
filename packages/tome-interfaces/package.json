@@ -21,7 +21,8 @@
     "tome-graph-interfaces": "workspace:*"
   },
   "scripts": {
-    "test": "bun test tests"
+    "test": "bun test tests",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",
