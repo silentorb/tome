@@ -3,7 +3,7 @@ import type { SiteData, SiteNode, TabItemsPayload } from "./site-types";
 import { createNodeUrlResolver, normalizeHrefAsSitePath, type NodeUrlResolver } from "./node-urls";
 import { tabPayloadKey } from "./static-export";
 
-const data = siteData as SiteData;
+const data = siteData as unknown as SiteData;
 
 function derivePathById(): Record<string, string> {
   if (data.pathById) return data.pathById;

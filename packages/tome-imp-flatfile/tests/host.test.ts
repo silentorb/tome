@@ -37,10 +37,10 @@ describe("createFlatfileExecutionHost textSearch", () => {
     destroyTestContentFixture(fixture);
   });
 
-  test("ranks title matches before body-only matches", () => {
+  test("ranks title matches before body-only matches", async () => {
     const host = createFlatfileExecutionHost(fixture.ctx.graphStore, { liveOnly: true });
-    const input = host.listInputRows();
-    const results = host.textSearch!(input, "surreal");
+    const input = await Promise.resolve(host.listInputRows());
+    const results = await Promise.resolve(host.textSearch!(input, "surreal"));
     expect(results.map((r) => r.id)).toEqual([titleHit, bodyOnly]);
   });
 });

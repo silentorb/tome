@@ -1,5 +1,7 @@
 import type { TableSortSpec } from "./site-types";
 
+export type { TableSortSpec } from "./site-types";
+
 export interface ViewSortLike {
   column: string;
   direction: "asc" | "desc";

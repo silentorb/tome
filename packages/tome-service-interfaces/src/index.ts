@@ -8,6 +8,8 @@ import type {
   WorkspaceFile,
 } from "tome-graph-interfaces";
 
+export type { TableSchemasFile, ViewsFile, WorkspaceFile } from "tome-graph-interfaces";
+
 /** Per-entry options from `tome-server.json` (module-specific). */
 export type TomeServiceModuleOptions = unknown;
 

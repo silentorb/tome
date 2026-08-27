@@ -4,6 +4,7 @@ import {
   createNodeUrlResolver,
   normalizeUrlAlias,
   resolveStaticHrefTarget,
+  type NodeUrlIndexInput,
 } from "../src/lib/node-urls";
 
 const ID_A = "0000000000000000000000001S";
@@ -30,7 +31,7 @@ describe("normalizeUrlAlias", () => {
 
 describe("buildNodeUrlIndex", () => {
   test("uses lowercase id when url_alias is unset", () => {
-    const nodes = [{ id: ID_A }];
+    const nodes: NodeUrlIndexInput[] = [{ id: ID_A }];
     const index = buildNodeUrlIndex(nodes);
     expect(nodes[0]!.urlPath).toBe(ID_A);
     expect(index.pathById[ID_A]).toBe(ID_A);
@@ -38,7 +39,7 @@ describe("buildNodeUrlIndex", () => {
   });
 
   test("uses alias path when url_alias is set", () => {
-    const nodes = [{ id: ID_A, urlAlias: "design/twold" }];
+    const nodes: NodeUrlIndexInput[] = [{ id: ID_A, urlAlias: "design/twold" }];
     const index = buildNodeUrlIndex(nodes);
     expect(nodes[0]!.urlPath).toBe("design/twold");
     expect(index.pathById[ID_A]).toBe("design/twold");

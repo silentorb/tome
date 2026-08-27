@@ -130,6 +130,7 @@ export function makeMockEditorApi(): EditorApi {
     },
     getGraphFull: async () => ({ nodes: [], relationships: [] }),
     getGraphExplorerLod: async () => makeGraphLodSnapshot(),
+    executeImp: async () => ({ columns: [], rows: [] }),
     getSchema: async () => emptySchemaFile(),
     listRelationshipTypes: async () => [
       { type: "000000000000000000000000B2:0", label: "Features" },

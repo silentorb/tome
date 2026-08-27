@@ -1,5 +1,8 @@
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
-import { defaultSchemaDiagramBlockData } from "./config";
+import {
+  defaultSchemaDiagramBlockData,
+  type SchemaDiagramBlockData,
+} from "./config";
 
 const IMPLEMENTATION_ID = "schema-diagram";
 
@@ -9,9 +12,9 @@ export function register(host: EditorPageBlockHost): void {
     slashMenu: { label: "Schema diagram", group: "custom", order: 30 },
     insertDefaultData: () => defaultSchemaDiagramBlockData(),
     Component({ ctx, blockData }) {
-      const data =
+      const data: SchemaDiagramBlockData =
         blockData && typeof blockData === "object" && !Array.isArray(blockData)
-          ? blockData
+          ? (blockData as SchemaDiagramBlockData)
           : defaultSchemaDiagramBlockData();
       const typeIds = Array.isArray(data.typeIds) ? data.typeIds.length : 0;
       const perspectives = Array.isArray(data.perspectives)

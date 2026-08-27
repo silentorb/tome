@@ -75,7 +75,7 @@ describe("handleLinkHardOpenClick", () => {
     root.innerHTML = `<a href="?node=x">Cozy horror</a>`;
     const anchor = root.querySelector("a")!;
     const view = null as unknown as Parameters<NonNullable<typeof handleClick>>[0];
-    expect(handleClick!(view, 0, mouseEvent({ ctrlKey: true }, anchor))).toBe(true);
-    expect(handleClick!(view, 0, mouseEvent({}, anchor))).toBe(false);
+    expect(handleClick!.call(plugin, view, 0, mouseEvent({ ctrlKey: true }, anchor))).toBe(true);
+    expect(handleClick!.call(plugin, view, 0, mouseEvent({}, anchor))).toBe(false);
   });
 });

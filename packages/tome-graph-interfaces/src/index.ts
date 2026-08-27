@@ -177,9 +177,21 @@ export type {
   ExecuteImpContext,
   TomeCorpusInfo,
   RelationshipRecordRef,
+  ListRelationshipProjectionsOptions,
   TomeGraphStoreBase,
   TomeGraphStoreQueryable,
   StoreChangeEvent,
   StoreChangeListener,
 } from "./graph-store";
 export { isQueryableGraphStore } from "./graph-store";
+
+export type {
+  PerspectiveLabelConfig,
+  PerspectivePair,
+  TraitEntry,
+  AssociationDefinition,
+  AssociationsFile,
+  DynamicPropertyFileEntry,
+  DynamicColumnSetFileEntry,
+  DynamicPropertiesFile,
+} from "./model-config";

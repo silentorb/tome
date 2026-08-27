@@ -52,7 +52,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
   const graphQuery = createExtensionGraphQueryServices(writeCtx.graphStore, config.contentDir);
   const schemaQuery = createExtensionSchemaQueryServices(graphStore, config.contentDir);
   const executeImp = createExtensionExecuteImpServices(writeCtx.graphStore);
-  const corpusQuery = createExtensionCorpusQueryServices(writeCtx.store);
+  const corpusQuery = createExtensionCorpusQueryServices(writeCtx.graphStore);
   const spatialGraphScale = spatialGraphNodeDimensionScale(workspace);
   const spatialGraphServices = spatialGraphScale
     ? { nodeDimensionScale: spatialGraphScale }

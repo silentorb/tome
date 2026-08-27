@@ -126,7 +126,7 @@ describe("node-type-properties", () => {
     const membership = detail?.sections.find(
       (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
     );
-    expect(membership?.rows).toEqual([
+    expect(membership?.type === "relations" ? membership.rows : undefined).toEqual([
       { targetId: CHAR_DB, name: "Characters", cells: {} },
     ]);
   });

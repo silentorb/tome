@@ -5,7 +5,6 @@ import {
 } from "tome-flatfile";
 import type {
   ExecuteImpContext,
-  GraphStoreCapabilities,
   ImpCollectionResult,
   ImpGraph,
   Node,
@@ -24,6 +23,7 @@ import type {
   DynamicPropertiesFile,
 } from "tome-graph-interfaces";
 import type { GraphDatabase } from "tome-sqlite";
+import type { SQLQueryBindings } from "bun:sqlite";
 import type { CacheSync } from "../content/sync";
 import { runExecuteImp, runExecuteImpSql } from "./execute-imp";
 
@@ -32,7 +32,7 @@ export class FlatfileQueryableGraphStore
   extends FlatfileGraphStore
   implements TomeGraphStoreQueryable
 {
-  override readonly capabilities: GraphStoreCapabilities = {
+  override readonly capabilities: TomeGraphStoreQueryable["capabilities"] = {
     queryable: true,
     impExecution: "execute",
   };
@@ -56,7 +56,7 @@ export class FlatfileQueryableGraphStore
 
 /** Composed host store — Base on flatfile, executeImp via SQL cache. */
 export class ComposedGraphStore implements TomeGraphStoreQueryable {
-  readonly capabilities: GraphStoreCapabilities = {
+  readonly capabilities: TomeGraphStoreQueryable["capabilities"] = {
     queryable: true,
     impExecution: "sql",
   };
@@ -262,7 +262,7 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
   }
 
   queryAll(sql: string, ...params: unknown[]): Record<string, unknown>[] {
-    return this.cache.queryAll(sql, ...params);
+    return this.cache.queryAll(sql, ...(params as SQLQueryBindings[]));
   }
 }
 

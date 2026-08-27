@@ -41,11 +41,14 @@ describe("prepare-editor-body API — schema diagram", () => {
     id: featureTypeId,
     properties: { title: "Feature" },
   });
-  seedTestNode(fixture, {
-    id: nodeId,
-    properties: { title: "Schema page" },
-    body: serializePageBlock("schema-diagram.block", {}),
-  });
+  seedTestNode(
+    fixture,
+    {
+      id: nodeId,
+      properties: { title: "Schema page" },
+    },
+    serializePageBlock("schema-diagram.block", {}),
+  );
 
   const modelDir = contentModelDir(fixture.ctx.store.contentDir);
   writeFileSync(

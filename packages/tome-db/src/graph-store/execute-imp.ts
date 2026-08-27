@@ -16,6 +16,7 @@ import type {
   TomeGraphStoreBase,
 } from "tome-graph-interfaces";
 import type { GraphDatabase } from "tome-sqlite";
+import type { SQLQueryBindings } from "bun:sqlite";
 import { loadSchemaFromContent } from "tome-flatfile";
 import { graphHasSearchNode, runSearchImpGraphSql } from "./search-graph";
 
@@ -102,7 +103,7 @@ export async function runExecuteImp(options: RunExecuteImpOptions): Promise<ImpC
       pageNodeId: options.context?.pageNodeId,
       corpus,
     });
-    const rows = options.cache.queryAll(compiled.sql, ...compiled.parameters);
+    const rows = options.cache.queryAll(compiled.sql, ...(compiled.parameters as SQLQueryBindings[]));
     return filterRowsByCorpus({ columns: rows[0] ? Object.keys(rows[0]) : ["id"], rows }, constraint.nodeIds);
   }
 
@@ -136,6 +137,6 @@ export function runExecuteImpSql(
     pageNodeId: context?.pageNodeId,
     corpus,
   });
-  const rows = cache.queryAll(compiled.sql, ...compiled.parameters);
+  const rows = cache.queryAll(compiled.sql, ...(compiled.parameters as SQLQueryBindings[]));
   return { columns: rows[0] ? Object.keys(rows[0]) : ["id"], rows };
 }

@@ -11,6 +11,7 @@ import {
   memberSideProjectionType,
 } from "tome-flatfile";
 import {
+  isGraphStoreBase,
   listRelationshipsFromSource,
   listRelationshipsToTarget,
   type RelationshipReadStore,
@@ -20,12 +21,18 @@ export { collectSetNodeIds } from "tome-flatfile";
 
 export type SetKind = "type_table" | "archive";
 
+function contentDirForReadStore(store: RelationshipReadStore, contentDir?: string): string {
+  if (contentDir) return contentDir;
+  if (isGraphStoreBase(store)) return store.contentDir;
+  return resolveContentPath();
+}
+
 export function memberSetIds(
   store: RelationshipReadStore,
   memberId: string,
   contentDir?: string,
 ): string[] {
-  const dir = contentDir ?? store.contentDir ?? resolveContentPath();
+  const dir = contentDirForReadStore(store, contentDir);
   const registry = loadAssociationsFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
@@ -42,7 +49,7 @@ export function setMemberIds(
   setId: string,
   contentDir?: string,
 ): string[] {
-  const dir = contentDir ?? store.contentDir ?? resolveContentPath();
+  const dir = contentDirForReadStore(store, contentDir);
   const registry = loadAssociationsFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
@@ -63,7 +70,7 @@ export function setKindForNode(
   nodeId: string,
   contentDir?: string,
 ): SetKind | null {
-  const dir = contentDir ?? store.contentDir ?? resolveContentPath();
+  const dir = contentDirForReadStore(store, contentDir);
   const archiveId = archiveNodeId(dir);
   if (archiveId && nodeId === archiveId) return "archive";
   if (hasTableSchemaEntry(dir, nodeId)) return "type_table";
@@ -83,7 +90,7 @@ export function findSetEdge(
   setId: string,
   contentDir?: string,
 ): Relationship | null {
-  const dir = contentDir ?? store.contentDir ?? resolveContentPath();
+  const dir = contentDirForReadStore(store, contentDir);
   const registry = loadAssociationsFromContent(dir);
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     const memberProjection = memberSideProjectionType(registry, composite);
@@ -101,7 +108,7 @@ export function listSetMemberRowConnections(
   setId: string,
   contentDir?: string,
 ): Relationship[] {
-  const dir = contentDir ?? store.contentDir ?? resolveContentPath();
+  const dir = contentDirForReadStore(store, contentDir);
   const registry = loadAssociationsFromContent(dir);
   const byMember = new Map<string, Relationship>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {

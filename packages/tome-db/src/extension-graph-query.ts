@@ -3,7 +3,7 @@ import type {
   GraphQueryEdge,
   GraphQueryNode,
 } from "tome-interfaces/extension-services/graph-query";
-import type { TomeGraphStoreQueryable } from "tome-graph-interfaces";
+import type { RelationshipRecordRef, TomeGraphStoreQueryable } from "tome-graph-interfaces";
 import {
   expandAllRelationships,
   loadAssociationsFromContent,
@@ -61,8 +61,7 @@ function listEdgesFromStore(
   const nodeIdSet = new Set(options.nodeIds);
   const typeSet = options.types?.length ? new Set(options.types) : null;
   const associations = store.readAssociations();
-  const entries: { a: string; b: string; type: string; properties?: Record<string, unknown> }[] =
-    [];
+  const entries: RelationshipRecordRef[] = [];
   store.forEachRelationshipRecord((entry) => entries.push(entry));
   const { projections } = expandAllRelationships(entries, associations);
 

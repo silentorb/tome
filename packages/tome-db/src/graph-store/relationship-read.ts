@@ -1,12 +1,12 @@
-import type { Relationship, TomeGraphStoreBase } from "tome-graph-interfaces";
-import type { GraphDatabase } from "tome-sqlite";
+import type { Node, Relationship, TomeGraphStoreBase } from "tome-graph-interfaces";
+import type { TomeQueryCache } from "tome-service-interfaces";
 import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
 import { normalizeAssociationId } from "tome-flatfile";
 
 /** Read store: graph store Base tier, or legacy cache during migration. */
-export type RelationshipReadStore = TomeGraphStoreBase | GraphDatabase;
+export type RelationshipReadStore = TomeGraphStoreBase | TomeQueryCache;
 
-function isGraphStoreBase(store: RelationshipReadStore): store is TomeGraphStoreBase {
+export function isGraphStoreBase(store: RelationshipReadStore): store is TomeGraphStoreBase {
   return typeof (store as TomeGraphStoreBase).listRelationshipProjections === "function";
 }
 
@@ -85,7 +85,7 @@ export function listDistinctProjectionTypes(store: RelationshipReadStore): strin
 export function readStoreGetNode(
   store: RelationshipReadStore,
   id: string,
-): ReturnType<GraphDatabase["getNode"]> {
+): Node | null {
   if (isGraphStoreBase(store)) {
     return store.getNode(id);
   }

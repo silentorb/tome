@@ -47,7 +47,7 @@ describe("views-file", () => {
           hiddenColumns: ["priority"],
         },
       ],
-    });
+    } as unknown as Parameters<typeof serializeViewsFile>[0]);
     expect(() => parseViewsFile(legacy)).toThrow("hiddenColumns is not supported");
 
     const columnOrder = serializeViewsFile({
@@ -62,7 +62,7 @@ describe("views-file", () => {
           properties: { columnOrder: ["status"] },
         },
       ],
-    });
+    } as unknown as Parameters<typeof serializeViewsFile>[0]);
     expect(() => parseViewsFile(columnOrder)).toThrow(
       "properties must be a string array (not { columnOrder })",
     );

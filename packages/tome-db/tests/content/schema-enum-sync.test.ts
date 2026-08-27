@@ -1,7 +1,7 @@
 import { describe, expect, test, afterAll, beforeAll } from "bun:test";
 import { Database } from "bun:sqlite";
 import { writeFileSync } from "node:fs";
-import { serializeSchemaFile, projectionTypeForEndpoint } from "tome-flatfile";
+import { serializeSchemaFile } from "tome-flatfile";
 import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, projectionTypeForEndpoint, TEST_MEMBER_OF_ASSOCIATION_ID } from "../../src/content/test-helpers";
 import { SCHEMA_FILENAME, schemaFilePath } from "tome-flatfile";
 import { enumConfigFingerprint } from "../../src/enum-config-fingerprint";

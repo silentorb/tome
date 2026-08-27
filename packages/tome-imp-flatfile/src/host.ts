@@ -1,6 +1,6 @@
 import type { ExecutionHost, ExecutionRow } from "imp-execution";
 import { expandAllRelationships } from "tome-flatfile";
-import type { TomeGraphStoreBase } from "tome-graph-interfaces";
+import type { RelationshipRecordRef, TomeGraphStoreBase } from "tome-graph-interfaces";
 
 export interface FlatfileExecutionHostOptions {
   /** When set, only live (non-archived) nodes are returned. Default true. */
@@ -43,8 +43,7 @@ function nodeToRow(
 
 function buildProjectionIndex(store: TomeGraphStoreBase): Map<string, ExecutionRow[]> {
   const associations = store.readAssociations();
-  const entries: { a: string; b: string; type: string; properties?: Record<string, unknown> }[] =
-    [];
+  const entries: RelationshipRecordRef[] = [];
   store.forEachRelationshipRecord((entry) => {
     entries.push(entry);
   });

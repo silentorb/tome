@@ -1,6 +1,6 @@
 import type { ContentStore, CompositeStore } from "tome-flatfile";
 import type { RelationshipEntry } from "tome-flatfile";
-import { isSetTraitComposite, loadAssociationsFromContent } from "tome-flatfile";
+import { isSetTraitComposite, loadAssociationsFromContent, resolveContentPath } from "tome-flatfile";
 import { archiveNodeId } from "tome-flatfile";
 
 type FlatfileStoreLike = ContentStore | CompositeStore;
@@ -10,7 +10,7 @@ export function isArchiveSetEntry(
   archiveHubId: string,
   contentDir?: string,
 ): boolean {
-  const registry = loadAssociationsFromContent(contentDir);
+  const registry = loadAssociationsFromContent(contentDir ?? resolveContentPath());
   if (!isSetTraitComposite(registry, entry.type)) return false;
   return entry.a === archiveHubId || entry.b === archiveHubId;
 }

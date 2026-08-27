@@ -20,7 +20,7 @@ import type {
   TableRelationColumn,
   TableScalarColumn,
   TableSchemasFile,
-} from "tome-flatfile";
+} from "tome-graph-interfaces";
 import { findColumnByKey, slugifyPropertyKey } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
 import {

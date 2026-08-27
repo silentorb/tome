@@ -24,7 +24,7 @@ import {
   setRoleAssociationForNode,
 } from "tome-flatfile";
 import { loadTableSchemasFromContent } from "tome-flatfile";
-import type { TableRelationColumn } from "tome-flatfile";
+import type { TableRelationColumn } from "tome-graph-interfaces";
 import { getTableSchema, relationColumns } from "tome-flatfile";
 import {
   projectionTypeForRelationColumn,

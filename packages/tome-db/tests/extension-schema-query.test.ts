@@ -137,7 +137,7 @@ describe("createExtensionSchemaQueryServices", () => {
     ]);
   });
 
-  test("listTypeTables includes memberCount from set membership", () => {
+  test("listTypeTables includes memberCount from set membership", async () => {
     const member1 = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
     const member2 = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
     seedTestNode(fixture, { id: member1, properties: { title: "Scene A" } });
@@ -145,7 +145,7 @@ describe("createExtensionSchemaQueryServices", () => {
     fixture.ctx.cache.upsertRelationship(member1, sceneTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
     fixture.ctx.cache.upsertRelationship(member2, sceneTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 1 });
 
-    const tables = services.listTypeTables();
+    const tables = await Promise.resolve(services.listTypeTables());
     const scene = tables.find((table) => table.id === sceneTypeId);
     expect(scene?.memberCount).toBe(2);
     expect(tables.find((table) => table.id === featureTypeId)?.memberCount).toBe(0);

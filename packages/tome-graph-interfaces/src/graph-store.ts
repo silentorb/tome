@@ -1,17 +1,13 @@
-import type {
-  Node,
-  Properties,
-  Relationship,
-  TableSchemasFile,
-  ViewsFile,
-  WorkspaceFile,
-} from "./graph";
+import type { Node, Properties, Relationship } from "./graph";
 import type {
   AssociationsFile,
   DynamicPropertiesFile,
 } from "./model-config";
 import type { SchemaFile } from "./schema";
 import type { StoreChangeEvent, StoreChangeListener } from "./store-events";
+import type { TableSchemasFile } from "./table-schemas";
+import type { ViewsFile } from "./views";
+import type { WorkspaceFile } from "./workspace";
 
 /** Structural Imp graph — compatible with imp-spec `Graph`. */
 export interface ImpGraph {

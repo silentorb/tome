@@ -1,4 +1,3 @@
-import type { GraphDatabase } from "tome-sqlite";
 import type { EvalRow } from "../row-sort";
 import { applyDynamicProperties as enrichEvalRows, type DynamicEnrichmentResult } from "./enrich";
 import {
@@ -7,6 +6,7 @@ import {
   registerFixedResolver,
   type ResolverRegistry,
 } from "./registry";
+import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import {
   buildAllSceneCountPrefetch,
   buildSceneCountByProductPrefetch,
@@ -50,7 +50,7 @@ function registerStarterResolvers(registry: ResolverRegistry): void {
 }
 
 export function applyDynamicProperties(
-  db: GraphDatabase,
+  db: RelationshipReadStore,
   owner: string,
   viewName: string,
   evalRows: EvalRow[],
@@ -66,5 +66,10 @@ export {
   seedDynamicColumnSet,
   seedDynamicProperty,
 } from "./overlay";
-export type { DynamicColumnSetRecord, DynamicPropertyRecord } from "./overlay";
+export type {
+  DynamicColumnSetRecord,
+  DynamicPropertyRecord,
+  SeedDynamicColumnSetInput,
+  SeedDynamicPropertyInput,
+} from "./overlay";
 export type { DynamicEnrichmentResult, ApplyDynamicPropertiesOptions } from "./enrich";

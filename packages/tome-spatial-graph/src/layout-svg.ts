@@ -111,7 +111,10 @@ async function withDom<T>(run: (container: HTMLElement) => Promise<T> | T): Prom
   globalThis.navigator = dom.window.navigator;
   globalThis.XMLSerializer = dom.window.XMLSerializer;
 
-  dom.window.HTMLCanvasElement.prototype.getContext = function (type: string) {
+  dom.window.HTMLCanvasElement.prototype.getContext = function (
+    this: HTMLCanvasElement,
+    type: string,
+  ) {
     const width = this.width > 0 ? this.width : 800;
     const height = this.height > 0 ? this.height : 600;
     const canvas = createCanvas(width, height);
@@ -171,16 +174,20 @@ export async function layoutSpatialGraphSvg(
       fit: true,
       padding: 30,
       ...config.layout,
-    });
+    } as Parameters<typeof cy.layout>[0]);
     layout.run();
 
     const linkOverlays = collectSpatialGraphNodeLinkOverlays(cy, nodePageHref);
-    const pxRatio = cy.renderer().getPixelRatio();
-    const rawSvg = cy.svg({
+    const cyWithSvg = cy as typeof cy & {
+      renderer(): { getPixelRatio(): number };
+      svg(options: { full: boolean; scale: number; bg: string }): string;
+    };
+    const pxRatio = cyWithSvg.renderer().getPixelRatio();
+    const rawSvg = cyWithSvg.svg({
       full: config.svg.full,
       scale: config.svg.scale / pxRatio,
-      bg: config.svg.bg,
-    }) as string;
+      bg: config.svg.bg ?? "",
+    });
 
     cy.destroy();
     return injectSpatialGraphNodeLinks(rawSvg, linkOverlays);

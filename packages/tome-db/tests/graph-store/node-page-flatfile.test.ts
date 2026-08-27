@@ -18,11 +18,14 @@ describe("getNodePageDetail flatfile", () => {
   test("loads node page without SQLite cache", () => {
     const fixture = createTestContentFixture("tome-node-page-flatfile-");
     try {
-      seedTestNode(fixture, {
-        id: TEST_HOME_NODE_ID,
-        properties: { title: "Home", modified_at: "2026-01-01T00:00:00.000Z" },
-        body: "# Home\n",
-      });
+      seedTestNode(
+        fixture,
+        {
+          id: TEST_HOME_NODE_ID,
+          properties: { title: "Home", modified_at: "2026-01-01T00:00:00.000Z" },
+        },
+        "# Home\n",
+      );
       seedTestNode(fixture, {
         id: TYPE_TABLE,
         properties: typeTableMarkerProperties("Features"),

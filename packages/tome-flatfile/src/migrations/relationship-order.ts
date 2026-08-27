@@ -9,6 +9,8 @@ import {
 import {
   parseAssociationsFile,
   type AssociationsFile,
+  type PerspectiveLabelConfig,
+  type PerspectivePair,
 } from "../content/associations-file";
 import { parseTableSchemasFile } from "../content/table-schemas-file";
 import {
@@ -99,9 +101,13 @@ function orientMemberOf(
 }
 
 /** Orient an asymmetric composite so index 0 owns `perspectives[0]`. Null when undecidable. */
+function perspectiveTitle(label: PerspectiveLabelConfig): string {
+  return typeof label === "string" ? label : label.title;
+}
+
 function orientAsymmetric(
   entry: RelationshipEntry,
-  perspectives: readonly [string, string],
+  perspectives: PerspectivePair,
   ctx: RelationshipOrderContext,
 ): { a: string; b: string; reason?: string } | null {
   const tA = typesOf(entry.a, ctx);
@@ -109,7 +115,7 @@ function orientAsymmetric(
   if (tA.size === 0 || tB.size === 0) {
     return { a: entry.a, b: entry.b, reason: "endpoint has no resolvable node type" };
   }
-  const p0 = perspectives[0];
+  const p0 = perspectiveTitle(perspectives[0]);
   const aOwnsP0 = ownsPerspective(ctx, tA, p0, tB);
   const bOwnsP0 = ownsPerspective(ctx, tB, p0, tA);
   if (aOwnsP0 && !bOwnsP0) return { a: entry.a, b: entry.b };
@@ -135,7 +141,6 @@ export function reorderRelationshipsFile(
       a,
       b,
       type: entry.type,
-      ...(entry.archived === true ? { archived: true } : {}),
       ...(entry.properties ? { properties: entry.properties } : {}),
     });
 

@@ -60,17 +60,17 @@ describe("createExtensionGraphQueryServices", () => {
     destroyTestContentFixture(fixture);
   });
 
-  test("listTypeMembers returns is_a instances", () => {
+  test("listTypeMembers returns is_a instances", async () => {
     const services = createExtensionGraphQueryServices(
       fixture.ctx.graphStore,
       fixture.ctx.store.contentDir,
     );
-    const members = services.listTypeMembers(typeId);
+    const members = await Promise.resolve(services.listTypeMembers(typeId));
     expect(members.map((node) => node.id).sort()).toEqual([cityA, cityB, house].sort());
     expect(members.find((node) => node.id === house)?.title).toBe("House");
   });
 
-  test("listEdges filters by node set and types", () => {
+  test("listEdges filters by node set and types", async () => {
     const services = createExtensionGraphQueryServices(
       fixture.ctx.graphStore,
       fixture.ctx.store.contentDir,
@@ -80,10 +80,10 @@ describe("createExtensionGraphQueryServices", () => {
     const parents1 = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1);
     const neighbor0 = projectionTypeForEndpoint(NEIGHBOR_ASSOCIATION_ID, 0);
     const neighbor1 = projectionTypeForEndpoint(NEIGHBOR_ASSOCIATION_ID, 1);
-    const edges = services.listEdges({
+    const edges = await Promise.resolve(services.listEdges({
       nodeIds,
       types: [parents0, parents1, neighbor0, neighbor1],
-    });
+    }));
     const types = edges.map((edge) => edge.type).sort();
     expect(types).toEqual(
       [neighbor0, neighbor1, parents0, parents0, parents1, parents1].sort(),

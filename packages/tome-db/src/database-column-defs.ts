@@ -2,7 +2,7 @@ import type { RelationshipReadStore } from "./graph-store/relationship-read";
 import { readStoreGetNode, readStoreListNodeIds } from "./graph-store/relationship-read";
 import type { DatabaseColumnDef } from "./database-view";
 import { resolveContentPath } from "tome-flatfile";
-import type { TableColumnDef, TableSchema } from "tome-flatfile";
+import type { TableColumnDef, TableSchema } from "tome-graph-interfaces";
 import { getTableSchema } from "tome-flatfile";
 import { loadTableSchemasFromContent } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";

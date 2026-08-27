@@ -1,4 +1,5 @@
-import type { RelationshipReadStore, Properties, Relationship } from "tome-sqlite";
+import type { RelationshipReadStore } from "./graph-store/relationship-read";
+import type { Properties, Relationship } from "tome-graph-interfaces";
 import type { TomeWriteContext } from "./content/write-context";
 import { loadAssociationsFromContent } from "tome-flatfile";
 import {

@@ -113,7 +113,7 @@ export function buildSiteNode(
     id: detail.id,
     title: detail.title,
     archived: detail.archived,
-    primaryTypeTitle: detail.primaryTypeTitle,
+    primaryTypeTitle: detail.primaryTypeTitle ?? undefined,
     urlAlias,
     urlPath: urlAlias ?? detail.id,
     metadata: detail.metadata,

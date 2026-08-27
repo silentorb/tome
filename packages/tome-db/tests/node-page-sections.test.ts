@@ -326,8 +326,8 @@ describe("node-sections", () => {
       (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1),
     );
 
-    expect(inspirations?.typeNodeId).toBe(inspTypeId);
-    expect(inspirations?.title).toBe("Inspirations");
+    expect(inspirations?.type === "relations" ? inspirations.typeNodeId : undefined).toBe(inspTypeId);
+    expect(inspirations?.type === "relations" ? inspirations.title : undefined).toBe("Inspirations");
   });
 
   test("groups multiple member_of parents in one Membership section", () => {

@@ -23,11 +23,14 @@ describe("prepare-editor-body API", () => {
     id: TEST_HOME_NODE_ID,
     properties: { title: "Home" },
   });
-  seedTestNode(fixture, {
-    id: nodeId,
-    properties: { title: "Page with block" },
-    body: serializePageBlock("fixture.demo", { text: "Hello" }),
-  });
+  seedTestNode(
+    fixture,
+    {
+      id: nodeId,
+      properties: { title: "Page with block" },
+    },
+    serializePageBlock("fixture.demo", { text: "Hello" }),
+  );
 
   writeFileSync(
     join(contentModelDir(fixture.ctx.store.contentDir), "extensions.json"),

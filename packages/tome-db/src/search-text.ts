@@ -1,4 +1,4 @@
-import type { GraphDatabase } from "tome-sqlite";
+import type { TomeQueryCache } from "tome-service-interfaces";
 import { primaryTypeTitleForInstance } from "./node-capabilities";
 import { buildSearchMatchPreview } from "./search-match-preview";
 import { sortBySearchRelevance } from "./search-relevance";
@@ -18,7 +18,7 @@ function bodyFromProperties(properties: Record<string, unknown>): string {
 }
 
 function toActiveNodeSummary(
-  db: GraphDatabase,
+  db: TomeQueryCache,
   row: { id: string; title: string },
 ): NodeSummary {
   return {
@@ -29,7 +29,7 @@ function toActiveNodeSummary(
 }
 
 function attachMatchPreviews(
-  db: GraphDatabase,
+  db: TomeQueryCache,
   summaries: NodeSummary[],
   query: string,
 ): void {
@@ -42,7 +42,7 @@ function attachMatchPreviews(
 }
 
 export function listRecentNodes(
-  db: GraphDatabase,
+  db: TomeQueryCache,
   limit = 20,
   allowedTypeIds?: readonly string[],
 ): NodeSummary[] {
@@ -55,7 +55,7 @@ export function listRecentNodes(
  * Tome text-search adapter: always scans title and body; title hits rank above body-only hits.
  */
 export function performTomeTextSearch(
-  db: GraphDatabase,
+  db: TomeQueryCache,
   query: string,
   limit = 20,
   allowedTypeIds?: readonly string[],
@@ -92,7 +92,7 @@ export function performTomeTextSearch(
 
 /** @deprecated Use performTomeTextSearch */
 export function searchNodes(
-  db: GraphDatabase,
+  db: TomeQueryCache,
   query: string,
   limit = 20,
   allowedTypeIds?: readonly string[],
@@ -101,7 +101,7 @@ export function searchNodes(
 }
 
 export function listRecentNodesByModifiedAt(
-  db: GraphDatabase,
+  db: TomeQueryCache,
   limit = 20,
   allowedTypeIds?: readonly string[],
 ): NodeSummary[] {

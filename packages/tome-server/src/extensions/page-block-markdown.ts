@@ -6,10 +6,7 @@ import {
   expandPageBlockFencesForEditor,
   type PageBlockPayload,
 } from "tome-interfaces/page-block";
-import {
-  unknownPageBlockHtml,
-  type HtmlPageBlockHost,
-} from "tome-interfaces/page-block/html";
+import { unknownPageBlockHtml } from "tome-interfaces/page-block/html";
 import type { ResolvedExtensionComponent } from "tome-db";
 import type { HtmlPageBlockHostImpl } from "./html-host";
 
@@ -22,7 +19,7 @@ export interface SchemaDiagramPageBlockServices {
 }
 
 async function renderBlockHtml(
-  host: HtmlPageBlockHost,
+  host: HtmlPageBlockHostImpl,
   componentsById: Map<string, ResolvedExtensionComponent>,
   nodeId: string,
   contentPath: string,

@@ -39,10 +39,13 @@ describe("relationship-traverse", () => {
   const typesFile = {
     version: 1 as const,
     associations: {
-      "000000000000000000000000A3": { perspectives: ["scenes", "product"] },
-      "000000000000000000000000A4": { perspectives: ["scenes", "part"] },
-      "000000000000000000000000BA": { perspectives: ["location", "scenes"] },
-      "000000000000000000000000A1": { perspectives: ["Members", "Membership"], traits: ["set"] },
+      "000000000000000000000000A3": { perspectives: ["scenes", "product"] as [string, string] },
+      "000000000000000000000000A4": { perspectives: ["scenes", "part"] as [string, string] },
+      "000000000000000000000000BA": { perspectives: ["location", "scenes"] as [string, string] },
+      "000000000000000000000000A1": {
+        perspectives: ["Members", "Membership"] as [string, string],
+        traits: ["set"],
+      },
     },
   };
   fixture.ctx.store.writeAssociationsFile(typesFile);
