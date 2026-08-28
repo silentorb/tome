@@ -7,6 +7,7 @@ import type {
   RelationTableSection,
   ResolvedTab,
 } from "tome-db";
+import type { StaticSiteLayout } from "./static-site-layout";
 
 export interface TableSortSpec {
   orderBy: { column: string; direction: "asc" | "desc" }[];
@@ -35,6 +36,8 @@ export interface SiteNode {
   urlAlias?: string;
   /** Canonical static path segment(s): alias or lowercase node id. */
   urlPath: string;
+  /** Static-site layout preset from frontmatter; omitted when default. */
+  layout?: StaticSiteLayout;
   metadata: NodePageMetadata;
   properties: PropertiesSection | null;
   body: string;

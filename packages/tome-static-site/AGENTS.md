@@ -2,7 +2,7 @@
 
 ## What it is
 
-Astro-based static site generator that exports every node in `content/` to HTML under `dist/web/` (default). Each page mirrors the editor’s read-only node view: metadata (with backlinks), properties, markdown body, Items tables, and relation tables with cross-links. Multi-tab type-table hubs get sibling URLs under `{urlPath}/tabs/{tabId}/`. Nodes may optionally set frontmatter `url_alias` for human-readable URL paths (static site only).
+Astro-based static site generator that exports every node in `content/` to HTML under `dist/web/` (default). Each page mirrors the editor’s read-only node view: metadata (with backlinks), properties, markdown body, Items tables, and relation tables with cross-links. Multi-tab type-table hubs get sibling URLs under `{urlPath}/tabs/{tabId}/`. Nodes may optionally set frontmatter `url_alias` for human-readable URL paths and `static_site_layout: bare` for minimal landing-page chrome (static site only).
 
 ## Run
 

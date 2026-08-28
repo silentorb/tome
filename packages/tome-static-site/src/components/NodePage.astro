@@ -2,10 +2,12 @@
 import type { SiteNode } from "../lib/site-types";
 import type { TabItemsPayload } from "../lib/site-types";
 import type { NodeUrlResolver } from "../lib/node-urls";
+import type { StaticSiteLayout } from "../lib/static-site-layout";
 import NodeMetadata from "./NodeMetadata.astro";
 import DatabaseSection from "./DatabaseSection.astro";
 import RelationSection from "./RelationSection.astro";
 import { buildSectionsForTab, resolveActiveTabId } from "../lib/node-page";
+import { isBareLayout } from "../lib/page-layout";
 import {
   prepareNodeMarkdown,
   renderMarkdownToHtml,
@@ -19,12 +21,22 @@ interface Props {
   urls: NodeUrlResolver;
   activeTabId?: string;
   tabPayload?: TabItemsPayload;
+  layout?: StaticSiteLayout;
 }
 
-const { node, base, titleById, urls, activeTabId: requestedTabId, tabPayload } = Astro.props;
+const {
+  node,
+  base,
+  titleById,
+  urls,
+  activeTabId: requestedTabId,
+  tabPayload,
+  layout = "default",
+} = Astro.props;
 
+const bare = isBareLayout(layout);
 const activeTabId = resolveActiveTabId(node, requestedTabId);
-const sections = buildSectionsForTab(node, activeTabId, tabPayload);
+const sections = bare ? [] : buildSectionsForTab(node, activeTabId, tabPayload);
 
 const { title } = resolvePageTitleAndContent(node.body, node.title);
 const prepared = prepareNodeMarkdown(node.body, node.title, urls, (id) =>
@@ -38,46 +50,54 @@ const bodyHtml =
 const emptyMarkdown = !prepared.markdown.trim() && !bodyHtml.trim();
 ---
 
-<div class="tome-record-page">
-  <div class="tome-record-sections">
-    <section class="tome-record-section tome-page-title-section">
-      {node.archived ? <span class="tome-record-page-archived">Archived</span> : null}
-      <h1 class="page-title">{title}</h1>
-    </section>
+{bare ? (
+  bodyHtml ? (
+    <article class="prose" set:html={bodyHtml} />
+  ) : (
+    <p class="prose-empty">No content.</p>
+  )
+) : (
+  <div class="tome-record-page">
+    <div class="tome-record-sections">
+      <section class="tome-record-section tome-page-title-section">
+        {node.archived ? <span class="tome-record-page-archived">Archived</span> : null}
+        <h1 class="page-title">{title}</h1>
+      </section>
 
-    <NodeMetadata metadata={node.metadata} pagePath={urls.pagePath} properties={node.properties} base={base} />
+      <NodeMetadata metadata={node.metadata} pagePath={urls.pagePath} properties={node.properties} base={base} />
 
-    <section class={`tome-record-section tome-markdown-section${emptyMarkdown ? " is-empty" : ""}`}>
-      <div class="tome-content-panel">
-        {
-          bodyHtml ? (
-            <article class="prose" set:html={bodyHtml} />
-          ) : (
-            <p class="prose-empty">No content.</p>
-          )
-        }
-      </div>
-    </section>
+      <section class={`tome-record-section tome-markdown-section${emptyMarkdown ? " is-empty" : ""}`}>
+        <div class="tome-content-panel">
+          {
+            bodyHtml ? (
+              <article class="prose" set:html={bodyHtml} />
+            ) : (
+              <p class="prose-empty">No content.</p>
+            )
+          }
+        </div>
+      </section>
 
-    {
-      sections.map((section) => {
-        if (section.type === "database") {
-          return (
-            <DatabaseSection
-              section={section}
-              nodeId={node.id}
-              activeTabId={activeTabId}
-              itemsTabs={node.itemsTabs}
-              pagePath={urls.pagePath}
-              tabPath={urls.tabPath}
-            />
-          );
-        }
-        if (section.type === "relations") {
-          return <RelationSection section={section} nodeId={node.id} pagePath={urls.pagePath} />;
-        }
-        return null;
-      })
-    }
+      {
+        sections.map((section) => {
+          if (section.type === "database") {
+            return (
+              <DatabaseSection
+                section={section}
+                nodeId={node.id}
+                activeTabId={activeTabId}
+                itemsTabs={node.itemsTabs}
+                pagePath={urls.pagePath}
+                tabPath={urls.tabPath}
+              />
+            );
+          }
+          if (section.type === "relations") {
+            return <RelationSection section={section} nodeId={node.id} pagePath={urls.pagePath} />;
+          }
+          return null;
+        })
+      }
+    </div>
   </div>
-</div>
+)}

@@ -1,0 +1,54 @@
+html:has(body.site-layout--bare) {
+  color-scheme: dark;
+  background: #000;
+}
+
+body.site-layout--bare {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: #c8c8c8;
+}
+
+.page--bare {
+  width: 100%;
+  max-width: 32rem;
+  padding: 2rem 1.5rem;
+  text-align: center;
+}
+
+.page--bare a {
+  color: #7eb8ff;
+  text-decoration: none;
+}
+
+.page--bare a:hover {
+  text-decoration: underline;
+}
+
+.page--bare .prose {
+  line-height: 1.65;
+}
+
+.page--bare .prose :where(p, ul, ol) {
+  margin: 0.75em 0;
+}
+
+.page--bare .prose :where(ul, ol) {
+  padding-left: 0;
+  list-style: none;
+}
+
+.page--bare .prose :where(img) {
+  max-width: 100%;
+  height: auto;
+}
+
+.page--bare .prose-empty {
+  color: #888;
+  font-style: italic;
+}

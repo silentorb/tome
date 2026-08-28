@@ -1,4 +1,5 @@
 ---
+import BareLayout from "../layouts/BareLayout.astro";
 import NodeLayout from "../layouts/NodeLayout.astro";
 import NodePage from "../components/NodePage.astro";
 import {
@@ -9,6 +10,7 @@ import {
   titleByIdRecord,
 } from "../lib/content";
 import { resolvePageTitleAndContent } from "../lib/markdown";
+import { isBareLayout, resolveNodeLayout } from "../lib/page-layout";
 
 const homeId = getHomeNodeId();
 const home = loadNodeById(homeId);
@@ -17,8 +19,16 @@ if (!home) throw new Error(`Home node not found: ${homeId}`);
 const base = getSiteBase();
 const urls = createSiteUrlResolver();
 const { title } = resolvePageTitleAndContent(home.body, home.title);
+const layout = resolveNodeLayout(home);
+const Layout = isBareLayout(layout) ? BareLayout : NodeLayout;
 ---
 
-<NodeLayout title={title}>
-  <NodePage node={home} base={base} titleById={titleByIdRecord()} urls={urls} />
-</NodeLayout>
+<Layout title={title}>
+  <NodePage
+    node={home}
+    base={base}
+    titleById={titleByIdRecord()}
+    urls={urls}
+    layout={layout}
+  />
+</Layout>

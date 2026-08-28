@@ -54,8 +54,20 @@ Example frontmatter:
 ---
 title: TWOLD design
 url_alias: design/twold
+static_site_layout: bare
 ---
 ```
+
+## Per-node layout overrides
+
+Nodes may set optional frontmatter `static_site_layout` to change static-site chrome (editor unchanged).
+
+| Value | Behavior |
+| --- | --- |
+| *(unset)* or `default` | Full site chrome: header, footer, title, metadata, Items/relation sections |
+| `bare` | Markdown body only — no header, footer, title, metadata, or table sections; solid black background with centered content |
+
+Use `bare` for landing pages that should not look like Tome node pages (e.g. a corporate home page). Other nodes on the same site keep the default layout.
 
 ## Page contents (read-only editor parity)
 

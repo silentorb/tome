@@ -1,8 +1,10 @@
 ---
+import BareLayout from "../../layouts/BareLayout.astro";
 import NodeLayout from "../../layouts/NodeLayout.astro";
 import NodePage from "../../components/NodePage.astro";
 import { createSiteUrlResolver, getSiteBase, loadAllNodes, titleByIdRecord } from "../../lib/content";
 import { resolvePageTitleAndContent } from "../../lib/markdown";
+import { isBareLayout, resolveNodeLayout } from "../../lib/page-layout";
 
 export function getStaticPaths() {
   const titleById = titleByIdRecord();
@@ -21,8 +23,10 @@ const { node, titleById } = Astro.props;
 const base = getSiteBase();
 const urls = createSiteUrlResolver();
 const { title } = resolvePageTitleAndContent(node.body, node.title);
+const layout = resolveNodeLayout(node);
+const Layout = isBareLayout(layout) ? BareLayout : NodeLayout;
 ---
 
-<NodeLayout title={title}>
-  <NodePage node={node} base={base} titleById={titleById} urls={urls} />
-</NodeLayout>
+<Layout title={title}>
+  <NodePage node={node} base={base} titleById={titleById} urls={urls} layout={layout} />
+</Layout>

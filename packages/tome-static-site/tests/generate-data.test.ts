@@ -93,6 +93,15 @@ describe("writeSiteData", () => {
     const aliasNode = aliasData.nodes.find((node) => node.id === aliasId);
     expect(aliasNode?.urlPath).toBe("design/alias-test");
 
+    const bareId = "00000000000000000000000010";
+    seedTestNode(fixture, {
+      id: bareId,
+      properties: { title: "Bare page", static_site_layout: "bare", body: "Bare body" },
+    });
+    const bareData = await writeSiteData(config, join(outDir, "site-data-bare.json"));
+    const bareNode = bareData.nodes.find((node) => node.id === bareId);
+    expect(bareNode?.layout).toBe("bare");
+
     const instance = data.nodes.find((node) => node.id === instanceId);
     expect(instance).toBeDefined();
     expect(instance?.properties?.typeTitle).toBe("Features DB");

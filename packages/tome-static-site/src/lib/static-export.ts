@@ -14,6 +14,7 @@ import {
   type TabItemsPayload,
   type TabRoute,
 } from "./site-types";
+import { readStaticSiteLayout } from "./static-site-layout";
 import { readUrlAlias } from "./node-urls";
 import { viewSortsToTableSort } from "./table-sort";
 
@@ -107,7 +108,9 @@ export function buildSiteNode(
     detail.isTypeTable && itemsSection ? buildItemsTabsMeta(itemsSection) : undefined;
 
   const multiTab = itemsTabs !== undefined && itemsTabs.items.length > 1;
-  const urlAlias = readUrlAlias(readStoreGetNode(store, id)?.properties ?? null) ?? undefined;
+  const nodeProperties = readStoreGetNode(store, id)?.properties ?? null;
+  const urlAlias = readUrlAlias(nodeProperties) ?? undefined;
+  const layout = readStaticSiteLayout(nodeProperties);
 
   return {
     id: detail.id,
@@ -116,6 +119,7 @@ export function buildSiteNode(
     primaryTypeTitle: detail.primaryTypeTitle ?? undefined,
     urlAlias,
     urlPath: urlAlias ?? detail.id,
+    ...(layout ? { layout } : {}),
     metadata: detail.metadata,
     properties: detail.properties,
     body: detail.body,
