@@ -20,7 +20,7 @@ Imp-backed custom table page block: React Flow query editor → Imp graph → SQ
 ## Dependencies
 
 - `tome-interfaces` + `tome-imp-sql` among Tome packages
-- Imp packages via workspace link (`tome` root workspaces include `../imp/packages/*` in the workbench)
+- Imp packages via workspace link (`tome` root workspaces include `../imp-ts/packages/*` in the workbench)
 - `@xyflow/react` for the query canvas
 
 ## Run / test

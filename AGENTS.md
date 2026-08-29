@@ -28,7 +28,7 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 ## Project context
 
 - Run tests: `bun test` at repo root (runs `bun run typecheck` first; typecheck failures block the suite).
-- Typecheck only: `bun run typecheck` at repo root (all workspace packages with a `typecheck` script, including Imp via `../imp/packages/*`). Treat typecheck failures as blocking when changing TypeScript.
+- Typecheck only: `bun run typecheck` at repo root (all workspace packages with a `typecheck` script, including Imp via `../imp-ts/packages/*`). Treat typecheck failures as blocking when changing TypeScript.
 - Feature specs: [`docs/features/`](./docs/features/) (read only the doc matching your task).
 - Package notes: each package's `README.md` (context) and `AGENTS.md` (implementation).
 - TypeScript-to-TypeScript imports are extensionless (no `.ts` suffix).
@@ -48,6 +48,6 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 
 ## Workbench integration
 
-In **silentorb-workbench**, this repo mounts at `repos/tome/`. The Compose `tome` service runs `editor:dev` with `TOME_CONTENT_PATH` pointing at the domain repo (e.g. marloth-story `content/`).
+In **silentorb-workbench**, this repo mounts at `.mnt/tome/` (container path: `/workspaces/silentorb-workbench/.mnt/tome`). The Compose `tome` service runs `editor:dev` with `TOME_CONTENT_PATH` pointing at the domain repo (e.g. marloth-story `content/`).
 
-Root `package.json` workspaces also include `../imp/packages/*` so `tome-query` can depend on Imp (`imp-spec`, `imp-sql`, …) while Imp remains a sibling repo.
+Root `package.json` workspaces also include `../imp-ts/packages/*` so `tome-query` can depend on Imp (`imp-spec`, `imp-sql`, …) while Imp remains a sibling repo mounted at `.mnt/imp-ts/`.

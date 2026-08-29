@@ -106,15 +106,15 @@ Store options (via `tome-server.json` `store.options` or env):
 ```json
 {
   "corpora": [
-    { "id": "marloth", "contentPath": "/workspaces/marloth-story/content", "access": "readwrite" },
-    { "id": "translucence", "contentPath": "/workspaces/translucence/content", "access": "readonly" }
+    { "id": "marloth", "contentPath": "/workspaces/silentorb-workbench/.mnt/marloth-story/content", "access": "readwrite" },
+    { "id": "translucence", "contentPath": "/workspaces/silentorb-workbench/.mnt/translucence/content", "access": "readonly" }
   ]
 }
 ```
 
 Env convenience: `TOME_CORPORA` as `id=/abs/path[:readonly]` pairs (comma-separated). Solo: `TOME_CONTENT_PATH` only.
 
-Session cache: set `TOME_DB_PATH` to a path outside every corpus **and inside a tree the host process can write** — in the workbench devcontainer the `tome` service mounts only the corpus repos plus `tome` and `imp`, so use `/workspaces/tome/data/tome-session.sqlite` (gitignored). A path in an unmounted repo fails at boot with `EACCES` from `mkdir`.
+Session cache: set `TOME_DB_PATH` to a path outside every corpus **and inside a tree the host process can write** — in the workbench devcontainer the `tome` service mounts corpus repos plus tome and imp under `.mnt/`, so use `/workspaces/silentorb-workbench/.mnt/tome/data/tome-session.sqlite` (gitignored). A path in an unmounted tree fails at boot with `EACCES` from `mkdir`.
 
 ## Verification
 

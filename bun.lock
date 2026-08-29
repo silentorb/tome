@@ -5,7 +5,7 @@
     "": {
       "name": "tome",
     },
-    "../imp/packages/imp-collection-transforms": {
+    "../imp-ts/packages/imp-collection-transforms": {
       "name": "imp-collection-transforms",
       "version": "0.1.0",
       "dependencies": {
@@ -16,7 +16,7 @@
         "typescript": "5.8.2",
       },
     },
-    "../imp/packages/imp-execution": {
+    "../imp-ts/packages/imp-execution": {
       "name": "imp-execution",
       "version": "0.1.0",
       "dependencies": {
@@ -29,7 +29,7 @@
         "typescript": "5.8.2",
       },
     },
-    "../imp/packages/imp-pathing": {
+    "../imp-ts/packages/imp-pathing": {
       "name": "imp-pathing",
       "version": "0.1.0",
       "dependencies": {
@@ -40,7 +40,7 @@
         "typescript": "5.8.2",
       },
     },
-    "../imp/packages/imp-react-flow": {
+    "../imp-ts/packages/imp-react-flow": {
       "name": "imp-react-flow",
       "version": "0.1.0",
       "dependencies": {
@@ -55,7 +55,7 @@
         "@xyflow/react": "^12.0.0",
       },
     },
-    "../imp/packages/imp-registry": {
+    "../imp-ts/packages/imp-registry": {
       "name": "imp-registry",
       "version": "0.1.0",
       "dependencies": {
@@ -65,7 +65,7 @@
         "typescript": "5.8.2",
       },
     },
-    "../imp/packages/imp-spec": {
+    "../imp-ts/packages/imp-spec": {
       "name": "imp-spec",
       "version": "0.1.0",
       "devDependencies": {
@@ -73,7 +73,7 @@
         "typescript": "5.8.2",
       },
     },
-    "../imp/packages/imp-sql": {
+    "../imp-ts/packages/imp-sql": {
       "name": "imp-sql",
       "version": "0.1.0",
       "dependencies": {
@@ -1251,19 +1251,19 @@
 
     "ieee754": ["ieee754@1.2.1", "", {}, "sha512-dcyqhDvX1C46lXZcVqCpK+FtMRQVdIMN6/Df5js2zouUsqG7I6sFxitIC+7KYK29KdXOLHdu9zL4sFnoVQnqaA=="],
 
-    "imp-collection-transforms": ["imp-collection-transforms@workspace:../imp/packages/imp-collection-transforms"],
+    "imp-collection-transforms": ["imp-collection-transforms@workspace:../imp-ts/packages/imp-collection-transforms"],
 
-    "imp-execution": ["imp-execution@workspace:../imp/packages/imp-execution"],
+    "imp-execution": ["imp-execution@workspace:../imp-ts/packages/imp-execution"],
 
-    "imp-pathing": ["imp-pathing@workspace:../imp/packages/imp-pathing"],
+    "imp-pathing": ["imp-pathing@workspace:../imp-ts/packages/imp-pathing"],
 
-    "imp-react-flow": ["imp-react-flow@workspace:../imp/packages/imp-react-flow"],
+    "imp-react-flow": ["imp-react-flow@workspace:../imp-ts/packages/imp-react-flow"],
 
-    "imp-registry": ["imp-registry@workspace:../imp/packages/imp-registry"],
+    "imp-registry": ["imp-registry@workspace:../imp-ts/packages/imp-registry"],
 
-    "imp-spec": ["imp-spec@workspace:../imp/packages/imp-spec"],
+    "imp-spec": ["imp-spec@workspace:../imp-ts/packages/imp-spec"],
 
-    "imp-sql": ["imp-sql@workspace:../imp/packages/imp-sql"],
+    "imp-sql": ["imp-sql@workspace:../imp-ts/packages/imp-sql"],
 
     "import-meta-resolve": ["import-meta-resolve@4.2.0", "", {}, "sha512-Iqv2fzaTQN28s/FwZAoFq0ZSs/7hMAHJVX+w8PZl3cY19Pxk6jFFalxQoIfW2826i/fDLXv8IiEZRIT0lDuWcg=="],
 

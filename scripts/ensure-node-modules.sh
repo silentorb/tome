@@ -16,10 +16,10 @@ install_lock="$_root/.bun-install.lock"
 )
 
 # Hoisted installs put deps under tome/node_modules, but Imp packages live outside
-# that tree (../imp). Bun resolves bare imports by walking up from the importing
+# that tree (../imp-ts). Bun resolves bare imports by walking up from the importing
 # file, so point imp/node_modules at tome's hoisted tree when Imp has no install
 # of its own.
-_imp_root="$(cd "$_root/../imp" 2>/dev/null && pwd)" || _imp_root=""
+_imp_root="$(cd "$_root/../imp-ts" 2>/dev/null && pwd)" || _imp_root=""
 if [[ -n "$_imp_root" && -d "$_imp_root/packages" ]]; then
   _imp_nm="$_imp_root/node_modules"
   if [[ ! -e "$_imp_nm" || -L "$_imp_nm" ]]; then

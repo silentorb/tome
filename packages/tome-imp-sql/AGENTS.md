@@ -29,4 +29,4 @@ bun test   # from this package
 ## See also
 
 - [tome-imp-sql.md](../../docs/features/tome-imp-sql.md)
-- Imp [pathing.md](../../../imp/docs/features/pathing.md) / [sql.md](../../../imp/docs/features/sql.md)
+- Imp [pathing.md](../../../imp-ts/docs/features/pathing.md) / [sql.md](../../../imp-ts/docs/features/sql.md)

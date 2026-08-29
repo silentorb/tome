@@ -4,7 +4,7 @@
 
 ## Dependencies
 
-Among Tome packages: `tome-interfaces` + `tome-imp-sql` (schema/registry/compile binder). Imp packages resolve via tome root workspaces (`../imp/packages/*`). Do not import `tome-db` / `tome-editor` / `tome-static-site`.
+Among Tome packages: `tome-interfaces` + `tome-imp-sql` (schema/registry/compile binder). Imp packages resolve via tome root workspaces (`../imp-ts/packages/*`). Do not import `tome-db` / `tome-editor` / `tome-static-site`.
 
 ## Layout
 
