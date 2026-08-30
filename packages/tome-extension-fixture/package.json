@@ -9,7 +9,7 @@
     "./server": "./src/server.ts"
   },
   "dependencies": {
-    "tome-interfaces": "workspace:*",
+    "tome-interfaces": "workspace:^0.1.0",
     "react": "19.0.0"
   },
   "scripts": {

@@ -5,7 +5,7 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import type { InputValues, NodeType, PrimitiveValue } from "imp-spec";
+import type { InputValues, NodeType, PrimitiveValue } from "imp-core-types";
 import { getNodeType, listNodeTypes } from "imp-registry";
 import { createQueryRegistry } from "./execute";
 

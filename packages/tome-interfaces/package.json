@@ -18,7 +18,7 @@
     "./extension-services/execute-imp": "./src/extension-services/execute-imp.ts"
   },
   "dependencies": {
-    "tome-graph-interfaces": "workspace:*"
+    "tome-graph-interfaces": "workspace:^0.1.0"
   },
   "scripts": {
     "test": "bun test tests",

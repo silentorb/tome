@@ -1,6 +1,6 @@
 {
   "name": "tome-server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -13,19 +13,19 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "tome-db": "workspace:*",
-    "tome-graph-interfaces": "workspace:*",
-    "tome-interfaces": "workspace:*",
-    "tome-service-interfaces": "workspace:*"
+    "tome-db": "workspace:^0.2.0",
+    "tome-graph-interfaces": "workspace:^0.1.0",
+    "tome-interfaces": "workspace:^0.1.0",
+    "tome-service-interfaces": "workspace:^0.1.0"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",
-    "tome-sqlite": "workspace:*",
-    "tome-http": "workspace:*",
-    "tome-flatfile": "workspace:*",
-    "tome-query": "workspace:*",
-    "tome-spatial-graph": "workspace:*",
-    "tome-schema-diagram": "workspace:*",
+    "tome-sqlite": "workspace:^0.1.0",
+    "tome-http": "workspace:^0.1.0",
+    "tome-flatfile": "workspace:^0.1.0",
+    "tome-query": "workspace:^0.2.0",
+    "tome-spatial-graph": "workspace:^0.1.0",
+    "tome-schema-diagram": "workspace:^0.1.0",
     "typescript": "5.8.2"
   }
 }

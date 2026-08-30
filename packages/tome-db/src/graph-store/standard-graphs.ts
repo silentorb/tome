@@ -1,4 +1,4 @@
-import type { Graph } from "imp-spec";
+import type { Graph } from "imp-core-types";
 import type { ImpGraph } from "tome-graph-interfaces";
 
 function edge(

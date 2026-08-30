@@ -15,7 +15,7 @@ import {
   applyEdgeChanges,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import type { PrimitiveValue } from "imp-spec";
+import type { PrimitiveValue } from "imp-core-types";
 import type { ReactFlowGraph } from "imp-react-flow";
 import { withoutInboundToPort } from "./config";
 import {

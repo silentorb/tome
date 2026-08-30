@@ -1,5 +1,5 @@
 import { executeGraph } from "imp-execution";
-import type { Graph } from "imp-spec";
+import type { Graph } from "imp-core-types";
 import {
   compileImpGraphToTomeSql,
   createTomeImpRegistry,

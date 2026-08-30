@@ -1,4 +1,4 @@
-import type { Graph } from "imp-spec";
+import type { Graph } from "imp-core-types";
 import type { ExecuteImpContext, ImpCollectionResult, ImpGraph } from "tome-graph-interfaces";
 import type { GraphDatabase } from "tome-sqlite";
 import type { TomeGraphStoreBase } from "tome-graph-interfaces";

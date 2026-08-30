@@ -1,6 +1,6 @@
 import type { ReactFlowGraph } from "imp-react-flow";
 import { impToReactFlow } from "imp-react-flow";
-import type { Graph } from "imp-spec";
+import type { Graph } from "imp-core-types";
 import {
   dedupeInboundReactFlowEdges,
   defaultReactFlowGraph as defaultQueryReactFlow,

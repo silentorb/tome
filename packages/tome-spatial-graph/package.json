@@ -15,7 +15,7 @@
     "cytoscape-svg": "0.4.0",
     "canvas": "3.1.0",
     "jsdom": "26.1.0",
-    "tome-interfaces": "workspace:*",
+    "tome-interfaces": "workspace:^0.1.0",
     "react": "19.0.0"
   },
   "devDependencies": {

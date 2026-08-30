@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { Graph } from "imp-spec";
+import type { Graph } from "imp-core-types";
 import {
   applyLiveNodesConstraint,
   compileImpGraphToTomeSql,

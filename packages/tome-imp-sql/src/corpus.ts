@@ -1,6 +1,6 @@
 /** Tome-only Imp corpus operator. Catalog + pre-SQL rewrite — not lowered by imp-sql. */
 
-import type { Graph, Node, NodeLibrary, Port, SignalType } from "imp-spec";
+import type { Graph, Node, NodeLibrary, Port, SignalType } from "imp-core-types";
 
 export const CORPUS_NODE_TYPE_ID = "corpus";
 export const PAGE_CORPUS_SPEC = "page";

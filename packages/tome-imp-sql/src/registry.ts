@@ -1,7 +1,7 @@
 import { collectionTransformsLibrary } from "imp-collection-transforms";
 import { pathingLibrary } from "imp-pathing";
 import { createRegistry, loadLibrary } from "imp-registry";
-import { coreNodeLibrary } from "imp-spec";
+import { coreNodeLibrary } from "imp-core-types";
 import { tomeCorpusLibrary } from "./corpus";
 
 /** Registry with core + collection transforms + pathing + Tome corpus for Tome Imp hosts. */

@@ -14,7 +14,7 @@
   "dependencies": {
     "elkjs": "^0.11.1",
     "react": "19.0.0",
-    "tome-interfaces": "workspace:*",
+    "tome-interfaces": "workspace:^0.1.0",
     "web-worker": "^1.5.0"
   },
   "devDependencies": {

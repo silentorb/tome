@@ -9,7 +9,7 @@ import type { TableSchemasFile } from "./table-schemas";
 import type { ViewsFile } from "./views";
 import type { WorkspaceFile } from "./workspace";
 
-/** Structural Imp graph — compatible with imp-spec `Graph`. */
+/** Structural Imp graph — compatible with imp-core-types `Graph`. */
 export interface ImpGraph {
   nodes: Record<
     string,

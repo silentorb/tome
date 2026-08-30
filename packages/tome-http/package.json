@@ -13,8 +13,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "tome-graph-interfaces": "workspace:*",
-    "tome-service-interfaces": "workspace:*"
+    "tome-graph-interfaces": "workspace:^0.1.0",
+    "tome-service-interfaces": "workspace:^0.1.0"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",

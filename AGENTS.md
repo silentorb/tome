@@ -50,4 +50,12 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 
 In **silentorb-workbench**, this repo mounts at `.mnt/tome/` (container path: `/workspaces/silentorb-workbench/.mnt/tome`). The Compose `tome` service runs `editor:dev` with `TOME_CONTENT_PATH` pointing at the domain repo (e.g. marloth-story `content/`).
 
-Root `package.json` workspaces also include `../imp-ts/packages/*` so `tome-query` can depend on Imp (`imp-spec`, `imp-sql`, …) while Imp remains a sibling repo mounted at `.mnt/imp-ts/`.
+Root `package.json` workspaces also include `../imp-ts/packages/*` so `tome-query` can depend on Imp (`imp-core-types`, `imp-sql`, …) while Imp remains a sibling repo mounted at `.mnt/imp-ts/`.
+
+## Versioning
+
+Packages use **0.x semver** (`0.MINOR.PATCH`). While `MAJOR` is 0, treat **`MINOR` as the API epoch** — bump it (reset `PATCH`) for breaking changes or new functionality; bump `PATCH` for backwards-compatible fixes only.
+
+Internal workspace dependencies use caret-locked ranges: `"tome-db": "workspace:^0.2.0"`, `"imp-core-types": "workspace:^0.2.0"`. When a dependency's `MINOR` epoch changes, direct dependents must bump their `MINOR` too and update the range — including cross-repo when imp-ts packages change.
+
+**Agent flow:** review the settled diff, classify each touched package (`minor` or `patch`), then run `bun scripts/bump-version.ts <package> <level>`. The script scans tome and imp-ts packages for range updates and cascades on `minor`. Refresh lockfiles: `bun install` here; also `.mnt/imp-ts` when imp packages change. Reconcile bump levels at commit time — see workbench [`plan-commit-workflow.mdc`](../../.cursor/rules/plan-commit-workflow.mdc).

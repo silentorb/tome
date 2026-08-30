@@ -1,4 +1,4 @@
-import type { Graph } from "imp-spec";
+import type { Graph } from "imp-core-types";
 import type { SchemaFile } from "tome-flatfile/schema-file";
 import { compileSql, graphToKysely } from "imp-sql";
 import { createTomeImpRegistry } from "./registry";

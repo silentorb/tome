@@ -1,4 +1,4 @@
-import type { PrimitiveValue } from "imp-spec";
+import type { PrimitiveValue } from "imp-core-types";
 import type { RelationalSchema } from "imp-sql";
 import { encodePropertyLiteral as encodeEnumPropertyLiteral } from "tome-flatfile/enum-property-codec";
 import type { SchemaFile } from "tome-flatfile/schema-file";

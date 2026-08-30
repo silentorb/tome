@@ -1,6 +1,6 @@
 {
   "name": "tome-query",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -15,13 +15,13 @@
   },
   "dependencies": {
     "@xyflow/react": "12.8.2",
-    "imp-react-flow": "workspace:*",
-    "imp-registry": "workspace:*",
-    "imp-spec": "workspace:*",
+    "imp-react-flow": "workspace:^0.2.0",
+    "imp-registry": "workspace:^0.2.0",
+    "imp-core-types": "workspace:^0.2.0",
     "react": "19.0.0",
-    "tome-flatfile": "workspace:*",
-    "tome-imp-sql": "workspace:*",
-    "tome-interfaces": "workspace:*"
+    "tome-flatfile": "workspace:^0.1.0",
+    "tome-imp-sql": "workspace:^0.2.0",
+    "tome-interfaces": "workspace:^0.1.0"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "17.4.4",

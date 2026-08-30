@@ -24,8 +24,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "tome-graph-interfaces": "workspace:*",
-    "tome-service-interfaces": "workspace:*",
+    "tome-graph-interfaces": "workspace:^0.1.0",
+    "tome-service-interfaces": "workspace:^0.1.0",
     "ulid": "^3.0.2",
     "yaml": "2.8.0"
   },

@@ -1,7 +1,7 @@
 {
   "name": "tome-editor",
   "description": "Browser markdown editor for design nodes in the Tome content graph",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,20 +22,20 @@
     "react-dom": "19.0.0",
     "react-force-graph-2d": "^1.29.1",
     "svg-pan-zoom": "^3.6.2",
-    "tome-db": "workspace:*",
-    "tome-graph-interfaces": "workspace:*",
-    "tome-http": "workspace:*",
-    "tome-interfaces": "workspace:*",
-    "tome-flatfile": "workspace:*",
-    "tome-theme-midnight": "workspace:*"
+    "tome-db": "workspace:^0.2.0",
+    "tome-graph-interfaces": "workspace:^0.1.0",
+    "tome-http": "workspace:^0.1.0",
+    "tome-interfaces": "workspace:^0.1.0",
+    "tome-flatfile": "workspace:^0.1.0",
+    "tome-theme-midnight": "workspace:^0.1.0"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",
     "@types/react": "19.0.12",
     "@types/react-dom": "19.0.4",
     "@vitejs/plugin-react": "4.3.4",
-    "tome-extension-fixture": "workspace:*",
-    "tome-schema-diagram": "workspace:*",
+    "tome-extension-fixture": "workspace:^0.1.0",
+    "tome-schema-diagram": "workspace:^0.1.0",
     "typescript": "5.8.2",
     "vite": "6.2.2",
     "@happy-dom/global-registrator": "17.4.4",
