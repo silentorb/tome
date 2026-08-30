@@ -106,8 +106,8 @@ None.
 ## Implementation pointers
 
 - Package: [`packages/tome-imp-sql`](../../packages/tome-imp-sql/)
-- Imp pathing: [pathing.md](../../../imp-ts/docs/features/pathing.md)
-- Imp SQL: [sql.md](../../../imp-ts/docs/features/sql.md)
+- Imp pathing: [pathing.md](../../../imp-spec/docs/packages/imp-pathing/pathing.md)
+- Imp SQL: [sql.md](../../../imp-spec/docs/packages/imp-sql/sql.md)
 - Consumer: [tome-query.md](./tome-query.md)
 
 ## See also
