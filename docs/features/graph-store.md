@@ -81,7 +81,7 @@ type GraphStoreCapabilities =
 - Third parties need domain CRUD without warming SQLite.
 - **Imp as read language** avoids mirroring every cache method on flatfile.
 - **`imp-execution`** (successor to [imp-kotlin execution](https://github.com/silentorb/imp-kotlin/tree/master/projects/execution/src/main/kotlin/silentorb/imp/execution)) shares operator semantics with `imp-sql`; hosts supply data only.
-- Imp effects stay **discrete** — default execute path is read-only ([execution.md](../../../imp-spec/docs/packages/imp-execution/execution.md)). Imp v1 has **no mutation operators**; Tome keeps imperative Base-tier CRUD for writes while Queryable tier stays read-only Imp.
+- Imp effects stay **discrete** — default execute path is read-only ([execution.md](../../../imp-ts/docs/features/execution.md)). Imp v1 has **no mutation operators**; Tome keeps imperative Base-tier CRUD for writes while Queryable tier stays read-only Imp.
 
 ## Behavior / pipeline
 
@@ -102,7 +102,7 @@ type GraphStoreCapabilities =
 | Interfaces | [`packages/tome-graph-interfaces/src/graph-store.ts`](../../packages/tome-graph-interfaces/src/graph-store.ts) |
 | Flatfile adapter | [`packages/tome-flatfile/src/graph-store/`](../../packages/tome-flatfile/src/graph-store/) |
 | Composed adapter | [`packages/tome-db/src/graph-store/`](../../packages/tome-db/src/graph-store/) |
-| Imp execution spec | [`imp-spec/docs/packages/imp-execution/execution.md`](../../../imp-spec/docs/packages/imp-execution/execution.md) |
+| Imp execution spec | [`imp-ts/docs/features/execution.md`](../../../imp-ts/docs/features/execution.md) |
 | Legacy store/cache | [`packages/tome-service-interfaces/`](../../packages/tome-service-interfaces/) |
 
 ## Migration phases

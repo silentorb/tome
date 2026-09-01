@@ -99,4 +99,4 @@ bun run test:functional
 - [tome-imp-sql.md](./tome-imp-sql.md) — Imp → Tome SQL binder
 - [extensions.md](./extensions.md) — registration + interactive mounting
 - [page-blocks.md](../extensions/page-blocks.md)
-- Imp [sql.md](../../../imp-spec/docs/packages/imp-sql/sql.md) / [collection-transforms.md](../../../imp-spec/docs/packages/imp-collection-transforms/collection-transforms.md) / [pathing.md](../../../imp-spec/docs/packages/imp-pathing/pathing.md)
+- Imp [sql.md](../../../imp-ts/docs/features/sql.md) / [collection-transforms.md](../../../imp-spec/docs/packages/imp-collection-transforms/collection-transforms.md) / [pathing.md](../../../imp-spec/docs/packages/imp-pathing/pathing.md)
