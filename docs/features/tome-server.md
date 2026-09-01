@@ -62,7 +62,9 @@ File: `packages/tome-server/config/tome-server.json` (override with `TOME_SERVER
 - Multiple services are allowed (each typically binds its own port in v1).
 - Path defaults (`TOME_CONTENT_PATH`, `TOME_DB_PATH`) are merged into module options by the host when omitted. Pass `corpora` in `store.options` (or `TOME_CORPORA`) for a multi-corpus session.
 
-Bootstrap order: open store → open cache (with enum codec + set perspectives from content) → open graph services (subscribe to store changes, `store.startWatching()`) → start service modules.
+Bootstrap order: open store → open cache (with enum codec + set perspectives from content) → **sync content to SQLite** (`CacheSync.ensureReady()` — blocking; emits `[tome-sync]` progress on stderr for large corpora) → open graph services (subscribe to store changes, `store.startWatching()`) → start service modules. **HTTP binds only after sync completes**, so `/api/health` is unavailable until the cache is ready.
+
+Startup logs: `[tome-server]` path/config lines, then `[tome-sync]` phase progress during cache rebuild or body reconciliation, then `[tome-server] graph ready (…ms)`, then `Tome API listening on …`. See [tome-db.md](./tome-db.md) § Cache sync at startup.
 
 ## Run
 

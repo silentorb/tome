@@ -48,7 +48,13 @@ export async function startTomeServer(options?: {
     memberPerspectives,
   });
 
+  console.log(
+    "[tome-server] opening graph services (cache sync may take a while on large corpora)…",
+  );
+  const graphStartedAt = performance.now();
   const graph = openTomeGraphServices({ store, cache });
+  console.log(`[tome-server] graph ready (${Math.round(performance.now() - graphStartedAt)}ms)`);
+
   const started = await startConfiguredServices(graph, config);
 
   return {

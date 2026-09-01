@@ -1,6 +1,6 @@
 {
   "name": "tome-functional-tests",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "description": "Cross-package functional tests (virtualized client↔API); not a production package",
@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "react": "19.0.0",
-    "tome-db": "workspace:^0.2.0",
-    "tome-editor": "workspace:^0.2.0",
+    "tome-db": "workspace:^0.5.0",
+    "tome-editor": "workspace:^0.5.0",
     "tome-graph-interfaces": "workspace:^0.1.0",
     "tome-http": "workspace:^0.1.0",
     "tome-interfaces": "workspace:^0.1.0",
-    "tome-query": "workspace:^0.2.0",
-    "tome-server": "workspace:^0.2.0"
+    "tome-query": "workspace:^0.5.0",
+    "tome-server": "workspace:^0.5.0"
   },
   "devDependencies": {
     "@happy-dom/global-registrator": "17.4.4",

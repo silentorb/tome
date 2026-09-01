@@ -155,6 +155,14 @@ Consolidate legacy dual directed edges with `bun scripts/consolidate-relationshi
 
 **Write paths (phase 4):** Domain mutation modules persist and validate through **`ctx.graphStore`** (`tome-db/src/graph-store/relationship-write.ts`) — not `ctx.store` or cache read-assist. SQLite cache remains the **`executeImp` SQL backend** and **`CacheSync`** target via `TomeWriteContext.cache`. See [graph-store.md](./graph-store.md).
 
+### Cache sync at startup
+
+`openContentGraph`, `openTomeWriteContext`, and **tome-server** startup all call `CacheSync.ensureReady()` **before** HTTP or other services bind. The call is synchronous: on a cold or stale cache it runs a full rebuild (every node + live relationships); on a warm cache it still scans every node for body drift.
+
+Progress is logged to **stderr** with the **`[tome-sync]`** prefix: cache freshness check, full rebuild or reconcile phase, periodic node counts (every 1,000 nodes on large corpora), relationship expansion timing, and a final `cache ready (…)` line. Inject a custom `SyncProgressReporter` via `openTomeWriteContext(…, { progress })` or `new CacheSync(…, reporter)` for tests and integrators.
+
+To avoid a long rebuild when starting the API, pre-warm the SQLite cache with `bash scripts/content-sync.sh` (same sync path as startup, no HTTP).
+
 `GraphDatabase` (`packages/tome-sqlite/src/graph.ts`) — cache / legacy tests:
 
 - `upsertNode(id, properties)` — create or merge node

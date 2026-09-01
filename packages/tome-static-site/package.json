@@ -1,6 +1,6 @@
 {
   "name": "tome-static-site",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -10,14 +10,14 @@
   },
   "dependencies": {
     "astro": "5.7.10",
-    "tome-db": "workspace:^0.2.0",
+    "tome-db": "workspace:^0.5.0",
     "tome-interfaces": "workspace:^0.1.0",
     "tome-flatfile": "workspace:^0.1.0",
     "tome-theme-midnight": "workspace:^0.1.0",
     "tome-extension-fixture": "workspace:^0.1.0",
     "tome-spatial-graph": "workspace:^0.1.0",
     "tome-schema-diagram": "workspace:^0.1.0",
-    "tome-query": "workspace:^0.2.0",
+    "tome-query": "workspace:^0.5.0",
     "marked": "15.0.12"
   },
   "devDependencies": {

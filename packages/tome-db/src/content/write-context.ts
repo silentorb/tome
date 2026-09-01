@@ -4,10 +4,15 @@ import type { TomeQueryCache } from "tome-service-interfaces";
 import type { TomeGraphStoreBase, TomeGraphStoreQueryable } from "tome-graph-interfaces";
 import type { GraphDatabase, Properties } from "tome-sqlite";
 import { ComposedGraphStore } from "../graph-store/composed-graph-store";
-import { CacheSync, subscribeStoreToCacheSync } from "./sync";
+import { CacheSync, subscribeStoreToCacheSync, type SyncProgressReporter } from "./sync";
 
 /** Solo or composite flatfile store used by domain write/sync paths. */
 export type FlatfileStore = ContentStore | CompositeStore;
+
+export interface OpenTomeWriteContextOptions {
+  graphStore?: TomeGraphStoreQueryable;
+  progress?: SyncProgressReporter;
+}
 
 export interface TomeWriteContext {
   /** Unified graph store facade (Base + Queryable when composed). */
@@ -26,13 +31,19 @@ export interface TomeWriteContext {
 export function openTomeWriteContext(
   store: FlatfileStore,
   cache: TomeQueryCache,
-  graphStore?: TomeGraphStoreQueryable,
+  graphStoreOrOptions?: TomeGraphStoreQueryable | OpenTomeWriteContextOptions,
 ): TomeWriteContext {
-  const sync = new CacheSync(store, cache);
+  const options: OpenTomeWriteContextOptions =
+    graphStoreOrOptions &&
+    typeof graphStoreOrOptions === "object" &&
+    ("progress" in graphStoreOrOptions || "graphStore" in graphStoreOrOptions)
+      ? graphStoreOrOptions
+      : { graphStore: graphStoreOrOptions as TomeGraphStoreQueryable | undefined };
+  const sync = new CacheSync(store, cache, options.progress);
   sync.ensureReady();
   subscribeStoreToCacheSync(store, sync);
   const resolvedGraphStore =
-    graphStore ??
+    options.graphStore ??
     new ComposedGraphStore(new FlatfileGraphStore(store), cache as GraphDatabase, sync);
   return { graphStore: resolvedGraphStore, store, sync, cache };
 }

@@ -80,11 +80,13 @@ export type {
 export { expandAllRelationships } from "./relationship-sync-expand";
 export {
   CacheSync,
+  createConsoleSyncProgressReporter,
   invalidateDynamicPropertiesCache,
   loadDynamicColumnSetsFromContent,
   loadDynamicPropertiesFromContent,
   openContentGraph,
 } from "./sync";
+export type { SyncProgressEvent, SyncProgressPhase, SyncProgressReporter } from "./sync";
 export {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -113,7 +115,7 @@ export {
   projectionTypeForEndpoint,
 } from "./test-helpers";
 export type { TestContentFixture } from "./test-helpers";
-export type { TomeWriteContext, FlatfileStore } from "./write-context";
+export type { TomeWriteContext, FlatfileStore, OpenTomeWriteContextOptions } from "./write-context";
 export {
   mergeNodePropertiesOnContent,
   openTomeWriteContext,

@@ -1,19 +1,19 @@
 {
   "name": "tome-imp-flatfile",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "dependencies": {
-    "imp-execution": "workspace:^0.2.0",
+    "imp-execution": "workspace:^0.5.0",
     "tome-flatfile": "workspace:^0.1.0",
     "tome-graph-interfaces": "workspace:^0.1.0"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",
-    "tome-db": "workspace:^0.2.0",
+    "tome-db": "workspace:^0.5.0",
     "typescript": "5.8.2"
   },
   "scripts": {

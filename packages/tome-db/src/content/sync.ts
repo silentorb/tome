@@ -45,6 +45,78 @@ import { openComposedGraphStore } from "../graph-store/open-graph-store";
 import type { TomeDataStore } from "tome-service-interfaces";
 import type { FlatfileStore, TomeWriteContext } from "./write-context";
 
+export type SyncProgressPhase =
+  | "check"
+  | "rebuild"
+  | "rebuild_nodes"
+  | "expand_relationships"
+  | "reconcile"
+  | "ready";
+
+export type SyncProgressEvent = {
+  phase: SyncProgressPhase;
+  current?: number;
+  total?: number;
+  message?: string;
+};
+
+export type SyncProgressReporter = (event: SyncProgressEvent) => void;
+
+function formatSyncCount(n: number): string {
+  return n.toLocaleString("en-US");
+}
+
+function formatSyncElapsed(ms: number): string {
+  if (ms < 1000) return `${Math.round(ms)}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function shouldReportSyncProgress(current: number, total: number): boolean {
+  if (total <= 100) return true;
+  return current % 1000 === 0 || current === total;
+}
+
+/** Default stderr progress lines for startup cache sync (`[tome-sync]` prefix). */
+export function createConsoleSyncProgressReporter(): SyncProgressReporter {
+  return (event) => {
+    const prefix = "[tome-sync]";
+    switch (event.phase) {
+      case "check":
+        console.log(`${prefix} ${event.message ?? "checking cache freshness…"}`);
+        break;
+      case "rebuild":
+        console.log(`${prefix} full rebuild: ${formatSyncCount(event.total ?? 0)} nodes`);
+        break;
+      case "rebuild_nodes":
+        if (event.current != null && event.total != null) {
+          console.log(
+            `${prefix} nodes ${formatSyncCount(event.current)}/${formatSyncCount(event.total)}`,
+          );
+        }
+        break;
+      case "expand_relationships":
+        if (event.message) {
+          console.log(`${prefix} ${event.message}`);
+        } else if (event.total != null) {
+          console.log(`${prefix} expanding ${formatSyncCount(event.total)} relationships…`);
+        }
+        break;
+      case "reconcile":
+        if (event.current != null && event.total != null && event.current > 0) {
+          console.log(
+            `${prefix} reconciling ${formatSyncCount(event.current)}/${formatSyncCount(event.total)} node bodies…`,
+          );
+        } else if (event.total != null) {
+          console.log(`${prefix} reconciling ${formatSyncCount(event.total)} node bodies…`);
+        }
+        break;
+      case "ready":
+        console.log(`${prefix} ${event.message ?? "cache ready"}`);
+        break;
+    }
+  };
+}
+
 /** Wire store change notifications into cache sync (file watching / external edits). */
 export function subscribeStoreToCacheSync(
   store: TomeDataStore,
@@ -131,11 +203,21 @@ export function loadDynamicColumnSetsFromContent(
 
 export class CacheSync {
   private applying = false;
+  private startupSync = false;
+  private readonly progress: SyncProgressReporter;
 
   constructor(
     readonly store: FlatfileStore,
     readonly cache: TomeQueryCache,
-  ) {}
+    progress?: SyncProgressReporter,
+  ) {
+    this.progress = progress ?? createConsoleSyncProgressReporter();
+  }
+
+  private report(event: SyncProgressEvent): void {
+    if (!this.startupSync) return;
+    this.progress(event);
+  }
 
   get contentDir(): string {
     return this.store.contentDir;
@@ -220,6 +302,10 @@ export class CacheSync {
     // Live tree only — archived edges live under relationships/archive/.
     const entries = this.store.readRelationshipsFile().relationships;
     const registry = this.store.readAssociationsFile();
+    const expandStarted = performance.now();
+    if (this.startupSync) {
+      this.report({ phase: "expand_relationships", total: entries.length });
+    }
     const { records, projections } = expandAllRelationships(entries, registry);
 
     this.cache.runExec("BEGIN");
@@ -233,6 +319,12 @@ export class CacheSync {
       }
       this.recomputeArchivedFlags();
       this.cache.runExec("COMMIT");
+      if (this.startupSync) {
+        this.report({
+          phase: "expand_relationships",
+          message: `relationships expanded (${formatSyncElapsed(performance.now() - expandStarted)})`,
+        });
+      }
     } catch (err) {
       this.cache.runExec("ROLLBACK");
       throw err;
@@ -249,12 +341,21 @@ export class CacheSync {
     try {
       this.cache.runExec("DELETE FROM nodes");
 
-      for (const id of this.store.listNodeIds()) {
+      const ids = this.store.listNodeIds();
+      const total = ids.length;
+      if (this.startupSync) {
+        this.report({ phase: "rebuild", total });
+      }
+      for (let i = 0; i < ids.length; i += 1) {
+        const id = ids[i]!;
         const node = this.store.readNode(id);
         if (!node) continue;
         const body = bodyFromNode(node);
         const props = { ...node.properties, body };
         this.cache.upsertNode(node.id, props);
+        if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
+          this.report({ phase: "rebuild_nodes", current: i + 1, total });
+        }
       }
 
       this.expandRelationshipsToCache();
@@ -267,16 +368,33 @@ export class CacheSync {
   }
 
   ensureReady(): void {
-    if (this.cacheNeedsRebuild()) {
-      this.fullRebuild();
-      return;
+    this.startupSync = true;
+    const startedAt = performance.now();
+    try {
+      this.report({ phase: "check", message: "checking cache freshness…" });
+      if (this.cacheNeedsRebuild()) {
+        this.fullRebuild();
+      } else {
+        this.reconcileNodeBodiesFromFiles();
+      }
+      this.report({
+        phase: "ready",
+        message: `cache ready (${formatSyncElapsed(performance.now() - startedAt)})`,
+      });
+    } finally {
+      this.startupSync = false;
     }
-    this.reconcileNodeBodiesFromFiles();
   }
 
   /** Repair SQLite bodies that drifted from git-tracked node files (e.g. after external edits). */
   private reconcileNodeBodiesFromFiles(): void {
-    for (const id of this.store.listNodeIds()) {
+    const ids = this.store.listNodeIds();
+    const total = ids.length;
+    if (this.startupSync) {
+      this.report({ phase: "reconcile", total });
+    }
+    for (let i = 0; i < ids.length; i += 1) {
+      const id = ids[i]!;
       const fileNode = this.store.readNode(id);
       if (!fileNode) continue;
       const fileBody = bodyFromNode(fileNode);
@@ -285,6 +403,9 @@ export class CacheSync {
         typeof cacheNode?.properties.body === "string" ? cacheNode.properties.body : "";
       if (fileBody !== cacheBody) {
         this.syncNode(id);
+      }
+      if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
+        this.report({ phase: "reconcile", current: i + 1, total });
       }
     }
   }
