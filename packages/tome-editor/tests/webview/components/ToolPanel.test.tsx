@@ -61,7 +61,6 @@ describe("ToolPanel", () => {
     fireEvent.click(screen.getByRole("button", { name: "Open" }));
     const panel = container.querySelector(".tome-tool-panel");
     expect(panel).toBeTruthy();
-    // Target the panel (bubbles to window). fireEvent.keyDown(window) unmounts inside act and throws in happy-dom.
     fireEvent.keyDown(panel as HTMLElement, { key: "Escape" });
     expect(container.querySelector(".tome-tool-panel")).toBeNull();
   });

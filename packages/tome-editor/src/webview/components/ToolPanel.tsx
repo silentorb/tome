@@ -56,17 +56,15 @@ export function ToolPanel({ session, onClose }: ToolPanelProps) {
     return () => window.removeEventListener("resize", onResize);
   }, [session, reclampToLayout]);
 
-  useEffect(() => {
-    if (!session) return;
-    const onKeyDown = (event: KeyboardEvent) => {
+  const onPanelKeyDown = useCallback(
+    (event: ReactKeyboardEvent<HTMLElement>) => {
       if (event.key === "Escape") {
         event.preventDefault();
         onClose();
       }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [session, onClose]);
+    },
+    [onClose],
+  );
 
   const persistWidth = useCallback((next: number) => {
     const layoutWidth = panelRef.current?.parentElement?.clientWidth;
@@ -143,6 +141,7 @@ export function ToolPanel({ session, onClose }: ToolPanelProps) {
       className={`tome-tool-panel${dragging ? " tome-tool-panel-dragging" : ""}`}
       aria-label={session.title}
       style={{ width: `${widthPx}px`, ["--tome-tool-panel-width" as string]: `${widthPx}px` }}
+      onKeyDown={onPanelKeyDown}
     >
       <div
         className="tome-tool-panel-resize"
