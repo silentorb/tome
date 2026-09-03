@@ -82,7 +82,7 @@ jobs:
       - name: Validate offline (network none)
         run: |
           docker run --rm --network none tome-release:ci ensure-deps
-          docker run --rm --network none tome-release:ci run run typecheck
+          docker run --rm --network none tome-release:ci test
 
       - name: Push to GHCR
         uses: docker/build-push-action@v6

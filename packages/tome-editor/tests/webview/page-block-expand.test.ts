@@ -30,6 +30,9 @@ const { pageBlockEmbed } = await import("../../src/webview/extensions/page-block
 const { expandInsertedPageBlock, insertPageBlock } = await import(
   "../../src/webview/extensions/page-block-menu"
 );
+const { initSchemaDiagramViewportsIn } = await import(
+  "../../src/webview/extensions/schema-diagram-viewport"
+);
 
 async function createEditor(initial = "") {
   const root = document.createElement("div");
@@ -83,6 +86,13 @@ describe("expandInsertedPageBlock", () => {
     });
 
     await new Promise((resolve) => window.setTimeout(resolve, 150));
+
+    const viewport = root.querySelector<HTMLElement>(".tome-schema-diagram-viewport");
+    expect(viewport).toBeTruthy();
+    // happy-dom leaves clientWidth/Height at 0; initViewport requires a non-zero size.
+    Object.defineProperty(viewport!, "clientWidth", { configurable: true, value: 640 });
+    Object.defineProperty(viewport!, "clientHeight", { configurable: true, value: 480 });
+    initSchemaDiagramViewportsIn(root);
 
     expect(root.querySelector(".tome-schema-diagram-viewport .schema-diagram-svg")).toBeTruthy();
     expect(root.querySelector(".tome-schema-diagram-toolbar")).toBeTruthy();

@@ -1,12 +1,8 @@
-import { afterEach, describe, expect, test } from "bun:test";
-import { cleanup, render, waitFor } from "@testing-library/react";
+import { describe, expect, test } from "bun:test";
+import { render, waitFor } from "@testing-library/react";
 import { useEffect } from "react";
 import type { TableRowsQuery, TableRowsWindow } from "tome-graph-interfaces";
 import { useWindowedTableRows } from "../../../src/webview/hooks/useWindowedTableRows";
-
-afterEach(() => {
-  cleanup();
-});
 
 function Probe(props: {
   seedRows: string[];

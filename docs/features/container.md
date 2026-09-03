@@ -119,7 +119,7 @@ gunzip -c tome-release.tar.gz | docker load
 
 ## Verification
 
-- Release CI: `.github/workflows/container.yml` builds release, runs `ensure-deps` + `typecheck` with `--network none`, then pushes.
+- Release CI: `.github/workflows/container.yml` builds release, runs `ensure-deps` + `test` with `--network none`, then pushes.
 - Dev: open workbench / rebuild Compose `tome` service after `docker/` toolchain changes.
 - Lockfile drift on release: change `bun.lock` / `package.json` under the working tree → `ensure-deps` must exit non-zero.
 

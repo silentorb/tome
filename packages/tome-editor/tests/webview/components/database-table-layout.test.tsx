@@ -16,8 +16,10 @@ function loadTableStyles(): HTMLStyleElement {
     join(COMPONENT_DIR, "../../../src/webview/components/database-table-view.css"),
     "utf8",
   );
+  // Theme files are already inlined above; unresolved @import blanks computed styles in happy-dom.
+  const cssWithoutImports = css.replace(/^@import\s+[^;]+;\s*$/gm, "");
   const style = document.createElement("style");
-  style.textContent = `${contentPanelCss}\n${databaseTableCss}\n${css}`;
+  style.textContent = `${contentPanelCss}\n${databaseTableCss}\n${cssWithoutImports}`;
   style.dataset.testTableLayout = "true";
   document.head.append(style);
   return style;
