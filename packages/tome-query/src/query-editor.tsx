@@ -32,6 +32,11 @@ export interface QueryFlowEditorProps {
   onGraphChange: (graph: ReactFlowGraph) => void;
 }
 
+/** React Flow deleteKeyCode: Backspace+Delete when editable; null when read-only. */
+export function queryFlowDeleteKeyCode(readOnly?: boolean): string[] | null {
+  return readOnly ? null : ["Backspace", "Delete"];
+}
+
 export function QueryFlowEditor({ graph, readOnly, onGraphChange }: QueryFlowEditorProps) {
   const nodeTypes = useImpNodeTypes();
   const palette = useMemo(() => listPaletteNodeTypes(), []);
@@ -193,7 +198,7 @@ export function QueryFlowEditor({ graph, readOnly, onGraphChange }: QueryFlowEdi
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          deleteKeyCode={readOnly ? null : ["Backspace", "Delete"]}
+          deleteKeyCode={queryFlowDeleteKeyCode(readOnly)}
           nodesDraggable={!readOnly}
           nodesConnectable={!readOnly}
           elementsSelectable={!readOnly}

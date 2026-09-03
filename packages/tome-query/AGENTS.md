@@ -32,4 +32,4 @@ Among Tome packages: `tome-interfaces` + `tome-imp-sql` (schema/registry/compile
 bun test   # from packages/tome-query, or: bun run --filter tome-query test
 ```
 
-Runs `tsc --noEmit`, then `bun test` with `--preload ./tests/test-setup.ts` (happy-dom via `@happy-dom/global-registrator`). UI tests use `@testing-library/react`. Unit tests: `tests/execute.test.ts`. UI tests: `tests/editor.test.tsx` (mocks `QueryFlowEditor`).
+Runs `tsc --noEmit`, then `bun test` with `--preload ./tests/test-setup.ts` (happy-dom via `@happy-dom/global-registrator`). UI tests use `@testing-library/react`. Unit tests: `tests/execute.test.ts`. UI tests: `tests/editor.test.tsx`. Delete-key policy: `tests/query-editor.test.tsx` covers `queryFlowDeleteKeyCode` as a pure helper (no `mock.module`).

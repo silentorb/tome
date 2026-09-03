@@ -1,12 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { defaultBlockData, defaultReactFlowGraph } from "../src/config";
-
-mock.module("../src/query-editor", () => ({
-  QueryFlowEditor: () => <div data-testid="query-flow-stub" />,
-}));
-
-const { QueryBlockComponent } = await import("../src/editor");
+import { QueryBlockComponent } from "../src/editor";
 
 const baseCtx = {
   component: { id: "tome-query.block", label: "Query table" },

@@ -1,7 +1,6 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { beforeEach, describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
-import { nonessentialTest } from "tome-test-support";
 import { ToolPanel, type ToolPanelSession } from "../../../src/webview/components/ToolPanel";
 import {
   DEFAULT_TOOL_PANEL_WIDTH_PX,
@@ -57,15 +56,19 @@ describe("ToolPanel", () => {
     expect(container.querySelector(".tome-tool-panel")).toBeNull();
   });
 
-  // Self-unmount during fireEvent/act under happy-dom can throw removeChild; keep coverage
-  // but do not hard-fail the suite on this brittle path (close button covers onClose).
-  nonessentialTest("Escape closes the panel", () => {
-    const { container } = render(<Harness />);
-    fireEvent.click(screen.getByRole("button", { name: "Open" }));
+  test("Escape calls onClose without unmounting during the key event", () => {
+    const onClose = mock(() => {});
+    const session: ToolPanelSession = {
+      title: "Edit query",
+      Component: Probe as (props: Record<string, unknown>) => unknown,
+      props: { label: "flow" },
+    };
+    const { container } = render(<ToolPanel session={session} onClose={onClose} />);
     const panel = container.querySelector(".tome-tool-panel");
     expect(panel).toBeTruthy();
     fireEvent.keyDown(panel as HTMLElement, { key: "Escape" });
-    expect(container.querySelector(".tome-tool-panel")).toBeNull();
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(container.querySelector(".tome-tool-panel")).toBeTruthy();
   });
 
   test("exposes a vertical resize separator", () => {
