@@ -60,6 +60,14 @@ ensure-deps-release.sh + entrypoint-release.sh ──► GHCR image
 5. Entrypoint validates lockfile hash; on drift, **fails** with rebuild instructions (never fetches).
 6. Publish `ghcr.io/silentorb/tome` (`main`, `sha-*`, semver on `v*` tags).
 
+### Semver image tags ↔ root version
+
+GHCR semver tags come from **git tags** matching `v*` (e.g. `v0.1.0`), not from workspace package versions under `packages/*`.
+
+- The **repo-root** `package.json` `"version"` is the release / container version.
+- Agents create a **local** annotated tag `v<version>` after a release commit when the user says **commit and tag tome** (`bash scripts/git-tag-version.sh tome` from silentorb-workbench). Ordinary package bumps do **not** create tags.
+- **Push is manual** — push the commit and tag when you want CI to publish semver image tags. Agents do not push.
+
 ## Inputs / outputs / artifacts
 
 | Artifact | Role |
