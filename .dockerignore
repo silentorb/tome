@@ -9,3 +9,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+**/.bun-install.lock
+**/coverage/
+**/*.sqlite
+**/*.sqlite-*

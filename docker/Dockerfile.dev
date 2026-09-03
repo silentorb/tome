@@ -1,6 +1,7 @@
-# Prefer docker/Dockerfile.dev — workbench Compose builds that path.
-# This file mirrors Dockerfile.dev so accidental builds of the old path still work.
 # syntax=docker/dockerfile:1
+# Dev image: toolchain for workbench / agent iteration.
+# Runtime bun install via bind-mounted source + tome-node-modules volume.
+# Build: docker build -f docker/Dockerfile.dev -t tome-dev:local .
 FROM mcr.microsoft.com/devcontainers/base:debian
 
 USER root

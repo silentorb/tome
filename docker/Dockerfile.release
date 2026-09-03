@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:1
+# Release image: offline-capable after build (all deps baked).
+#
+# Requires BuildKit named contexts `tome` and `imp` (imp-ts checkout).
+# Prefer: bash docker/build-release.sh
+
+FROM debian:bookworm-slim AS base
+ENV BUN_INSTALL=/usr/local/bun
+ENV PATH="${BUN_INSTALL}/bin:${PATH}"
+ENV DEBIAN_FRONTEND=noninteractive
+COPY docker/install-runtime.sh /tmp/install-runtime.sh
+RUN bash /tmp/install-runtime.sh && rm /tmp/install-runtime.sh
+
+FROM base AS deps
+WORKDIR /opt
+COPY --from=tome . /opt/tome
+COPY --from=imp . /opt/imp-ts
+COPY docker/bake-deps.sh /opt/tome/docker/bake-deps.sh
+COPY docker/lib/lockfile-hash.sh docker/lib/imp-symlink.sh /opt/tome/docker/lib/
+RUN chmod +x /opt/tome/docker/bake-deps.sh \
+  && TOME_ROOT=/opt/tome IMP_ROOT=/opt/imp-ts bash /opt/tome/docker/bake-deps.sh
+
+FROM base AS release
+RUN useradd --create-home --uid 1000 --shell /bin/bash tome \
+  && mkdir -p /opt/tome /opt/tome-baked /opt/imp-ts \
+  && chown -R tome:tome /opt
+
+COPY --from=deps --chown=tome:tome /opt/tome /opt/tome
+COPY --from=deps --chown=tome:tome /opt/imp-ts /opt/imp-ts
+COPY --from=deps --chown=tome:tome /opt/tome /opt/tome-baked
+
+COPY --chown=tome:tome docker/ensure-deps-release.sh /opt/tome/scripts/ensure-node-modules.sh
+COPY --chown=tome:tome docker/ensure-deps-release.sh /opt/tome-baked/scripts/ensure-node-modules.sh
+COPY --chown=tome:tome docker/lib/lockfile-hash.sh docker/lib/imp-symlink.sh /opt/tome/docker/lib/
+COPY --chown=tome:tome docker/lib/lockfile-hash.sh docker/lib/imp-symlink.sh /opt/tome-baked/docker/lib/
+COPY docker/entrypoint-release.sh /usr/local/bin/tome-entrypoint
+RUN chmod +x /usr/local/bin/tome-entrypoint \
+  /opt/tome/scripts/ensure-node-modules.sh \
+  /opt/tome-baked/scripts/ensure-node-modules.sh
+
+USER tome
+ENV HOME=/home/tome
+ENV BUN_INSTALL=/usr/local/bun
+ENV PATH="${BUN_INSTALL}/bin:${PATH}"
+ENV TOME_ROOT=/opt/tome
+ENV TOME_BAKED_ROOT=/opt/tome-baked
+ENV IMP_ROOT=/opt/imp-ts
+ENV TOME_EDITOR_DEV_HOST=0.0.0.0
+WORKDIR /opt/tome
+
+EXPOSE 3847 5173
+ENTRYPOINT ["/usr/local/bin/tome-entrypoint"]
+CMD ["serve-dev"]

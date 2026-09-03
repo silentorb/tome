@@ -79,7 +79,7 @@ flowchart TB
 
 ## Development
 
-This repo is typically opened via **silentorb-workbench**, which bind-mounts `tome` and a domain repo (e.g. marloth-story) and runs the editor in a Compose `tome` service with `TOME_CONTENT_PATH` pointing at the domain `content/` directory.
+This repo is typically opened via **silentorb-workbench**, which bind-mounts `tome` and a domain repo (e.g. marloth-story) and runs the editor in a Compose `tome` service built from [`docker/Dockerfile.dev`](./docker/Dockerfile.dev).
 
 Standalone (with `TOME_CONTENT_PATH` set):
 
@@ -87,5 +87,7 @@ Standalone (with `TOME_CONTENT_PATH` set):
 bun install --frozen-lockfile
 bun run editor:dev
 ```
+
+**Containers:** [`docs/features/container.md`](./docs/features/container.md) — `docker/Dockerfile.dev` (workbench), `docker/Dockerfile.release` (offline GHCR image). Local release build: `bash docker/build-release.sh`.
 
 See [`AGENTS.md`](./AGENTS.md) and [`docs/features/`](./docs/features/) for feature specs.

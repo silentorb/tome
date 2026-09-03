@@ -1,0 +1,13 @@
+# syntax=docker/dockerfile:1
+# Shared OS + Bun toolchain layer for the release image.
+# Build: docker build -f docker/Dockerfile.base -t tome-base:local .
+FROM debian:bookworm-slim
+
+ENV BUN_INSTALL=/usr/local/bun
+ENV PATH="${BUN_INSTALL}/bin:${PATH}"
+ENV DEBIAN_FRONTEND=noninteractive
+
+COPY docker/install-runtime.sh /tmp/install-runtime.sh
+RUN bash /tmp/install-runtime.sh && rm /tmp/install-runtime.sh
+
+CMD ["bash"]

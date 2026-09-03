@@ -45,13 +45,15 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 | `TOME_EDITOR_API_PORT` | HTTP API port (default 3847; historical name) |
 | `TOME_EDITOR_DEV_HOST` | Vite bind host (default `127.0.0.1`; use `0.0.0.0` in containers) |
 | `TOME_SERVER_CONFIG` | Path to `tome-server.json` (service module list) |
+| `IMP_ROOT` | Path to Imp sibling (default `../imp-ts`; `/opt/imp-ts` in the release image) |
 
 ## Workbench integration
 
-In **silentorb-workbench**, this repo mounts at `.mnt/tome/` (container path: `/workspaces/silentorb-workbench/.mnt/tome`). The Compose `tome` service runs `editor:dev` with `TOME_CONTENT_PATH` pointing at the domain repo (e.g. marloth-story `content/`).
+In **silentorb-workbench**, this repo mounts at `.mnt/tome/` (container path: `/workspaces/silentorb-workbench/.mnt/tome`). The Compose `tome` service builds [`docker/Dockerfile.dev`](./docker/Dockerfile.dev) locally and runs `editor:dev` with `TOME_CONTENT_PATH` pointing at the domain repo (e.g. marloth-story `content/`). Rebuild that image after changing `docker/install-runtime.sh` or related toolchain files — not after every lockfile bump (dev installs deps at runtime).
 
 Root `package.json` workspaces also include `../imp-ts/packages/*` so `tome-query` can depend on Imp (`imp-core-types`, `imp-sql`, …) while Imp remains a sibling repo mounted at `.mnt/imp-ts/`.
 
+**Containers:** see [`docs/features/container.md`](./docs/features/container.md). The **release** image (`docker/Dockerfile.release`, published to `ghcr.io/silentorb/tome`) bakes all dependencies at build time and runs offline.
 ## Versioning
 
 Packages use **0.x semver** (`0.MINOR.PATCH`). While `MAJOR` is 0, treat **`MINOR` as the API epoch** — bump it (reset `PATCH`) for breaking changes or new functionality; bump `PATCH` for backwards-compatible fixes only.
