@@ -15,8 +15,8 @@ function port(id: string, type: SignalType, defaultValue?: Port["defaultValue"])
 
 export const tomeCorpusLibrary: NodeLibrary = {
   id: "tome.corpus",
-  types: {
-    [CORPUS_NODE_TYPE_ID]: {
+  definitions: [
+    {
       id: CORPUS_NODE_TYPE_ID,
       inputs: {
         collection: port("collection", collection),
@@ -26,7 +26,7 @@ export const tomeCorpusLibrary: NodeLibrary = {
         collection: port("collection", collection),
       },
     },
-  },
+  ],
 };
 
 export interface TomeCorpusLookup {

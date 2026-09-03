@@ -6,7 +6,7 @@
   "scripts": {
     "build": "bun run src/build.ts",
     "test": "bun test tests",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "bun run src/ensure-site-data-stub.ts && tsc --noEmit"
   },
   "dependencies": {
     "astro": "5.7.10",

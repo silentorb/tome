@@ -5,8 +5,9 @@ import {
   type Node,
   type NodeProps,
 } from "@xyflow/react";
-import type { InputValues, NodeType, PrimitiveValue } from "imp-core-types";
-import { getNodeType, listNodeTypes } from "imp-registry";
+import type { InputValues, NodeDefinition, Port, PrimitiveValue } from "imp-core-types";
+import { isConcreteSignalType } from "imp-core-types";
+import { getNodeDefinition, listNodeDefinitions } from "imp-registry";
 import { createQueryRegistry } from "./execute";
 
 export type ImpFlowNodeData = {
@@ -20,9 +21,10 @@ export type ImpFlowNode = Node<ImpFlowNodeData>;
 
 /** Literal text fields only for scalar ports with no inbound edge. */
 export function shouldShowPortLiteralInput(
-  port: { id: string; type: { id: string } },
+  port: Port,
   connectedInputPorts: readonly string[] = [],
 ): boolean {
+  if (!isConcreteSignalType(port.type)) return false;
   const signal = port.type.id;
   if (signal === "collection" || signal === "boolean") return false;
   return !connectedInputPorts.includes(port.id);
@@ -30,11 +32,11 @@ export function shouldShowPortLiteralInput(
 
 function ImpOperatorNode({ id, data, type }: NodeProps<ImpFlowNode>) {
   const registry = useMemo(() => createQueryRegistry(), []);
-  const nodeType = type ? getNodeType(registry, type) : undefined;
+  const definition = type ? getNodeDefinition(registry, type) : undefined;
   const inputValues = data.inputValues ?? {};
   const connectedInputPorts = data.connectedInputPorts ?? [];
 
-  if (!nodeType) {
+  if (!definition) {
     return (
       <div className="tome-query-rf-node tome-query-rf-node-unknown">
         <strong>{type ?? "unknown"}</strong>
@@ -42,12 +44,12 @@ function ImpOperatorNode({ id, data, type }: NodeProps<ImpFlowNode>) {
     );
   }
 
-  const inputPorts = Object.values(nodeType.inputs);
-  const outputPorts = Object.values(nodeType.outputs);
+  const inputPorts = Object.values(definition.inputs);
+  const outputPorts = Object.values(definition.outputs);
 
   return (
-    <div className={`tome-query-rf-node tome-query-rf-node-${nodeType.id}`}>
-      <div className="tome-query-rf-node-title">{nodeType.id}</div>
+    <div className={`tome-query-rf-node tome-query-rf-node-${definition.id}`}>
+      <div className="tome-query-rf-node-title">{definition.id}</div>
       {inputPorts.map((port) => (
         <div key={`in-${port.id}`} className="tome-query-rf-port tome-query-rf-port-in">
           <Handle
@@ -106,14 +108,14 @@ function parseInputValue(raw: string, portId: string): PrimitiveValue {
 export function createImpNodeTypes(): Record<string, typeof ImpOperatorNode> {
   const registry = createQueryRegistry();
   const types: Record<string, typeof ImpOperatorNode> = {};
-  for (const nodeType of listNodeTypes(registry)) {
-    types[nodeType.id] = ImpOperatorNode;
+  for (const definition of listNodeDefinitions(registry)) {
+    types[definition.id] = ImpOperatorNode;
   }
   return types;
 }
 
-export function listPaletteNodeTypes(): NodeType[] {
-  return listNodeTypes(createQueryRegistry()).filter(
+export function listPaletteNodeTypes(): NodeDefinition[] {
+  return listNodeDefinitions(createQueryRegistry()).filter(
     (type) => type.id !== "input" && type.id !== "output",
   );
 }
@@ -132,10 +134,10 @@ export function createOperatorNode(
   onInputChange: ImpFlowNodeData["onInputChange"],
 ): ImpFlowNode {
   const registry = createQueryRegistry();
-  const nodeType = getNodeType(registry, typeId);
+  const definition = getNodeDefinition(registry, typeId);
   const inputValues: InputValues = {};
-  if (nodeType) {
-    for (const port of Object.values(nodeType.inputs)) {
+  if (definition) {
+    for (const port of Object.values(definition.inputs)) {
       if (port.defaultValue !== undefined) {
         inputValues[port.id] = port.defaultValue;
       }
