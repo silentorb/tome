@@ -2,21 +2,11 @@ name: Container
 
 # Build and publish the offline-capable release image to GHCR.
 # Dev image (docker/Dockerfile.dev) is built locally by workbench Compose — not published.
+# Images are published only for git tags matching v* (the root package version).
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
-    paths:
-      - docker/**
-      - packages/**
-      - scripts/**
-      - package.json
-      - bun.lock
-      - bunfig.toml
-      - .dockerignore
-      - .github/workflows/container.yml
   workflow_dispatch:
 
 concurrency:
@@ -32,6 +22,7 @@ env:
 
 jobs:
   release:
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout tome
@@ -60,8 +51,6 @@ jobs:
         with:
           images: ${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=main,enable={{is_default_branch}}
-            type=sha,prefix=sha-,format=short
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
 

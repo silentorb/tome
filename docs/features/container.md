@@ -58,7 +58,7 @@ ensure-deps-release.sh + entrypoint-release.sh ──► GHCR image
    - `/opt/tome-baked` — immutable seed (same tree; used if a bind mount hides `node_modules`)
    - `/opt/imp-ts` — baked Imp sibling
 5. Entrypoint validates lockfile hash; on drift, **fails** with rebuild instructions (never fetches).
-6. Publish `ghcr.io/silentorb/tome` (`main`, `sha-*`, semver on `v*` tags).
+6. Publish `ghcr.io/silentorb/tome` **only** for git tags matching `v*` (semver + `major.minor`). Pushes to `main` do not publish an image.
 
 ### Semver image tags ↔ root version
 
@@ -66,7 +66,7 @@ GHCR semver tags come from **git tags** matching `v*` (e.g. `v0.1.0`), not from 
 
 - The **repo-root** `package.json` `"version"` is the release / container version.
 - Agents create a **local** annotated tag `v<version>` after a release commit when the user says **commit and tag tome** (`bash scripts/git-tag-version.sh tome` from silentorb-workbench). Ordinary package bumps do **not** create tags.
-- **Push is manual** — push the commit and tag when you want CI to publish semver image tags. Agents do not push.
+- **Push is manual** — push the annotated `v*` tag (and its commit) when you want CI to publish. Agents do not push. Ordinary pushes to `main` do not build or publish GHCR images.
 
 ## Inputs / outputs / artifacts
 
@@ -98,7 +98,7 @@ docker run --rm --network none \
   -e TOME_CONTENT_PATH=/path/in/container/content \
   -e TOME_DB_PATH=/tmp/tome.sqlite \
   -v /host/content:/content:ro \
-  ghcr.io/silentorb/tome:main \
+  ghcr.io/silentorb/tome:0.1.0 \
   test
 ```
 
@@ -107,7 +107,7 @@ docker run --rm --network none \
 **Air-gap without registry:**
 
 ```bash
-docker save ghcr.io/silentorb/tome:main | gzip > tome-release.tar.gz
+docker save ghcr.io/silentorb/tome:0.1.0 | gzip > tome-release.tar.gz
 # on the target host:
 gunzip -c tome-release.tar.gz | docker load
 ```
@@ -127,7 +127,7 @@ gunzip -c tome-release.tar.gz | docker load
 
 ## Verification
 
-- Release CI: `.github/workflows/container.yml` builds release, runs `ensure-deps` + `test` with `--network none`, then pushes.
+- Release CI: `.github/workflows/container.yml` runs on `v*` tags (and `workflow_dispatch` of a `v*` ref), builds release, runs `ensure-deps` + `test` with `--network none`, then pushes semver tags.
 - Offline `test` runs root `bun run test` → **weighted** critical/nonessential gating (see [`testing.md`](./testing.md)).
 - Dev: open workbench / rebuild Compose `tome` service after `docker/` toolchain changes.
 - Lockfile drift on release: change `bun.lock` / `package.json` under the working tree → `ensure-deps` must exit non-zero.
