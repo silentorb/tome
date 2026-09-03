@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { measureCanvasSize, canRenderCanvas2d } from "../../src/webview/graph-canvas-size";
+import {
+  measureCanvasSize,
+  canRenderCanvas2d,
+  setCanRenderCanvas2dForTests,
+} from "../../src/webview/graph-canvas-size";
 
 describe("graph-canvas-size", () => {
   test("measureCanvasSize returns null when container has no dimensions", () => {
@@ -17,5 +21,15 @@ describe("graph-canvas-size", () => {
   test("canRenderCanvas2d rejects invalid dimensions", () => {
     expect(canRenderCanvas2d(0, 100)).toBe(false);
     expect(canRenderCanvas2d(100, -1)).toBe(false);
+  });
+
+  test("canRenderCanvas2d test override still rejects invalid dimensions", () => {
+    setCanRenderCanvas2dForTests(true);
+    try {
+      expect(canRenderCanvas2d(0, 100)).toBe(false);
+      expect(canRenderCanvas2d(100, -1)).toBe(false);
+    } finally {
+      setCanRenderCanvas2dForTests(undefined);
+    }
   });
 });

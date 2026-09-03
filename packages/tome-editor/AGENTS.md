@@ -81,6 +81,8 @@ bun test packages/tome-server/tests
 bun test packages/tome-db/tests
 ```
 
+Bun `mock.module` is process-wide and is not restored between files. Do not mock modules that other tests import for real behavior (e.g. `graph-canvas-size`); stub canvas size via `installGraphCanvasTestEnv` (`tests/webview/test-fixtures/canvas-container-size.ts`).
+
 ### Regression tests
 
 When fixing table-view bugs, add a regression test in the same change. Prefer `seedTestCompositeRelationships` (or full `ContentStore` sync) for graph traversal bugs so tests match production relationship composite types. Do not close a bug fix without a test unless the user explicitly waives it.

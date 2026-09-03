@@ -25,11 +25,19 @@ export function measureCanvasSize(container: HTMLElement): CanvasSize | null {
   return { width, height };
 }
 
+let canRenderCanvas2dForTests: boolean | undefined;
+
+/** Test-only override. Dimension checks still run, so invalid sizes stay rejected. */
+export function setCanRenderCanvas2dForTests(value: boolean | undefined): void {
+  canRenderCanvas2dForTests = value;
+}
+
 export function canRenderCanvas2d(width: number, height: number): boolean {
   if (typeof document === "undefined") return false;
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) {
     return false;
   }
+  if (canRenderCanvas2dForTests !== undefined) return canRenderCanvas2dForTests;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
