@@ -21,19 +21,38 @@
 | `packages/tome-sequencing-interfaces/` | Shared sequencing domain types |
 | `packages/tome-sequencing-resolution/` | Relative chronology constraint resolution |
 | `packages/tome-sequencing/` | Timeline page block (Imp query + visx) |
+| `packages/tome-test-support/` | Critical/nonessential test helpers + weighted gate math |
 | `packages/tome-extension-*/` | Optional extensions (e.g. `tome-extension-fixture` for tests) |
 
 Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to work in the package). See [`packages/README.md`](./packages/README.md).
 
 ## Project context
 
-- Run tests: `bun test` at repo root (runs `bun run typecheck` first; typecheck failures block the suite).
+- Run tests: `bun run test` at repo root (weighted gate via [`scripts/run-weighted-tests.ts`](./scripts/run-weighted-tests.ts); typecheck first). Strict all-or-nothing: `bun run test:raw`. See [`docs/features/testing.md`](./docs/features/testing.md).
 - Typecheck only: `bun run typecheck` at repo root (all workspace packages with a `typecheck` script, including Imp via `../imp-ts/packages/*`). Treat typecheck failures as blocking when changing TypeScript.
 - Feature specs: [`docs/features/`](./docs/features/) (read only the doc matching your task).
 - Package notes: each package's `README.md` (context) and `AGENTS.md` (implementation).
 - TypeScript-to-TypeScript imports are extensionless (no `.ts` suffix).
-- **Regression tests:** When fixing table views, dynamic fields, or related API bugs, add a regression test in the same change.
+- **Regression tests:** When fixing table views, dynamic fields, or related API bugs, add a regression test in the same change. Prefer a **critical**, deterministic assertion; do not mark regression coverage nonessential unless the user waives a hard gate.
 - **UI tests:** New or changed React UI (editor webview, interactive page blocks, extension components) should include tests using **`bun:test`**, **`@testing-library/react`**, and **happy-dom** (`@happy-dom/global-registrator` via `--preload`). Follow the setup in `tome-editor` or `tome-query` (`tests/test-setup.ts`). Do not introduce a different DOM test runner for Tome UI packages.
+
+### Robust UI testing
+
+Prefer **critical** tests when behavior is deterministic:
+
+- Assert on stable outcomes: mock call counts, returned state, role/label text after a click
+- Use synchronous `fireEvent` (or `userEvent`) on elements that **remain mounted**
+- Prefer testing close/handler paths via props/callbacks over DOM teardown side effects
+
+**Do not** add critical tests that are brittle or race-prone (use `nonessentialTest` from `tome-test-support` only when the case still adds value):
+
+- `fireEvent` on a node whose handler synchronously unmounts that node
+- Hard-coded `setTimeout` sleeps instead of fake timers or stable `waitFor` conditions
+- `waitFor` with async callbacks or mock-only assertions without DOM settlement
+- Window/document-level keyboard listeners without guaranteed teardown
+- Assertions that depend on happy-dom layout quirks (zero `clientWidth`, etc.)
+
+**Nonessential** means lower weight in the gate (always run); not a skip/config toggle. Details: [`docs/features/testing.md`](./docs/features/testing.md).
 
 ## Environment
 

@@ -23,6 +23,7 @@ Each subdirectory is a **workspace package** in the Tome monorepo. Packages are 
 | [`tome-sequencing-resolution`](./tome-sequencing-resolution/) | Relative chronology constraint resolution |
 | [`tome-sequencing`](./tome-sequencing/) | Timeline page block (Imp query + visx) |
 | [`tome-functional-tests`](./tome-functional-tests/) | Cross-package functional tests (dev-only; not a runtime library) |
+| [`tome-test-support`](./tome-test-support/) | Critical/nonessential tier helpers + weighted gate math (dev-only) |
 
 ```mermaid
 flowchart TB

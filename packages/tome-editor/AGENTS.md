@@ -81,11 +81,13 @@ bun test packages/tome-server/tests
 bun test packages/tome-db/tests
 ```
 
+Root `bun run test` uses **weighted** critical/nonessential gating ([`docs/features/testing.md`](../../../docs/features/testing.md)). Prefer critical, deterministic UI assertions; use `nonessentialTest` from `tome-test-support` only for brittle happy-dom cases that still add value (e.g. Escape self-unmount during `fireEvent`/`act()`).
+
 Bun `mock.module` is process-wide and is not restored between files. Do not mock modules that other tests import for real behavior (e.g. `graph-canvas-size`); stub canvas size via `installGraphCanvasTestEnv` (`tests/webview/test-fixtures/canvas-container-size.ts`).
 
 ### Regression tests
 
-When fixing table-view bugs, add a regression test in the same change. Prefer `seedTestCompositeRelationships` (or full `ContentStore` sync) for graph traversal bugs so tests match production relationship composite types. Do not close a bug fix without a test unless the user explicitly waives it.
+When fixing table-view bugs, add a regression test in the same change. Prefer `seedTestCompositeRelationships` (or full `ContentStore` sync) for graph traversal bugs so tests match production relationship composite types. Do not close a bug fix without a test unless the user explicitly waives it. Keep regressions **critical** unless waived.
 
 **Table layout / column width / horizontal scroll:** extend [`tests/webview/components/database-table-layout.test.tsx`](tests/webview/components/database-table-layout.test.tsx). It checks CSS max-width values and scroll-container rules.
 

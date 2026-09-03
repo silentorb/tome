@@ -38,6 +38,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Multi-corpus editor sessions | [multi-corpus.md](./multi-corpus.md) |
 | Graph store API (Base / Queryable, executeImp) | [graph-store.md](./graph-store.md) |
 | Dev / release containers (GHCR) | [container.md](./container.md) |
+| Test tiers and weighted gating | [testing.md](./testing.md) |
 
 ## Split of concerns
 
