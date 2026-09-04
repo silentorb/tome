@@ -1,6 +1,6 @@
 import { isNonessentialName } from "./tiers";
 
-export type TestTier = "critical" | "nonessential";
+export type TestTier = "essential" | "nonessential";
 
 export type TestCaseResult = {
   name: string;
@@ -17,7 +17,7 @@ export type TierCounts = {
 };
 
 export type AggregatedResults = {
-  critical: TierCounts;
+  essential: TierCounts;
   nonessential: TierCounts;
   cases: TestCaseResult[];
 };
@@ -44,7 +44,7 @@ function classifyTier(name: string, classname: string): TestTier {
   if (isNonessentialName(name) || isNonessentialName(classname)) {
     return "nonessential";
   }
-  return "critical";
+  return "essential";
 }
 
 function caseStatus(inner: string): TestCaseResult["status"] {
@@ -80,15 +80,15 @@ export function parseJunitXml(xml: string, fileHint?: string): TestCaseResult[] 
 }
 
 export function aggregateResults(cases: TestCaseResult[]): AggregatedResults {
-  const critical = emptyCounts();
+  const essential = emptyCounts();
   const nonessential = emptyCounts();
   for (const c of cases) {
-    const bucket = c.tier === "nonessential" ? nonessential : critical;
+    const bucket = c.tier === "nonessential" ? nonessential : essential;
     if (c.status === "passed") bucket.passed += 1;
     else if (c.status === "failed") bucket.failed += 1;
     else bucket.skipped += 1;
   }
-  return { critical, nonessential, cases };
+  return { essential, nonessential, cases };
 }
 
 /** Pass rate among executed (non-skipped) cases; 1 when none executed. */

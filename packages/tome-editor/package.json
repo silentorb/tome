@@ -1,7 +1,7 @@
 {
   "name": "tome-editor",
   "description": "Browser markdown editor for design nodes in the Tome content graph",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -36,7 +36,7 @@
     "@vitejs/plugin-react": "4.3.4",
     "tome-extension-fixture": "workspace:^0.1.0",
     "tome-schema-diagram": "workspace:^0.1.0",
-    "tome-test-support": "workspace:^0.1.0",
+    "tome-test-support": "workspace:^0.2.0",
     "typescript": "5.8.2",
     "vite": "6.2.2",
     "@happy-dom/global-registrator": "17.4.4",

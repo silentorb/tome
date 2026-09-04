@@ -19,7 +19,7 @@ describe("tiers naming", () => {
 });
 
 describe("parseJunitXml", () => {
-  test("classifies critical and nonessential cases from Bun-style XML", () => {
+  test("classifies essential and nonessential cases from Bun-style XML", () => {
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <testsuites name="bun test" tests="4" failures="1" skipped="1" time="0.1">
   <testsuite name="ToolPanel" file="ToolPanel.test.tsx" tests="4" failures="1" skipped="1" time="0.05">
@@ -41,7 +41,7 @@ describe("parseJunitXml", () => {
 
     expect(cases[0]).toMatchObject({
       name: "close button clears the session",
-      tier: "critical",
+      tier: "essential",
       status: "passed",
     });
     expect(cases[1]).toMatchObject({
@@ -51,7 +51,7 @@ describe("parseJunitXml", () => {
     });
     expect(cases[2]).toMatchObject({
       status: "skipped",
-      tier: "critical",
+      tier: "essential",
     });
     expect(cases[3]).toMatchObject({
       classname: "[nonessential] Soft suite",
@@ -66,7 +66,7 @@ describe("passRate and evaluateGate", () => {
     expect(passRate({ passed: 0, failed: 0, skipped: 3 })).toBe(1);
   });
 
-  test("critical failure blocks even when nonessential is perfect", () => {
+  test("essential failure blocks even when nonessential is perfect", () => {
     const cases = parseJunitXml(`
       <testsuites>
         <testsuite name="A">
@@ -76,14 +76,14 @@ describe("passRate and evaluateGate", () => {
         </testsuite>
       </testsuites>`);
     const gate = evaluateGate(cases, 0.9);
-    expect(gate.decision).toEqual({ ok: false, reason: "critical_failure" });
-    expect(gate.criticalFailures).toHaveLength(1);
+    expect(gate.decision).toEqual({ ok: false, reason: "essential_failure" });
+    expect(gate.essentialFailures).toHaveLength(1);
   });
 
   test("single nonessential failure still passes at 90% when enough nonessential cases pass", () => {
     const names = Array.from({ length: 9 }, (_, i) => `soft-${i}`);
     const xmlParts = [
-      `<testcase name="critical-ok" classname="C"/>`,
+      `<testcase name="essential-ok" classname="C"/>`,
       ...names.map((n) => `<testcase name="[nonessential] ${n}" classname="C"/>`),
       `<testcase name="[nonessential] flaky" classname="C"><failure/></testcase>`,
     ];
@@ -131,7 +131,7 @@ describe("passRate and evaluateGate", () => {
         </testsuite>
       </testsuites>`);
     const agg = aggregateResults(cases);
-    expect(agg.critical).toEqual({ passed: 1, failed: 0, skipped: 1 });
+    expect(agg.essential).toEqual({ passed: 1, failed: 0, skipped: 1 });
     expect(agg.nonessential).toEqual({ passed: 0, failed: 1, skipped: 0 });
   });
 
@@ -141,6 +141,7 @@ describe("passRate and evaluateGate", () => {
       0.9,
     );
     expect(formatGateSummary(pass)).toContain("result: PASS");
+    expect(formatGateSummary(pass)).toContain("essential:");
 
     const fail = evaluateGate(
       parseJunitXml(
@@ -149,5 +150,6 @@ describe("passRate and evaluateGate", () => {
       0.9,
     );
     expect(formatGateSummary(fail)).toContain("result: FAIL");
+    expect(formatGateSummary(fail)).toContain("essential test failure");
   });
 });

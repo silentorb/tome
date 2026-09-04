@@ -1,6 +1,6 @@
 {
   "name": "tome-sequencing",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -23,7 +23,7 @@
     "tome-imp-sql": "workspace:^0.5.0",
     "tome-interfaces": "workspace:^0.1.0",
     "tome-flatfile": "workspace:^0.1.0",
-    "tome-query": "workspace:^0.5.0",
+    "tome-query": "workspace:^0.6.0",
     "tome-sequencing-interfaces": "workspace:^0.1.0",
     "tome-sequencing-resolution": "workspace:^0.1.0"
   },
@@ -35,7 +35,7 @@
     "@types/react-dom": "19.0.4",
     "happy-dom": "17.4.4",
     "react-dom": "19.0.0",
-    "tome-test-support": "workspace:^0.1.0",
+    "tome-test-support": "workspace:^0.2.0",
     "typescript": "5.8.2"
   },
   "scripts": {

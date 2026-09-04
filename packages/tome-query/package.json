@@ -1,6 +1,6 @@
 {
   "name": "tome-query",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -31,7 +31,7 @@
     "@types/react-dom": "19.0.4",
     "happy-dom": "17.4.4",
     "react-dom": "19.0.0",
-    "tome-test-support": "workspace:^0.1.0",
+    "tome-test-support": "workspace:^0.2.0",
     "typescript": "5.8.2"
   },
   "scripts": {

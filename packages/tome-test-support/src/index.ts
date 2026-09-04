@@ -1,6 +1,6 @@
 export {
   NONESSENTIAL_PREFIX,
-  criticalTest,
+  essentialTest,
   nonessentialTest,
   describeNonessential,
   isNonessentialName,

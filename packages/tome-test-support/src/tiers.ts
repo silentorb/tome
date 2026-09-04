@@ -6,8 +6,8 @@ export const NONESSENTIAL_PREFIX = "[nonessential] ";
 type TestFn = Parameters<typeof test>[1];
 type TestOptions = Parameters<typeof test>[2];
 
-/** Explicit critical case. Plain `test(...)` is also critical by default. */
-export function criticalTest(name: string, fn: TestFn, options?: TestOptions) {
+/** Explicit essential case. Plain `test(...)` is also essential by default. */
+export function essentialTest(name: string, fn: TestFn, options?: TestOptions) {
   return test(name, fn, options);
 }
 

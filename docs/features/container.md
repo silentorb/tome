@@ -128,7 +128,7 @@ gunzip -c tome-release.tar.gz | docker load
 ## Verification
 
 - Release CI: `.github/workflows/container.yml` runs on `v*` tags (and `workflow_dispatch` of a `v*` ref), builds release, runs `ensure-deps` + `test` with `--network none`, then pushes semver tags.
-- Offline `test` runs root `bun run test` → **weighted** critical/nonessential gating (see [`testing.md`](./testing.md)).
+- Offline `test` runs root `bun run test` → **weighted** essential/nonessential gating (see [`testing.md`](./testing.md)).
 - Dev: open workbench / rebuild Compose `tome` service after `docker/` toolchain changes.
 - Lockfile drift on release: change `bun.lock` / `package.json` under the working tree → `ensure-deps` must exit non-zero.
 

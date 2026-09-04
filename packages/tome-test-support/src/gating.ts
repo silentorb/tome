@@ -8,15 +8,15 @@ import {
 
 export type GateDecision =
   | { ok: true; reason: "passed" }
-  | { ok: false; reason: "critical_failure" | "nonessential_threshold" };
+  | { ok: false; reason: "essential_failure" | "nonessential_threshold" };
 
 export type GateEvaluation = {
   decision: GateDecision;
-  critical: TierCounts;
+  essential: TierCounts;
   nonessential: TierCounts;
   nonessentialPassRate: number;
   minNonessentialPassRate: number;
-  criticalFailures: TestCaseResult[];
+  essentialFailures: TestCaseResult[];
   nonessentialFailures: TestCaseResult[];
 };
 
@@ -38,22 +38,22 @@ export function evaluateGate(
   minNonessentialPassRate: number,
 ): GateEvaluation {
   const aggregated: AggregatedResults = aggregateResults(cases);
-  const criticalFailures = cases.filter(
-    (c) => c.tier === "critical" && c.status === "failed",
+  const essentialFailures = cases.filter(
+    (c) => c.tier === "essential" && c.status === "failed",
   );
   const nonessentialFailures = cases.filter(
     (c) => c.tier === "nonessential" && c.status === "failed",
   );
   const nonessentialPassRate = passRate(aggregated.nonessential);
 
-  if (criticalFailures.length > 0) {
+  if (essentialFailures.length > 0) {
     return {
-      decision: { ok: false, reason: "critical_failure" },
-      critical: aggregated.critical,
+      decision: { ok: false, reason: "essential_failure" },
+      essential: aggregated.essential,
       nonessential: aggregated.nonessential,
       nonessentialPassRate,
       minNonessentialPassRate,
-      criticalFailures,
+      essentialFailures,
       nonessentialFailures,
     };
   }
@@ -61,40 +61,40 @@ export function evaluateGate(
   if (!nonessentialGateOk(aggregated.nonessential, minNonessentialPassRate)) {
     return {
       decision: { ok: false, reason: "nonessential_threshold" },
-      critical: aggregated.critical,
+      essential: aggregated.essential,
       nonessential: aggregated.nonessential,
       nonessentialPassRate,
       minNonessentialPassRate,
-      criticalFailures,
+      essentialFailures,
       nonessentialFailures,
     };
   }
 
   return {
     decision: { ok: true, reason: "passed" },
-    critical: aggregated.critical,
+    essential: aggregated.essential,
     nonessential: aggregated.nonessential,
     nonessentialPassRate,
     minNonessentialPassRate,
-    criticalFailures,
+    essentialFailures,
     nonessentialFailures,
   };
 }
 
 export function formatGateSummary(evaluation: GateEvaluation): string {
-  const { critical, nonessential, nonessentialPassRate, minNonessentialPassRate } =
+  const { essential, nonessential, nonessentialPassRate, minNonessentialPassRate } =
     evaluation;
   const ratePct = (nonessentialPassRate * 100).toFixed(1);
   const minPct = (minNonessentialPassRate * 100).toFixed(1);
   const lines = [
     "Weighted test gate summary",
-    `  critical:     ${critical.passed} passed, ${critical.failed} failed, ${critical.skipped} skipped`,
+    `  essential:    ${essential.passed} passed, ${essential.failed} failed, ${essential.skipped} skipped`,
     `  nonessential: ${nonessential.passed} passed, ${nonessential.failed} failed, ${nonessential.skipped} skipped (${ratePct}% pass rate; min ${minPct}%)`,
   ];
 
-  if (evaluation.criticalFailures.length > 0) {
-    lines.push("  critical failures:");
-    for (const f of evaluation.criticalFailures) {
+  if (evaluation.essentialFailures.length > 0) {
+    lines.push("  essential failures:");
+    for (const f of evaluation.essentialFailures) {
       lines.push(`    - ${f.classname}: ${f.name}${f.file ? ` (${f.file})` : ""}`);
     }
   }
@@ -106,8 +106,8 @@ export function formatGateSummary(evaluation: GateEvaluation): string {
   }
 
   if (!evaluation.decision.ok) {
-    if (evaluation.decision.reason === "critical_failure") {
-      lines.push("  result: FAIL (critical test failure)");
+    if (evaluation.decision.reason === "essential_failure") {
+      lines.push("  result: FAIL (essential test failure)");
     } else {
       lines.push("  result: FAIL (nonessential pass rate below threshold)");
     }

@@ -6,8 +6,8 @@ Shared **test infrastructure** (not a product package): tier helpers, JUnit clas
 
 ## When to use
 
-- Prefer plain `test(...)` for critical coverage (default tier).
-- Use `nonessentialTest(...)` only when a case still has value but is brittle / race-prone under happy-dom (see [`docs/features/testing.md`](../../docs/features/testing.md)).
+- Prefer plain `test(...)` for essential coverage (default tier).
+- Use `nonessentialTest(...)` when a case still has value but stays brittle (see [`docs/features/testing.md`](../../docs/features/testing.md)).
 - Do not invent alternate prefixes or skip-based “tiers”.
 
 ## Run / test

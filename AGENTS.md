@@ -21,7 +21,7 @@
 | `packages/tome-sequencing-interfaces/` | Shared sequencing domain types |
 | `packages/tome-sequencing-resolution/` | Relative chronology constraint resolution |
 | `packages/tome-sequencing/` | Timeline page block (Imp query + visx) |
-| `packages/tome-test-support/` | Critical/nonessential test helpers + weighted gate math |
+| `packages/tome-test-support/` | Essential/nonessential test helpers + weighted gate math |
 | `packages/tome-extension-*/` | Optional extensions (e.g. `tome-extension-fixture` for tests) |
 
 Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to work in the package). See [`packages/README.md`](./packages/README.md).
@@ -33,18 +33,18 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 - Feature specs: [`docs/features/`](./docs/features/) (read only the doc matching your task).
 - Package notes: each package's `README.md` (context) and `AGENTS.md` (implementation).
 - TypeScript-to-TypeScript imports are extensionless (no `.ts` suffix).
-- **Regression tests:** When fixing table views, dynamic fields, or related API bugs, add a regression test in the same change. Prefer a **critical**, deterministic assertion; do not mark regression coverage nonessential unless the user waives a hard gate.
+- **Regression tests:** When fixing table views, dynamic fields, or related API bugs, add a regression test in the same change. Prefer an **essential**, durable assertion; do not mark regression coverage nonessential unless the user waives a hard gate.
 - **UI tests:** New or changed React UI (editor webview, interactive page blocks, extension components) should include tests using **`bun:test`**, **`@testing-library/react`**, and **happy-dom** (`@happy-dom/global-registrator` via `--preload`). Follow the setup in `tome-editor` or `tome-query` (`tests/test-setup.ts`). Do not introduce a different DOM test runner for Tome UI packages.
 
 ### Robust UI testing
 
-Prefer **critical** tests when behavior is deterministic:
+Essential tests should be **deterministic, reliable, and durable**. Prefer essential coverage when a case can meet that bar. Examples of good essential shape (not a checklist that unlocks essential tier or dropping `nonessentialTest`):
 
 - Assert on stable outcomes: mock call counts, returned state, role/label text after a click
 - Use synchronous `fireEvent` (or `userEvent`) on elements that **remain mounted**
 - Prefer testing close/handler paths via props/callbacks over DOM teardown side effects
 
-**Do not** add critical tests that are brittle or race-prone (use `nonessentialTest` from `tome-test-support` only when the case still adds value):
+**Don’t add brittle essential tests.** Use `nonessentialTest` from `tome-test-support` when the case still adds value but stays brittle. Examples of brittleness (not exhaustive; races are among the worst forms):
 
 - `fireEvent` on a node whose handler synchronously unmounts that node
 - Hard-coded `setTimeout` sleeps instead of fake timers or stable `waitFor` conditions
@@ -82,5 +82,7 @@ Internal workspace dependencies use caret-locked ranges: `"tome-db": "workspace:
 **Root `tome` version** (repo-root `package.json`) is the **release / container** version. Bump it only when tagging a container publish — not on every workspace package bump. Git tag `v<version>` must match the root version; see [`docs/features/container.md`](./docs/features/container.md).
 
 **Agent flow (packages):** review the settled diff, classify each touched package (`minor` or `patch`), then run `bash scripts/bump-version.sh <package> <level>` from **silentorb-workbench** (or the thin delegator in this repo: `bun scripts/bump-version.ts`). The script scans tome and imp-ts packages for range updates and cascades on `minor`. Refresh lockfiles with `--install` or manually: `bun install` in both `.mnt/tome` and `.mnt/imp-ts` when imp packages change. Reconcile bump levels at commit time — see workbench [`plan-commit-workflow.mdc`](../../.cursor/rules/plan-commit-workflow.mdc).
+
+**Agent flow (after plan implementation):** before awaiting commit approval, print a **tag bump preview** for this repo when the change set is tag-relevant: workspace packages (current → proposed next + `minor`/`patch` why), cascades, proposed root `tome` version, and resulting `v*` tag **if** the user later says **commit and tag tome**. Do not bump or tag until asked. Details: workbench `plan-commit-workflow.mdc` § After plan implementation.
 
 **Agent flow (release tag):** when the user says **commit and tag tome**, also bump the root package (`bash scripts/bump-version.sh tome <minor|patch>`), include it in the commit, then create a local annotated tag with `bash scripts/git-tag-version.sh tome`. Do **not** push — the user pushes commit + tag when ready for GHCR semver.

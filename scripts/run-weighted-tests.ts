@@ -4,8 +4,8 @@
  *
  * 1. Runs root typecheck (blocking).
  * 2. Runs each package suite with Bun JUnit output (continues after failures).
- * 3. Classifies cases as critical vs nonessential ([nonessential] name/classname prefix).
- * 4. Gates: any critical failure → exit 1; else nonessential pass rate must meet threshold.
+ * 3. Classifies cases as essential vs nonessential ([nonessential] name/classname prefix).
+ * 4. Gates: any essential failure → exit 1; else nonessential pass rate must meet threshold.
  *
  * Env:
  *   TOME_TEST_NONESSENTIAL_PASS_RATE — default 0.90
