@@ -247,14 +247,67 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     fn: (entry: RelationshipRecordRef) => void,
     options?: { includeArchived?: boolean },
   ): void {
-    this.flatfile.forEachRelationshipRecord(fn, options);
+    // Live records live in the SQLite cache after sync. Archived edges are
+    // flatfile-only — fall back when the caller asks for them.
+    if (options?.includeArchived) {
+      this.flatfile.forEachRelationshipRecord(fn, options);
+      return;
+    }
+    const rows = this.cache.queryAll<{
+      node_a: string;
+      node_b: string;
+      composite_type: string;
+      properties: string;
+    }>(
+      `SELECT node_a, node_b, composite_type, properties
+       FROM relationship_records
+       ORDER BY id`,
+    );
+    for (const row of rows) {
+      let properties: Properties = {};
+      try {
+        properties = JSON.parse(row.properties) as Properties;
+      } catch {
+        properties = {};
+      }
+      fn({
+        a: row.node_a,
+        b: row.node_b,
+        type: row.composite_type,
+        properties,
+      });
+    }
   }
 
   listRelationshipProjections(
     nodeId: string,
     options?: ListRelationshipProjectionsOptions,
   ): Relationship[] {
-    return this.flatfile.listRelationshipProjections(nodeId, options);
+    const direction = options?.direction ?? "both";
+    const projectionType = options?.projectionType;
+    if (direction === "from") {
+      return this.cache.listRelationshipsFromSource(nodeId, projectionType);
+    }
+    if (direction === "to") {
+      return this.cache.listRelationshipsToTarget(nodeId, projectionType);
+    }
+    const from = this.cache.listRelationshipsFromSource(nodeId, projectionType);
+    const to = this.cache.listRelationshipsToTarget(nodeId, projectionType);
+    if (to.length === 0) return from;
+    if (from.length === 0) return to;
+    const seen = new Set(from.map((rel) => rel.id));
+    const merged = from.slice();
+    for (const rel of to) {
+      if (seen.has(rel.id)) continue;
+      seen.add(rel.id);
+      merged.push(rel);
+    }
+    return merged;
+  }
+
+  /** Body substring scan via SQLite (backlink discovery). */
+  listNodesWithBodyLike(pattern: string): { id: string; body: string }[] {
+    return this.cache.listNodesWithBodyLike(pattern);
   }
 
   executeImp(graph: ImpGraph, context?: ExecuteImpContext): ImpCollectionResult {

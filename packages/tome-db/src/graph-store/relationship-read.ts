@@ -147,13 +147,25 @@ export function readStoreCountIncidentRelationships(
   return store.countIncidentRelationships(nodeId);
 }
 
+function hasListNodesWithBodyLike(
+  store: RelationshipReadStore,
+): store is RelationshipReadStore & {
+  listNodesWithBodyLike: (pattern: string) => { id: string; body: string }[];
+} {
+  return typeof (store as { listNodesWithBodyLike?: unknown }).listNodesWithBodyLike === "function";
+}
+
 /** Nodes whose stored body text matches a substring (backlink discovery). */
 export function readStoreListNodesWithBodyLike(
   store: RelationshipReadStore,
   needle: string,
 ): { id: string; body: string }[] {
-  const pattern = needle.replace(/^%|%$/g, "");
   if (isGraphStoreBase(store)) {
+    // ComposedGraphStore exposes listNodesWithBodyLike via the SQLite cache.
+    if (hasListNodesWithBodyLike(store)) {
+      return store.listNodesWithBodyLike(needle);
+    }
+    const pattern = needle.replace(/^%|%$/g, "");
     const matches: { id: string; body: string }[] = [];
     for (const id of store.listNodeIds()) {
       const node = store.getNode(id);

@@ -68,7 +68,7 @@ type GraphStoreCapabilities =
 | Dynamic runtime | `imp-execution` | Walk Imp DAG; read-only host |
 | Tome flatfile host | `tome-imp-flatfile` | RowSource over flatfile scans |
 | SQL binder | `tome-imp-sql` | Compile to SQL |
-| Composed host | `ComposedGraphStore` | Base→flatfile, executeImp→sql, internal `CacheSync` |
+| Composed host | `ComposedGraphStore` | Writes→flatfile; projection/incident reads→SQLite cache; executeImp→sql; internal `CacheSync` |
 
 ### Editor vs integrator
 
@@ -132,7 +132,12 @@ Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read 
 
 ### Base-tier relationship reads
 
-`listRelationshipProjections(nodeId, { direction, projectionType })` on **`TomeGraphStoreBase`** expands canonical relationship records via flatfile. Domain modules use helpers in `tome-db/src/graph-store/relationship-read.ts` (`listRelationshipsFromSource`, `readStoreGetNode`, …) so reads work on both graph store and legacy cache during migration.
+Domain modules use helpers in `tome-db/src/graph-store/relationship-read.ts` (`listRelationshipsFromSource`, `readStoreListNodesWithBodyLike`, `readStoreGetNode`, …) and `relationship-traverse.ts` (`listRelationshipsForComposite`).
+
+- **`ComposedGraphStore` (editor / tome-server host):** projection and incident reads — including `listRelationshipProjections`, live `forEachRelationshipRecord`, body backlink scans, and composite listing via `queryAll` — are served from the **SQLite query cache** (indexed). Flatfile remains the write path and source of truth; sync keeps the cache current. This avoids re-scanning every relationship shard on each page or table view.
+- **Flatfile-only Base stores** (no SQLite): `listRelationshipProjections` still expands canonical records by scanning flatfile relationship trees.
+
+`listRelationshipsForComposite` prefers `queryAll` whenever the store exposes it, and only falls back to Base `forEachRelationshipRecord` when there is no query cache.
 
 Phase 2 removes direct `searchNodes(cache)` and extension raw SQL for Imp graphs. Search heuristics (title+body, title-first ranking, `matchPreview` on body-only hits) live in Tome adapters (`performTomeTextSearch`, flatfile `textSearch`).
 

@@ -5,11 +5,17 @@ import {
   readStoreListNodesWithBodyLike,
 } from "./graph-store/relationship-read";
 import { findMarkdownLinksToTarget } from "tome-flatfile/markdown-links";
-import { getNodeDetail } from "./queries";
 import type { NodeBacklink, NodePageMetadata } from "tome-graph-interfaces";
 
 export type { NodeBacklink, NodePageMetadata } from "tome-graph-interfaces";
 
+function titleFromNodeProperties(properties: Record<string, unknown>): string {
+  const title = properties.title;
+  if (typeof title === "string" && title.trim()) return title.trim();
+  const alias = properties.alias;
+  if (typeof alias === "string" && alias.trim()) return alias.trim();
+  return "Untitled";
+}
 
 function isoTimestampFromProperties(
   properties: Record<string, unknown>,
@@ -35,11 +41,12 @@ export function getNodePageMetadata(db: RelationshipReadStore, id: string): Node
     if (matches.length === 0 || seenSources.has(candidate.id)) continue;
 
     seenSources.add(candidate.id);
-    const source = getNodeDetail(db, candidate.id);
+    // Title only — avoid getNodeDetail (re-runs isTypeTable + primaryTypeTitle).
+    const sourceNode = readStoreGetNode(db, candidate.id);
     const linkText = matches[0]?.linkText.trim() || null;
     backlinks.push({
       sourceId: candidate.id,
-      title: source?.title ?? "Untitled",
+      title: sourceNode ? titleFromNodeProperties(sourceNode.properties) : "Untitled",
       linkText,
     });
   }

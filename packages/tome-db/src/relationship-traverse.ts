@@ -65,6 +65,14 @@ function isGraphStoreBase(store: RelationshipReadStore): store is import("tome-g
   return typeof (store as import("tome-graph-interfaces").TomeGraphStoreBase).listRelationshipProjections === "function";
 }
 
+function hasQueryAll(
+  store: RelationshipReadStore,
+): store is RelationshipReadStore & {
+  queryAll: <T extends Record<string, unknown>>(sql: string, ...params: unknown[]) => T[];
+} {
+  return typeof (store as { queryAll?: unknown }).queryAll === "function";
+}
+
 /** All projections for a composite relationship type incident to nodeId. */
 export function listRelationshipsForComposite(
   db: RelationshipReadStore,
@@ -72,6 +80,33 @@ export function listRelationshipsForComposite(
   compositeType: string,
 ): Relationship[] {
   const normalized = normalizeAssociationId(compositeType);
+
+  // Prefer indexed SQLite when available (ComposedGraphStore / GraphDatabase).
+  // Base-tier forEach over flatfile re-scans every relationship shard.
+  if (hasQueryAll(db)) {
+    const rows = db.queryAll<{
+      id: string;
+      record_id: string;
+      source_node_id: string;
+      target_node_id: string;
+      type: string;
+      properties: string;
+    }>(
+      `SELECT p.id, p.record_id, p.source_node_id, p.target_node_id, p.type, p.properties
+       FROM relationship_projections p
+       INNER JOIN relationship_records r ON p.record_id = r.id
+       WHERE r.composite_type = ?
+         AND (p.source_node_id = ? OR p.target_node_id = ?)
+       ORDER BY p.id`,
+      normalized,
+      nodeId,
+      nodeId,
+    );
+    const composite = dedupeByRecordId(mapProjectionRows(rows));
+    if (composite.length > 0) return composite;
+    return listRelationshipsFromSource(db, nodeId, normalized);
+  }
+
   if (isGraphStoreBase(db)) {
     const registry = db.readAssociations();
     const seen = new Set<string>();
@@ -91,27 +126,6 @@ export function listRelationshipsForComposite(
     if (results.length > 0) return dedupeByRecordId(results);
     return listRelationshipsFromSource(db, nodeId, normalized);
   }
-
-  const rows = db.queryAll<{
-    id: string;
-    record_id: string;
-    source_node_id: string;
-    target_node_id: string;
-    type: string;
-    properties: string;
-  }>(
-    `SELECT p.id, p.record_id, p.source_node_id, p.target_node_id, p.type, p.properties
-     FROM relationship_projections p
-     INNER JOIN relationship_records r ON p.record_id = r.id
-     WHERE r.composite_type = ?
-       AND (p.source_node_id = ? OR p.target_node_id = ?)
-     ORDER BY p.id`,
-    normalized,
-    nodeId,
-    nodeId,
-  );
-  const composite = dedupeByRecordId(mapProjectionRows(rows));
-  if (composite.length > 0) return composite;
 
   return listRelationshipsFromSource(db, nodeId, normalized);
 }
