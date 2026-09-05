@@ -2,7 +2,7 @@
 
 ## Summary
 
-A **set** is a node that contains other nodes via a relationship type that carries the **`set` trait** in `associations.json`. Set semantics are orthogonal to any particular storage slug: Tome resolves set/member roles from traits and from **caller context** (usually `views.json`), not from a hard-coded membership composite on each type table.
+A **set** is a node that contains other nodes via an association that carries the **`set` trait** in `associations.json`. Set semantics are orthogonal to any particular storage slug: Tome resolves set/member roles from traits and from **caller context** (usually `views.json`), not from a hard-coded membership composite on each type table.
 
 | Concept | Role |
 | --- | --- |
@@ -17,7 +17,7 @@ A **set** is a node that contains other nodes via a relationship type that carri
 | Association id | Perspective labels | Traits | Typical use |
 | --- | --- | --- | --- |
 | *(ULID)* | Members / Membership | `set` | Plain type tables, Archive |
-| *(ULID)* | Members / Ordered membership | `set`, `ordered` | Scenes, Parts, Products (sequence on `order`) |
+| *(ULID)* | Ordered members / Ordered membership | `set`, `ordered` | Scenes, Parts, Products (sequence on `order`) |
 
 There is **no `membershipComposite` field** on `table-schemas.json`. Which set association applies for a node comes from **views / caller context** via `setRoleAssociationForNode` (view association ULID for that node, else a sole set-trait registry fallback).
 
@@ -39,7 +39,7 @@ For design-domain meaning of types and sets, read [`/workspaces/marloth-story/do
 
 ### Set trait and endpoint labels
 
-Every relationship type in `associations.json` defines a `perspectives` **tuple of exactly two** display labels. Types with `traits` including `set` (or `{ "key": "set", ... }`) are set associations. Directed cache identity is `associationId:endpointIndex` (not the label text).
+Every association in `associations.json` defines a `perspectives` **tuple of exactly two** display labels. Associations with `traits` including `set` (or `{ "key": "set", ... }`) are set associations. Directed cache identity is `associationId:endpointIndex` (not the label text).
 
 **Example content record (Marloth set association):**
 

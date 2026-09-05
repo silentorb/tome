@@ -73,6 +73,7 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 - Schema: union relationship rules and enums (with conflict rules above).
 - `workspace.json` is **not** flattened. Each corpus **must** have `homeNodeId`. Session API lists corpora; editor chrome uses the **active** corpus only.
 - Archive: each corpus’s `archiveNodeId`; archiving uses that node’s hub; cache recompute considers every hub.
+- **Shared associations:** corpora that share an association must reuse the **same association ULID** with an identical definition; display titles alone do not merge. Example: Marloth and Translucence both declare plain set membership as `01KXBNPNJDENZ9BXN5BYZ7JKPT` (Members / Membership, `set` trait).
 
 ### Editor chrome
 
