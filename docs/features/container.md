@@ -59,13 +59,14 @@ ensure-deps-release.sh + entrypoint-release.sh ──► GHCR image
    - `/opt/imp-ts` — baked Imp sibling
 5. Entrypoint validates lockfile hash; on drift, **fails** with rebuild instructions (never fetches).
 6. Publish `ghcr.io/silentorb/tome` **only** for git tags matching `v*` (semver + `major.minor`). Pushes to `main` do not publish an image.
+7. Published tags are a **plain single-arch** image (`linux/amd64`), not an OCI index. Multi-arch indexes stay deferred until real extra platforms are published.
 
 ### Semver image tags ↔ root version
 
 GHCR semver tags come from **git tags** matching `v*` (e.g. `v0.1.0`), not from workspace package versions under `packages/*`.
 
 - The **repo-root** `package.json` `"version"` is the release / container version.
-- Agents create a **local** annotated tag `v<version>` after a release commit when the user says **commit and tag tome** (`bash scripts/git-tag-version.sh tome` from silentorb-workbench). Ordinary package bumps do **not** create tags.
+- Agents create a **local** annotated tag `v<version>` after a dedicated bump commit when the user says **bump** or **commit and bump** (`bash scripts/git-tag-version.sh tome` from silentorb-workbench). Plain **commit** does **not** bump versions or create tags.
 - **Push is manual** — push the annotated `v*` tag (and its commit) when you want CI to publish. Agents do not push. Ordinary pushes to `main` do not build or publish GHCR images.
 
 ## Inputs / outputs / artifacts

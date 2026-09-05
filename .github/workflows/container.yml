@@ -82,6 +82,10 @@ jobs:
             tome=.
             imp=./imp-ts-checkout
           push: true
+          # Plain single-arch image (not an attestation-bearing OCI index).
+          platforms: linux/amd64
+          provenance: false
+          sbom: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
