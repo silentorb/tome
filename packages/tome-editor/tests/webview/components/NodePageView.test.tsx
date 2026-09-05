@@ -22,6 +22,7 @@ describe("NodePageView", () => {
         <NodePageView
           api={api}
           node={makeNodePageDetail()}
+          title="Example page"
           saveState="idle"
           metadataExpanded={false}
           onMetadataExpandedChange={() => {}}
@@ -54,6 +55,7 @@ describe("NodePageView", () => {
         <NodePageView
           api={api}
           node={makeNodePageDetail()}
+          title="Example page"
           saveState="idle"
           metadataExpanded={false}
           onMetadataExpandedChange={() => {}}
@@ -84,6 +86,7 @@ describe("NodePageView", () => {
         <NodePageView
           api={api}
           node={node}
+          title={node.title}
           saveState="idle"
           metadataExpanded={false}
           onMetadataExpandedChange={() => {}}
@@ -119,6 +122,7 @@ describe("NodePageView", () => {
         <NodePageView
           api={api}
           node={node}
+          title={node.title}
           saveState="idle"
           metadataExpanded={false}
           onMetadataExpandedChange={() => {}}
@@ -147,6 +151,7 @@ describe("NodePageView", () => {
         <NodePageView
           api={api}
           node={node}
+          title={node.title}
           saveState="idle"
           metadataExpanded={false}
           onMetadataExpandedChange={() => {}}
@@ -180,6 +185,7 @@ describe("NodePageView", () => {
         <NodePageView
           api={api}
           node={node}
+          title={node.title}
           saveState="idle"
           metadataExpanded={false}
           onMetadataExpandedChange={() => {}}
@@ -231,6 +237,7 @@ describe("NodePageView", () => {
         <NodePageView
           api={api}
           node={node}
+          title={node.title}
           saveState="idle"
           metadataExpanded={true}
           onMetadataExpandedChange={() => {}}
@@ -282,6 +289,7 @@ describe("NodePageView", () => {
         <NodePageView
           api={api}
           node={node}
+          title={node.title}
           saveState="idle"
           metadataExpanded={false}
           onMetadataExpandedChange={() => {}}
@@ -372,6 +380,7 @@ describe("NodePageView IS_A relation section", () => {
               }),
             ],
           })}
+          title="Example page"
           saveState="idle"
           metadataExpanded={true}
           onMetadataExpandedChange={() => {}}

@@ -56,7 +56,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     options?: { keepalive?: boolean },
   ): Promise<void> {
     await fetchJson(`/api/nodes/${id}`, {
-      method: "PUT",
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
       keepalive: options?.keepalive === true,

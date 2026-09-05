@@ -56,6 +56,9 @@ interface TomeEditorProps {
   onBodyChange?: (body: string) => void;
 }
 
+/** Effect deps that remount Milkdown — callbacks are read via refs and must not appear here. */
+export const TOME_EDITOR_MOUNT_DEPS = ["api", "nodeId", "initialBody"] as const;
+
 export function TomeEditor({
   api,
   nodeId,
@@ -74,6 +77,10 @@ export function TomeEditor({
   const mentionRef = useRef<MentionState | null>(null);
   const mentionRangeRef = useRef<{ replaceFrom: number; replaceTo: number } | null>(null);
   const resultsRef = useRef<NodeSummary[]>([]);
+  const onBodyChangeRef = useRef(onBodyChange);
+  const onEditorBaselineRef = useRef(onEditorBaseline);
+  onBodyChangeRef.current = onBodyChange;
+  onEditorBaselineRef.current = onEditorBaseline;
   mentionRef.current = mention;
   resultsRef.current = results;
 
@@ -100,6 +107,11 @@ export function TomeEditor({
     [closeMention],
   );
 
+  const closeMentionRef = useRef(closeMention);
+  const insertMentionRef = useRef(insertMention);
+  closeMentionRef.current = closeMention;
+  insertMentionRef.current = insertMention;
+
   useEffect(() => {
     if (!mention) return;
     const handle = window.setTimeout(() => {
@@ -121,6 +133,8 @@ export function TomeEditor({
     let detachEditorLinkNavigation: (() => void) | null = null;
     let detachBlockHandleMenu: (() => void) | null = null;
     let detachHeadingKeymap: (() => void) | null = null;
+    const generation = Symbol("tome-editor-mount");
+    let activeGeneration: symbol | null = generation;
     setInitError(null);
     setIsEmpty(!initialBody.trim());
     root.replaceChildren();
@@ -129,9 +143,9 @@ export function TomeEditor({
       let blockMenuBuilder = buildCalloutSlashMenu;
       try {
         const manifest = await api.getExtensionsManifest();
-        if (destroyed) return;
+        if (destroyed || activeGeneration !== generation) return;
         await loadEditorBundles(manifest);
-        if (destroyed) return;
+        if (destroyed || activeGeneration !== generation) return;
         setPageBlockEmbedNodeId(nodeId);
         setPageBlockInvokeExtension((componentId, input, invokeNodeId) =>
           api.invokeExtension(componentId, input, invokeNodeId),
@@ -145,13 +159,13 @@ export function TomeEditor({
           );
         }
       } catch (err: unknown) {
-        if (!destroyed) {
+        if (!destroyed && activeGeneration === generation) {
           setInitError(err instanceof Error ? err.message : String(err));
         }
         return;
       }
 
-      if (destroyed) return;
+      if (destroyed || activeGeneration !== generation) return;
 
       crepe = new Crepe({
       root,
@@ -179,7 +193,7 @@ export function TomeEditor({
     });
     crepe.editor.use(pageBlockEmbed);
     await replaceBlockquoteInputRule(crepe.editor);
-    if (destroyed) return;
+    if (destroyed || activeGeneration !== generation) return;
 
     detachEditorLinkNavigation = attachEditorLinkNavigation(root);
 
@@ -197,7 +211,7 @@ export function TomeEditor({
           return;
         }
         setIsEmpty(!markdown.trim());
-        onBodyChange?.(markdown);
+        onBodyChangeRef.current?.(markdown);
       });
     });
 
@@ -206,18 +220,18 @@ export function TomeEditor({
     crepeRef.current = activeCrepe;
 
     void activeCrepe.create().then(async () => {
-      if (destroyed) return;
+      if (destroyed || activeGeneration !== generation) return;
       // Capture baseline from the initial doc so the first user edit (e.g. page-block
       // tab toggle) is saved — not mistaken for the load baseline.
       try {
         const initialMarkdown = await activeCrepe.editor.action(getMarkdown());
-        if (destroyed) return;
+        if (destroyed || activeGeneration !== generation) return;
         baselineCaptured = true;
         editorReady = true;
         setIsEmpty(!initialMarkdown.trim());
-        onEditorBaseline?.(initialMarkdown);
+        onEditorBaselineRef.current?.(initialMarkdown);
       } catch {
-        if (destroyed) return;
+        if (destroyed || activeGeneration !== generation) return;
         baselineCaptured = true;
         editorReady = true;
       }
@@ -245,7 +259,7 @@ export function TomeEditor({
           const mentionRange = activeMentionRangeAtSelection(state);
           if (!mentionRange) {
             mentionRangeRef.current = null;
-            if (mentionRef.current) closeMention();
+            if (mentionRef.current) closeMentionRef.current();
             return;
           }
           mentionRangeRef.current = {
@@ -270,7 +284,7 @@ export function TomeEditor({
           const state = mentionRef.current;
           if (!state) return;
           if (event.key === "Escape") {
-            closeMention();
+            closeMentionRef.current();
             event.preventDefault();
             return;
           }
@@ -294,7 +308,7 @@ export function TomeEditor({
             event.preventDefault();
             event.stopPropagation();
             syncMentionMenu();
-            if (item) insertMention(item);
+            if (item) insertMentionRef.current(item);
           }
         };
 
@@ -304,7 +318,7 @@ export function TomeEditor({
       });
     }).catch((err: unknown) => {
       console.error("Tome editor failed to initialize:", err);
-      if (!destroyed) {
+      if (!destroyed && activeGeneration === generation) {
         setInitError(err instanceof Error ? err.message : String(err));
       }
     });
@@ -313,6 +327,7 @@ export function TomeEditor({
 
     return () => {
       destroyed = true;
+      activeGeneration = null;
       setPageBlockInvokeExtension(null);
       if (editorDom && onKeyDown) {
         editorDom.removeEventListener("keydown", onKeyDown, true);
@@ -320,20 +335,22 @@ export function TomeEditor({
       detachEditorLinkNavigation?.();
       detachHeadingKeymap?.();
       detachBlockHandleMenu?.();
-      root.replaceChildren();
-      void crepe?.destroy();
+      const toDestroy = crepe;
       crepeRef.current = null;
+      void (async () => {
+        if (toDestroy) {
+          try {
+            await toDestroy.destroy();
+          } catch {
+            // Ignore destroy races when a newer mount already replaced the root.
+          }
+        }
+        if (root.isConnected) {
+          root.replaceChildren();
+        }
+      })();
     };
-  }, [
-    api,
-    closeMention,
-    initialBody,
-    insertMention,
-    onEditorBaseline,
-    onBodyChange,
-    nodeId,
-    title,
-  ]);
+  }, [api, initialBody, nodeId]);
 
   return (
     <div className="tome-editor-shell">

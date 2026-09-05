@@ -39,7 +39,7 @@ export function titleNeedsSave(nextTitle: string, savedTitle: string | null): bo
 
 export type PendingSavePayload = { document?: NodeBodyDocument; title?: string };
 
-/** Build a combined PUT patch for dirty pending fields, or null when nothing to flush. */
+/** Build a combined PATCH payload for dirty pending fields, or null when nothing to flush. */
 export function buildPendingSavePayload(
   pendingBody: string | null,
   pendingTitle: string | null,

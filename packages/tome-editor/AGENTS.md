@@ -6,7 +6,7 @@ Browser editor for design corpus nodes. **Client-only** — talks to `tome-serve
 
 ## Terminology
 
-- **Node** — graph entity; API `GET/PUT /api/nodes/:id`, search `GET /api/nodes/search`.
+- **Node** — graph entity; API `GET/PATCH /api/nodes/:id`, search `GET /api/nodes/search`.
 - **Page** — `NodePageView` UI for one node (title, metadata, sections).
 - **Relationship** — graph relationship; relationship property edits via `/api/nodes/:id/relationships/...`.
 - Navigation: `?node={id}` (`standaloneNodeUrl` in `src/webview/node-links.ts`).

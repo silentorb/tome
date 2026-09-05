@@ -151,6 +151,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
   );
   const [view, setView] = useState<AppView>(() => viewFromLocation());
   const [node, setNode] = useState<EditorNodePageDetail | null>(null);
+  const [pageTitle, setPageTitle] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [metadataExpanded, setMetadataExpanded] = useState(() => metadataExpandedFromLocation());
@@ -334,6 +335,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
       const editorMarkdown = documentToEditorMarkdown(detail.document);
       nodeIdRef.current = detail.id;
       setNode(detail);
+      setPageTitle(title);
       setView("node-page");
       setMetadataExpanded(false);
       pendingBody.current = editorMarkdown;
@@ -426,7 +428,11 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
 
       if (options?.keepalive) {
         if (patch.document !== undefined) savedDocument.current = patch.document;
-        if (patch.title !== undefined) savedTitle.current = patch.title;
+        if (patch.title !== undefined) {
+          savedTitle.current = patch.title;
+          setPageTitle(patch.title);
+          setNode((prev) => (prev ? { ...prev, title: patch.title! } : prev));
+        }
         void api.saveNode(id, patch, { keepalive: true }).catch(() => {});
         return;
       }
@@ -435,7 +441,11 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
       try {
         await api.saveNode(id, patch);
         if (patch.document !== undefined) savedDocument.current = patch.document;
-        if (patch.title !== undefined) savedTitle.current = patch.title;
+        if (patch.title !== undefined) {
+          savedTitle.current = patch.title;
+          setPageTitle(patch.title);
+          setNode((prev) => (prev ? { ...prev, title: patch.title! } : prev));
+        }
         setSaveState("saved");
       } catch {
         setSaveState("error");
@@ -473,6 +483,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
       const draft = makeDraftNodePageDetail();
       nodeIdRef.current = DRAFT_NODE_ID;
       setNode(draft);
+      setPageTitle("");
       setView("node-page");
       setSelectPageTitleOnMount(true);
       setMetadataExpanded(false);
@@ -591,7 +602,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
 
   useEffect(() => {
     const appTitle = workspace?.branding?.appTitle ?? "Tome";
-    syncDocumentTitle(view, node?.title, appTitle);
+    syncDocumentTitle(view, view === "node-page" ? pageTitle || null : node?.title, appTitle);
     const urlNodeId = nodeFromLocation();
     syncDocumentIcon({
       view,
@@ -606,6 +617,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     });
   }, [
     view,
+    pageTitle,
     node?.id,
     node?.title,
     node?.primaryTypeTitle,
@@ -626,37 +638,40 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     return () => window.removeEventListener("pagehide", onPageHide);
   }, [flushPendingSaves]);
 
-  const syncEditorBaseline = useCallback(
-    (markdown: string) => {
-      if (!node) return;
-      savedDocument.current = editorMarkdownToSaveDocument(markdown, node.title);
-      pendingBody.current = markdown;
-    },
-    [node],
+  const activeTitleForSave = useCallback(
+    () => pendingTitle.current ?? savedTitle.current ?? "",
+    [],
   );
+
+  const syncEditorBaseline = useCallback((markdown: string) => {
+    if (!nodeIdRef.current) return;
+    savedDocument.current = editorMarkdownToSaveDocument(markdown, activeTitleForSave());
+    pendingBody.current = markdown;
+  }, [activeTitleForSave]);
 
   const scheduleSave = useCallback(
     (body: string) => {
-      if (!node) return;
-      if (!bodyNeedsSave(body, savedDocument.current, node.title)) return;
+      if (!nodeIdRef.current) return;
+      const title = activeTitleForSave();
+      if (!bodyNeedsSave(body, savedDocument.current, title)) return;
       pendingBody.current = body;
       setSaveState("dirty");
       if (isDraftNodeId(nodeIdRef.current)) {
-        if (!isPersistableNodeTitle(pendingTitle.current ?? node.title)) return;
+        if (!isPersistableNodeTitle(pendingTitle.current ?? title)) return;
       }
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => {
         void flushPendingSaves();
       }, saveDebounceDelay);
     },
-    [flushPendingSaves, node],
+    [activeTitleForSave, flushPendingSaves],
   );
 
   const scheduleSaveTitle = useCallback(
     (title: string) => {
-      if (!node) return;
+      if (!nodeIdRef.current) return;
       const trimmed = title.trim();
-      setNode((prev) => (prev && prev.title !== title ? { ...prev, title } : prev));
+      setPageTitle(title);
       pendingTitle.current = trimmed;
       if (isDraftNodeId(nodeIdRef.current)) {
         if (!isPersistableNodeTitle(trimmed)) {
@@ -679,7 +694,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
         void flushPendingSaves();
       }, saveDebounceDelay);
     },
-    [flushPendingSaves, node],
+    [flushPendingSaves],
   );
 
   const goHome = useCallback(async () => {
@@ -929,6 +944,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
           <NodePageView
             api={api}
             node={node}
+            title={pageTitle}
             saveState={saveState}
             metadataExpanded={metadataExpanded}
             onMetadataExpandedChange={(expanded) => {
@@ -953,7 +969,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
             onAddQuickLink={() =>
               addQuickLinkForNode(
                 node.id,
-                node.title,
+                pageTitle,
                 resolveDocumentIcon({
                   view: "node-page",
                   nodeId: node.id,

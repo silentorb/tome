@@ -254,7 +254,7 @@ export function createApiHandler(
           if (!node) return json({ error: "not found" }, 404);
           return json({ node });
         }
-        if (req.method === "PUT") {
+        if (req.method === "PATCH") {
           const payload = (await req.json()) as {
             document?: unknown;
             title?: string;

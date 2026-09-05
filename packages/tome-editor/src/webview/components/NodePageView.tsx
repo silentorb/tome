@@ -21,6 +21,8 @@ import "./page-actions-menu.css";
 interface NodePageViewProps {
   api: EditorApi;
   node: EditorNodePageDetail;
+  /** Live title draft — independent of loaded `node.title` so edits do not remount the body. */
+  title: string;
   saveState: "idle" | "dirty" | "saving" | "saved" | "error";
   metadataExpanded: boolean;
   onMetadataExpandedChange: (expanded: boolean) => void;
@@ -46,6 +48,7 @@ interface NodePageViewProps {
 export function NodePageView({
   api,
   node,
+  title,
   saveState,
   metadataExpanded,
   onMetadataExpandedChange,
@@ -104,7 +107,7 @@ export function NodePageView({
           ) : null}
           <div className="tome-page-title-row">
             <PageTitle
-              value={node.title}
+              value={title}
               onChange={onTitleChange}
               selectOnMount={selectTitleOnMount}
               onSelected={onTitleSelected}
@@ -112,7 +115,7 @@ export function NodePageView({
             <div className="tome-page-title-actions">
               {showPageActions ? (
                 <PageActionsMenu
-                  recordTitle={node.title}
+                  recordTitle={title}
                   archived={node.archived}
                   disabled={saveState === "saving"}
                   archiveHubTitle={archiveHubTitle}

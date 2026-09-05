@@ -28,7 +28,7 @@ describe("saveNode keepalive", () => {
     );
 
     expect(calls).toHaveLength(1);
-    expect(calls[0]?.method).toBe("PUT");
+    expect(calls[0]?.method).toBe("PATCH");
     expect(calls[0]?.keepalive).toBe(true);
     expect(calls[0]?.body).toBe(JSON.stringify({ document: hiDoc }));
   });
@@ -50,6 +50,7 @@ describe("saveNode keepalive", () => {
     });
 
     expect(calls).toHaveLength(1);
+    expect(calls[0]?.method).toBe("PATCH");
     expect(calls[0]?.keepalive).toBe(false);
     expect(calls[0]?.body).toBe(
       JSON.stringify({ title: "Alpha", document: hiDoc }),

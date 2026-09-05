@@ -38,7 +38,7 @@ export function createHandlerClient(handler: (req: Request) => Promise<Response>
     async saveBody(id: string, body: string): Promise<void> {
       const document = storageMarkdownToDocument(body);
       await fetchJson(`/api/nodes/${id}`, {
-        method: "PUT",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ document }),
       });
