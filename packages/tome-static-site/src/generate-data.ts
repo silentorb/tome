@@ -11,10 +11,12 @@ import {
   schemaDiagramPageBlockServices,
   spatialGraphNodeDimensionScale,
 } from "tome-db";
+import { loadRedirectsFromContent } from "tome-flatfile";
 import type { ResolvedConfig } from "./config";
 import type { SiteData, SiteNode } from "./lib/site-types";
 import { buildExtraTabPayloadsAndRoutes, buildSiteNode } from "./lib/static-export";
 import { buildNodeUrlIndex, createNodeUrlResolver } from "./lib/node-urls";
+import { resolveRedirects } from "./lib/redirects";
 import { ExtensionHtmlRuntime } from "./extensions/loader";
 import { createPageBlockHtmlContext, renderNodeBodyHtml } from "./lib/page-block-html";
 import { resolveStaticSiteFooter } from "./lib/static-site-footer";
@@ -41,6 +43,13 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
 
   const { pathById, aliasToId } = buildNodeUrlIndex(nodes);
   const urls = createNodeUrlResolver({ pathById, aliasToId, base: config.base });
+  const redirectsFile = loadRedirectsFromContent(config.contentDir);
+  const redirects = resolveRedirects({
+    redirects: redirectsFile.redirects,
+    pathById,
+    tabRoutes,
+    base: config.base,
+  });
 
   const titleById: Record<string, string> = {};
   for (const node of nodes) {
@@ -97,6 +106,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
     aliasToId,
     tabItemsPayloads,
     tabRoutes,
+    redirects,
   };
 }
 

@@ -1,9 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
 import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, seedTestViews, seedTestWorkspace, TEST_STATIC_SITE_HOME_NODE_ID, type TestContentFixture, TEST_MEMBER_OF_ASSOCIATION_ID } from "tome-db/content";
+import { invalidateRedirectsCache } from "tome-flatfile";
 import { writeSiteData, defaultSiteDataPath } from "../src/generate-data";
 import { tabPayloadKey } from "../src/lib/static-export";
 import type { ResolvedConfig } from "../src/config";
@@ -81,6 +82,7 @@ describe("writeSiteData", () => {
     expect(data.staticSiteFooter).toBeUndefined();
     expect(data.pathById[instanceId.toLowerCase()]).toBe(instanceId.toLowerCase());
     expect(data.aliasToId).toEqual({});
+    expect(data.redirects).toEqual([]);
 
     const aliasId = "00000000000000000000000009";
     seedTestNode(fixture, {
@@ -158,6 +160,48 @@ describe("writeSiteData", () => {
     } finally {
       destroyTestContentFixture(footerFixture);
       rmSync(footerOutDir, { recursive: true, force: true });
+    }
+  });
+
+  test("resolves redirects.json into site data", async () => {
+    const redirectFixture = createTestContentFixture("tome-static-redirect-");
+    const redirectOutDir = mkdtempSync(join(tmpdir(), "tome-static-redirect-out-"));
+    invalidateRedirectsCache();
+
+    try {
+      const targetId = "000000000000000000000000A1";
+      seedTestNode(redirectFixture, {
+        id: targetId,
+        properties: { title: "Target", url_alias: "design/target", body: "Body" },
+      });
+      writeFileSync(
+        join(redirectFixture.tempDir, "content", "model", "redirects.json"),
+        `${JSON.stringify(
+          {
+            version: 1,
+            redirects: { "old/target": targetId },
+          },
+          null,
+          2,
+        )}\n`,
+      );
+
+      const config: ResolvedConfig = {
+        repoRoot: redirectFixture.tempDir,
+        contentDir: join(redirectFixture.tempDir, "content"),
+        dbPath: join(redirectFixture.tempDir, "redirect.sqlite"),
+        outDir: join(redirectOutDir, "web"),
+        base: "/",
+      };
+
+      const data = await writeSiteData(config, join(redirectOutDir, "site-data.json"));
+      expect(data.redirects).toEqual([
+        { path: "old/target", nodeId: targetId, targetHref: "/design/target/" },
+      ]);
+    } finally {
+      invalidateRedirectsCache();
+      destroyTestContentFixture(redirectFixture);
+      rmSync(redirectOutDir, { recursive: true, force: true });
     }
   });
 });

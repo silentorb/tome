@@ -97,6 +97,7 @@ export {
   TABLE_PRESENTATION_FILENAME,
   SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
+  REDIRECTS_FILENAME,
   NODE_FILE_PATTERN,
   NODE_ID_PATTERN,
   RELATIONSHIP_FILE_PATTERN,
@@ -121,6 +122,7 @@ export {
   tablePresentationFilePath,
   sequencingFilePath,
   extensionsFilePath,
+  redirectsFilePath,
   isNodeId,
   nodeFileName,
   nodeFilePath,
@@ -144,6 +146,14 @@ export {
   VIEWS_FILE_VERSION,
 } from "./views-file";
 export type { ViewsFile } from "./views-file";
+export {
+  REDIRECTS_FILE_VERSION,
+  emptyRedirectsFile,
+  normalizeRedirectPath,
+  parseRedirectsFile,
+  serializeRedirectsFile,
+} from "./redirects-file";
+export type { RedirectsFile } from "./redirects-file";
 export {
   emptyTableSchemasFile,
   parseTableSchemasFile,

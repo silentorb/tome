@@ -62,6 +62,12 @@ export interface TabRoute {
   tabId: string;
 }
 
+export interface SiteRedirect {
+  path: string;
+  nodeId: string;
+  targetHref: string;
+}
+
 export interface SiteData {
   homeNodeId: string;
   staticSiteHeader: string;
@@ -75,6 +81,8 @@ export interface SiteData {
   aliasToId: Record<string, string>;
   tabItemsPayloads: Record<string, TabItemsPayload>;
   tabRoutes: TabRoute[];
+  /** Resolved redirects from content/model/redirects.json. */
+  redirects: SiteRedirect[];
 }
 
 export type { DatabaseColumnDef, DatabaseRow };

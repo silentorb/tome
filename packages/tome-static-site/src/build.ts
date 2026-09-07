@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { applyBuildEnv, printHelp, readConfig } from "./config";
 import { defaultSiteDataPath, writeSiteData } from "./generate-data";
+import { writeRedirectPages } from "./lib/redirects";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -25,6 +26,7 @@ async function main(): Promise<void> {
   if (config.publicDir) console.log(`  public:  ${config.publicDir}`);
   console.log(`  nodes:   ${data.nodes.length}`);
   console.log(`  tab pages: ${data.tabRoutes.length}`);
+  console.log(`  redirects: ${data.redirects.length}`);
 
   const astro = spawnSync("bun", ["astro", "build"], {
     cwd: packageRoot,
@@ -32,7 +34,12 @@ async function main(): Promise<void> {
     stdio: "inherit",
   });
 
-  process.exit(astro.status ?? 1);
+  if ((astro.status ?? 1) !== 0) {
+    process.exit(astro.status ?? 1);
+  }
+
+  writeRedirectPages(config.outDir, data.redirects);
+  process.exit(0);
 }
 
 void main();

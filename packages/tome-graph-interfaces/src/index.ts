@@ -162,6 +162,8 @@ export type {
   PublicExtensionsManifest,
 } from "./extensions";
 
+export type { RedirectsFile } from "./redirects";
+
 export type {
   WorkspacePublic,
   TomeCorpusPublic,

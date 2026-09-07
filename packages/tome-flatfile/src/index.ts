@@ -126,6 +126,7 @@ export {
   TABLE_PRESENTATION_FILENAME,
   SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
+  REDIRECTS_FILENAME,
   NODE_FILE_PATTERN,
   NODE_ID_PATTERN,
   RELATIONSHIP_FILE_PATTERN,
@@ -150,6 +151,7 @@ export {
   tablePresentationFilePath,
   sequencingFilePath,
   extensionsFilePath,
+  redirectsFilePath,
   isNodeId,
   nodeFileName,
   nodeFilePath,
@@ -279,6 +281,17 @@ export type {
   ExtensionsManifest,
   ResolvedExtensionComponent,
 } from "./extensions";
+
+export {
+  REDIRECTS_FILE_VERSION,
+  emptyRedirectsFile,
+  normalizeRedirectPath,
+  parseRedirectsFile,
+  serializeRedirectsFile,
+  invalidateRedirectsCache,
+  loadRedirectsFromContent,
+} from "./redirects";
+export type { RedirectsFile } from "./redirects";
 
 export {
   SET_TRAIT,

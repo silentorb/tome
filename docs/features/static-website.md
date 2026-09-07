@@ -35,6 +35,7 @@ Astro produces plain static HTML suitable for copying into any host or parent bu
 5. **Tab sibling pages** (multi-tab type-table hubs only): `/{urlPath}/tabs/{tabId}/` — full page chrome with that tab’s Items table; tab bar links between URLs.
 6. **Landing page** (`index.html`): full render of the static-site home node (`STATIC_SITE_HOME_NODE_ID` in `generate-data.ts`; independent of the editor’s `DEFAULT_HOME_NODE_ID`).
 7. Astro writes `index.html`, `{urlPath}/index.html`, optional `{urlPath}/tabs/{tabId}/index.html`, and `_astro/` assets.
+8. **Redirect stubs** (when `redirects.json` is present): post-Astro HTML pages at each configured path that point at the target node’s published URL.
 
 ## URL aliases
 
@@ -57,6 +58,30 @@ url_alias: design/twold
 static_site_layout: bare
 ---
 ```
+
+## Redirects
+
+Optional `content/model/redirects.json` maps site-relative paths to node ids. After Astro builds node pages, the static-site pipeline writes bare HTML stub pages at each redirect path. Stubs use meta refresh, `location.replace`, a canonical link, and an anchor fallback — no CDN or host redirect config required.
+
+Editor routing does **not** use this file.
+
+```json
+{
+  "version": 1,
+  "redirects": {
+    "old/about": "01KWN86X6KNBWXKBG5EGFMQJXA"
+  }
+}
+```
+
+| Rule | Behavior |
+| --- | --- |
+| Shape | Object map: path → node id (ULID) |
+| Path keys | Normalized like `url_alias` (trim, strip slashes, lowercase segments; reject `.` / `..` / `_astro`) |
+| Target | Resolved to the node’s published URL (`url_alias` or id), including `base` |
+| Missing file | Treated as an empty map |
+| Conflicts | Build fails if a redirect path equals a node `urlPath`, a tab route path, or would overwrite an existing output file |
+| Auto redirects | None — ULID↔alias is not auto-generated; only explicit map entries |
 
 ## Per-node layout overrides
 
@@ -95,13 +120,14 @@ Editing, add-row/link-existing, row actions, drag-reorder, table search, tab/col
 | --- | --- |
 | Nodes | `content/data/nodes/{shard}/{id}.md` (+ `content/archive/nodes/`) |
 | Relationships | `content/data/relationships/` via SQLite rebuild |
-| Workspace model | `content/model/` (`views.json`, `schema.json`, `table-schemas.json`, `dynamic-properties.json`, `extensions.json`) |
+| Workspace model | `content/model/` (`views.json`, `schema.json`, `table-schemas.json`, `dynamic-properties.json`, `extensions.json`, optional `redirects.json`) |
 
 | Output | Default path |
 | --- | --- |
 | Site root | `dist/web/index.html` (static-site home node) |
 | Node pages | `dist/web/{urlPath}/index.html` (`{urlPath}` is `url_alias` or lowercase node id) |
 | Tab pages | `dist/web/{urlPath}/tabs/{tabId}/index.html` |
+| Redirect stubs | `dist/web/{redirectPath}/index.html` (from `redirects.json`) |
 | Assets | `dist/web/_astro/` |
 
 Output is gitignored (`**/dist/`).

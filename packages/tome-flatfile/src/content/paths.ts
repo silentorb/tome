@@ -25,6 +25,7 @@ export const WORKSPACE_FILENAME = "workspace.json";
 export const TABLE_PRESENTATION_FILENAME = "table-presentation.json";
 export const SEQUENCING_FILENAME = "sequencing.json";
 export const EXTENSIONS_FILENAME = "extensions.json";
+export const REDIRECTS_FILENAME = "redirects.json";
 export { NODE_ID_PATTERN, NODE_FILE_PATTERN, isNodeId };
 
 /** Matches a relationship shard JSON basename (`{62 hex}.json`). */
@@ -162,6 +163,10 @@ export function sequencingFilePath(contentRoot: string): string {
 
 export function extensionsFilePath(contentRoot: string): string {
   return resolve(contentModelDir(contentRoot), EXTENSIONS_FILENAME);
+}
+
+export function redirectsFilePath(contentRoot: string): string {
+  return resolve(contentModelDir(contentRoot), REDIRECTS_FILENAME);
 }
 
 export const DEFAULT_DB_FILENAME = "tome.sqlite";

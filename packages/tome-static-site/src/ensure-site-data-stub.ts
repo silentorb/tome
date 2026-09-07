@@ -20,6 +20,7 @@ if (!existsSync(outFile)) {
         aliasToId: {},
         tabItemsPayloads: {},
         tabRoutes: [],
+        redirects: [],
       },
       null,
       2,

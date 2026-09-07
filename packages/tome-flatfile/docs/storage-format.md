@@ -33,6 +33,7 @@ The content root is a directory conventionally named `content/`. Tools discover 
     dynamic-properties.json
     table-presentation.json
     extensions.json
+    redirects.json
 ```
 
 | Area | Role |
@@ -499,6 +500,26 @@ Runtime extension registration. Version defaults to `1` if omitted on read.
 
 **Component entry:** `id`, `extensionId`, `kind` (must be `"page-block"`), `implementationId`, `label`, `enabled`; optional `slashMenu` (`group?`, `order?`), `params`.
 
+### `redirects.json` (version 1)
+
+Optional static-site redirect map. Missing file ⇒ empty map. Consumed by `tome-static-site` only (editor does not route on this file).
+
+```json
+{
+  "version": 1,
+  "redirects": {
+    "old/about": "01KWN86X6KNBWXKBG5EGFMQJXA"
+  }
+}
+```
+
+| Field | Notes |
+| --- | --- |
+| `version` | must be `1` |
+| `redirects` | object map: site-relative path → node id (ULID) |
+
+Path keys are normalized like static-site `url_alias` (trim, strip slashes, lowercase segments; reject `.` / `..` / `_astro`). At build time the static site resolves each value to the node's published URL and emits an HTML redirect stub.
+
 ## Minimal compatible corpus
 
 | File / path | Minimal graph | Notes |
@@ -514,6 +535,7 @@ Runtime extension registration. Version defaults to `1` if omitted on read.
 | `model/dynamic-properties.json` | optional | Computed columns |
 | `model/table-presentation.json` | optional | Scope tabs, row groups, reorderable Items tables |
 | `model/extensions.json` | optional | Extension packages |
+| `model/redirects.json` | optional | Static-site path → node id redirects |
 
 A Tome-compatible writer should:
 
@@ -553,6 +575,7 @@ Normative parsers and path helpers in this package:
 | Dynamic properties | `src/content/dynamic-properties-file.ts` |
 | Table presentation | `src/table-presentation/table-presentation-file.ts` |
 | Extensions | `src/extensions/extensions-file.ts` |
+| Redirects | `src/content/redirects-file.ts` |
 | Body link forms | `src/markdown-links.ts`, `src/dynamic-node-links.ts` |
 | Set / ordered traits | `src/association-traits.ts` |
 
