@@ -83,6 +83,8 @@ Editor routing does **not** use this file.
 | Conflicts | Build fails if a redirect path equals a node `urlPath`, a tab route path, or would overwrite an existing output file |
 | Auto redirects | None — ULID↔alias is not auto-generated; only explicit map entries |
 
+When retiring a node’s `url_alias` so the canonical publish path becomes the node id, add the former alias path to `redirects.json` pointing at that node. Do not keep `url_alias` solely to preserve old public URLs — redirects are the mechanism for retired paths.
+
 ## Per-node layout overrides
 
 Nodes may set optional frontmatter `static_site_layout` to change static-site chrome (editor unchanged).
