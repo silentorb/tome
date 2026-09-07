@@ -59,9 +59,15 @@ export interface TomeCorpusPublic {
   workspace: WorkspacePublic;
 }
 
+export type DocumentIconResult =
+  | { ok: true; body: Uint8Array; contentType: string }
+  | { ok: false; error: "not_found" | "bad_path" | "bad_type" };
+
 export interface TomeGraphServices {
   getWorkspace(corpusId?: string): WorkspacePublic;
   listCorpora(): TomeCorpusPublic[];
+  /** Bytes for `branding.documentIconImage` of the given (or default) corpus. */
+  getDocumentIcon(corpusId?: string): DocumentIconResult;
   getHomeId(corpusId?: string): string;
   getNode(
     id: string,

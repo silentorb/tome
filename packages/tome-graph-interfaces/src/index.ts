@@ -167,6 +167,7 @@ export type {
   TomeCorpusPublic,
   TomeGraphServices,
   RelationshipTypeOption,
+  DocumentIconResult,
 } from "./graph-services";
 
 export type {

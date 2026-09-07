@@ -104,6 +104,35 @@ describe("parseWorkspaceFile", () => {
     expect(file.branding?.staticSiteFooterOrganization).toBe("Silent Orb");
   });
 
+  test("parses documentIconImage branding field", () => {
+    const file = parseWorkspaceFile(
+      JSON.stringify({
+        ...VALID,
+        branding: {
+          appTitle: "Tome",
+          defaultDocumentIcon: "T",
+          documentIconImage: "model/branding/icon.svg",
+        },
+      }),
+    );
+    expect(file.branding?.defaultDocumentIcon).toBe("T");
+    expect(file.branding?.documentIconImage).toBe("model/branding/icon.svg");
+  });
+
+  test("treats whitespace-only documentIconImage as unset", () => {
+    const file = parseWorkspaceFile(
+      JSON.stringify({
+        ...VALID,
+        branding: {
+          appTitle: "Tome",
+          documentIconImage: "   ",
+        },
+      }),
+    );
+    expect(file.branding?.appTitle).toBe("Tome");
+    expect(file.branding?.documentIconImage).toBeUndefined();
+  });
+
   test("treats whitespace-only footer fields as unset", () => {
     const file = parseWorkspaceFile(
       JSON.stringify({

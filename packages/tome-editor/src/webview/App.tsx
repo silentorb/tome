@@ -64,7 +64,7 @@ import {
   type GraphExplorerMode,
 } from "./graph-preferences";
 import { syncDocumentTitle } from "./document-title";
-import { syncDocumentIcon } from "./document-icon";
+import { documentIconImageApiUrl, syncDocumentIcon } from "./document-icon";
 import { setPageBlockParameterHandlers, setPageBlockToolPanelHandlers } from "./extensions/page-block-registry";
 
 export type { AppView };
@@ -604,6 +604,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     const appTitle = workspace?.branding?.appTitle ?? "Tome";
     syncDocumentTitle(view, view === "node-page" ? pageTitle || null : node?.title, appTitle);
     const urlNodeId = nodeFromLocation();
+    const hasDocumentIconImage = Boolean(workspace?.branding?.documentIconImage?.trim());
     syncDocumentIcon({
       view,
       nodeId: node?.id ?? urlNodeId,
@@ -612,6 +613,9 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
       isTypeTable: node?.isTypeTable,
       homeId,
       defaultDocumentIcon: workspace?.branding?.defaultDocumentIcon,
+      documentIconImageUrl: hasDocumentIconImage
+        ? documentIconImageApiUrl(activeCorpusId)
+        : null,
       quickLinkIconByNodeId: quickLinkIconMaps.byNodeId,
       quickLinkIconByLabel: quickLinkIconMaps.byLabel,
     });
@@ -624,8 +628,10 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     node?.document,
     node?.isTypeTable,
     homeId,
+    activeCorpusId,
     workspace?.branding?.appTitle,
     workspace?.branding?.defaultDocumentIcon,
+    workspace?.branding?.documentIconImage,
     quickLinkIconMaps.byLabel,
     quickLinkIconMaps.byNodeId,
   ]);

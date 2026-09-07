@@ -75,6 +75,7 @@ import {
 import {
   ExtensionServerRuntime,
 } from "./extensions/runtime";
+import { readDocumentIconFile } from "./document-icon";
 import type {
   NodeBodyDocument,
   NodeSummary,
@@ -159,6 +160,15 @@ function buildGraphServices(
   return {
     getWorkspace(corpusId?: string): WorkspacePublic {
       return workspaceForCorpus(corpusId);
+    },
+    getDocumentIcon(corpusId?: string) {
+      const corpora = writeCtx.graphStore.listCorpora();
+      const match = corpusId
+        ? corpora.find((c) => c.id === corpusId)
+        : corpora[0];
+      const contentDir = match?.contentDir ?? contentPath;
+      const ws = loadWorkspaceFromContent(contentDir);
+      return readDocumentIconFile(contentDir, ws.branding?.documentIconImage);
     },
     listCorpora() {
       return writeCtx.graphStore.listCorpora().map((c) => {

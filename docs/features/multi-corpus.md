@@ -86,9 +86,12 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 - Search / graph may query the union so cross-links resolve; create and chrome stay corpus-scoped.
 - Node search (`GET /api/nodes/search`) accepts optional `activeCorpusId`. Hits whose owning corpus differs from that id include `corpusLabel` (workspace `branding.appTitle`, else the corpus id). The editor injects the active corpus into search and shows `corpusLabel` as a muted title suffix in global search, record link pickers, and `@` mentions.
 
+**New corpus branding:** In that corpus’s `content/model/workspace.json` → `branding`, set `defaultDocumentIcon` to the **first letter** of the corpus display name (e.g. Marloth → `"M"`, Translucence → `"T"`). Optionally set `documentIconImage` to a content-relative `.svg` or `.png` under `model/` (served by `GET /api/workspace/document-icon`). If `defaultDocumentIcon` is omitted, the editor falls back to the package letter **`T`** (generic Tome), which is easy to confuse with a corpus named like Translucence — prefer an explicit letter for every corpus.
+
 ### HTTP
 
 - `GET /api/corpora` — id, label, home, archive, `access`.
+- `GET /api/workspace/document-icon?corpusId=…` — optional branding favicon image for that corpus (`branding.documentIconImage`).
 - Node page and search hits include `corpusId` (and whether the corpus is readonly).
 - Search hits may also include `corpusLabel` when `activeCorpusId` is passed and the hit is foreign.
 - `GET /api/nodes/:id` stays id-only; create may take optional `corpusId`.

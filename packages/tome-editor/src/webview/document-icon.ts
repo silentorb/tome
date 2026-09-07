@@ -5,7 +5,7 @@ import { HOME_ICON, VIEW_ICONS } from "./quick-links-nav";
 import type { AppView } from "../shared/types";
 
 const DATABASE_ICON = "▦";
-const FALLBACK_DEFAULT_ICON = "M";
+const FALLBACK_DEFAULT_ICON = "T";
 const FAVICON_LINK_ID = "tome-favicon";
 const FAVICON_SIZE = 32;
 
@@ -18,12 +18,22 @@ export interface DocumentIconContext {
   isTypeTable?: boolean | null;
   homeId?: string | null;
   defaultDocumentIcon?: string | null;
+  /** When set, used as favicon href while the resolved glyph is the branding default. */
+  documentIconImageUrl?: string | null;
   quickLinkIconByNodeId?: Readonly<Record<string, string>>;
   quickLinkIconByLabel?: Readonly<Record<string, string>>;
   /** @deprecated Use quickLinkIconByNodeId */
   sidebarIconByNodeId?: Readonly<Record<string, string>>;
   /** @deprecated Use quickLinkIconByLabel */
   sidebarIconByLabel?: Readonly<Record<string, string>>;
+}
+
+/** Build the API URL for a corpus branding document icon image. */
+export function documentIconImageApiUrl(corpusId?: string | null): string {
+  if (corpusId?.trim()) {
+    return `/api/workspace/document-icon?corpusId=${encodeURIComponent(corpusId.trim())}`;
+  }
+  return "/api/workspace/document-icon";
 }
 
 export function resolveDocumentIcon(ctx: DocumentIconContext): string {
@@ -147,6 +157,17 @@ export function iconToFaviconHref(icon: string, defaultIcon = FALLBACK_DEFAULT_I
   return renderIconToCanvasDataUrl(icon, defaultIcon) ?? buildSvgFallbackDataUrl(icon, defaultIcon);
 }
 
+/** Resolve the favicon href (API image URL or generated letter/emoji data URL). */
+export function resolveFaviconHref(ctx: DocumentIconContext): string {
+  const defaultIcon = ctx.defaultDocumentIcon?.trim() || FALLBACK_DEFAULT_ICON;
+  const icon = resolveDocumentIcon(ctx);
+  const imageUrl = ctx.documentIconImageUrl?.trim();
+  if (imageUrl && isDefaultBrandingIcon(icon, defaultIcon)) {
+    return imageUrl;
+  }
+  return iconToFaviconHref(icon, defaultIcon);
+}
+
 function ensureFaviconLink(): HTMLLinkElement {
   let link = document.getElementById(FAVICON_LINK_ID) as HTMLLinkElement | null;
   if (!link) {
@@ -159,9 +180,15 @@ function ensureFaviconLink(): HTMLLinkElement {
 }
 
 export function syncDocumentIcon(ctx: DocumentIconContext): void {
-  const defaultIcon = ctx.defaultDocumentIcon?.trim() || FALLBACK_DEFAULT_ICON;
   const link = ensureFaviconLink();
-  const href = iconToFaviconHref(resolveDocumentIcon(ctx), defaultIcon);
-  link.type = href.startsWith("data:image/png") ? "image/png" : "image/svg+xml";
+  const href = resolveFaviconHref(ctx);
+  if (href.startsWith("data:image/png")) {
+    link.type = "image/png";
+  } else if (href.startsWith("data:image/svg+xml")) {
+    link.type = "image/svg+xml";
+  } else {
+    // API route — Content-Type comes from the response; omit a wrong link type.
+    link.removeAttribute("type");
+  }
   link.href = href;
 }

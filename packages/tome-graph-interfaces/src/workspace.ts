@@ -10,6 +10,11 @@ export type SidebarLink = WorkspaceQuickLink;
 export interface WorkspaceBranding {
   appTitle?: string;
   defaultDocumentIcon?: string;
+  /**
+   * Optional favicon image path relative to the corpus content root.
+   * Must resolve under `model/` and use `.svg` or `.png`.
+   */
+  documentIconImage?: string;
   staticSiteHeader?: string;
   /** Custom static-site footer template; replaces the default copyright template when set. */
   staticSiteFooter?: string;

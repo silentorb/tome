@@ -94,6 +94,23 @@ export function createApiHandler(
         return json(db.getWorkspace(corpusId || undefined));
       }
 
+      if (path === "/api/workspace/document-icon" && req.method === "GET") {
+        const corpusId = url.searchParams.get("corpusId") ?? undefined;
+        const result = db.getDocumentIcon(corpusId || undefined);
+        if (!result.ok) {
+          if (result.error === "not_found") return json({ error: "not found" }, 404);
+          if (result.error === "bad_type") return json({ error: "unsupported icon type" }, 400);
+          return json({ error: "invalid icon path" }, 400);
+        }
+        return new Response(result.body, {
+          headers: {
+            "Content-Type": result.contentType,
+            "Cache-Control": "no-store",
+            "Access-Control-Allow-Origin": "*",
+          },
+        });
+      }
+
       if (path === "/api/workspace/quick-links/order" && req.method === "PUT") {
         const payload = (await req.json()) as { nodeIds?: unknown };
         if (!Array.isArray(payload.nodeIds)) {

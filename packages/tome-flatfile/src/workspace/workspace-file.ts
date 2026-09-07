@@ -119,6 +119,13 @@ function parseBranding(raw: unknown, path: string): WorkspaceBranding | undefine
     }
     branding.defaultDocumentIcon = obj.defaultDocumentIcon;
   }
+  if (obj.documentIconImage !== undefined) {
+    if (typeof obj.documentIconImage !== "string") {
+      throw new Error(`${path}.documentIconImage: must be a string`);
+    }
+    const trimmed = obj.documentIconImage.trim();
+    if (trimmed) branding.documentIconImage = trimmed;
+  }
   if (obj.staticSiteHeader !== undefined) {
     if (typeof obj.staticSiteHeader !== "string") {
       throw new Error(`${path}.staticSiteHeader: must be a string`);

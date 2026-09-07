@@ -155,6 +155,8 @@ The webview calls this REST API directly (via shared client in `src/shared/http-
 
 **Workspace config:** `GET /api/workspace` returns parsed `content/model/workspace.json` (home/archive/protected node ids, quick links, branding, graph explorer default anchor). The webview loads this on boot; `GET /api/home` still resolves the effective home node id (workspace home when present, else most recent node).
 
+**Document icon / favicon:** The tab icon is resolved from the page (emoji, home, quick-link, type table) or falls back to branding. Package default letter is **`T`**. Corpora set `branding.defaultDocumentIcon` (single character) and optionally `branding.documentIconImage` (content-relative `.svg` or `.png` under `model/`, e.g. `model/branding/icon.svg`). When the resolved glyph is the branding default and an image is configured, the favicon uses `GET /api/workspace/document-icon?corpusId=…` instead of the generated letter tile.
+
 **Multi-corpus sessions:** when the host opens multiple corpora, the sidebar shows a corpus dropdown; chrome (Home / quick links) is scoped to the **active** corpus. Navigating to a node follows that node’s corpus; switching the dropdown navigates to that corpus’s home. See [`multi-corpus.md`](./multi-corpus.md).
 
 ## Behavior / pipeline

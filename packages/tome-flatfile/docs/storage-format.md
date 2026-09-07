@@ -368,7 +368,7 @@ Strict version **1**. Workspace identity and navigation anchors.
 
 | Field | Notes |
 | --- | --- |
-| `branding` | `appTitle`, `defaultDocumentIcon`, `staticSiteHeader`, `staticSiteFooter`, `staticSiteFooterOrganization` |
+| `branding` | `appTitle`, `defaultDocumentIcon`, `documentIconImage` (content-relative `.svg`/`.png` under `model/`), `staticSiteHeader`, `staticSiteFooter`, `staticSiteFooterOrganization` |
 | `legacy` | `exportPathPrefix`, `archivePathPrefix` |
 | `editor.markdownBodyPanel` | boolean |
 | `spatialGraph.nodeDimensionScale` | `{ x?, y? }` positive finite numbers |
