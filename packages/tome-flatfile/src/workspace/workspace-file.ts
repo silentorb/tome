@@ -92,13 +92,12 @@ function parseWorkspaceQuickLink(raw: unknown, path: string): WorkspaceQuickLink
   if (typeof obj.label !== "string" || !obj.label.trim()) {
     throw new Error(`${path}: label is required`);
   }
-  if (typeof obj.icon !== "string") {
-    throw new Error(`${path}: icon is required`);
+  if (obj.icon !== undefined) {
+    throw new Error(`${path}: icon is not supported`);
   }
   return {
     nodeId: parseNodeId(obj.nodeId, `${path}.nodeId`),
     label: obj.label.trim(),
-    icon: obj.icon,
   };
 }
 

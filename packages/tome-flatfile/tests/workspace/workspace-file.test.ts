@@ -18,7 +18,7 @@ const VALID = {
   ],
   graphExplorer: { defaultAnchorNodeId: "0000000000000000000000002V" },
   staticSite: { homeNodeId: "0000000000000000000000000Y" },
-  quickLinks: [{ nodeId: "0000000000000000000000002P", label: "Features", icon: "★" }],
+  quickLinks: [{ nodeId: "0000000000000000000000002P", label: "Features" }],
   branding: { appTitle: "Tome" },
   legacy: { exportPathPrefix: "Marloth", archivePathPrefix: "Marloth/Archive" },
 };
@@ -69,7 +69,7 @@ describe("parseWorkspaceFile", () => {
       JSON.stringify({
         ...legacyShape,
         sidebar: {
-          links: [{ nodeId: "0000000000000000000000002P", label: "Features", icon: "★" }],
+          links: [{ nodeId: "0000000000000000000000002P", label: "Features" }],
         },
       }),
     );
@@ -102,6 +102,23 @@ describe("parseWorkspaceFile", () => {
     );
     expect(file.branding?.staticSiteFooter).toBe("© :year: :organization:");
     expect(file.branding?.staticSiteFooterOrganization).toBe("Silent Orb");
+  });
+
+  test("rejects quick link icon field", () => {
+    expect(() =>
+      parseWorkspaceFile(
+        JSON.stringify({
+          ...VALID,
+          quickLinks: [
+            {
+              nodeId: "0000000000000000000000002P",
+              label: "Features",
+              icon: "★",
+            },
+          ],
+        }),
+      ),
+    ).toThrow(/icon is not supported/);
   });
 
   test("parses documentIconImage branding field", () => {

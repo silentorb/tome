@@ -17,7 +17,7 @@ import type { WorkspaceQuickLink } from "tome-graph-interfaces";
 import type { AppView } from "../../shared/types";
 import { isProtectedEditorNode } from "../../shared/types";
 import type { EditorApi } from "../api/client";
-import type { SidePanelStandaloneUrls } from "./SidePanel";
+import type { SidePanelStandaloneUrls } from "./PrimarySidePanel";
 import { nodePageHref } from "../node-links";
 import { suppressNavigationClickAfterDragReorder } from "../quick-links-nav";
 import { moveColumnOrderItem } from "./SortableDataColumnHeaders";
@@ -31,7 +31,6 @@ interface QuickLinksPanelProps {
   activeView: AppView;
   activeNodeId?: string | null;
   activeNodeArchived?: boolean;
-  collapsed: boolean;
   standaloneUrls?: SidePanelStandaloneUrls;
   pageBase?: string;
   protectedNodeIds?: readonly string[];
@@ -47,7 +46,6 @@ interface SortableQuickLinkItemProps {
   link: WorkspaceQuickLink;
   active: boolean;
   archived: boolean;
-  collapsed: boolean;
   href: string;
   reorderable: boolean;
   dragCompleted?: { current: boolean };
@@ -79,7 +77,6 @@ function SortableQuickLinkItem({
   link,
   active,
   archived,
-  collapsed,
   href,
   reorderable,
   dragCompleted,
@@ -91,7 +88,7 @@ function SortableQuickLinkItem({
   onUnarchiveNode,
   onDeleteNode,
 }: SortableQuickLinkItemProps) {
-  const { nodeId, label, icon } = link;
+  const { nodeId, label } = link;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: nodeId,
     disabled: !reorderable,
@@ -105,14 +102,7 @@ function SortableQuickLinkItem({
     : undefined;
 
   const itemClassName = `tome-side-panel-item${reorderable ? " is-reorderable" : ""}`;
-  const itemContent = (
-    <>
-      <span className="tome-side-panel-item-icon" aria-hidden="true">
-        {icon}
-      </span>
-      <span className="tome-side-panel-item-label">{label}</span>
-    </>
-  );
+  const itemContent = <span className="tome-side-panel-item-label">{label}</span>;
 
   const handleAnchorClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (!dragCompleted) return;
@@ -134,7 +124,7 @@ function SortableQuickLinkItem({
       >
         {itemContent}
       </a>
-      {!collapsed && showActions && onArchiveNode && onDeleteNode && onRemoveQuickLink ? (
+      {showActions && onArchiveNode && onDeleteNode && onRemoveQuickLink ? (
         <div className="tome-side-panel-quick-link-actions">
           <PageActionsMenu
             recordTitle={label}
@@ -174,7 +164,6 @@ export function QuickLinksPanel({
   activeView,
   activeNodeId,
   activeNodeArchived = false,
-  collapsed,
   standaloneUrls,
   pageBase,
   protectedNodeIds = [],
@@ -188,7 +177,7 @@ export function QuickLinksPanel({
   const [displayLinks, setDisplayLinks] = useState<readonly WorkspaceQuickLink[]>(quickLinks);
   const [relateNodeId, setRelateNodeId] = useState<string | null>(null);
   const dragCompletedRef = useRef(false);
-  const reorderable = !collapsed && Boolean(onQuickLinksReorder) && quickLinks.length > 1;
+  const reorderable = Boolean(onQuickLinksReorder) && quickLinks.length > 1;
   const showNodeActions = Boolean(
     onRemoveQuickLink && onArchiveNode && onDeleteNode,
   );
@@ -232,7 +221,6 @@ export function QuickLinksPanel({
         link={link}
         active={active}
         archived={archived}
-        collapsed={collapsed}
         href={href}
         reorderable={reorderable}
         dragCompleted={reorderable ? dragCompletedRef : undefined}
@@ -250,10 +238,7 @@ export function QuickLinksPanel({
   return (
     <>
       <div className="tome-side-panel-divider" role="presentation" />
-      <div
-        className={`tome-side-panel-section${collapsed ? " is-collapsed" : ""}`}
-        aria-label="Quick links"
-      >
+      <div className="tome-side-panel-section" aria-label="Quick links">
         {reorderable ? (
           <DndContext
             sensors={dragSensors}

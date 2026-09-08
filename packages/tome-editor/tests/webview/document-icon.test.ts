@@ -1,12 +1,11 @@
 import { describe, expect, test } from "bun:test";
 import { TEST_HOME_NODE_ID } from "tome-db/content/test-helpers";
-import { buildQuickLinkIconMaps } from "../../src/webview/quick-links-nav";
-import { iconToFaviconHref, resolveDocumentIcon, resolveFaviconHref, documentIconImageApiUrl } from "../../src/webview/document-icon";
-
-const quickLinkIconMaps = buildQuickLinkIconMaps([
-  { nodeId: "0000000000000000000000000D", label: "Scenes", icon: "▶" },
-  { nodeId: "0000000000000000000000002P", label: "Features", icon: "★" },
-]);
+import {
+  iconToFaviconHref,
+  resolveDocumentIcon,
+  resolveFaviconHref,
+  documentIconImageApiUrl,
+} from "../../src/webview/document-icon";
 
 describe("resolveDocumentIcon", () => {
   test("uses graph view icons", () => {
@@ -23,44 +22,14 @@ describe("resolveDocumentIcon", () => {
     ).toBe("⌂");
   });
 
-  test("prefers page emoji over type-based database icon", () => {
+  test("prefers page emoji over branding", () => {
     expect(
       resolveDocumentIcon({
         view: "node-page",
-        primaryTypeTitle: "Scenes",
         recordBody: "💡\n\n# Opening scene",
-        quickLinkIconByLabel: quickLinkIconMaps.byLabel,
+        defaultDocumentIcon: "M",
       }),
     ).toBe("💡");
-  });
-
-  test("uses type-title icon for database member pages", () => {
-    expect(
-      resolveDocumentIcon({
-        view: "node-page",
-        primaryTypeTitle: "Features",
-        quickLinkIconByLabel: quickLinkIconMaps.byLabel,
-      }),
-    ).toBe("★");
-  });
-
-  test("uses quick-link icon for database hub nodes", () => {
-    expect(
-      resolveDocumentIcon({
-        view: "node-page",
-        nodeId: "0000000000000000000000000D",
-        quickLinkIconByNodeId: quickLinkIconMaps.byNodeId,
-      }),
-    ).toBe("▶");
-  });
-
-  test("uses database icon for type table nodes", () => {
-    expect(
-      resolveDocumentIcon({
-        view: "node-page",
-        isTypeTable: true,
-      }),
-    ).toBe("▦");
   });
 
   test("falls back to default branding icon", () => {

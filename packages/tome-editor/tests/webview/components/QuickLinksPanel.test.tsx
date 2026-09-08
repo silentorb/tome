@@ -25,12 +25,11 @@ function renderReorderableQuickLinks(onQuickLinksReorder = mock(async () => {}))
     <QuickLinksPanel
       api={mockApi}
       quickLinks={[
-        { nodeId: NODE_A, label: "Features", icon: "★" },
-        { nodeId: NODE_B, label: "Scenes", icon: "▶" },
+        { nodeId: NODE_A, label: "Features" },
+        { nodeId: NODE_B, label: "Scenes" },
       ]}
       activeView="node-page"
       activeNodeId={null}
-      collapsed={false}
       onQuickLinksReorder={onQuickLinksReorder}
       {...nodeActionMocks()}
     />,
@@ -64,11 +63,10 @@ describe("QuickLinksPanel", () => {
       <QuickLinksPanel
         api={mockApi}
         quickLinks={[
-          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features", icon: "★" },
+          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features" },
         ]}
         activeView="node-page"
         activeNodeId={null}
-        collapsed={false}
         {...nodeActionMocks()}
       />,
     );
@@ -85,11 +83,10 @@ describe("QuickLinksPanel", () => {
       <QuickLinksPanel
         api={mockApi}
         quickLinks={[
-          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features", icon: "★" },
+          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features" },
         ]}
         activeView="node-page"
         activeNodeId={null}
-        collapsed={false}
         onRemoveQuickLink={onRemoveQuickLink}
         onArchiveNode={mock(async () => {})}
         onDeleteNode={mock(async () => {})}
@@ -104,22 +101,6 @@ describe("QuickLinksPanel", () => {
     expect(onRemoveQuickLink).toHaveBeenCalledWith("AAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 
-  test("hides page actions menu when collapsed", () => {
-    const { queryByRole } = render(
-      <QuickLinksPanel
-        api={mockApi}
-        quickLinks={[
-          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features", icon: "★" },
-        ]}
-        activeView="node-page"
-        activeNodeId={null}
-        collapsed
-        {...nodeActionMocks()}
-      />,
-    );
-
-    expect(queryByRole("button", { name: "Page actions" })).toBeNull();
-  });
 
   test("renders reorderable quick links as native anchors", () => {
     renderReorderableQuickLinks();
@@ -136,11 +117,10 @@ describe("QuickLinksPanel", () => {
       <QuickLinksPanel
         api={mockApi}
         quickLinks={[
-          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features", icon: "★" },
+          { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features" },
         ]}
         activeView="node-page"
         activeNodeId={null}
-        collapsed={false}
         onQuickLinksReorder={mock(async () => {})}
         {...nodeActionMocks()}
       />,
@@ -170,10 +150,9 @@ describe("QuickLinksPanel", () => {
     const { getByRole } = render(
       <QuickLinksPanel
         api={mockApi}
-        quickLinks={[{ nodeId: NODE_A, label: "Features", icon: "★" }]}
+        quickLinks={[{ nodeId: NODE_A, label: "Features" }]}
         activeView="node-page"
         activeNodeId={null}
-        collapsed={false}
         onQuickLinksReorder={mock(async () => {})}
         {...nodeActionMocks()}
       />,
@@ -190,7 +169,6 @@ describe("QuickLinksPanel", () => {
         api={mockApi}
         quickLinks={[]}
         activeView="node-page"
-        collapsed={false}
         {...nodeActionMocks()}
       />,
     );

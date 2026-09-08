@@ -37,7 +37,7 @@ describe("RecentNodesPanel", () => {
           activeView="node-page"
           activeNodeId="AAAAAAAAAAAAAAAAAAAAAAAAAA"
           homeNodeId="CCCCCCCCCCCCCCCCCCCCCCCCCC"
-          collapsed={false}
+          defaultDocumentIcon="M"
           refreshKey={0}
           pageBase="http://127.0.0.1:5173/?node=home"
         />
@@ -53,6 +53,7 @@ describe("RecentNodesPanel", () => {
     expect(links[1]?.href).toContain("node=BBBBBBBBBBBBBBBBBBBBBBBBBB");
     expect(links[0]?.classList.contains("is-active")).toBe(true);
     expect(container.querySelector(".tome-side-panel-section-label")?.textContent).toBe("Recent");
+    expect(container.querySelector(".tome-side-panel-item-icon")?.textContent).toBe("M");
   });
 
   test("renders nothing when the API returns no nodes", async () => {
@@ -62,7 +63,6 @@ describe("RecentNodesPanel", () => {
         <RecentNodesPanel
           api={api}
           activeView="node-page"
-          collapsed={false}
           refreshKey={0}
         />
       </UserSettingsProvider>,

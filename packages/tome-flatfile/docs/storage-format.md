@@ -346,8 +346,7 @@ Strict version **1**. Workspace identity and navigation anchors.
   "quickLinks": [
     {
       "nodeId": "01EXAMPLELINKNODEID000000001",
-      "label": "Features",
-      "icon": "folder"
+      "label": "Features"
     }
   ]
 }
@@ -363,7 +362,7 @@ Strict version **1**. Workspace identity and navigation anchors.
 | `protectedNodeIds` | ULID array |
 | `graphExplorer.defaultAnchorNodeId` | ULID |
 | `staticSite.homeNodeId` | ULID |
-| `quickLinks` | array of `{ nodeId, label, icon }` (legacy `sidebar.links` accepted on read) |
+| `quickLinks` | array of `{ nodeId, label }` (legacy `sidebar.links` accepted on read; `icon` rejected) |
 
 **Optional**
 

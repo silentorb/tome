@@ -105,3 +105,43 @@ describe("SidePanel corpus switcher", () => {
     expect(screen.getByTitle("New page")).toBeTruthy();
   });
 });
+
+describe("SidePanel collapse", () => {
+  test("shows only the Primary panel when collapsed", async () => {
+    const api = makeMockEditorApi();
+    api.listRecent = mock(async () => [
+      {
+        id: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+        title: "Recent page",
+        primaryTypeTitle: null,
+      },
+    ]);
+    const quickLinks = [{ nodeId: "BBBBBBBBBBBBBBBBBBBBBBBBBB", label: "Features" }];
+    render(
+      <UserSettingsProvider api={api}>
+        <SidePanel
+          api={api}
+          activeView="node-page"
+          homeNodeId={TEST_HOME_NODE_ID}
+          quickLinks={quickLinks}
+          defaultDocumentIcon="M"
+          onViewChange={() => {}}
+          onNewPage={() => {}}
+          onOpenSearch={() => {}}
+        />
+      </UserSettingsProvider>,
+    );
+
+    expect(screen.getByLabelText("Primary")).toBeTruthy();
+    expect(await screen.findByLabelText("Quick links")).toBeTruthy();
+    expect(await screen.findByLabelText("Recent nodes")).toBeTruthy();
+
+    fireEvent.click(screen.getByLabelText("Collapse sidebar"));
+
+    expect(screen.getByLabelText("Primary")).toBeTruthy();
+    expect(screen.getByTitle("Home")).toBeTruthy();
+    expect(screen.getByTitle("Search nodes (Ctrl+K)")).toBeTruthy();
+    expect(screen.queryByLabelText("Quick links")).toBeNull();
+    expect(screen.queryByLabelText("Recent nodes")).toBeNull();
+  });
+});

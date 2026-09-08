@@ -4,7 +4,6 @@ import { extractPageIconFromDocument } from "./body-document-projection";
 import { HOME_ICON, VIEW_ICONS } from "./quick-links-nav";
 import type { AppView } from "../shared/types";
 
-const DATABASE_ICON = "▦";
 const FALLBACK_DEFAULT_ICON = "T";
 const FAVICON_LINK_ID = "tome-favicon";
 const FAVICON_SIZE = 32;
@@ -12,20 +11,12 @@ const FAVICON_SIZE = 32;
 export interface DocumentIconContext {
   view: AppView;
   nodeId?: string | null;
-  primaryTypeTitle?: string | null;
   recordBody?: string | null;
   recordDocument?: NodeBodyDocument | null;
-  isTypeTable?: boolean | null;
   homeId?: string | null;
   defaultDocumentIcon?: string | null;
   /** When set, used as favicon href while the resolved glyph is the branding default. */
   documentIconImageUrl?: string | null;
-  quickLinkIconByNodeId?: Readonly<Record<string, string>>;
-  quickLinkIconByLabel?: Readonly<Record<string, string>>;
-  /** @deprecated Use quickLinkIconByNodeId */
-  sidebarIconByNodeId?: Readonly<Record<string, string>>;
-  /** @deprecated Use quickLinkIconByLabel */
-  sidebarIconByLabel?: Readonly<Record<string, string>>;
 }
 
 /** Build the API URL for a corpus branding document icon image. */
@@ -49,27 +40,7 @@ export function resolveDocumentIcon(ctx: DocumentIconContext): string {
       : null;
   if (bodyIcon) return bodyIcon;
 
-  const quickLinkIconByNodeId = ctx.quickLinkIconByNodeId ?? ctx.sidebarIconByNodeId;
-  const quickLinkIconByLabel = ctx.quickLinkIconByLabel ?? ctx.sidebarIconByLabel;
-
-  if (nodeId && quickLinkIconByNodeId?.[nodeId]) {
-    return quickLinkIconByNodeId[nodeId]!;
-  }
-
-  const typeIcon = iconFromTypeTitle(ctx.primaryTypeTitle, quickLinkIconByLabel);
-  if (typeIcon) return typeIcon;
-
-  if (ctx.isTypeTable) return DATABASE_ICON;
-
   return ctx.defaultDocumentIcon?.trim() || FALLBACK_DEFAULT_ICON;
-}
-
-function iconFromTypeTitle(
-  title: string | null | undefined,
-  quickLinkIconByLabel?: Readonly<Record<string, string>>,
-): string | null {
-  if (!title) return null;
-  return quickLinkIconByLabel?.[title] ?? null;
 }
 
 function escapeXml(value: string): string {
@@ -94,7 +65,7 @@ function roundRect(
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + width, y, x + width, y + height, r);
   ctx.arcTo(x + width, y + height, x, y + height, r);
-  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x + width, y + height, x, y, r);
   ctx.arcTo(x, y, x + width, y, r);
   ctx.closePath();
 }

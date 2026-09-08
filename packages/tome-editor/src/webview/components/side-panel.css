@@ -161,10 +161,6 @@
   color: var(--tome-muted);
 }
 
-.tome-side-panel-section.is-collapsed .tome-side-panel-section-label {
-  display: none;
-}
-
 .tome-side-panel-quick-link-item {
   position: relative;
   display: flex;

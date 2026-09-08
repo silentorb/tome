@@ -4,26 +4,17 @@ import type { TomeCorpusPublic } from "../../shared/http-client";
 import type { AppView } from "../../shared/types";
 import type { EditorApi } from "../api/client";
 import { nodePageHref } from "../node-links";
-import { HOME_ICON, VIEW_ICONS } from "../quick-links-nav";
+import {
+  PrimarySidePanel,
+  isHomeNavActive,
+  type SidePanelStandaloneUrls,
+} from "./PrimarySidePanel";
 import { QuickLinksPanel } from "./QuickLinksPanel";
 import { RecentNodesPanel } from "./RecentNodesPanel";
 import "./side-panel.css";
 
-export interface SidePanelStandaloneUrls {
-  home: string;
-  explorer: string;
-  create: string;
-  nodes: Record<string, string>;
-}
-
-export function isHomeNavActive(
-  activeView: AppView,
-  activeNodeId: string | null | undefined,
-  homeNodeId: string | null | undefined,
-): boolean {
-  if (activeView !== "node-page" || !activeNodeId || !homeNodeId) return false;
-  return activeNodeId === homeNodeId;
-}
+export type { SidePanelStandaloneUrls };
+export { isHomeNavActive };
 
 interface SidePanelProps {
   api: EditorApi;
@@ -43,47 +34,12 @@ interface SidePanelProps {
   protectedNodeIds?: readonly string[];
   archiveHubTitle?: string;
   activeNodeArchived?: boolean;
+  defaultDocumentIcon?: string | null;
   onRemoveQuickLink?: (nodeId: string) => void | Promise<void>;
   onQuickLinksReorder?: (nodeIds: string[]) => void | Promise<void>;
   onArchiveNode?: (nodeId: string) => Promise<void>;
   onUnarchiveNode?: (nodeId: string) => Promise<void>;
   onDeleteNode?: (nodeId: string) => Promise<void>;
-}
-
-function NavItem({
-  active,
-  title,
-  icon,
-  label,
-  href,
-  onClick,
-}: {
-  active: boolean;
-  title: string;
-  icon: string;
-  label: string;
-  href?: string;
-  onClick?: () => void;
-}) {
-  const className = `tome-side-panel-item${active ? " is-active" : ""}`;
-  if (href) {
-    return (
-      <a className={className} href={href} title={title}>
-        <span className="tome-side-panel-item-icon" aria-hidden="true">
-          {icon}
-        </span>
-        <span className="tome-side-panel-item-label">{label}</span>
-      </a>
-    );
-  }
-  return (
-    <button type="button" className={className} onClick={onClick} title={title}>
-      <span className="tome-side-panel-item-icon" aria-hidden="true">
-        {icon}
-      </span>
-      <span className="tome-side-panel-item-label">{label}</span>
-    </button>
-  );
 }
 
 export function SidePanel({
@@ -104,6 +60,7 @@ export function SidePanel({
   protectedNodeIds = [],
   archiveHubTitle,
   activeNodeArchived = false,
+  defaultDocumentIcon,
   onRemoveQuickLink,
   onQuickLinksReorder,
   onArchiveNode,
@@ -160,64 +117,46 @@ export function SidePanel({
         </button>
       </div>
       <nav className="tome-side-panel-nav">
-        <NavItem
-          active={isHomeNavActive(activeView, activeNodeId, homeNodeId)}
-          title="Home"
-          icon={HOME_ICON}
-          label="Home"
-          href={homeHref}
-        />
-        <NavItem
-          active={false}
-          title="Search nodes (Ctrl+K)"
-          icon="⌕"
-          label="Search"
-          onClick={onOpenSearch}
-        />
-        <NavItem
-          active={activeView === "graph-explorer"}
-          title="Graph Explorer"
-          icon={VIEW_ICONS["graph-explorer"]}
-          label="Graph Explorer"
-          href={standaloneUrls?.explorer}
-          onClick={standaloneUrls ? undefined : () => onViewChange("graph-explorer")}
-        />
-        {!corpusReadonly ? (
-          <NavItem
-            active={false}
-            title="New page"
-            icon="+"
-            label="New page"
-            href={standaloneUrls?.create}
-            onClick={standaloneUrls ? undefined : onNewPage}
-          />
-        ) : null}
-        <QuickLinksPanel
-          api={api}
-          quickLinks={quickLinks}
-          activeView={activeView}
-          activeNodeId={activeNodeId}
-          activeNodeArchived={activeNodeArchived}
-          collapsed={collapsed}
-          standaloneUrls={standaloneUrls}
-          pageBase={pageBase}
-          protectedNodeIds={protectedNodeIds}
-          archiveHubTitle={archiveHubTitle}
-          onRemoveQuickLink={corpusReadonly ? undefined : onRemoveQuickLink}
-          onQuickLinksReorder={corpusReadonly ? undefined : onQuickLinksReorder}
-          onArchiveNode={corpusReadonly ? undefined : onArchiveNode}
-          onUnarchiveNode={corpusReadonly ? undefined : onUnarchiveNode}
-          onDeleteNode={corpusReadonly ? undefined : onDeleteNode}
-        />
-        <RecentNodesPanel
-          api={api}
+        <PrimarySidePanel
           activeView={activeView}
           activeNodeId={activeNodeId}
           homeNodeId={homeNodeId}
-          collapsed={collapsed}
-          refreshKey={recentNodesRefreshKey}
-          pageBase={pageBase}
+          homeHref={homeHref}
+          corpusReadonly={corpusReadonly}
+          standaloneUrls={standaloneUrls}
+          onViewChange={onViewChange}
+          onNewPage={onNewPage}
+          onOpenSearch={onOpenSearch}
         />
+        {!collapsed ? (
+          <>
+            <QuickLinksPanel
+              api={api}
+              quickLinks={quickLinks}
+              activeView={activeView}
+              activeNodeId={activeNodeId}
+              activeNodeArchived={activeNodeArchived}
+              standaloneUrls={standaloneUrls}
+              pageBase={pageBase}
+              protectedNodeIds={protectedNodeIds}
+              archiveHubTitle={archiveHubTitle}
+              onRemoveQuickLink={corpusReadonly ? undefined : onRemoveQuickLink}
+              onQuickLinksReorder={corpusReadonly ? undefined : onQuickLinksReorder}
+              onArchiveNode={corpusReadonly ? undefined : onArchiveNode}
+              onUnarchiveNode={corpusReadonly ? undefined : onUnarchiveNode}
+              onDeleteNode={corpusReadonly ? undefined : onDeleteNode}
+            />
+            <RecentNodesPanel
+              api={api}
+              activeView={activeView}
+              activeNodeId={activeNodeId}
+              homeNodeId={homeNodeId}
+              defaultDocumentIcon={defaultDocumentIcon}
+              refreshKey={recentNodesRefreshKey}
+              pageBase={pageBase}
+            />
+          </>
+        ) : null}
       </nav>
     </aside>
   );

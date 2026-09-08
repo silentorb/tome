@@ -348,13 +348,12 @@ export function createApiHandler(
       const quickLinkMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/quick-link$/i.exec(path);
       if (quickLinkMatch && req.method === "POST") {
         const id = quickLinkMatch[1]!;
-        let options: { label?: string; icon?: string } | undefined;
+        let options: { label?: string } | undefined;
         try {
-          const payload = (await req.json()) as { label?: string; icon?: string };
+          const payload = (await req.json()) as { label?: string };
           if (payload && typeof payload === "object") {
             options = {
               ...(typeof payload.label === "string" ? { label: payload.label } : {}),
-              ...(typeof payload.icon === "string" ? { icon: payload.icon } : {}),
             };
           }
         } catch {

@@ -15,14 +15,8 @@ import type { QuickLinkError } from "tome-graph-interfaces";
 
 export type { QuickLinkError } from "tome-graph-interfaces";
 
-const FALLBACK_ICON = "M";
-
 export function isWorkspaceQuickLink(workspace: WorkspaceFile, nodeId: string): boolean {
   return workspace.quickLinks.some((link) => link.nodeId === nodeId);
-}
-
-function defaultQuickLinkIcon(workspace: WorkspaceFile): string {
-  return workspace.branding?.defaultDocumentIcon?.trim() || FALLBACK_ICON;
 }
 
 function nodeTitle(ctx: TomeWriteContext, nodeId: string): string | null {
@@ -53,7 +47,7 @@ function workspaceForNode(ctx: TomeWriteContext, nodeId: string): WorkspaceFile 
 export function addWorkspaceQuickLink(
   ctx: TomeWriteContext,
   nodeId: string,
-  options?: { label?: string; icon?: string },
+  options?: { label?: string },
 ): QuickLinkError | null {
   const normalizedId = nodeId;
   if (!writeStoreGetNode(ctx.graphStore, normalizedId)) return "not_found";
@@ -64,15 +58,9 @@ export function addWorkspaceQuickLink(
   const label = options?.label?.trim() || nodeTitle(ctx, normalizedId);
   if (!label) return "not_found";
 
-  const icon =
-    options?.icon !== undefined && options.icon !== ""
-      ? options.icon
-      : defaultQuickLinkIcon(workspace);
-
   const entry: WorkspaceQuickLink = {
     nodeId: normalizedId,
     label,
-    icon,
   };
 
   const next: WorkspaceFile = {

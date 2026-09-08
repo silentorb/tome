@@ -115,7 +115,6 @@ export function makeMockEditorApi(): EditorApi {
         {
           nodeId: id,
           label: options?.label ?? "Quick link",
-          icon: options?.icon ?? "M",
         },
       ];
     },

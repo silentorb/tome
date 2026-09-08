@@ -38,7 +38,6 @@ describe("workspace quick links", () => {
       expect(workspace.quickLinks[0]).toEqual({
         nodeId: NODE_ID,
         label: "Features hub",
-        icon: "T",
       });
       expect(isWorkspaceQuickLink(workspace, NODE_ID)).toBe(true);
     } finally {
@@ -46,20 +45,19 @@ describe("workspace quick links", () => {
     }
   });
 
-  test("addWorkspaceQuickLink accepts explicit label and icon", () => {
+  test("addWorkspaceQuickLink accepts explicit label", () => {
     const fixture = createTestContentFixture("tome-quick-link-add-custom-");
     try {
       seedTestNode(fixture, { id: NODE_ID, properties: { title: "Ignored" } });
 
       expect(
-        addWorkspaceQuickLink(fixture.ctx, NODE_ID, { label: "Features", icon: "★" }),
+        addWorkspaceQuickLink(fixture.ctx, NODE_ID, { label: "Features" }),
       ).toBeNull();
 
       const workspace = loadWorkspaceFromContent(fixture.ctx.store.contentDir);
       expect(workspace.quickLinks[0]).toEqual({
         nodeId: NODE_ID,
         label: "Features",
-        icon: "★",
       });
     } finally {
       destroyTestContentFixture(fixture);
@@ -84,7 +82,7 @@ describe("workspace quick links", () => {
     try {
       seedTestNode(fixture, { id: NODE_ID, properties: { title: "Page" } });
       seedTestWorkspace(fixture, {
-        quickLinks: [{ nodeId: NODE_ID, label: "Page", icon: "M" }],
+        quickLinks: [{ nodeId: NODE_ID, label: "Page" }],
       });
 
       expect(removeWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBeNull();
@@ -103,8 +101,8 @@ describe("workspace quick links", () => {
     try {
       seedTestWorkspace(fixture, {
         quickLinks: [
-          { nodeId: NODE_ID, label: "First", icon: "1" },
-          { nodeId: OTHER_NODE_ID, label: "Second", icon: "2" },
+          { nodeId: NODE_ID, label: "First" },
+          { nodeId: OTHER_NODE_ID, label: "Second" },
         ],
       });
 

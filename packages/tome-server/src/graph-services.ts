@@ -429,7 +429,7 @@ function buildGraphServices(
     },
     addQuickLink(
       id: string,
-      options?: { label?: string; icon?: string },
+      options?: { label?: string },
     ): QuickLinkError | null {
       return addWorkspaceQuickLink(writeCtx, id, options);
     },

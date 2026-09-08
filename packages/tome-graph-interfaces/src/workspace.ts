@@ -1,7 +1,6 @@
 export interface WorkspaceQuickLink {
   nodeId: string;
   label: string;
-  icon: string;
 }
 
 /** @deprecated Use WorkspaceQuickLink */

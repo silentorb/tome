@@ -415,7 +415,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     },
     async addQuickLink(
       id: string,
-      options?: { label?: string; icon?: string },
+      options?: { label?: string },
     ): Promise<void> {
       await fetchJson(`/api/nodes/${id}/quick-link`, {
         method: "POST",

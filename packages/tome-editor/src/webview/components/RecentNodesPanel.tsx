@@ -10,7 +10,7 @@ interface RecentNodesPanelProps {
   activeView: AppView;
   activeNodeId?: string | null;
   homeNodeId?: string | null;
-  collapsed: boolean;
+  defaultDocumentIcon?: string | null;
   refreshKey: number;
   pageBase?: string;
 }
@@ -43,7 +43,7 @@ export function RecentNodesPanel({
   activeView,
   activeNodeId,
   homeNodeId,
-  collapsed,
+  defaultDocumentIcon,
   refreshKey,
   pageBase,
 }: RecentNodesPanelProps) {
@@ -70,10 +70,7 @@ export function RecentNodesPanel({
   return (
     <>
       <div className="tome-side-panel-divider" role="presentation" />
-      <div
-        className={`tome-side-panel-section${collapsed ? " is-collapsed" : ""}`}
-        aria-label="Recent nodes"
-      >
+      <div className="tome-side-panel-section" aria-label="Recent nodes">
         <div className="tome-side-panel-section-label">Recent</div>
         {nodes.map((item) => (
           <NavItem
@@ -83,8 +80,8 @@ export function RecentNodesPanel({
             icon={resolveDocumentIcon({
               view: "node-page",
               nodeId: item.id,
-              primaryTypeTitle: item.primaryTypeTitle,
               homeId: homeNodeId,
+              defaultDocumentIcon,
             })}
             label={item.title}
             href={nodePageHref(item.id, pageBase)}

@@ -157,7 +157,7 @@ export interface TomeGraphServices {
   unarchiveNode(id: string): NodeLifecycleError | null;
   addQuickLink(
     id: string,
-    options?: { label?: string; icon?: string },
+    options?: { label?: string },
   ): QuickLinkError | null;
   removeQuickLink(id: string): QuickLinkError | null;
   reorderQuickLinks(nodeIds: readonly string[]): QuickLinkError | null;

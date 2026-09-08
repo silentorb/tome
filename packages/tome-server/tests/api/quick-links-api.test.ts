@@ -24,7 +24,7 @@ describe("quick links API", () => {
         new Request(`http://127.0.0.1/api/nodes/${NODE_ID}/quick-link`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ label: "Features", icon: "★" }),
+          body: JSON.stringify({ label: "Features" }),
         }),
       );
       expect(added.status).toBe(200);
@@ -33,7 +33,7 @@ describe("quick links API", () => {
         readFileSync(workspaceFilePath(fixture.ctx.store.contentDir), "utf-8"),
       );
       expect(workspaceAfterAdd.quickLinks).toEqual([
-        { nodeId: NODE_ID, label: "Features", icon: "★" },
+        { nodeId: NODE_ID, label: "Features" },
       ]);
 
       const duplicate = await handler(
@@ -67,14 +67,14 @@ describe("quick links API", () => {
         new Request(`http://127.0.0.1/api/nodes/${NODE_ID}/quick-link`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ label: "First", icon: "1" }),
+          body: JSON.stringify({ label: "First" }),
         }),
       );
       await handler(
         new Request(`http://127.0.0.1/api/nodes/${OTHER_NODE_ID}/quick-link`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ label: "Second", icon: "2" }),
+          body: JSON.stringify({ label: "Second" }),
         }),
       );
 
