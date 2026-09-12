@@ -62,9 +62,11 @@ File: `packages/tome-server/config/tome-server.json` (override with `TOME_SERVER
 - Multiple services are allowed (each typically binds its own port in v1).
 - Path defaults (`TOME_CONTENT_PATH`, `TOME_DB_PATH`) are merged into module options by the host when omitted. Pass `corpora` in `store.options` (or `TOME_CORPORA`) for a multi-corpus session.
 
-Bootstrap order: open store → open cache (with enum codec + set perspectives from content) → **sync content to SQLite** (`CacheSync.ensureReady()` — blocking; emits `[tome-sync]` progress on stderr for large corpora) → open graph services (subscribe to store changes, `store.startWatching()`) → start service modules. **HTTP binds only after sync completes**, so `/api/health` is unavailable until the cache is ready.
+Bootstrap order: open store → open cache (with enum codec + set perspectives from content) → open graph services **without** blocking sync or file watchers → **start service modules (HTTP binds)** → run `CacheSync.ensureReadyAsync()` (cooperative; emits `[tome-sync]` progress on stderr and updates the sync status tracker) → mark ready, subscribe store→cache, `startWatching()`.
 
-Startup logs: `[tome-server]` path/config lines, then `[tome-sync]` phase progress during cache rebuild or body reconciliation, then `[tome-server] graph ready (…ms)`, then `Tome API listening on …`. See [tome-db.md](./tome-db.md) § Cache sync at startup.
+While syncing, `/api/health` reports `ready: false` / `syncing: true` with optional numeric `progress`; other API routes return **503** `cache_syncing`. After sync completes, health reports `ready: true` and data routes work normally. See [tome-db.md](./tome-db.md) § Cache sync at startup.
+
+Startup logs: `[tome-server]` path/config lines, `Tome API listening on …` (may appear **before** sync finishes), then `[tome-sync]` phase progress, then `[tome-server] graph ready (…ms)`.
 
 ## Run
 

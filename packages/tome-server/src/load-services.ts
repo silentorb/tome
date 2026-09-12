@@ -14,6 +14,7 @@ import type {
   TomeQueryCache,
   TomeQueryCacheOpenOptions,
   TomeCorpusConfig,
+  CacheSyncPublicStatus,
 } from "tome-service-interfaces";
 import type { TomeGraphServices } from "tome-graph-interfaces";
 
@@ -215,6 +216,7 @@ export interface StartedServices {
 export async function startConfiguredServices(
   graph: TomeGraphServices,
   config: TomeServerConfig = loadServerConfig(),
+  hostExtras?: { getCacheSyncStatus?: () => CacheSyncPublicStatus },
 ): Promise<StartedServices> {
   if (config.services.length === 0) {
     console.warn(
@@ -228,6 +230,7 @@ export async function startConfiguredServices(
     await service.start({
       services: graph,
       options: entry.options ?? {},
+      getCacheSyncStatus: hostExtras?.getCacheSyncStatus,
     });
     modules.push(service);
     console.log(`[tome-server] started service "${service.id}" from ${entry.module}`);

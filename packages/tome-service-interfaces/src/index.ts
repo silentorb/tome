@@ -14,12 +14,29 @@ export type { TableSchemasFile, ViewsFile, WorkspaceFile } from "tome-graph-inte
 export type TomeServiceModuleOptions = unknown;
 
 /**
+ * Public cache-sync readiness for HTTP health / gated routes during startup.
+ * Populated from tome-db `CacheSync` progress events.
+ */
+export type CacheSyncPublicStatus = {
+  ready: boolean;
+  syncing: boolean;
+  phase?: string;
+  /** 0..1 when current+total are known. */
+  progress?: number;
+  current?: number;
+  total?: number;
+  message?: string;
+};
+
+/**
  * Host context passed into a service module when the server starts it.
  * `services` is the domain facade (`TomeGraphServices`), not a service module.
  */
 export interface TomeServiceHost {
   services: TomeGraphServices;
   options: TomeServiceModuleOptions;
+  /** Present while startup cache sync may still be running. */
+  getCacheSyncStatus?: () => CacheSyncPublicStatus;
 }
 
 /**

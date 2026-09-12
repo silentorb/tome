@@ -4,7 +4,11 @@ import type { TomeQueryCache } from "tome-service-interfaces";
 import type { TomeGraphStoreBase, TomeGraphStoreQueryable } from "tome-graph-interfaces";
 import type { GraphDatabase, Properties } from "tome-sqlite";
 import { ComposedGraphStore } from "../graph-store/composed-graph-store";
-import { CacheSync, subscribeStoreToCacheSync, type SyncProgressReporter } from "./sync";
+import {
+  CacheSync,
+  subscribeStoreToCacheSync,
+  type SyncProgressReporter,
+} from "./sync";
 
 /** Solo or composite flatfile store used by domain write/sync paths. */
 export type FlatfileStore = ContentStore | CompositeStore;
@@ -12,6 +16,12 @@ export type FlatfileStore = ContentStore | CompositeStore;
 export interface OpenTomeWriteContextOptions {
   graphStore?: TomeGraphStoreQueryable;
   progress?: SyncProgressReporter;
+  /**
+   * When true, skip `ensureReady()` and store→sync subscription.
+   * Caller must run `sync.ensureReady()` / `ensureReadyAsync()` then
+   * {@link finishDeferredWriteContextReady}.
+   */
+  deferReady?: boolean;
 }
 
 export interface TomeWriteContext {
@@ -36,16 +46,25 @@ export function openTomeWriteContext(
   const options: OpenTomeWriteContextOptions =
     graphStoreOrOptions &&
     typeof graphStoreOrOptions === "object" &&
-    ("progress" in graphStoreOrOptions || "graphStore" in graphStoreOrOptions)
+    ("progress" in graphStoreOrOptions ||
+      "graphStore" in graphStoreOrOptions ||
+      "deferReady" in graphStoreOrOptions)
       ? graphStoreOrOptions
       : { graphStore: graphStoreOrOptions as TomeGraphStoreQueryable | undefined };
   const sync = new CacheSync(store, cache, options.progress);
-  sync.ensureReady();
-  subscribeStoreToCacheSync(store, sync);
+  if (!options.deferReady) {
+    sync.ensureReady();
+    subscribeStoreToCacheSync(store, sync);
+  }
   const resolvedGraphStore =
     options.graphStore ??
     new ComposedGraphStore(new FlatfileGraphStore(store), cache as GraphDatabase, sync);
   return { graphStore: resolvedGraphStore, store, sync, cache };
+}
+
+/** After deferred `ensureReady` / `ensureReadyAsync`, wire store→cache subscriptions. */
+export function finishDeferredWriteContextReady(ctx: TomeWriteContext): () => void {
+  return subscribeStoreToCacheSync(ctx.store, ctx.sync);
 }
 
 export function syncAfterNodeWrite(ctx: TomeWriteContext, id: string): void {

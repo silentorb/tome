@@ -5,6 +5,7 @@ import type {
   TomeGraphServices,
   ViewSortSpec,
 } from "tome-graph-interfaces";
+import type { CacheSyncPublicStatus } from "tome-service-interfaces";
 import { isPersistableNodeTitle } from "tome-graph-interfaces";
 import type { UserSettingsPatch } from "./user-settings";
 import { UserSettingsStore } from "./user-settings-store";
@@ -61,13 +62,46 @@ function quickLinkMessage(error: QuickLinkError): string {
 
 export type ApiFetchHandler = ((req: Request) => Promise<Response>) & { close: () => void };
 
+export type CreateApiHandlerOptions = {
+  getCacheSyncStatus?: () => CacheSyncPublicStatus;
+};
+
+function cacheSyncingPayload(status: CacheSyncPublicStatus) {
+  return {
+    error: "cache_syncing" as const,
+    syncing: true as const,
+    ...(status.phase != null ? { phase: status.phase } : {}),
+    ...(status.progress != null ? { progress: status.progress } : {}),
+    ...(status.current != null ? { current: status.current } : {}),
+    ...(status.total != null ? { total: status.total } : {}),
+    ...(status.message != null ? { message: status.message } : {}),
+  };
+}
+
+function healthPayload(status: CacheSyncPublicStatus | undefined) {
+  if (!status) {
+    return { ok: true as const, ready: true as const, syncing: false as const };
+  }
+  return {
+    ok: true as const,
+    ready: status.ready,
+    syncing: status.syncing,
+    ...(status.phase != null ? { phase: status.phase } : {}),
+    ...(status.progress != null ? { progress: status.progress } : {}),
+    ...(status.current != null ? { current: status.current } : {}),
+    ...(status.total != null ? { total: status.total } : {}),
+    ...(status.message != null ? { message: status.message } : {}),
+  };
+}
+
 /** Build the HTTP fetch handler against graph services (no DB/path opening). */
 export function createApiHandler(
   db: TomeGraphServices,
   userSettingsStore: UserSettingsStore,
+  options?: CreateApiHandlerOptions,
 ): ApiFetchHandler {
   const settingsStore = userSettingsStore;
-
+  const getCacheSyncStatus = options?.getCacheSyncStatus;
 
   const fetchHandler = async (req: Request): Promise<Response> => {
     if (req.method === "OPTIONS") return corsPreflight();
@@ -76,8 +110,14 @@ export function createApiHandler(
     const path = url.pathname;
 
     try {
+      const syncStatus = getCacheSyncStatus?.();
+
       if (path === "/api/health") {
-        return json({ ok: true });
+        return json(healthPayload(syncStatus));
+      }
+
+      if (syncStatus && !syncStatus.ready) {
+        return json(cacheSyncingPayload(syncStatus), 503);
       }
 
       if (path === "/api/home") {

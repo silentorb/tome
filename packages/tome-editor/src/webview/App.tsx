@@ -41,6 +41,8 @@ import {
 } from "./body-document-projection";
 import { bodyNeedsSave, buildPendingSavePayload, editorMarkdownToSaveDocument, titleNeedsSave } from "./editor-save";
 import { useCorpora } from "./useCorpora";
+import { CacheSyncProgressPanel } from "./components/CacheSyncProgressPanel";
+import { isCacheSyncingError } from "../shared/http-client";
 import {
   readGraphExplorerLayerDepth,
   readGraphExplorerMode,
@@ -123,6 +125,8 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     corpusReadonly,
     workspace,
     error: workspaceError,
+    cacheSync,
+    setCacheSync,
     refreshWorkspace,
     setActiveCorpus,
   } = useCorpora(baseApi);
@@ -543,19 +547,38 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
   );
 
   const bootstrap = useCallback(async () => {
-    if (!userSettingsReady || !workspace) return;
+    if (!userSettingsReady || !workspace || cacheSync) return;
     try {
       const home = await api.getHomeId(activeCorpusId ?? undefined);
       setHomeId(home);
       await hydrateFromLocation({ homeId: home });
     } catch (err) {
+      if (isCacheSyncingError(err)) {
+        setCacheSync({
+          phase: err.phase,
+          progress: err.progress,
+          current: err.current,
+          total: err.total,
+          message: err.message,
+        });
+        setError(null);
+        return;
+      }
       setError(
         err instanceof Error
           ? err.message
           : "Could not reach the Tome editor API. Start it with: bun run editor:dev",
       );
     }
-  }, [activeCorpusId, api, hydrateFromLocation, userSettingsReady, workspace]);
+  }, [
+    activeCorpusId,
+    api,
+    cacheSync,
+    hydrateFromLocation,
+    setCacheSync,
+    userSettingsReady,
+    workspace,
+  ]);
 
   useEffect(() => {
     void bootstrap();
@@ -901,7 +924,9 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
         onDeleteNode={deleteCurrentNode}
       />
       <div className={`tome-main${view === "graph-explorer" ? " tome-main-graph" : ""}`}>
-        {workspaceError ? (
+        {cacheSync ? (
+          <CacheSyncProgressPanel status={cacheSync} />
+        ) : workspaceError ? (
           <div className="tome-error">{workspaceError}</div>
         ) : !workspace ? (
           <div className="tome-loading">Loading…</div>

@@ -14,6 +14,7 @@ import type { UserSettings, UserSettingsPatch } from "./user-settings";
 import type { PublicExtensionsManifest } from "tome-graph-interfaces";
 import type { SchemaFile } from "tome-graph-interfaces";
 import type {
+  ApiHealth,
   CreateNodeResponse,
   TomeHttpClient,
   GetNodeOptions,
@@ -24,6 +25,62 @@ import type {
 import { appendTableRowsQueryParams } from "./table-rows-query";
 
 export const DEFAULT_API_BASE_URL = "http://127.0.0.1:3847";
+
+export type CacheSyncingErrorFields = {
+  phase?: string;
+  progress?: number;
+  current?: number;
+  total?: number;
+  message?: string;
+};
+
+/** Thrown when the API returns 503 because startup cache sync is still running. */
+export class CacheSyncingError extends Error {
+  readonly syncing = true as const;
+  readonly phase?: string;
+  readonly progress?: number;
+  readonly current?: number;
+  readonly total?: number;
+
+  constructor(fields: CacheSyncingErrorFields = {}) {
+    super(fields.message ?? "Cache sync in progress");
+    this.name = "CacheSyncingError";
+    this.phase = fields.phase;
+    this.progress = fields.progress;
+    this.current = fields.current;
+    this.total = fields.total;
+  }
+}
+
+export function isCacheSyncingError(err: unknown): err is CacheSyncingError {
+  return err instanceof CacheSyncingError;
+}
+
+function parseCacheSyncingPayload(text: string): CacheSyncingErrorFields | null {
+  try {
+    const payload = JSON.parse(text) as {
+      error?: string;
+      syncing?: boolean;
+      phase?: string;
+      progress?: number;
+      current?: number;
+      total?: number;
+      message?: string;
+    };
+    if (payload.syncing === true || payload.error === "cache_syncing") {
+      return {
+        phase: payload.phase,
+        progress: payload.progress,
+        current: payload.current,
+        total: payload.total,
+        message: payload.message,
+      };
+    }
+  } catch {
+    /* not JSON */
+  }
+  return null;
+}
 
 function parseApiError(text: string, status: number): string {
   try {
@@ -42,6 +99,10 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     const res = await fetch(`${normalizedBase}${path}`, init);
     if (!res.ok) {
       const text = await res.text();
+      if (res.status === 503) {
+        const syncing = parseCacheSyncingPayload(text);
+        if (syncing) throw new CacheSyncingError(syncing);
+      }
       throw new Error(parseApiError(text, res.status));
     }
     return (await res.json()) as T;
@@ -64,6 +125,9 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
   }
 
   return {
+    async getHealth(): Promise<ApiHealth> {
+      return fetchJson<ApiHealth>("/api/health");
+    },
     async getWorkspace(corpusId?: string): Promise<WorkspacePublic> {
       const qs = corpusId ? `?corpusId=${encodeURIComponent(corpusId)}` : "";
       return fetchJson<WorkspacePublic>(`/api/workspace${qs}`);
@@ -526,7 +590,11 @@ export async function waitForApi(baseUrl: string, attempts = 40): Promise<boolea
   for (let i = 0; i < attempts; i += 1) {
     try {
       const res = await fetch(`${normalizedBase}/api/health`);
-      if (res.ok) return true;
+      if (res.ok) {
+        const payload = (await res.json()) as { ready?: boolean };
+        // ready === false means listening but cache sync still running
+        if (payload.ready !== false) return true;
+      }
     } catch {
       /* retry */
     }

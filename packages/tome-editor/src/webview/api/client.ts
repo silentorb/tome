@@ -23,6 +23,7 @@ export function createEditorApi(): EditorApi {
   const rest = createHttpEditorClient(resolveWebviewApiBaseUrl());
 
   return {
+    getHealth: rest.getHealth.bind(rest),
     getWorkspace: rest.getWorkspace.bind(rest),
     listCorpora: rest.listCorpora.bind(rest),
     getHomeId: rest.getHomeId.bind(rest),

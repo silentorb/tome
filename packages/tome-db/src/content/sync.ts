@@ -62,6 +62,89 @@ export type SyncProgressEvent = {
 
 export type SyncProgressReporter = (event: SyncProgressEvent) => void;
 
+/** Public readiness snapshot for HTTP health / gated API responses. */
+export type CacheSyncPublicStatus = {
+  ready: boolean;
+  syncing: boolean;
+  phase?: SyncProgressPhase;
+  /** 0..1 when current+total are known. */
+  progress?: number;
+  current?: number;
+  total?: number;
+  message?: string;
+};
+
+export type CacheSyncStatusTracker = {
+  report: SyncProgressReporter;
+  getStatus: () => CacheSyncPublicStatus;
+  markReady: () => void;
+};
+
+function progressFromEvent(event: SyncProgressEvent): number | undefined {
+  if (
+    event.current != null &&
+    event.total != null &&
+    event.total > 0 &&
+    Number.isFinite(event.current) &&
+    Number.isFinite(event.total)
+  ) {
+    return Math.min(1, Math.max(0, event.current / event.total));
+  }
+  return undefined;
+}
+
+/** Mutable status tracker that also acts as a `SyncProgressReporter`. */
+export function createCacheSyncStatusTracker(
+  initial?: Partial<CacheSyncPublicStatus>,
+): CacheSyncStatusTracker {
+  let status: CacheSyncPublicStatus = {
+    ready: false,
+    syncing: true,
+    phase: "check",
+    message: "checking cache freshness…",
+    ...initial,
+  };
+
+  return {
+    report(event) {
+      const progress = progressFromEvent(event);
+      status = {
+        ready: event.phase === "ready",
+        syncing: event.phase !== "ready",
+        phase: event.phase,
+        ...(progress != null ? { progress } : {}),
+        ...(event.current != null ? { current: event.current } : {}),
+        ...(event.total != null ? { total: event.total } : {}),
+        ...(event.message != null ? { message: event.message } : {}),
+      };
+    },
+    getStatus() {
+      return { ...status };
+    },
+    markReady() {
+      status = {
+        ready: true,
+        syncing: false,
+        phase: "ready",
+        progress: 1,
+        message: status.message ?? "cache ready",
+      };
+    },
+  };
+}
+
+/** Combine multiple progress reporters (e.g. console + status tracker). */
+export function composeSyncProgressReporters(
+  ...reporters: Array<SyncProgressReporter | undefined>
+): SyncProgressReporter {
+  const active = reporters.filter((r): r is SyncProgressReporter => r != null);
+  if (active.length === 0) return () => {};
+  if (active.length === 1) return active[0]!;
+  return (event) => {
+    for (const reporter of active) reporter(event);
+  };
+}
+
 function formatSyncCount(n: number): string {
   return n.toLocaleString("en-US");
 }
@@ -367,6 +450,73 @@ export class CacheSync {
     }
   }
 
+  private async fullRebuildAsync(): Promise<void> {
+    this.applying = true;
+    try {
+      this.cache.runExec("DELETE FROM nodes");
+
+      const ids = this.store.listNodeIds();
+      const total = ids.length;
+      if (this.startupSync) {
+        this.report({ phase: "rebuild", total });
+        await Bun.sleep(0);
+      }
+      for (let i = 0; i < ids.length; i += 1) {
+        const id = ids[i]!;
+        const node = this.store.readNode(id);
+        if (!node) continue;
+        const body = bodyFromNode(node);
+        const props = { ...node.properties, body };
+        this.cache.upsertNode(node.id, props);
+        if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
+          this.report({ phase: "rebuild_nodes", current: i + 1, total });
+          await Bun.sleep(0);
+        }
+      }
+
+      await this.expandRelationshipsToCacheAsync();
+
+      invalidateDynamicPropertiesCache();
+      this.updateCacheMarkers();
+    } finally {
+      this.applying = false;
+    }
+  }
+
+  private async expandRelationshipsToCacheAsync(): Promise<void> {
+    const entries = this.store.readRelationshipsFile().relationships;
+    const registry = this.store.readAssociationsFile();
+    const expandStarted = performance.now();
+    if (this.startupSync) {
+      this.report({ phase: "expand_relationships", total: entries.length });
+      await Bun.sleep(0);
+    }
+    const { records, projections } = expandAllRelationships(entries, registry);
+
+    this.cache.runExec("BEGIN");
+    try {
+      this.cache.clearRelationshipCache();
+      for (const record of records) {
+        this.cache.upsertRelationshipRecord(record);
+      }
+      for (const projection of projections) {
+        this.cache.upsertRelationshipProjection(projection);
+      }
+      this.recomputeArchivedFlags();
+      this.cache.runExec("COMMIT");
+      if (this.startupSync) {
+        this.report({
+          phase: "expand_relationships",
+          message: `relationships expanded (${formatSyncElapsed(performance.now() - expandStarted)})`,
+        });
+        await Bun.sleep(0);
+      }
+    } catch (err) {
+      this.cache.runExec("ROLLBACK");
+      throw err;
+    }
+  }
+
   ensureReady(): void {
     this.startupSync = true;
     const startedAt = performance.now();
@@ -376,6 +526,30 @@ export class CacheSync {
         this.fullRebuild();
       } else {
         this.reconcileNodeBodiesFromFiles();
+      }
+      this.report({
+        phase: "ready",
+        message: `cache ready (${formatSyncElapsed(performance.now() - startedAt)})`,
+      });
+    } finally {
+      this.startupSync = false;
+    }
+  }
+
+  /**
+   * Cooperative startup sync: yields to the event loop on progress ticks so HTTP
+   * can answer gated syncing responses while a long rebuild runs.
+   */
+  async ensureReadyAsync(): Promise<void> {
+    this.startupSync = true;
+    const startedAt = performance.now();
+    try {
+      this.report({ phase: "check", message: "checking cache freshness…" });
+      await Bun.sleep(0);
+      if (this.cacheNeedsRebuild()) {
+        await this.fullRebuildAsync();
+      } else {
+        await this.reconcileNodeBodiesFromFilesAsync();
       }
       this.report({
         phase: "ready",
@@ -406,6 +580,31 @@ export class CacheSync {
       }
       if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
         this.report({ phase: "reconcile", current: i + 1, total });
+      }
+    }
+  }
+
+  private async reconcileNodeBodiesFromFilesAsync(): Promise<void> {
+    const ids = this.store.listNodeIds();
+    const total = ids.length;
+    if (this.startupSync) {
+      this.report({ phase: "reconcile", total });
+      await Bun.sleep(0);
+    }
+    for (let i = 0; i < ids.length; i += 1) {
+      const id = ids[i]!;
+      const fileNode = this.store.readNode(id);
+      if (!fileNode) continue;
+      const fileBody = bodyFromNode(fileNode);
+      const cacheNode = this.cache.getNode(id);
+      const cacheBody =
+        typeof cacheNode?.properties.body === "string" ? cacheNode.properties.body : "";
+      if (fileBody !== cacheBody) {
+        this.syncNode(id);
+      }
+      if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
+        this.report({ phase: "reconcile", current: i + 1, total });
+        await Bun.sleep(0);
       }
     }
   }

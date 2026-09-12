@@ -31,6 +31,18 @@ export interface TomeCorpusPublic {
   workspace: WorkspacePublic;
 }
 
+/** `/api/health` payload (includes cache-sync readiness while startup sync runs). */
+export type ApiHealth = {
+  ok: true;
+  ready: boolean;
+  syncing: boolean;
+  phase?: string;
+  progress?: number;
+  current?: number;
+  total?: number;
+  message?: string;
+};
+
 export type {
   GraphRelationship,
   GraphNode,
@@ -61,6 +73,7 @@ export interface CreateNodeResponse {
 }
 
 export interface TomeHttpClient {
+  getHealth(): Promise<ApiHealth>;
   getWorkspace(corpusId?: string): Promise<WorkspacePublic>;
   listCorpora(): Promise<TomeCorpusPublic[]>;
   getHomeId(corpusId?: string): Promise<string>;

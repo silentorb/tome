@@ -12,6 +12,7 @@ export function makeMockEditorApi(): EditorApi {
   };
 
   return {
+    getHealth: async () => ({ ok: true as const, ready: true, syncing: false }),
     getWorkspace: async () => workspace,
     listCorpora: async () => [
       {

@@ -4,7 +4,13 @@ import {
   loadSchemaFromContent,
   setTraitProjectionTypes,
 } from "tome-db";
-import { openTomeGraphServices } from "./graph-services";
+import {
+  composeSyncProgressReporters,
+  createCacheSyncStatusTracker,
+  createConsoleSyncProgressReporter,
+  finishDeferredWriteContextReady,
+} from "tome-db/content";
+import { openTomeGraphServicesDeferred } from "./graph-services";
 import {
   loadConfiguredCache,
   loadConfiguredStore,
@@ -48,21 +54,40 @@ export async function startTomeServer(options?: {
     memberPerspectives,
   });
 
-  console.log(
-    "[tome-server] opening graph services (cache sync may take a while on large corpora)…",
+  const syncStatus = createCacheSyncStatusTracker();
+  const progress = composeSyncProgressReporters(
+    createConsoleSyncProgressReporter(),
+    syncStatus.report,
   );
-  const graphStartedAt = performance.now();
-  const graph = openTomeGraphServices({ store, cache });
-  console.log(`[tome-server] graph ready (${Math.round(performance.now() - graphStartedAt)}ms)`);
 
-  const started = await startConfiguredServices(graph, config);
+  console.log(
+    "[tome-server] opening graph services (HTTP will listen during cache sync)…",
+  );
+  const deferred = openTomeGraphServicesDeferred(
+    { store, cache },
+    { progress },
+  );
+
+  const started = await startConfiguredServices(deferred.services, config, {
+    getCacheSyncStatus: () => syncStatus.getStatus(),
+  });
+
+  const graphStartedAt = performance.now();
+  console.log("[tome-server] cache sync starting…");
+  await deferred.writeCtx.sync.ensureReadyAsync();
+  syncStatus.markReady();
+  finishDeferredWriteContextReady(deferred.writeCtx);
+  deferred.startWatching();
+  console.log(
+    `[tome-server] graph ready (${Math.round(performance.now() - graphStartedAt)}ms)`,
+  );
 
   return {
-    graph,
+    graph: deferred.services,
     services: started.modules,
     async stop() {
       await started.stop();
-      graph.close();
+      deferred.services.close();
     },
   };
 }

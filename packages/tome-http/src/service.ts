@@ -64,7 +64,9 @@ export function createTomeHttpService(): TomeServiceModule {
       const port = resolvePort(options);
       const settingsPath = resolveUserSettingsPath(options);
       const settingsStore = new UserSettingsStore(settingsPath);
-      handler = createApiHandler(host.services, settingsStore);
+      handler = createApiHandler(host.services, settingsStore, {
+        getCacheSyncStatus: host.getCacheSyncStatus,
+      });
       server = Bun.serve({
         port,
         fetch: handler,

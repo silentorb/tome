@@ -62,6 +62,7 @@ import {
   openContentGraph,
   openTomeWriteContext,
   type FlatfileStore,
+  type SyncProgressReporter,
 } from "tome-db/content";
 import type { TomeDataStore, TomeQueryCache } from "tome-service-interfaces";
 import { resolveContentPath, resolveDbPath } from "./paths";
@@ -105,8 +106,11 @@ export type OpenTomeGraphServicesArgs = {
 function buildGraphServices(
   writeCtx: TomeWriteContext,
   contentPath: string,
+  options?: { startWatching?: boolean },
 ): TomeGraphServices {
-  writeCtx.graphStore.startWatching();
+  if (options?.startWatching !== false) {
+    writeCtx.graphStore.startWatching();
+  }
   const graphStore = writeCtx.graphStore;
 
   const extensions = new ExtensionServerRuntime(
@@ -534,7 +538,7 @@ function buildGraphServices(
 /**
  * Open graph services from injected store + cache, or from db/content paths (tests).
  *
- * - `openTomeGraphServices({ store, cache })` — host DI path
+ * - `openTomeGraphServices({ store, cache })` — host DI path (syncs cache before return)
  * - `openTomeGraphServices(dbPath, contentPath)` — test convenience via `openContentGraph`
  */
 export function openTomeGraphServices(
@@ -547,6 +551,35 @@ export function openTomeGraphServices(
   }
   const writeCtx = openContentGraph(contentPath, args);
   return buildGraphServices(writeCtx, contentPath);
+}
+
+export type DeferredTomeGraphServices = {
+  services: TomeGraphServices;
+  writeCtx: TomeWriteContext;
+  startWatching: () => void;
+};
+
+/**
+ * Open graph services without blocking on cache sync or starting file watchers.
+ * Caller runs `writeCtx.sync.ensureReadyAsync()`, then `finishDeferredWriteContextReady`
+ * and `startWatching()`.
+ */
+export function openTomeGraphServicesDeferred(
+  args: OpenTomeGraphServicesArgs,
+  options?: { progress?: SyncProgressReporter },
+): DeferredTomeGraphServices {
+  const writeCtx = openTomeWriteContext(args.store as FlatfileStore, args.cache, {
+    deferReady: true,
+    progress: options?.progress,
+  });
+  const services = buildGraphServices(writeCtx, args.store.contentDir, {
+    startWatching: false,
+  });
+  return {
+    services,
+    writeCtx,
+    startWatching: () => writeCtx.graphStore.startWatching(),
+  };
 }
 
 /** @deprecated Use openTomeGraphServices */

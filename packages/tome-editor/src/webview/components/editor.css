@@ -344,7 +344,8 @@
 }
 
 .tome-loading,
-.tome-error {
+.tome-error,
+.tome-syncing {
   max-width: 1280px;
   margin: 48px auto;
   padding: 0 24px;
@@ -352,6 +353,61 @@
 
 .tome-error {
   color: #f87171;
+}
+
+.tome-syncing-title {
+  margin: 0 0 8px;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.tome-syncing-copy {
+  margin: 0 0 16px;
+  color: var(--tome-muted);
+  max-width: 36rem;
+}
+
+.tome-syncing-bar {
+  height: 8px;
+  max-width: 28rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--tome-border) 80%, transparent);
+  overflow: hidden;
+}
+
+.tome-syncing-bar-fill {
+  height: 100%;
+  width: 0;
+  border-radius: 4px;
+  background: #60a5fa;
+  transition: width 0.2s ease-out;
+}
+
+.tome-syncing-bar.is-indeterminate .tome-syncing-bar-fill {
+  width: 35%;
+  animation: tome-syncing-indeterminate 1.2s ease-in-out infinite;
+}
+
+@keyframes tome-syncing-indeterminate {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(320%);
+  }
+}
+
+.tome-syncing-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 10px;
+  font-size: 0.85rem;
+  color: var(--tome-muted);
+}
+
+.tome-syncing-detail {
+  color: var(--tome-fg, inherit);
 }
 
 .tome-app-bar {

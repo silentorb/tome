@@ -157,9 +157,14 @@ Consolidate legacy dual directed edges with `bun scripts/consolidate-relationshi
 
 ### Cache sync at startup
 
-`openContentGraph`, `openTomeWriteContext`, and **tome-server** startup all call `CacheSync.ensureReady()` **before** HTTP or other services bind. The call is synchronous: on a cold or stale cache it runs a full rebuild (every node + live relationships); on a warm cache it still scans every node for body drift.
+`openContentGraph` and `openTomeWriteContext` (default) still call `CacheSync.ensureReady()` **synchronously** before returning. **tome-server** instead opens a deferred write context, **binds HTTP immediately**, then runs `CacheSync.ensureReadyAsync()` (cooperative yields on progress ticks so gated routes can answer).
 
-Progress is logged to **stderr** with the **`[tome-sync]`** prefix: cache freshness check, full rebuild or reconcile phase, periodic node counts (every 1,000 nodes on large corpora), relationship expansion timing, and a final `cache ready (…)` line. Inject a custom `SyncProgressReporter` via `openTomeWriteContext(…, { progress })` or `new CacheSync(…, reporter)` for tests and integrators.
+While startup sync is in progress:
+
+- `GET /api/health` returns `{ ok: true, ready: false, syncing: true, phase, progress?, … }`
+- Other `/api/*` routes return **503** `{ error: "cache_syncing", syncing: true, phase, progress?, … }`
+
+Progress is also logged to **stderr** with the **`[tome-sync]`** prefix. Inject a custom `SyncProgressReporter` via `openTomeWriteContext(…, { progress })` or `new CacheSync(…, reporter)`; server combines the console reporter with `createCacheSyncStatusTracker()` for HTTP.
 
 To avoid a long rebuild when starting the API, pre-warm the SQLite cache with `bash scripts/content-sync.sh` (same sync path as startup, no HTTP).
 
