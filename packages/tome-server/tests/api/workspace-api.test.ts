@@ -16,6 +16,10 @@ describe("GET /api/workspace", () => {
     id: TEST_ARCHIVE_NODE_ID,
     properties: { title: "Archive hub" },
   });
+  seedTestNode(fixture, {
+    id: TEST_HOME_NODE_ID,
+    properties: { title: "Home" },
+  });
 
   const api = createTestApiFromContent(fixture);
 
@@ -39,5 +43,18 @@ describe("GET /api/workspace", () => {
     expect(body.protectedNodeIds).toEqual([TEST_HOME_NODE_ID, TEST_ARCHIVE_NODE_ID]);
     expect(body.graphExplorer.defaultAnchorNodeId).toBe(TEST_GRAPH_ANCHOR_NODE_ID);
     expect(body.archiveNodeTitle).toBe("Archive hub");
+  });
+
+  test("GET /api/home returns configured home when the home node exists", async () => {
+    const res = await api.handler(new Request("http://127.0.0.1/api/home"));
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { id: string }).id).toBe(TEST_HOME_NODE_ID);
+  });
+
+  test("listCorpora includes archive title from point getNode", () => {
+    const corpora = api.services.listCorpora();
+    expect(corpora.length).toBeGreaterThan(0);
+    expect(corpora[0]?.workspace.archiveNodeTitle).toBe("Archive hub");
+    expect(api.services.getHomeId()).toBe(TEST_HOME_NODE_ID);
   });
 });

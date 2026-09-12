@@ -9,6 +9,11 @@ import type {
   RelationshipRecordRow,
   TomeQueryCache,
 } from "tome-service-interfaces";
+import {
+  isProfilingEnabled,
+  recordProfileSample,
+  truncateSql,
+} from "tome-service-interfaces";
 import { migrateSchema } from "./schema-migrate";
 import { DDL, SCHEMA_VERSION } from "./schema";
 
@@ -669,7 +674,19 @@ export class GraphDatabase implements TomeQueryCache {
 
   /** Run a read query (used by overlay / dynamic-field modules). */
   queryAll<T extends Record<string, unknown>>(sql: string, ...params: SQLQueryBindings[]): T[] {
-    return this.db.prepare(sql).all(...params) as T[];
+    if (!isProfilingEnabled()) {
+      return this.db.prepare(sql).all(...params) as T[];
+    }
+    const started = performance.now();
+    try {
+      return this.db.prepare(sql).all(...params) as T[];
+    } finally {
+      recordProfileSample(
+        "sql",
+        performance.now() - started,
+        `${truncateSql(sql)} (${params.length} params)`,
+      );
+    }
   }
 
   /** Run a write statement (used by overlay seed / migration scripts). */

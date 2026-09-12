@@ -77,6 +77,26 @@ bun run server:dev
 
 Requires `TOME_CONTENT_PATH` (and usually a populated content tree). Historical env: `TOME_EDITOR_API_PORT` still overrides the HTTP port when config omits `options.port`.
 
+## Request / SQL profiling (opt-in)
+
+Default **off** (one boolean check per HTTP request and `queryAll`; no timers when disabled).
+
+| Knob | Purpose |
+| --- | --- |
+| `TOME_PROFILE=1` | Enable slow-sample capture (HTTP + SQL) |
+| `TOME_PROFILE=verbose` | Log/buffer every timed sample, not only slow ones |
+| `TOME_SLOW_MS` | Threshold in ms (default **100**) |
+| `services[].options.profile` | `true` or `"verbose"` in `tome-server.json` |
+| `services[].options.slowMs` | Same threshold via config |
+
+When enabled:
+
+- Slow HTTP requests log `[tome-http] Xms METHOD path → status` on stderr.
+- Slow `queryAll` calls log `[tome-sql] Xms <truncated SQL> (N params)`.
+- `GET /api/debug/profile` returns `{ config, samples }` (ring buffer of recent slow samples). When profiling is off, that route returns **404**.
+
+Containers: pass env at runtime (no image rebuild). Workbench Compose forwards `TOME_PROFILE` / `TOME_SLOW_MS` into the `tome` service — see [container.md](./container.md).
+
 ## See also
 
 - [`web-api-design.md`](./web-api-design.md) — application-specific HTTP use-case rules
@@ -84,3 +104,5 @@ Requires `TOME_CONTENT_PATH` (and usually a populated content tree). Historical 
 - [`tome-db.md`](./tome-db.md) — domain + sync; store/cache packages
 - [`extensions.md`](./extensions.md) — page-block extensions (server runtime in `tome-server`)
 - [`multi-corpus.md`](./multi-corpus.md) — multiple content roots in one session
+- [`container.md`](./container.md) — env vars including profiling
+- [`graph-store.md`](./graph-store.md) — composed SQLite read path (nodes + relationships)

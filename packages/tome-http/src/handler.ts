@@ -6,6 +6,11 @@ import type {
   ViewSortSpec,
 } from "tome-graph-interfaces";
 import type { CacheSyncPublicStatus } from "tome-service-interfaces";
+import {
+  getProfileSnapshot,
+  isProfilingEnabled,
+  recordProfileSample,
+} from "tome-service-interfaces";
 import { isPersistableNodeTitle } from "tome-graph-interfaces";
 import type { UserSettingsPatch } from "./user-settings";
 import { UserSettingsStore } from "./user-settings-store";
@@ -108,12 +113,56 @@ export function createApiHandler(
 
     const url = new URL(req.url);
     const path = url.pathname;
+    const profiling = isProfilingEnabled();
+    const started = profiling ? performance.now() : 0;
 
     try {
+      const response = await dispatchApiRequest(req, url, path, db, settingsStore, getCacheSyncStatus);
+      if (profiling) {
+        recordProfileSample(
+          "http",
+          performance.now() - started,
+          `${req.method} ${path} → ${response.status}`,
+        );
+      }
+      return response;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`[tome-http] ${req.method} ${path} → 500:`, err);
+      if (profiling) {
+        recordProfileSample(
+          "http",
+          performance.now() - started,
+          `${req.method} ${path} → 500`,
+        );
+      }
+      return json({ error: message }, 500);
+    }
+  };
+
+  fetchHandler.close = () => {};
+  return fetchHandler;
+}
+
+async function dispatchApiRequest(
+  req: Request,
+  url: URL,
+  path: string,
+  db: TomeGraphServices,
+  settingsStore: UserSettingsStore,
+  getCacheSyncStatus: CreateApiHandlerOptions["getCacheSyncStatus"],
+): Promise<Response> {
       const syncStatus = getCacheSyncStatus?.();
 
       if (path === "/api/health") {
         return json(healthPayload(syncStatus));
+      }
+
+      if (path === "/api/debug/profile" && req.method === "GET") {
+        if (!isProfilingEnabled()) {
+          return json({ error: "not found" }, 404);
+        }
+        return json(getProfileSnapshot());
       }
 
       if (syncStatus && !syncStatus.ready) {
@@ -827,14 +876,4 @@ export function createApiHandler(
       }
 
       return json({ error: "not found" }, 404);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`[tome-http] ${req.method} ${path} → 500:`, err);
-      return json({ error: message }, 500);
-    }
-  };
-
-  fetchHandler.close = () => {};
-  return fetchHandler;
 }
-

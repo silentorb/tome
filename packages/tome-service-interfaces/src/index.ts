@@ -395,3 +395,18 @@ export interface TomeCacheModule {
 
 export type TomeStoreModuleFactory = () => TomeStoreModule;
 export type TomeCacheModuleFactory = () => TomeCacheModule;
+
+export {
+  clearProfileSamples,
+  configureProfiler,
+  getProfileSnapshot,
+  getProfilerConfig,
+  isProfilingEnabled,
+  recordProfileSample,
+  resetProfilerForTests,
+  resolveProfilerFromEnv,
+  truncateSql,
+  type ProfileConfig,
+  type ProfileSample,
+  type ProfileSampleKind,
+} from "./profiler";

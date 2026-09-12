@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 import type { TomeServiceHost, TomeServiceModule } from "tome-service-interfaces";
+import { configureProfiler, resolveProfilerFromEnv } from "tome-service-interfaces";
 import { createApiHandler, type ApiFetchHandler } from "./handler";
 import { UserSettingsStore } from "./user-settings-store";
 
@@ -9,6 +10,10 @@ export interface TomeHttpServiceOptions {
   port?: number;
   /** Absolute or CWD-relative path to user settings JSON. */
   userSettingsPath?: string;
+  /** Opt-in API/SQL profiling (`true` / `"verbose"`). Env: `TOME_PROFILE`. */
+  profile?: boolean | "verbose";
+  /** Slow-sample threshold in ms (default 100). Env: `TOME_SLOW_MS`. */
+  slowMs?: number;
 }
 
 function readEnv(name: string): string | undefined {
@@ -41,12 +46,20 @@ function resolveUserSettingsPath(options: TomeHttpServiceOptions, contentHint?: 
   return resolve(process.cwd(), ".tome/user-settings.json");
 }
 
+function parseProfileOption(raw: unknown): boolean | "verbose" | undefined {
+  if (raw === true || raw === false) return raw;
+  if (raw === "verbose") return "verbose";
+  return undefined;
+}
+
 function parseOptions(raw: unknown): TomeHttpServiceOptions {
   if (!raw || typeof raw !== "object") return {};
   const o = raw as Record<string, unknown>;
   return {
     port: typeof o.port === "number" ? o.port : undefined,
     userSettingsPath: typeof o.userSettingsPath === "string" ? o.userSettingsPath : undefined,
+    profile: parseProfileOption(o.profile),
+    slowMs: typeof o.slowMs === "number" ? o.slowMs : undefined,
   };
 }
 
@@ -64,6 +77,11 @@ export function createTomeHttpService(): TomeServiceModule {
       const port = resolvePort(options);
       const settingsPath = resolveUserSettingsPath(options);
       const settingsStore = new UserSettingsStore(settingsPath);
+      const profileConfig = resolveProfilerFromEnv({
+        profile: options.profile,
+        slowMs: options.slowMs,
+      });
+      configureProfiler(profileConfig);
       handler = createApiHandler(host.services, settingsStore, {
         getCacheSyncStatus: host.getCacheSyncStatus,
       });
@@ -72,6 +90,11 @@ export function createTomeHttpService(): TomeServiceModule {
         fetch: handler,
       });
       console.log(`Tome API listening on http://127.0.0.1:${port}`);
+      if (profileConfig.enabled) {
+        console.log(
+          `[tome-http] profiling enabled (slowMs=${profileConfig.slowMs}${profileConfig.verbose ? ", verbose" : ""})`,
+        );
+      }
     },
     stop() {
       handler?.close();

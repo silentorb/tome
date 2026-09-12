@@ -52,6 +52,25 @@ function spyRelationshipFileReads(store: ComposedGraphStore): {
   };
 }
 
+function spyFlatfileNodeReads(store: ComposedGraphStore): {
+  readCount: () => number;
+  restore: () => void;
+} {
+  const backend = store.flatfileBackend;
+  let reads = 0;
+  const original = backend.readNode.bind(backend);
+  backend.readNode = (id: string) => {
+    reads += 1;
+    return original(id);
+  };
+  return {
+    readCount: () => reads,
+    restore: () => {
+      backend.readNode = original;
+    },
+  };
+}
+
 describe("ComposedGraphStore SQLite read path", () => {
   const fixture = createTestContentFixture("tome-composed-read-");
   const contentDir = fixture.ctx.store.contentDir;
@@ -224,6 +243,24 @@ describe("ComposedGraphStore SQLite read path", () => {
       expect(detail?.rows.length).toBeLessThanOrEqual(2);
       expect(detail?.rows.length).toBeGreaterThan(0);
       expect(spy.scanCount()).toBe(0);
+    } finally {
+      spy.restore();
+    }
+  });
+
+  test("getNode and windowed database view do not read flatfile node markdown", () => {
+    const spy = spyFlatfileNodeReads(graphStore);
+    try {
+      const node = graphStore.getNode(scene1);
+      expect(node?.properties.title).toBe("Scene One");
+      expect(spy.readCount()).toBe(0);
+
+      const detail = getDatabaseViewDetail(graphStore, SCENES_DB, bookA, contentDir, {
+        limit: 2,
+        offset: 0,
+      });
+      expect(detail?.rows.length).toBeGreaterThan(0);
+      expect(spy.readCount()).toBe(0);
     } finally {
       spy.restore();
     }

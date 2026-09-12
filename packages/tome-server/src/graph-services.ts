@@ -154,10 +154,15 @@ function buildGraphServices(
       : corpora[0];
     const contentDir = match?.contentDir ?? contentPath;
     const ws = match?.workspace ?? loadWorkspaceFromContent(contentDir);
-    const archivePage = getNodePageDetail(graphStore, ws.archiveNodeId, { contentDir });
+    const archiveNode = graphStore.getNode(ws.archiveNodeId);
+    const archiveTitleRaw = archiveNode?.properties.title ?? archiveNode?.properties.alias;
+    const archiveNodeTitle =
+      typeof archiveTitleRaw === "string" && archiveTitleRaw.trim()
+        ? archiveTitleRaw.trim()
+        : "Archive";
     return {
       ...ws,
-      archiveNodeTitle: archivePage?.title ?? "Archive",
+      archiveNodeTitle,
     };
   };
 
@@ -189,11 +194,7 @@ function buildGraphServices(
     },
     getHomeId(corpusId?: string): string {
       const ws = workspaceForCorpus(corpusId);
-      const contentDir =
-        writeCtx.graphStore.listCorpora().find((c) => c.workspace.homeNodeId === ws.homeNodeId)
-          ?.contentDir ?? contentPath;
-      const home = getNodePageDetail(graphStore, ws.homeNodeId, { contentDir });
-      if (home) return ws.homeNodeId;
+      if (graphStore.getNode(ws.homeNodeId)) return ws.homeNodeId;
       const recent = writeCtx.graphStore.executeImp(recentNodesGraph(1));
       const rows = recent instanceof Promise ? [] : recent.rows;
       return rows[0]?.id ? String(rows[0].id) : ws.homeNodeId;

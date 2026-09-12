@@ -113,7 +113,7 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
   }
 
   getNode(id: string): Node | null {
-    return this.flatfile.getNode(id);
+    return this.cache.getNode(id);
   }
 
   upsertNode(node: Node, body?: string): void {
