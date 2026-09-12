@@ -2,11 +2,13 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import { extensionImportMapPlugin } from "./src/webview/vite/extension-import-map-plugin";
+import { tomeVersionMetaPlugin } from "./src/webview/vite/tome-version-meta-plugin";
 
 const root = resolve(import.meta.dirname);
+const tomeRepoRoot = resolve(root, "../..");
 
 export default defineConfig({
-  plugins: [extensionImportMapPlugin(), react()],
+  plugins: [tomeVersionMetaPlugin(tomeRepoRoot), extensionImportMapPlugin(), react()],
   root,
   publicDir: false,
   build: {

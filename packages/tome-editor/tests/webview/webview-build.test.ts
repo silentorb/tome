@@ -36,6 +36,14 @@ describe("webview build", () => {
       expect(result.stderr).not.toContain("bun:sqlite");
 
       const distDir = join(packageDir, "dist-webview");
+      const rootVersion = (
+        JSON.parse(readFileSync(resolve(packageDir, "../../package.json"), "utf8")) as {
+          version: string;
+        }
+      ).version;
+      const indexHtml = readFileSync(join(distDir, "index.html"), "utf8");
+      expect(indexHtml).toContain(`<meta name="tome-version" content="${rootVersion}" />`);
+
       const bundled = listFilesRecursive(distDir)
         .filter((path) => path.endsWith(".js") || path.endsWith(".mjs"))
         .map((path) => readFileSync(path, "utf8"))
@@ -46,3 +54,4 @@ describe("webview build", () => {
     { timeout: 30_000 },
   );
 });
+

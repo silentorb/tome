@@ -128,6 +128,7 @@ Pointer handlers (click, context menu, drag affordances) **must** cover the **fu
 
 - Development uses Vite dev server + Bun API (`bun run editor:dev`).
 - The webview calls the REST API directly (via `src/shared/http-client.ts`); Vite proxies `/api` to the editor API port.
+- The editor HTML head **must** expose the container / release version (Tome repo-root `package.json` `"version"`) as `<meta name="tome-version" content="…">` (injected by Vite; not UI chrome).
 
 ### Node creation
 
