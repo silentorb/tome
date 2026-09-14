@@ -102,40 +102,56 @@ export function listRelationshipsForComposite(
       nodeId,
       nodeId,
     );
-    const composite = dedupeByRecordId(mapProjectionRows(rows));
+    const composite = dedupeByRecordId(mapProjectionRows(rows), nodeId);
     if (composite.length > 0) return composite;
     return listRelationshipsFromSource(db, nodeId, normalized);
   }
 
   if (isGraphStoreBase(db)) {
     const registry = db.readAssociations();
-    const seen = new Set<string>();
     const results: Relationship[] = [];
     db.forEachRelationshipRecord((entry) => {
       if (normalizeAssociationId(entry.type) !== normalized) return;
       const { projections } = expandRelationshipEntry(entry, registry);
       for (const row of projections) {
         if (row.sourceNodeId !== nodeId && row.targetNodeId !== nodeId) continue;
-        const rel = toDomainRelationship(row);
-        const key = rel.recordId ?? rel.id;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        results.push(rel);
+        results.push(toDomainRelationship(row));
       }
     });
-    if (results.length > 0) return dedupeByRecordId(results);
+    if (results.length > 0) return dedupeByRecordId(results, nodeId);
     return listRelationshipsFromSource(db, nodeId, normalized);
   }
 
   return listRelationshipsFromSource(db, nodeId, normalized);
 }
 
-function dedupeByRecordId(relationships: Relationship[]): Relationship[] {
+/**
+ * One projection per relationship record. When `preferredSourceNodeId` is set
+ * (composite listing for a node), keep that node's outgoing projection so
+ * directed filters such as `filterByOutgoingPerspective` see every link.
+ * Otherwise fall back to lexicographically smaller sourceNodeId.
+ */
+function dedupeByRecordId(
+  relationships: Relationship[],
+  preferredSourceNodeId?: string,
+): Relationship[] {
   const byRecord = new Map<string, Relationship>();
   for (const relationship of relationships) {
     const key = relationship.recordId ?? relationship.id;
     const existing = byRecord.get(key);
-    if (!existing || relationship.sourceNodeId < existing.sourceNodeId) {
+    if (!existing) {
+      byRecord.set(key, relationship);
+      continue;
+    }
+    if (preferredSourceNodeId) {
+      const nextOutgoing = relationship.sourceNodeId === preferredSourceNodeId;
+      const existingOutgoing = existing.sourceNodeId === preferredSourceNodeId;
+      if (nextOutgoing && !existingOutgoing) {
+        byRecord.set(key, relationship);
+      }
+      continue;
+    }
+    if (relationship.sourceNodeId < existing.sourceNodeId) {
       byRecord.set(key, relationship);
     }
   }

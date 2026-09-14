@@ -418,6 +418,105 @@ describe("database-view-relations", () => {
     ]);
   });
 
+  test("hydrates all Inspirations from Features when some inspiration ids sort before the feature", () => {
+    // Mirrors Satire: bidirectional projections share a record_id; lex-smaller
+    // source was previously kept and dropped the Features→Inspirations projection.
+    const featureId = "000000000000000000000000M0";
+    const earlyInspirationId = "000000000000000000000000A0";
+    const lateInspirationId = "000000000000000000000000Z0";
+    const featuresProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0);
+    const inspirationsProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1);
+
+    db.upsertNode(featuresDb, { ...typeTableMarkerProperties("Features") });
+    db.upsertNode(featureId, { title: "Satire" });
+    db.upsertNode(earlyInspirationId, { title: "Dilbert" });
+    db.upsertNode(lateInspirationId, { title: "The Office" });
+    db.upsertRelationship(featureId, featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
+      row_index: 0,
+    });
+    for (const inspirationId of [earlyInspirationId, lateInspirationId]) {
+      db.upsertRelationship(inspirationId, inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
+        row_index: 0,
+      });
+    }
+
+    const seedBidirectional = (recordId: string, inspirationId: string) => {
+      db.upsertRelationshipRecord({
+        id: recordId,
+        nodeA: featureId,
+        nodeB: inspirationId,
+        compositeType: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+        properties: {},
+      });
+      db.upsertRelationshipProjection({
+        id: `${recordId}:0`,
+        recordId,
+        sourceNodeId: featureId,
+        targetNodeId: inspirationId,
+        type: featuresProjection,
+        properties: {},
+      });
+      db.upsertRelationshipProjection({
+        id: `${recordId}:1`,
+        recordId,
+        sourceNodeId: inspirationId,
+        targetNodeId: featureId,
+        type: inspirationsProjection,
+        properties: {},
+      });
+    };
+    seedBidirectional("rel-early-inspiration", earlyInspirationId);
+    seedBidirectional("rel-late-inspiration", lateInspirationId);
+
+    expect(earlyInspirationId < featureId).toBe(true);
+    expect(lateInspirationId > featureId).toBe(true);
+
+    const connections = listRelationConnectionsForRow(
+      db,
+      featureId,
+      featuresProjection,
+      featuresDb,
+      TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+      contentDir,
+    );
+    expect(connections).toHaveLength(2);
+    const linkedTitles = connections
+      .map((connection) => {
+        const otherId =
+          connection.sourceNodeId === featureId ? connection.targetNodeId : connection.sourceNodeId;
+        return db.getNode(otherId)?.properties.title;
+      })
+      .sort();
+    expect(linkedTitles).toEqual(["Dilbert", "The Office"]);
+
+    writeFileSync(
+      tableSchemasFilePath(contentDir),
+      serializeTableSchemasFile({
+        version: 1,
+        tables: {
+          [featuresDb]: {
+            columns: [
+              {
+                key: "inspirations",
+                name: "Inspirations",
+                type: "relation",
+                association: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+              },
+            ],
+          },
+        },
+      }),
+    );
+    invalidateTableSchemasCache();
+
+    const detail = getDatabaseViewDetail(db, featuresDb, undefined, contentDir);
+    const row = detail?.rows.find((r) => r.nodeId === featureId);
+    expect(row?.relationCells?.inspirations).toEqual([
+      { targetId: earlyInspirationId, title: "Dilbert" },
+      { targetId: lateInspirationId, title: "The Office" },
+    ]);
+  });
+
   test("story_scale relation column hydrates from relationships, not a stale scalar member_of property", () => {
     const storyScaleRowsDb = "0000000000000000000000001D";
     const storyScaleDb = "0000000000000000000000001Y";
