@@ -298,6 +298,7 @@ export type { RedirectsFile } from "./redirects";
 export {
   SET_TRAIT,
   ORDERED_TRAIT,
+  SYMMETRIC_TRAIT,
   ORDERED_PROPERTY_DEFAULT,
   associationIdFromTypeOrProjection,
   childNodeId,
@@ -311,6 +312,8 @@ export {
   isSetTraitEntry,
   isSetTraitProjectionType,
   isSetTraitType,
+  isSymmetricAssociation,
+  isSymmetricComposite,
   memberSideProjectionType,
   memberSideProjectionTypes,
   orderedPropertyName,
@@ -400,6 +403,7 @@ export { loadViewsFromContent, invalidateViewsCache } from "./views/load";
 
 export {
   hostEndpointIndex,
+  uniqueHostEndpointIndex,
   projectionTypeForHostTable,
   targetTypeIdForHostTable,
   allowedTargetTypeIdsForEndpoint,

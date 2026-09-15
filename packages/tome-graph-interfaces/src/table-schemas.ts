@@ -28,6 +28,8 @@ export interface TableRelationColumn {
   type: "relation";
   /** Registered relationship type id (storage composite). */
   association: string;
+  /** Association endpoint index this column hosts (`perspectives[endpoint]` is display-only). */
+  endpoint: 0 | 1;
 }
 
 export type TableColumnDef = TableScalarColumn | TableRelationColumn;

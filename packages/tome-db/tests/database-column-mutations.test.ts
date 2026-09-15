@@ -99,12 +99,14 @@ describe("database column mutations", () => {
       name: "Parents",
       type: "relation",
       association: "000000000000000000000000B1",
+              endpoint: 0,
     });
     expect(result).toMatchObject({
       column: {
         key: "parents",
         type: "relation",
         association: "000000000000000000000000B1",
+              endpoint: 0,
       },
     });
   });
@@ -178,6 +180,7 @@ describe("database column mutations", () => {
     const result = updateDatabaseColumn(fixture.ctx, databaseId, "label", {
       type: "relation",
       association: "000000000000000000000000B1",
+              endpoint: 0,
     });
     expect(result).toMatchObject({ valuesCleared: 1, relationsUnlinked: 0 });
 
@@ -199,6 +202,7 @@ describe("database column mutations", () => {
         name: "Parents",
         type: "relation",
         association: "000000000000000000000000B1",
+              endpoint: 0,
       },
     ]);
     seedParentsChildrenTypes(fixture, databaseId, parentDbId);
@@ -249,6 +253,7 @@ describe("database column mutations", () => {
         name: "Parents",
         type: "relation",
         association: "000000000000000000000000B1",
+              endpoint: 0,
       },
     ]);
     seedParentsChildrenTypes(fixture, databaseId, parentDbId);
@@ -271,6 +276,7 @@ describe("database column mutations", () => {
 
     const result = updateDatabaseColumn(fixture.ctx, databaseId, "parents", {
       association: "000000000000000000000000BE",
+              endpoint: 0,
     });
     expect(result).toMatchObject({ relationsUnlinked: 1 });
     expect(

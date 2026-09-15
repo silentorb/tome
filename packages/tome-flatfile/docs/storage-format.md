@@ -201,12 +201,12 @@ Each type definition:
 
 | Field | Required | Notes |
 | --- | --- | --- |
-| `perspectives` | yes | Exactly two label configs: string title or `{ title, linkAdd?, linkExisting? }` for endpoints 0 and 1 |
+| `perspectives` | yes | Exactly two label configs: string title or `{ title, linkAdd?, linkExisting? }` for endpoints 0 and 1 (display only — not machine ids) |
 | `linkExisting` | no | boolean; UI default for link-existing controls |
-| `traits` | no | Array of flag strings or `{ key, ...config }` objects; trait keys unique per type |
+| `traits` | no | Array of flag strings or `{ key, ...config }` objects; trait keys unique per type. Known: `set`, `ordered`, `symmetric` |
 | `endpoints` | no | `{ "0": { "typeId": "<ULID>" }, "1": { "typeId": "<ULID>" } }` — allowed `is_a` type node at each endpoint |
 
-**Set association orientation (example):** for a set-trait type with labels `["Members", "Membership"]` — **set at `a` (index 0), member at `b` (index 1)**. Cache projections use `{associationId}:0` / `{associationId}:1`. An ordered set association uses the same parent/child indices with traits `set` and `ordered`.
+**Set association orientation (example):** for a set-trait type with labels `["Members", "Membership"]` — **set at `a` (index 0), member at `b` (index 1)**. Cache projections use `{associationId}:0` / `{associationId}:1`. An ordered set association uses the same parent/child indices with traits `set` and `ordered`. Symmetric associations use trait `symmetric` (do not infer from equal perspective titles).
 
 Serialize sorts type keys and sorts traits (string flags before object entries) for stable diffs.
 
@@ -264,7 +264,7 @@ Column definitions for type tables (keys are type-node ULIDs).
       "columns": [
         { "key": "name", "name": "Name", "type": "text" },
         { "key": "status", "name": "Status", "type": "select", "enumId": "priority" },
-        { "key": "related", "name": "Related", "type": "relation", "association": "<association-ulid>" }
+        { "key": "related", "name": "Related", "type": "relation", "association": "<association-ulid>", "endpoint": 0 }
       ]
     }
   }
@@ -286,7 +286,7 @@ Column definitions for type tables (keys are type-node ULIDs).
 
 `checkbox` | `date` | `email` | `files` | `multi_select` | `number` | `phone_number` | `rich_text` | `select` | `status` | `text` | `url`
 
-**Relation column:** `{ key, name, type: "relation", association }`
+**Relation column:** `{ key, name, type: "relation", association, endpoint }` where `association` is an association ULID and `endpoint` is `0` or `1` (which association endpoint this column hosts). Perspective titles are display-only.
 
 ### `views.json` (version 2)
 

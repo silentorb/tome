@@ -25,7 +25,8 @@ See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./s
           "key": "inspirations",
           "name": "Inspirations",
           "type": "relation",
-          "association": "inspirations_features"
+          "association": "01KXBNPNJDENZ9BXN5BYZ7JKQH",
+          "endpoint": 0
         }
       ]
     }
@@ -39,7 +40,7 @@ See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./s
 | --- | --- |
 | **Identity** | Column identity is `key` (slug), not legacy property ids |
 | **Scalars** | `select`, `multi_select`, `checkbox`, `number`, `text`, `date`, `url`, `email`, `phone_number` |
-| **Relations** | `association` is a registered composite in [`associations.json`](../../content/model/associations.json) |
+| **Relations** | `association` is a registered ULID in [`associations.json`](../../content/model/associations.json); **`endpoint` is `0` or `1`** (which association endpoint this column hosts). Perspective titles are display-only and must not be used as keys. Directed projection identity is `{association}:{endpoint}`. |
 | **Enums** | `enumId` references [`schema.json`](../../content/model/schema.json) `enums` |
 | **Computed** | Formula/rollup columns are **not** stored here; use [`dynamic-properties.json`](./dynamic-properties.md) |
 
@@ -74,7 +75,7 @@ Row data for instances is stored on `is_a` relationship properties, not on the i
 
 - **Editor UI:** type-table Items sections support **add**, **edit**, **delete**, and **reorder** for stored columns (`table-schemas.json`). Use **+ Column** in the table utility bar or right-click anywhere in a column header cell → **Edit** / **Delete**. Dynamic/computed columns (`dynamic-properties.json`) remain read-only in the UI.
 - **Create / update API:** `POST /api/databases/:id/columns`, `PATCH /api/databases/:id/columns/:key` (see [tome-editor.md](./tome-editor.md)).
-- **Destructive schema edits** (key rename, type change, relation association change) migrate or clear row data on `is_a` edges; the UI confirms before applying.
+- **Destructive schema edits** (key rename, type change, relation `association` / `endpoint` change) migrate or clear row data on `is_a` edges; the UI confirms before applying.
 - **`select` / `status`:** the editor can wire an **existing** `schema.json` enum via `enumId`. Creating new enum definitions remains a manual / script workflow (`bun scripts/seed-select-enums.ts`, edit `schema.json`).
 - **Manual:** edit `table-schemas.json` directly
 - **Sync:** `bun run content:sync` or editor API startup rebuilds the SQLite cache

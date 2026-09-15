@@ -14,6 +14,7 @@ import { loadViewsFromContent } from "./views/load";
 
 export const SET_TRAIT = "set";
 export const ORDERED_TRAIT = "ordered";
+export const SYMMETRIC_TRAIT = "symmetric";
 export const ORDERED_PROPERTY_DEFAULT = "order";
 
 const DEFAULT_PARENT_INDEX = 0;
@@ -67,6 +68,17 @@ export function isSetTraitType(def: AssociationDefinition | undefined): boolean 
 
 export function isOrderedTraitType(def: AssociationDefinition | undefined): boolean {
   return hasTrait(def, ORDERED_TRAIT);
+}
+
+export function isSymmetricAssociation(def: AssociationDefinition | undefined): boolean {
+  return hasTrait(def, SYMMETRIC_TRAIT);
+}
+
+export function isSymmetricComposite(
+  registry: AssociationsFile,
+  compositeType: string,
+): boolean {
+  return isSymmetricAssociation(registry.associations[normalizeAssociationId(compositeType)]);
 }
 
 export function isSetTraitComposite(

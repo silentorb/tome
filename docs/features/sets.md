@@ -39,7 +39,7 @@ For design-domain meaning of types and sets, read [`/workspaces/marloth-story/do
 
 ### Set trait and endpoint labels
 
-Every association in `associations.json` defines a `perspectives` **tuple of exactly two** display labels. Associations with `traits` including `set` (or `{ "key": "set", ... }`) are set associations. Directed cache identity is `associationId:endpointIndex` (not the label text).
+Every association in `associations.json` defines a `perspectives` **tuple of exactly two** display labels. Associations with `traits` including `set` (or `{ "key": "set", ... }`) are set associations. Directed cache identity is `associationId:endpointIndex` (not the label text). Symmetric associations use the `symmetric` trait — do not infer symmetry from equal perspective titles.
 
 **Example content record (Marloth set association):**
 

@@ -27,10 +27,12 @@ export interface DatabaseColumnDef {
   defaultValue?: string;
   /** Dropdown display order for enum options (UI only; storage uses canonical options order). */
   defaultOrder?: "asc" | "desc";
-  /** Graph relationship perspective when type is `relation`. */
+  /** Graph relationship projection when type is `relation`. */
   relationType?: string;
   /** Storage composite from associations.json when type is `relation`. */
   relationshipCompositeType?: string;
+  /** Association endpoint index this column hosts. */
+  relationEndpoint?: 0 | 1;
   /** @deprecated Use relationshipCompositeType + registry endpoints. */
   targetDatabaseId?: string;
 }

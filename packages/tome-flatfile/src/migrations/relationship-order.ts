@@ -7,16 +7,17 @@ import {
   type RelationshipsFile,
 } from "../content/relationships-file";
 import {
+  normalizeAssociationId,
   parseAssociationsFile,
+  projectionTypeForEndpoint,
   type AssociationsFile,
-  type PerspectiveLabelConfig,
-  type PerspectivePair,
 } from "../content/associations-file";
 import { parseTableSchemasFile } from "../content/table-schemas-file";
 import {
   projectionTypeForRelationColumn,
   targetTypeIdForRelationColumn,
 } from "../table-relation-column";
+import { isSymmetricAssociation } from "../association-traits";
 import { parseWorkspaceFile } from "../workspace/workspace-file";
 import { normalizeRelationshipType } from "../relation-type";
 import {
@@ -33,16 +34,16 @@ import {
  *
  * Prior to this, endpoints were stored lexicographically sorted with no stored
  * direction; `member_of` direction was re-derived at cache time from set
- * membership, and asymmetric composites bound `perspectives[0]` to the
+ * membership, and asymmetric composites bound endpoint 0 to the
  * lexicographically-smaller node. Now the SQLite expander binds strictly by
  * tuple order, so the authored order must carry the intent.
  *
  * Orientation source of truth (in priority):
  *   - **"member_of"**: parent (set) at index 0, child (member) at index 1.
  *   - **asymmetric cross-type**: place the endpoint whose node type owns the
- *     `perspectives[0]` relation column (targeting the other endpoint's type) at
- *     index 0, derived from `table-schemas.json`.
- *   - **symmetric** (perspectives repeat): order is irrelevant, left as-is.
+ *     endpoint-0 relation column (targeting the other endpoint's type) at
+ *     index 0, derived from `table-schemas.json` (`association` + `endpoint`).
+ *   - **symmetric** (`symmetric` trait): order is irrelevant, left as-is.
  *   - **ambiguous** (same-type asymmetric like parents_children, or missing node
  *     types): left in their current order and reported for manual review.
  */
@@ -55,7 +56,7 @@ export interface RelationshipOrderContext {
   nodeTypes: Map<string, Set<string>>;
   /** Type-table ids plus the archive hub id. */
   setNodeIds: Set<string>;
-  /** `${ownerTypeId}\0${perspective}\0${targetTypeId}` for every relation column. */
+  /** `${ownerTypeId}\0${projectionType}\0${targetTypeId}` for every relation column. */
   relationTriples: Set<string>;
 }
 
@@ -72,15 +73,15 @@ function typesOf(nodeId: string, ctx: RelationshipOrderContext): Set<string> {
   return out;
 }
 
-function ownsPerspective(
+function ownsProjection(
   ctx: RelationshipOrderContext,
   ownerTypes: Set<string>,
-  perspective: string,
+  projectionType: string,
   targetTypes: Set<string>,
 ): boolean {
   for (const owner of ownerTypes) {
     for (const target of targetTypes) {
-      if (ctx.relationTriples.has(`${owner}${TRIPLE_SEP}${perspective}${TRIPLE_SEP}${target}`)) {
+      if (ctx.relationTriples.has(`${owner}${TRIPLE_SEP}${projectionType}${TRIPLE_SEP}${target}`)) {
         return true;
       }
     }
@@ -100,14 +101,10 @@ function orientMemberOf(
   return null;
 }
 
-/** Orient an asymmetric composite so index 0 owns `perspectives[0]`. Null when undecidable. */
-function perspectiveTitle(label: PerspectiveLabelConfig): string {
-  return typeof label === "string" ? label : label.title;
-}
-
+/** Orient an asymmetric composite so index 0 owns the endpoint-0 projection. */
 function orientAsymmetric(
   entry: RelationshipEntry,
-  perspectives: PerspectivePair,
+  associationId: string,
   ctx: RelationshipOrderContext,
 ): { a: string; b: string; reason?: string } | null {
   const tA = typesOf(entry.a, ctx);
@@ -115,12 +112,12 @@ function orientAsymmetric(
   if (tA.size === 0 || tB.size === 0) {
     return { a: entry.a, b: entry.b, reason: "endpoint has no resolvable node type" };
   }
-  const p0 = perspectiveTitle(perspectives[0]);
-  const aOwnsP0 = ownsPerspective(ctx, tA, p0, tB);
-  const bOwnsP0 = ownsPerspective(ctx, tB, p0, tA);
+  const p0 = projectionTypeForEndpoint(associationId, 0);
+  const aOwnsP0 = ownsProjection(ctx, tA, p0, tB);
+  const bOwnsP0 = ownsProjection(ctx, tB, p0, tA);
   if (aOwnsP0 && !bOwnsP0) return { a: entry.a, b: entry.b };
   if (bOwnsP0 && !aOwnsP0) return { a: entry.b, b: entry.a };
-  return { a: entry.a, b: entry.b, reason: "endpoints share type or perspective owner is ambiguous" };
+  return { a: entry.a, b: entry.b, reason: "endpoints share type or projection owner is ambiguous" };
 }
 
 /** Pure reorder over a parsed relationships file. */
@@ -136,7 +133,8 @@ export function reorderRelationshipsFile(
   };
 
   const relationships = file.relationships.map((entry) => {
-    const perspectives = ctx.registry.associations[normalizeRelationshipType(entry.type)]?.perspectives;
+    const associationId = normalizeAssociationId(entry.type);
+    const def = ctx.registry.associations[associationId];
     const rebuilt = (a: string, b: string): RelationshipEntry => ({
       a,
       b,
@@ -145,7 +143,7 @@ export function reorderRelationshipsFile(
     });
 
     // Unregistered or symmetric types carry no direction — leave as authored.
-    if (!perspectives || perspectives[0] === perspectives[1]) {
+    if (!def || isSymmetricAssociation(def)) {
       report.unchanged += 1;
       return entry;
     }
@@ -153,7 +151,7 @@ export function reorderRelationshipsFile(
     const oriented =
       normalizeRelationshipType(entry.type) === "member_of"
         ? orientMemberOf(entry, ctx)
-        : orientAsymmetric(entry, perspectives, ctx);
+        : orientAsymmetric(entry, associationId, ctx);
 
     if (!oriented) {
       // "member_of" with both/neither endpoint a set: keep current order, flag it.
@@ -224,10 +222,10 @@ export function buildRelationshipOrderContext(
   for (const [owner, schema] of Object.entries(schemas.tables)) {
     for (const col of schema.columns) {
       if (col.type !== "relation") continue;
-      const perspective = projectionTypeForRelationColumn(registry, owner, col);
+      const projectionType = projectionTypeForRelationColumn(registry, owner, col);
       const target = targetTypeIdForRelationColumn(registry, owner, col);
       if (!target) continue;
-      relationTriples.add(`${owner}${TRIPLE_SEP}${perspective}${TRIPLE_SEP}${target}`);
+      relationTriples.add(`${owner}${TRIPLE_SEP}${projectionType}${TRIPLE_SEP}${target}`);
     }
   }
 

@@ -326,6 +326,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
                 name: "Inspirations",
                 type: "relation",
                 association: "000000000000000000000000B2",
+              endpoint: 0,
               },
             ],
           },

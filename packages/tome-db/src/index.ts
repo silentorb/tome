@@ -238,6 +238,7 @@ export type { TraitEntry, TraitObjectEntry } from "tome-flatfile";
 export {
   SET_TRAIT,
   ORDERED_TRAIT,
+  SYMMETRIC_TRAIT,
   ORDERED_PROPERTY_DEFAULT,
   associationIdFromTypeOrProjection,
   childNodeId,
@@ -251,6 +252,8 @@ export {
   isSetTraitEntry,
   isSetTraitProjectionType,
   isSetTraitType,
+  isSymmetricAssociation,
+  isSymmetricComposite,
   memberSideProjectionType,
   memberSideProjectionTypes,
   orderedPropertyName,

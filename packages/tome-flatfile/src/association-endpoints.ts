@@ -38,6 +38,18 @@ export function hostEndpointIndex(
   return null;
 }
 
+/** Endpoint index when host uniquely matches one side (null if both/neither). */
+export function uniqueHostEndpointIndex(
+  def: AssociationDefinition,
+  hostTypeId: string,
+): 0 | 1 | null {
+  if (!def.endpoints) return null;
+  const matches: Array<0 | 1> = [];
+  if (def.endpoints[0].typeId === hostTypeId) matches.push(0);
+  if (def.endpoints[1].typeId === hostTypeId) matches.push(1);
+  return matches.length === 1 ? matches[0]! : null;
+}
+
 /** Directed projection type when linking from a row in `hostTypeId`. */
 export function projectionTypeForHostTable(
   def: AssociationDefinition,

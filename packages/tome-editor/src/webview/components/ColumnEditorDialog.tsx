@@ -4,6 +4,7 @@ import type { EditorApi } from "../api/client";
 import { slugifyColumnKey } from "./column-editor-utils";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { AssociationPicker } from "./AssociationPicker";
+import { parseProjectionType } from "tome-flatfile/associations-file";
 import "./add-relationship-dialog.css";
 import "./column-editor-dialog.css";
 
@@ -48,6 +49,7 @@ function initialFormFromColumn(def: DatabaseColumnDef | undefined, mode: "add" |
       enumId: def.enumId ?? "",
       association:
         def.type === "relation" ? (def.relationshipCompositeType ?? "") : "",
+      endpoint: def.type === "relation" ? (def.relationEndpoint ?? 0) : 0,
     };
   }
   return {
@@ -56,6 +58,7 @@ function initialFormFromColumn(def: DatabaseColumnDef | undefined, mode: "add" |
     type: "text",
     enumId: "",
     association: "",
+    endpoint: 0 as 0 | 1,
   };
 }
 
@@ -77,7 +80,7 @@ function migrationConfirmMessage(
       parts.push("Changing the column type may leave existing cell values incompatible.");
     }
   } else if (next.type === "relation") {
-    if (next.association !== initial.association) {
+    if (next.association !== initial.association || next.endpoint !== initial.endpoint) {
       parts.push("Changing relation settings will unlink all existing links for this column.");
     }
   }
@@ -145,6 +148,28 @@ export function ColumnEditorDialog({
   const autoKey = slugifyColumnKey(form.name);
   const effectiveKey = form.key.trim() || autoKey;
 
+  const [endpointLabels, setEndpointLabels] = useState<{ 0: string; 1: string }>({
+    0: "Endpoint 0",
+    1: "Endpoint 1",
+  });
+
+  useEffect(() => {
+    if (!open || form.type !== "relation" || !form.association.trim()) return;
+    const association = form.association.trim();
+    void api
+      .listRelationshipTypes()
+      .then((types) => {
+        const label0 =
+          types.find((item) => item.type === `${association}:0`)?.label ?? "Endpoint 0";
+        const label1 =
+          types.find((item) => item.type === `${association}:1`)?.label ?? "Endpoint 1";
+        setEndpointLabels({ 0: label0, 1: label1 });
+      })
+      .catch(() => {
+        setEndpointLabels({ 0: "Endpoint 0", 1: "Endpoint 1" });
+      });
+  }, [api, form.association, form.type, open]);
+
   const submitPayload = () => {
     const name = form.name.trim();
     const key = form.key.trim() || slugifyColumnKey(name);
@@ -158,6 +183,7 @@ export function ColumnEditorDialog({
       return {
         ...base,
         association: form.association.trim(),
+        endpoint: form.endpoint,
       };
     }
     if (form.type === "select" || form.type === "status") {
@@ -194,6 +220,7 @@ export function ColumnEditorDialog({
           enumId: "enumId" in payload ? payload.enumId : undefined,
           association:
             "association" in payload ? payload.association : undefined,
+          endpoint: "endpoint" in payload ? payload.endpoint : undefined,
           viewId,
         });
       } else if (state.columnKey) {
@@ -207,6 +234,7 @@ export function ColumnEditorDialog({
               : null,
           association:
             "association" in payload ? payload.association : undefined,
+          endpoint: "endpoint" in payload ? payload.endpoint : undefined,
         });
       }
       onSaved();
@@ -328,6 +356,7 @@ export function ColumnEditorDialog({
                         : "",
                     association:
                       event.target.value === "relation" ? current.association : "",
+                    endpoint: event.target.value === "relation" ? current.endpoint : 0,
                   }))
                 }
               >
@@ -364,20 +393,64 @@ export function ColumnEditorDialog({
             ) : null}
 
             {form.type === "relation" ? (
-              <label className="tome-column-editor-field">
-                <span>Relationship type</span>
-                <AssociationPicker
-                  api={api}
-                  selectedType={form.association || null}
-                  ariaLabel="Relationship type"
-                  onSelect={(association) =>
-                    setForm((current) => ({ ...current, association }))
-                  }
-                />
-                <span className="tome-column-editor-hint">
-                  Cross-table link flavor from associations.json.
-                </span>
-              </label>
+              <>
+                <label className="tome-column-editor-field">
+                  <span>Relationship type</span>
+                  <AssociationPicker
+                    api={api}
+                    selectedType={
+                      form.association
+                        ? `${form.association}:${form.endpoint}`
+                        : null
+                    }
+                    ariaLabel="Relationship type"
+                    onSelect={(type) => {
+                      const parsed = parseProjectionType(type);
+                      if (parsed) {
+                        setForm((current) => ({
+                          ...current,
+                          association: parsed.associationId,
+                          endpoint: parsed.endpointIndex,
+                        }));
+                        return;
+                      }
+                      setForm((current) => ({
+                        ...current,
+                        association: type,
+                      }));
+                    }}
+                  />
+                  <span className="tome-column-editor-hint">
+                    Cross-table link flavor from associations.json.
+                  </span>
+                </label>
+                <fieldset className="tome-column-editor-field">
+                  <legend>Host endpoint</legend>
+                  <label className="tome-column-editor-radio">
+                    <input
+                      type="radio"
+                      name="relation-endpoint"
+                      checked={form.endpoint === 0}
+                      disabled={busy || !form.association}
+                      onChange={() => setForm((current) => ({ ...current, endpoint: 0 }))}
+                    />
+                    <span>{endpointLabels[0]}</span>
+                  </label>
+                  <label className="tome-column-editor-radio">
+                    <input
+                      type="radio"
+                      name="relation-endpoint"
+                      checked={form.endpoint === 1}
+                      disabled={busy || !form.association}
+                      onChange={() => setForm((current) => ({ ...current, endpoint: 1 }))}
+                    />
+                    <span>{endpointLabels[1]}</span>
+                  </label>
+                  <span className="tome-column-editor-hint">
+                    Which association endpoint this column hosts (perspective titles are labels only).
+                  </span>
+                </fieldset>
+              </>
             ) : null}
 
             {error ? <p className="tome-add-relationship-error">{error}</p> : null}

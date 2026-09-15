@@ -65,6 +65,7 @@ describe("deleteDatabaseColumn", () => {
         name: "Parents",
         type: "relation",
         association: "000000000000000000000000B1",
+              endpoint: 0,
       },
     ]);
     const registry = fixture.ctx.store.readAssociationsFile();

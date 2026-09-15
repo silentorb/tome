@@ -316,6 +316,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         type: string;
         enumId?: string;
         association?: string;
+        endpoint?: 0 | 1;
         viewId?: string;
       },
     ): Promise<{
@@ -339,6 +340,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         type?: string;
         enumId?: string | null;
         association?: string;
+        endpoint?: 0 | 1;
       },
     ): Promise<{
       column: import("tome-graph-interfaces").TableColumnDef;

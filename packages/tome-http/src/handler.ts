@@ -665,6 +665,7 @@ async function dispatchApiRequest(
           type?: string;
           enumId?: string;
           association?: string;
+          endpoint?: 0 | 1;
           viewId?: string;
         };
         if (typeof payload.name !== "string" || typeof payload.type !== "string") {
@@ -676,6 +677,7 @@ async function dispatchApiRequest(
           type: payload.type as import("tome-graph-interfaces").TableColumnDef["type"],
           enumId: payload.enumId,
           association: payload.association,
+          endpoint: payload.endpoint,
           viewId: payload.viewId,
         });
         if (result === "database_not_found") return json({ error: "not found" }, 404);
@@ -703,6 +705,7 @@ async function dispatchApiRequest(
           type?: string;
           enumId?: string | null;
           association?: string;
+          endpoint?: 0 | 1;
         };
         const result = db.updateDatabaseColumn(databaseId, columnKey, {
           name: payload.name,
@@ -710,6 +713,7 @@ async function dispatchApiRequest(
           type: payload.type as import("tome-graph-interfaces").TableColumnDef["type"] | undefined,
           enumId: payload.enumId,
           association: payload.association,
+          endpoint: payload.endpoint,
         });
         if (result === "database_not_found") return json({ error: "not found" }, 404);
         if (result === "column_not_found") return json({ error: "column not found" }, 404);

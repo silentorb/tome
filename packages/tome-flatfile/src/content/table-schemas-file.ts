@@ -87,11 +87,15 @@ function parseRelationColumn(raw: unknown, path: string): TableRelationColumn {
   if (!isAssociationId(association)) {
     throw new Error(`${path}: association must be a ULID`);
   }
+  if (obj.endpoint !== 0 && obj.endpoint !== 1) {
+    throw new Error(`${path}: relation column requires endpoint 0 or 1`);
+  }
   return {
     key: obj.key.trim(),
     name: obj.name.trim(),
     type: "relation",
     association,
+    endpoint: obj.endpoint,
   };
 }
 

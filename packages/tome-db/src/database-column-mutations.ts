@@ -6,7 +6,7 @@ import {
 } from "./database-column-data";
 import { loadDynamicProperties } from "./dynamic-properties";
 import { isTypeTableNode } from "./node-capabilities";
-import { normalizeAssociationId, isAssociationId } from "tome-flatfile";
+import { normalizeAssociationId, isAssociationId, uniqueHostEndpointIndex } from "tome-flatfile";
 import { resolvePropertyEnumFromContent } from "./property-enums";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
@@ -83,7 +83,25 @@ function validateEnumId(ctx: TomeWriteContext, enumId: string | undefined): bool
   return resolvePropertyEnumFromContent(enumId.trim(), writeStoreContentDir(ctx.graphStore)) !== null;
 }
 
-function buildColumnDef(input: CreateDatabaseColumnInput, key: string): TableColumnDef | null {
+function resolveRelationEndpoint(
+  ctx: TomeWriteContext,
+  databaseId: string,
+  association: string,
+  endpoint: 0 | 1 | undefined,
+): 0 | 1 | null {
+  if (endpoint === 0 || endpoint === 1) return endpoint;
+  const registry = ctx.graphStore.readAssociations();
+  const def = registry.associations[association];
+  if (!def) return null;
+  return uniqueHostEndpointIndex(def, databaseId);
+}
+
+function buildColumnDef(
+  ctx: TomeWriteContext,
+  databaseId: string,
+  input: CreateDatabaseColumnInput,
+  key: string,
+): TableColumnDef | null {
   const name = input.name.trim();
   if (!name) return null;
 
@@ -91,11 +109,14 @@ function buildColumnDef(input: CreateDatabaseColumnInput, key: string): TableCol
     if (!input.association?.trim()) return null;
     const association = normalizeAssociationId(input.association);
     if (!isAssociationId(association)) return null;
+    const endpoint = resolveRelationEndpoint(ctx, databaseId, association, input.endpoint);
+    if (endpoint === null) return null;
     return {
       key,
       name,
       type: "relation",
       association,
+      endpoint,
     };
   }
 
@@ -149,7 +170,7 @@ export function createDatabaseColumn(
     return "column_key_taken";
   }
 
-  const columnDef = buildColumnDef(input, key);
+  const columnDef = buildColumnDef(ctx, databaseId, input, key);
   if (!columnDef) {
     if (input.type === "relation") return "invalid_relation_target";
     if (input.type === "select" || input.type === "status") return "invalid_enum";
@@ -198,6 +219,8 @@ export function createDatabaseColumn(
 function applyColumnPatch(
   existing: TableColumnDef,
   input: UpdateDatabaseColumnInput,
+  ctx: TomeWriteContext,
+  databaseId: string,
 ): TableColumnDef | null {
   const name = input.name !== undefined ? input.name.trim() : existing.name;
   if (!name) return null;
@@ -210,11 +233,16 @@ function applyColumnPatch(
       (existing.type === "relation" ? existing.association : "");
     const association = normalizeAssociationId(associationRaw);
     if (!association || !isAssociationId(association)) return null;
+    const endpointInput =
+      input.endpoint ?? (existing.type === "relation" ? existing.endpoint : undefined);
+    const endpoint = resolveRelationEndpoint(ctx, databaseId, association, endpointInput);
+    if (endpoint === null) return null;
     return {
       key: existing.key,
       name,
       type: "relation",
       association,
+      endpoint,
     };
   }
 
@@ -247,7 +275,7 @@ function relationConfigChanged(
   oldCol: TableColumnDef & { type: "relation" },
   newCol: TableColumnDef & { type: "relation" },
 ): boolean {
-  return oldCol.association !== newCol.association;
+  return oldCol.association !== newCol.association || oldCol.endpoint !== newCol.endpoint;
 }
 
 export function updateDatabaseColumn(
@@ -272,7 +300,7 @@ export function updateDatabaseColumn(
   const existing = findColumnByKey(tableSchema, normalizedKey);
   if (!existing) return "column_not_found";
 
-  const patched = applyColumnPatch(existing, input);
+  const patched = applyColumnPatch(existing, input, ctx, databaseId);
   if (!patched) {
     if (input.type === "relation" || existing.type === "relation") {
       return "invalid_relation_target";

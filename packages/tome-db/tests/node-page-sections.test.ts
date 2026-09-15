@@ -385,6 +385,7 @@ describe("node-sections table-schema empty relation placeholders", () => {
               name: "Features",
               type: "relation",
               association: "000000000000000000000000B2",
+              endpoint: 1,
             },
           ],
         },
@@ -480,6 +481,7 @@ describe("node-sections children_children addMode", () => {
         },
         "000000000000000000000000B4": {
           perspectives: ["children", "children"],
+          traits: ["symmetric"],
           endpoints: {
             0: { typeId: groupsTypeId },
             1: { typeId: groupsTypeId },
@@ -501,12 +503,14 @@ describe("node-sections children_children addMode", () => {
               name: "Children",
               type: "relation",
               association: "000000000000000000000000B4",
+              endpoint: 0,
             },
             {
               key: "parents",
               name: "Parents",
               type: "relation",
               association: "000000000000000000000000B1",
+              endpoint: 1,
             },
           ],
         },
@@ -666,6 +670,7 @@ describe("node-sections bible passages regression", () => {
               name: "Features",
               type: "relation",
               association: "000000000000000000000000B5",
+              endpoint: 1,
             },
             { key: "verses", name: "Verses", type: "rich_text" },
           ],

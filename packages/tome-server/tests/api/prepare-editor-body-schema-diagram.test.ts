@@ -93,6 +93,7 @@ describe("prepare-editor-body API — schema diagram", () => {
                 name: "Features",
                 type: "relation",
                 association: "000000000000000000000000B7",
+              endpoint: 0,
               },
             ],
           },

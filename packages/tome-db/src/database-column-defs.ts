@@ -34,6 +34,7 @@ function databaseColumnFromTableColumn(
       type: col.type,
       relationType: projectionTypeForRelationColumn(registry, databaseId, col),
       relationshipCompositeType: relationColumnCompositeType(col),
+      relationEndpoint: col.endpoint,
       targetDatabaseId: targetTypeIdForRelationColumn(registry, databaseId, col) ?? undefined,
     };
   }

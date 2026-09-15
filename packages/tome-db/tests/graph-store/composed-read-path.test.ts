@@ -94,12 +94,14 @@ describe("ComposedGraphStore SQLite read path", () => {
       name: "Product",
       type: "relation",
       association: "000000000000000000000000A3",
+              endpoint: 0,
     },
     {
       key: "part",
       name: "Part",
       type: "relation",
       association: "000000000000000000000000A4",
+              endpoint: 0,
     },
   ]);
   seedTestNode(fixture, { id: bookA, properties: { title: "Book A" } });

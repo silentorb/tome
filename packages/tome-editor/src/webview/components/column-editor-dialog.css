@@ -15,12 +15,20 @@
   font-size: 0.85rem;
 }
 
-.tome-column-editor-field > span:first-child {
+.tome-column-editor-field > span:first-child,
+.tome-column-editor-field > legend {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--tome-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
+}
+
+.tome-column-editor-radio {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
 }
 
 .tome-column-editor-field input,

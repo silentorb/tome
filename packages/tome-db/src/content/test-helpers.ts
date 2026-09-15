@@ -330,7 +330,9 @@ function associationIdForPerspectiveSlug(
       return id;
     }
   }
-  return registerBidirectionalType(registry, label, label);
+  return registerBidirectionalType(registry, label, label, undefined, {
+    traits: ["symmetric"],
+  });
 }
 
 function ensureSeedAssociation(
@@ -373,10 +375,21 @@ function ensureSeedAssociation(
     [TEST_OTHER_PARENTS_CHILDREN_ASSOCIATION_ID]: ["Children", "Parents"],
     [TEST_RELATED_ASSOCIATION_ID]: ["Related", "Related"],
   };
+  const symmetricIds = new Set([
+    TEST_INCLUDES_ASSOCIATION_ID,
+    TEST_CHILDREN_CHILDREN_ASSOCIATION_ID,
+    TEST_RELATED_ASSOCIATION_ID,
+  ]);
   if (isAssociationId(resolved)) {
     if (!registry.associations[resolved]) {
       const pair = knownPairs[resolved] ?? ["A", "B"];
-      registerBidirectionalType(registry, pair[0], pair[1], resolved);
+      registerBidirectionalType(
+        registry,
+        pair[0],
+        pair[1],
+        resolved,
+        symmetricIds.has(resolved) ? { traits: ["symmetric"] } : undefined,
+      );
     }
     return resolved;
   }

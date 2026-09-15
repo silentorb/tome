@@ -28,7 +28,8 @@ export type PerspectiveLabelConfig =
 
 /**
  * Exactly two perspectives: one display config per endpoint (a→b, b→a).
- * Symmetric associations repeat the same label. These are not machine ids.
+ * These are not machine ids. Symmetric associations use the `symmetric` trait
+ * (labels may still repeat for display).
  */
 export type PerspectivePair = [PerspectiveLabelConfig, PerspectiveLabelConfig];
 
@@ -451,10 +452,12 @@ export function registerBidirectionalType(
   labelFromA: PerspectiveLabelConfig,
   labelFromB: PerspectiveLabelConfig,
   id?: string,
+  options?: { traits?: TraitEntry[] },
 ): string {
   const associationId = id !== undefined ? normalizeAssociationId(id) : generateAssociationId();
   registerTypeDefinition(file, associationId, {
     perspectives: [labelFromA, labelFromB],
+    ...(options?.traits ? { traits: options.traits } : {}),
   });
   return associationId;
 }

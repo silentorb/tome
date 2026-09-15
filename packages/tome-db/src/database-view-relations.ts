@@ -13,12 +13,10 @@ import {
   loadAssociationsFromContent,
   normalizeRelationshipType,
   parseProjectionType,
-  perspectiveConfigAt,
-  perspectiveTitle,
   projectionTypeForEndpoint,
-  slugifyPropertyKey,
+  isSymmetricAssociation,
 } from "tome-flatfile";
-import type { AssociationDefinition, AssociationsFile } from "tome-flatfile";
+import type { AssociationsFile } from "tome-flatfile";
 import {
   listRelationshipsFromSource,
   type RelationshipReadStore,
@@ -47,13 +45,7 @@ function scopeForRow(
   return filterRelationshipsByRowDatabaseContext(db, rowId, databaseId, relationships, contentDir);
 }
 
-function perspectiveSlugAt(def: AssociationDefinition, index: 0 | 1): string {
-  return normalizeRelationshipType(
-    slugifyPropertyKey(perspectiveTitle(perspectiveConfigAt(def, index))),
-  );
-}
-
-/** Projection types that share a display label with `connectionType` (symmetric associations). */
+/** Projection types that share direction with `connectionType` (symmetric associations). */
 function acceptedOutgoingTypes(
   connectionType: string,
   registry: AssociationsFile | null,
@@ -64,8 +56,7 @@ function acceptedOutgoingTypes(
   const parsed = parseProjectionType(connectionType);
   if (!parsed) return accepted;
   const def = registry.associations[parsed.associationId];
-  if (!def) return accepted;
-  if (perspectiveSlugAt(def, 0) !== perspectiveSlugAt(def, 1)) return accepted;
+  if (!def || !isSymmetricAssociation(def)) return accepted;
   accepted.add(
     normalizeRelationshipType(projectionTypeForEndpoint(parsed.associationId, 0)),
   );
@@ -120,8 +111,7 @@ export function listRelationConnectionsForRow(
       const parsed = parseProjectionType(connectionType);
       if (!parsed) return [] as Relationship[];
       const def = registry.associations[parsed.associationId];
-      if (!def) return [] as Relationship[];
-      if (perspectiveSlugAt(def, 0) !== perspectiveSlugAt(def, 1)) return [] as Relationship[];
+      if (!def || !isSymmetricAssociation(def)) return [] as Relationship[];
       const otherIndex: 0 | 1 = parsed.endpointIndex === 0 ? 1 : 0;
       return listRelationshipsFromSource(
         db,

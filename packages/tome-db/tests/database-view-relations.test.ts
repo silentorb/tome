@@ -104,6 +104,7 @@ describe("database-view-relations", () => {
               name: "Type",
               type: "relation",
               association: PROP_TYPE_ASSOCIATION_ID,
+              endpoint: 0,
             },
           ],
         },
@@ -172,12 +173,14 @@ describe("database-view-relations", () => {
                 name: "Parents",
                 type: "relation",
                 association: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
+              endpoint: 1,
               },
               {
                 key: "children",
                 name: "Children",
                 type: "relation",
                 association: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
+              endpoint: 0,
               },
             ],
           },
@@ -259,6 +262,7 @@ describe("database-view-relations", () => {
     });
     registerTypeDefinition(registry, NEIGHBOR_ASSOCIATION_ID, {
       perspectives: ["Neighbor", "Neighbor"],
+      traits: ["symmetric"],
     });
     fixture.ctx.store.writeAssociationsFile(registry);
     fixture.ctx.store.writeRelationshipsFile({
@@ -298,6 +302,7 @@ describe("database-view-relations", () => {
                 name: "Neighbor",
                 type: "relation",
                 association: NEIGHBOR_ASSOCIATION_ID,
+              endpoint: 0,
               },
             ],
           },
@@ -345,6 +350,7 @@ describe("database-view-relations", () => {
                 name: "Part",
                 type: "relation",
                 association: TEST_SCENES_PART_ASSOCIATION_ID,
+              endpoint: 0,
               },
             ],
           },
@@ -501,6 +507,7 @@ describe("database-view-relations", () => {
                 name: "Inspirations",
                 type: "relation",
                 association: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+              endpoint: 0,
               },
             ],
           },
@@ -536,6 +543,7 @@ describe("database-view-relations", () => {
                 name: "Story scale",
                 type: "relation",
                 association: STORY_SCALE_ASSOCIATION_ID,
+              endpoint: 0,
               },
             ],
           },

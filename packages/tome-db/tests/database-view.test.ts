@@ -156,6 +156,7 @@ describe("database-view", () => {
         name: "Parents",
         type: "relation",
         association: "000000000000000000000000B1",
+              endpoint: 1,
       },
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
