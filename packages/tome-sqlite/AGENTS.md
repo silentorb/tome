@@ -14,7 +14,7 @@ SQLite graph database implementing `TomeQueryCache` / `TomeCacheModule` (used as
 | File | Contents |
 | --- | --- |
 | `src/graph.ts` | `GraphDatabase`, `relationshipId` |
-| `src/schema.ts` | DDL + `SCHEMA_VERSION` |
+| `src/schema.ts` | DDL + `SCHEMA_VERSION` (nodes columns + `node_properties` EAV; relationship JSON bags unchanged) |
 | `src/schema-migrate.ts` | Schema migrations |
 | `src/module.ts` | `createSqliteModule()` |
 | `src/index.ts` | Public exports |

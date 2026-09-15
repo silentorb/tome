@@ -3,6 +3,7 @@ export {
   createTomeLiveNodesSchema,
   projectionType,
   tomeLiveNodesSchema,
+  tomeNodePropertiesJson,
   tomeNodesColumnExpression,
 } from "./schema";
 export { createTomeImpRegistry } from "./registry";

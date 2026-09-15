@@ -16,8 +16,6 @@ import { dedupeInboundReactFlowEdges } from "./config";
 
 export { createTomeImpRegistry as createQueryRegistry };
 
-const TITLE_EXTRACT = `json_extract(properties, '$.title') as title`;
-
 export interface CompiledTomeQuery {
   sql: string;
   parameters: unknown[];
@@ -69,15 +67,12 @@ export function ensureIdentityTitleProjection(graph: Graph): Graph {
   return { ...graph, nodes };
 }
 
-/** When there is no project (SELECT *), expose title as an aliased column. */
+/**
+ * Historically injected `json_extract(…title) AS title` for opaque JSON bags.
+ * Title is a real `nodes` column now, so bare `SELECT *` already exposes it.
+ */
 export function ensureTitleColumnInSelectStar(sql: string): string {
-  if (!/^\s*select\s+\*\s+from\b/i.test(sql)) {
-    return sql;
-  }
-  if (/\bas\s+title\b/i.test(sql) || /\btitle\s*,/i.test(sql)) {
-    return sql;
-  }
-  return sql.replace(/^\s*select\s+\*\s+from\b/i, `select *, ${TITLE_EXTRACT} from`);
+  return sql;
 }
 
 export interface CompileReactFlowQueryOptions {

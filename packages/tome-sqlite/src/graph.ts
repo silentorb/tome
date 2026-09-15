@@ -1,7 +1,7 @@
 import { Database, type SQLQueryBindings } from "bun:sqlite";
 import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
-import type { Node, Properties, Relationship } from "tome-graph-interfaces";
+import type { Node, Properties, PropertyValue, Relationship } from "tome-graph-interfaces";
 import type {
   GraphCounts,
   RelationshipProjectionRow,
@@ -15,7 +15,7 @@ import {
   truncateSql,
 } from "tome-service-interfaces";
 import { migrateSchema } from "./schema-migrate";
-import { DDL, SCHEMA_VERSION } from "./schema";
+import { DDL, PROMOTED_NODE_COLUMN_SET, SCHEMA_VERSION } from "./schema";
 
 export type {
   Node,
@@ -31,6 +31,8 @@ const IDENTITY_CODEC: RelationshipPropertyCodec = {
   decode: (properties) => properties,
 };
 
+const NODE_DISPLAY_TITLE_SQL = `COALESCE(NULLIF(title, ''), NULLIF(alias, ''), 'Untitled')`;
+
 function parseJsonObject(raw: string): Properties {
   try {
     const v = JSON.parse(raw) as unknown;
@@ -41,6 +43,14 @@ function parseJsonObject(raw: string): Properties {
   return {};
 }
 
+function decodePropertyValue(raw: string): PropertyValue {
+  try {
+    return JSON.parse(raw) as PropertyValue;
+  } catch {
+    return raw;
+  }
+}
+
 function mergeProperties(base: Properties, patch: Properties): Properties {
   const out = { ...base };
   for (const [k, v] of Object.entries(patch)) {
@@ -48,6 +58,77 @@ function mergeProperties(base: Properties, patch: Properties): Properties {
     out[k] = v;
   }
   return out;
+}
+
+type NodeRow = {
+  id: string;
+  title: string | null;
+  alias: string | null;
+  body: string | null;
+  created_at: string | null;
+  modified_at: string | null;
+};
+
+function splitNodeProperties(properties: Properties): {
+  title: string | null;
+  alias: string | null;
+  body: string | null;
+  created_at: string | null;
+  modified_at: string | null;
+  eav: Properties;
+} {
+  const eav: Properties = {};
+  let title: string | null = null;
+  let alias: string | null = null;
+  let body: string | null = null;
+  let created_at: string | null = null;
+  let modified_at: string | null = null;
+
+  for (const [key, value] of Object.entries(properties)) {
+    if (value === undefined) continue;
+    if (key === "title" && typeof value === "string") {
+      title = value;
+      continue;
+    }
+    if (key === "alias" && typeof value === "string") {
+      alias = value;
+      continue;
+    }
+    if (key === "body" && typeof value === "string") {
+      body = value;
+      continue;
+    }
+    if (key === "created_at" && typeof value === "string") {
+      created_at = value;
+      continue;
+    }
+    if (key === "modified_at" && typeof value === "string") {
+      modified_at = value;
+      continue;
+    }
+    if (PROMOTED_NODE_COLUMN_SET.has(key) && typeof value === "string") {
+      continue;
+    }
+    eav[key] = value;
+  }
+
+  return { title, alias, body, created_at, modified_at, eav };
+}
+
+function assembleNodeProperties(
+  row: NodeRow,
+  eavRows: readonly { key: string; value: string }[],
+): Properties {
+  const properties: Properties = {};
+  if (row.title != null) properties.title = row.title;
+  if (row.alias != null) properties.alias = row.alias;
+  if (row.body != null) properties.body = row.body;
+  if (row.created_at != null) properties.created_at = row.created_at;
+  if (row.modified_at != null) properties.modified_at = row.modified_at;
+  for (const entry of eavRows) {
+    properties[entry.key] = decodePropertyValue(entry.value);
+  }
+  return properties;
 }
 
 export function relationshipId(sourceNodeId: string, type: string, targetNodeId: string): string {
@@ -60,8 +141,12 @@ export class GraphDatabase implements TomeQueryCache {
   private readonly propertyCodec: RelationshipPropertyCodec;
   private readonly memberPerspectives?: () => readonly string[];
 
-  private insertNode!: ReturnType<Database["prepare"]>;
-  private updateNodeProps!: ReturnType<Database["prepare"]>;
+  private insertNodeId!: ReturnType<Database["prepare"]>;
+  private updateNodeColumns!: ReturnType<Database["prepare"]>;
+  private deleteNodeProperties!: ReturnType<Database["prepare"]>;
+  private insertNodeProperty!: ReturnType<Database["prepare"]>;
+  private selectNodeRow!: ReturnType<Database["prepare"]>;
+  private selectNodeProperties!: ReturnType<Database["prepare"]>;
   private insertRecord!: ReturnType<Database["prepare"]>;
   private updateRecordProps!: ReturnType<Database["prepare"]>;
   private insertProjection!: ReturnType<Database["prepare"]>;
@@ -122,11 +207,26 @@ export class GraphDatabase implements TomeQueryCache {
   }
 
   private prepareStatements(): void {
-    this.insertNode = this.db.prepare(
-      "INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, 0) ON CONFLICT(id) DO NOTHING",
+    this.insertNodeId = this.db.prepare(
+      "INSERT INTO nodes (id, is_archived) VALUES (?, 0) ON CONFLICT(id) DO NOTHING",
     );
-    this.updateNodeProps = this.db.prepare(
-      "UPDATE nodes SET properties = ? WHERE id = ?",
+    this.updateNodeColumns = this.db.prepare(
+      `UPDATE nodes
+       SET title = ?, alias = ?, body = ?, created_at = ?, modified_at = ?
+       WHERE id = ?`,
+    );
+    this.deleteNodeProperties = this.db.prepare(
+      "DELETE FROM node_properties WHERE node_id = ?",
+    );
+    this.insertNodeProperty = this.db.prepare(
+      "INSERT INTO node_properties (node_id, key, value) VALUES (?, ?, ?)",
+    );
+    this.selectNodeRow = this.db.prepare(
+      `SELECT id, title, alias, body, created_at, modified_at
+       FROM nodes WHERE id = ?`,
+    );
+    this.selectNodeProperties = this.db.prepare(
+      "SELECT key, value FROM node_properties WHERE node_id = ?",
     );
     this.insertRecord = this.db.prepare(
       `INSERT INTO relationship_records (id, node_a, node_b, composite_type, properties)
@@ -159,13 +259,30 @@ export class GraphDatabase implements TomeQueryCache {
     return row?.value ?? null;
   }
 
-  upsertNode(id: string, properties: Properties = {}): void {
-    this.insertNode.run(id, JSON.stringify(properties));
-    const existing = this.getNode(id);
-    if (existing && Object.keys(properties).length > 0) {
-      const merged = mergeProperties(existing.properties, properties);
-      this.updateNodeProps.run(JSON.stringify(merged), id);
+  private writeNodeProperties(id: string, properties: Properties): void {
+    const split = splitNodeProperties(properties);
+    this.updateNodeColumns.run(
+      split.title,
+      split.alias,
+      split.body,
+      split.created_at,
+      split.modified_at,
+      id,
+    );
+    this.deleteNodeProperties.run(id);
+    for (const [key, value] of Object.entries(split.eav)) {
+      if (value === undefined) continue;
+      this.insertNodeProperty.run(id, key, JSON.stringify(value));
     }
+  }
+
+  upsertNode(id: string, properties: Properties = {}): void {
+    this.insertNodeId.run(id);
+    const existing = this.getNode(id);
+    if (!existing) return;
+    if (Object.keys(properties).length === 0) return;
+    const merged = mergeProperties(existing.properties, properties);
+    this.writeNodeProperties(id, merged);
   }
 
   mergeNodeProperties(id: string, properties: Properties): void {
@@ -175,7 +292,7 @@ export class GraphDatabase implements TomeQueryCache {
       return;
     }
     const merged = mergeProperties(existing.properties, properties);
-    this.updateNodeProps.run(JSON.stringify(merged), id);
+    this.writeNodeProperties(id, merged);
   }
 
   clearRelationshipCache(): void {
@@ -275,13 +392,12 @@ export class GraphDatabase implements TomeQueryCache {
   }
 
   getNode(id: string): Node | null {
-    const row = this.db.prepare("SELECT id, properties FROM nodes WHERE id = ?").get(id) as
-      | { id: string; properties: string }
-      | undefined;
+    const row = this.selectNodeRow.get(id) as NodeRow | undefined;
     if (!row) return null;
+    const eavRows = this.selectNodeProperties.all(id) as { key: string; value: string }[];
     return {
       id: row.id,
-      properties: parseJsonObject(row.properties),
+      properties: assembleNodeProperties(row, eavRows),
     };
   }
 
@@ -397,15 +513,10 @@ export class GraphDatabase implements TomeQueryCache {
     const fetchBatch = (batchLimit: number) =>
       this.db
         .prepare(
-          `SELECT id,
-                  COALESCE(
-                    NULLIF(json_extract(properties, '$.title'), ''),
-                    NULLIF(json_extract(properties, '$.alias'), ''),
-                    'Untitled'
-                  ) AS title
+          `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
            FROM nodes
            WHERE is_archived = 0
-             AND COALESCE(json_extract(properties, '$.title'), json_extract(properties, '$.alias'), '') LIKE ? ESCAPE '\\'
+             AND COALESCE(title, alias, '') LIKE ? ESCAPE '\\'
            ORDER BY title COLLATE NOCASE
            LIMIT ?`,
         )
@@ -422,15 +533,10 @@ export class GraphDatabase implements TomeQueryCache {
     const fetchBatch = (batchLimit: number) =>
       this.db
         .prepare(
-          `SELECT id,
-                  COALESCE(
-                    NULLIF(json_extract(properties, '$.title'), ''),
-                    NULLIF(json_extract(properties, '$.alias'), ''),
-                    'Untitled'
-                  ) AS title
+          `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
            FROM nodes
            WHERE is_archived = 0
-             AND COALESCE(json_extract(properties, '$.body'), '') LIKE ? ESCAPE '\\'
+             AND COALESCE(body, '') LIKE ? ESCAPE '\\'
            ORDER BY title COLLATE NOCASE
            LIMIT ?`,
         )
@@ -446,16 +552,10 @@ export class GraphDatabase implements TomeQueryCache {
     const fetchBatch = (batchLimit: number) =>
       this.db
         .prepare(
-          `SELECT id,
-                  COALESCE(
-                    NULLIF(json_extract(properties, '$.title'), ''),
-                    NULLIF(json_extract(properties, '$.alias'), ''),
-                    'Untitled'
-                  ) AS title
+          `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
            FROM nodes
            WHERE is_archived = 0
-             AND (json_extract(properties, '$.title') IS NOT NULL
-              OR json_extract(properties, '$.alias') IS NOT NULL)
+             AND (title IS NOT NULL OR alias IS NOT NULL)
            ORDER BY title COLLATE NOCASE
            LIMIT ?`,
         )
@@ -470,18 +570,12 @@ export class GraphDatabase implements TomeQueryCache {
   ): { id: string; title: string }[] {
     const rows = this.db
       .prepare(
-        `SELECT id,
-                COALESCE(
-                  NULLIF(json_extract(properties, '$.title'), ''),
-                  NULLIF(json_extract(properties, '$.alias'), ''),
-                  'Untitled'
-                ) AS title
+        `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
          FROM nodes
          WHERE is_archived = 0
-           AND (json_extract(properties, '$.title') IS NOT NULL
-            OR json_extract(properties, '$.alias') IS NOT NULL)
-           AND NULLIF(json_extract(properties, '$.modified_at'), '') IS NOT NULL
-         ORDER BY json_extract(properties, '$.modified_at') DESC, id
+           AND (title IS NOT NULL OR alias IS NOT NULL)
+           AND NULLIF(modified_at, '') IS NOT NULL
+         ORDER BY modified_at DESC, id
          LIMIT ?`,
       )
       .all(limit) as { id: string; title: string }[];
@@ -544,9 +638,9 @@ export class GraphDatabase implements TomeQueryCache {
   listNodesWithBodyLike(pattern: string): { id: string; body: string }[] {
     return this.db
       .prepare(
-        `SELECT id, json_extract(properties, '$.body') AS body
+        `SELECT id, body
          FROM nodes
-         WHERE json_extract(properties, '$.body') LIKE ?`,
+         WHERE body LIKE ?`,
       )
       .all(pattern) as { id: string; body: string }[];
   }
@@ -554,12 +648,7 @@ export class GraphDatabase implements TomeQueryCache {
   listNodesForGraphExport(): { id: string; title: string }[] {
     return this.db
       .prepare(
-        `SELECT id,
-                COALESCE(
-                  NULLIF(json_extract(properties, '$.title'), ''),
-                  NULLIF(json_extract(properties, '$.alias'), ''),
-                  'Untitled'
-                ) AS title
+        `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
          FROM nodes`,
       )
       .all() as { id: string; title: string }[];

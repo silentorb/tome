@@ -6,15 +6,32 @@ import type { SchemaFile } from "tome-flatfile/schema-file";
 const IDENT_RE = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 const ASSOCIATION_ID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
+/** Keep in sync with `PROMOTED_NODE_COLUMNS` in tome-sqlite/schema.ts. */
+const PROMOTED_NODE_COLUMNS = new Set([
+  "title",
+  "alias",
+  "body",
+  "created_at",
+  "modified_at",
+]);
+
+/** Rebuild a JSON bag from promoted node columns for Imp traverse `json_patch`. */
+export function tomeNodePropertiesJson(alias: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) {
+    throw new Error(`Invalid table alias "${alias}"`);
+  }
+  return `json_object('title', ${alias}.title, 'alias', ${alias}.alias, 'body', ${alias}.body, 'created_at', ${alias}.created_at, 'modified_at', ${alias}.modified_at)`;
+}
+
 /** Map logical Imp column names onto the Tome `nodes` SQLite table. */
 export function tomeNodesColumnExpression(name: string): string {
   if (!IDENT_RE.test(name)) {
     throw new Error(`Invalid column name "${name}"`);
   }
-  if (name === "id" || name === "is_archived") {
+  if (name === "id" || name === "is_archived" || PROMOTED_NODE_COLUMNS.has(name)) {
     return name;
   }
-  return `json_extract(properties, '$.${name}')`;
+  return `(SELECT json_extract(value, '$') FROM node_properties WHERE node_id = nodes.id AND key = '${name}')`;
 }
 
 /**
@@ -36,6 +53,7 @@ export function projectionType(associationId: string, direction: 0 | 1): string 
 const tomeLiveNodesSchemaBase = {
   table: "nodes",
   column: tomeNodesColumnExpression,
+  nodePropertiesJson: tomeNodePropertiesJson,
   edges: {
     table: "relationship_projections",
     sourceColumn: "source_node_id",

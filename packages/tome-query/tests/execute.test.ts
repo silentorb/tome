@@ -143,9 +143,12 @@ describe("tome-query config", () => {
 });
 
 describe("tome-query schema", () => {
-  test("maps property columns to json_extract", () => {
+  test("maps promoted columns directly and EAV keys via node_properties", () => {
     expect(tomeNodesColumnExpression("id")).toBe("id");
-    expect(tomeNodesColumnExpression("title")).toBe("json_extract(properties, '$.title')");
+    expect(tomeNodesColumnExpression("title")).toBe("title");
+    expect(tomeNodesColumnExpression("status")).toBe(
+      "(SELECT json_extract(value, '$') FROM node_properties WHERE node_id = nodes.id AND key = 'status')",
+    );
   });
 
   test("rejects invalid column names", () => {
@@ -164,7 +167,7 @@ describe("tome-query compile + execute", () => {
     const { sql } = compileReactFlowQuery(defaultReactFlowGraph());
     expect(sql.toLowerCase()).toContain("nodes");
     expect(sql).toContain('is_archived" = 0');
-    expect(sql.toLowerCase()).toContain("as title");
+    expect(sql.toLowerCase()).toContain("select *");
   });
 
   test("project id-only compiles with title plumbing", () => {
@@ -207,8 +210,8 @@ describe("tome-query compile + execute", () => {
       ],
     };
     const { sql } = compileReactFlowQuery(reactFlow);
-    expect(sql.toLowerCase()).toMatch(/as\s+title/);
-    expect(sql.toLowerCase()).toContain("json_extract");
+    expect(sql.toLowerCase()).toContain("title");
+    expect(sql.toLowerCase()).toContain('"id"');
   });
 
   test("ensureIdentityTitleProjection merges id and title into project", () => {
@@ -254,10 +257,9 @@ describe("tome-query compile + execute", () => {
     expect(ensured.nodes.project?.inputs?.columns).toBe("id,title");
   });
 
-  test("ensureTitleColumnInSelectStar rewrites bare select *", () => {
+  test("ensureTitleColumnInSelectStar leaves bare select * unchanged", () => {
     const sql = ensureTitleColumnInSelectStar('select * from "nodes"');
-    expect(sql.toLowerCase()).toContain("as title");
-    expect(sql.toLowerCase().startsWith("select *,")).toBe(true);
+    expect(sql).toBe('select * from "nodes"');
   });
 
   test("compiles when multiple edges target the same input port", () => {
@@ -372,7 +374,7 @@ describe("tome-query compile + execute", () => {
 
     const { sql, parameters } = compileReactFlowQuery(reactFlow);
     expect(sql.toLowerCase()).toContain("where");
-    expect(sql.toLowerCase()).toContain("json_extract");
+    expect(sql.toLowerCase()).toContain("title");
     expect(parameters).toContain("Alpha");
   });
 
@@ -381,18 +383,22 @@ describe("tome-query compile + execute", () => {
     db.run(`
       CREATE TABLE nodes (
         id TEXT PRIMARY KEY NOT NULL,
-        properties TEXT NOT NULL DEFAULT '{}',
+        title TEXT,
+        alias TEXT,
+        body TEXT,
+        created_at TEXT,
+        modified_at TEXT,
         is_archived INTEGER NOT NULL DEFAULT 0
       );
     `);
-    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+    db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
       "live1",
-      JSON.stringify({ title: "Live" }),
+      "Live",
       0,
     ]);
-    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+    db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
       "arch1",
-      JSON.stringify({ title: "Archived" }),
+      "Archived",
       1,
     ]);
 
@@ -413,18 +419,22 @@ describe("tome-query compile + execute", () => {
     db.run(`
       CREATE TABLE nodes (
         id TEXT PRIMARY KEY NOT NULL,
-        properties TEXT NOT NULL DEFAULT '{}',
+        title TEXT,
+        alias TEXT,
+        body TEXT,
+        created_at TEXT,
+        modified_at TEXT,
         is_archived INTEGER NOT NULL DEFAULT 0
       );
     `);
-    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+    db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
       "tl1",
-      JSON.stringify({ title: "Translucence article" }),
+      "Translucence article",
       0,
     ]);
-    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+    db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
       "ml1",
-      JSON.stringify({ title: "Marloth scene" }),
+      "Marloth scene",
       0,
     ]);
 
@@ -488,13 +498,17 @@ describe("tome-query compile + execute", () => {
     db.run(`
       CREATE TABLE nodes (
         id TEXT PRIMARY KEY NOT NULL,
-        properties TEXT NOT NULL DEFAULT '{}',
+        title TEXT,
+        alias TEXT,
+        body TEXT,
+        created_at TEXT,
+        modified_at TEXT,
         is_archived INTEGER NOT NULL DEFAULT 0
       );
     `);
-    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+    db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
       "n1",
-      JSON.stringify({ title: "Alpha" }),
+      "Alpha",
       0,
     ]);
     const reactFlow = {
@@ -618,7 +632,11 @@ describe("tome-query compile + execute", () => {
     db.run(`
       CREATE TABLE nodes (
         id TEXT PRIMARY KEY NOT NULL,
-        properties TEXT NOT NULL DEFAULT '{}',
+        title TEXT,
+        alias TEXT,
+        body TEXT,
+        created_at TEXT,
+        modified_at TEXT,
         is_archived INTEGER NOT NULL DEFAULT 0
       );
       CREATE TABLE relationship_projections (
@@ -630,19 +648,19 @@ describe("tome-query compile + execute", () => {
         properties TEXT NOT NULL DEFAULT '{}'
       );
     `);
-    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+    db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
       "a",
-      JSON.stringify({ title: "A" }),
+      "A",
       0,
     ]);
-    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+    db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
       "b",
-      JSON.stringify({ title: "B" }),
+      "B",
       0,
     ]);
-    db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, ?)`, [
+    db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
       "archived-target",
-      JSON.stringify({ title: "Archived" }),
+      "Archived",
       1,
     ]);
     db.run(
@@ -714,7 +732,11 @@ describe("tome-query compile + execute", () => {
     db.run(`
       CREATE TABLE nodes (
         id TEXT PRIMARY KEY NOT NULL,
-        properties TEXT NOT NULL DEFAULT '{}',
+        title TEXT,
+        alias TEXT,
+        body TEXT,
+        created_at TEXT,
+        modified_at TEXT,
         is_archived INTEGER NOT NULL DEFAULT 0
       );
       CREATE TABLE relationship_projections (
@@ -731,9 +753,9 @@ describe("tome-query compile + execute", () => {
       ["member", "Member"],
       ["orphan", "Orphan"],
     ] as const) {
-      db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, 0)`, [
+      db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, 0)`, [
         id,
-        JSON.stringify({ title }),
+        title,
       ]);
     }
     db.run(
@@ -855,7 +877,11 @@ describe("tome-query compile + execute", () => {
     db.run(`
       CREATE TABLE nodes (
         id TEXT PRIMARY KEY NOT NULL,
-        properties TEXT NOT NULL DEFAULT '{}',
+        title TEXT,
+        alias TEXT,
+        body TEXT,
+        created_at TEXT,
+        modified_at TEXT,
         is_archived INTEGER NOT NULL DEFAULT 0
       );
       CREATE TABLE relationship_projections (
@@ -872,9 +898,9 @@ describe("tome-query compile + execute", () => {
       ["consideration", "Consideration arc"],
       ["regular", "Regular arc"],
     ] as const) {
-      db.run(`INSERT INTO nodes (id, properties, is_archived) VALUES (?, ?, 0)`, [
+      db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, 0)`, [
         id,
-        JSON.stringify({ title }),
+        title,
       ]);
     }
     db.run(

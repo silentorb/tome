@@ -37,7 +37,7 @@ For **what design nodes mean** (features, inspirations, products, traceability),
 | **Type table** | Node listed in [`table-schemas.json`](./table-schemas.md) and/or receiving set-membership rows. |
 | **Schema** | Workspace model config in `content/model/schema.json` (relationship rules, enums) — see [schema.md](./schema.md). |
 
-API names: `ContentStore`, `openContentGraph`, `TomeWriteContext` (`{ store, sync, cache }`), `getNodeDetail`, `getNodePageDetail`, `GET /api/nodes`, `?node=`. Cache tables: `nodes`, `relationship_records`, `relationship_projections` (`SCHEMA_VERSION` **11**).
+API names: `ContentStore`, `openContentGraph`, `TomeWriteContext` (`{ store, sync, cache }`), `getNodeDetail`, `getNodePageDetail`, `GET /api/nodes`, `?node=`. Cache tables: `nodes`, `node_properties`, `relationship_records`, `relationship_projections` (`SCHEMA_VERSION` **12**).
 
 ## Editing the graph (agent workflow)
 
@@ -104,8 +104,11 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 | --- | --- |
 | `relationship_records` | Mirror of content records |
 | `relationship_projections` | Directed rows `(source, target, local_type)` — hot path for queries |
-| `nodes` | Entity property bags; `is_archived` denormalized flag (recomputed on sync) |
+| `nodes` | Hot node fields as columns (`title`, `alias`, `body`, `created_at`, `modified_at`) plus `is_archived` (recomputed on sync) |
+| `node_properties` | EAV leftovers for non-promoted frontmatter keys (`key` + JSON-encoded `value`) |
 | `meta` | Schema version, content mtime, enum config fingerprint |
+
+**Node cache shape (schema v12):** sync still packs flatfile frontmatter + markdown `body` into a property map for `upsertNode`; `GraphDatabase` splits promoted keys onto `nodes` columns and stores the rest in `node_properties`. `getNode` reassembles an in-memory `properties` bag for callers. Relationship `properties` remain JSON bags on records/projections.
 
 **Archive membership:** a page is archived when it has set membership on the Archive hub node (`01KWN86X6MFZQAJ1V36T95928S`). Archiving (`POST /api/nodes/:id/archive`) **moves** the node markdown into `content/archive/nodes/`, moves every other incident relationship file into `content/archive/relationships/`, then adds the hub membership edge in the live relationship tree. Unarchiving reverses those moves when the other endpoint is not still archived.
 

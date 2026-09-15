@@ -1,4 +1,17 @@
-export const SCHEMA_VERSION = 11;
+export const SCHEMA_VERSION = 12;
+
+/** Hot node fields stored as real columns on `nodes` (never in `node_properties`). */
+export const PROMOTED_NODE_COLUMNS = [
+  "title",
+  "alias",
+  "body",
+  "created_at",
+  "modified_at",
+] as const;
+
+export type PromotedNodeColumn = (typeof PROMOTED_NODE_COLUMNS)[number];
+
+export const PROMOTED_NODE_COLUMN_SET: ReadonlySet<string> = new Set(PROMOTED_NODE_COLUMNS);
 
 export const DDL = `
 CREATE TABLE IF NOT EXISTS meta (
@@ -8,8 +21,19 @@ CREATE TABLE IF NOT EXISTS meta (
 
 CREATE TABLE IF NOT EXISTS nodes (
   id TEXT PRIMARY KEY NOT NULL,
-  properties TEXT NOT NULL DEFAULT '{}',
+  title TEXT,
+  alias TEXT,
+  body TEXT,
+  created_at TEXT,
+  modified_at TEXT,
   is_archived INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS node_properties (
+  node_id TEXT NOT NULL REFERENCES nodes(id) ON DELETE CASCADE,
+  key TEXT NOT NULL,
+  value TEXT NOT NULL,
+  PRIMARY KEY (node_id, key)
 );
 
 CREATE TABLE IF NOT EXISTS relationship_records (
@@ -30,6 +54,8 @@ CREATE TABLE IF NOT EXISTS relationship_projections (
   properties TEXT NOT NULL DEFAULT '{}'
 );
 
+CREATE INDEX IF NOT EXISTS idx_nodes_is_archived ON nodes(is_archived) WHERE is_archived = 1;
+CREATE INDEX IF NOT EXISTS idx_node_properties_key ON node_properties(key);
 CREATE INDEX IF NOT EXISTS idx_rel_records_node_a ON relationship_records(node_a);
 CREATE INDEX IF NOT EXISTS idx_rel_records_node_b ON relationship_records(node_b);
 CREATE INDEX IF NOT EXISTS idx_rel_proj_source ON relationship_projections(source_node_id, type);

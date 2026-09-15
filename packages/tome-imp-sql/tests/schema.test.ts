@@ -12,9 +12,13 @@ import {
 const VALID_ASSOCIATION = "00000000000000000000000001";
 
 describe("tome-imp-sql schema", () => {
-  test("maps property columns to json_extract", () => {
+  test("maps promoted columns directly and EAV keys via node_properties", () => {
     expect(tomeNodesColumnExpression("id")).toBe("id");
-    expect(tomeNodesColumnExpression("title")).toBe("json_extract(properties, '$.title')");
+    expect(tomeNodesColumnExpression("title")).toBe("title");
+    expect(tomeNodesColumnExpression("body")).toBe("body");
+    expect(tomeNodesColumnExpression("status")).toBe(
+      "(SELECT json_extract(value, '$') FROM node_properties WHERE node_id = nodes.id AND key = 'status')",
+    );
   });
 
   test("rejects invalid column names", () => {

@@ -134,7 +134,7 @@ Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read 
 
 Domain modules use helpers in `tome-db/src/graph-store/relationship-read.ts` (`listRelationshipsFromSource`, `readStoreListNodesWithBodyLike`, `readStoreGetNode`, …) and `relationship-traverse.ts` (`listRelationshipsForComposite`).
 
-- **`ComposedGraphStore` (editor / tome-server host):** node point-gets (`getNode`), projection and incident reads — including `listRelationshipProjections`, live `forEachRelationshipRecord`, body backlink scans, and composite listing via `queryAll` — are served from the **SQLite query cache** (indexed). Flatfile remains the write path and source of truth; sync keeps the cache current. This avoids re-scanning every relationship shard (and re-reading every node markdown file) on each page or table view.
+- **`ComposedGraphStore` (editor / tome-server host):** node point-gets (`getNode`), projection and incident reads — including `listRelationshipProjections`, live `forEachRelationshipRecord`, body backlink scans, and composite listing via `queryAll` — are served from the **SQLite query cache** (indexed). Node bags are assembled from promoted `nodes` columns plus `node_properties` EAV rows. Flatfile remains the write path and source of truth; sync keeps the cache current. This avoids re-scanning every relationship shard (and re-reading every node markdown file) on each page or table view.
 - **Flatfile-only Base stores** (no SQLite): `listRelationshipProjections` still expands canonical records by scanning flatfile relationship trees.
 
 `listRelationshipsForComposite` prefers `queryAll` whenever the store exposes it, and only falls back to Base `forEachRelationshipRecord` when there is no query cache.
