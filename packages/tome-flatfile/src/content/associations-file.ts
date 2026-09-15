@@ -116,6 +116,30 @@ export function parseProjectionType(
   };
 }
 
+/** Other directed projection of the same association (`:0` ↔ `:1`). */
+export function oppositeProjectionType(type: string): string | null {
+  const parsed = parseProjectionType(type);
+  if (!parsed) return null;
+  return projectionTypeForEndpoint(
+    parsed.associationId,
+    parsed.endpointIndex === 0 ? 1 : 0,
+  );
+}
+
+/**
+ * Projection whose **sources** are the "active hosts" for Only-active picking.
+ * Picking a target of P → hosts of opposite(P); picking a source of P → hosts of P.
+ */
+export function onlyActiveHostProjectionType(
+  selectedProjectionType: string,
+  pickingRole: "source" | "target",
+): string | null {
+  const trimmed = selectedProjectionType.trim();
+  if (!trimmed) return null;
+  if (pickingRole === "source") return trimmed;
+  return oppositeProjectionType(trimmed);
+}
+
 export function associationIdFromProjectionType(type: string): string | null {
   return parseProjectionType(type)?.associationId ?? null;
 }

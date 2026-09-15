@@ -81,6 +81,53 @@ export function listDistinctProjectionTypes(store: RelationshipReadStore): strin
   return [...types].sort();
 }
 
+/** Node ids that appear as source or target of at least one projection of `type`. */
+export function listNodeIdsForProjectionType(
+  store: RelationshipReadStore,
+  projectionType: string,
+): string[] {
+  const trimmed = projectionType.trim();
+  if (!trimmed) return [];
+
+  if (
+    !isGraphStoreBase(store) &&
+    typeof (store as TomeQueryCache).listNodeIdsForProjectionType === "function"
+  ) {
+    return (store as TomeQueryCache).listNodeIdsForProjectionType(trimmed);
+  }
+
+  const ids = new Set<string>();
+  for (const rel of listAllRelationshipProjections(store)) {
+    if (rel.type !== trimmed) continue;
+    ids.add(rel.sourceNodeId);
+    ids.add(rel.targetNodeId);
+  }
+  return [...ids];
+}
+
+/** Node ids that appear as source of at least one projection of `type`. */
+export function listSourceNodeIdsForProjectionType(
+  store: RelationshipReadStore,
+  projectionType: string,
+): string[] {
+  const trimmed = projectionType.trim();
+  if (!trimmed) return [];
+
+  if (
+    !isGraphStoreBase(store) &&
+    typeof (store as TomeQueryCache).listSourceNodeIdsForProjectionType === "function"
+  ) {
+    return (store as TomeQueryCache).listSourceNodeIdsForProjectionType(trimmed);
+  }
+
+  const ids = new Set<string>();
+  for (const rel of listAllRelationshipProjections(store)) {
+    if (rel.type !== trimmed) continue;
+    ids.add(rel.sourceNodeId);
+  }
+  return [...ids];
+}
+
 /** Node lookup shared by read modules. */
 export function readStoreGetNode(
   store: RelationshipReadStore,

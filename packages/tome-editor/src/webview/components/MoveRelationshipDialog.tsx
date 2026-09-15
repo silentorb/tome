@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { EditorApi } from "../api/client";
+import { useUserSettings } from "../hooks/useUserSettings";
 import { RecordLinkPicker } from "./RecordLinkPicker";
 import "./add-relationship-dialog.css";
 
@@ -7,6 +8,13 @@ interface MoveRelationshipDialogProps {
   api: EditorApi;
   open: boolean;
   recordTitle: string;
+  /** Locked directed projection type for this move (e.g. section label). */
+  projectionType: string;
+  /**
+   * Endpoint role being picked for Only-active filtering.
+   * Relation-section Move picks a new source; database Move picks a new target.
+   */
+  onlyActivePickingRole: "source" | "target";
   allowedTypeIds?: readonly string[];
   excludedIds: readonly string[];
   onClose: () => void;
@@ -28,6 +36,8 @@ export function MoveRelationshipDialog({
   api,
   open,
   recordTitle,
+  projectionType,
+  onlyActivePickingRole,
   allowedTypeIds,
   excludedIds,
   onClose,
@@ -35,7 +45,12 @@ export function MoveRelationshipDialog({
   onMoved,
 }: MoveRelationshipDialogProps) {
   const titleId = useId();
+  const onlyActiveId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const {
+    relationshipsOnlyActiveTargets,
+    setRelationshipsOnlyActiveTargets,
+  } = useUserSettings();
   const [moving, setMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pickerKey, setPickerKey] = useState(0);
@@ -111,7 +126,25 @@ export function MoveRelationshipDialog({
         </p>
         <div className="tome-add-relationship-fields">
           <div className="tome-add-relationship-field">
-            <span className="tome-add-relationship-label">New connection</span>
+            <div className="tome-add-relationship-label-row">
+              <span className="tome-add-relationship-label">New connection</span>
+              <label
+                className="tome-add-relationship-only-active"
+                htmlFor={onlyActiveId}
+              >
+                <input
+                  id={onlyActiveId}
+                  type="checkbox"
+                  checked={relationshipsOnlyActiveTargets}
+                  disabled={moving}
+                  onChange={(event) => {
+                    setRelationshipsOnlyActiveTargets(event.target.checked);
+                    setPickerKey((key) => key + 1);
+                  }}
+                />
+                Only active
+              </label>
+            </div>
             <RecordLinkPicker
               key={pickerKey}
               api={api}
@@ -123,6 +156,10 @@ export function MoveRelationshipDialog({
                   : undefined
               }
               excludedIds={excludedIds}
+              participatesInProjectionType={
+                relationshipsOnlyActiveTargets ? projectionType : undefined
+              }
+              onlyActivePickingRole={onlyActivePickingRole}
               ariaLabel={`Search destination for ${displayTitle}`}
               onSelect={handleSelect}
               onClose={() => {}}

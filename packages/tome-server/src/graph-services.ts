@@ -363,6 +363,8 @@ function buildGraphServices(
       const executed = writeCtx.graphStore.executeImp(searchNodesGraph(cap), {
         parameters: { query },
         allowedTypeIds,
+        participatesInProjectionType: options?.participatesInProjectionType,
+        onlyActivePickingRole: options?.onlyActivePickingRole,
       });
       const rows = executed instanceof Promise ? [] : executed.rows;
       return rows.map((row) => {

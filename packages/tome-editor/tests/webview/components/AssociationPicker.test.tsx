@@ -19,13 +19,26 @@ describe("filterAndSortAssociations", () => {
     expect(filterAndSortAssociations(types, "  ")).toEqual(types);
   });
 
+  test("pins recent types first when query is empty", () => {
+    const types = [
+      { type: "z", label: "Zeta" },
+      { type: "a", label: "Alpha" },
+      { type: "m", label: "Mike" },
+    ];
+    expect(filterAndSortAssociations(types, "", ["m", "missing", "z"])).toEqual([
+      { type: "m", label: "Mike" },
+      { type: "z", label: "Zeta" },
+      { type: "a", label: "Alpha" },
+    ]);
+  });
+
   test("sorts filtered types by label relevance when query is non-empty", () => {
     const types = [
       { type: APPLIED_TYPE, label: "Applied Surrealism" },
       { type: SURREAL_TYPE, label: "Surreal" },
       { type: FEATURES_TYPE, label: "Features" },
     ];
-    expect(filterAndSortAssociations(types, "surreal")).toEqual([
+    expect(filterAndSortAssociations(types, "surreal", [APPLIED_TYPE])).toEqual([
       { type: SURREAL_TYPE, label: "Surreal" },
       { type: APPLIED_TYPE, label: "Applied Surrealism" },
     ]);
@@ -60,6 +73,34 @@ describe("AssociationPicker", () => {
     expect(options.map((option) => option.textContent)).toEqual(["Features", "Surreal"]);
     expect(view.container.textContent).not.toContain(FEATURES_TYPE);
     expect(view.container.textContent).not.toContain(SURREAL_TYPE);
+  });
+
+  test("orders recent types first when provided", async () => {
+    const api = {
+      ...makeMockEditorApi(),
+      listRelationshipTypes: mock(async () => [
+        { type: FEATURES_TYPE, label: "Features" },
+        { type: SURREAL_TYPE, label: "Surreal" },
+        { type: APPLIED_TYPE, label: "Applied Surrealism" },
+      ]),
+    } as EditorApi;
+
+    const view = render(
+      <AssociationPicker
+        api={api}
+        selectedType={null}
+        recentTypes={[SURREAL_TYPE]}
+        ariaLabel="Relationship type"
+        onSelect={() => {}}
+      />,
+    );
+
+    const options = await view.findAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual([
+      "Surreal",
+      "Features",
+      "Applied Surrealism",
+    ]);
   });
 
   test("selects by type id while displaying the label", async () => {

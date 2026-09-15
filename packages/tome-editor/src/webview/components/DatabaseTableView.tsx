@@ -305,6 +305,8 @@ function FlatDatabaseTableView({
             onDeleteNode,
             getMoveConfig: (rowNodeId: string) => ({
               api,
+              projectionType: databaseView.memberSidePerspective,
+              onlyActivePickingRole: "target" as const,
               excludedIds: [nodeId, rowNodeId],
               onMove: async (selectedId: string) => {
                 await api.moveRelationshipConnection({

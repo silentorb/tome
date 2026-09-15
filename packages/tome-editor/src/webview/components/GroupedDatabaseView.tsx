@@ -443,6 +443,8 @@ export function GroupedDatabaseView({
             onDeleteNode,
             getMoveConfig: (rowNodeId: string) => ({
               api,
+              projectionType: view.memberSidePerspective,
+              onlyActivePickingRole: "target" as const,
               excludedIds: [nodeId, rowNodeId],
               onMove: async (selectedId: string) => {
                 await api.moveRelationshipConnection({

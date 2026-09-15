@@ -14,6 +14,10 @@ import {
   parseUserSettings,
   relationTableSortKey,
   sequencingShowDependencyEdges,
+  relationshipsOnlyActiveTargets,
+  relationshipsRecentAssociationTypes,
+  pushRecentAssociationType,
+  MAX_RECENT_ASSOCIATION_TYPES,
   sortTableRows,
   effectiveTableSort,
   tableSortForKey,
@@ -285,5 +289,55 @@ describe("user-settings", () => {
       sequencing: { showDependencyEdges: false },
     });
     expect(parsedOff.sequencing).toBeUndefined();
+  });
+
+  test("relationships onlyActiveTargets defaults true and stores false sparsely", () => {
+    expect(relationshipsOnlyActiveTargets({ version: 1 })).toBe(true);
+
+    const disabled = applyUserSettingsPatch(
+      { version: 1 },
+      { relationships: { onlyActiveTargets: false } },
+    );
+    expect(relationshipsOnlyActiveTargets(disabled)).toBe(false);
+    expect(disabled.relationships).toEqual({ onlyActiveTargets: false });
+
+    const reenabled = applyUserSettingsPatch(disabled, {
+      relationships: { onlyActiveTargets: true },
+    });
+    expect(relationshipsOnlyActiveTargets(reenabled)).toBe(true);
+    expect(reenabled.relationships).toBeUndefined();
+
+    const parsed = parseUserSettings({
+      version: 1,
+      relationships: { onlyActiveTargets: false },
+    });
+    expect(relationshipsOnlyActiveTargets(parsed)).toBe(false);
+  });
+
+  test("relationships recentAssociationTypes are MRU, capped, and merge with onlyActive", () => {
+    expect(pushRecentAssociationType([], "a:0")).toEqual(["a:0"]);
+    expect(pushRecentAssociationType(["a:0", "b:1"], "b:1")).toEqual(["b:1", "a:0"]);
+
+    const many = Array.from({ length: MAX_RECENT_ASSOCIATION_TYPES + 3 }, (_, i) => `t${i}:0`);
+    const capped = pushRecentAssociationType(many.slice(1), many[0]!);
+    expect(capped).toHaveLength(MAX_RECENT_ASSOCIATION_TYPES);
+    expect(capped[0]).toBe(many[0]);
+
+    const withRecent = applyUserSettingsPatch(
+      { version: 1 },
+      { relationships: { recentAssociationTypes: ["x:0", "y:1"] } },
+    );
+    expect(relationshipsRecentAssociationTypes(withRecent)).toEqual(["x:0", "y:1"]);
+
+    const withBoth = applyUserSettingsPatch(withRecent, {
+      relationships: { onlyActiveTargets: false },
+    });
+    expect(withBoth.relationships).toEqual({
+      recentAssociationTypes: ["x:0", "y:1"],
+      onlyActiveTargets: false,
+    });
+
+    const cleared = applyUserSettingsPatch(withBoth, { relationships: null });
+    expect(cleared.relationships).toBeUndefined();
   });
 });

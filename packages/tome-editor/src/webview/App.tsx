@@ -137,7 +137,11 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
         query: string,
         limit?: number,
         allowedTypeIds?: string[],
-        options?: { activeCorpusId?: string },
+        options?: {
+          activeCorpusId?: string;
+          participatesInProjectionType?: string;
+          onlyActivePickingRole?: "source" | "target";
+        },
       ) =>
         baseApi.search(query, limit, allowedTypeIds, {
           ...options,

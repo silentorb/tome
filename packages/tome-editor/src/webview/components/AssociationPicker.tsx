@@ -9,16 +9,34 @@ interface AssociationPickerProps {
   selectedType: string | null;
   ariaLabel: string;
   onSelect: (type: string, label?: string) => void;
+  /** MRU-first projection types to pin at the top when the query is empty. */
+  recentTypes?: readonly string[];
 }
 
 export function filterAndSortAssociations(
   types: readonly RelationshipTypeOption[],
   query: string,
+  recentTypes: readonly string[] = [],
 ): RelationshipTypeOption[] {
   const q = query.trim().toLowerCase();
-  if (!q) return [...types];
-  const matches = types.filter((item) => item.label.toLowerCase().includes(q));
-  return sortBySearchRelevanceMulti(matches, query, (item) => [item.label]);
+  if (q) {
+    const matches = types.filter((item) => item.label.toLowerCase().includes(q));
+    return sortBySearchRelevanceMulti(matches, query, (item) => [item.label]);
+  }
+
+  if (recentTypes.length === 0) return [...types];
+
+  const byType = new Map(types.map((item) => [item.type, item]));
+  const recent: RelationshipTypeOption[] = [];
+  const seen = new Set<string>();
+  for (const type of recentTypes) {
+    const item = byType.get(type);
+    if (!item || seen.has(type)) continue;
+    seen.add(type);
+    recent.push(item);
+  }
+  const rest = types.filter((item) => !seen.has(item.type));
+  return [...recent, ...rest];
 }
 
 export function AssociationPicker({
@@ -26,6 +44,7 @@ export function AssociationPicker({
   selectedType,
   ariaLabel,
   onSelect,
+  recentTypes = [],
 }: AssociationPickerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
@@ -48,13 +67,13 @@ export function AssociationPicker({
   }, [api]);
 
   const filtered = useMemo(
-    () => filterAndSortAssociations(types, query),
-    [query, types],
+    () => filterAndSortAssociations(types, query, recentTypes),
+    [query, recentTypes, types],
   );
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [query, types.length]);
+  }, [query, types.length, recentTypes]);
 
   const selectedLabel = types.find((item) => item.type === selectedType)?.label;
 

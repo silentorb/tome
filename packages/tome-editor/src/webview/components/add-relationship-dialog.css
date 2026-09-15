@@ -84,6 +84,30 @@
   letter-spacing: 0.04em;
 }
 
+.tome-add-relationship-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.tome-add-relationship-only-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--tome-text);
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tome-add-relationship-only-active input {
+  margin: 0;
+}
+
 .tome-add-relationship-target-placeholder {
   padding: 8px 10px;
   border: 1px solid var(--tome-border);

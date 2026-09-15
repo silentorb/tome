@@ -55,6 +55,8 @@ export {
   associationIdFromProjectionType,
   endpointIndexFromProjectionType,
   projectionTypeForEndpoint,
+  oppositeProjectionType,
+  onlyActiveHostProjectionType,
   projectionTypesForComposite,
   perspectiveTitle,
   perspectiveLinkAdd,

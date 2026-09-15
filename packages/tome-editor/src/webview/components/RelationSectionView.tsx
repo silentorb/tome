@@ -189,6 +189,8 @@ export function RelationSectionView({
                     onDeleteNode,
                     getMoveConfig: (rowNodeId) => ({
                       api,
+                      projectionType: section.label,
+                      onlyActivePickingRole: "source" as const,
                       excludedIds: [nodeId, rowNodeId],
                       onMove: async (selectedId: string) => {
                         await api.moveRelationshipConnection({

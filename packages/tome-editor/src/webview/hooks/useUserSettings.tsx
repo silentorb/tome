@@ -17,6 +17,9 @@ import {
   emptyUserSettings,
   sidebarRecentMaxItems,
   sequencingShowDependencyEdges,
+  relationshipsOnlyActiveTargets,
+  relationshipsRecentAssociationTypes,
+  pushRecentAssociationType,
   isDefaultTableSort,
   nextSortOnColumnClick,
   normalizeTableSort,
@@ -56,6 +59,10 @@ interface UserSettingsContextValue {
   sequencingShowDependencyEdges: boolean;
   setSequencingShowDependencyEdges: (value: boolean) => void;
   sidebarRecentMaxItems: number;
+  relationshipsOnlyActiveTargets: boolean;
+  setRelationshipsOnlyActiveTargets: (value: boolean) => void;
+  relationshipsRecentAssociationTypes: string[];
+  rememberRecentAssociationType: (type: string) => void;
 }
 
 const UserSettingsContext = createContext<UserSettingsContextValue | null>(null);
@@ -206,6 +213,40 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
     [api],
   );
 
+  const setRelationshipsOnlyActiveTargets = useCallback(
+    (value: boolean) => {
+      const patch = {
+        relationships: { onlyActiveTargets: value },
+      };
+      setSettings((current) => {
+        const next = applyUserSettingsPatch(current, patch);
+        void api.patchUserSettings(patch).catch(() => {
+          /* keep optimistic local state */
+        });
+        return next;
+      });
+    },
+    [api],
+  );
+
+  const rememberRecentAssociationType = useCallback(
+    (type: string) => {
+      setSettings((current) => {
+        const recentAssociationTypes = pushRecentAssociationType(
+          relationshipsRecentAssociationTypes(current),
+          type,
+        );
+        const patch = { relationships: { recentAssociationTypes } };
+        const next = applyUserSettingsPatch(current, patch);
+        void api.patchUserSettings(patch).catch(() => {
+          /* keep optimistic local state */
+        });
+        return next;
+      });
+    },
+    [api],
+  );
+
   const value = useMemo(
     (): UserSettingsContextValue => ({
       ready,
@@ -222,6 +263,10 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
       sequencingShowDependencyEdges: sequencingShowDependencyEdges(settings),
       setSequencingShowDependencyEdges,
       sidebarRecentMaxItems: sidebarRecentMaxItems(settings),
+      relationshipsOnlyActiveTargets: relationshipsOnlyActiveTargets(settings),
+      setRelationshipsOnlyActiveTargets,
+      relationshipsRecentAssociationTypes: relationshipsRecentAssociationTypes(settings),
+      rememberRecentAssociationType,
     }),
     [
       ready,
@@ -237,6 +282,8 @@ export function UserSettingsProvider({ api, children }: UserSettingsProviderProp
       setBlockParameter,
       getBlockParametersRevision,
       setSequencingShowDependencyEdges,
+      setRelationshipsOnlyActiveTargets,
+      rememberRecentAssociationType,
     ],
   );
 

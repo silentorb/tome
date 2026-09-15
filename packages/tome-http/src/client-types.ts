@@ -183,7 +183,11 @@ export interface TomeHttpClient {
     query: string,
     limit?: number,
     allowedTypeIds?: string[],
-    options?: { activeCorpusId?: string },
+    options?: {
+      activeCorpusId?: string;
+      participatesInProjectionType?: string;
+      onlyActivePickingRole?: "source" | "target";
+    },
   ): Promise<NodeSummary[]>;
   listRecent(limit?: number): Promise<NodeSummary[]>;
   saveNode(

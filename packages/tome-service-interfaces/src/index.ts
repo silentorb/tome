@@ -364,6 +364,10 @@ export interface TomeQueryCache {
     limit: number,
     allowedTypeIds?: readonly string[],
   ): { id: string; title: string }[];
+  /** Distinct node ids that participate in projections of the given type. */
+  listNodeIdsForProjectionType(projectionType: string): string[];
+  /** Distinct source node ids for projections of the given type. */
+  listSourceNodeIdsForProjectionType(projectionType: string): string[];
   listNodesWithBodyLike(pattern: string): { id: string; body: string }[];
   listNodesForGraphExport(): { id: string; title: string }[];
   listRelationshipsForGraphExport(): {

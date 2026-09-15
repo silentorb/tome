@@ -46,6 +46,12 @@ export interface ExecuteImpContext {
   pageNodeId?: string;
   parameters?: Record<string, unknown>;
   allowedTypeIds?: readonly string[];
+  /**
+   * Selected projection for Only-active filtering (see SearchNodesOptions).
+   * Resolved to opposite-host sources when picking a target.
+   */
+  participatesInProjectionType?: string;
+  onlyActivePickingRole?: "source" | "target";
 }
 
 export interface TomeCorpusInfo {

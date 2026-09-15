@@ -379,7 +379,11 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       query: string,
       limit = 20,
       allowedTypeIds?: string[],
-      options?: { activeCorpusId?: string },
+      options?: {
+        activeCorpusId?: string;
+        participatesInProjectionType?: string;
+        onlyActivePickingRole?: "source" | "target";
+      },
     ): Promise<NodeSummary[]> {
       const params = new URLSearchParams({ q: query, limit: String(limit) });
       if (allowedTypeIds?.length) {
@@ -387,6 +391,15 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       }
       if (options?.activeCorpusId) {
         params.set("activeCorpusId", options.activeCorpusId);
+      }
+      if (options?.participatesInProjectionType) {
+        params.set(
+          "participatesInProjectionType",
+          options.participatesInProjectionType,
+        );
+      }
+      if (options?.onlyActivePickingRole) {
+        params.set("onlyActivePickingRole", options.onlyActivePickingRole);
       }
       const data = await fetchJson<{ results: NodeSummary[] }>(
         `/api/nodes/search?${params}`,

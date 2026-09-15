@@ -672,6 +672,36 @@ export class GraphDatabase implements TomeQueryCache {
     return rows.map((row) => row.type);
   }
 
+  /** Node ids that appear as source or target of at least one projection of `type`. */
+  listNodeIdsForProjectionType(projectionType: string): string[] {
+    const trimmed = projectionType.trim();
+    if (!trimmed) return [];
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT node_id FROM (
+           SELECT source_node_id AS node_id FROM relationship_projections WHERE type = ?
+           UNION
+           SELECT target_node_id AS node_id FROM relationship_projections WHERE type = ?
+         )`,
+      )
+      .all(trimmed, trimmed) as { node_id: string }[];
+    return rows.map((row) => row.node_id);
+  }
+
+  /** Node ids that appear as source of at least one projection of `type`. */
+  listSourceNodeIdsForProjectionType(projectionType: string): string[] {
+    const trimmed = projectionType.trim();
+    if (!trimmed) return [];
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT source_node_id AS node_id
+         FROM relationship_projections
+         WHERE type = ?`,
+      )
+      .all(trimmed) as { node_id: string }[];
+    return rows.map((row) => row.node_id);
+  }
+
   /** Run a read query (used by overlay / dynamic-field modules). */
   queryAll<T extends Record<string, unknown>>(sql: string, ...params: SQLQueryBindings[]): T[] {
     if (!isProfilingEnabled()) {

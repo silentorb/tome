@@ -32,6 +32,16 @@ export interface SequencingSettings {
   showDependencyEdges?: boolean;
 }
 
+/**
+ * Relate/Move picker prefs (sparse).
+ * `onlyActiveTargets` defaults to true — only persist `false`.
+ */
+export interface RelationshipsSettings {
+  /** MRU-first directed projection types (`ULID:0` / `ULID:1`), max 10. */
+  recentAssociationTypes?: string[];
+  onlyActiveTargets?: boolean;
+}
+
 /** Primitive values for Imp graph parameter overrides. */
 export type BlockParameterValue = string | number | boolean | null;
 
@@ -49,6 +59,7 @@ export interface UserSettings {
   blockParameters?: Record<string, Record<string, BlockParameterValue>>;
   sidebar?: SidebarSettings;
   sequencing?: SequencingSettings;
+  relationships?: RelationshipsSettings;
 }
 
 export type UserSettingsPatch = {
@@ -58,10 +69,13 @@ export type UserSettingsPatch = {
   blockParameters?: Record<string, Record<string, BlockParameterValue | null> | null>;
   sidebar?: SidebarSettings | null;
   sequencing?: SequencingSettings | null;
+  /** Partial merge; `null` clears the whole section. */
+  relationships?: RelationshipsSettings | null;
 };
 
 export const DEFAULT_SIDEBAR_RECENT_MAX_ITEMS = 8;
 export const MAX_SIDEBAR_RECENT_MAX_ITEMS = 100;
+export const MAX_RECENT_ASSOCIATION_TYPES = 10;
 
 export const DEFAULT_TABLE_SORT: TableSortSpec = {
   orderBy: [{ column: "name", direction: "asc" }],
@@ -73,6 +87,29 @@ export function emptyUserSettings(): UserSettings {
 
 export function sequencingShowDependencyEdges(settings: UserSettings): boolean {
   return settings.sequencing?.showDependencyEdges === true;
+}
+
+/** Default true — only an explicit `false` override disables the filter. */
+export function relationshipsOnlyActiveTargets(settings: UserSettings): boolean {
+  return settings.relationships?.onlyActiveTargets !== false;
+}
+
+export function relationshipsRecentAssociationTypes(settings: UserSettings): string[] {
+  const raw = settings.relationships?.recentAssociationTypes;
+  return Array.isArray(raw) ? [...raw] : [];
+}
+
+/** Prepend `type` and clamp to {@link MAX_RECENT_ASSOCIATION_TYPES} unique entries. */
+export function pushRecentAssociationType(
+  current: readonly string[],
+  type: string,
+): string[] {
+  const trimmed = type.trim();
+  if (!trimmed) return [...current];
+  return [trimmed, ...current.filter((entry) => entry !== trimmed)].slice(
+    0,
+    MAX_RECENT_ASSOCIATION_TYPES,
+  );
 }
 
 export function sidebarRecentMaxItems(settings: UserSettings): number {
@@ -97,6 +134,33 @@ function normalizeSequencing(
 ): SequencingSettings | undefined {
   if (!value || value.showDependencyEdges !== true) return undefined;
   return { showDependencyEdges: true };
+}
+
+function normalizeRecentAssociationTypes(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.trim();
+    if (!trimmed || seen.has(trimmed)) continue;
+    seen.add(trimmed);
+    result.push(trimmed);
+    if (result.length >= MAX_RECENT_ASSOCIATION_TYPES) break;
+  }
+  return result.length > 0 ? result : undefined;
+}
+
+function normalizeRelationships(
+  value: RelationshipsSettings | undefined,
+): RelationshipsSettings | undefined {
+  if (!value || typeof value !== "object") return undefined;
+  const recentAssociationTypes = normalizeRecentAssociationTypes(value.recentAssociationTypes);
+  const onlyActiveTargets = value.onlyActiveTargets === false ? false : undefined;
+  const result: RelationshipsSettings = {};
+  if (recentAssociationTypes) result.recentAssociationTypes = recentAssociationTypes;
+  if (onlyActiveTargets === false) result.onlyActiveTargets = false;
+  return Object.keys(result).length > 0 ? result : undefined;
 }
 
 /** Stable key for Imp graph parameter overrides on a page block. */
@@ -325,6 +389,7 @@ export function applyUserSettingsPatch(
       : undefined,
     sidebar: current.sidebar ? { ...current.sidebar } : undefined,
     sequencing: current.sequencing ? { ...current.sequencing } : undefined,
+    relationships: current.relationships ? { ...current.relationships } : undefined,
   };
 
   if (patch.tableSorts) {
@@ -412,6 +477,26 @@ export function applyUserSettingsPatch(
     }
   }
 
+  if (patch.relationships !== undefined) {
+    if (patch.relationships === null) {
+      delete next.relationships;
+    } else {
+      const merged: RelationshipsSettings = { ...(next.relationships ?? {}) };
+      if ("recentAssociationTypes" in patch.relationships) {
+        merged.recentAssociationTypes = patch.relationships.recentAssociationTypes;
+      }
+      if ("onlyActiveTargets" in patch.relationships) {
+        merged.onlyActiveTargets = patch.relationships.onlyActiveTargets;
+      }
+      const normalized = normalizeRelationships(merged);
+      if (normalized) {
+        next.relationships = normalized;
+      } else {
+        delete next.relationships;
+      }
+    }
+  }
+
   return next;
 }
 
@@ -475,6 +560,14 @@ export function parseUserSettings(raw: unknown): UserSettings {
     const normalized = normalizeSequencing(sequencing as SequencingSettings);
     if (normalized) {
       settings.sequencing = normalized;
+    }
+  }
+
+  const relationships = record.relationships;
+  if (relationships && typeof relationships === "object" && !Array.isArray(relationships)) {
+    const normalized = normalizeRelationships(relationships as RelationshipsSettings);
+    if (normalized) {
+      settings.relationships = normalized;
     }
   }
 

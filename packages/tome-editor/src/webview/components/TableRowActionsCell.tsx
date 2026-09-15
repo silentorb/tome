@@ -5,6 +5,10 @@ import type { EditorApi } from "../api/client";
 
 export interface TableRowMoveConfig {
   api: EditorApi;
+  /** Locked directed projection type for the move dialog filter. */
+  projectionType: string;
+  /** Endpoint role being picked (drives Only-active opposite-side resolution). */
+  onlyActivePickingRole: "source" | "target";
   excludedIds: readonly string[];
   allowedTypeIds?: readonly string[];
   onMove: (selectedId: string) => Promise<void>;
@@ -48,6 +52,8 @@ export function TableRowActionsCell({
           api={move.api}
           open={moveOpen}
           recordTitle={recordTitle}
+          projectionType={move.projectionType}
+          onlyActivePickingRole={move.onlyActivePickingRole}
           allowedTypeIds={move.allowedTypeIds}
           excludedIds={move.excludedIds}
           onClose={() => setMoveOpen(false)}

@@ -5,6 +5,8 @@ import {
   parseAssociationsFile,
   parseProjectionType,
   projectionTypeForEndpoint,
+  oppositeProjectionType,
+  onlyActiveHostProjectionType,
   requireAssociationId,
   serializeAssociationsFile,
 } from "../src/content/associations-file";
@@ -362,6 +364,15 @@ describe("projection types and requireAssociationId", () => {
       associationId: MEMBER_OF,
       endpointIndex: 1,
     });
+  });
+
+  test("oppositeProjectionType and onlyActiveHostProjectionType flip endpoints", () => {
+    const members = projectionTypeForEndpoint(MEMBER_OF, 0);
+    const membership = projectionTypeForEndpoint(MEMBER_OF, 1);
+    expect(oppositeProjectionType(membership)).toBe(members);
+    expect(oppositeProjectionType(members)).toBe(membership);
+    expect(onlyActiveHostProjectionType(membership, "target")).toBe(members);
+    expect(onlyActiveHostProjectionType(members, "source")).toBe(members);
   });
 
   test("requireAssociationId returns registered ids", () => {

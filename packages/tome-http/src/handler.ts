@@ -269,9 +269,18 @@ async function dispatchApiRequest(
           : undefined;
         const activeCorpusId =
           url.searchParams.get("activeCorpusId") ?? undefined;
+        const participatesInProjectionType =
+          url.searchParams.get("participatesInProjectionType") ?? undefined;
+        const pickingRoleRaw = url.searchParams.get("onlyActivePickingRole");
+        const onlyActivePickingRole =
+          pickingRoleRaw === "source" || pickingRoleRaw === "target"
+            ? pickingRoleRaw
+            : undefined;
         return json({
           results: db.search(q, limit, allowedTypeIds, {
             activeCorpusId,
+            participatesInProjectionType,
+            onlyActivePickingRole,
           }),
         });
       }

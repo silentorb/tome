@@ -2,6 +2,7 @@ import type { Graph } from "imp-core-types";
 import type { ExecuteImpContext, ImpCollectionResult, ImpGraph } from "tome-graph-interfaces";
 import type { GraphDatabase } from "tome-sqlite";
 import type { TomeGraphStoreBase } from "tome-graph-interfaces";
+import { onlyActiveHostProjectionType } from "tome-flatfile";
 import { performTomeTextSearch } from "../search-text";
 
 function inboundEdge(graph: Graph, nodeId: string, port: string) {
@@ -68,7 +69,21 @@ export function runSearchImpGraphSql(
   const query = resolveSearchQueryFromGraph(graph, context);
   const limit = resolveLimitFromGraph(graph, 20);
   const allowedTypeIds = context?.allowedTypeIds;
-  const summaries = performTomeTextSearch(cache, query, limit, allowedTypeIds);
+  const selectedProjection = context?.participatesInProjectionType?.trim();
+  const pickingRole = context?.onlyActivePickingRole === "source" ? "source" : "target";
+  const hostProjection = selectedProjection
+    ? onlyActiveHostProjectionType(selectedProjection, pickingRole)
+    : null;
+  const allowedNodeIds = hostProjection
+    ? new Set(cache.listSourceNodeIdsForProjectionType(hostProjection))
+    : undefined;
+  const summaries = performTomeTextSearch(
+    cache,
+    query,
+    limit,
+    allowedTypeIds,
+    allowedNodeIds,
+  );
   return {
     columns: ["id", "title"],
     rows: summaries.map((row) => ({

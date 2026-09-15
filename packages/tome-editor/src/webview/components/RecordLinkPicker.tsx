@@ -23,6 +23,16 @@ interface RecordLinkPickerProps {
   searchLimit?: number;
   /** Focus the search input on mount (default: true when not embedded). */
   autoFocus?: boolean;
+  /**
+   * When set, only return nodes that already host the opposite association side
+   * for this selected/locked projection (Relate/Move “Only active” filter).
+   */
+  participatesInProjectionType?: string;
+  /**
+   * Endpoint role being picked. Default `target` (Relate). Use `source` when
+   * Move picks a new owning page for a relation section.
+   */
+  onlyActivePickingRole?: "source" | "target";
 }
 
 export function RecordLinkPicker({
@@ -36,11 +46,13 @@ export function RecordLinkPicker({
   embedded = false,
   searchLimit,
   autoFocus,
+  participatesInProjectionType,
+  onlyActivePickingRole,
 }: RecordLinkPickerProps) {
   const shouldAutoFocus = autoFocus ?? !embedded;
   const effectiveSearchLimit =
     searchLimit ??
-    (allowedTypeIds && allowedTypeIds.length > 0
+    ((allowedTypeIds && allowedTypeIds.length > 0) || participatesInProjectionType
       ? TYPE_SCOPED_SEARCH_LIMIT
       : DEFAULT_SEARCH_LIMIT);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -84,7 +96,10 @@ export function RecordLinkPicker({
       setLoading(true);
       setError(null);
       void api
-        .search(query, effectiveSearchLimit, allowedTypeIds)
+        .search(query, effectiveSearchLimit, allowedTypeIds, {
+          participatesInProjectionType,
+          onlyActivePickingRole,
+        })
         .then((items) => setResults(items))
         .catch((err) => {
           setResults([]);
@@ -93,7 +108,14 @@ export function RecordLinkPicker({
         .finally(() => setLoading(false));
     }, 120);
     return () => window.clearTimeout(handle);
-  }, [allowedTypeIds, api, effectiveSearchLimit, query]);
+  }, [
+    allowedTypeIds,
+    api,
+    effectiveSearchLimit,
+    onlyActivePickingRole,
+    participatesInProjectionType,
+    query,
+  ]);
 
   const selectable = results.filter((item) => !excluded.current.has(item.id));
 

@@ -10,6 +10,8 @@ export type { GraphWriteStore } from "./relationship-write";
 export {
   listAllRelationshipProjections,
   listDistinctProjectionTypes,
+  listNodeIdsForProjectionType,
+  listSourceNodeIdsForProjectionType,
   listRelationshipsFromSource,
   listRelationshipsToTarget,
   readStoreCompositeTypeForRelationship,

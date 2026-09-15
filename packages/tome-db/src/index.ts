@@ -410,6 +410,8 @@ export {
   runExecuteImp,
   runExecuteImpSql,
   listDistinctProjectionTypes,
+  listNodeIdsForProjectionType,
+  listSourceNodeIdsForProjectionType,
   readStoreGetNode,
   readStoreListNodeIds,
   recentNodesGraph,

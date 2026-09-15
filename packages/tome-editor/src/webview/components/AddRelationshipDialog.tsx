@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { EditorApi } from "../api/client";
+import { useUserSettings } from "../hooks/useUserSettings";
 import { AssociationPicker } from "./AssociationPicker";
 import { RecordLinkPicker } from "./RecordLinkPicker";
 import "./add-relationship-dialog.css";
@@ -30,7 +31,14 @@ export function AddRelationshipDialog({
   onLinked,
 }: AddRelationshipDialogProps) {
   const titleId = useId();
+  const onlyActiveId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
+  const {
+    relationshipsOnlyActiveTargets,
+    setRelationshipsOnlyActiveTargets,
+    relationshipsRecentAssociationTypes,
+    rememberRecentAssociationType,
+  } = useUserSettings();
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
   const [allowedTypeIds, setAllowedTypeIds] = useState<string[] | undefined>(undefined);
@@ -95,6 +103,7 @@ export function AddRelationshipDialog({
           type: selectedType,
           targetId,
         });
+        rememberRecentAssociationType(selectedType);
         onLinked?.();
         onClose();
       } catch (err) {
@@ -103,7 +112,15 @@ export function AddRelationshipDialog({
         setLinking(false);
       }
     },
-    [api, linking, nodeId, onClose, onLinked, selectedType],
+    [
+      api,
+      linking,
+      nodeId,
+      onClose,
+      onLinked,
+      rememberRecentAssociationType,
+      selectedType,
+    ],
   );
 
   if (!open) return null;
@@ -144,12 +161,31 @@ export function AddRelationshipDialog({
             <AssociationPicker
               api={api}
               selectedType={selectedType}
+              recentTypes={relationshipsRecentAssociationTypes}
               ariaLabel="Relationship type"
               onSelect={handleTypeSelect}
             />
           </div>
           <div className="tome-add-relationship-field">
-            <span className="tome-add-relationship-label">Target record</span>
+            <div className="tome-add-relationship-label-row">
+              <span className="tome-add-relationship-label">Target record</span>
+              <label
+                className="tome-add-relationship-only-active"
+                htmlFor={onlyActiveId}
+              >
+                <input
+                  id={onlyActiveId}
+                  type="checkbox"
+                  checked={relationshipsOnlyActiveTargets}
+                  disabled={linking}
+                  onChange={(event) => {
+                    setRelationshipsOnlyActiveTargets(event.target.checked);
+                    setTargetPickerKey((key) => key + 1);
+                  }}
+                />
+                Only active
+              </label>
+            </div>
             {selectedType ? (
               <RecordLinkPicker
                 key={targetPickerKey}
@@ -158,6 +194,10 @@ export function AddRelationshipDialog({
                 closeOnSelect
                 allowedTypeIds={allowedTypeIds}
                 excludedIds={[nodeId]}
+                participatesInProjectionType={
+                  relationshipsOnlyActiveTargets ? selectedType : undefined
+                }
+                onlyActivePickingRole="target"
                 ariaLabel={`Search target for ${selectedLabel ?? selectedType}`}
                 onSelect={handleLink}
                 onClose={() => {}}

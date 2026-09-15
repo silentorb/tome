@@ -24,4 +24,16 @@ export interface NodeDetail extends NodeSummary {
 export interface SearchNodesOptions {
   /** Editor active corpus; used to decide which hits get corpusLabel. */
   activeCorpusId?: string;
+  /**
+   * Selected / locked directed projection type for Only-active filtering.
+   * Combined with {@link onlyActivePickingRole} to resolve host nodes of the
+   * opposite association side (e.g. Membership → sources of Members).
+   */
+  participatesInProjectionType?: string;
+  /**
+   * Endpoint role being picked for the selected projection.
+   * Default `target` (Relate / move-to-new-target). Use `source` when moving
+   * the owning side of a relation section.
+   */
+  onlyActivePickingRole?: "source" | "target";
 }

@@ -45,10 +45,35 @@ export function listRecentNodes(
   db: TomeQueryCache,
   limit = 20,
   allowedTypeIds?: readonly string[],
+  allowedNodeIds?: ReadonlySet<string>,
 ): NodeSummary[] {
-  const maxCap = allowedTypeIds && allowedTypeIds.length > 0 ? 5000 : 100;
+  if (allowedNodeIds && allowedNodeIds.size === 0) return [];
+  const needsOverFetch =
+    (allowedTypeIds && allowedTypeIds.length > 0) ||
+    (allowedNodeIds !== undefined && allowedNodeIds.size > 0);
+  const maxCap = needsOverFetch ? 5000 : 100;
   const cap = Math.max(1, Math.min(limit, maxCap));
-  return db.listNodesByTitle(cap, allowedTypeIds).map((row) => toActiveNodeSummary(db, row));
+  const fetchLimit = needsOverFetch ? maxCap : cap;
+  return filterByAllowedNodeIds(
+    db.listNodesByTitle(fetchLimit, allowedTypeIds).map((row) => toActiveNodeSummary(db, row)),
+    allowedNodeIds,
+    cap,
+  );
+}
+
+function filterByAllowedNodeIds(
+  summaries: NodeSummary[],
+  allowedNodeIds: ReadonlySet<string> | undefined,
+  limit: number,
+): NodeSummary[] {
+  if (!allowedNodeIds) return summaries.slice(0, limit);
+  const matched: NodeSummary[] = [];
+  for (const summary of summaries) {
+    if (!allowedNodeIds.has(summary.id)) continue;
+    matched.push(summary);
+    if (matched.length >= limit) break;
+  }
+  return matched;
 }
 
 /**
@@ -59,18 +84,27 @@ export function performTomeTextSearch(
   query: string,
   limit = 20,
   allowedTypeIds?: readonly string[],
+  allowedNodeIds?: ReadonlySet<string>,
 ): NodeSummary[] {
+  if (allowedNodeIds && allowedNodeIds.size === 0) return [];
   const trimmed = query.trim();
-  const maxCap = allowedTypeIds && allowedTypeIds.length > 0 ? 5000 : 100;
+  const needsOverFetch =
+    (allowedTypeIds && allowedTypeIds.length > 0) ||
+    (allowedNodeIds !== undefined && allowedNodeIds.size > 0);
+  const maxCap = needsOverFetch ? 5000 : 100;
   const cap = Math.max(1, Math.min(limit, maxCap));
   if (!trimmed) {
-    return listRecentNodes(db, cap, allowedTypeIds);
+    return listRecentNodes(db, cap, allowedTypeIds, allowedNodeIds);
   }
 
   const pattern = `%${trimmed.replace(/[%_\\]/g, "\\$&")}%`;
   const titleRows = db.searchNodesByTitle(pattern, maxCap, allowedTypeIds);
   let summaries = sortBySearchRelevance(
-    titleRows.map((row) => toActiveNodeSummary(db, row)),
+    filterByAllowedNodeIds(
+      titleRows.map((row) => toActiveNodeSummary(db, row)),
+      allowedNodeIds,
+      maxCap,
+    ),
     trimmed,
     (row) => row.title,
   );
@@ -78,9 +112,13 @@ export function performTomeTextSearch(
   const seen = new Set(summaries.map((row) => row.id));
   const bodyRows = db.searchNodesByBody(pattern, maxCap, allowedTypeIds);
   const bodyOnlySummaries = sortBySearchRelevance(
-    bodyRows
-      .filter((row) => !seen.has(row.id))
-      .map((row) => toActiveNodeSummary(db, row)),
+    filterByAllowedNodeIds(
+      bodyRows
+        .filter((row) => !seen.has(row.id))
+        .map((row) => toActiveNodeSummary(db, row)),
+      allowedNodeIds,
+      maxCap,
+    ),
     trimmed,
     (row) => row.title,
   );
