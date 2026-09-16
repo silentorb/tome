@@ -46,7 +46,7 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 - Supported transforms: Imp collection library (`filter`, `except`, `sort`, `limit`, `offset`, `project`, `group`, predicates, `column`, `literal`)
 - Supported path ops: Imp `traverse` (single hop via `relationship_projections`; Imp inputs are separate `association` + `direction` — Tome binds them to projection types at SQL time)
 - `except` is declarative set difference by `id`; SQL lowering uses `NOT EXISTS` over the exclude subquery (not an in-memory subtract)
-- Columns: Imp `project` with comma-separated logical names; `id` / `is_archived` / promoted node fields (`title`, `alias`, `body`, `created_at`, `modified_at`) are table columns; other names map to `node_properties` EAV subqueries
+- Columns: Imp `project` with comma-separated logical names; `id` / `is_archived` / promoted node fields (`title`, `alias`, `body`, `created_at`, `modified_at`) are table columns; other names map to `node_properties` EAV subqueries. Edge filters on traverse use promoted relationship columns (`ordinal`, `order`, `priority`) or `relationship_projection_properties` EAV (see [tome-imp-sql.md](./tome-imp-sql.md)).
 - **Title-link baseline:** every result table always shows a first **title** column of node page links (like database table name cells). Compile always ensures SQL selects `id` and `title` (merging into any author `project`, or adding `title` on bare `SELECT *`). Visible columns omit raw `id` / duplicate `title` plumbing; author-projected extras follow the title column. Projecting only `id` yields a single-column title-link table.
 - Host must exclude archived nodes even when the graph has no filter (including traverse targets)
 

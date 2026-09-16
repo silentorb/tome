@@ -15,12 +15,26 @@ const PROMOTED_NODE_COLUMNS = new Set([
   "modified_at",
 ]);
 
+/** Keep in sync with `PROMOTED_RELATIONSHIP_COLUMNS` in tome-sqlite/schema.ts. */
+const PROMOTED_RELATIONSHIP_COLUMNS = new Set(["ordinal", "order", "priority"]);
+
 /** Rebuild a JSON bag from promoted node columns for Imp traverse `json_patch`. */
 export function tomeNodePropertiesJson(alias: string): string {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) {
     throw new Error(`Invalid table alias "${alias}"`);
   }
   return `json_object('title', ${alias}.title, 'alias', ${alias}.alias, 'body', ${alias}.body, 'created_at', ${alias}.created_at, 'modified_at', ${alias}.modified_at)`;
+}
+
+/**
+ * Rebuild a JSON bag from promoted edge columns + EAV for Imp traverse `json_patch`.
+ * EAV values are already JSON-encoded PropertyValue text.
+ */
+export function tomeEdgePropertiesJson(alias: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) {
+    throw new Error(`Invalid table alias "${alias}"`);
+  }
+  return `json_patch(json_object('ordinal', ${alias}.ordinal, 'order', ${alias}."order", 'priority', ${alias}.priority), coalesce((SELECT json_group_object(key, json(value)) FROM relationship_projection_properties WHERE projection_id = ${alias}.id), '{}'))`;
 }
 
 /** Map logical Imp column names onto the Tome `nodes` SQLite table. */
@@ -32,6 +46,23 @@ export function tomeNodesColumnExpression(name: string): string {
     return name;
   }
   return `(SELECT json_extract(value, '$') FROM node_properties WHERE node_id = nodes.id AND key = '${name}')`;
+}
+
+/** Map logical edge property names onto `relationship_projections` (+ EAV). */
+export function tomeEdgePropertyExpression(alias: string, name: string): string {
+  if (!IDENT_RE.test(alias)) {
+    throw new Error(`Invalid edges alias "${alias}"`);
+  }
+  if (!IDENT_RE.test(name)) {
+    throw new Error(`Invalid edge property name "${name}"`);
+  }
+  if (name === "order") {
+    return `${alias}."order"`;
+  }
+  if (PROMOTED_RELATIONSHIP_COLUMNS.has(name)) {
+    return `${alias}.${name}`;
+  }
+  return `(SELECT json_extract(value, '$') FROM relationship_projection_properties WHERE projection_id = ${alias}.id AND key = '${name}')`;
 }
 
 /**
@@ -59,7 +90,8 @@ const tomeLiveNodesSchemaBase = {
     sourceColumn: "source_node_id",
     targetColumn: "target_node_id",
     typeColumn: "type",
-    propertiesColumn: "properties",
+    property: tomeEdgePropertyExpression,
+    propertiesJson: tomeEdgePropertiesJson,
   },
   edgeType(association: string, direction: number) {
     if (direction !== 0 && direction !== 1) {

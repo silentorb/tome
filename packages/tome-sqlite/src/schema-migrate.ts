@@ -1,5 +1,9 @@
 import type { Database } from "bun:sqlite";
-import { PROMOTED_NODE_COLUMN_SET, SCHEMA_VERSION } from "./schema";
+import {
+  PROMOTED_NODE_COLUMN_SET,
+  PROMOTED_RELATIONSHIP_COLUMN_SET,
+  SCHEMA_VERSION,
+} from "./schema";
 
 function tableExists(db: Database, name: string): boolean {
   const row = db
@@ -175,12 +179,230 @@ export function migrateSchemaToV12(db: Database): void {
   db.exec("PRAGMA foreign_keys = ON");
 }
 
+function splitRelationshipBag(bag: Record<string, unknown>): {
+  ordinal: number | null;
+  order: string | null;
+  priority: number | null;
+  eav: Array<[string, string]>;
+} {
+  let ordinal: number | null = null;
+  let order: string | null = null;
+  let priority: number | null = null;
+  const eav: Array<[string, string]> = [];
+
+  for (const [key, value] of Object.entries(bag)) {
+    if (value === undefined) continue;
+    if (key === "ordinal" && typeof value === "number" && Number.isFinite(value)) {
+      ordinal = value;
+      continue;
+    }
+    if (key === "order" && typeof value === "string") {
+      order = value;
+      continue;
+    }
+    if (key === "priority" && typeof value === "number" && Number.isFinite(value)) {
+      priority = value;
+      continue;
+    }
+    if (PROMOTED_RELATIONSHIP_COLUMN_SET.has(key)) {
+      // Wrong runtime type for a promoted key — keep in EAV rather than drop.
+      eav.push([key, JSON.stringify(value)]);
+      continue;
+    }
+    eav.push([key, JSON.stringify(value)]);
+  }
+
+  return { ordinal, order, priority, eav };
+}
+
+/**
+ * Expand relationship `properties` JSON into promoted columns + EAV
+ * (schema v12 → v13).
+ */
+export function migrateSchemaToV13(db: Database): void {
+  if (!tableExists(db, "relationship_records")) return;
+  const recordColumns = columnNames(db, "relationship_records");
+  if (!recordColumns.includes("properties")) {
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS relationship_record_properties (
+        record_id TEXT NOT NULL REFERENCES relationship_records(id) ON DELETE CASCADE,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        PRIMARY KEY (record_id, key)
+      )
+    `);
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS relationship_projection_properties (
+        projection_id TEXT NOT NULL REFERENCES relationship_projections(id) ON DELETE CASCADE,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        PRIMARY KEY (projection_id, key)
+      )
+    `);
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS idx_rel_record_properties_key ON relationship_record_properties(key)",
+    );
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS idx_rel_proj_properties_key ON relationship_projection_properties(key)",
+    );
+    return;
+  }
+
+  const records = db
+    .prepare("SELECT id, node_a, node_b, composite_type, properties FROM relationship_records")
+    .all() as {
+    id: string;
+    node_a: string;
+    node_b: string;
+    composite_type: string;
+    properties: string;
+  }[];
+  const projections = db
+    .prepare(
+      "SELECT id, record_id, source_node_id, target_node_id, type, properties FROM relationship_projections",
+    )
+    .all() as {
+    id: string;
+    record_id: string;
+    source_node_id: string;
+    target_node_id: string;
+    type: string;
+    properties: string;
+  }[];
+
+  db.exec("PRAGMA foreign_keys = OFF");
+  db.exec(`
+    CREATE TABLE relationship_records_v13 (
+      id TEXT PRIMARY KEY NOT NULL,
+      node_a TEXT NOT NULL,
+      node_b TEXT NOT NULL,
+      composite_type TEXT NOT NULL,
+      ordinal INTEGER,
+      "order" TEXT,
+      priority INTEGER,
+      UNIQUE (node_a, node_b, composite_type)
+    )
+  `);
+  db.exec(`
+    CREATE TABLE relationship_projections_v13 (
+      id TEXT PRIMARY KEY NOT NULL,
+      record_id TEXT NOT NULL,
+      source_node_id TEXT NOT NULL,
+      target_node_id TEXT NOT NULL,
+      type TEXT NOT NULL,
+      ordinal INTEGER,
+      "order" TEXT,
+      priority INTEGER
+    )
+  `);
+  db.exec(`
+    CREATE TABLE relationship_record_properties_v13 (
+      record_id TEXT NOT NULL,
+      key TEXT NOT NULL,
+      value TEXT NOT NULL,
+      PRIMARY KEY (record_id, key)
+    )
+  `);
+  db.exec(`
+    CREATE TABLE relationship_projection_properties_v13 (
+      projection_id TEXT NOT NULL,
+      key TEXT NOT NULL,
+      value TEXT NOT NULL,
+      PRIMARY KEY (projection_id, key)
+    )
+  `);
+
+  const insertRecord = db.prepare(
+    `INSERT INTO relationship_records_v13 (id, node_a, node_b, composite_type, ordinal, "order", priority)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const insertRecordProp = db.prepare(
+    "INSERT INTO relationship_record_properties_v13 (record_id, key, value) VALUES (?, ?, ?)",
+  );
+  const insertProjection = db.prepare(
+    `INSERT INTO relationship_projections_v13 (id, record_id, source_node_id, target_node_id, type, ordinal, "order", priority)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const insertProjectionProp = db.prepare(
+    "INSERT INTO relationship_projection_properties_v13 (projection_id, key, value) VALUES (?, ?, ?)",
+  );
+
+  const tx = db.transaction(() => {
+    for (const row of records) {
+      const split = splitRelationshipBag(parseJsonObject(row.properties));
+      insertRecord.run(
+        row.id,
+        row.node_a,
+        row.node_b,
+        row.composite_type,
+        split.ordinal,
+        split.order,
+        split.priority,
+      );
+      for (const [key, value] of split.eav) {
+        insertRecordProp.run(row.id, key, value);
+      }
+    }
+
+    for (const row of projections) {
+      const split = splitRelationshipBag(parseJsonObject(row.properties));
+      insertProjection.run(
+        row.id,
+        row.record_id,
+        row.source_node_id,
+        row.target_node_id,
+        row.type,
+        split.ordinal,
+        split.order,
+        split.priority,
+      );
+      for (const [key, value] of split.eav) {
+        insertProjectionProp.run(row.id, key, value);
+      }
+    }
+
+    db.exec("DROP TABLE relationship_projections");
+    db.exec("DROP TABLE relationship_records");
+    if (tableExists(db, "relationship_record_properties")) {
+      db.exec("DROP TABLE relationship_record_properties");
+    }
+    if (tableExists(db, "relationship_projection_properties")) {
+      db.exec("DROP TABLE relationship_projection_properties");
+    }
+    db.exec("ALTER TABLE relationship_records_v13 RENAME TO relationship_records");
+    db.exec("ALTER TABLE relationship_projections_v13 RENAME TO relationship_projections");
+    db.exec(
+      "ALTER TABLE relationship_record_properties_v13 RENAME TO relationship_record_properties",
+    );
+    db.exec(
+      "ALTER TABLE relationship_projection_properties_v13 RENAME TO relationship_projection_properties",
+    );
+    db.exec("CREATE INDEX IF NOT EXISTS idx_rel_records_node_a ON relationship_records(node_a)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_rel_records_node_b ON relationship_records(node_b)");
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS idx_rel_proj_source ON relationship_projections(source_node_id, type)",
+    );
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS idx_rel_proj_target ON relationship_projections(target_node_id, type)",
+    );
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS idx_rel_record_properties_key ON relationship_record_properties(key)",
+    );
+    db.exec(
+      "CREATE INDEX IF NOT EXISTS idx_rel_proj_properties_key ON relationship_projection_properties(key)",
+    );
+  });
+  tx();
+  db.exec("PRAGMA foreign_keys = ON");
+}
+
 export function migrateSchema(db: Database): void {
   migrateSchemaToV5(db);
   migrateSchemaToV6(db);
   migrateSchemaToV7(db);
   migrateSchemaToV10(db);
   migrateSchemaToV12(db);
+  migrateSchemaToV13(db);
 
   const versionRow = db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get() as
     | { value: string }

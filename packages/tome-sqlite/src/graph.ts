@@ -15,7 +15,12 @@ import {
   truncateSql,
 } from "tome-service-interfaces";
 import { migrateSchema } from "./schema-migrate";
-import { DDL, PROMOTED_NODE_COLUMN_SET, SCHEMA_VERSION } from "./schema";
+import {
+  DDL,
+  PROMOTED_NODE_COLUMN_SET,
+  PROMOTED_RELATIONSHIP_COLUMN_SET,
+  SCHEMA_VERSION,
+} from "./schema";
 
 export type {
   Node,
@@ -32,16 +37,6 @@ const IDENTITY_CODEC: RelationshipPropertyCodec = {
 };
 
 const NODE_DISPLAY_TITLE_SQL = `COALESCE(NULLIF(title, ''), NULLIF(alias, ''), 'Untitled')`;
-
-function parseJsonObject(raw: string): Properties {
-  try {
-    const v = JSON.parse(raw) as unknown;
-    if (v && typeof v === "object" && !Array.isArray(v)) return v as Properties;
-  } catch {
-    /* fall through */
-  }
-  return {};
-}
 
 function decodePropertyValue(raw: string): PropertyValue {
   try {
@@ -131,6 +126,82 @@ function assembleNodeProperties(
   return properties;
 }
 
+type RelationshipColumns = {
+  ordinal: number | null;
+  order: string | null;
+  priority: number | null;
+};
+
+type ProjectionRow = {
+  id: string;
+  record_id: string;
+  source_node_id: string;
+  target_node_id: string;
+  type: string;
+  ordinal: number | null;
+  order: string | null;
+  priority: number | null;
+};
+
+type RecordRow = {
+  id: string;
+  node_a: string;
+  node_b: string;
+  composite_type: string;
+  ordinal: number | null;
+  order: string | null;
+  priority: number | null;
+};
+
+function splitRelationshipProperties(properties: Properties): {
+  ordinal: number | null;
+  order: string | null;
+  priority: number | null;
+  eav: Properties;
+} {
+  const eav: Properties = {};
+  let ordinal: number | null = null;
+  let order: string | null = null;
+  let priority: number | null = null;
+
+  for (const [key, value] of Object.entries(properties)) {
+    if (value === undefined) continue;
+    if (key === "ordinal" && typeof value === "number" && Number.isFinite(value)) {
+      ordinal = value;
+      continue;
+    }
+    if (key === "order" && typeof value === "string") {
+      order = value;
+      continue;
+    }
+    if (key === "priority" && typeof value === "number" && Number.isFinite(value)) {
+      priority = value;
+      continue;
+    }
+    if (PROMOTED_RELATIONSHIP_COLUMN_SET.has(key)) {
+      eav[key] = value;
+      continue;
+    }
+    eav[key] = value;
+  }
+
+  return { ordinal, order, priority, eav };
+}
+
+function assembleRelationshipProperties(
+  columns: RelationshipColumns,
+  eavRows: readonly { key: string; value: string }[],
+): Properties {
+  const properties: Properties = {};
+  if (columns.ordinal != null) properties.ordinal = columns.ordinal;
+  if (columns.order != null) properties.order = columns.order;
+  if (columns.priority != null) properties.priority = columns.priority;
+  for (const entry of eavRows) {
+    properties[entry.key] = decodePropertyValue(entry.value);
+  }
+  return properties;
+}
+
 export function relationshipId(sourceNodeId: string, type: string, targetNodeId: string): string {
   return `${sourceNodeId}:${type}:${targetNodeId}`;
 }
@@ -148,9 +219,17 @@ export class GraphDatabase implements TomeQueryCache {
   private selectNodeRow!: ReturnType<Database["prepare"]>;
   private selectNodeProperties!: ReturnType<Database["prepare"]>;
   private insertRecord!: ReturnType<Database["prepare"]>;
-  private updateRecordProps!: ReturnType<Database["prepare"]>;
+  private updateRecordColumns!: ReturnType<Database["prepare"]>;
+  private deleteRecordProperties!: ReturnType<Database["prepare"]>;
+  private insertRecordProperty!: ReturnType<Database["prepare"]>;
+  private selectRecordRow!: ReturnType<Database["prepare"]>;
+  private selectRecordProperties!: ReturnType<Database["prepare"]>;
   private insertProjection!: ReturnType<Database["prepare"]>;
-  private updateProjectionProps!: ReturnType<Database["prepare"]>;
+  private updateProjectionColumns!: ReturnType<Database["prepare"]>;
+  private deleteProjectionProperties!: ReturnType<Database["prepare"]>;
+  private insertProjectionProperty!: ReturnType<Database["prepare"]>;
+  private selectProjectionRow!: ReturnType<Database["prepare"]>;
+  private selectProjectionProperties!: ReturnType<Database["prepare"]>;
 
   constructor(
     path: string,
@@ -180,30 +259,65 @@ export class GraphDatabase implements TomeQueryCache {
     this.setMeta("schema_version", String(SCHEMA_VERSION));
   }
 
-  private parseRelationshipProperties(raw: string): Properties {
-    return this.propertyCodec.decode(parseJsonObject(raw));
+  private writeRecordProperties(id: string, encoded: Properties): void {
+    const split = splitRelationshipProperties(encoded);
+    this.updateRecordColumns.run(split.ordinal, split.order, split.priority, id);
+    this.deleteRecordProperties.run(id);
+    for (const [key, value] of Object.entries(split.eav)) {
+      if (value === undefined) continue;
+      this.insertRecordProperty.run(id, key, JSON.stringify(value));
+    }
   }
 
-  private stringifyRelationshipProperties(properties: Properties): string {
-    return JSON.stringify(this.propertyCodec.encode(properties));
+  private writeProjectionProperties(id: string, encoded: Properties): void {
+    const split = splitRelationshipProperties(encoded);
+    this.updateProjectionColumns.run(split.ordinal, split.order, split.priority, id);
+    this.deleteProjectionProperties.run(id);
+    for (const [key, value] of Object.entries(split.eav)) {
+      if (value === undefined) continue;
+      this.insertProjectionProperty.run(id, key, JSON.stringify(value));
+    }
   }
 
-  private mapProjectionRow(row: {
-    id: string;
-    record_id: string;
-    source_node_id: string;
-    target_node_id: string;
-    type: string;
-    properties: string;
-  }): Relationship {
+  private mapProjectionRow(
+    row: ProjectionRow,
+    eavRows: readonly { key: string; value: string }[],
+  ): Relationship {
     return {
       id: row.id,
       recordId: row.record_id,
       sourceNodeId: row.source_node_id,
       targetNodeId: row.target_node_id,
       type: row.type,
-      properties: this.parseRelationshipProperties(row.properties),
+      properties: this.propertyCodec.decode(
+        assembleRelationshipProperties(
+          { ordinal: row.ordinal, order: row.order, priority: row.priority },
+          eavRows,
+        ),
+      ),
     };
+  }
+
+  private mapProjectionRows(rows: ProjectionRow[]): Relationship[] {
+    if (rows.length === 0) return [];
+    const placeholders = rows.map(() => "?").join(", ");
+    const eavAll = this.db
+      .prepare(
+        `SELECT projection_id, key, value FROM relationship_projection_properties
+         WHERE projection_id IN (${placeholders})`,
+      )
+      .all(...rows.map((row) => row.id)) as {
+      projection_id: string;
+      key: string;
+      value: string;
+    }[];
+    const eavById = new Map<string, { key: string; value: string }[]>();
+    for (const entry of eavAll) {
+      const list = eavById.get(entry.projection_id);
+      if (list) list.push(entry);
+      else eavById.set(entry.projection_id, [entry]);
+    }
+    return rows.map((row) => this.mapProjectionRow(row, eavById.get(row.id) ?? []));
   }
 
   private prepareStatements(): void {
@@ -229,18 +343,44 @@ export class GraphDatabase implements TomeQueryCache {
       "SELECT key, value FROM node_properties WHERE node_id = ?",
     );
     this.insertRecord = this.db.prepare(
-      `INSERT INTO relationship_records (id, node_a, node_b, composite_type, properties)
-       VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
+      `INSERT INTO relationship_records (id, node_a, node_b, composite_type)
+       VALUES (?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
     );
-    this.updateRecordProps = this.db.prepare(
-      "UPDATE relationship_records SET properties = ? WHERE id = ?",
+    this.updateRecordColumns = this.db.prepare(
+      `UPDATE relationship_records SET ordinal = ?, "order" = ?, priority = ? WHERE id = ?`,
+    );
+    this.deleteRecordProperties = this.db.prepare(
+      "DELETE FROM relationship_record_properties WHERE record_id = ?",
+    );
+    this.insertRecordProperty = this.db.prepare(
+      "INSERT INTO relationship_record_properties (record_id, key, value) VALUES (?, ?, ?)",
+    );
+    this.selectRecordRow = this.db.prepare(
+      `SELECT id, node_a, node_b, composite_type, ordinal, "order", priority
+       FROM relationship_records WHERE id = ?`,
+    );
+    this.selectRecordProperties = this.db.prepare(
+      "SELECT key, value FROM relationship_record_properties WHERE record_id = ?",
     );
     this.insertProjection = this.db.prepare(
-      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
-       VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type)
+       VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
     );
-    this.updateProjectionProps = this.db.prepare(
-      "UPDATE relationship_projections SET properties = ? WHERE id = ?",
+    this.updateProjectionColumns = this.db.prepare(
+      `UPDATE relationship_projections SET ordinal = ?, "order" = ?, priority = ? WHERE id = ?`,
+    );
+    this.deleteProjectionProperties = this.db.prepare(
+      "DELETE FROM relationship_projection_properties WHERE projection_id = ?",
+    );
+    this.insertProjectionProperty = this.db.prepare(
+      "INSERT INTO relationship_projection_properties (projection_id, key, value) VALUES (?, ?, ?)",
+    );
+    this.selectProjectionRow = this.db.prepare(
+      `SELECT id, record_id, source_node_id, target_node_id, type, ordinal, "order", priority
+       FROM relationship_projections WHERE id = ?`,
+    );
+    this.selectProjectionProperties = this.db.prepare(
+      "SELECT key, value FROM relationship_projection_properties WHERE projection_id = ?",
     );
   }
 
@@ -301,18 +441,12 @@ export class GraphDatabase implements TomeQueryCache {
   }
 
   upsertRelationshipRecord(record: RelationshipRecordRow): void {
-    this.insertRecord.run(
-      record.id,
-      record.nodeA,
-      record.nodeB,
-      record.compositeType,
-      this.stringifyRelationshipProperties(record.properties),
-    );
+    this.insertRecord.run(record.id, record.nodeA, record.nodeB, record.compositeType);
+    if (Object.keys(record.properties).length === 0) return;
     const existing = this.getRelationshipRecord(record.id);
-    if (existing && Object.keys(record.properties).length > 0) {
-      const merged = mergeProperties(existing.properties, record.properties);
-      this.updateRecordProps.run(this.stringifyRelationshipProperties(merged), record.id);
-    }
+    if (!existing) return;
+    const merged = mergeProperties(existing.properties, record.properties);
+    this.writeRecordProperties(record.id, this.propertyCodec.encode(merged));
   }
 
   upsertRelationshipProjection(projection: RelationshipProjectionRow): void {
@@ -322,13 +456,12 @@ export class GraphDatabase implements TomeQueryCache {
       projection.sourceNodeId,
       projection.targetNodeId,
       projection.type,
-      this.stringifyRelationshipProperties(projection.properties),
     );
+    if (Object.keys(projection.properties).length === 0) return;
     const existing = this.getRelationship(projection.id);
-    if (existing && Object.keys(projection.properties).length > 0) {
-      const merged = mergeProperties(existing.properties, projection.properties);
-      this.updateProjectionProps.run(this.stringifyRelationshipProperties(merged), projection.id);
-    }
+    if (!existing) return;
+    const merged = mergeProperties(existing.properties, projection.properties);
+    this.writeProjectionProperties(projection.id, this.propertyCodec.encode(merged));
   }
 
   /** @deprecated Use upsertRelationshipProjection via sync expander. Kept for test helpers. */
@@ -339,35 +472,25 @@ export class GraphDatabase implements TomeQueryCache {
     properties: Properties = {},
   ): void {
     const id = relationshipId(sourceNodeId, type, targetNodeId);
-    this.insertRecord.run(
-      id,
-      sourceNodeId,
-      targetNodeId,
-      type,
-      this.stringifyRelationshipProperties(properties),
-    );
-    this.insertProjection.run(
-      id,
-      id,
-      sourceNodeId,
-      targetNodeId,
-      type,
-      this.stringifyRelationshipProperties(properties),
-    );
+    this.insertRecord.run(id, sourceNodeId, targetNodeId, type);
+    this.insertProjection.run(id, id, sourceNodeId, targetNodeId, type);
+    if (Object.keys(properties).length === 0) return;
     const existing = this.getRelationship(id);
-    if (existing && Object.keys(properties).length > 0) {
-      const merged = mergeProperties(existing.properties, properties);
-      this.updateProjectionProps.run(this.stringifyRelationshipProperties(merged), id);
-    }
+    if (!existing) return;
+    const merged = mergeProperties(existing.properties, properties);
+    const encoded = this.propertyCodec.encode(merged);
+    this.writeRecordProperties(id, encoded);
+    this.writeProjectionProperties(id, encoded);
   }
 
   mergeRelationshipProperties(id: string, properties: Properties): void {
     const existing = this.getRelationship(id);
     if (!existing) return;
     const merged = mergeProperties(existing.properties, properties);
-    this.updateProjectionProps.run(this.stringifyRelationshipProperties(merged), id);
+    const encoded = this.propertyCodec.encode(merged);
+    this.writeProjectionProperties(id, encoded);
     if (existing.recordId) {
-      this.updateRecordProps.run(this.stringifyRelationshipProperties(merged), existing.recordId);
+      this.writeRecordProperties(existing.recordId, encoded);
     }
   }
 
@@ -454,47 +577,28 @@ export class GraphDatabase implements TomeQueryCache {
   }
 
   getRelationshipRecord(id: string): RelationshipRecordRow | null {
-    const row = this.db
-      .prepare(
-        "SELECT id, node_a, node_b, composite_type, properties FROM relationship_records WHERE id = ?",
-      )
-      .get(id) as
-      | {
-          id: string;
-          node_a: string;
-          node_b: string;
-          composite_type: string;
-          properties: string;
-        }
-      | undefined;
+    const row = this.selectRecordRow.get(id) as RecordRow | undefined;
     if (!row) return null;
+    const eavRows = this.selectRecordProperties.all(id) as { key: string; value: string }[];
     return {
       id: row.id,
       nodeA: row.node_a,
       nodeB: row.node_b,
       compositeType: row.composite_type,
-      properties: this.parseRelationshipProperties(row.properties),
+      properties: this.propertyCodec.decode(
+        assembleRelationshipProperties(
+          { ordinal: row.ordinal, order: row.order, priority: row.priority },
+          eavRows,
+        ),
+      ),
     };
   }
 
   getRelationship(id: string): Relationship | null {
-    const row = this.db
-      .prepare(
-        `SELECT id, record_id, source_node_id, target_node_id, type, properties
-         FROM relationship_projections WHERE id = ?`,
-      )
-      .get(id) as
-      | {
-          id: string;
-          record_id: string;
-          source_node_id: string;
-          target_node_id: string;
-          type: string;
-          properties: string;
-        }
-      | undefined;
+    const row = this.selectProjectionRow.get(id) as ProjectionRow | undefined;
     if (!row) return null;
-    return this.mapProjectionRow(row);
+    const eavRows = this.selectProjectionProperties.all(id) as { key: string; value: string }[];
+    return this.mapProjectionRow(row, eavRows);
   }
 
   counts(): GraphCounts {
@@ -683,64 +787,36 @@ export class GraphDatabase implements TomeQueryCache {
     const rows = type
       ? (this.db
           .prepare(
-            `SELECT id, record_id, source_node_id, target_node_id, type, properties
+            `SELECT id, record_id, source_node_id, target_node_id, type, ordinal, "order", priority
              FROM relationship_projections WHERE source_node_id = ? AND type = ? ORDER BY id`,
           )
-          .all(sourceNodeId, type) as {
-          id: string;
-          record_id: string;
-          source_node_id: string;
-          target_node_id: string;
-          type: string;
-          properties: string;
-        }[])
+          .all(sourceNodeId, type) as ProjectionRow[])
       : (this.db
           .prepare(
-            `SELECT id, record_id, source_node_id, target_node_id, type, properties
+            `SELECT id, record_id, source_node_id, target_node_id, type, ordinal, "order", priority
              FROM relationship_projections WHERE source_node_id = ? ORDER BY type, id`,
           )
-          .all(sourceNodeId) as {
-          id: string;
-          record_id: string;
-          source_node_id: string;
-          target_node_id: string;
-          type: string;
-          properties: string;
-        }[]);
+          .all(sourceNodeId) as ProjectionRow[]);
 
-    return rows.map((row) => this.mapProjectionRow(row));
+    return this.mapProjectionRows(rows);
   }
 
   listRelationshipsToTarget(targetNodeId: string, type?: string): Relationship[] {
     const rows = type
       ? (this.db
           .prepare(
-            `SELECT id, record_id, source_node_id, target_node_id, type, properties
+            `SELECT id, record_id, source_node_id, target_node_id, type, ordinal, "order", priority
              FROM relationship_projections WHERE target_node_id = ? AND type = ? ORDER BY id`,
           )
-          .all(targetNodeId, type) as {
-          id: string;
-          record_id: string;
-          source_node_id: string;
-          target_node_id: string;
-          type: string;
-          properties: string;
-        }[])
+          .all(targetNodeId, type) as ProjectionRow[])
       : (this.db
           .prepare(
-            `SELECT id, record_id, source_node_id, target_node_id, type, properties
+            `SELECT id, record_id, source_node_id, target_node_id, type, ordinal, "order", priority
              FROM relationship_projections WHERE target_node_id = ? ORDER BY id`,
           )
-          .all(targetNodeId) as {
-          id: string;
-          record_id: string;
-          source_node_id: string;
-          target_node_id: string;
-          type: string;
-          properties: string;
-        }[]);
+          .all(targetNodeId) as ProjectionRow[]);
 
-    return rows.map((row) => this.mapProjectionRow(row));
+    return this.mapProjectionRows(rows);
   }
 
   countIncidentRelationships(nodeId: string): number {

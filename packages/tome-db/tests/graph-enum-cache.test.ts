@@ -1,5 +1,4 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { Database } from "bun:sqlite";
 import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -42,15 +41,17 @@ describe("GraphDatabase enum cache encoding", () => {
     expect(record?.properties.priority).toBe("High");
     expect(record?.properties.row_index).toBe(4);
 
-    const rawDb = new Database(dbPath);
-    const raw = rawDb
-      .prepare("SELECT properties FROM relationship_records WHERE id = ?")
-      .get(recordId) as { properties: string };
-    rawDb.close();
+    const raw = db.queryAll<{ priority: number | null }>(
+      "SELECT priority FROM relationship_records WHERE id = ?",
+      recordId,
+    )[0];
+    const eav = db.queryAll<{ key: string; value: string }>(
+      "SELECT key, value FROM relationship_record_properties WHERE record_id = ? ORDER BY key",
+      recordId,
+    );
 
-    const stored = JSON.parse(raw.properties) as Record<string, unknown>;
-    expect(stored.priority).toBe(labelToEnumIndex(priorityEnum!, "High"));
-    expect(stored.row_index).toBe(4);
+    expect(raw?.priority).toBe(labelToEnumIndex(priorityEnum!, "High"));
+    expect(eav).toEqual([{ key: "row_index", value: JSON.stringify(4) }]);
 
     db.close();
   });

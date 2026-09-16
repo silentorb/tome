@@ -46,11 +46,12 @@ function considerationHopGraph(): Graph {
 }
 
 describe("tome-imp-sql edge property filter", () => {
-  test("traverse with edge_property emits json_extract on relationship_projections", () => {
+  test("traverse with edge_property uses promoted priority column", () => {
     const { sql, parameters } = compileImpGraphToTomeSql(considerationHopGraph());
-    expect(sql.toLowerCase()).toContain("json_extract");
-    expect(sql).toContain("$.priority");
+    expect(sql).toContain("path_edges.priority");
+    expect(sql.toLowerCase()).not.toContain("json_extract(path_edges.properties");
     expect(sql).toContain("relationship_projections");
+    expect(sql.toLowerCase()).toContain("json_patch");
     expect(parameters).toContain("Consideration");
   });
 

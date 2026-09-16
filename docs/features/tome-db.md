@@ -102,19 +102,22 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 
 | Table | Role |
 | --- | --- |
-| `relationship_records` | Mirror of content records |
-| `relationship_projections` | Directed rows `(source, target, local_type)` — hot path for queries |
 | `nodes` | Hot node fields as columns (`title`, `alias`, `body`, `created_at`, `modified_at`) plus `is_archived` (recomputed on sync) |
 | `node_properties` | EAV leftovers for non-promoted frontmatter keys (`key` + JSON-encoded `value`) |
+| `relationship_records` | Mirror of content records; hot fields `ordinal`, `order`, `priority` as columns |
+| `relationship_projections` | Directed rows `(source, target, local_type)` with the same promoted columns — hot path for queries |
+| `relationship_record_properties` / `relationship_projection_properties` | EAV leftovers for non-promoted relationship keys |
 | `meta` | Schema version, content mtime, enum config fingerprint |
 
-**Node cache shape (schema v12):** sync still packs flatfile frontmatter + markdown `body` into a property map for `upsertNode`; `GraphDatabase` splits promoted keys onto `nodes` columns and stores the rest in `node_properties`. `getNode` reassembles an in-memory `properties` bag for callers. Relationship `properties` remain JSON bags on records/projections.
+**Node cache shape (schema v12+):** sync still packs flatfile frontmatter + markdown `body` into a property map for `upsertNode`; `GraphDatabase` splits promoted keys onto `nodes` columns and stores the rest in `node_properties`. `getNode` reassembles an in-memory `properties` bag for callers.
+
+**Relationship cache shape (schema v13):** sync still packs flatfile `properties` maps into upserts; `GraphDatabase` splits promoted keys (`ordinal`, `order`, `priority`) onto record/projection columns and stores the rest in the relationship EAV tables. Reads reassemble an in-memory `properties` bag (enum decode via `propertyCodec` still applies).
 
 **Archive membership:** a page is archived when it has set membership on the Archive hub node (`01KWN86X6MFZQAJ1V36T95928S`). Archiving (`POST /api/nodes/:id/archive`) **moves** the node markdown into `content/archive/nodes/`, moves every other incident relationship file into `content/archive/relationships/`, then adds the hub membership edge in the live relationship tree. Unarchiving reverses those moves when the other endpoint is not still archived.
 
 **Archived relationships in content:** files under `content/archive/relationships/` are kept in git but **excluded** from SQLite sync (only the live `content/data/relationships/` tree is expanded). Hub membership edges stay live so `nodes.is_archived` can be recomputed. Search and `nodes.is_archived` exclude archived pages; graph export also excludes archived nodes.
 
-**Enum properties in cache:** keys declared in [`content/model/schema.json`](../../content/model/schema.json) `enums` (e.g. `priority`) are stored in SQLite relationship `properties` JSON as **0-based indices** into the enum’s `options` array. Git-tracked relationship shard files keep **string labels**. Encode on cache write and decode on cache read (`packages/tome-db/src/enum-codec.ts` injected as the cache `propertyCodec`). Changing enum `options` order in `schema.json` triggers a relationship cache re-sync (store change events + `enum_config_fingerprint` meta check). After pulling enum-cache changes or a `SCHEMA_VERSION` bump, run `bun run content:sync` (or restart the editor API) to rebuild the cache from content.
+**Enum properties in cache:** keys declared in [`content/model/schema.json`](../../content/model/schema.json) `enums` (e.g. `priority`) are stored in SQLite as **0-based indices** into the enum’s `options` array (promoted `priority` column or EAV `value`). Git-tracked relationship shard files keep **string labels**. Encode on cache write and decode on cache read (`packages/tome-db/src/enum-codec.ts` injected as the cache `propertyCodec`). Changing enum `options` order in `schema.json` triggers a relationship cache re-sync (store change events + `enum_config_fingerprint` meta check). After pulling enum-cache changes or a `SCHEMA_VERSION` bump, run `bun run content:sync` (or restart the editor API) to rebuild the cache from content.
 
 Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTableNode` in `node-capabilities.ts`).
 

@@ -253,28 +253,17 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
       this.flatfile.forEachRelationshipRecord(fn, options);
       return;
     }
-    const rows = this.cache.queryAll<{
-      node_a: string;
-      node_b: string;
-      composite_type: string;
-      properties: string;
-    }>(
-      `SELECT node_a, node_b, composite_type, properties
-       FROM relationship_records
-       ORDER BY id`,
+    const rows = this.cache.queryAll<{ id: string }>(
+      `SELECT id FROM relationship_records ORDER BY id`,
     );
     for (const row of rows) {
-      let properties: Properties = {};
-      try {
-        properties = JSON.parse(row.properties) as Properties;
-      } catch {
-        properties = {};
-      }
+      const record = this.cache.getRelationshipRecord(row.id);
+      if (!record) continue;
       fn({
-        a: row.node_a,
-        b: row.node_b,
-        type: row.composite_type,
-        properties,
+        a: record.nodeA,
+        b: record.nodeB,
+        type: record.compositeType,
+        properties: record.properties,
       });
     }
   }
@@ -308,6 +297,10 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
   /** Body substring scan via SQLite (backlink discovery). */
   listNodesWithBodyLike(pattern: string): { id: string; body: string }[] {
     return this.cache.listNodesWithBodyLike(pattern);
+  }
+
+  getRelationship(id: string): Relationship | null {
+    return this.cache.getRelationship(id);
   }
 
   executeImp(graph: ImpGraph, context?: ExecuteImpContext): ImpCollectionResult {

@@ -19,9 +19,10 @@
 | Node collection (`schema.table`) | `nodes` |
 | Property columns | `id` / `is_archived` / promoted fields (`title`, `alias`, `body`, `created_at`, `modified_at`) as columns; other names via `(SELECT json_extract(value, '$') FROM node_properties WHERE node_id = nodes.id AND key = '…')` |
 | Traverse node bag | `nodePropertiesJson` rebuilds promoted fields via `json_object(...)` for edge `json_patch` (nodes no longer have a `properties` column) |
-| Edges (`schema.edges`) | `relationship_projections` with `source_node_id`, `target_node_id`, `type`, `properties` (`propertiesColumn`) |
+| Edges (`schema.edges`) | `relationship_projections` with `source_node_id`, `target_node_id`, `type`; promoted edge fields (`ordinal`, `order`, `priority`) as columns; other keys via `relationship_projection_properties` EAV (`schema.edges.property` / `propertiesJson`) |
 | Traverse hop | Imp `association` + `direction` (0\|1) → `schema.edgeType` → `{associationId}:{direction}` for `relationship_projections.type` |
-| Optional edge property filter | When `traverse.edge_property` + `edge_equals` are set: `json_extract(path_edges.properties, '$.{edge_property}') = edge_equals`. When `compileImpGraphToTomeSql` is called with workspace `schema`, enum literals in `edge_equals` (and in `equals` / ordering comparisons against enum columns) are encoded to cache indices via `encodePropertyLiteral` — same mapping as cache sync ([schema.md](./schema.md)). |
+| Optional edge property filter | When `traverse.edge_property` + `edge_equals` are set: `schema.edges.property('path_edges', edge_property) = edge_equals` (promoted column or EAV subquery). When `compileImpGraphToTomeSql` is called with workspace `schema`, enum literals in `edge_equals` (and in `equals` / ordering comparisons against enum columns) are encoded to cache indices via `encodePropertyLiteral` — same mapping as cache sync ([schema.md](./schema.md)). |
+| Traverse edge bag | `propertiesJson` rebuilds promoted edge columns + EAV via `json_object` / `json_group_object` for node↔edge `json_patch` (projections no longer have a `properties` column) |
 
 ### Enum property literals (Imp SQL compile)
 

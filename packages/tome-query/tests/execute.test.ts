@@ -645,7 +645,15 @@ describe("tome-query compile + execute", () => {
         source_node_id TEXT NOT NULL,
         target_node_id TEXT NOT NULL,
         type TEXT NOT NULL,
-        properties TEXT NOT NULL DEFAULT '{}'
+        ordinal INTEGER,
+        "order" TEXT,
+        priority INTEGER
+      );
+      CREATE TABLE relationship_projection_properties (
+        projection_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        PRIMARY KEY (projection_id, key)
       );
     `);
     db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
@@ -664,13 +672,13 @@ describe("tome-query compile + execute", () => {
       1,
     ]);
     db.run(
-      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
-       VALUES (?, ?, ?, ?, ?, '{}')`,
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type)
+       VALUES (?, ?, ?, ?, ?)`,
       ["p1", "r1", "a", "b", edgeType],
     );
     db.run(
-      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
-       VALUES (?, ?, ?, ?, ?, '{}')`,
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type)
+       VALUES (?, ?, ?, ?, ?)`,
       ["p2", "r2", "a", "archived-target", edgeType],
     );
 
@@ -745,7 +753,15 @@ describe("tome-query compile + execute", () => {
         source_node_id TEXT NOT NULL,
         target_node_id TEXT NOT NULL,
         type TEXT NOT NULL,
-        properties TEXT NOT NULL DEFAULT '{}'
+        ordinal INTEGER,
+        "order" TEXT,
+        priority INTEGER
+      );
+      CREATE TABLE relationship_projection_properties (
+        projection_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        PRIMARY KEY (projection_id, key)
       );
     `);
     for (const [id, title] of [
@@ -759,13 +775,13 @@ describe("tome-query compile + execute", () => {
       ]);
     }
     db.run(
-      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
-       VALUES (?, ?, ?, ?, ?, '{}')`,
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type)
+       VALUES (?, ?, ?, ?, ?)`,
       ["p0", "r1", "hub", "member", setToMember],
     );
     db.run(
-      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
-       VALUES (?, ?, ?, ?, ?, '{}')`,
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type)
+       VALUES (?, ?, ?, ?, ?)`,
       ["p1", "r1", "member", "hub", memberToSet],
     );
 
@@ -890,7 +906,15 @@ describe("tome-query compile + execute", () => {
         source_node_id TEXT NOT NULL,
         target_node_id TEXT NOT NULL,
         type TEXT NOT NULL,
-        properties TEXT NOT NULL DEFAULT '{}'
+        ordinal INTEGER,
+        "order" TEXT,
+        priority INTEGER
+      );
+      CREATE TABLE relationship_projection_properties (
+        projection_id TEXT NOT NULL,
+        key TEXT NOT NULL,
+        value TEXT NOT NULL,
+        PRIMARY KEY (projection_id, key)
       );
     `);
     for (const [id, title] of [
@@ -904,14 +928,14 @@ describe("tome-query compile + execute", () => {
       ]);
     }
     db.run(
-      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, priority)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      ["p0", "r0", "hub", "consideration", memberType, JSON.stringify({ priority: 0 })],
+      ["p0", "r0", "hub", "consideration", memberType, 0],
     );
     db.run(
-      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
+      `INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, priority)
        VALUES (?, ?, ?, ?, ?, ?)`,
-      ["p1", "r1", "hub", "regular", memberType, JSON.stringify({ priority: 2 })],
+      ["p1", "r1", "hub", "regular", memberType, 2],
     );
 
     const reactFlow = {

@@ -6,6 +6,7 @@ import {
   projectionType,
   tomeLiveNodesSchema,
   tomeNodesColumnExpression,
+  tomeEdgePropertyExpression,
 } from "../src/index";
 
 /** Crockford ULID (26 chars); matches Tome association id shape. */
@@ -40,13 +41,24 @@ describe("tome-imp-sql schema", () => {
     expect(sql).toContain('as "targets"');
   });
 
+  test("maps promoted edge columns and EAV keys via relationship_projection_properties", () => {
+    expect(tomeEdgePropertyExpression("path_edges", "priority")).toBe("path_edges.priority");
+    expect(tomeEdgePropertyExpression("path_edges", "ordinal")).toBe("path_edges.ordinal");
+    expect(tomeEdgePropertyExpression("path_edges", "order")).toBe('path_edges."order"');
+    expect(tomeEdgePropertyExpression("path_edges", "weight")).toBe(
+      "(SELECT json_extract(value, '$') FROM relationship_projection_properties WHERE projection_id = path_edges.id AND key = 'weight')",
+    );
+  });
+
   test("tomeLiveNodesSchema exposes relationship_projections edges", () => {
     expect(tomeLiveNodesSchema.table).toBe("nodes");
     expect(tomeLiveNodesSchema.edges?.table).toBe("relationship_projections");
     expect(tomeLiveNodesSchema.edges?.sourceColumn).toBe("source_node_id");
     expect(tomeLiveNodesSchema.edges?.targetColumn).toBe("target_node_id");
     expect(tomeLiveNodesSchema.edges?.typeColumn).toBe("type");
-    expect(tomeLiveNodesSchema.edges?.propertiesColumn).toBe("properties");
+    expect(tomeLiveNodesSchema.edges?.propertiesColumn).toBeUndefined();
+    expect(typeof tomeLiveNodesSchema.edges?.property).toBe("function");
+    expect(typeof tomeLiveNodesSchema.edges?.propertiesJson).toBe("function");
     expect(tomeLiveNodesSchema.edgeType?.(VALID_ASSOCIATION, 0)).toBe(
       `${VALID_ASSOCIATION}:0`,
     );

@@ -33,6 +33,7 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 - Feature specs: [`docs/features/`](./docs/features/) (read only the doc matching your task).
 - Package notes: each package's `README.md` (context) and `AGENTS.md` (implementation).
 - TypeScript-to-TypeScript imports are extensionless (no `.ts` suffix).
+- **SQLite schema:** do not add JSON bag columns for structured maps by default — see [`packages/tome-sqlite/AGENTS.md`](./packages/tome-sqlite/AGENTS.md) (user approval required for exceptions).
 - **Regression tests:** When fixing table views, dynamic fields, or related API bugs, add a regression test in the same change. Prefer an **essential**, durable assertion; do not mark regression coverage nonessential unless the user waives a hard gate.
 - **UI tests:** New or changed React UI (editor webview, interactive page blocks, extension components) should include tests using **`bun:test`**, **`@testing-library/react`**, and **happy-dom** (`@happy-dom/global-registrator` via `--preload`). Follow the setup in `tome-editor` or `tome-query` (`tests/test-setup.ts`). Do not introduce a different DOM test runner for Tome UI packages.
 

@@ -105,6 +105,102 @@ describe("GraphDatabase", () => {
     db.close();
   });
 
+  test("stores relationship promoted columns and EAV leftovers separately", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "rel-eav.sqlite");
+    const db = new GraphDatabase(dbPath);
+    db.upsertNode("a", { title: "A" });
+    db.upsertNode("b", { title: "B" });
+    db.upsertRelationship("a", "b", "related", {
+      ordinal: 3,
+      order: "10",
+      priority: 2,
+      weight: "strong",
+      tags: ["x"],
+    });
+    const edge = db.getRelationship("a:related:b");
+    expect(edge?.properties).toEqual({
+      ordinal: 3,
+      order: "10",
+      priority: 2,
+      weight: "strong",
+      tags: ["x"],
+    });
+
+    const row = db.queryAll<{
+      ordinal: number | null;
+      order: string | null;
+      priority: number | null;
+    }>('SELECT ordinal, "order", priority FROM relationship_projections WHERE id = ?', "a:related:b")[0];
+    expect(row).toEqual({ ordinal: 3, order: "10", priority: 2 });
+
+    const eav = db.queryAll<{ key: string; value: string }>(
+      "SELECT key, value FROM relationship_projection_properties WHERE projection_id = ? ORDER BY key",
+      "a:related:b",
+    );
+    expect(eav).toEqual([
+      { key: "tags", value: JSON.stringify(["x"]) },
+      { key: "weight", value: JSON.stringify("strong") },
+    ]);
+    db.close();
+  });
+
+  test("migrates v12 relationship JSON bags into columns + EAV", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "migrate-v13.sqlite");
+    const raw = new Database(dbPath, { create: true });
+    raw.exec(`
+      CREATE TABLE meta (key TEXT PRIMARY KEY NOT NULL, value TEXT NOT NULL);
+      CREATE TABLE nodes (
+        id TEXT PRIMARY KEY NOT NULL,
+        title TEXT,
+        alias TEXT,
+        body TEXT,
+        created_at TEXT,
+        modified_at TEXT,
+        is_archived INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE relationship_records (
+        id TEXT PRIMARY KEY NOT NULL,
+        node_a TEXT NOT NULL,
+        node_b TEXT NOT NULL,
+        composite_type TEXT NOT NULL,
+        properties TEXT NOT NULL DEFAULT '{}',
+        UNIQUE (node_a, node_b, composite_type)
+      );
+      CREATE TABLE relationship_projections (
+        id TEXT PRIMARY KEY NOT NULL,
+        record_id TEXT NOT NULL REFERENCES relationship_records(id) ON DELETE CASCADE,
+        source_node_id TEXT NOT NULL,
+        target_node_id TEXT NOT NULL,
+        type TEXT NOT NULL,
+        properties TEXT NOT NULL DEFAULT '{}'
+      );
+      INSERT INTO meta (key, value) VALUES ('schema_version', '12');
+      INSERT INTO nodes (id, title, is_archived) VALUES ('a', 'A', 0), ('b', 'B', 0);
+      INSERT INTO relationship_records (id, node_a, node_b, composite_type, properties)
+        VALUES ('rec1', 'a', 'b', 'related', '{"ordinal":1,"priority":2,"weight":"strong"}');
+      INSERT INTO relationship_projections (id, record_id, source_node_id, target_node_id, type, properties)
+        VALUES ('a:related:b', 'rec1', 'a', 'b', 'related', '{"ordinal":1,"priority":2,"weight":"strong"}');
+    `);
+    raw.close();
+
+    const db = new GraphDatabase(dbPath);
+    expect(db.getMeta("schema_version")).toBe(String(SCHEMA_VERSION));
+    expect(db.getRelationship("a:related:b")?.properties).toEqual({
+      ordinal: 1,
+      priority: 2,
+      weight: "strong",
+    });
+    const columnNames = db
+      .queryAll<{ name: string }>("SELECT name FROM pragma_table_info('relationship_projections')")
+      .map((row) => row.name);
+    expect(columnNames).not.toContain("properties");
+    expect(columnNames).toContain("ordinal");
+    expect(columnNames).toContain("priority");
+    db.close();
+  });
+
   test("migrates v11 JSON properties bag into columns + EAV", () => {
     tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "migrate-v12.sqlite");

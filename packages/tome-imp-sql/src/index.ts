@@ -2,6 +2,8 @@ export {
   applyLiveNodesConstraint,
   createTomeLiveNodesSchema,
   projectionType,
+  tomeEdgePropertiesJson,
+  tomeEdgePropertyExpression,
   tomeLiveNodesSchema,
   tomeNodePropertiesJson,
   tomeNodesColumnExpression,

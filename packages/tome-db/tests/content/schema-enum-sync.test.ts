@@ -1,5 +1,4 @@
 import { describe, expect, test, afterAll, beforeAll } from "bun:test";
-import { Database } from "bun:sqlite";
 import { writeFileSync } from "node:fs";
 import { serializeSchemaFile } from "tome-flatfile";
 import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, projectionTypeForEndpoint, TEST_MEMBER_OF_ASSOCIATION_ID } from "../../src/content/test-helpers";
@@ -56,12 +55,12 @@ describe("CacheSync schema enum causality", () => {
       "High",
     );
 
-    const rawDb = new Database(fixture.ctx.cache.path);
-    const raw = rawDb
-      .prepare("SELECT properties FROM relationship_records WHERE id = ?")
-      .get(recordId) as { properties: string };
-    rawDb.close();
-    expect(JSON.parse(raw.properties).priority).toBe(2);
+    expect(
+      fixture.ctx.cache.queryAll<{ priority: number | null }>(
+        "SELECT priority FROM relationship_records WHERE id = ?",
+        recordId,
+      )[0]?.priority,
+    ).toBe(2);
   });
 
   test("re-encodes enum indices when schema option order changes", () => {
@@ -76,12 +75,12 @@ describe("CacheSync schema enum causality", () => {
       "High",
     );
 
-    const rawDb = new Database(fixture.ctx.cache.path);
-    const raw = rawDb
-      .prepare("SELECT properties FROM relationship_records WHERE id = ?")
-      .get(recordId) as { properties: string };
-    rawDb.close();
-    expect(JSON.parse(raw.properties).priority).toBe(3);
+    expect(
+      fixture.ctx.cache.queryAll<{ priority: number | null }>(
+        "SELECT priority FROM relationship_records WHERE id = ?",
+        recordId,
+      )[0]?.priority,
+    ).toBe(3);
 
     expect(fixture.ctx.cache.getMeta("enum_config_fingerprint")).toBe(
       enumConfigFingerprint(SCHEMA_V2),

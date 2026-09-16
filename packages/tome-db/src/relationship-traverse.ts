@@ -7,7 +7,6 @@ import {
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
 import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
-import type { Properties } from "tome-graph-interfaces";
 
 export function rowBelongsToDatabase(
   db: RelationshipReadStore,
@@ -41,24 +40,12 @@ function uniqueRelationships(relationships: Relationship[]): Relationship[] {
   return unique;
 }
 
-function mapProjectionRows(
-  rows: {
-    id: string;
-    record_id: string;
-    source_node_id: string;
-    target_node_id: string;
-    type: string;
-    properties: string;
-  }[],
-): Relationship[] {
-  return rows.map((row) => ({
-    id: row.id,
-    recordId: row.record_id,
-    sourceNodeId: row.source_node_id,
-    targetNodeId: row.target_node_id,
-    type: row.type,
-    properties: JSON.parse(row.properties) as Properties,
-  }));
+function hasGetRelationship(
+  store: RelationshipReadStore,
+): store is RelationshipReadStore & {
+  getRelationship: (id: string) => Relationship | null;
+} {
+  return typeof (store as { getRelationship?: unknown }).getRelationship === "function";
 }
 
 function isGraphStoreBase(store: RelationshipReadStore): store is import("tome-graph-interfaces").TomeGraphStoreBase {
@@ -83,16 +70,9 @@ export function listRelationshipsForComposite(
 
   // Prefer indexed SQLite when available (ComposedGraphStore / GraphDatabase).
   // Base-tier forEach over flatfile re-scans every relationship shard.
-  if (hasQueryAll(db)) {
-    const rows = db.queryAll<{
-      id: string;
-      record_id: string;
-      source_node_id: string;
-      target_node_id: string;
-      type: string;
-      properties: string;
-    }>(
-      `SELECT p.id, p.record_id, p.source_node_id, p.target_node_id, p.type, p.properties
+  if (hasQueryAll(db) && hasGetRelationship(db)) {
+    const rows = db.queryAll<{ id: string }>(
+      `SELECT p.id
        FROM relationship_projections p
        INNER JOIN relationship_records r ON p.record_id = r.id
        WHERE r.composite_type = ?
@@ -102,8 +82,18 @@ export function listRelationshipsForComposite(
       nodeId,
       nodeId,
     );
-    const composite = dedupeByRecordId(mapProjectionRows(rows), nodeId);
+    const hydrated: Relationship[] = [];
+    for (const row of rows) {
+      const relationship = db.getRelationship(row.id);
+      if (relationship) hydrated.push(relationship);
+    }
+    const composite = dedupeByRecordId(hydrated, nodeId);
     if (composite.length > 0) return composite;
+    return listRelationshipsFromSource(db, nodeId, normalized);
+  }
+
+  if (hasQueryAll(db)) {
+    // Cache without getRelationship: fall through to projection list APIs.
     return listRelationshipsFromSource(db, nodeId, normalized);
   }
 
