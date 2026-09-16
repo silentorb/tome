@@ -1,6 +1,6 @@
 {
   "name": "tome-extension-fixture",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -9,7 +9,7 @@
     "./server": "./src/server.ts"
   },
   "dependencies": {
-    "tome-interfaces": "workspace:^0.1.0",
+    "tome-interfaces": "workspace:^0.2.0",
     "react": "19.0.0"
   },
   "scripts": {

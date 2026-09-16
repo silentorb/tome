@@ -1,6 +1,6 @@
 {
   "name": "tome-http",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -13,8 +13,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "tome-graph-interfaces": "workspace:^0.1.0",
-    "tome-service-interfaces": "workspace:^0.1.0"
+    "tome-graph-interfaces": "workspace:^0.2.0",
+    "tome-service-interfaces": "workspace:^0.2.0"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",
