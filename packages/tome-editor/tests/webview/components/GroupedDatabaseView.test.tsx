@@ -1,6 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { GroupedDatabaseView } from "../../../src/webview/components/GroupedDatabaseView";
+import { UserSettingsProvider } from "../../../src/webview/hooks/useUserSettings";
 import { makeMockEditorApi } from "../test-fixtures/mock-api";
 import type { DatabaseViewDetail } from "../../../src/shared/types";
 
@@ -218,15 +219,17 @@ describe("GroupedDatabaseView", () => {
     };
 
     render(
-      <GroupedDatabaseView
-        api={api}
-        nodeId={BOOK_A}
-        view={customView}
-        onTabSelect={() => {}}
-        onViewChange={() => {}}
-        onArchiveNode={async () => {}}
-        onDeleteNode={async () => {}}
-      />,
+      <UserSettingsProvider api={api}>
+        <GroupedDatabaseView
+          api={api}
+          nodeId={BOOK_A}
+          view={customView}
+          onTabSelect={() => {}}
+          onViewChange={() => {}}
+          onArchiveNode={async () => {}}
+          onDeleteNode={async () => {}}
+        />
+      </UserSettingsProvider>,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Page actions" }));

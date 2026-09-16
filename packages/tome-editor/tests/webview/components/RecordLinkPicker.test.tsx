@@ -151,7 +151,10 @@ describe("RecordLinkPicker", () => {
     );
 
     await waitFor(() => expect(search).toHaveBeenCalled());
-    expect(search).toHaveBeenCalledWith("", 5000, [featuresDbId]);
+    expect(search).toHaveBeenCalledWith("", 5000, [featuresDbId], {
+      participatesInProjectionType: undefined,
+      onlyActivePickingRole: undefined,
+    });
   });
 
   test("focuses search input when autoFocus is set on embedded picker", async () => {
