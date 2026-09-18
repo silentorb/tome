@@ -4,16 +4,22 @@ import {
   destroyTestContentFixture,
   seedTestNode,
   seedTestTableSchema,
+  TEST_SCENES_PART_ASSOCIATION_ID,
+  TEST_SCENES_PRODUCT_ASSOCIATION_ID,
 } from "../src/content/test-helpers";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import {
   filterRelationshipsByRowDatabaseContext,
-  firstRelatedNodeId,
   listRelationshipsForComposite,
   listRelationshipsToDatabaseMembers,
-  relatedNodeIds,
   rowBelongsToDatabase,
 } from "../src/relationship-traverse";
+import {
+  firstRelatedNodeId,
+  loadSemanticRelatedPathContext,
+  relatedNodeIds,
+  relationTokenForAssociation,
+} from "../src/semantic-related-ids";
 import type { RelationshipEntry } from "tome-flatfile";
 import { RELATIONSHIPS_FILE_VERSION } from "tome-flatfile";
 import { invalidateAssociationsCache } from "tome-flatfile";
@@ -27,20 +33,55 @@ describe("relationship-traverse", () => {
   const location = "44444444444444444444444444";
   const scenesDb = "55555555555555555555555555";
   const locationsDb = "66666666666666666666666666";
+  const productsDb = "77777777777777777777777777";
+  const partsDb = "88888888888888888888888888";
 
   seedTestNode(fixture, { id: scenesDb, properties: typeTableMarkerProperties("Scenes") });
   seedTestNode(fixture, { id: locationsDb, properties: typeTableMarkerProperties("Locations") });
+  seedTestNode(fixture, { id: productsDb, properties: typeTableMarkerProperties("Products") });
+  seedTestNode(fixture, { id: partsDb, properties: typeTableMarkerProperties("Parts") });
   seedTestNode(fixture, { id: scene, properties: { title: "Scene" } });
   seedTestNode(fixture, { id: product, properties: { title: "Product" } });
   seedTestNode(fixture, { id: part, properties: { title: "Part" } });
   seedTestNode(fixture, { id: location, properties: { title: "Location" } });
-  seedTestTableSchema(fixture, scenesDb, []);
+  seedTestTableSchema(fixture, scenesDb, [
+    {
+      key: "product",
+      name: "Product",
+      type: "relation",
+      association: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+      endpoint: 0,
+    },
+    {
+      key: "part",
+      name: "Part",
+      type: "relation",
+      association: TEST_SCENES_PART_ASSOCIATION_ID,
+      endpoint: 0,
+    },
+  ]);
   seedTestTableSchema(fixture, locationsDb, []);
+  // Drop default presentation schemas (0D/0Z/0S) so PathOntology matches this fixture only.
+  seedTestTableSchema(fixture, "0000000000000000000000000D", []);
+  seedTestTableSchema(fixture, "0000000000000000000000000Z", []);
+  seedTestTableSchema(fixture, "0000000000000000000000000S", []);
   const typesFile = {
     version: 1 as const,
     associations: {
-      "000000000000000000000000A3": { perspectives: ["scenes", "product"] as [string, string] },
-      "000000000000000000000000A4": { perspectives: ["scenes", "part"] as [string, string] },
+      [TEST_SCENES_PRODUCT_ASSOCIATION_ID]: {
+        perspectives: ["scenes", "product"] as [string, string],
+        endpoints: {
+          0: { typeId: scenesDb },
+          1: { typeId: productsDb },
+        },
+      },
+      [TEST_SCENES_PART_ASSOCIATION_ID]: {
+        perspectives: ["scenes", "part"] as [string, string],
+        endpoints: {
+          0: { typeId: scenesDb },
+          1: { typeId: partsDb },
+        },
+      },
       "000000000000000000000000BA": { perspectives: ["location", "scenes"] as [string, string] },
       "000000000000000000000000A1": {
         perspectives: ["Members", "Membership"] as [string, string],
@@ -55,8 +96,8 @@ describe("relationship-traverse", () => {
   // index 0 and the member at index 1; asymmetric composites place
   // each endpoint at the index whose perspective matches its role.
   const relationships: RelationshipEntry[] = [
-    { a: product, b: scene, type: "000000000000000000000000A3", properties: { ordinal: 0 } },
-    { a: part, b: scene, type: "000000000000000000000000A4", properties: { ordinal: 0 } },
+    { a: scene, b: product, type: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: { ordinal: 0 } },
+    { a: scene, b: part, type: TEST_SCENES_PART_ASSOCIATION_ID, properties: { ordinal: 0 } },
     {
       a: scene,
       b: location,
@@ -72,13 +113,46 @@ describe("relationship-traverse", () => {
   });
   fixture.ctx.sync.syncRelationships();
 
-  test("finds product through scenes_product composite", () => {
-    expect(firstRelatedNodeId(fixture.ctx.cache, scene, "000000000000000000000000A3")).toBe(product);
-    expect(relatedNodeIds(fixture.ctx.cache, scene, "000000000000000000000000A3")).toEqual([product]);
+  const pathContext = loadSemanticRelatedPathContext(contentDir);
+  const store = () => fixture.ctx.graphStore;
+
+  test("finds product through scenes_product semantic path", () => {
+    expect(
+      firstRelatedNodeId(
+        store(),
+        scene,
+        TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        scenesDb,
+        pathContext,
+      ),
+    ).toBe(product);
+    expect(
+      relatedNodeIds(
+        store(),
+        scene,
+        TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        scenesDb,
+        pathContext,
+      ),
+    ).toEqual([product]);
   });
 
-  test("finds part through scenes_part composite", () => {
-    expect(firstRelatedNodeId(fixture.ctx.cache, scene, "000000000000000000000000A4")).toBe(part);
+  test("finds part through scenes_part semantic path", () => {
+    expect(
+      firstRelatedNodeId(
+        store(),
+        scene,
+        TEST_SCENES_PART_ASSOCIATION_ID,
+        scenesDb,
+        pathContext,
+      ),
+    ).toBe(part);
+  });
+
+  test("relationTokenForAssociation fails when column is missing", () => {
+    expect(() =>
+      relationTokenForAssociation(pathContext.tableSchemas, locationsDb, TEST_SCENES_PRODUCT_ASSOCIATION_ID),
+    ).toThrow(/No relation column/);
   });
 
   test("finds scene from location through scenes_location composite", () => {

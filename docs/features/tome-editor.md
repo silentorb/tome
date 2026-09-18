@@ -223,7 +223,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 | Database table assembly (`getDatabaseViewDetail`) | `packages/tome-db/tests/database-view.test.ts`, `database-view-relations.test.ts` |
 | Composed scope / group / reorder tables | `packages/tome-db/tests/table-presentation.test.ts`, `packages/tome-editor/tests/webview/components/GroupedDatabaseView.test.tsx` |
 | Dynamic computed columns | `packages/tome-db/tests/dynamic-properties/dynamic-properties.test.ts` |
-| Composite relationship traversal | `packages/tome-db/tests/relationship-traverse.test.ts` |
+| Composite relationship traversal | `packages/tome-db/tests/relationship-traverse.test.ts`, `packages/tome-db/tests/semantic-related-ids.test.ts` |
 | Database table UI | `packages/tome-editor/tests/webview/components/DatabaseTableView.test.tsx` |
 | Shared sortable table UI | `packages/tome-editor/tests/webview/components/SectionDataTable.test.tsx`, `database-table-layout.test.tsx` (column header hit-area CSS) |
 | Relation / enum cell rendering | `table-cell-render.test.tsx`, `RelationSectionView.test.tsx`, `EnumSelectCell.test.tsx` |

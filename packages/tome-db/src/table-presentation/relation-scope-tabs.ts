@@ -1,9 +1,5 @@
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
-import {
-  listRelationshipsFromSource,
-  readStoreGetNode,
-  readStoreListNodeIds,
-} from "../graph-store/relationship-read";
+import { listRelationshipsFromSource } from "../graph-store/relationship-read";
 import {
   isOrderedTraitComposite,
   loadAssociationsFromContent,
@@ -13,7 +9,11 @@ import {
   SET_TRAIT,
   typesWithTrait,
 } from "tome-flatfile";
-import { firstRelatedNodeId } from "../relationship-traverse";
+import {
+  firstRelatedNodeId,
+  loadSemanticRelatedPathContext,
+  type SemanticRelatedPathContext,
+} from "../semantic-related-ids";
 import { listSetMemberRowConnections } from "../set-membership";
 import type { RelationScopeLayerConfig, RelationScopeTab } from "tome-graph-interfaces";
 import { numericSortKey, nodeTitle } from "./helpers";
@@ -43,12 +43,20 @@ export function discoverRelationScopes(
   typeDatabaseId: string,
   config: RelationScopeLayerConfig,
   contentDir?: string,
+  pathContext?: SemanticRelatedPathContext,
 ): RelationScopeTab[] {
   const dir = contentDir ?? resolveContentPath();
+  const ctx = pathContext ?? loadSemanticRelatedPathContext(dir);
   const scopeIds = new Set<string>();
 
   for (const connection of listSetMemberRowConnections(db, typeDatabaseId, dir)) {
-    const scopeId = firstRelatedNodeId(db, connection.sourceNodeId, config.memberToScopeComposite);
+    const scopeId = firstRelatedNodeId(
+      db,
+      connection.sourceNodeId,
+      config.memberToScopeComposite,
+      typeDatabaseId,
+      ctx,
+    );
     if (scopeId) scopeIds.add(scopeId);
   }
 
@@ -73,6 +81,16 @@ export function memberMatchesScope(
   memberId: string,
   config: RelationScopeLayerConfig,
   scopeId: string,
+  startType: string,
+  pathContext: SemanticRelatedPathContext,
 ): boolean {
-  return firstRelatedNodeId(db, memberId, config.memberToScopeComposite) === scopeId;
+  return (
+    firstRelatedNodeId(
+      db,
+      memberId,
+      config.memberToScopeComposite,
+      startType,
+      pathContext,
+    ) === scopeId
+  );
 }

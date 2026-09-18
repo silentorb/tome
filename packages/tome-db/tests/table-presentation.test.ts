@@ -17,7 +17,7 @@ import {
   TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
 } from "../src/content/test-helpers";
 import { VIEWS_FILE_VERSION, projectionTypeForEndpoint } from "tome-flatfile";
-import { firstRelatedNodeId } from "../src/relationship-traverse";
+import { firstRelatedNodeId, loadSemanticRelatedPathContext } from "../src/semantic-related-ids";
 
 const SCENES_DB = "0000000000000000000000000D";
 const PARTS_DB = "0000000000000000000000000Z";
@@ -41,7 +41,15 @@ describe("table-presentation", () => {
   seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
   seedTestNode(fixture, { id: CHARACTERS_DB, properties: typeTableMarkerProperties("Characters") });
   seedTestTableSchema(fixture, PRODUCTS_DB, []);
-  seedTestTableSchema(fixture, PARTS_DB, []);
+  seedTestTableSchema(fixture, PARTS_DB, [
+    {
+      key: "products",
+      name: "Products",
+      type: "relation",
+      association: "000000000000000000000000A5",
+      endpoint: 0,
+    },
+  ]);
   seedTestNode(fixture, {
     id: SCENES_DB,
     properties: typeTableMarkerProperties("Scenes"),
@@ -52,35 +60,35 @@ describe("table-presentation", () => {
       name: "Product",
       type: "relation",
       association: "000000000000000000000000A3",
-              endpoint: 0,
+      endpoint: 0,
     },
     {
       key: "part",
       name: "Part",
       type: "relation",
       association: "000000000000000000000000A4",
-              endpoint: 0,
+      endpoint: 0,
     },
     {
       key: "solutions",
       name: "Solutions",
       type: "relation",
       association: "000000000000000000000000BB",
-              endpoint: 0,
+      endpoint: 0,
     },
     {
       key: "characters",
       name: "📁 Characters",
       type: "relation",
       association: "000000000000000000000000B9",
-              endpoint: 0,
+      endpoint: 0,
     },
     {
       key: "location",
       name: "📁 Location",
       type: "relation",
       association: "000000000000000000000000BA",
-              endpoint: 0,
+      endpoint: 0,
     },
     { key: "order", name: "Order", type: "number" },
   ]);
@@ -154,6 +162,10 @@ describe("table-presentation", () => {
   };
   registry.associations["000000000000000000000000A5"] = {
     perspectives: ["Products", "Parts database"],
+    endpoints: {
+      0: { typeId: PARTS_DB },
+      1: { typeId: PRODUCTS_DB },
+    },
   };
   registry.associations["000000000000000000000000BB"] = {
     perspectives: ["Solutions", "Scenes"],
@@ -201,8 +213,9 @@ describe("table-presentation", () => {
   });
   seedTestDynamicProperties(fixture, []);
 
-  const db = () => fixture.ctx.cache;
+  const db = () => fixture.ctx.graphStore;
   const contentDir = () => fixture.ctx.store.contentDir;
+  const pathContext = () => loadSemanticRelatedPathContext(contentDir());
   const view = (tabId?: string) => getDatabaseViewDetail(db(), SCENES_DB, tabId, contentDir());
 
   test("scope layer builds tabs from products that have scenes", () => {
@@ -269,8 +282,8 @@ describe("table-presentation", () => {
     expect(partGroup?.rows.map((row) => row.nodeId)).toEqual([scene2, scene1]);
 
     const memberProjection = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1);
-    const edge1 = db().getRelationship(`${scene1}:${memberProjection}:${SCENES_DB}`);
-    const edge2 = db().getRelationship(`${scene2}:${memberProjection}:${SCENES_DB}`);
+    const edge1 = fixture.ctx.cache.getRelationship(`${scene1}:${memberProjection}:${SCENES_DB}`);
+    const edge2 = fixture.ctx.cache.getRelationship(`${scene2}:${memberProjection}:${SCENES_DB}`);
     expect(edge1?.properties.order).toBe("20");
     expect(edge2?.properties.order).toBe("10");
   });
@@ -284,7 +297,15 @@ describe("table-presentation", () => {
 
     const part2Group = updated?.groups?.find((group) => group.groupId === part2);
     expect(part2Group?.rows.some((row) => row.nodeId === scene1)).toBe(true);
-    expect(firstRelatedNodeId(db(), scene1, "000000000000000000000000A4")).toBe(part2);
+    expect(
+      firstRelatedNodeId(
+        db(),
+        scene1,
+        "000000000000000000000000A4",
+        SCENES_DB,
+        pathContext(),
+      ),
+    ).toBe(part2);
 
     const entry = fixture.ctx.store
       .readRelationshipsFile()
@@ -305,7 +326,15 @@ describe("table-presentation", () => {
       groupChange: { memberId: scene2, targetGroupId: UNASSIGNED_GROUP_ID },
     });
 
-    expect(firstRelatedNodeId(db(), scene2, "000000000000000000000000A4")).toBeNull();
+    expect(
+      firstRelatedNodeId(
+        db(),
+        scene2,
+        "000000000000000000000000A4",
+        SCENES_DB,
+        pathContext(),
+      ),
+    ).toBeNull();
   });
 
   test("Scenes database page emits a composed database section", () => {
@@ -340,8 +369,24 @@ describe("table-presentation", () => {
     const detail = view(bookA);
     const partGroup = detail?.groups?.find((group) => group.groupId === part1);
     expect(partGroup?.rows.some((row) => row.nodeId === created.id)).toBe(true);
-    expect(firstRelatedNodeId(db(), created.id, "000000000000000000000000A3")).toBe(bookA);
-    expect(firstRelatedNodeId(db(), created.id, "000000000000000000000000A4")).toBe(part1);
+    expect(
+      firstRelatedNodeId(
+        db(),
+        created.id,
+        "000000000000000000000000A3",
+        SCENES_DB,
+        pathContext(),
+      ),
+    ).toBe(bookA);
+    expect(
+      firstRelatedNodeId(
+        db(),
+        created.id,
+        "000000000000000000000000A4",
+        SCENES_DB,
+        pathContext(),
+      ),
+    ).toBe(part1);
   });
 
   afterAll(() => {

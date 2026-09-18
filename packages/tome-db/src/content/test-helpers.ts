@@ -168,6 +168,31 @@ export function seedDefaultAssociations(fixture: TestContentFixture): void {
     "Characters",
     TEST_SCENES_CHARACTERS_ASSOCIATION_ID,
   );
+  const scenesDb = "0000000000000000000000000D";
+  const partsDb = "0000000000000000000000000Z";
+  const productsDb = "0000000000000000000000000S";
+  registry.associations[TEST_SCENES_PRODUCT_ASSOCIATION_ID] = {
+    ...registry.associations[TEST_SCENES_PRODUCT_ASSOCIATION_ID]!,
+    endpoints: {
+      0: { typeId: scenesDb },
+      1: { typeId: productsDb },
+    },
+  };
+  registry.associations[TEST_SCENES_PART_ASSOCIATION_ID] = {
+    ...registry.associations[TEST_SCENES_PART_ASSOCIATION_ID]!,
+    endpoints: {
+      0: { typeId: scenesDb },
+      1: { typeId: partsDb },
+    },
+  };
+  // Tuple seeds use a=part, b=product — endpoint 0 is the parts host side.
+  registry.associations[TEST_PRODUCTS_PARTS_ASSOCIATION_ID] = {
+    ...registry.associations[TEST_PRODUCTS_PARTS_ASSOCIATION_ID]!,
+    endpoints: {
+      0: { typeId: partsDb },
+      1: { typeId: productsDb },
+    },
+  };
   fixture.ctx.store.writeAssociationsFile(registry);
 }
 
@@ -197,8 +222,35 @@ export function seedDefaultTablePresentationTableSchemas(fixture: TestContentFix
   const partsDb = "0000000000000000000000000Z";
   const productsDb = "0000000000000000000000000S";
   const file = fixture.ctx.store.readTableSchemasFile();
-  file.tables[scenesDb] = { columns: [] };
-  file.tables[partsDb] = { columns: [] };
+  file.tables[scenesDb] = {
+    columns: [
+      {
+        key: "product",
+        name: "Product",
+        type: "relation",
+        association: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        endpoint: 0,
+      },
+      {
+        key: "part",
+        name: "Part",
+        type: "relation",
+        association: TEST_SCENES_PART_ASSOCIATION_ID,
+        endpoint: 0,
+      },
+    ],
+  };
+  file.tables[partsDb] = {
+    columns: [
+      {
+        key: "products",
+        name: "Products",
+        type: "relation",
+        association: TEST_PRODUCTS_PARTS_ASSOCIATION_ID,
+        endpoint: 0,
+      },
+    ],
+  };
   file.tables[productsDb] = { columns: [] };
   fixture.ctx.store.writeTableSchemasFile(file);
   invalidateTableSchemasCache();

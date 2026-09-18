@@ -135,7 +135,9 @@ Imp hop graphs use bare `association` + `direction` (not packed `ULID:dir`). Pre
 
 ### Base-tier relationship reads
 
-Domain modules use helpers in `tome-db/src/graph-store/relationship-read.ts` (`listRelationshipsFromSource`, `readStoreListNodesWithBodyLike`, `readStoreGetNode`, …) and `relationship-traverse.ts` (`listRelationshipsForComposite`).
+Domain modules use helpers in `tome-db/src/graph-store/relationship-read.ts` (`listRelationshipsFromSource`, `readStoreListNodesWithBodyLike`, `readStoreGetNode`, …) and `relationship-traverse.ts` (`listRelationshipsForComposite` for **relationship DTO** bags).
+
+**Table-presentation related-id hops** (scope/group membership) use Imp semantic paths instead: `semantic-related-ids.ts` resolves the presentation composite to a table-schema column key on the host type, builds a **minimal** PathOntology for that hop, then `semanticPathFromAnchorGraph` + `executeImp` (Queryable store required). No composite-SQL fallback for those helpers. Relation-cell hydration and other DTO readers still use `listRelationshipsForComposite` until a later slice.
 
 - **`ComposedGraphStore` (editor / tome-server host):** node point-gets (`getNode`), projection and incident reads — including `listRelationshipProjections`, live `forEachRelationshipRecord`, body backlink scans, and composite listing via `queryAll` — are served from the **SQLite query cache** (indexed). Node bags are assembled from promoted `nodes` columns plus `node_properties` EAV rows; relationship bags from promoted record/projection columns plus relationship EAV tables. Flatfile remains the write path and source of truth; sync keeps the cache current. This avoids re-scanning every relationship shard (and re-reading every node markdown file) on each page or table view.
 - **Flatfile-only Base stores** (no SQLite): `listRelationshipProjections` still expands canonical records by scanning flatfile relationship trees.
@@ -149,4 +151,5 @@ Phase 2 removes direct `searchNodes(cache)` and extension raw SQL for Imp graphs
 - [tome-db.md](./tome-db.md) — storage and sync
 - [tome-imp-sql.md](./tome-imp-sql.md) — SQL binder
 - [tome-query.md](./tome-query.md) — Imp query page block
+- [table-presentation.md](./table-presentation.md) — scope/group hops via Imp semantic paths
 - [multi-corpus.md](./multi-corpus.md)

@@ -12,8 +12,10 @@ import {
 } from "tome-flatfile";
 import {
   firstRelatedNodeId,
+  loadSemanticRelatedPathContext,
   relatedNodeIds,
-} from "../relationship-traverse";
+  type SemanticRelatedPathContext,
+} from "../semantic-related-ids";
 import type {
   DatabaseRow,
   DatabaseRowGroup,
@@ -52,8 +54,10 @@ export function groupsForScope(
   config: RelationGroupsLayerConfig,
   scopeId: string | undefined,
   contentDir?: string,
+  pathContext?: SemanticRelatedPathContext,
 ): GroupHeader[] {
   const dir = contentDir ?? resolveContentPath();
+  const ctx = pathContext ?? loadSemanticRelatedPathContext(dir);
   const groups: GroupHeader[] = [];
   const [, memberPerspective] = setRoleProjectionTypesForNode(config.groupTypeDatabaseId, dir);
 
@@ -64,7 +68,13 @@ export function groupsForScope(
   )) {
     const groupId = connection.sourceNodeId;
     if (scopeId && config.groupToScopeComposite) {
-      const scopeIds = relatedNodeIds(db, groupId, config.groupToScopeComposite);
+      const scopeIds = relatedNodeIds(
+        db,
+        groupId,
+        config.groupToScopeComposite,
+        config.groupTypeDatabaseId,
+        ctx,
+      );
       if (!scopeIds.includes(scopeId)) continue;
     }
 
@@ -99,9 +109,17 @@ export function resolveMemberGroupId(
   config: RelationGroupsLayerConfig,
   memberId: string,
   scopeGroups: GroupHeader[],
+  memberStartType: string,
+  pathContext: SemanticRelatedPathContext,
 ): string | null {
   const scopeGroupIds = new Set(scopeGroups.map((group) => group.id));
-  const target = firstRelatedNodeId(db, memberId, config.memberToGroupComposite);
+  const target = firstRelatedNodeId(
+    db,
+    memberId,
+    config.memberToGroupComposite,
+    memberStartType,
+    pathContext,
+  );
 
   if (!target) return null;
   if (scopeGroupIds.has(target)) return target;
@@ -127,9 +145,10 @@ export function buildRelationGroups(
   rows: DatabaseRow[],
   memberGroupIds: Map<string, string | null>,
   contentDir?: string,
+  pathContext?: SemanticRelatedPathContext,
 ): DatabaseRowGroup[] {
   const dir = contentDir ?? resolveContentPath();
-  const headers = groupsForScope(db, config, scopeId, dir);
+  const headers = groupsForScope(db, config, scopeId, dir, pathContext);
   const rowsByGroup = new Map<string | null, DatabaseRow[]>();
 
   for (const row of rows) {

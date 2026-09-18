@@ -26,8 +26,31 @@ describe("database members API", () => {
   seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
   seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
   seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
-  seedTestTableSchema(fixture, SCENES_DB, []);
-  seedTestTableSchema(fixture, PARTS_DB, []);
+  seedTestTableSchema(fixture, SCENES_DB, [
+    {
+      key: "product",
+      name: "Product",
+      type: "relation",
+      association: "000000000000000000000000A3",
+      endpoint: 0,
+    },
+    {
+      key: "part",
+      name: "Part",
+      type: "relation",
+      association: "000000000000000000000000A4",
+      endpoint: 0,
+    },
+  ]);
+  seedTestTableSchema(fixture, PARTS_DB, [
+    {
+      key: "products",
+      name: "Products",
+      type: "relation",
+      association: "000000000000000000000000A5",
+      endpoint: 0,
+    },
+  ]);
   seedTestTableSchema(fixture, PRODUCTS_DB, []);
   seedTestNode(fixture, { id: book, properties: { title: "TWOLD" } });
   seedTestNode(fixture, { id: part, properties: { title: "Part 1" } });
@@ -58,6 +81,7 @@ describe("database members API", () => {
   };
   registry.associations["000000000000000000000000A5"] = {
     perspectives: ["Products", "Parts database"],
+    endpoints: { 0: { typeId: PARTS_DB }, 1: { typeId: PRODUCTS_DB } },
   };
   fixture.ctx.store.writeAssociationsFile(registry);
   fixture.ctx.sync.syncRelationships();

@@ -35,6 +35,7 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For view tabs general
 ### `scope` layer
 
 - `memberToScopeComposite` is the association between a member row and its scope node.
+- At read time the host **must** resolve that composite to the matching table-schema relation column key on `typeDatabaseId`, then hop via Imp semantic bind (`semanticPathFromAnchorGraph` + `executeImp`). Missing or ambiguous columns **must** fail loudly — there is no composite-SQL fallback for related-id hops.
 - Tabs **must** be generated from the scope nodes that actually have members; the first tab is active by default.
 - Rows **must** filter to the active scope.
 - Order is **scoped**: with `reorder` also enabled, sequence applies within the active scope, not globally across the database.
@@ -42,6 +43,7 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For view tabs general
 ### `groups` layer
 
 - `memberToGroupComposite` links a member to its group node; `groupTypeDatabaseId` is the group type table.
+- Related-id hops for member→group and optional `groupToScopeComposite` **must** use the same Imp semantic path pipeline (column key on the appropriate start type).
 - Group headers **must** sort by the group's own ordered-set membership `order`, with the `unassignedGroupTitle` group always last.
 - `groupToScopeComposite` (optional) restricts visible groups to those linked to the active scope.
 - `canonicalGroupByTitle` (default on) resolves a member's group by title when import created duplicate group nodes.
@@ -122,7 +124,7 @@ User drag-drop (webview)
 ## Verification
 
 - `bun test packages/tome-flatfile/tests` — composition file parsing and loading
-- `bun test packages/tome-db/tests` — composed view, groups, reorder mutations
+- `bun test packages/tome-db/tests` — composed view, groups, reorder mutations, Imp semantic related-id hops
 - `bun test packages/tome-server/tests/api` — node page section and reorder endpoint
 - `bun test packages/tome-editor/tests` — `GroupedDatabaseView` rendering, filtering, unlink
 - Manual: open the Scenes database → scope tabs → drag within/across groups → reload → order persists
@@ -135,6 +137,7 @@ User drag-drop (webview)
 | `packages/tome-graph-interfaces/src/table-presentation.ts` | Composition, group, and presentation DTOs |
 | `packages/tome-flatfile/src/table-presentation/` | Parse / load / invalidate the composition file |
 | `packages/tome-db/src/table-presentation/compose.ts` | Build the composed `DatabaseViewDetail` |
+| `packages/tome-db/src/semantic-related-ids.ts` | Composite → table-schema token → Imp `executeImp` related ids |
 | `packages/tome-db/src/table-presentation/relation-scope-tabs.ts` | Scope discovery and member filtering |
 | `packages/tome-db/src/table-presentation/relation-groups.ts` | Group headers, member→group resolution, windowing |
 | `packages/tome-db/src/table-presentation/reorder-members.ts` | Sparse order rewrite + group change |

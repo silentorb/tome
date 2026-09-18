@@ -63,6 +63,8 @@ Ordinary relation→field hops **must** prefer Imp semantic bind over hand-wired
 
 Perspective display labels are **not** semantic tokens.
 
+Editor **table-presentation** scope/group related-id reads resolve presentation composites to table-schema column keys, then use a **minimal** PathOntology for that hop plus `semanticPathFromAnchorGraph` + Queryable `executeImp` (see [table-presentation.md](./table-presentation.md), [graph-store.md](./graph-store.md)). Prefer that path over hand-wired `traverse` when only opposite node ids are needed. Hosts should not call `createTomePathOntology` over an entire corpus for these hops — unrelated relation columns without endpoint typeIds would fail integrity checks.
+
 ### API
 
 | Operation | Behavior |

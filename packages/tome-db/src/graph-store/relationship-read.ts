@@ -155,8 +155,12 @@ export function readStoreIsNodeArchived(store: RelationshipReadStore, id: string
 
 export function isQueryableReadStore(
   store: RelationshipReadStore,
-): store is TomeGraphStoreBase & { executeImp: NonNullable<TomeGraphStoreBase["listRelationshipProjections"]> } {
-  return isGraphStoreBase(store) && typeof (store as TomeGraphStoreBase & { executeImp?: unknown }).executeImp === "function";
+): store is import("tome-graph-interfaces").TomeGraphStoreQueryable {
+  return (
+    isGraphStoreBase(store) &&
+    typeof (store as import("tome-graph-interfaces").TomeGraphStoreQueryable).executeImp ===
+      "function"
+  );
 }
 
 /** Composite association id for a projection, when known from store data. */

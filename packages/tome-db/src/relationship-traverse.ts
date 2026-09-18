@@ -154,31 +154,6 @@ export function otherEndpoint(relationship: Relationship, nodeId: string): strin
     : relationship.sourceNodeId;
 }
 
-export function relatedNodeIds(
-  db: RelationshipReadStore,
-  nodeId: string,
-  compositeType: string,
-): string[] {
-  const seen = new Set<string>();
-  const ids: string[] = [];
-  for (const relationship of listRelationshipsForComposite(db, nodeId, compositeType)) {
-    const other = otherEndpoint(relationship, nodeId);
-    if (seen.has(other)) continue;
-    seen.add(other);
-    ids.push(other);
-  }
-  return ids;
-}
-
-export function firstRelatedNodeId(
-  db: RelationshipReadStore,
-  nodeId: string,
-  compositeType: string,
-): string | null {
-  const relationships = listRelationshipsForComposite(db, nodeId, compositeType);
-  return relationships[0] ? otherEndpoint(relationships[0], nodeId) : null;
-}
-
 function databaseMemberIds(db: RelationshipReadStore, databaseId: string, contentDir?: string): Set<string> {
   return new Set(setMemberIds(db, databaseId, contentDir));
 }

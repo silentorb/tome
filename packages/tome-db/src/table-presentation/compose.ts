@@ -31,6 +31,7 @@ import {
   resolveMemberGroupId,
   windowRelationGroups,
 } from "./relation-groups";
+import { loadSemanticRelatedPathContext } from "../semantic-related-ids";
 
 function stringProperty(value: unknown): string | null {
   if (typeof value === "string" && value.trim()) return value.trim();
@@ -84,9 +85,19 @@ export function buildComposedDatabaseView(
 
   let activeScopeId: string | undefined;
   let tabs: DatabaseViewDetail["tabs"];
+  const pathContext =
+    composition.scope || composition.groups
+      ? loadSemanticRelatedPathContext(dir)
+      : undefined;
 
   if (composition.scope) {
-    const scopes = discoverRelationScopes(db, databaseId, composition.scope, dir);
+    const scopes = discoverRelationScopes(
+      db,
+      databaseId,
+      composition.scope,
+      dir,
+      pathContext,
+    );
     tabs = resolveGeneratedTabsFromScopes(scopes, requestedTabId);
     activeScopeId = tabs.activeTabId || undefined;
   } else {
@@ -104,7 +115,15 @@ export function buildComposedDatabaseView(
     if (
       composition.scope &&
       activeScopeId &&
-      !memberMatchesScope(db, memberId, composition.scope, activeScopeId)
+      pathContext &&
+      !memberMatchesScope(
+        db,
+        memberId,
+        composition.scope,
+        activeScopeId,
+        databaseId,
+        pathContext,
+      )
     ) {
       continue;
     }
@@ -176,12 +195,25 @@ export function buildComposedDatabaseView(
   let groups = undefined as DatabaseViewDetail["groups"];
   let memberGroupIds = new Map<string, string | null>();
 
-  if (composition.groups) {
-    const headers = groupsForScope(db, composition.groups, activeScopeId, dir);
+  if (composition.groups && pathContext) {
+    const headers = groupsForScope(
+      db,
+      composition.groups,
+      activeScopeId,
+      dir,
+      pathContext,
+    );
     for (const row of databaseRows) {
       memberGroupIds.set(
         row.nodeId,
-        resolveMemberGroupId(db, composition.groups, row.nodeId, headers),
+        resolveMemberGroupId(
+          db,
+          composition.groups,
+          row.nodeId,
+          headers,
+          databaseId,
+          pathContext,
+        ),
       );
     }
     groups = buildRelationGroups(
@@ -191,6 +223,7 @@ export function buildComposedDatabaseView(
       databaseRows,
       memberGroupIds,
       dir,
+      pathContext,
     );
   }
 
