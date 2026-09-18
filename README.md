@@ -1,6 +1,15 @@
 # Tome
 
-Domain-agnostic tooling for git-tracked design graphs: SQLite query cache (`tome-db`), config-driven server host (`tome-server` + `tome-http`), web editor (`tome-editor`), and static site export (`tome-static-site`).
+Tome is tooling for design graphs that live in git. Your corpus stays as ordinary files—the source of truth—while a local SQLite cache keeps exploration and edits fast. The same graph powers a web editor, a config-driven API host, and static site export, without baking any one domain into the packages.
+
+## Highlights
+
+- **Git-tracked corpus** — nodes and relationships under `content/`; SQLite is a rebuildable query cache, not the canonical store ([`docs/features/tome-db.md`](docs/features/tome-db.md))
+- **Web editor** — browse and edit the graph as pages, tables, and related views ([`docs/features/tome-editor.md`](docs/features/tome-editor.md))
+- **Config-driven host** — wire store, cache, and HTTP services from project config ([`docs/features/tome-server.md`](docs/features/tome-server.md))
+- **Static site export** — publish the corpus to portable HTML ([`docs/features/static-website.md`](docs/features/static-website.md))
+- **Extensions** — load page blocks and other components from project config at runtime ([`docs/features/extensions.md`](docs/features/extensions.md))
+- **Domain stays in the project** — workspace model, associations, and schemas live under `content/model/`, not in Tome package source
 
 ## Packages
 
