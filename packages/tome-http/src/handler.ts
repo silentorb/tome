@@ -7,14 +7,16 @@ import type {
 } from "tome-graph-interfaces";
 import type { CacheSyncPublicStatus } from "tome-service-interfaces";
 import {
-  getProfileSnapshot,
+  getProfilingConfig,
+  getProfilingStore,
   isProfilingEnabled,
-  recordProfileSample,
+  recordProfilingSample,
 } from "tome-service-interfaces";
 import { isPersistableNodeTitle } from "tome-graph-interfaces";
 import type { UserSettingsPatch } from "./user-settings";
 import { UserSettingsStore } from "./user-settings-store";
 import { tableRowsQueryFromSearchParams } from "./table-rows-query";
+import { executeProfilingImp } from "./profiling-imp";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -119,7 +121,7 @@ export function createApiHandler(
     try {
       const response = await dispatchApiRequest(req, url, path, db, settingsStore, getCacheSyncStatus);
       if (profiling) {
-        recordProfileSample(
+        recordProfilingSample(
           "http",
           performance.now() - started,
           `${req.method} ${path} → ${response.status}`,
@@ -130,7 +132,7 @@ export function createApiHandler(
       const message = err instanceof Error ? err.message : String(err);
       console.error(`[tome-http] ${req.method} ${path} → 500:`, err);
       if (profiling) {
-        recordProfileSample(
+        recordProfilingSample(
           "http",
           performance.now() - started,
           `${req.method} ${path} → 500`,
@@ -158,11 +160,34 @@ async function dispatchApiRequest(
         return json(healthPayload(syncStatus));
       }
 
-      if (path === "/api/debug/profile" && req.method === "GET") {
+      if (path === "/api/debug/profiling" && req.method === "GET") {
         if (!isProfilingEnabled()) {
           return json({ error: "not found" }, 404);
         }
-        return json(getProfileSnapshot());
+        const store = getProfilingStore();
+        return json({
+          config: getProfilingConfig(),
+          dbPath: store?.dbPath ?? null,
+        });
+      }
+
+      if (path === "/api/debug/profiling/execute-imp" && req.method === "POST") {
+        if (!isProfilingEnabled()) {
+          return json({ error: "not found" }, 404);
+        }
+        const payload = (await req.json()) as { graph?: unknown };
+        if (!payload.graph || typeof payload.graph !== "object") {
+          return json({ error: "graph object required" }, 400);
+        }
+        try {
+          const result = executeProfilingImp(
+            payload.graph as import("imp-core-types").Graph,
+          );
+          return json(result);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return json({ error: message }, 400);
+        }
       }
 
       if (syncStatus && !syncStatus.ready) {

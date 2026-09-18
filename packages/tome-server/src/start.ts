@@ -70,6 +70,7 @@ export async function startTomeServer(options?: {
 
   const started = await startConfiguredServices(deferred.services, config, {
     getCacheSyncStatus: () => syncStatus.getStatus(),
+    cacheDbPath: dbPath,
   });
 
   const graphStartedAt = performance.now();

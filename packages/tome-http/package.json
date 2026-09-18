@@ -13,6 +13,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "imp-collection-transforms": "workspace:^0.5.0",
+    "imp-core-types": "workspace:^0.5.0",
+    "imp-registry": "workspace:^0.5.0",
+    "imp-sql": "workspace:^0.6.0",
     "tome-graph-interfaces": "workspace:^0.2.0",
     "tome-service-interfaces": "workspace:^0.2.0"
   },

@@ -83,19 +83,25 @@ Default **off** (one boolean check per HTTP request and `queryAll`; no timers wh
 
 | Knob | Purpose |
 | --- | --- |
-| `TOME_PROFILE=1` | Enable slow-sample capture (HTTP + SQL) |
-| `TOME_PROFILE=verbose` | Log/buffer every timed sample, not only slow ones |
-| `TOME_SLOW_MS` | Threshold in ms (default **100**) |
-| `services[].options.profile` | `true` or `"verbose"` in `tome-server.json` |
+| `TOME_PROFILING=1` | Enable slow-sample capture (HTTP + SQL) |
+| `TOME_PROFILING=verbose` | Record every timed sample, not only slow ones |
+| `TOME_PROFILING_SLOW_MS` | Threshold in ms (default **100**) |
+| `TOME_PROFILING_DB_PATH` | Profiling SQLite path (default: sibling `tome-profiling.sqlite` next to the cache DB) |
+| `TOME_PROFILING_LOG=1` | Mirror samples to stderr (default **off**) |
+| `TOME_PROFILING_MAX_MB` | Soft retention ceiling in MB (default **32**; converted to a row cap via ~512 B/sample) |
+| `TOME_PROFILING_BATCH_DELETE_MB` | Oldest-sample batch to delete when over the ceiling (default **4**) |
+| `services[].options.profiling` | `true` or `"verbose"` in `tome-server.json` |
 | `services[].options.slowMs` | Same threshold via config |
 
 When enabled:
 
-- Slow HTTP requests log `[tome-http] Xms METHOD path → status` on stderr.
-- Slow `queryAll` calls log `[tome-sql] Xms <truncated SQL> (N params)`.
-- `GET /api/debug/profile` returns `{ config, samples }` (ring buffer of recent slow samples). When profiling is off, that route returns **404**.
+- Samples are appended to a dedicated SQLite file (`samples` table: `id`, `at`, `kind`, `ms`, `detail`), not an in-memory ring.
+- When the row ceiling is exceeded, the oldest **batch** of rows is deleted in one statement (not one delete per write).
+- Samples are **not** logged to stderr unless `TOME_PROFILING_LOG` is set.
+- `GET /api/debug/profiling` returns `{ config, dbPath }` (`config` includes `maxMb`, `batchDeleteMb`, derived `maxRows` / `batchDeleteRows`, `slowMs`, `verbose`, …). **404** when profiling is off.
+- `POST /api/debug/profiling/execute-imp` with `{ graph }` runs an Imp collection query via `imp-sql` against the profiling DB (filter / sort / limit / project — no pathing). **404** when off.
 
-Containers: pass env at runtime (no image rebuild). Workbench Compose forwards `TOME_PROFILE` / `TOME_SLOW_MS` into the `tome` service — see [container.md](./container.md).
+Containers: pass env at runtime (no image rebuild). Workbench Compose forwards the `TOME_PROFILING*` vars into the `tome` service — see [container.md](./container.md).
 
 ## See also
 

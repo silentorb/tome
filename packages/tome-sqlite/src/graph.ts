@@ -11,7 +11,7 @@ import type {
 } from "tome-service-interfaces";
 import {
   isProfilingEnabled,
-  recordProfileSample,
+  recordProfilingSample,
   truncateSql,
 } from "tome-service-interfaces";
 import { migrateSchema } from "./schema-migrate";
@@ -876,7 +876,7 @@ export class GraphDatabase implements TomeQueryCache {
     try {
       return this.db.prepare(sql).all(...params) as T[];
     } finally {
-      recordProfileSample(
+      recordProfilingSample(
         "sql",
         performance.now() - started,
         `${truncateSql(sql)} (${params.length} params)`,

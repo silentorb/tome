@@ -1,6 +1,11 @@
 import { resolve } from "node:path";
 import type { TomeServiceHost, TomeServiceModule } from "tome-service-interfaces";
-import { configureProfiler, resolveProfilerFromEnv } from "tome-service-interfaces";
+import {
+  configureProfiling,
+  ensureProfilingStore,
+  openProfilingStore,
+  resolveProfilingFromEnv,
+} from "tome-service-interfaces";
 import { createApiHandler, type ApiFetchHandler } from "./handler";
 import { UserSettingsStore } from "./user-settings-store";
 
@@ -10,10 +15,17 @@ export interface TomeHttpServiceOptions {
   port?: number;
   /** Absolute or CWD-relative path to user settings JSON. */
   userSettingsPath?: string;
-  /** Opt-in API/SQL profiling (`true` / `"verbose"`). Env: `TOME_PROFILE`. */
-  profile?: boolean | "verbose";
-  /** Slow-sample threshold in ms (default 100). Env: `TOME_SLOW_MS`. */
+  /** Opt-in API/SQL profiling (`true` / `"verbose"`). Env: `TOME_PROFILING`. */
+  profiling?: boolean | "verbose";
+  /** Slow-sample threshold in ms (default 100). Env: `TOME_PROFILING_SLOW_MS`. */
   slowMs?: number;
+  /**
+   * Cache SQLite path used to derive neighboring `tome-profiling.sqlite`
+   * when `TOME_PROFILING_DB_PATH` is unset.
+   */
+  cacheDbPath?: string;
+  /** Explicit profiling DB path (wins over neighbor derivation when set here; env still wins inside resolve). */
+  profilingDbPath?: string;
 }
 
 function readEnv(name: string): string | undefined {
@@ -46,7 +58,7 @@ function resolveUserSettingsPath(options: TomeHttpServiceOptions, contentHint?: 
   return resolve(process.cwd(), ".tome/user-settings.json");
 }
 
-function parseProfileOption(raw: unknown): boolean | "verbose" | undefined {
+function parseProfilingOption(raw: unknown): boolean | "verbose" | undefined {
   if (raw === true || raw === false) return raw;
   if (raw === "verbose") return "verbose";
   return undefined;
@@ -58,8 +70,10 @@ function parseOptions(raw: unknown): TomeHttpServiceOptions {
   return {
     port: typeof o.port === "number" ? o.port : undefined,
     userSettingsPath: typeof o.userSettingsPath === "string" ? o.userSettingsPath : undefined,
-    profile: parseProfileOption(o.profile),
+    profiling: parseProfilingOption(o.profiling),
     slowMs: typeof o.slowMs === "number" ? o.slowMs : undefined,
+    cacheDbPath: typeof o.cacheDbPath === "string" ? o.cacheDbPath : undefined,
+    profilingDbPath: typeof o.profilingDbPath === "string" ? o.profilingDbPath : undefined,
   };
 }
 
@@ -77,11 +91,18 @@ export function createTomeHttpService(): TomeServiceModule {
       const port = resolvePort(options);
       const settingsPath = resolveUserSettingsPath(options);
       const settingsStore = new UserSettingsStore(settingsPath);
-      const profileConfig = resolveProfilerFromEnv({
-        profile: options.profile,
+      const profilingConfig = resolveProfilingFromEnv({
+        profiling: options.profiling,
         slowMs: options.slowMs,
       });
-      configureProfiler(profileConfig);
+      configureProfiling(profilingConfig);
+      if (profilingConfig.enabled) {
+        if (options.profilingDbPath) {
+          openProfilingStore(resolve(options.profilingDbPath));
+        } else {
+          ensureProfilingStore(options.cacheDbPath);
+        }
+      }
       handler = createApiHandler(host.services, settingsStore, {
         getCacheSyncStatus: host.getCacheSyncStatus,
       });
@@ -90,9 +111,9 @@ export function createTomeHttpService(): TomeServiceModule {
         fetch: handler,
       });
       console.log(`Tome API listening on http://127.0.0.1:${port}`);
-      if (profileConfig.enabled) {
+      if (profilingConfig.enabled) {
         console.log(
-          `[tome-http] profiling enabled (slowMs=${profileConfig.slowMs}${profileConfig.verbose ? ", verbose" : ""})`,
+          `[tome-http] profiling enabled (slowMs=${profilingConfig.slowMs}${profilingConfig.verbose ? ", verbose" : ""}; maxMb=${profilingConfig.maxMb})`,
         );
       }
     },

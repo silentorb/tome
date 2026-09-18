@@ -216,7 +216,11 @@ export interface StartedServices {
 export async function startConfiguredServices(
   graph: TomeGraphServices,
   config: TomeServerConfig = loadServerConfig(),
-  hostExtras?: { getCacheSyncStatus?: () => CacheSyncPublicStatus },
+  hostExtras?: {
+    getCacheSyncStatus?: () => CacheSyncPublicStatus;
+    /** Cache SQLite path — forwarded into HTTP options for profiling DB neighbor derivation. */
+    cacheDbPath?: string;
+  },
 ): Promise<StartedServices> {
   if (config.services.length === 0) {
     console.warn(
@@ -227,9 +231,17 @@ export async function startConfiguredServices(
   const modules: TomeServiceModule[] = [];
   for (const entry of config.services) {
     const service = await loadServiceModule(entry);
+    const options: Record<string, unknown> = {
+      ...(entry.options && typeof entry.options === "object"
+        ? (entry.options as Record<string, unknown>)
+        : {}),
+    };
+    if (hostExtras?.cacheDbPath && options.cacheDbPath == null) {
+      options.cacheDbPath = hostExtras.cacheDbPath;
+    }
     await service.start({
       services: graph,
-      options: entry.options ?? {},
+      options,
       getCacheSyncStatus: hostExtras?.getCacheSyncStatus,
     });
     modules.push(service);

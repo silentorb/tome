@@ -122,13 +122,17 @@ gunzip -c tome-release.tar.gz | docker load
 | `TOME_DB_PATH` | SQLite cache path |
 | `TOME_EDITOR_DEV_HOST` | Vite bind host (default `0.0.0.0` in containers) |
 | `TOME_EDITOR_API_PORT` | API port (default 3847) |
-| `TOME_PROFILE` | Opt-in API/SQL profiling (`1` / `verbose`); default off — see [tome-server.md](./tome-server.md) § Request / SQL profiling |
-| `TOME_SLOW_MS` | Slow-sample threshold in ms when profiling (default 100) |
+| `TOME_PROFILING` | Opt-in API/SQL profiling (`1` / `verbose`); default off — see [tome-server.md](./tome-server.md) § Request / SQL profiling |
+| `TOME_PROFILING_SLOW_MS` | Slow-sample threshold in ms when profiling (default 100) |
+| `TOME_PROFILING_DB_PATH` | Profiling SQLite path (default: `tome-profiling.sqlite` beside the cache DB) |
+| `TOME_PROFILING_LOG` | Mirror samples to stderr (`1`); default off |
+| `TOME_PROFILING_MAX_MB` | Retention ceiling in MB (default 32) |
+| `TOME_PROFILING_BATCH_DELETE_MB` | Batch delete size in MB when pruning (default 4) |
 | `IMP_ROOT` | Imp sibling path (default `/opt/imp-ts` in release) |
 | `TOME_BAKED_ROOT` | Immutable bake path (default `/opt/tome-baked`) |
 | `IMP_REF` (CI var) | imp-ts git ref when building the release image |
 
-Enable profiling on a running container without rebuilding, e.g. `docker run -e TOME_PROFILE=1 …` or in the workbench: `TOME_PROFILE=1` when starting Compose (the `tome` service forwards the var). Inspect samples via `docker logs` / `docker compose logs tome` (`[tome-http]` / `[tome-sql]` lines) or `GET /api/debug/profile` on the API port while profiling is on.
+Enable profiling on a running container without rebuilding, e.g. `docker run -e TOME_PROFILING=1 …` or in the workbench: `TOME_PROFILING=1` when starting Compose (the `tome` service forwards the vars). Inspect via `GET /api/debug/profiling` and `POST /api/debug/profiling/execute-imp` on the API port while profiling is on (optional stderr with `TOME_PROFILING_LOG=1`).
 ## Verification
 
 - Release CI: `.github/workflows/container.yml` runs on `v*` tags (and `workflow_dispatch` of a `v*` ref), builds release, runs `ensure-deps` + `test` with `--network none`, then pushes semver tags.

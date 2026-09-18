@@ -1,5 +1,9 @@
 import type { TomeCacheModule } from "tome-service-interfaces";
-import { configureProfiler, resolveProfilerFromEnv } from "tome-service-interfaces";
+import {
+  configureProfiling,
+  ensureProfilingStore,
+  resolveProfilingFromEnv,
+} from "tome-service-interfaces";
 import { GraphDatabase } from "./graph";
 
 export function createSqliteModule(): TomeCacheModule {
@@ -11,7 +15,11 @@ export function createSqliteModule(): TomeCacheModule {
         throw new Error("tome-sqlite open() requires options.dbPath");
       }
       // Apply env early so sync SQL is covered before HTTP service starts.
-      configureProfiler(resolveProfilerFromEnv());
+      const profilingConfig = resolveProfilingFromEnv();
+      configureProfiling(profilingConfig);
+      if (profilingConfig.enabled) {
+        ensureProfilingStore(dbPath);
+      }
       return new GraphDatabase(dbPath, {
         clean: options?.clean,
         propertyCodec: options?.propertyCodec,
