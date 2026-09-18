@@ -87,7 +87,9 @@ describe("interactive page-block data persistence", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
-    expect(session).toBeTruthy();
+    await waitFor(() => {
+      expect(session).toBeTruthy();
+    });
 
     const nextGraph = {
       ...defaultReactFlowGraph(),
@@ -177,6 +179,9 @@ describe("interactive page-block data persistence", () => {
     updates.length = 0;
 
     fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
+    await waitFor(() => {
+      expect(session).toBeTruthy();
+    });
     const onGraphChange = session!.props.onGraphChange as (graph: unknown) => void;
     onGraphChange({
       ...defaultReactFlowGraph(),

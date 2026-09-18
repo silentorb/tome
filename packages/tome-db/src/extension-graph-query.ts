@@ -7,7 +7,8 @@ import type { RelationshipRecordRef, TomeGraphStoreQueryable } from "tome-graph-
 import {
   expandAllRelationships,
   loadAssociationsFromContent,
-  setSideProjectionType,
+  normalizeAssociationId,
+  setRoleIndices,
   typesWithTrait,
   SET_TRAIT,
 } from "tome-flatfile";
@@ -35,8 +36,12 @@ function listTypeMembersFromStore(
   const memberIds = new Set<string>();
 
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const projection = setSideProjectionType(registry, composite);
-    const executed = store.executeImp(typeMembersGraph(typeId, projection));
+    const associationId = normalizeAssociationId(composite);
+    const def = registry.associations[associationId];
+    const { parentIndex } = setRoleIndices(def);
+    const executed = store.executeImp(
+      typeMembersGraph(typeId, associationId, parentIndex),
+    );
     if (executed instanceof Promise) {
       throw new Error("ExtensionGraphQueryServices requires synchronous executeImp");
     }

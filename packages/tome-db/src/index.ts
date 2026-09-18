@@ -421,11 +421,16 @@ export {
   searchNodesGraph,
   outgoingRelationshipsGraph,
   incomingRelationshipsGraph,
+  semanticPathFromAnchorGraph,
   typeMembersGraph,
   standardImpGraphs,
   standardGraphs,
 } from "./graph-store";
-export type { RelationshipReadStore, RunExecuteImpOptions } from "./graph-store";
+export type {
+  RelationshipReadStore,
+  RunExecuteImpOptions,
+  SemanticPathFromAnchorOptions,
+} from "./graph-store";
 export type {
   ExtensionComponentEntry,
   ExtensionComponentKind,

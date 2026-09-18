@@ -104,11 +104,20 @@ describe("query-block data client↔API round trip", () => {
   });
 
   test("graph edit survives normalize → saveBody → prepare → remount", async () => {
-    const invoke = mock(async () => ({
-      ok: true,
-      columns: ["id"],
-      rows: [],
-    }));
+    const invoke = mock(async (input: unknown) => {
+      const record =
+        input && typeof input === "object" && !Array.isArray(input)
+          ? (input as Record<string, unknown>)
+          : {};
+      if (record.action === "listPathHopOptions") {
+        return { ok: true, typeTables: [], relationsByType: {} };
+      }
+      return {
+        ok: true,
+        columns: ["id"],
+        rows: [],
+      };
+    });
     const written: unknown[] = [];
     let onGraphChange: ((graph: unknown) => void) | undefined;
 
@@ -134,6 +143,9 @@ describe("query-block data client↔API round trip", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
+    await waitFor(() => {
+      expect(onGraphChange).toBeDefined();
+    });
     const nextGraph = {
       ...defaultReactFlowGraph(),
       nodes: defaultReactFlowGraph().nodes.map((node) =>

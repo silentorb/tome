@@ -44,8 +44,10 @@ export {
   searchNodesGraph,
   outgoingRelationshipsGraph,
   incomingRelationshipsGraph,
+  semanticPathFromAnchorGraph,
   standardGraphs,
   standardImpGraphs,
   typeMembersGraph,
   type StandardImpGraphName,
+  type SemanticPathFromAnchorOptions,
 } from "./standard-graphs";

@@ -72,6 +72,12 @@ describe("tome-imp-sql schema", () => {
   test("projectionType rejects invalid association ids", () => {
     expect(() => projectionType("not-a-ulid", 0)).toThrow();
   });
+
+  test("edgeType rejects packed association strings in Imp graphs", () => {
+    expect(() =>
+      tomeLiveNodesSchema.edgeType?.(`${VALID_ASSOCIATION}:0`, 0),
+    ).toThrow(/Invalid association id/);
+  });
 });
 
 describe("tome-imp-sql compile", () => {

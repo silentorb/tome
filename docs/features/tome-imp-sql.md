@@ -50,7 +50,18 @@ compileImpGraphToTomeSql(graph, { schema: loadSchemaFromContent(contentDir) })
 
 ### Projection type helper
 
-`projectionType(associationId, direction)` **must** return `{associationId}:{0|1}` matching Tome directed projection types used in `relationship_projections.type`. This encoding is a **storage/SQL boundary** concern — Imp graphs keep `association` and `direction` as separate values and must not store the colon-joined form.
+`projectionType(associationId, direction)` **must** return `{associationId}:{0|1}` matching Tome directed projection types used in `relationship_projections.type`. This encoding is a **storage/SQL boundary** concern — Imp graphs keep `association` and `direction` as separate values and **must not** store the colon-joined form. `edgeType` accepts bare association ids only (packed strings are rejected).
+
+### Semantic paths (host PathOntology)
+
+Ordinary relation→field hops **must** prefer Imp semantic bind over hand-wired `traverse` / `column` chains:
+
+| Operation | Behavior |
+| --- | --- |
+| `createTomePathOntology(associations, tableSchemas)` | Type-scoped tokens from table-schema column keys + promoted node fields (`id`, `title`, …). Relation tokens bind to bare `association` + `endpoint` as direction and opposite endpoint `typeId` as `nextType`. Fails if a token maps to both property and relationship in one type. |
+| `bindTomeSemanticPath(tokens, { ontology, startType, prefix, source, asScalar? })` | Resolve + desugar to `traverse` / `project` (wraps `imp-pathing` `bindSemanticPath`) |
+
+Perspective display labels are **not** semantic tokens.
 
 ### API
 
@@ -61,6 +72,7 @@ compileImpGraphToTomeSql(graph, { schema: loadSchemaFromContent(contentDir) })
 | `createTomeImpRegistry()` | Standard Imp registry for Tome hosts |
 | `tomeLiveNodesSchema` | Default schema without workspace enum binding |
 | `applyLiveNodesConstraint(sql, parameters)` | Rewrite `FROM "nodes"` |
+| `createTomePathOntology` / `bindTomeSemanticPath` | Host semantic path bind (see above) |
 
 ### Dependencies
 
@@ -103,7 +115,7 @@ None.
 ## Verification
 
 - `bun run --filter tome-imp-sql test`
-- Tests cover column mapping, live rewrite, `projectionType`, and `traverse` SQL joining `relationship_projections`.
+- Tests cover column mapping, live rewrite, `projectionType`, bare-association `edgeType`, `traverse` SQL joining `relationship_projections`, and PathOntology bind/desugar.
 
 ## Implementation pointers
 

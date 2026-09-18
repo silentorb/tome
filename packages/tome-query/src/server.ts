@@ -1,8 +1,13 @@
 import type { ServerPageBlockHost } from "tome-interfaces/page-block/server";
 import { loadSchemaFromContent } from "tome-flatfile/schema-load";
+import {
+  loadAssociationsFromContent,
+  loadTableSchemasFromContent,
+} from "tome-flatfile";
 import { resolve } from "node:path";
 import { IMPLEMENTATION_ID, parseQueryBlockData } from "./config";
 import type { GraphParameterValue } from "./parameters";
+import { buildPathHopOptions } from "./path-hop-options";
 import { executeQueryBlock } from "./render";
 
 function parseParameterOverrides(raw: unknown): Record<string, GraphParameterValue> | undefined {
@@ -21,10 +26,15 @@ function parseParameterOverrides(raw: unknown): Record<string, GraphParameterVal
   return out;
 }
 
-function schemaFromEnv(): ReturnType<typeof loadSchemaFromContent> | undefined {
+function contentDirFromEnv(): string | undefined {
   const fromEnv = process.env.TOME_CONTENT_PATH;
-  if (!fromEnv?.trim()) return undefined;
-  return loadSchemaFromContent(resolve(fromEnv.trim()));
+  return fromEnv?.trim() || undefined;
+}
+
+function schemaFromEnv(): ReturnType<typeof loadSchemaFromContent> | undefined {
+  const dir = contentDirFromEnv();
+  if (!dir) return undefined;
+  return loadSchemaFromContent(resolve(dir));
 }
 
 export function register(host: ServerPageBlockHost): void {
@@ -36,6 +46,28 @@ export function register(host: ServerPageBlockHost): void {
           ? (input as Record<string, unknown>)
           : {};
       const action = typeof record.action === "string" ? record.action : "execute";
+
+      if (action === "listPathHopOptions") {
+        const dir = contentDirFromEnv();
+        if (!dir) {
+          return { ok: false, error: "TOME_CONTENT_PATH is not set" };
+        }
+        try {
+          const associations = loadAssociationsFromContent(resolve(dir));
+          const tableSchemas = loadTableSchemasFromContent(resolve(dir));
+          const titleMap = new Map<string, string>();
+          if (ctx.services.schemaQuery) {
+            const tables = await Promise.resolve(ctx.services.schemaQuery.listTypeTables());
+            for (const t of tables) titleMap.set(t.id, t.title);
+          }
+          const options = buildPathHopOptions(associations, tableSchemas, titleMap);
+          return { ok: true, ...options };
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          return { ok: false, error: message };
+        }
+      }
+
       if (action !== "execute") {
         throw new Error(`Unknown tome-query action "${action}"`);
       }

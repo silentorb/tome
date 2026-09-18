@@ -1,5 +1,5 @@
 import type { ExecutionHost, ExecutionRow } from "imp-execution";
-import { expandAllRelationships } from "tome-flatfile";
+import { expandAllRelationships, projectionTypeForEndpoint } from "tome-flatfile";
 import type { RelationshipRecordRef, TomeGraphStoreBase } from "tome-graph-interfaces";
 
 export interface FlatfileExecutionHostOptions {
@@ -122,11 +122,13 @@ export function createFlatfileExecutionHost(
         projectionIndex = buildProjectionIndex(store);
       }
 
+      // Pack at the host boundary — Imp graphs keep association + direction separate.
+      const projectionType = projectionTypeForEndpoint(association, direction);
       const out: ExecutionRow[] = [];
       const seen = new Set<string>();
 
       if (direction === 0) {
-        const key = `${sourceId}\0${association}`;
+        const key = `${sourceId}\0${projectionType}`;
         for (const row of projectionIndex.get(key) ?? []) {
           if (!corpusAllows(row.id) || !liveAllows(row.id)) continue;
           if (!matchesEdgeFilter(row.properties, edgeProperty ?? null, edgeEquals)) continue;
@@ -139,7 +141,7 @@ export function createFlatfileExecutionHost(
 
       for (const [key, targets] of projectionIndex) {
         const [fromId, type] = key.split("\0");
-        if (type !== association) continue;
+        if (type !== projectionType) continue;
         for (const row of targets) {
           if (row.id !== sourceId) continue;
           if (!corpusAllows(fromId) || !liveAllows(fromId)) continue;

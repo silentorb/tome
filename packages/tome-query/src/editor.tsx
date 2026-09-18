@@ -25,6 +25,7 @@ import {
   resolveGraphParameterValues,
   type GraphParameterValue,
 } from "./parameters";
+import type { PathHopOptions } from "./path-hop-options";
 import { formatCellText } from "./render";
 import { queryNodePageHref } from "./node-links";
 import "./query-block.css";
@@ -41,14 +42,21 @@ export function QueryToolPanelContent({
   graph,
   readOnly,
   onGraphChange,
+  pathHopOptions,
 }: {
   graph: ReactFlowGraph;
   readOnly?: boolean;
   onGraphChange: (graph: ReactFlowGraph) => void;
+  pathHopOptions?: PathHopOptions | null;
 }) {
   return (
     <div className="tome-query-tool-panel">
-      <QueryFlowEditor graph={graph} readOnly={readOnly} onGraphChange={onGraphChange} />
+      <QueryFlowEditor
+        graph={graph}
+        readOnly={readOnly}
+        onGraphChange={onGraphChange}
+        pathHopOptions={pathHopOptions}
+      />
     </div>
   );
 }
@@ -192,18 +200,52 @@ export function QueryBlockComponent({
       setError("Query editor panel is not available");
       return;
     }
-    ctx.openToolPanel({
-      title: "Edit query",
-      Component: QueryToolPanelContent as (props: Record<string, unknown>) => unknown,
-      props: {
-        graph,
-        readOnly: Boolean(readOnly),
-        onGraphChange: persistGraph,
-      },
-      onClose: () => {
-        void runQueryRef.current();
-      },
-    });
+
+    const openWithOptions = (pathHopOptions: PathHopOptions | null) => {
+      ctx.openToolPanel!({
+        title: "Edit query",
+        Component: QueryToolPanelContent as (props: Record<string, unknown>) => unknown,
+        props: {
+          graph,
+          readOnly: Boolean(readOnly),
+          onGraphChange: persistGraph,
+          pathHopOptions,
+        },
+        onClose: () => {
+          void runQueryRef.current();
+        },
+      });
+    };
+
+    if (!ctx.invoke) {
+      openWithOptions(null);
+      return;
+    }
+
+    void (async () => {
+      try {
+        const result = await ctx.invoke!({ action: "listPathHopOptions" });
+        const record =
+          result && typeof result === "object" && !Array.isArray(result)
+            ? (result as Record<string, unknown>)
+            : {};
+        if (
+          record.ok === true &&
+          Array.isArray(record.typeTables) &&
+          record.relationsByType &&
+          typeof record.relationsByType === "object"
+        ) {
+          openWithOptions({
+            typeTables: record.typeTables as PathHopOptions["typeTables"],
+            relationsByType: record.relationsByType as PathHopOptions["relationsByType"],
+          });
+          return;
+        }
+      } catch {
+        // Fall through to editor without ontology hop assist.
+      }
+      openWithOptions(null);
+    })();
   }, [ctx, graph, persistGraph, readOnly]);
 
   return (

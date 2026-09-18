@@ -118,13 +118,16 @@ Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read 
 
 ### Standard Imp graphs (`tome-db`)
 
+Imp hop graphs use bare `association` + `direction` (not packed `ULID:dir`). Prefer `semanticPathFromAnchorGraph` / `bindTomeSemanticPath` for ordinary relation→field chains when a type context is known.
+
 | Graph factory | Purpose |
 | --- | --- |
 | `recentNodesGraph` | Recent nodes by `modified_at` |
-| `typeMembersGraph` | Type-table member rows |
+| `typeMembersGraph(setNodeId, associationId, direction)` | Type-table member rows (set-side hop) |
 | `searchNodesGraph` | Title/body search |
-| `outgoingRelationshipsGraph` | Outgoing projections from a node |
-| `incomingRelationshipsGraph` | Incoming projections to a node |
+| `outgoingRelationshipsGraph(nodeId, associationId)` | Outgoing projections from a node (direction 0) |
+| `incomingRelationshipsGraph(nodeId, associationId)` | Incoming projections to a node (direction 1) |
+| `semanticPathFromAnchorGraph(anchorId, tokens, { ontology, startType })` | Filter to anchor then semantic navigate/project |
 
 ### Base-tier relationship writes
 

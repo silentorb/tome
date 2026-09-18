@@ -25,11 +25,14 @@ import {
   type ImpFlowNode,
   type ImpFlowNodeData,
 } from "./imp-nodes";
+import type { PathHopOptions } from "./path-hop-options";
 
 export interface QueryFlowEditorProps {
   graph: ReactFlowGraph;
   readOnly?: boolean;
   onGraphChange: (graph: ReactFlowGraph) => void;
+  /** Ontology-backed traverse hop options (type + relation tokens). */
+  pathHopOptions?: PathHopOptions | null;
 }
 
 /** React Flow deleteKeyCode: Backspace+Delete when editable; null when read-only. */
@@ -37,7 +40,12 @@ export function queryFlowDeleteKeyCode(readOnly?: boolean): string[] | null {
   return readOnly ? null : ["Backspace", "Delete"];
 }
 
-export function QueryFlowEditor({ graph, readOnly, onGraphChange }: QueryFlowEditorProps) {
+export function QueryFlowEditor({
+  graph,
+  readOnly,
+  onGraphChange,
+  pathHopOptions = null,
+}: QueryFlowEditorProps) {
   const nodeTypes = useImpNodeTypes();
   const palette = useMemo(() => listPaletteNodeTypes(), []);
   const onGraphChangeRef = useRef(onGraphChange);
@@ -49,7 +57,10 @@ export function QueryFlowEditor({ graph, readOnly, onGraphChange }: QueryFlowEdi
         id,
         type,
         position,
-        data: { inputValues: data.inputValues ?? {} },
+        data: {
+          inputValues: data.inputValues ?? {},
+          ...(data.pathStartType ? { pathStartType: data.pathStartType } : {}),
+        },
       })),
       edges: nextEdges.map(({ id, source, target, sourceHandle, targetHandle }) => ({
         id,
@@ -87,15 +98,56 @@ export function QueryFlowEditor({ graph, readOnly, onGraphChange }: QueryFlowEdi
     [emit],
   );
 
+  const onPathStartTypeChange = useCallback(
+    (nodeId: string, typeId: string) => {
+      setNodes((current) => {
+        const next = current.map((node) => {
+          if (node.id !== nodeId) return node;
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              pathStartType: typeId || undefined,
+              inputValues: {
+                ...node.data.inputValues,
+                association: "",
+                direction: 0,
+              },
+            },
+          };
+        });
+        setEdges((currentEdges) => {
+          emit(next, currentEdges);
+          return currentEdges;
+        });
+        return next;
+      });
+    },
+    [emit],
+  );
+
   const [nodes, setNodes] = useNodesState(
-    attachInputHandlers(graph.nodes as ImpFlowNode[], graph.edges as Edge[], onInputChange),
+    attachInputHandlers(
+      graph.nodes as ImpFlowNode[],
+      graph.edges as Edge[],
+      onInputChange,
+      onPathStartTypeChange,
+      pathHopOptions,
+    ),
   );
   const [edges, setEdges] = useEdgesState(graph.edges as Edge[]);
 
   // Keep handlers + connection flags fresh without resetting positions from parent.
   const nodesWithHandlers = useMemo(
-    () => attachInputHandlers(nodes, edges, onInputChange),
-    [nodes, edges, onInputChange],
+    () =>
+      attachInputHandlers(
+        nodes,
+        edges,
+        onInputChange,
+        onPathStartTypeChange,
+        pathHopOptions,
+      ),
+    [nodes, edges, onInputChange, onPathStartTypeChange, pathHopOptions],
   );
 
   const onNodesChange = useCallback(
@@ -229,14 +281,20 @@ function attachInputHandlers(
   nodes: ImpFlowNode[],
   edges: Edge[],
   onInputChange: ImpFlowNodeData["onInputChange"],
+  onPathStartTypeChange: ImpFlowNodeData["onPathStartTypeChange"],
+  pathHopOptions: PathHopOptions | null,
 ): ImpFlowNode[] {
   const connected = connectedInputPortsByNode(edges);
   return nodes.map((node) => ({
     ...node,
     data: {
       inputValues: node.data?.inputValues ?? {},
+      pathStartType:
+        typeof node.data?.pathStartType === "string" ? node.data.pathStartType : undefined,
       connectedInputPorts: connected.get(node.id) ?? [],
       onInputChange,
+      onPathStartTypeChange,
+      pathHopOptions,
     },
   }));
 }

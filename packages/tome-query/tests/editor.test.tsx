@@ -142,11 +142,29 @@ describe("QueryBlockComponent", () => {
   });
 
   test("Edit query opens the host tool panel with QueryFlowEditor props", async () => {
-    const invoke = mock(async () => ({
-      ok: true,
-      columns: ["id"],
-      rows: [],
-    }));
+    const invoke = mock(async (input: unknown) => {
+      const record =
+        input && typeof input === "object" && !Array.isArray(input)
+          ? (input as Record<string, unknown>)
+          : {};
+      if (record.action === "listPathHopOptions") {
+        return {
+          ok: true,
+          typeTables: [{ id: "type-a", title: "Type A" }],
+          relationsByType: {
+            "type-a": [
+              {
+                token: "deps",
+                label: "Deps",
+                association: "01KXBNPNJDENZ9BXN5BYZ7JKPD",
+                direction: 1,
+              },
+            ],
+          },
+        };
+      }
+      return { ok: true, columns: ["id"], rows: [] };
+    });
     type OpenedSession = {
       title: string;
       props: Record<string, unknown>;
@@ -171,19 +189,43 @@ describe("QueryBlockComponent", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
 
-    expect(openToolPanel).toHaveBeenCalledTimes(1);
+    await waitFor(() => {
+      expect(openToolPanel).toHaveBeenCalledTimes(1);
+    });
     expect(opened).not.toBeNull();
     expect(opened!.title).toBe("Edit query");
     expect(opened!.props.graph).toEqual(defaultReactFlowGraph());
     expect(typeof opened!.props.onGraphChange).toBe("function");
+    expect(opened!.props.pathHopOptions).toEqual({
+      typeTables: [{ id: "type-a", title: "Type A" }],
+      relationsByType: {
+        "type-a": [
+          {
+            token: "deps",
+            label: "Deps",
+            association: "01KXBNPNJDENZ9BXN5BYZ7JKPD",
+            direction: 1,
+          },
+        ],
+      },
+    });
   });
 
   test("panel onClose re-runs the query", async () => {
-    const invoke = mock(async () => ({
-      ok: true,
-      columns: ["id"],
-      rows: [],
-    }));
+    const invoke = mock(async (input: unknown) => {
+      const record =
+        input && typeof input === "object" && !Array.isArray(input)
+          ? (input as Record<string, unknown>)
+          : {};
+      if (record.action === "listPathHopOptions") {
+        return { ok: true, typeTables: [], relationsByType: {} };
+      }
+      return {
+        ok: true,
+        columns: ["id"],
+        rows: [],
+      };
+    });
     let onClose: (() => void) | undefined;
     const openToolPanel = mock(
       (session: { onClose?: () => void }) => {
@@ -204,20 +246,32 @@ describe("QueryBlockComponent", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
-    expect(onClose).toBeDefined();
+    await waitFor(() => {
+      expect(onClose).toBeDefined();
+    });
     onClose!();
 
     await waitFor(() => {
-      expect(invoke).toHaveBeenCalledTimes(2);
+      // mount execute + listPathHopOptions + onClose execute
+      expect(invoke).toHaveBeenCalledTimes(3);
     });
   });
 
   test("graph change from panel persists reactFlow without viewMode", async () => {
-    const invoke = mock(async () => ({
-      ok: true,
-      columns: ["id"],
-      rows: [],
-    }));
+    const invoke = mock(async (input: unknown) => {
+      const record =
+        input && typeof input === "object" && !Array.isArray(input)
+          ? (input as Record<string, unknown>)
+          : {};
+      if (record.action === "listPathHopOptions") {
+        return { ok: true, typeTables: [], relationsByType: {} };
+      }
+      return {
+        ok: true,
+        columns: ["id"],
+        rows: [],
+      };
+    });
     const calls: unknown[] = [];
     let onGraphChange: ((graph: unknown) => void) | undefined;
     const openToolPanel = mock(
@@ -241,6 +295,9 @@ describe("QueryBlockComponent", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
+    await waitFor(() => {
+      expect(onGraphChange).toBeDefined();
+    });
     const nextGraph = {
       nodes: [{ id: "in", type: "input", position: { x: 0, y: 0 }, data: { inputValues: {} } }],
       edges: [],

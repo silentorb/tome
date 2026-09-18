@@ -1,4 +1,9 @@
 import type { Graph } from "imp-core-types";
+import { mergeDesugarIntoGraph } from "imp-pathing";
+import {
+  bindTomeSemanticPath,
+  type BindTomeSemanticPathOptions,
+} from "tome-imp-sql";
 import type { ImpGraph } from "tome-graph-interfaces";
 
 function edge(
@@ -47,8 +52,15 @@ export function recentNodesGraph(limit: number): ImpGraph {
   };
 }
 
-/** Type-table members via one hop on the set-side projection type. */
-export function typeMembersGraph(setNodeId: string, setProjectionType: string): ImpGraph {
+/**
+ * Type-table members via one hop on the set-side association.
+ * Imp graphs use bare association + direction (not packed projection types).
+ */
+export function typeMembersGraph(
+  setNodeId: string,
+  associationId: string,
+  direction: 0 | 1,
+): ImpGraph {
   const setIdLit = "set_id_lit";
   const assocLit = "assoc_lit";
   const dirLit = "dir_lit";
@@ -62,8 +74,8 @@ export function typeMembersGraph(setNodeId: string, setProjectionType: string): 
     nodes: {
       input: { id: "input", type: "input", inputs: {} },
       [setIdLit]: literalNode(setIdLit, setNodeId),
-      [assocLit]: literalNode(assocLit, setProjectionType),
-      [dirLit]: literalNode(dirLit, 0),
+      [assocLit]: literalNode(assocLit, associationId),
+      [dirLit]: literalNode(dirLit, direction),
       [equalsLeft]: { id: equalsLeft, type: "column", inputs: { name: "id" } },
       [equalsRight]: literalNode(equalsRight, setNodeId),
       [equals]: { id: equals, type: "equals", inputs: {} },
@@ -126,29 +138,29 @@ export function searchNodesGraph(limit: number): ImpGraph {
   };
 }
 
-/** Outgoing relationships from a source node (one hop, directed projection type). */
+/** Outgoing relationships from a source node (one hop, direction 0). */
 export function outgoingRelationshipsGraph(
   sourceNodeId: string,
-  projectionType: string,
+  associationId: string,
 ): ImpGraph {
-  return relationshipHopGraph(sourceNodeId, projectionType, 0);
+  return relationshipHopGraph(sourceNodeId, associationId, 0);
 }
 
-/** Incoming relationships to a target node (one hop, directed projection type). */
+/** Incoming relationships to a target node (one hop, direction 1). */
 export function incomingRelationshipsGraph(
   targetNodeId: string,
-  projectionType: string,
+  associationId: string,
 ): ImpGraph {
-  return relationshipHopGraph(targetNodeId, projectionType, 1);
+  return relationshipHopGraph(targetNodeId, associationId, 1);
 }
 
 function relationshipHopGraph(
   anchorNodeId: string,
-  projectionType: string,
+  associationId: string,
   direction: 0 | 1,
 ): ImpGraph {
   const anchorLit = "anchor_lit";
-  const typeLit = "type_lit";
+  const assocLit = "assoc_lit";
   const dirLit = "dir_lit";
   const equalsLeft = "equals_left";
   const equalsRight = "equals_right";
@@ -160,7 +172,7 @@ function relationshipHopGraph(
     nodes: {
       input: { id: "input", type: "input", inputs: {} },
       [anchorLit]: literalNode(anchorLit, anchorNodeId),
-      [typeLit]: literalNode(typeLit, projectionType),
+      [assocLit]: literalNode(assocLit, associationId),
       [dirLit]: literalNode(dirLit, direction),
       [equalsLeft]: { id: equalsLeft, type: "column", inputs: { name: "id" } },
       [equalsRight]: literalNode(equalsRight, anchorNodeId),
@@ -180,10 +192,66 @@ function relationshipHopGraph(
       e4: edge(equalsLeft, "value", equals, "left"),
       e5: edge(equalsRight, "value", equals, "right"),
       e6: edge(equals, "value", filter, "predicate"),
-      e7: edge(typeLit, "value", hop, "association"),
+      e7: edge(assocLit, "value", hop, "association"),
       e8: edge(dirLit, "value", hop, "direction"),
     },
   };
+}
+
+export type SemanticPathFromAnchorOptions = {
+  ontology: BindTomeSemanticPathOptions["ontology"];
+  startType: string;
+  asScalar?: boolean;
+  prefix?: string;
+};
+
+/**
+ * Filter to an anchor node, then navigate/project via semantic path tokens.
+ * Prefer this over hand-wiring traverse + project chains when a type context is known.
+ */
+export function semanticPathFromAnchorGraph(
+  anchorNodeId: string,
+  tokens: readonly string[],
+  options: SemanticPathFromAnchorOptions,
+): ImpGraph {
+  const prefix = options.prefix ?? "sem";
+  const equalsLeft = "equals_left";
+  const equalsRight = "equals_right";
+  const filter = "filter";
+  const equals = "equals";
+  const output = "output";
+
+  const base: ImpGraph = {
+    nodes: {
+      input: { id: "input", type: "input", inputs: {} },
+      [equalsLeft]: { id: equalsLeft, type: "column", inputs: { name: "id" } },
+      [equalsRight]: literalNode(equalsRight, anchorNodeId),
+      [equals]: { id: equals, type: "equals", inputs: {} },
+      [filter]: { id: filter, type: "filter", inputs: {} },
+      [output]: { id: output, type: "output", inputs: {} },
+    },
+    edges: {
+      e1: edge("input", "value", filter, "collection"),
+      e4: edge(equalsLeft, "value", equals, "left"),
+      e5: edge(equalsRight, "value", equals, "right"),
+      e6: edge(equals, "value", filter, "predicate"),
+    },
+  };
+
+  const bound = bindTomeSemanticPath(tokens, {
+    ontology: options.ontology,
+    startType: options.startType,
+    prefix,
+    source: { node: filter, port: "collection" },
+    asScalar: options.asScalar,
+  });
+
+  const merged = mergeDesugarIntoGraph(base, bound) as ImpGraph;
+  merged.edges[`${prefix}_to_output`] = {
+    from: bound.collection,
+    to: { node: output, port: "value" },
+  };
+  return merged;
 }
 
 export const standardImpGraphs = {
@@ -192,6 +260,7 @@ export const standardImpGraphs = {
   search: searchNodesGraph,
   outgoingRelationships: outgoingRelationshipsGraph,
   incomingRelationships: incomingRelationshipsGraph,
+  semanticPathFromAnchor: semanticPathFromAnchorGraph,
 } as const;
 
 export type StandardImpGraphName = keyof typeof standardImpGraphs;

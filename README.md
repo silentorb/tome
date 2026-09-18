@@ -79,7 +79,7 @@ flowchart TB
 
 ## Development
 
-This repo is typically opened via **silentorb-workbench**, which bind-mounts `tome` and a domain repo (e.g. marloth-story) and runs the editor in a Compose `tome` service built from [`docker/Dockerfile.dev`](./docker/Dockerfile.dev).
+When modifying Tome, this repo is typically opened via **silentorb-workbench**, which bind-mounts `tome` and a domain repo (e.g. marloth-story) and runs the editor in a Compose `tome` service built from [`docker/Dockerfile.dev`](./docker/Dockerfile.dev).
 
 Standalone (with `TOME_CONTENT_PATH` set):
 

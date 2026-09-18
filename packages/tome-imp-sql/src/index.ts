@@ -24,3 +24,9 @@ export {
   type CompiledTomeImpSql,
   type CompileImpGraphToTomeSqlOptions,
 } from "./compile";
+export {
+  TOME_PATH_PROMOTED_PROPERTIES,
+  createTomePathOntology,
+  bindTomeSemanticPath,
+  type BindTomeSemanticPathOptions,
+} from "./path-ontology";
