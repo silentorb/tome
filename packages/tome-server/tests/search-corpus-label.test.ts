@@ -60,7 +60,10 @@ function seedCorpus(
 }
 
 describe("search corpusLabel enrichment", () => {
-  test("labels foreign hits when activeCorpusId is set in a multi-corpus session", () => {
+  // Full weighted suite can make SQLite sync + search exceed the default 5s.
+  test(
+    "labels foreign hits when activeCorpusId is set in a multi-corpus session",
+    () => {
     const temp = mkdtempSync(join(tmpdir(), "tome-search-corpus-label-"));
     try {
       const contentA = seedCorpus(join(temp, "a"), HOME_A, ARCHIVE_A, "Corpus A");
@@ -90,9 +93,13 @@ describe("search corpusLabel enrichment", () => {
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }
-  });
+  },
+    30_000,
+  );
 
-  test("never sets corpusLabel in a solo corpus session", () => {
+  test(
+    "never sets corpusLabel in a solo corpus session",
+    () => {
     const temp = mkdtempSync(join(tmpdir(), "tome-search-corpus-label-solo-"));
     try {
       const contentA = seedCorpus(join(temp, "a"), HOME_A, ARCHIVE_A, "Corpus A");
@@ -110,5 +117,7 @@ describe("search corpusLabel enrichment", () => {
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }
-  });
+  },
+    30_000,
+  );
 });
