@@ -31,6 +31,7 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 - Run tests: `bun run test` at repo root (weighted gate via [`scripts/run-weighted-tests.ts`](./scripts/run-weighted-tests.ts); typecheck first). Strict all-or-nothing: `bun run test:raw`. See [`docs/features/testing.md`](./docs/features/testing.md).
 - Typecheck only: `bun run typecheck` at repo root (all workspace packages with a `typecheck` script, including Imp via `../imp-ts/packages/*`). Treat typecheck failures as blocking when changing TypeScript.
 - Feature specs: [`docs/features/`](./docs/features/) (read only the doc matching your task).
+- Optional backlog: [`tasks/`](./tasks/) — Git-tracked ideas; not required for every change.
 - Package notes: each package's `README.md` (context) and `AGENTS.md` (implementation).
 - TypeScript-to-TypeScript imports are extensionless (no `.ts` suffix).
 - **SQLite schema:** do not add JSON bag columns for structured maps by default — see [`packages/tome-sqlite/AGENTS.md`](./packages/tome-sqlite/AGENTS.md) (user approval required for exceptions).
