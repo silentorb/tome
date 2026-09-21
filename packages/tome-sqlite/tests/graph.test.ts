@@ -427,4 +427,110 @@ describe("GraphDatabase", () => {
 
     db.close();
   });
+
+  test("windows composed membership with scope filter, groups, and LIMIT OFFSET", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "composed-window.sqlite");
+    const db = new GraphDatabase(dbPath);
+    const setId = "01SET0000000000000000000000";
+    const setProjection = "assocSet:0";
+    const memberProjection = "assocSet:1";
+    const scopeType = "assocScope:0";
+    const groupType = "assocGroup:0";
+    const groupSetId = "01GROUPSET0000000000000000";
+    const groupSetProjection = "assocGSet:0";
+    const groupMemberProjection = "assocGSet:1";
+    const groupToScopeType = "assocGScope:0";
+    const bookA = "01BOOKA0000000000000000000";
+    const bookB = "01BOOKB0000000000000000000";
+    const part1 = "01PART10000000000000000000";
+    const part2 = "01PART20000000000000000000";
+
+    db.upsertNode(setId, { title: "Scenes" });
+    db.upsertNode(groupSetId, { title: "Parts" });
+    db.upsertNode(bookA, { title: "Book A" });
+    db.upsertNode(bookB, { title: "Book B" });
+    db.upsertNode(part1, { title: "Part 1" });
+    db.upsertNode(part2, { title: "Part 2" });
+    db.upsertRelationship(groupSetId, part1, groupSetProjection, { order: 10 });
+    db.upsertRelationship(groupSetId, part2, groupSetProjection, { order: 20 });
+    db.upsertRelationship(part1, bookA, groupToScopeType, {});
+    db.upsertRelationship(part2, bookA, groupToScopeType, {});
+
+    for (let i = 0; i < 6; i++) {
+      const id = `01SCENE${String(i).padStart(19, "0")}`;
+      db.upsertNode(id, { title: `Scene ${i}` });
+      db.upsertRelationship(setId, id, setProjection, { order: (i + 1) * 10 });
+      const book = i < 4 ? bookA : bookB;
+      db.upsertRelationship(id, book, scopeType, {});
+      if (i < 4) {
+        db.upsertRelationship(id, i < 2 ? part1 : part2, groupType, {});
+      }
+    }
+
+    const scopes = db.listDistinctSetMemberScopeIds(setId, {
+      projections: [{ setProjection, memberProjection }],
+      scopeProjectionType: scopeType,
+    });
+    expect(scopes.map((s) => s.id).sort()).toEqual([bookA, bookB].sort());
+
+    const headers = db.listComposedGroupHeaders({
+      groupTypeDatabaseId: groupSetId,
+      groupSetProjections: [
+        { setProjection: groupSetProjection, memberProjection: groupMemberProjection },
+      ],
+      groupToScopeProjectionType: groupToScopeType,
+      scopeNodeId: bookA,
+    });
+    expect(headers.map((h) => h.id)).toEqual([part1, part2]);
+
+    const page0 = db.listComposedSetMemberRowConnectionsWindow(setId, {
+      projections: [{ setProjection, memberProjection }],
+      scope: { projectionType: scopeType, scopeNodeId: bookA },
+      groups: {
+        memberToGroupProjectionType: groupType,
+        groupTypeDatabaseId: groupSetId,
+        groupSetProjections: [
+          { setProjection: groupSetProjection, memberProjection: groupMemberProjection },
+        ],
+        groupToScopeProjectionType: groupToScopeType,
+        scopeNodeId: bookA,
+        canonicalGroupByTitle: true,
+      },
+      defaultOrdered: true,
+      limit: 2,
+      offset: 0,
+    });
+    expect(page0.total).toBe(4);
+    expect(page0.relationships).toHaveLength(2);
+    expect(page0.groupIds).toEqual([part1, part1]);
+    expect(page0.relationships.map((r) => r.sourceNodeId)).toEqual([
+      "01SCENE0000000000000000000",
+      "01SCENE0000000000000000001",
+    ]);
+
+    const page1 = db.listComposedSetMemberRowConnectionsWindow(setId, {
+      projections: [{ setProjection, memberProjection }],
+      scope: { projectionType: scopeType, scopeNodeId: bookA },
+      groups: {
+        memberToGroupProjectionType: groupType,
+        groupTypeDatabaseId: groupSetId,
+        groupSetProjections: [
+          { setProjection: groupSetProjection, memberProjection: groupMemberProjection },
+        ],
+        groupToScopeProjectionType: groupToScopeType,
+        scopeNodeId: bookA,
+      },
+      defaultOrdered: true,
+      limit: 2,
+      offset: 2,
+    });
+    expect(page1.groupIds).toEqual([part2, part2]);
+    expect(page1.relationships.map((r) => r.sourceNodeId)).toEqual([
+      "01SCENE0000000000000000002",
+      "01SCENE0000000000000000003",
+    ]);
+
+    db.close();
+  });
 });

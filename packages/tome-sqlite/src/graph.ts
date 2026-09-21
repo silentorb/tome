@@ -11,6 +11,13 @@ import type {
   RelationshipRecordRow,
   SetMemberWindowQuery,
   SetMemberWindowResult,
+  DistinctSetMemberScopeQuery,
+  DistinctSetMemberScopeRow,
+  ComposedMemberWindowQuery,
+  ComposedMemberWindowResult,
+  ComposedGroupHeadersQuery,
+  ComposedGroupHeaderRow,
+  SetMemberProjectionPair,
   TomeQueryCache,
 } from "tome-service-interfaces";
 import {
@@ -93,6 +100,74 @@ function buildOutgoingProjectionOrderBy(
 }
 
 type MemberOrderBy = { sql: string; params: SQLQueryBindings[] };
+
+type MembershipCte = { sql: string; params: SQLQueryBindings[] };
+
+/** Shared membership union + dedupe CTE used by Items and composed windows. */
+function buildMembershipCte(
+  setId: string,
+  pairs: readonly SetMemberProjectionPair[],
+): MembershipCte | null {
+  const unionParts: string[] = [];
+  const unionParams: SQLQueryBindings[] = [];
+  for (const pair of pairs) {
+    const setProjection = pair.setProjection?.trim();
+    const memberProjection = pair.memberProjection?.trim();
+    if (!setProjection || !memberProjection) continue;
+    unionParts.push(
+      `SELECT rp.id, rp.record_id, rp.target_node_id AS member_id, rp.source_node_id AS set_id,
+              rp.type, rp.ordinal, rp."order", rp.priority, 0 AS side_rank
+       FROM relationship_projections rp
+       WHERE rp.source_node_id = ? AND rp.type = ?`,
+    );
+    unionParams.push(setId, setProjection);
+    unionParts.push(
+      `SELECT rp.id, rp.record_id, rp.source_node_id AS member_id, rp.target_node_id AS set_id,
+              rp.type, rp.ordinal, rp."order", rp.priority, 1 AS side_rank
+       FROM relationship_projections rp
+       WHERE rp.target_node_id = ? AND rp.type = ?`,
+    );
+    unionParams.push(setId, memberProjection);
+  }
+  if (unionParts.length === 0) return null;
+
+  return {
+    sql: `
+      WITH membership AS (
+        ${unionParts.join("\nUNION ALL\n")}
+      ),
+      ranked AS (
+        SELECT *,
+          ROW_NUMBER() OVER (PARTITION BY member_id ORDER BY side_rank ASC, id ASC) AS rn
+        FROM membership
+      ),
+      members AS (
+        SELECT id, record_id, member_id, set_id, type, ordinal, "order", priority
+        FROM ranked
+        WHERE rn = 1
+      )`,
+    params: unionParams,
+  };
+}
+
+function parseLimitOffset(query: {
+  limit?: number | null;
+  offset?: number;
+}): { limit: number | null; offset: number } {
+  const offsetRaw = query.offset;
+  const offset =
+    typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
+      ? Math.floor(offsetRaw)
+      : 0;
+  const limitRaw = query.limit;
+  const limit =
+    limitRaw === undefined || limitRaw === null
+      ? null
+      : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
+        ? Math.floor(limitRaw)
+        : null;
+  return { limit, offset };
+}
 
 function buildSetMemberOrderBy(
   sorts: readonly { column: string; direction: "asc" | "desc" }[] | undefined,
@@ -1009,55 +1084,14 @@ export class GraphDatabase implements TomeQueryCache {
     setId: string,
     query: SetMemberWindowQuery,
   ): SetMemberWindowResult {
-    const pairs = query.projections ?? [];
-    if (pairs.length === 0) {
+    const membership = buildMembershipCte(setId, query.projections ?? []);
+    if (!membership) {
       return { relationships: [], total: 0 };
     }
-
-    const unionParts: string[] = [];
-    const unionParams: SQLQueryBindings[] = [];
-    for (const pair of pairs) {
-      const setProjection = pair.setProjection?.trim();
-      const memberProjection = pair.memberProjection?.trim();
-      if (!setProjection || !memberProjection) continue;
-      unionParts.push(
-        `SELECT rp.id, rp.record_id, rp.target_node_id AS member_id, rp.source_node_id AS set_id,
-                rp.type, rp.ordinal, rp."order", rp.priority, 0 AS side_rank
-         FROM relationship_projections rp
-         WHERE rp.source_node_id = ? AND rp.type = ?`,
-      );
-      unionParams.push(setId, setProjection);
-      unionParts.push(
-        `SELECT rp.id, rp.record_id, rp.source_node_id AS member_id, rp.target_node_id AS set_id,
-                rp.type, rp.ordinal, rp."order", rp.priority, 1 AS side_rank
-         FROM relationship_projections rp
-         WHERE rp.target_node_id = ? AND rp.type = ?`,
-      );
-      unionParams.push(setId, memberProjection);
-    }
-    if (unionParts.length === 0) {
-      return { relationships: [], total: 0 };
-    }
-
-    const membershipCte = unionParts.join("\nUNION ALL\n");
-    const dedupedCte = `
-      WITH membership AS (
-        ${membershipCte}
-      ),
-      ranked AS (
-        SELECT *,
-          ROW_NUMBER() OVER (PARTITION BY member_id ORDER BY side_rank ASC, id ASC) AS rn
-        FROM membership
-      ),
-      members AS (
-        SELECT id, record_id, member_id, set_id, type, ordinal, "order", priority
-        FROM ranked
-        WHERE rn = 1
-      )`;
 
     const totalRow = this.db
-      .prepare(`${dedupedCte} SELECT COUNT(*) AS c FROM members`)
-      .get(...unionParams) as { c: number };
+      .prepare(`${membership.sql} SELECT COUNT(*) AS c FROM members`)
+      .get(...membership.params) as { c: number };
     const total = totalRow.c;
 
     const { sql: orderBySql, params: orderParams } = buildSetMemberOrderBy(
@@ -1066,27 +1100,16 @@ export class GraphDatabase implements TomeQueryCache {
       Boolean(query.defaultOrdered),
     );
 
-    const offsetRaw = query.offset;
-    const offset =
-      typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
-        ? Math.floor(offsetRaw)
-        : 0;
-    const limitRaw = query.limit;
-    const limit =
-      limitRaw === undefined || limitRaw === null
-        ? null
-        : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
-          ? Math.floor(limitRaw)
-          : null;
+    const { limit, offset } = parseLimitOffset(query);
 
-    const selectSql = `${dedupedCte}
+    const selectSql = `${membership.sql}
       SELECT m.id, m.record_id, m.member_id AS source_node_id, m.set_id AS target_node_id,
              m.type, m.ordinal, m."order", m.priority
       FROM members m
       LEFT JOIN nodes n ON n.id = m.member_id
       ${orderBySql}`;
 
-    const selectParams = [...unionParams, ...orderParams];
+    const selectParams = [...membership.params, ...orderParams];
     let rows: ProjectionRow[];
     if (limit === null) {
       rows = this.db.prepare(selectSql).all(...selectParams) as ProjectionRow[];
@@ -1100,6 +1123,376 @@ export class GraphDatabase implements TomeQueryCache {
       relationships: this.mapProjectionRows(rows),
       total,
     };
+  }
+
+  listDistinctSetMemberScopeIds(
+    setId: string,
+    query: DistinctSetMemberScopeQuery,
+  ): DistinctSetMemberScopeRow[] {
+    const membership = buildMembershipCte(setId, query.projections ?? []);
+    if (!membership) return [];
+
+    const scopeType = query.scopeProjectionType?.trim();
+    if (!scopeType) return [];
+
+    const orderTypes = (query.scopeOrderProjectionTypes ?? [])
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+
+    let orderExpr = "999";
+    const orderParams: SQLQueryBindings[] = [];
+    if (orderTypes.length > 0) {
+      const placeholders = orderTypes.map(() => "?").join(", ");
+      orderExpr = `COALESCE(
+        (SELECT rp."order" FROM relationship_projections rp
+         WHERE rp.source_node_id = s.scope_id AND rp.type IN (${placeholders})
+           AND rp."order" IS NOT NULL
+         ORDER BY rp."order" ASC LIMIT 1),
+        999
+      )`;
+      orderParams.push(...orderTypes);
+    }
+
+    const titleSql = `COALESCE(NULLIF(n.title, ''), NULLIF(n.alias, ''), 'Untitled')`;
+    const sql = `${membership.sql},
+      scopes AS (
+        SELECT DISTINCT sp.target_node_id AS scope_id
+        FROM members m
+        INNER JOIN relationship_projections sp
+          ON sp.source_node_id = m.member_id AND sp.type = ?
+        UNION
+        SELECT DISTINCT sp.source_node_id AS scope_id
+        FROM members m
+        INNER JOIN relationship_projections sp
+          ON sp.target_node_id = m.member_id AND sp.type = ?
+      )
+      SELECT s.scope_id AS id,
+             ${titleSql} AS title,
+             ${orderExpr} AS sort_key
+      FROM scopes s
+      LEFT JOIN nodes n ON n.id = s.scope_id
+      ORDER BY sort_key ASC, title COLLATE NOCASE ASC, s.scope_id ASC`;
+
+    const rows = this.db
+      .prepare(sql)
+      .all(...membership.params, scopeType, scopeType, ...orderParams) as {
+      id: string;
+      title: string;
+      sort_key: number;
+    }[];
+
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      sortKey: typeof row.sort_key === "number" ? row.sort_key : Number(row.sort_key) || 999,
+    }));
+  }
+
+  listComposedGroupHeaders(query: ComposedGroupHeadersQuery): ComposedGroupHeaderRow[] {
+    const groupSetId = query.groupTypeDatabaseId?.trim();
+    if (!groupSetId) return [];
+
+    const membership = buildMembershipCte(groupSetId, query.groupSetProjections ?? []);
+    if (!membership) return [];
+
+    const scopeType = query.groupToScopeProjectionType?.trim();
+    const scopeId = query.scopeNodeId?.trim();
+    const filterByScope = Boolean(scopeType && scopeId);
+
+    const scopeFilterSql = filterByScope
+      ? `WHERE (
+           EXISTS (
+             SELECT 1 FROM relationship_projections gsp
+             WHERE gsp.source_node_id = m.member_id AND gsp.type = ? AND gsp.target_node_id = ?
+           )
+           OR EXISTS (
+             SELECT 1 FROM relationship_projections gsp
+             WHERE gsp.target_node_id = m.member_id AND gsp.type = ? AND gsp.source_node_id = ?
+           )
+         )`
+      : "";
+
+    const titleSql = `COALESCE(NULLIF(n.title, ''), NULLIF(n.alias, ''), 'Untitled')`;
+    const sortKeySql = `COALESCE(
+      (SELECT rp."order" FROM relationship_projections rp
+       WHERE rp.source_node_id = m.member_id AND rp.target_node_id = ?
+         AND rp."order" IS NOT NULL
+       ORDER BY rp."order" ASC LIMIT 1),
+      (SELECT rp."order" FROM relationship_projections rp
+       WHERE rp.target_node_id = m.member_id AND rp.source_node_id = ?
+         AND rp."order" IS NOT NULL
+       ORDER BY rp."order" ASC LIMIT 1),
+      999
+    )`;
+
+    const sql = `${membership.sql}
+      SELECT m.member_id AS id,
+             ${titleSql} AS title,
+             ${sortKeySql} AS sort_key
+      FROM members m
+      LEFT JOIN nodes n ON n.id = m.member_id
+      ${scopeFilterSql}
+      ORDER BY sort_key ASC, title COLLATE NOCASE ASC, m.member_id ASC`;
+
+    const params: SQLQueryBindings[] = [...membership.params, groupSetId, groupSetId];
+    if (filterByScope && scopeType && scopeId) {
+      params.push(scopeType, scopeId, scopeType, scopeId);
+    }
+
+    const rows = this.db.prepare(sql).all(...params) as {
+      id: string;
+      title: string;
+      sort_key: number;
+    }[];
+
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      sortKey: typeof row.sort_key === "number" ? row.sort_key : Number(row.sort_key) || 999,
+    }));
+  }
+
+  listComposedSetMemberRowConnectionsWindow(
+    setId: string,
+    query: ComposedMemberWindowQuery,
+  ): ComposedMemberWindowResult {
+    const membership = buildMembershipCte(setId, query.projections ?? []);
+    if (!membership) {
+      return { relationships: [], groupIds: [], total: 0 };
+    }
+
+    const scopeType = query.scope?.projectionType?.trim();
+    const scopeId = query.scope?.scopeNodeId?.trim();
+    const hasScope = Boolean(scopeType && scopeId);
+
+    const groups = query.groups;
+    const memberToGroupType = groups?.memberToGroupProjectionType?.trim() ?? "";
+    const groupTypeDatabaseId = groups?.groupTypeDatabaseId?.trim() ?? "";
+    const hasGroups = Boolean(memberToGroupType && groupTypeDatabaseId);
+    const groupToScopeType = groups?.groupToScopeProjectionType?.trim();
+    const groupScopeId = (groups?.scopeNodeId ?? query.scope?.scopeNodeId)?.trim();
+    const filterGroupScope = Boolean(hasGroups && groupToScopeType && groupScopeId);
+    const canonical = hasGroups && groups?.canonicalGroupByTitle !== false;
+    const defaultOrdered = Boolean(query.defaultOrdered);
+    const titleSql = `COALESCE(NULLIF(n.title, ''), NULLIF(n.alias, ''), 'Untitled')`;
+    const groupTitleSql = `COALESCE(NULLIF(gn.title, ''), NULLIF(gn.alias, ''), 'Untitled')`;
+
+    const params: SQLQueryBindings[] = [...membership.params];
+    let withSql = membership.sql.trim();
+
+    if (hasScope && scopeType && scopeId) {
+      withSql += `,
+      scoped_members AS (
+        SELECT m.*
+        FROM members m
+        WHERE EXISTS (
+          SELECT 1 FROM relationship_projections sp
+          WHERE sp.source_node_id = m.member_id AND sp.type = ? AND sp.target_node_id = ?
+        )
+        OR EXISTS (
+          SELECT 1 FROM relationship_projections sp
+          WHERE sp.target_node_id = m.member_id AND sp.type = ? AND sp.source_node_id = ?
+        )
+      )`;
+      params.push(scopeType, scopeId, scopeType, scopeId);
+    } else {
+      withSql += `,
+      scoped_members AS (SELECT * FROM members)`;
+    }
+
+    if (hasGroups) {
+      const groupPairs = groups?.groupSetProjections ?? [];
+      const groupUnion: string[] = [];
+      const groupParams: SQLQueryBindings[] = [];
+      for (const pair of groupPairs) {
+        const setProjection = pair.setProjection?.trim();
+        const memberProjection = pair.memberProjection?.trim();
+        if (!setProjection || !memberProjection) continue;
+        groupUnion.push(
+          `SELECT rp.target_node_id AS group_id, rp."order" AS group_order, 0 AS side_rank, rp.id AS edge_id
+           FROM relationship_projections rp
+           WHERE rp.source_node_id = ? AND rp.type = ?`,
+        );
+        groupParams.push(groupTypeDatabaseId, setProjection);
+        groupUnion.push(
+          `SELECT rp.source_node_id AS group_id, rp."order" AS group_order, 1 AS side_rank, rp.id AS edge_id
+           FROM relationship_projections rp
+           WHERE rp.target_node_id = ? AND rp.type = ?`,
+        );
+        groupParams.push(groupTypeDatabaseId, memberProjection);
+      }
+
+      if (groupUnion.length === 0) {
+        withSql += `,
+      member_with_group AS (
+        SELECT sm.*, CAST(NULL AS TEXT) AS group_id, CAST(NULL AS REAL) AS group_sort_key,
+               CAST(NULL AS TEXT) AS group_title
+        FROM scoped_members sm
+      )`;
+      } else {
+        withSql += `,
+      group_membership AS (
+        ${groupUnion.join("\nUNION ALL\n")}
+      ),
+      group_ranked AS (
+        SELECT *,
+          ROW_NUMBER() OVER (PARTITION BY group_id ORDER BY side_rank ASC, edge_id ASC) AS rn
+        FROM group_membership
+      ),
+      group_headers AS (
+        SELECT gr.group_id,
+               COALESCE(gr.group_order, 999) AS sort_key,
+               ${groupTitleSql} AS title
+        FROM group_ranked gr
+        LEFT JOIN nodes gn ON gn.id = gr.group_id
+        WHERE gr.rn = 1`;
+        params.push(...groupParams);
+
+        if (filterGroupScope && groupToScopeType && groupScopeId) {
+          withSql += `
+          AND (
+            EXISTS (
+              SELECT 1 FROM relationship_projections gsp
+              WHERE gsp.source_node_id = gr.group_id AND gsp.type = ? AND gsp.target_node_id = ?
+            )
+            OR EXISTS (
+              SELECT 1 FROM relationship_projections gsp
+              WHERE gsp.target_node_id = gr.group_id AND gsp.type = ? AND gsp.source_node_id = ?
+            )
+          )`;
+          params.push(groupToScopeType, groupScopeId, groupToScopeType, groupScopeId);
+        }
+
+        const canonicalBranch = canonical
+          ? `WHEN (
+               SELECT cg.canonical_id FROM nodes rn
+               INNER JOIN canonical_groups cg
+                 ON cg.title_key = lower(trim(
+                   COALESCE(NULLIF(rn.title, ''), NULLIF(rn.alias, ''), 'Untitled')
+                 ))
+               WHERE rn.id = rmg.raw_group_id
+               LIMIT 1
+             ) IS NOT NULL
+            THEN (
+               SELECT cg.canonical_id FROM nodes rn
+               INNER JOIN canonical_groups cg
+                 ON cg.title_key = lower(trim(
+                   COALESCE(NULLIF(rn.title, ''), NULLIF(rn.alias, ''), 'Untitled')
+                 ))
+               WHERE rn.id = rmg.raw_group_id
+               LIMIT 1
+            )`
+          : "";
+
+        withSql += `
+      ),
+      canonical_groups AS (
+        SELECT title_key, group_id AS canonical_id
+        FROM (
+          SELECT lower(trim(title)) AS title_key, group_id,
+            ROW_NUMBER() OVER (
+              PARTITION BY lower(trim(title))
+              ORDER BY sort_key ASC, title COLLATE NOCASE ASC, group_id ASC
+            ) AS rn
+          FROM group_headers
+        ) WHERE rn = 1
+      ),
+      raw_member_group AS (
+        SELECT sm.member_id,
+          COALESCE(
+            (
+              SELECT sp.target_node_id FROM relationship_projections sp
+              WHERE sp.source_node_id = sm.member_id AND sp.type = ?
+              ORDER BY sp.id ASC LIMIT 1
+            ),
+            (
+              SELECT sp.source_node_id FROM relationship_projections sp
+              WHERE sp.target_node_id = sm.member_id AND sp.type = ?
+              ORDER BY sp.id ASC LIMIT 1
+            )
+          ) AS raw_group_id
+        FROM scoped_members sm
+      ),
+      resolved_member_group AS (
+        SELECT rmg.member_id,
+          CASE
+            WHEN rmg.raw_group_id IS NULL THEN NULL
+            WHEN EXISTS (SELECT 1 FROM group_headers gh WHERE gh.group_id = rmg.raw_group_id)
+              THEN rmg.raw_group_id
+            ${canonicalBranch}
+            ELSE NULL
+          END AS group_id
+        FROM raw_member_group rmg
+      ),
+      member_with_group AS (
+        SELECT sm.*,
+               rmg.group_id AS group_id,
+               gh.sort_key AS group_sort_key,
+               gh.title AS group_title
+        FROM scoped_members sm
+        LEFT JOIN resolved_member_group rmg ON rmg.member_id = sm.member_id
+        LEFT JOIN group_headers gh ON gh.group_id = rmg.group_id
+      )`;
+        params.push(memberToGroupType, memberToGroupType);
+      }
+    } else {
+      withSql += `,
+      member_with_group AS (
+        SELECT sm.*, CAST(NULL AS TEXT) AS group_id, CAST(NULL AS REAL) AS group_sort_key,
+               CAST(NULL AS TEXT) AS group_title
+        FROM scoped_members sm
+      )`;
+    }
+
+    const totalRow = this.db
+      .prepare(`${withSql} SELECT COUNT(*) AS c FROM member_with_group`)
+      .get(...params) as { c: number };
+    const total = totalRow.c;
+
+    const orderClauses: string[] = [];
+    if (hasGroups) {
+      orderClauses.push("CASE WHEN mwg.group_id IS NULL THEN 1 ELSE 0 END ASC");
+      orderClauses.push("COALESCE(mwg.group_sort_key, 999) ASC");
+      orderClauses.push("COALESCE(mwg.group_title, '') COLLATE NOCASE ASC");
+    }
+    if (defaultOrdered) {
+      orderClauses.push(`CASE WHEN mwg."order" IS NULL THEN 1 ELSE 0 END ASC`);
+      orderClauses.push(`mwg."order" ASC`);
+    }
+    orderClauses.push(`${titleSql} COLLATE NOCASE ASC`);
+    orderClauses.push("mwg.id ASC");
+    const orderBySql = `ORDER BY ${orderClauses.join(", ")}`;
+
+    const { limit, offset } = parseLimitOffset(query);
+
+    const selectSql = `${withSql}
+      SELECT mwg.id, mwg.record_id, mwg.member_id AS source_node_id, mwg.set_id AS target_node_id,
+             mwg.type, mwg.ordinal, mwg."order", mwg.priority,
+             mwg.group_id AS resolved_group_id
+      FROM member_with_group mwg
+      LEFT JOIN nodes n ON n.id = mwg.member_id
+      ${orderBySql}`;
+
+    type Row = ProjectionRow & { resolved_group_id: string | null };
+    let rows: Row[];
+    if (limit === null) {
+      rows = this.db.prepare(selectSql).all(...params) as Row[];
+    } else {
+      rows = this.db
+        .prepare(`${selectSql} LIMIT ? OFFSET ?`)
+        .all(...params, limit, offset) as Row[];
+    }
+
+    const relationships = this.mapProjectionRows(rows);
+    const groupIds = hasGroups
+      ? rows.map((row) =>
+          typeof row.resolved_group_id === "string" && row.resolved_group_id
+            ? row.resolved_group_id
+            : null,
+        )
+      : [];
+
+    return { relationships, groupIds, total };
   }
 
   countIncidentRelationships(nodeId: string): number {

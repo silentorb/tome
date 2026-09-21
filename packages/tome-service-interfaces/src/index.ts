@@ -373,6 +373,82 @@ export interface SetMemberWindowResult {
   total: number;
 }
 
+/** Scope discovery among set members (composed table tabs). */
+export interface DistinctSetMemberScopeQuery {
+  projections: SetMemberProjectionPair[];
+  /** Directed projection type from member → scope. */
+  scopeProjectionType: string;
+  /**
+   * Member-side projection types used on scope nodes for ordered-set membership sort
+   * (same role as JS `scopeMembershipSortKey`).
+   */
+  scopeOrderProjectionTypes?: string[];
+}
+
+export interface DistinctSetMemberScopeRow {
+  id: string;
+  title: string;
+  sortKey: number;
+}
+
+/** Optional scope filter for composed membership windows. */
+export interface ComposedMemberScopeFilter {
+  projectionType: string;
+  scopeNodeId: string;
+}
+
+/** Optional groups join / ORDER BY for composed membership windows. */
+export interface ComposedMemberGroupsQuery {
+  /** Directed projection type from member → group. */
+  memberToGroupProjectionType: string;
+  /** Group type-table id (set node for group headers). */
+  groupTypeDatabaseId: string;
+  /** Set-trait pairs for the group type table (membership edges). */
+  groupSetProjections: SetMemberProjectionPair[];
+  /** When set with scopeNodeId, only groups linked to that scope. */
+  groupToScopeProjectionType?: string;
+  scopeNodeId?: string;
+  /** Remap duplicate group nodes by title within the scoped header set (default true). */
+  canonicalGroupByTitle?: boolean;
+}
+
+/** Window + scope/group for composed / generated table presentations. */
+export interface ComposedMemberWindowQuery {
+  projections: SetMemberProjectionPair[];
+  scope?: ComposedMemberScopeFilter;
+  groups?: ComposedMemberGroupsQuery;
+  /** When true, ORDER BY membership `order` (within group when groups set). */
+  defaultOrdered?: boolean;
+  /** Omit or null → return the full ordered set (static export). */
+  limit?: number | null;
+  offset?: number;
+}
+
+export interface ComposedMemberWindowResult {
+  /** Membership edges normalized with member as `sourceNodeId` and set as `targetNodeId`. */
+  relationships: Relationship[];
+  /**
+   * Parallel to `relationships`: resolved group id, or `null` for unassigned.
+   * Empty array when `groups` was not requested.
+   */
+  groupIds: (string | null)[];
+  total: number;
+}
+
+/** Group headers for a composed presentation (optional scope filter). */
+export interface ComposedGroupHeadersQuery {
+  groupTypeDatabaseId: string;
+  groupSetProjections: SetMemberProjectionPair[];
+  groupToScopeProjectionType?: string;
+  scopeNodeId?: string;
+}
+
+export interface ComposedGroupHeaderRow {
+  id: string;
+  title: string;
+  sortKey: number;
+}
+
 export interface TomeQueryCache {
   readonly path: string;
 
@@ -466,6 +542,24 @@ export interface TomeQueryCache {
     setId: string,
     query: SetMemberWindowQuery,
   ): SetMemberWindowResult;
+  /**
+   * Distinct scope node ids among set members (composed scope tabs).
+   * Ordered by optional scope membership `order`, then title.
+   */
+  listDistinctSetMemberScopeIds(
+    setId: string,
+    query: DistinctSetMemberScopeQuery,
+  ): DistinctSetMemberScopeRow[];
+  /**
+   * Ordered window of set members for a composed presentation.
+   * Optional scope filter + group join/order run in SQL.
+   */
+  listComposedSetMemberRowConnectionsWindow(
+    setId: string,
+    query: ComposedMemberWindowQuery,
+  ): ComposedMemberWindowResult;
+  /** Group-type members for composed group headers (optional scope filter). */
+  listComposedGroupHeaders(query: ComposedGroupHeadersQuery): ComposedGroupHeaderRow[];
   countIncidentRelationships(nodeId: string): number;
   listDistinctRelationshipTypes(): string[];
 

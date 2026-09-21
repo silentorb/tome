@@ -109,7 +109,7 @@ When query results come from the **SQLite / Imp SQL** database:
 
 Editor table windows apply this rule with **binary routing**: SQL-expressible sorts use SQL windows; deferred modes (dynamic property **sorts**, table `q` / search relevance) keep the legacy full-materialize path until a dedicated design lands. Table `q` is an exploration hold for **next-level Tome search** — do not treat `LIKE` as the intended search architecture. Details: [views.md](./views.md) § Lazy-loaded rows.
 
-**Items / database custom views** use a parameterized cache API (`listSetMemberRowConnectionsWindow`) for set-membership windows — equivalent to Imp `sort` / `limit` / `offset`, not an extension of `typeMembersGraph` (which remains id-only for Imp consumers). Relation sections use `listRelationshipsFromSourceWindow`.
+**Items / database custom views** use a parameterized cache API (`listSetMemberRowConnectionsWindow`) for set-membership windows — equivalent to Imp `sort` / `limit` / `offset`, not an extension of `typeMembersGraph` (which remains id-only for Imp consumers). Relation sections use `listRelationshipsFromSourceWindow`. **Composed / generated presentations** use `listDistinctSetMemberScopeIds`, `listComposedSetMemberRowConnectionsWindow`, and `listComposedGroupHeaders` for scope tabs, scoped/grouped membership windows, and group headers.
 
 ## Quick start
 

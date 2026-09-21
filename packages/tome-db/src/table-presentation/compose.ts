@@ -1,12 +1,21 @@
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
-import { readStoreGetNode, readStoreListNodeIds } from "../graph-store/relationship-read";
 import {
+  listComposedGroupHeaders,
+  listComposedSetMemberRowConnectionsWindow,
+  listDistinctSetMemberScopeIds,
+  readStoreGetNode,
+} from "../graph-store/relationship-read";
+import {
+  isOrderedTraitComposite,
   loadAssociationsFromContent,
   loadViewsFromContent,
+  memberSideProjectionType,
   ORDERED_PROPERTY_DEFAULT,
   resolveContentPath,
   setRoleAssociationForNode,
   setRoleProjectionTypesForComposite,
+  SET_TRAIT,
+  typesWithTrait,
 } from "tome-flatfile";
 import { applyDynamicProperties } from "../dynamic-properties";
 import { hydrateRelationCellsForRows } from "../database-view-relations";
@@ -15,11 +24,21 @@ import type { EvalRow } from "../row-sort";
 import { applySectionColumnOrder } from "../views/column-order";
 import { resolveGeneratedTabsFromScopes } from "../views/resolve-tabs";
 import { perspectiveDisplayLabel } from "../association-label";
-import { listSetMemberRowConnections } from "../set-membership";
-import { applyNameFilterAndWindow } from "../table-rows-window";
+import {
+  listSetMemberProjectionPairs,
+  listSetMemberRowConnections,
+} from "../set-membership";
+import {
+  applyNameFilterAndWindow,
+  buildTableRowsWindow,
+  resolveWindowBounds,
+} from "../table-rows-window";
+import { shouldUseSqlComposedWindow } from "../table-sql-window";
 import type {
   DatabaseRow,
   DatabaseViewDetail,
+  Relationship,
+  RelationScopeTab,
   TablePresentationComposition,
   TableRowsQuery,
 } from "tome-graph-interfaces";
@@ -27,9 +46,11 @@ import { memberLinkPerspective, numericSortKey, titleFromProperties } from "./he
 import { discoverRelationScopes, memberMatchesScope } from "./relation-scope-tabs";
 import {
   buildRelationGroups,
+  buildRelationGroupsFromHeaders,
   groupsForScope,
   resolveMemberGroupId,
   windowRelationGroups,
+  type GroupHeader,
 } from "./relation-groups";
 import { loadSemanticRelatedPathContext } from "../semantic-related-ids";
 
@@ -57,30 +78,329 @@ function excludedKeys(composition: TablePresentationComposition): Set<string> {
   return keys;
 }
 
-/**
- * Build a database Items view with optional relation-scope tabs, relation groups,
- * and reorder presentation layers.
- */
-export function buildComposedDatabaseView(
-  db: RelationshipReadStore,
-  composition: TablePresentationComposition,
-  requestedTabId?: string,
-  contentDir?: string,
-  rowsQuery?: TableRowsQuery,
-): DatabaseViewDetail | null {
-  const dir = contentDir ?? resolveContentPath();
-  const database = readStoreGetNode(db, composition.typeDatabaseId);
-  if (!database) return null;
+function orderedSetMemberProjectionTypes(contentDir: string): string[] {
+  const registry = loadAssociationsFromContent(contentDir);
+  return typesWithTrait(registry, SET_TRAIT)
+    .filter((composite) => isOrderedTraitComposite(registry, composite))
+    .map((composite) => memberSideProjectionType(registry, composite));
+}
 
-  const databaseId = composition.typeDatabaseId;
-  const associationId = setRoleAssociationForNode(databaseId, dir);
-  const associations = loadAssociationsFromContent(dir);
-  const [setSideProjection, memberSidePerspective] = setRoleProjectionTypesForComposite(
-    associations,
+function evalRowsFromMembership(
+  db: RelationshipReadStore,
+  connections: Relationship[],
+  reorder: boolean,
+): EvalRow[] {
+  const evalRows: EvalRow[] = [];
+  let fallbackOrder = 0;
+  for (const connection of connections) {
+    const memberId = connection.sourceNodeId;
+    const page = db.getNode(memberId);
+    fallbackOrder += 10;
+    const rowIndex = reorder
+      ? numericSortKey(connection.properties[ORDERED_PROPERTY_DEFAULT], fallbackOrder)
+      : evalRows.length;
+    evalRows.push({
+      nodeId: memberId,
+      name: page ? titleFromProperties(page.properties) : "Untitled",
+      cells: cellsFromProperties(connection.properties),
+      rowIndex,
+      createdAt: null,
+      modifiedAt: null,
+    });
+  }
+  if (reorder) {
+    evalRows.sort((a, b) => {
+      if (a.rowIndex !== b.rowIndex) return a.rowIndex - b.rowIndex;
+      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+    });
+  }
+  return evalRows;
+}
+
+function finishComposedView(args: {
+  db: RelationshipReadStore;
+  composition: TablePresentationComposition;
+  databaseId: string;
+  databaseTitle: string;
+  dir: string;
+  associationId: string;
+  memberSidePerspective: string;
+  sectionLabel: string;
+  tabs: DatabaseViewDetail["tabs"];
+  activeScopeId: string | undefined;
+  evalRows: EvalRow[];
+  rowsWindow: DatabaseViewDetail["rowsWindow"];
+  memberGroupIds?: Map<string, string | null>;
+  groupHeaders?: GroupHeader[];
+}): DatabaseViewDetail {
+  const {
+    db,
+    composition,
+    databaseId,
+    databaseTitle,
+    dir,
+    associationId,
+    memberSidePerspective,
+    sectionLabel,
+    tabs,
+    activeScopeId,
+    evalRows,
+    rowsWindow,
+    memberGroupIds,
+    groupHeaders,
+  } = args;
+
+  const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
+    db,
+    databaseId,
+    "default",
+    evalRows,
+    undefined,
+    { contentDir: dir },
+  );
+
+  const excludeKeys = excludedKeys(composition);
+  const mergedColumnDefs = buildDatabaseColumnDefs(
+    db,
+    databaseId,
+    dynamicColumnDefs,
+    hiddenColumnKeys,
+    { excludeKeys, contentDir: dir },
+  );
+
+  const defaultColumns =
+    mergedColumnDefs.length > 0
+      ? mergedColumnDefs.map((col) => col.key)
+      : [...new Set(enrichedRows.flatMap((r) => Object.keys(r.cells)))].sort((a, b) =>
+          a.localeCompare(b),
+        );
+
+  const views = loadViewsFromContent(dir);
+  const { columns, columnDefs } = applySectionColumnOrder(
+    defaultColumns,
+    mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
+    views,
+    databaseId,
     associationId,
   );
-  const sectionLabel = perspectiveDisplayLabel(associations, setSideProjection, associationId);
 
+  hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, enrichedRows, dir);
+
+  const windowedRows: DatabaseRow[] = enrichedRows.map((row, index) => ({
+    rowIndex: rowsWindow.offset + index,
+    nodeId: row.nodeId,
+    name: row.name,
+    cells: normalizeRowCells(row.cells, mergedColumnDefs),
+    relationCells: row.relationCells,
+  }));
+
+  let groups = undefined as DatabaseViewDetail["groups"];
+  if (composition.groups) {
+    const includeEmpty = !rowsWindow.hasMore && rowsWindow.offset === 0;
+    if (groupHeaders && memberGroupIds) {
+      const fullGroups = buildRelationGroupsFromHeaders(
+        groupHeaders,
+        composition.groups,
+        windowedRows,
+        memberGroupIds,
+      );
+      groups = windowRelationGroups(fullGroups, windowedRows, includeEmpty);
+    }
+  }
+
+  const presentation: DatabaseViewDetail["presentation"] = {
+    compositionId: composition.id,
+    scopeId: activeScopeId,
+    reorderable: Boolean(composition.reorder),
+  };
+  if (composition.scope) {
+    presentation.scopeRelationType = memberLinkPerspective(
+      databaseId,
+      composition.scope.memberToScopeComposite,
+      dir,
+      `table-presentation "${composition.id}" scope`,
+    );
+  }
+  if (composition.groups) {
+    presentation.groupCompositeType = composition.groups.memberToGroupComposite;
+    presentation.groupRelationType = memberLinkPerspective(
+      databaseId,
+      composition.groups.memberToGroupComposite,
+      dir,
+      `table-presentation "${composition.id}" groups`,
+    );
+  }
+
+  const activeLabel =
+    tabs.items.find((item) => item.id === tabs.activeTabId)?.label ?? tabs.activeTabId;
+
+  return {
+    id: databaseId,
+    title: databaseTitle,
+    views: tabs.items.map((item) => item.label),
+    view: activeLabel || "default",
+    tabs,
+    viewAssociation: associationId,
+    memberSidePerspective,
+    sectionTitle: sectionLabel.trim() ? sectionLabel : "Contents",
+    allColumns: defaultColumns,
+    columns,
+    rows: windowedRows,
+    rowsWindow,
+    columnDefs,
+    allColumnDefs: mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
+    groups,
+    presentation,
+  };
+}
+
+function buildComposedDatabaseViewSql(
+  db: RelationshipReadStore,
+  composition: TablePresentationComposition,
+  requestedTabId: string | undefined,
+  dir: string,
+  rowsQuery: TableRowsQuery | undefined,
+  databaseId: string,
+  databaseTitle: string,
+  associationId: string,
+  memberSidePerspective: string,
+  sectionLabel: string,
+): DatabaseViewDetail {
+  const projections = listSetMemberProjectionPairs(dir);
+  const { offset, limit } = resolveWindowBounds(rowsQuery);
+
+  let activeScopeId: string | undefined;
+  let tabs: DatabaseViewDetail["tabs"];
+
+  if (composition.scope) {
+    const scopeProjectionType = memberLinkPerspective(
+      databaseId,
+      composition.scope.memberToScopeComposite,
+      dir,
+      `table-presentation "${composition.id}" scope`,
+    );
+    const scopeRows = listDistinctSetMemberScopeIds(db, databaseId, {
+      projections,
+      scopeProjectionType,
+      scopeOrderProjectionTypes: orderedSetMemberProjectionTypes(dir),
+    });
+    const scopes: RelationScopeTab[] = scopeRows.map((row) => ({
+      id: row.id,
+      name: row.title,
+    }));
+    tabs = resolveGeneratedTabsFromScopes(scopes, requestedTabId);
+    activeScopeId = tabs.activeTabId || undefined;
+  } else {
+    tabs = {
+      kind: "generated",
+      items: [],
+      activeTabId: "",
+    };
+  }
+
+  const scopeFilter =
+    composition.scope && activeScopeId
+      ? {
+          projectionType: memberLinkPerspective(
+            databaseId,
+            composition.scope.memberToScopeComposite,
+            dir,
+            `table-presentation "${composition.id}" scope`,
+          ),
+          scopeNodeId: activeScopeId,
+        }
+      : undefined;
+
+  const groupsQuery = composition.groups
+    ? {
+        memberToGroupProjectionType: memberLinkPerspective(
+          databaseId,
+          composition.groups.memberToGroupComposite,
+          dir,
+          `table-presentation "${composition.id}" groups`,
+        ),
+        groupTypeDatabaseId: composition.groups.groupTypeDatabaseId,
+        groupSetProjections: projections,
+        groupToScopeProjectionType: composition.groups.groupToScopeComposite
+          ? memberLinkPerspective(
+              composition.groups.groupTypeDatabaseId,
+              composition.groups.groupToScopeComposite,
+              dir,
+              `table-presentation "${composition.id}" groupToScope`,
+            )
+          : undefined,
+        scopeNodeId: activeScopeId,
+        canonicalGroupByTitle: composition.groups.canonicalGroupByTitle !== false,
+      }
+    : undefined;
+
+  const { relationships, groupIds, total } = listComposedSetMemberRowConnectionsWindow(
+    db,
+    databaseId,
+    {
+      projections,
+      scope: scopeFilter,
+      groups: groupsQuery,
+      defaultOrdered: Boolean(composition.reorder),
+      limit,
+      offset,
+    },
+  );
+
+  const evalRows = evalRowsFromMembership(db, relationships, false);
+  const rowsWindow = buildTableRowsWindow(offset, limit, total);
+
+  let memberGroupIds: Map<string, string | null> | undefined;
+  let groupHeaders: GroupHeader[] | undefined;
+  if (composition.groups && groupsQuery) {
+    memberGroupIds = new Map();
+    for (let i = 0; i < relationships.length; i++) {
+      const edge = relationships[i]!;
+      memberGroupIds.set(edge.sourceNodeId, groupIds[i] ?? null);
+    }
+    const headerRows = listComposedGroupHeaders(db, {
+      groupTypeDatabaseId: groupsQuery.groupTypeDatabaseId,
+      groupSetProjections: groupsQuery.groupSetProjections,
+      groupToScopeProjectionType: groupsQuery.groupToScopeProjectionType,
+      scopeNodeId: groupsQuery.scopeNodeId,
+    });
+    groupHeaders = headerRows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      sortKey: row.sortKey,
+    }));
+  }
+
+  return finishComposedView({
+    db,
+    composition,
+    databaseId,
+    databaseTitle,
+    dir,
+    associationId,
+    memberSidePerspective,
+    sectionLabel,
+    tabs,
+    activeScopeId,
+    evalRows,
+    rowsWindow,
+    memberGroupIds,
+    groupHeaders,
+  });
+}
+
+function buildComposedDatabaseViewLegacy(
+  db: RelationshipReadStore,
+  composition: TablePresentationComposition,
+  requestedTabId: string | undefined,
+  dir: string,
+  rowsQuery: TableRowsQuery | undefined,
+  databaseId: string,
+  databaseTitle: string,
+  associationId: string,
+  memberSidePerspective: string,
+  sectionLabel: string,
+): DatabaseViewDetail {
   const incoming = listSetMemberRowConnections(db, databaseId, dir);
 
   let activeScopeId: string | undefined;
@@ -108,8 +428,7 @@ export function buildComposedDatabaseView(
     };
   }
 
-  const evalRows: EvalRow[] = [];
-  let fallbackOrder = 0;
+  const scopedConnections: Relationship[] = [];
   for (const connection of incoming) {
     const memberId = connection.sourceNodeId;
     if (
@@ -127,29 +446,10 @@ export function buildComposedDatabaseView(
     ) {
       continue;
     }
-
-    const page = db.getNode(memberId);
-    fallbackOrder += 10;
-    const rowIndex = composition.reorder
-      ? numericSortKey(connection.properties[ORDERED_PROPERTY_DEFAULT], fallbackOrder)
-      : evalRows.length;
-
-    evalRows.push({
-      nodeId: memberId,
-      name: page ? titleFromProperties(page.properties) : "Untitled",
-      cells: cellsFromProperties(connection.properties),
-      rowIndex,
-      createdAt: null,
-      modifiedAt: null,
-    });
+    scopedConnections.push(connection);
   }
 
-  if (composition.reorder) {
-    evalRows.sort((a, b) => {
-      if (a.rowIndex !== b.rowIndex) return a.rowIndex - b.rowIndex;
-      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-    });
-  }
+  const evalRows = evalRowsFromMembership(db, scopedConnections, Boolean(composition.reorder));
 
   const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
     db,
@@ -302,7 +602,7 @@ export function buildComposedDatabaseView(
 
   return {
     id: databaseId,
-    title: titleFromProperties(database.properties),
+    title: databaseTitle,
     views: tabs.items.map((item) => item.label),
     view: activeLabel || "default",
     tabs,
@@ -318,4 +618,58 @@ export function buildComposedDatabaseView(
     groups,
     presentation,
   };
+}
+
+/**
+ * Build a database Items view with optional relation-scope tabs, relation groups,
+ * and reorder presentation layers.
+ */
+export function buildComposedDatabaseView(
+  db: RelationshipReadStore,
+  composition: TablePresentationComposition,
+  requestedTabId?: string,
+  contentDir?: string,
+  rowsQuery?: TableRowsQuery,
+): DatabaseViewDetail | null {
+  const dir = contentDir ?? resolveContentPath();
+  const database = readStoreGetNode(db, composition.typeDatabaseId);
+  if (!database) return null;
+
+  const databaseId = composition.typeDatabaseId;
+  const associationId = setRoleAssociationForNode(databaseId, dir);
+  const associations = loadAssociationsFromContent(dir);
+  const [setSideProjection, memberSidePerspective] = setRoleProjectionTypesForComposite(
+    associations,
+    associationId,
+  );
+  const sectionLabel = perspectiveDisplayLabel(associations, setSideProjection, associationId);
+  const databaseTitle = titleFromProperties(database.properties);
+
+  if (shouldUseSqlComposedWindow(db, rowsQuery)) {
+    return buildComposedDatabaseViewSql(
+      db,
+      composition,
+      requestedTabId,
+      dir,
+      rowsQuery,
+      databaseId,
+      databaseTitle,
+      associationId,
+      memberSidePerspective,
+      sectionLabel,
+    );
+  }
+
+  return buildComposedDatabaseViewLegacy(
+    db,
+    composition,
+    requestedTabId,
+    dir,
+    rowsQuery,
+    databaseId,
+    databaseTitle,
+    associationId,
+    memberSidePerspective,
+    sectionLabel,
+  );
 }

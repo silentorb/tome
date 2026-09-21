@@ -105,6 +105,8 @@ GET /api/nodes/:databaseId?tab=:scopeId
   → database section with groups + presentation
 ```
 
+**SQL windowing (SQLite cache):** when the store has a query cache and the request is not deferred (`q`), scope discovery, scope filter, group assignment/`canonicalGroupByTitle`, reorder sort, and `limit`/`offset` run in parameterized SQL (`listDistinctSetMemberScopeIds` / `listComposedSetMemberRowConnectionsWindow` / `listComposedGroupHeaders`). Dyn and relation **display** hydrate only the returned window. With `q`, or without a cache (flatfile), the full-materialize path remains (Imp related-id hops + `applyNameFilterAndWindow`). See [views.md](./views.md) § Lazy-loaded rows.
+
 Reorder:
 
 ```

@@ -87,6 +87,18 @@ export function shouldUseSqlDatabaseWindow(
   return getQueryCache(store) !== null;
 }
 
+/**
+ * Composed / generated presentations: SQL window when cache present and not deferred (`q`).
+ * Compose ignores column sorts (reorder = membership `order`).
+ */
+export function shouldUseSqlComposedWindow(
+  store: RelationshipReadStore,
+  query?: TableRowsQuery,
+): boolean {
+  if (tableRowsQueryUsesDeferredSearch(query)) return false;
+  return getQueryCache(store) !== null;
+}
+
 /** Map editor view sorts into cache window sorts (identity for relation edge keys). */
 export function relationWindowSortsFromQuery(
   query?: TableRowsQuery,

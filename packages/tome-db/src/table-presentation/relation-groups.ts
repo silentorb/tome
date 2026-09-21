@@ -149,6 +149,16 @@ export function buildRelationGroups(
 ): DatabaseRowGroup[] {
   const dir = contentDir ?? resolveContentPath();
   const headers = groupsForScope(db, config, scopeId, dir, pathContext);
+  return buildRelationGroupsFromHeaders(headers, config, rows, memberGroupIds);
+}
+
+/** Partition rows into group headers (including empty headers and unassigned). */
+export function buildRelationGroupsFromHeaders(
+  headers: GroupHeader[],
+  config: RelationGroupsLayerConfig,
+  rows: DatabaseRow[],
+  memberGroupIds: Map<string, string | null>,
+): DatabaseRowGroup[] {
   const rowsByGroup = new Map<string | null, DatabaseRow[]>();
 
   for (const row of rows) {

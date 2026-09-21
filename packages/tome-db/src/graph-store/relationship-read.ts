@@ -4,6 +4,12 @@ import type {
   RelationshipProjectionWindowResult,
   SetMemberWindowQuery,
   SetMemberWindowResult,
+  DistinctSetMemberScopeQuery,
+  DistinctSetMemberScopeRow,
+  ComposedMemberWindowQuery,
+  ComposedMemberWindowResult,
+  ComposedGroupHeadersQuery,
+  ComposedGroupHeaderRow,
   TomeQueryCache,
 } from "tome-service-interfaces";
 import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
@@ -110,6 +116,44 @@ export function listSetMemberRowConnectionsWindow(
     throw new Error("listSetMemberRowConnectionsWindow requires a SQLite query cache");
   }
   return cache.listSetMemberRowConnectionsWindow(setId, query);
+}
+
+/** Distinct scope ids among set members; throws if no query cache. */
+export function listDistinctSetMemberScopeIds(
+  store: RelationshipReadStore,
+  setId: string,
+  query: DistinctSetMemberScopeQuery,
+): DistinctSetMemberScopeRow[] {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listDistinctSetMemberScopeIds !== "function") {
+    throw new Error("listDistinctSetMemberScopeIds requires a SQLite query cache");
+  }
+  return cache.listDistinctSetMemberScopeIds(setId, query);
+}
+
+/** Composed membership window with optional scope/group; throws if no query cache. */
+export function listComposedSetMemberRowConnectionsWindow(
+  store: RelationshipReadStore,
+  setId: string,
+  query: ComposedMemberWindowQuery,
+): ComposedMemberWindowResult {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listComposedSetMemberRowConnectionsWindow !== "function") {
+    throw new Error("listComposedSetMemberRowConnectionsWindow requires a SQLite query cache");
+  }
+  return cache.listComposedSetMemberRowConnectionsWindow(setId, query);
+}
+
+/** Composed group headers; throws if no query cache. */
+export function listComposedGroupHeaders(
+  store: RelationshipReadStore,
+  query: ComposedGroupHeadersQuery,
+): ComposedGroupHeaderRow[] {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listComposedGroupHeaders !== "function") {
+    throw new Error("listComposedGroupHeaders requires a SQLite query cache");
+  }
+  return cache.listComposedGroupHeaders(query);
 }
 
 /** Incoming directed projections to `targetNodeId`, optionally filtered by projection type. */

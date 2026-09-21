@@ -77,6 +77,7 @@ export {
   relationWindowSortsFromQuery,
   shouldUseSqlRelationWindow,
   shouldUseSqlDatabaseWindow,
+  shouldUseSqlComposedWindow,
   tableRowsQueryUsesDynSort,
   tableRowsQueryUsesNonExpressibleSort,
   tableRowsQueryUsesDeferredSearch,
