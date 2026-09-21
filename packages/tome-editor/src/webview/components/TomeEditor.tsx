@@ -4,6 +4,7 @@ import { wrapInHeadingCommand } from "@milkdown/kit/preset/commonmark";
 import { Crepe } from "@milkdown/crepe";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame-dark.css";
+import "prosemirror-virtual-cursor/style/virtual-cursor.css";
 import type { EditorApi } from "../api/client";
 import type { NodeSummary } from "../../shared/types";
 import { CorpusSuffix } from "./CorpusSuffix";
@@ -12,6 +13,10 @@ import {
   buildPageBlockSlashMenu,
   composeBlockEditMenus,
 } from "../extensions/page-block-menu";
+import {
+  buildTableSlashMenu,
+  installMilkdownKitFeatures,
+} from "../milkdown-kit-features";
 import { replaceBlockquoteInputRule } from "../blockquote-input-rule";
 import { pageBlockEmbed, setPageBlockEmbedNodeId } from "../extensions/page-block-embed";
 import { loadEditorBundles, setPageBlockInvokeExtension } from "../extensions/page-block-registry";
@@ -154,7 +159,10 @@ export function TomeEditor({
     root.replaceChildren();
 
     void (async () => {
-      let blockMenuBuilder = buildCalloutSlashMenu;
+      let blockMenuBuilder = composeBlockEditMenus(
+        buildCalloutSlashMenu,
+        buildTableSlashMenu,
+      );
       try {
         const manifest = await api.getExtensionsManifest();
         if (destroyed || activeGeneration !== generation) return;
@@ -167,6 +175,7 @@ export function TomeEditor({
         if (manifest.components.length > 0) {
           blockMenuBuilder = composeBlockEditMenus(
             buildCalloutSlashMenu,
+            buildTableSlashMenu,
             buildPageBlockSlashMenu(manifest.components, {
               prepareEditorBody: (markdown) => api.prepareEditorBody(nodeId, markdown),
             }),
@@ -189,10 +198,10 @@ export function TomeEditor({
         [Crepe.Feature.LinkTooltip]: false,
         [Crepe.Feature.BlockEdit]: true,
         [Crepe.Feature.Placeholder]: true,
-        [Crepe.Feature.Cursor]: true,
-        [Crepe.Feature.ListItem]: true,
-        [Crepe.Feature.Table]: true,
-        [Crepe.Feature.CodeMirror]: true,
+        [Crepe.Feature.Cursor]: false,
+        [Crepe.Feature.ListItem]: false,
+        [Crepe.Feature.Table]: false,
+        [Crepe.Feature.CodeMirror]: false,
         [Crepe.Feature.Latex]: false,
         [Crepe.Feature.ImageBlock]: false,
       },
@@ -205,6 +214,7 @@ export function TomeEditor({
         },
       },
     });
+    installMilkdownKitFeatures(crepe.editor);
     crepe.editor.use(calloutPlugin);
     crepe.editor.use(pageBlockEmbed);
     await replaceBlockquoteInputRule(crepe.editor);

@@ -52,7 +52,7 @@ For panels and canvases that expose **view/visualization toggles** (not page con
 
 Git-tracked node bodies are **Extended Markdown**: CommonMark + GFM, plus Tome encodings for semantics that standard Markdown does not have. Storage is a **persistence transport**. It is not the editor interchange format and not the HTTP body shape.
 
-`NodeBodyDocument` (`version: 1`, `content` block tree in `tome-graph-interfaces`) is the semantic document. It matches the editor’s CommonMark/GFM baseline plus Tome supersets, and maps 1:1 to the live ProseMirror schema (`body-document-pm.ts`). Crepe only hosts that ProseMirror doc (`defaultValue` JSON + `listener.updated` / `doc.toJSON()`). There is no editor-markdown projection.
+`NodeBodyDocument` (`version: 1`, `content` block tree in `tome-graph-interfaces`) is the semantic document. It matches the editor’s CommonMark/GFM baseline plus Tome supersets, and maps 1:1 to the live ProseMirror schema (`body-document-pm.ts`). Milkdown Crepe hosts that ProseMirror doc (`defaultValue` JSON + `listener.updated` / `doc.toJSON()`); cursor, list-item, table, and CodeMirror code-block UI come from `@milkdown/kit` (`milkdown-kit-features.ts`). There is no editor-markdown projection.
 
 | Semantic node | Storage encoding |
 | --- | --- |
@@ -272,7 +272,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 | `packages/tome-http/src/user-settings-store.ts` | Local user settings file I/O |
 | `packages/tome-server/` | Config-driven host (graph + service modules) |
 | `packages/tome-editor/src/shared/user-settings.ts` | User settings types and table sort helpers |
-| `packages/tome-editor/src/webview/` | React + Milkdown Crepe UI |
+| `packages/tome-editor/src/webview/` | React + Milkdown (Crepe shell + kit features) UI |
 | `packages/tome-editor/src/webview/components/NodePageView.tsx` | Universal page layout (title, metadata, properties, markdown, sections) |
 | `packages/tome-editor/src/webview/App.tsx` (`openDraftPage`) | New-page client draft; create on persistable title |
 | `packages/tome-editor/src/webview/draft-page.ts` | Draft node id + empty `NodePageDetail` |

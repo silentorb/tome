@@ -13,7 +13,7 @@ Browser editor for design corpus nodes. **Client-only** — talks to `tome-serve
 
 ## Theme
 
-The editor is **dark-first** and uses the **Midnight** theme from `tome-theme-midnight` (`import "tome-theme-midnight/tokens"` in `main.tsx`). Milkdown loads `frame-dark.css`; code blocks use Crepe’s One Dark CodeMirror theme. New UI should use `--tome-*` tokens (add tokens to `tome-theme-midnight/src/tokens.css` rather than hardcoding colors). Editor shell and interactive overrides live in `src/webview/styles.css` and component CSS.
+The editor is **dark-first** and uses the **Midnight** theme from `tome-theme-midnight` (`import "tome-theme-midnight/tokens"` in `main.tsx`). Milkdown loads Crepe `frame-dark.css` for shell chrome; code blocks, list items, tables, and cursor helpers come from `@milkdown/kit` (CodeMirror One Dark via `milkdown-kit-features.ts`). New UI should use `--tome-*` tokens (add tokens to `tome-theme-midnight/src/tokens.css` rather than hardcoding colors). Editor shell and interactive overrides live in `src/webview/styles.css` and component CSS.
 
 ## View settings control
 

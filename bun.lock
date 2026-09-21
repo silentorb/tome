@@ -26,12 +26,12 @@
     },
     "../imp-ts/packages/imp-execution": {
       "name": "imp-execution",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "dependencies": {
         "imp-collection-transforms": "workspace:^0.5.0",
         "imp-core-types": "workspace:^0.5.0",
-        "imp-graph-resolve": "workspace:^0.2.0",
-        "imp-pathing": "workspace:^0.5.0",
+        "imp-graph-resolve": "workspace:^0.3.0",
+        "imp-pathing": "workspace:^0.6.0",
         "imp-registry": "workspace:^0.5.0",
       },
       "devDependencies": {
@@ -50,11 +50,11 @@
     },
     "../imp-ts/packages/imp-graph-resolve": {
       "name": "imp-graph-resolve",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "imp-core-types": "workspace:^0.5.0",
         "imp-registry": "workspace:^0.5.0",
-        "imp-typecheck": "workspace:^0.5.0",
+        "imp-typecheck": "workspace:^0.6.0",
       },
       "devDependencies": {
         "imp-collection-transforms": "workspace:^0.5.0",
@@ -63,14 +63,14 @@
     },
     "../imp-ts/packages/imp-pathing": {
       "name": "imp-pathing",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "dependencies": {
         "imp-core-types": "workspace:^0.5.0",
       },
       "devDependencies": {
         "imp-collection-transforms": "workspace:^0.5.0",
         "imp-registry": "workspace:^0.5.0",
-        "imp-sql": "workspace:^0.6.0",
+        "imp-sql": "workspace:^0.7.0",
         "typescript": "5.8.2",
       },
     },
@@ -101,12 +101,12 @@
     },
     "../imp-ts/packages/imp-sql": {
       "name": "imp-sql",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "dependencies": {
         "imp-collection-transforms": "workspace:^0.5.0",
         "imp-core-types": "workspace:^0.5.0",
-        "imp-graph-resolve": "workspace:^0.2.0",
-        "imp-pathing": "workspace:^0.5.0",
+        "imp-graph-resolve": "workspace:^0.3.0",
+        "imp-pathing": "workspace:^0.6.0",
         "imp-registry": "workspace:^0.5.0",
         "kysely": "^0.28.2",
       },
@@ -116,33 +116,33 @@
     },
     "../imp-ts/packages/imp-typecheck": {
       "name": "imp-typecheck",
-      "version": "0.5.0",
+      "version": "0.6.0",
       "dependencies": {
         "imp-core-types": "workspace:^0.5.0",
         "imp-registry": "workspace:^0.5.0",
       },
       "devDependencies": {
         "imp-collection-transforms": "workspace:^0.5.0",
-        "imp-pathing": "workspace:^0.5.0",
+        "imp-pathing": "workspace:^0.6.0",
         "typescript": "5.8.2",
       },
     },
     "packages/tome-db": {
       "name": "tome-db",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
-        "imp-execution": "workspace:^0.5.0",
-        "imp-pathing": "workspace:^0.5.0",
+        "imp-execution": "workspace:^0.6.0",
+        "imp-pathing": "workspace:^0.6.0",
         "remark-gfm": "4.0.1",
         "remark-parse": "11.0.0",
         "remark-stringify": "11.0.0",
-        "tome-flatfile": "workspace:^0.2.0",
-        "tome-graph-interfaces": "workspace:^0.2.0",
-        "tome-imp-flatfile": "workspace:^0.7.0",
-        "tome-imp-sql": "workspace:^0.6.0",
-        "tome-interfaces": "workspace:^0.2.0",
-        "tome-service-interfaces": "workspace:^0.2.0",
-        "tome-sqlite": "workspace:^0.2.0",
+        "tome-flatfile": "workspace:^0.3.0",
+        "tome-graph-interfaces": "workspace:^0.3.0",
+        "tome-imp-flatfile": "workspace:^0.8.0",
+        "tome-imp-sql": "workspace:^0.7.0",
+        "tome-interfaces": "workspace:^0.3.0",
+        "tome-service-interfaces": "workspace:^0.3.0",
+        "tome-sqlite": "workspace:^0.3.0",
         "unified": "11.0.5",
         "unist-util-visit": "5.0.0",
       },
@@ -153,21 +153,28 @@
     },
     "packages/tome-editor": {
       "name": "tome-editor",
-      "version": "0.8.1",
+      "version": "0.9.0",
       "dependencies": {
+        "@codemirror/commands": "6.10.3",
+        "@codemirror/language-data": "6.5.2",
+        "@codemirror/theme-one-dark": "6.1.3",
+        "@codemirror/view": "6.43.1",
         "@dnd-kit/core": "6.3.1",
         "@dnd-kit/sortable": "10.0.0",
         "@dnd-kit/utilities": "3.2.2",
         "@milkdown/crepe": "7.20.0",
+        "@milkdown/kit": "7.20.0",
+        "codemirror": "6.0.2",
+        "prosemirror-virtual-cursor": "0.4.2",
         "react": "19.0.0",
         "react-dom": "19.0.0",
         "react-force-graph-2d": "^1.29.1",
         "svg-pan-zoom": "^3.6.2",
-        "tome-db": "workspace:^0.5.0",
-        "tome-flatfile": "workspace:^0.1.0",
-        "tome-graph-interfaces": "workspace:^0.1.0",
-        "tome-http": "workspace:^0.1.0",
-        "tome-interfaces": "workspace:^0.1.0",
+        "tome-db": "workspace:^0.8.0",
+        "tome-flatfile": "workspace:^0.3.0",
+        "tome-graph-interfaces": "workspace:^0.3.0",
+        "tome-http": "workspace:^0.3.0",
+        "tome-interfaces": "workspace:^0.3.0",
         "tome-theme-midnight": "workspace:^0.1.0",
       },
       "devDependencies": {
@@ -178,19 +185,19 @@
         "@types/react-dom": "19.0.4",
         "@vitejs/plugin-react": "4.3.4",
         "happy-dom": "17.4.4",
-        "tome-extension-fixture": "workspace:^0.1.0",
-        "tome-schema-diagram": "workspace:^0.1.0",
-        "tome-test-support": "workspace:^0.1.0",
+        "tome-extension-fixture": "workspace:^0.3.0",
+        "tome-schema-diagram": "workspace:^0.3.0",
+        "tome-test-support": "workspace:^0.2.0",
         "typescript": "5.8.2",
         "vite": "6.2.2",
       },
     },
     "packages/tome-extension-fixture": {
       "name": "tome-extension-fixture",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "react": "19.0.0",
-        "tome-interfaces": "workspace:^0.1.0",
+        "tome-interfaces": "workspace:^0.3.0",
       },
       "devDependencies": {
         "@types/react": "19.0.12",
@@ -199,10 +206,10 @@
     },
     "packages/tome-flatfile": {
       "name": "tome-flatfile",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
-        "tome-graph-interfaces": "workspace:^0.2.0",
-        "tome-service-interfaces": "workspace:^0.2.0",
+        "tome-graph-interfaces": "workspace:^0.3.0",
+        "tome-service-interfaces": "workspace:^0.3.0",
         "ulid": "^3.0.2",
         "yaml": "2.8.0",
       },
@@ -213,7 +220,7 @@
     },
     "packages/tome-functional-tests": {
       "name": "tome-functional-tests",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "react": "19.0.0",
         "tome-db": "workspace:^0.5.0",
@@ -238,7 +245,7 @@
     },
     "packages/tome-graph-interfaces": {
       "name": "tome-graph-interfaces",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "devDependencies": {
         "@types/bun": "1.2.23",
         "typescript": "5.8.2",
@@ -246,14 +253,14 @@
     },
     "packages/tome-http": {
       "name": "tome-http",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "imp-collection-transforms": "workspace:^0.5.0",
         "imp-core-types": "workspace:^0.5.0",
         "imp-registry": "workspace:^0.5.0",
-        "imp-sql": "workspace:^0.6.0",
-        "tome-graph-interfaces": "workspace:^0.2.0",
-        "tome-service-interfaces": "workspace:^0.2.0",
+        "imp-sql": "workspace:^0.7.0",
+        "tome-graph-interfaces": "workspace:^0.3.0",
+        "tome-service-interfaces": "workspace:^0.3.0",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -262,28 +269,28 @@
     },
     "packages/tome-imp-flatfile": {
       "name": "tome-imp-flatfile",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
-        "imp-execution": "workspace:^0.5.0",
-        "tome-flatfile": "workspace:^0.2.0",
-        "tome-graph-interfaces": "workspace:^0.2.0",
+        "imp-execution": "workspace:^0.6.0",
+        "tome-flatfile": "workspace:^0.3.0",
+        "tome-graph-interfaces": "workspace:^0.3.0",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
-        "tome-db": "workspace:^0.7.0",
+        "tome-db": "workspace:^0.8.0",
         "typescript": "5.8.2",
       },
     },
     "packages/tome-imp-sql": {
       "name": "tome-imp-sql",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "dependencies": {
         "imp-collection-transforms": "workspace:^0.5.0",
         "imp-core-types": "workspace:^0.5.0",
-        "imp-pathing": "workspace:^0.5.0",
+        "imp-pathing": "workspace:^0.6.0",
         "imp-registry": "workspace:^0.5.0",
-        "imp-sql": "workspace:^0.6.0",
-        "tome-flatfile": "workspace:^0.2.0",
+        "imp-sql": "workspace:^0.7.0",
+        "tome-flatfile": "workspace:^0.3.0",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -292,9 +299,9 @@
     },
     "packages/tome-interfaces": {
       "name": "tome-interfaces",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
-        "tome-graph-interfaces": "workspace:^0.2.0",
+        "tome-graph-interfaces": "workspace:^0.3.0",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -303,7 +310,7 @@
     },
     "packages/tome-query": {
       "name": "tome-query",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "@xyflow/react": "12.8.2",
         "imp-core-types": "workspace:^0.5.0",
@@ -328,11 +335,11 @@
     },
     "packages/tome-schema-diagram": {
       "name": "tome-schema-diagram",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "elkjs": "^0.11.1",
         "react": "19.0.0",
-        "tome-interfaces": "workspace:^0.1.0",
+        "tome-interfaces": "workspace:^0.3.0",
         "web-worker": "^1.5.0",
       },
       "devDependencies": {
@@ -342,7 +349,7 @@
     },
     "packages/tome-sequencing": {
       "name": "tome-sequencing",
-      "version": "0.7.0",
+      "version": "0.8.0",
       "dependencies": {
         "@visx/axis": "3.12.0",
         "@visx/group": "3.12.0",
@@ -394,7 +401,7 @@
     },
     "packages/tome-server": {
       "name": "tome-server",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "tome-db": "workspace:^0.5.0",
         "tome-graph-interfaces": "workspace:^0.1.0",
@@ -414,9 +421,9 @@
     },
     "packages/tome-service-interfaces": {
       "name": "tome-service-interfaces",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
-        "tome-graph-interfaces": "workspace:^0.2.0",
+        "tome-graph-interfaces": "workspace:^0.3.0",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -425,7 +432,7 @@
     },
     "packages/tome-spatial-graph": {
       "name": "tome-spatial-graph",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
         "canvas": "3.1.0",
         "cytoscape": "3.31.2",
@@ -442,10 +449,10 @@
     },
     "packages/tome-sqlite": {
       "name": "tome-sqlite",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "dependencies": {
-        "tome-graph-interfaces": "workspace:^0.2.0",
-        "tome-service-interfaces": "workspace:^0.2.0",
+        "tome-graph-interfaces": "workspace:^0.3.0",
+        "tome-service-interfaces": "workspace:^0.3.0",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -454,7 +461,7 @@
     },
     "packages/tome-static-site": {
       "name": "tome-static-site",
-      "version": "0.8.0",
+      "version": "0.9.0",
       "dependencies": {
         "astro": "5.7.10",
         "marked": "15.0.12",
