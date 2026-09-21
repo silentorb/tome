@@ -1,63 +1,51 @@
 import { describe, expect, test } from "bun:test";
-import {
-  expandPageBlockFencesForEditor,
-  formatPageBlockEmbedComment,
-  serializePageBlock,
-} from "tome-interfaces/page-block";
+import { documentsEqual, type NodeBodyDocument } from "tome-graph-interfaces";
 import {
   bodyNeedsSave,
   buildPendingSavePayload,
-  normalizeEditorBody,
+  storageBodyForCreate,
   titleNeedsSave,
 } from "../../src/webview/editor-save";
 
-describe("normalizeEditorBody", () => {
-  test("strips duplicate page title before compare", () => {
-    expect(normalizeEditorBody("# Alpha\n\nNotes", "Alpha")).toBe("Notes");
-  });
+function paragraphDoc(text: string): NodeBodyDocument {
+  return {
+    version: 1,
+    content: text ? [{ type: "paragraph", content: [{ type: "text", text }] }] : [],
+  };
+}
 
-  test("collapses server-rendered page block embeds to fences", async () => {
-    const fence = serializePageBlock("demo.block", { x: 1 });
-    const expanded = await expandPageBlockFencesForEditor(fence, async () => {
-      return '<figure class="demo">block</figure>';
-    });
-    expect(normalizeEditorBody(expanded, "Page")).toBe(fence);
-  });
-
-  test("preserves page block metadata comment through collapse", () => {
-    const fence = serializePageBlock("demo.block", { x: 1 });
-    const embed =
-      `${formatPageBlockEmbedComment({ componentId: "demo.block", data: { x: 1 } })}\n` +
-      '<figure class="demo">block</figure>';
-    expect(normalizeEditorBody(embed, "Page")).toBe(fence);
-  });
-
-  test("canonicalizes node links to relative sibling paths", () => {
-    const id = "0000000000000000000000000F";
-    const body = `[Action](http://127.0.0.1:5173/?node=${id})`;
-    expect(normalizeEditorBody(body, "Page")).toBe(`[Action](./${id}.md)`);
-  });
-
-  test("collapses dynamic editor links to storage syntax", () => {
-    const id = "0000000000000000000000000F";
-    const body = `[Target](?node=${id}&dynamicTitle=1)`;
-    expect(normalizeEditorBody(body, "Page")).toBe(`[[${id}]]`);
+describe("storageBodyForCreate", () => {
+  test("serializes a paragraph without a duplicated title heading", () => {
+    expect(storageBodyForCreate(paragraphDoc("Notes")).trim()).toBe("Notes");
   });
 });
 
 describe("bodyNeedsSave", () => {
-  const notesDoc = { segments: [{ type: "prose" as const, markdown: "Notes" }] };
+  const notesDoc = paragraphDoc("Notes");
 
-  test("returns false when normalized body matches saved baseline", () => {
-    expect(bodyNeedsSave("# Alpha\n\nNotes", notesDoc, "Alpha")).toBe(false);
+  test("returns false when the document matches the saved baseline", () => {
+    expect(bodyNeedsSave(paragraphDoc("Notes"), notesDoc)).toBe(false);
+  });
+
+  test("ignores page-block editorHtml when comparing", () => {
+    const saved: NodeBodyDocument = {
+      version: 1,
+      content: [{ type: "page_block", componentId: "demo.block", data: { x: 1 }, editorHtml: "<p>a</p>" }],
+    };
+    const next: NodeBodyDocument = {
+      version: 1,
+      content: [{ type: "page_block", componentId: "demo.block", data: { x: 1 }, editorHtml: "<p>b</p>" }],
+    };
+    expect(documentsEqual(saved, next)).toBe(true);
+    expect(bodyNeedsSave(next, saved)).toBe(false);
   });
 
   test("returns true when content changed", () => {
-    expect(bodyNeedsSave("# Alpha\n\nMore notes", notesDoc, "Alpha")).toBe(true);
+    expect(bodyNeedsSave(paragraphDoc("More notes"), notesDoc)).toBe(true);
   });
 
   test("returns false when saved baseline is unset", () => {
-    expect(bodyNeedsSave("Notes", null, "Alpha")).toBe(false);
+    expect(bodyNeedsSave(paragraphDoc("Notes"), null)).toBe(false);
   });
 });
 
@@ -86,38 +74,38 @@ describe("titleNeedsSave", () => {
 });
 
 describe("buildPendingSavePayload", () => {
-  const notesDoc = { segments: [{ type: "prose" as const, markdown: "Notes" }] };
-  const moreDoc = { segments: [{ type: "prose" as const, markdown: "More" }] };
+  const notesDoc = paragraphDoc("Notes");
+  const moreDoc = paragraphDoc("More");
 
   test("returns null when nothing is dirty", () => {
-    expect(buildPendingSavePayload("Notes", "Alpha", notesDoc, "Alpha", "Alpha")).toBeNull();
+    expect(buildPendingSavePayload(notesDoc, "Alpha", notesDoc, "Alpha")).toBeNull();
   });
 
   test("returns document when body changed", () => {
-    expect(buildPendingSavePayload("More", "Alpha", notesDoc, "Alpha", "Alpha")).toEqual({
+    expect(buildPendingSavePayload(moreDoc, "Alpha", notesDoc, "Alpha")).toEqual({
       document: moreDoc,
     });
   });
 
   test("returns title-only when title changed", () => {
-    expect(buildPendingSavePayload("Notes", "Beta", notesDoc, "Alpha", "Alpha")).toEqual({
+    expect(buildPendingSavePayload(notesDoc, "Beta", notesDoc, "Alpha")).toEqual({
       title: "Beta",
     });
   });
 
   test("omits invalid titles from the patch", () => {
-    expect(buildPendingSavePayload("Notes", "Untitled", notesDoc, "Alpha", "Alpha")).toBeNull();
-    expect(buildPendingSavePayload("Notes", "", notesDoc, "Alpha", "Alpha")).toBeNull();
+    expect(buildPendingSavePayload(notesDoc, "Untitled", notesDoc, "Alpha")).toBeNull();
+    expect(buildPendingSavePayload(notesDoc, "", notesDoc, "Alpha")).toBeNull();
   });
 
   test("returns both when body and title changed", () => {
-    expect(buildPendingSavePayload("More", "Beta", notesDoc, "Alpha", "Alpha")).toEqual({
+    expect(buildPendingSavePayload(moreDoc, "Beta", notesDoc, "Alpha")).toEqual({
       document: moreDoc,
       title: "Beta",
     });
   });
 
   test("returns null when baselines are unset", () => {
-    expect(buildPendingSavePayload("More", "Beta", null, null, "Alpha")).toBeNull();
+    expect(buildPendingSavePayload(moreDoc, "Beta", null, null)).toBeNull();
   });
 });

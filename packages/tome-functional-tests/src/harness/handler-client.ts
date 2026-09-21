@@ -1,26 +1,9 @@
-import type { NodeBodyDocument, NodeBodySegment } from "tome-graph-interfaces";
+import type { NodeBodyDocument } from "tome-graph-interfaces";
+import { parseStorageBody } from "tome-db";
 import { documentToStorageBody } from "tome-db";
-import { parsePageBlockFences } from "tome-interfaces/page-block";
 
 function storageMarkdownToDocument(body: string): NodeBodyDocument {
-  const { segments: fenceSegments } = parsePageBlockFences(body);
-  const segments: NodeBodySegment[] = [];
-  for (const fence of fenceSegments) {
-    if (fence.type === "block") {
-      segments.push({
-        type: "page_block",
-        componentId: fence.payload.componentId,
-        data: fence.payload.data,
-        editorHtml: "",
-      });
-      continue;
-    }
-    segments.push({ type: "prose", markdown: fence.content });
-  }
-  if (segments.length === 0) {
-    return { segments: [{ type: "prose", markdown: body }] };
-  }
-  return { segments };
+  return parseStorageBody(body);
 }
 
 export function createHandlerClient(handler: (req: Request) => Promise<Response> | Response) {

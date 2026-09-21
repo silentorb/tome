@@ -14,7 +14,8 @@ import {
   resolveMentionInsertRange,
 } from "../../src/webview/mention-range";
 import { formatEditorDynamicNodeLink } from "../../src/webview/standalone-markdown";
-import { normalizeEditorBody } from "../../src/webview/editor-save";
+import { documentToStorageBody } from "tome-db/document-to-storage-body";
+import { pmJsonToDocument } from "../../src/webview/body-document-pm";
 
 const TARGET_ID = "0000000000000000000000002X";
 
@@ -197,9 +198,23 @@ describe("dynamic link demotion", () => {
   });
 });
 
-describe("normalizeEditorBody after demotion", () => {
+describe("static link storage after demotion", () => {
   test("static link is saved when dynamic marker removed", () => {
-    const body = `[Custom label](?node=${TARGET_ID})`;
-    expect(normalizeEditorBody(body, "Page")).toBe(`[Custom label](./${TARGET_ID}.md)`);
+    const doc = pmJsonToDocument({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Custom label",
+              marks: [{ type: "link", attrs: { href: `?node=${TARGET_ID}`, title: null } }],
+            },
+          ],
+        },
+      ],
+    });
+    expect(documentToStorageBody(doc)).toContain(`[Custom label](./${TARGET_ID}.md)`);
   });
 });

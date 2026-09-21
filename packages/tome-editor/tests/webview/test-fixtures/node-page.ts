@@ -1,3 +1,4 @@
+import { parseStorageBody } from "tome-db";
 import type {
   DatabaseViewDetail,
   EditorNodePageDetail,
@@ -140,7 +141,7 @@ export function makeNodePageDetail(
       relationshipCount: 1,
       backlinks: [],
     },
-    document: documentOverride ?? { segments: [{ type: "prose", markdown: prose }] },
+    document: documentOverride ?? parseStorageBody(prose),
     sections,
     ...rest,
   };

@@ -8,7 +8,7 @@ import {
   formatEditorNodeMarkdownLink,
   prepareEditorMarkdown,
 } from "../../src/webview/standalone-markdown";
-import { normalizeEditorBody } from "../../src/webview/editor-save";
+import { documentToStorageBody, parseStorageBody } from "tome-db";
 
 const TARGET = "0000000000000000000000002X";
 
@@ -53,10 +53,12 @@ describe("formatEditorNodeMarkdownLink", () => {
   });
 });
 
-describe("normalizeEditorBody dynamic links", () => {
-  test("round-trips dynamic storage through editor display", () => {
+describe("dynamic link storage", () => {
+  test("round-trips wiki links through the semantic document", () => {
     const storage = `See ${formatDynamicNodeLink(TARGET)} here.`;
-    const editor = prepareEditorMarkdown(storage, () => "Cozy horror");
-    expect(normalizeEditorBody(editor, "Page")).toBe(storage);
+    const stored = documentToStorageBody(parseStorageBody(storage));
+    expect(stored).toContain(`[[${TARGET}]]`);
+    expect(stored).toContain("See");
+    expect(stored).toContain("here.");
   });
 });

@@ -128,6 +128,8 @@ Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTa
 
 ### Markdown body links
 
+Node `body` files are **Extended Markdown** (CommonMark + GFM plus Tome encodings). That file text is storage only. The editor API uses `NodeBodyDocument` (`parseStorageBody` / `documentToStorageBody` in `tome-db`). See [tome-editor.md](./tome-editor.md) § Extended Markdown.
+
 Node cross-references in markdown `body` use two storage forms (see `tome-flatfile` markdown-links and dynamic-node-links):
 
 | Form | Example | Title source |

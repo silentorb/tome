@@ -139,9 +139,44 @@ export type { NodeBacklink, NodePageMetadata } from "./node-metadata";
 
 export type { PropertiesSection } from "./node-type-properties";
 
+export {
+  NODE_BODY_DOCUMENT_VERSION,
+  assignDynamicLinkTitles,
+  collectDynamicLinkIds,
+  documentEqualityKey,
+  documentHasPageBlock,
+  documentsEqual,
+  emptyNodeBodyDocument,
+  inlinePlainText,
+  isDocumentEffectivelyEmpty,
+  mapPageBlocks,
+  stripDuplicateTitleHeading,
+} from "./node-body-document";
 export type {
+  NodeBodyBlock,
+  NodeBodyBlockquote,
+  NodeBodyBulletList,
+  NodeBodyCallout,
+  NodeBodyCodeBlock,
   NodeBodyDocument,
-  NodeBodySegment,
+  NodeBodyDynamicLink,
+  NodeBodyHardBreak,
+  NodeBodyHeading,
+  NodeBodyHtmlBlock,
+  NodeBodyHtmlInline,
+  NodeBodyImage,
+  NodeBodyInline,
+  NodeBodyLink,
+  NodeBodyListItem,
+  NodeBodyMark,
+  NodeBodyOrderedList,
+  NodeBodyPageBlock,
+  NodeBodyParagraph,
+  NodeBodyStaticLink,
+  NodeBodyTable,
+  NodeBodyTableCell,
+  NodeBodyTableRow,
+  NodeBodyText,
 } from "./node-body-document";
 
 export type {

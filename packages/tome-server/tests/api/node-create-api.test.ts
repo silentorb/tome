@@ -58,12 +58,12 @@ describe("node create API", () => {
     const nodeRes = await api.handler(new Request(`http://127.0.0.1/api/nodes/${payload.node.id}`));
     expect(nodeRes.status).toBe(200);
     const nodePayload = (await nodeRes.json()) as {
-      node: { title: string; document: { segments: Array<{ type: string; markdown?: string }> } };
+      node: { title: string; document: { content: Array<{ type: string; content?: Array<{ text?: string }> }> } };
     };
     expect(nodePayload.node.title).toBe("Standalone");
-    const prose = nodePayload.node.document.segments
-      .filter((s) => s.type === "prose")
-      .map((s) => s.markdown ?? "")
+    const prose = nodePayload.node.document.content
+      .flatMap((block) => block.content ?? [])
+      .map((inline) => inline.text ?? "")
       .join("");
     expect(prose).toContain("Hello");
   });

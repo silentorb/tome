@@ -77,16 +77,17 @@ import {
   ExtensionServerRuntime,
 } from "./extensions/runtime";
 import { readDocumentIconFile } from "./document-icon";
-import type {
-  NodeBodyDocument,
-  NodeSummary,
-  PublicExtensionsManifest,
-  SearchNodesOptions,
-  TableRowsQuery,
-  TomeGraphServices,
-  WorkspacePublic,
+import {
+  documentHasPageBlock,
+  stripDuplicateTitleHeading,
+  type NodeBodyDocument,
+  type NodeSummary,
+  type PublicExtensionsManifest,
+  type SearchNodesOptions,
+  type TableRowsQuery,
+  type TomeGraphServices,
+  type WorkspacePublic,
 } from "tome-graph-interfaces";
-import { formatPageBlockEmbedComment } from "tome-interfaces/page-block";
 
 const EDITOR_TABLE_ROWS: TableRowsQuery = {
   limit: DEFAULT_TABLE_ROW_LIMIT,
@@ -220,17 +221,17 @@ function buildGraphServices(
       });
       if (!detail) return null;
 
-      let document = storageBodyToDocument(graphStore, detail.body);
-      const needsPageBlockExtensions = document.segments.some(
-        (segment) => segment.type === "page_block",
+      let document = stripDuplicateTitleHeading(
+        storageBodyToDocument(graphStore, detail.body),
+        detail.title,
       );
+      const needsPageBlockExtensions = documentHasPageBlock(document);
       if (needsPageBlockExtensions) {
         await extensionsReady;
         try {
           await extensions.ensureLoaded();
           document = await attachPageBlockEditorHtml(document, async (componentId, data) => {
-            const html = await extensions.renderPageBlockHtml(id, componentId, data);
-            return `${formatPageBlockEmbedComment({ componentId, data })}\n${html}`;
+            return extensions.renderPageBlockHtml(id, componentId, data);
           });
         } catch (err: unknown) {
           console.error(

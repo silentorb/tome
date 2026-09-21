@@ -174,9 +174,10 @@ export type {
 export { documentToStorageBody } from "./document-to-storage-body";
 export {
   attachPageBlockEditorHtml,
+  parseStorageBody,
   storageBodyToDocument,
 } from "./node-body-document";
-export type { NodeBodyDocument, NodeBodySegment, EditorNodePageDetail } from "tome-graph-interfaces";
+export type { NodeBodyDocument, EditorNodePageDetail } from "tome-graph-interfaces";
 export {
   relationSectionSupportsLinkExisting,
   associationRuleContext,

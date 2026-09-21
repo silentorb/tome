@@ -14,7 +14,8 @@ import {
 } from "tome-db";
 import { formatPageBlockEmbedComment } from "tome-interfaces/page-block";
 import { ExtensionServerRuntime } from "../../../tome-server/src/extensions/runtime";
-import { documentToEditorMarkdown } from "../../src/webview/body-document-projection";
+import { documentToPmJson } from "../../src/webview/body-document-pm";
+import { calloutPlugin } from "../../src/webview/callout-schema";
 import { pageBlockEmbed } from "../../src/webview/extensions/page-block-embed";
 import {
   registerInteractivePageBlockForTests,
@@ -71,8 +72,8 @@ describe("Arcs sequencing page-block parse", () => {
         const html = await runtime.renderPageBlockHtml(arcsId, componentId, data);
         return `${formatPageBlockEmbedComment({ componentId, data })}\n${html}`;
       });
-      const editorMarkdown = documentToEditorMarkdown(withHtml);
-      expect(editorMarkdown.length).toBeGreaterThan(1000);
+      const editorJson = documentToPmJson(withHtml);
+      expect(JSON.stringify(editorJson).length).toBeGreaterThan(100);
 
       resetPageBlockRegistryForTests();
       // Register interactive so remount prefers React path (stub component).
@@ -96,10 +97,11 @@ describe("Arcs sequencing page-block parse", () => {
       const editor = await Editor.make()
         .config((ctx) => {
           ctx.set(rootCtx, root);
-          ctx.set(defaultValueCtx, editorMarkdown);
+          ctx.set(defaultValueCtx, { type: "json", value: editorJson as never });
         })
         .use(commonmark)
         .use(gfm)
+        .use(calloutPlugin)
         .use(pageBlockEmbed)
         .create();
 

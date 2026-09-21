@@ -8,7 +8,6 @@ import { createEditorApi } from "./api/client";
 import { UserSettingsProvider, useUserSettings } from "./hooks/useUserSettings";
 import { nodeTableTabKey } from "../shared/user-settings";
 import type { GetNodeOptions } from "../shared/http-client";
-import { documentToStorageBody } from "tome-db/document-to-storage-body";
 import {
   isPersistableNodeTitle,
   standaloneNodeUrl,
@@ -17,6 +16,9 @@ import {
   type EditorNodePageDetail,
   type NodeBodyDocument,
 } from "../shared/types";
+import { DRAFT_NODE_ID, isDraftNodeId, makeDraftNodePageDetail } from "./draft-page";
+import { bodyNeedsSave, buildPendingSavePayload, storageBodyForCreate, titleNeedsSave } from "./editor-save";
+import { emptyNodeBodyDocument } from "tome-graph-interfaces";
 import {
   anchorFromLocation,
   corpusFromLocation,
@@ -35,11 +37,6 @@ import {
   standaloneViewUrl,
 } from "./node-links";
 import { attachStandaloneChromeNavigation } from "./standalone-navigation";
-import { DRAFT_NODE_ID, isDraftNodeId, makeDraftNodePageDetail } from "./draft-page";
-import {
-  documentToEditorMarkdown,
-} from "./body-document-projection";
-import { bodyNeedsSave, buildPendingSavePayload, editorMarkdownToSaveDocument, titleNeedsSave } from "./editor-save";
 import { useCorpora } from "./useCorpora";
 import { CacheSyncProgressPanel } from "./components/CacheSyncProgressPanel";
 import { isCacheSyncingError } from "../shared/http-client";
@@ -97,7 +94,7 @@ function activeTabIdFromNode(node: EditorNodePageDetail): string | undefined {
   return undefined;
 }
 
-const EMPTY_DOCUMENT: NodeBodyDocument = { segments: [{ type: "prose", markdown: "" }] };
+const EMPTY_DOCUMENT: NodeBodyDocument = emptyNodeBodyDocument();
 
 export function App() {
   const api = useMemo(() => createEditorApi(), []);
@@ -172,7 +169,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
   const [homeId, setHomeId] = useState<string | null>(null);
   const [explorerAnchorId, setExplorerAnchorId] = useState("");
   const [toolPanelSession, setToolPanelSession] = useState<ToolPanelSession | null>(null);
-  const pendingBody = useRef<string | null>(null);
+  const pendingBody = useRef<NodeBodyDocument | null>(null);
   const pendingTitle = useRef<string | null>(null);
   const savedDocument = useRef<NodeBodyDocument | null>(null);
   const savedTitle = useRef<string | null>(null);
@@ -329,13 +326,12 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
   const applyLoadedNode = useCallback(
     (detail: EditorNodePageDetail, options?: GetNodeOptions) => {
       const title = detail.title;
-      const editorMarkdown = documentToEditorMarkdown(detail.document);
       nodeIdRef.current = detail.id;
       setNode(detail);
       setPageTitle(title);
       setView("node-page");
       setMetadataExpanded(false);
-      pendingBody.current = editorMarkdown;
+      pendingBody.current = detail.document;
       pendingTitle.current = title;
       savedDocument.current = detail.document;
       savedTitle.current = title;
@@ -359,9 +355,8 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     async (options?: { keepalive?: boolean }) => {
       const title = (pendingTitle.current ?? "").trim();
       if (!isPersistableNodeTitle(title)) return;
-      const body = pendingBody.current ?? "";
-      const document = editorMarkdownToSaveDocument(body, title);
-      const storageBody = documentToStorageBody(document);
+      const document = pendingBody.current ?? EMPTY_DOCUMENT;
+      const storageBody = storageBodyForCreate(document);
 
       if (options?.keepalive) {
         void api
@@ -375,7 +370,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
             savedTitle.current = title;
             savedDocument.current = document;
             pendingTitle.current = title;
-            pendingBody.current = body;
+            pendingBody.current = document;
             replaceStandaloneHistory(standaloneNodeUrl(created.id));
           })
           .catch(() => {});
@@ -413,13 +408,11 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
         return;
       }
 
-      const pageTitle = pendingTitle.current ?? savedTitle.current ?? "";
       const patch = buildPendingSavePayload(
         pendingBody.current,
         pendingTitle.current,
         savedDocument.current,
         savedTitle.current,
-        pageTitle,
       );
       if (!patch) return;
 
@@ -484,7 +477,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
       setView("node-page");
       setSelectPageTitleOnMount(true);
       setMetadataExpanded(false);
-      pendingBody.current = "";
+      pendingBody.current = EMPTY_DOCUMENT;
       pendingTitle.current = "";
       savedDocument.current = EMPTY_DOCUMENT;
       savedTitle.current = "";
@@ -652,33 +645,27 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
     return () => window.removeEventListener("pagehide", onPageHide);
   }, [flushPendingSaves]);
 
-  const activeTitleForSave = useCallback(
-    () => pendingTitle.current ?? savedTitle.current ?? "",
-    [],
-  );
-
-  const syncEditorBaseline = useCallback((markdown: string) => {
+  const syncEditorBaseline = useCallback((document: NodeBodyDocument) => {
     if (!nodeIdRef.current) return;
-    savedDocument.current = editorMarkdownToSaveDocument(markdown, activeTitleForSave());
-    pendingBody.current = markdown;
-  }, [activeTitleForSave]);
+    savedDocument.current = document;
+    pendingBody.current = document;
+  }, []);
 
   const scheduleSave = useCallback(
-    (body: string) => {
+    (document: NodeBodyDocument) => {
       if (!nodeIdRef.current) return;
-      const title = activeTitleForSave();
-      if (!bodyNeedsSave(body, savedDocument.current, title)) return;
-      pendingBody.current = body;
+      if (!bodyNeedsSave(document, savedDocument.current)) return;
+      pendingBody.current = document;
       setSaveState("dirty");
       if (isDraftNodeId(nodeIdRef.current)) {
-        if (!isPersistableNodeTitle(pendingTitle.current ?? title)) return;
+        if (!isPersistableNodeTitle(pendingTitle.current ?? "")) return;
       }
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(() => {
         void flushPendingSaves();
       }, saveDebounceDelay);
     },
-    [activeTitleForSave, flushPendingSaves],
+    [flushPendingSaves],
   );
 
   const scheduleSaveTitle = useCallback(
@@ -690,7 +677,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
       if (isDraftNodeId(nodeIdRef.current)) {
         if (!isPersistableNodeTitle(trimmed)) {
           setSaveState(
-            bodyNeedsSave(pendingBody.current ?? "", savedDocument.current, title) ? "dirty" : "idle",
+            bodyNeedsSave(pendingBody.current, savedDocument.current) ? "dirty" : "idle",
           );
           return;
         }

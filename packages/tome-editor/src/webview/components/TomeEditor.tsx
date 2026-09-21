@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { commandsCtx, editorViewCtx } from "@milkdown/kit/core";
 import { wrapInHeadingCommand } from "@milkdown/kit/preset/commonmark";
-import { getMarkdown, replaceRange } from "@milkdown/kit/utils";
 import { Crepe } from "@milkdown/crepe";
 import "@milkdown/crepe/theme/common/style.css";
 import "@milkdown/crepe/theme/frame-dark.css";
@@ -33,8 +32,12 @@ import {
   activeMentionRangeAtSelection,
   resolveMentionInsertRange,
 } from "../mention-range";
-import { formatEditorDynamicNodeLink } from "../standalone-markdown";
-import { classifyMarkdownUpdate } from "../editor-markdown-update";
+import type { NodeBodyDocument } from "tome-graph-interfaces";
+import { documentEqualityKey, isDocumentEffectivelyEmpty } from "tome-graph-interfaces";
+import { editorDynamicNodeHref } from "tome-flatfile/dynamic-node-links";
+import { documentToPmJson, pmNodeToDocument } from "../body-document-pm";
+import { calloutPlugin } from "../callout-schema";
+import { classifyDocumentUpdate } from "../editor-markdown-update";
 import "./editor.css";
 
 interface MentionState {
@@ -49,31 +52,32 @@ interface MentionState {
 interface TomeEditorProps {
   api: EditorApi;
   nodeId: string;
-  initialBody: string;
+  initialDocument: NodeBodyDocument;
   title?: string;
   hideTitle?: boolean;
-  onEditorBaseline?: (body: string) => void;
-  onBodyChange?: (body: string) => void;
+  onEditorBaseline?: (document: NodeBodyDocument) => void;
+  onBodyChange?: (document: NodeBodyDocument) => void;
 }
 
 /** Effect deps that remount Milkdown — callbacks are read via refs and must not appear here. */
-export const TOME_EDITOR_MOUNT_DEPS = ["api", "nodeId", "initialBody"] as const;
+export const TOME_EDITOR_MOUNT_DEPS = ["api", "nodeId", "initialDocumentKey"] as const;
 
 export function TomeEditor({
   api,
   nodeId,
-  initialBody,
+  initialDocument,
   title = "",
   hideTitle = true,
   onEditorBaseline,
   onBodyChange,
 }: TomeEditorProps) {
+  const initialDocumentKey = documentEqualityKey(initialDocument);
   const rootRef = useRef<HTMLDivElement>(null);
   const crepeRef = useRef<Crepe | null>(null);
   const [mention, setMention] = useState<MentionState | null>(null);
   const [results, setResults] = useState<NodeSummary[]>([]);
   const [initError, setInitError] = useState<string | null>(null);
-  const [isEmpty, setIsEmpty] = useState(() => !initialBody.trim());
+  const [isEmpty, setIsEmpty] = useState(() => isDocumentEffectivelyEmpty(initialDocument));
   const mentionRef = useRef<MentionState | null>(null);
   const mentionRangeRef = useRef<{ replaceFrom: number; replaceTo: number } | null>(null);
   const resultsRef = useRef<NodeSummary[]>([]);
@@ -99,8 +103,16 @@ export function TomeEditor({
         const view = ctx.get(editorViewCtx);
         const range = resolveMentionInsertRange(view.state, stored);
         if (!range) return;
-        const link = formatEditorDynamicNodeLink(item.id, item.title);
-        replaceRange(link, { from: range.replaceFrom, to: range.replaceTo })(ctx);
+        const schema = view.state.schema;
+        const link = schema.marks.link?.create({
+          href: editorDynamicNodeHref(item.id),
+          title: null,
+        });
+        if (!link) return;
+        const text = schema.text(item.title || item.id, [link]);
+        view.dispatch(
+          view.state.tr.replaceWith(range.replaceFrom, range.replaceTo, text).scrollIntoView(),
+        );
       });
       closeMention();
     },
@@ -136,7 +148,7 @@ export function TomeEditor({
     const generation = Symbol("tome-editor-mount");
     let activeGeneration: symbol | null = generation;
     setInitError(null);
-    setIsEmpty(!initialBody.trim());
+    setIsEmpty(isDocumentEffectivelyEmpty(initialDocument));
     root.replaceChildren();
 
     void (async () => {
@@ -169,7 +181,7 @@ export function TomeEditor({
 
       crepe = new Crepe({
       root,
-      defaultValue: initialBody,
+      defaultValue: { type: "json", value: documentToPmJson(initialDocument) as never },
       features: {
         [Crepe.Feature.Toolbar]: true,
         [Crepe.Feature.LinkTooltip]: true,
@@ -191,6 +203,7 @@ export function TomeEditor({
         },
       },
     });
+    crepe.editor.use(calloutPlugin);
     crepe.editor.use(pageBlockEmbed);
     await replaceBlockquoteInputRule(crepe.editor);
     if (destroyed || activeGeneration !== generation) return;
@@ -198,20 +211,20 @@ export function TomeEditor({
     detachEditorLinkNavigation = attachEditorLinkNavigation(root);
 
     crepe.on((listener) => {
-      listener.markdownUpdated((_ctx, markdown, prevMarkdown) => {
+      listener.updated((_ctx, doc, prevDoc) => {
         if (
-          classifyMarkdownUpdate({
+          classifyDocumentUpdate({
             destroyed,
             editorReady,
             baselineCaptured,
-            markdown,
-            prevMarkdown,
+            sameDoc: prevDoc != null && doc.eq(prevDoc),
           }) !== "save"
         ) {
           return;
         }
-        setIsEmpty(!markdown.trim());
-        onBodyChangeRef.current?.(markdown);
+        const nextDocument = pmNodeToDocument(doc);
+        setIsEmpty(isDocumentEffectivelyEmpty(nextDocument));
+        onBodyChangeRef.current?.(nextDocument);
       });
     });
 
@@ -224,12 +237,14 @@ export function TomeEditor({
       // Capture baseline from the initial doc so the first user edit (e.g. page-block
       // tab toggle) is saved — not mistaken for the load baseline.
       try {
-        const initialMarkdown = await activeCrepe.editor.action(getMarkdown());
+        const initialDocumentFromEditor = pmNodeToDocument(
+          activeCrepe.editor.action((ctx) => ctx.get(editorViewCtx).state.doc),
+        );
         if (destroyed || activeGeneration !== generation) return;
         baselineCaptured = true;
         editorReady = true;
-        setIsEmpty(!initialMarkdown.trim());
-        onEditorBaselineRef.current?.(initialMarkdown);
+        setIsEmpty(isDocumentEffectivelyEmpty(initialDocumentFromEditor));
+        onEditorBaselineRef.current?.(initialDocumentFromEditor);
       } catch {
         if (destroyed || activeGeneration !== generation) return;
         baselineCaptured = true;
@@ -350,7 +365,7 @@ export function TomeEditor({
         }
       })();
     };
-  }, [api, initialBody, nodeId]);
+  }, [api, initialDocumentKey, nodeId]);
 
   return (
     <div className="tome-editor-shell">

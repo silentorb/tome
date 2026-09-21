@@ -30,8 +30,8 @@ A logical block **may** implement editor only, html only, server only, or any co
 ## Editor host (`tome-editor`)
 
 - Loads `editorModule` (slash-menu defaults via manifest), `htmlModule`, and `serverModule` at API startup.
-- **`POST /api/nodes/:id/prepare-editor-body`** expands `tome-block` fences to embedded HTML before Milkdown loads (uses the same `htmlModule` renderers as static export).
-- Display markdown embeds each block as an HTML comment (canonical JSON payload) plus rendered HTML (e.g. inline SVG):
+- **`POST /api/nodes/:id/prepare-editor-body`** expands a newly inserted `tome-block` fence to HTML for the slash-menu path (same `htmlModule` renderers as static export). Page load does not use it: `GET` already returns `page_block` nodes with `editorHtml`.
+- The editor maps each `page_block` to a `tome_page_block` atom. Display attrs are an HTML comment (canonical JSON payload) plus rendered HTML (e.g. inline SVG):
 
 ```markdown
 <!-- tome-page-block {"componentId":"spatial-graph.block","data":{...}} -->
@@ -39,7 +39,7 @@ A logical block **may** implement editor only, html only, server only, or any co
 ```
 
 - Slash menu inserts fences via `serializePageBlock` (defaults from manifest `insertDefaultData`).
-- On save, `normalizeEditorBody` collapses embeds back to `tome-block` fences (same pattern as dynamic link prepare/collapse).
+- On save, the ProseMirror atom maps back to a `page_block` node; the server writes a `tome-block` fence. `editorHtml` is not part of the saved document.
 - **Interactive blocks:** when `EditorPageBlockRegistration.interactive` is true (exposed on the public manifest), the webview loads `editorBundles`, mounts the extension React `Component` inside the page-block NodeView, and persists edits via `onBlockDataChange` → embed comment attrs. Non-interactive blocks keep the static HTML path (plus optional host enhancements such as schema-diagram pan/zoom).
 - **Tool panel:** `EditorPageBlockContext.openToolPanel` / `closeToolPanel` open a host right panel (sibling of `.tome-main`) for complex UIs that should not live inside Milkdown (e.g. tome-query React Flow). The panel is omitted from the layout when no session is open. Users can drag the panel’s left edge to resize it; width is stored in `localStorage`.
 

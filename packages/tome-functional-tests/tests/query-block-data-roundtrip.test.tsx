@@ -12,9 +12,8 @@ import {
   seedTestWorkspace,
   TEST_HOME_NODE_ID,
 } from "tome-db/content/test-helpers";
-import { normalizeEditorBody } from "tome-editor/src/webview/editor-save";
+import { documentToStorageBody } from "tome-db";
 import {
-  formatPageBlockEmbedComment,
   parsePageBlockFences,
   parsePageBlockPayload,
   serializePageBlock,
@@ -162,12 +161,16 @@ describe("query-block data client↔API round trip", () => {
 
     unmount();
 
-    const embed =
-      `${formatPageBlockEmbedComment({
-        componentId: "tome-query.block",
-        data: blockData,
-      })}\n` + `<div class="tome-query-block">snapshot</div>`;
-    const fence = normalizeEditorBody(embed, PAGE_TITLE);
+    const fence = documentToStorageBody({
+      version: 1,
+      content: [
+        {
+          type: "page_block",
+          componentId: "tome-query.block",
+          data: blockData,
+        },
+      ],
+    });
     expect(fence).toContain("```tome-block");
     expect(fence).toContain('"x": 42');
     expect(fence).not.toContain('"viewMode"');

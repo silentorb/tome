@@ -402,7 +402,8 @@ async function dispatchApiRequest(
           const hasDocument =
             payload.document !== null &&
             typeof payload.document === "object" &&
-            Array.isArray((payload.document as { segments?: unknown }).segments);
+            (payload.document as { version?: unknown }).version === 1 &&
+            Array.isArray((payload.document as { content?: unknown }).content);
           const hasTitle = typeof payload.title === "string";
           if (!hasDocument && !hasTitle) {
             return json({ error: "document or title required" }, 400);

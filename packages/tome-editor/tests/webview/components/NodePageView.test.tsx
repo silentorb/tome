@@ -4,7 +4,11 @@ import { mock, describe, expect, test } from "bun:test";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
 mock.module("../../../src/webview/components/TomeEditor", () => ({
-  TomeEditor: () => <div data-testid="tome-editor-stub" />,
+  TomeEditor: () => (
+    <div className="tome-editor-body" data-testid="tome-editor-stub">
+      <div className="ProseMirror" tabIndex={0} />
+    </div>
+  ),
 }));
 
 import { PropertiesSectionView } from "../../../src/webview/components/PropertiesSectionView";
@@ -208,6 +212,41 @@ describe("NodePageView", () => {
       expect(title.value).toBe("");
       expect(title.placeholder).toBe("Untitled");
     });
+  });
+
+  test("Enter in the page title focuses the markdown body", () => {
+    const api = makeMockEditorApi();
+    const node = makeNodePageDetail({ title: "Draft title", body: "" });
+
+    render(
+      <UserSettingsProvider api={api}>
+        <NodePageView
+          api={api}
+          node={node}
+          title={node.title}
+          saveState="idle"
+          metadataExpanded={false}
+          onMetadataExpandedChange={() => {}}
+          onBodyChange={() => {}}
+          onTitleChange={() => {}}
+          onTabSelect={() => {}}
+          onDatabaseViewChange={() => {}}
+          onArchiveNode={async () => {}}
+          onUnarchiveNode={async () => {}}
+          onDeleteNode={async () => {}}
+        />
+      </UserSettingsProvider>,
+    );
+
+    const title = screen.getByRole("textbox", { name: "Page title" }) as HTMLTextAreaElement;
+    const body = document.querySelector(".tome-editor-body .ProseMirror") as HTMLElement;
+    expect(body).toBeTruthy();
+
+    title.focus();
+    fireEvent.keyDown(title, { key: "Enter" });
+
+    expect(document.activeElement).toBe(body);
+    expect(title.value).toBe("Draft title");
   });
 
   test("renders Properties section when metadata is expanded", () => {

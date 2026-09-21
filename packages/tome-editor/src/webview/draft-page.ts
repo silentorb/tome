@@ -1,4 +1,5 @@
 import type { EditorNodePageDetail } from "tome-graph-interfaces";
+import { emptyNodeBodyDocument } from "tome-graph-interfaces";
 
 /** Client-only id for New page drafts before createNode runs. */
 export const DRAFT_NODE_ID = "__draft__";
@@ -14,7 +15,7 @@ export function makeDraftNodePageDetail(): EditorNodePageDetail {
     primaryTypeTitle: null,
     isTypeTable: false,
     archived: false,
-    document: { segments: [{ type: "prose", markdown: "" }] },
+    document: emptyNodeBodyDocument(),
     metadata: {
       createdAt: null,
       modifiedAt: null,

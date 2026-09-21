@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { emptyNodeBodyDocument } from "tome-graph-interfaces";
 import {
   DRAFT_NODE_ID,
   isDraftNodeId,
@@ -10,7 +11,7 @@ describe("draft-page", () => {
     const draft = makeDraftNodePageDetail();
     expect(draft.id).toBe(DRAFT_NODE_ID);
     expect(draft.title).toBe("");
-    expect(draft.document).toEqual({ segments: [{ type: "prose", markdown: "" }] });
+    expect(draft.document).toEqual(emptyNodeBodyDocument());
     expect(draft.sections).toEqual([{ type: "markdown" }]);
     expect(isDraftNodeId(draft.id)).toBe(true);
   });

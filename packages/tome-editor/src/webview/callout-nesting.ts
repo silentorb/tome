@@ -3,23 +3,32 @@ import type { Node as ProseNode, NodeType, Schema, Slice } from "@milkdown/prose
 import type { ResolvedPos } from "@milkdown/prose/model";
 import type { EditorState } from "@milkdown/prose/state";
 import type { EditorView } from "@milkdown/prose/view";
-import { blockquoteSchema, paragraphSchema } from "@milkdown/kit/preset/commonmark";
-import { DEFAULT_CALLOUT_PREFIX } from "tome-flatfile/callout";
+import { paragraphSchema } from "@milkdown/kit/preset/commonmark";
+import { DEFAULT_CALLOUT_EMOJI, DEFAULT_CALLOUT_PREFIX } from "tome-flatfile/callout";
+import { calloutSchema } from "./callout-schema";
 import { isCalloutBlockquoteNode } from "./callout-decoration";
 
-/** Innermost blockquote ancestor depth, or -1 when not inside a blockquote. */
+function isCalloutNode(node: { type: { name: string } }): boolean {
+  return node.type.name === "callout";
+}
+
+/** Innermost callout or emoji-blockquote ancestor depth, or -1. */
 export function findBlockquoteDepth($from: ResolvedPos): number {
   for (let depth = $from.depth; depth > 0; depth--) {
-    if ($from.node(depth).type.name === "blockquote") return depth;
+    const node = $from.node(depth);
+    if (isCalloutNode(node) || (node.type.name === "blockquote" && isCalloutBlockquoteNode(node))) {
+      return depth;
+    }
   }
   return -1;
 }
 
-/** Whether the selection sits inside a callout blockquote (any ancestor). */
+/** Whether the selection sits inside a callout (node or emoji blockquote). */
 export function selectionInsideCallout(state: EditorState, view?: EditorView): boolean {
   const { $from } = state.selection;
   for (let depth = $from.depth; depth > 0; depth--) {
     const node = $from.node(depth);
+    if (isCalloutNode(node)) return true;
     if (node.type.name !== "blockquote") continue;
     if (view) {
       const dom = view.nodeDOM($from.before(depth));
@@ -34,11 +43,11 @@ export function selectionInsideCallout(state: EditorState, view?: EditorView): b
 
 export function createCalloutBlockquoteNode(
   schema: Schema,
-  blockquoteType: NodeType,
+  calloutType: NodeType,
   paragraphType: NodeType,
 ): ProseNode {
   const paragraph = paragraphType.create(null, schema.text(DEFAULT_CALLOUT_PREFIX));
-  return blockquoteType.create(null, paragraph);
+  return calloutType.create({ emoji: DEFAULT_CALLOUT_EMOJI }, paragraph);
 }
 
 export function calloutBlockquoteTypes(ctx: Ctx): {
@@ -46,21 +55,21 @@ export function calloutBlockquoteTypes(ctx: Ctx): {
   paragraphType: NodeType;
 } {
   return {
-    blockquoteType: blockquoteSchema.type(ctx),
+    blockquoteType: calloutSchema.type(ctx),
     paragraphType: paragraphSchema.type(ctx),
   };
 }
 
-/** Caret position immediately after the default emoji prefix in a callout blockquote node. */
+/** Caret position immediately after the default emoji prefix in a callout node. */
 export function caretAfterCalloutPrefix(blockquotePos: number): number {
   return blockquotePos + 1 + 1 + DEFAULT_CALLOUT_PREFIX.length;
 }
 
-/** Whether a pasted slice contains a top-level callout blockquote. */
+/** Whether a pasted slice contains a top-level callout. */
 export function sliceContainsCalloutBlockquote(slice: Slice): boolean {
   let found = false;
   slice.content.forEach((node) => {
-    if (node.type.name === "blockquote" && isCalloutBlockquoteNode(node)) {
+    if (isCalloutNode(node) || (node.type.name === "blockquote" && isCalloutBlockquoteNode(node))) {
       found = true;
     }
   });

@@ -1,39 +1,36 @@
 import { describe, expect, test } from "bun:test";
-import { classifyMarkdownUpdate } from "../../src/webview/editor-markdown-update";
+import { classifyDocumentUpdate } from "../../src/webview/editor-markdown-update";
 
-describe("classifyMarkdownUpdate", () => {
+describe("classifyDocumentUpdate", () => {
   test("ignores updates before baseline is captured at create", () => {
     expect(
-      classifyMarkdownUpdate({
+      classifyDocumentUpdate({
         destroyed: false,
         editorReady: true,
         baselineCaptured: false,
-        markdown: "a",
-        prevMarkdown: "b",
+        sameDoc: false,
       }),
     ).toBe("ignore");
   });
 
   test("saves the first real edit after baseline", () => {
     expect(
-      classifyMarkdownUpdate({
+      classifyDocumentUpdate({
         destroyed: false,
         editorReady: true,
         baselineCaptured: true,
-        markdown: '<!-- tome-page-block {"data":{"reactFlow":{"nodes":[{"id":"in"}]}}} -->',
-        prevMarkdown: '<!-- tome-page-block {"data":{"reactFlow":{"nodes":[]}}} -->',
+        sameDoc: false,
       }),
     ).toBe("save");
   });
 
-  test("ignores no-op markdown", () => {
+  test("ignores no-op document updates", () => {
     expect(
-      classifyMarkdownUpdate({
+      classifyDocumentUpdate({
         destroyed: false,
         editorReady: true,
         baselineCaptured: true,
-        markdown: "same",
-        prevMarkdown: "same",
+        sameDoc: true,
       }),
     ).toBe("ignore");
   });

@@ -1,45 +1,47 @@
 import { describe, expect, test } from "bun:test";
-import { defaultValueCtx, Editor, rootCtx } from "@milkdown/core";
-import { getMarkdown } from "@milkdown/kit/utils";
-import { gfm } from "@milkdown/preset-gfm";
-import { commonmark } from "@milkdown/preset-commonmark";
+import { documentToStorageBody } from "tome-db/document-to-storage-body";
 import { editorDynamicNodeHref } from "tome-flatfile/dynamic-node-links";
-import { formatEditorDynamicNodeLink } from "../../src/webview/standalone-markdown";
-import { normalizeEditorBody } from "../../src/webview/editor-save";
+import type { NodeBodyDocument } from "tome-graph-interfaces";
+import { documentToPmJson, pmJsonToDocument } from "../../src/webview/body-document-pm";
 
 const TARGET = "0000000000000000000000002X";
 
-describe("dynamic link milkdown serialization", () => {
-  test("GFM getMarkdown preserves dynamicTitle flag and save collapses to [[id]]", async () => {
-    const link = formatEditorDynamicNodeLink(TARGET, "Cozy horror");
-    const root = document.createElement("div");
-    document.body.appendChild(root);
-    const editor = await Editor.make()
-      .config((ctx) => {
-        ctx.set(rootCtx, root);
-        ctx.set(defaultValueCtx, link);
-      })
-      .use(commonmark)
-      .use(gfm)
-      .create();
-    let md = "";
-    await editor.action((ctx) => {
-      md = getMarkdown()(ctx);
+function dynamicDoc(): NodeBodyDocument {
+  return {
+    version: 1,
+    content: [
+      {
+        type: "paragraph",
+        content: [{ type: "dynamic_link", nodeId: TARGET, title: "Cozy horror" }],
+      },
+    ],
+  };
+}
+
+describe("dynamic link document mapping", () => {
+  test("storage form is a wiki link and ProseMirror round-trips the dynamic link", () => {
+    expect(documentToStorageBody(dynamicDoc())).toContain(`[[${TARGET}]]`);
+    const roundTrip = pmJsonToDocument(documentToPmJson(dynamicDoc()));
+    expect(roundTrip.content).toEqual(dynamicDoc().content);
+  });
+
+  test("a link mark without dynamicTitle is a static link in storage", () => {
+    const doc = pmJsonToDocument({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Cozy horror",
+              marks: [{ type: "link", attrs: { href: `?node=${TARGET}`, title: null } }],
+            },
+          ],
+        },
+      ],
     });
-    expect(md).toContain("dynamicTitle=");
-    expect(md).toContain(`node=${TARGET}`);
-    expect(normalizeEditorBody(md.trim(), "Page")).toBe(`[[${TARGET}]]`);
-    await editor.destroy();
-  });
-
-  test("GFM-escaped &dynamicTitle=1 still collapses on save", () => {
-    const md = `[Cozy horror](?node=${TARGET}\\&dynamicTitle=1)`;
-    expect(normalizeEditorBody(md, "Page")).toBe(`[[${TARGET}]]`);
-  });
-
-  test("normalizeEditorBody saves static when dynamic marker missing", () => {
-    const md = `[Cozy horror](http://127.0.0.1:5173/?node=${TARGET})`;
-    expect(normalizeEditorBody(md, "Page")).toBe(`[Cozy horror](./${TARGET}.md)`);
+    expect(documentToStorageBody(doc)).toContain(`[Cozy horror](./${TARGET}.md)`);
   });
 
   test("dynamicTitle href format", () => {

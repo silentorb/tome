@@ -31,11 +31,11 @@ Still keep use cases separable so the editor is not one mega-RPC: workspace vs n
 Example — **open node page** (`GET /api/nodes/:id`):
 
 1. Load node + sections (tables, relations, metadata).
-2. Parse storage markdown into a structured body document (prose / links / page blocks).
-3. Batch-resolve dynamic-link titles; expand page blocks for the editor.
-4. Return one payload the client can project into Milkdown without further title/body GETs.
+2. Parse Extended Markdown (storage only) into a `NodeBodyDocument` semantic tree (blocks, inlines, callouts, links, page blocks).
+3. Batch-resolve dynamic-link titles; attach page-block `editorHtml`.
+4. Return one payload the client maps to ProseMirror JSON without further title/body GETs or a markdown projection.
 
-Save (`PUT` with the same document shape) encodes back to storage on the server.
+Save (`PATCH` with the same document) encodes back to Extended Markdown on the server.
 
 ## Inputs / outputs / artifacts
 

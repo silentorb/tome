@@ -10,7 +10,9 @@ import {
 } from "tome-interfaces/page-block";
 import type { EditorToolPanelSession } from "tome-interfaces/page-block/editor";
 import { defaultBlockData, defaultReactFlowGraph } from "tome-query/config";
-import { normalizeEditorBody } from "../../src/webview/editor-save";
+import { documentToStorageBody } from "tome-db/document-to-storage-body";
+import { editorViewCtx } from "@milkdown/kit/core";
+import { pmNodeToDocument } from "../../src/webview/body-document-pm";
 import { pageBlockEmbed } from "../../src/webview/extensions/page-block-embed";
 import {
   registerInteractivePageBlockForTests,
@@ -105,12 +107,14 @@ describe("interactive page-block data persistence", () => {
       expect(markdown.includes('"x": 12') || markdown.includes('"x":12')).toBe(true);
     });
 
-    const markdown = await editor.action(getMarkdown());
-    const fence = normalizeEditorBody(markdown, "Page");
-    expect(fence).toContain('"x": 12');
-    expect(fence).not.toContain('"viewMode"');
+    let stored = "";
+    await editor.action((ctx) => {
+      stored = documentToStorageBody(pmNodeToDocument(ctx.get(editorViewCtx).state.doc));
+    });
+    expect(stored).toContain('"x": 12');
+    expect(stored).not.toContain('"viewMode"');
 
-    const match = /```tome-block\n([\s\S]*?)\n```/.exec(fence);
+    const match = /```tome-block\n([\s\S]*?)\n```/.exec(stored);
     expect(match).toBeTruthy();
     const payload = parsePageBlockPayload(match![1]!);
     const data = payload?.data as { reactFlow?: { nodes?: { id: string; position: { x: number } }[] } };

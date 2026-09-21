@@ -1,33 +1,19 @@
 import { documentToStorageBody } from "tome-db/document-to-storage-body";
-import type { NodeBodyDocument } from "tome-graph-interfaces";
-import { isPersistableNodeTitle } from "../shared/types";
-import { stripLeadingTitleHeading } from "./markdown-body";
 import {
   documentsEqual,
-  editorMarkdownToDocument,
-} from "./body-document-projection";
+  emptyNodeBodyDocument,
+  type NodeBodyDocument,
+} from "tome-graph-interfaces";
+import { isPersistableNodeTitle } from "../shared/types";
 
-/** Editor markdown → storage markdown (tests / createNode body). */
-export function normalizeEditorBody(body: string, title: string): string {
-  const normalized = stripLeadingTitleHeading(body.replace(/\r\n/g, "\n"), title);
-  return documentToStorageBody(editorMarkdownToDocument(normalized)).trimEnd();
-}
-
-export function editorMarkdownToSaveDocument(
-  body: string,
-  title: string,
-): NodeBodyDocument {
-  const normalized = stripLeadingTitleHeading(body.replace(/\r\n/g, "\n"), title);
-  return editorMarkdownToDocument(normalized);
-}
+export type PendingSavePayload = { document?: NodeBodyDocument; title?: string };
 
 export function bodyNeedsSave(
-  nextBody: string,
+  nextDocument: NodeBodyDocument | null,
   savedDocument: NodeBodyDocument | null,
-  title: string,
 ): boolean {
-  if (savedDocument === null) return false;
-  return !documentsEqual(editorMarkdownToSaveDocument(nextBody, title), savedDocument);
+  if (nextDocument === null || savedDocument === null) return false;
+  return !documentsEqual(nextDocument, savedDocument);
 }
 
 export function titleNeedsSave(nextTitle: string, savedTitle: string | null): boolean {
@@ -37,22 +23,16 @@ export function titleNeedsSave(nextTitle: string, savedTitle: string | null): bo
   return trimmed !== savedTitle;
 }
 
-export type PendingSavePayload = { document?: NodeBodyDocument; title?: string };
-
 /** Build a combined PATCH payload for dirty pending fields, or null when nothing to flush. */
 export function buildPendingSavePayload(
-  pendingBody: string | null,
+  pendingBody: NodeBodyDocument | null,
   pendingTitle: string | null,
   savedDocument: NodeBodyDocument | null,
   savedTitle: string | null,
-  pageTitle: string,
 ): PendingSavePayload | null {
   const patch: PendingSavePayload = {};
-  if (pendingBody !== null && savedDocument !== null) {
-    const nextDoc = editorMarkdownToSaveDocument(pendingBody, pageTitle);
-    if (!documentsEqual(nextDoc, savedDocument)) {
-      patch.document = nextDoc;
-    }
+  if (pendingBody !== null && savedDocument !== null && !documentsEqual(pendingBody, savedDocument)) {
+    patch.document = pendingBody;
   }
   if (pendingTitle !== null && savedTitle !== null) {
     const trimmed = pendingTitle.trim();
@@ -63,3 +43,9 @@ export function buildPendingSavePayload(
   if (patch.document === undefined && patch.title === undefined) return null;
   return patch;
 }
+
+export function storageBodyForCreate(document: NodeBodyDocument): string {
+  return documentToStorageBody(document).trimEnd();
+}
+
+export { emptyNodeBodyDocument };

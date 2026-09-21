@@ -28,7 +28,6 @@ export type {
   EditorNodePageDetail,
   EditorNodeSection,
   NodeBodyDocument,
-  NodeBodySegment,
   NodeDetail,
   NodeSummary,
   TableTabsDetail,

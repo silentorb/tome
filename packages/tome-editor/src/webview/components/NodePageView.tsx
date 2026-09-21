@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { DatabaseTableView } from "./DatabaseTableView";
 import { TomeEditor } from "./TomeEditor";
 import { PageActionsMenu } from "./PageActionsMenu";
@@ -10,13 +10,17 @@ import type { EditorApi } from "../api/client";
 import type { DatabaseViewDetail, EditorNodePageDetail } from "../../shared/types";
 import { isProtectedEditorNode } from "../../shared/types";
 import { isDraftNodeId } from "../draft-page";
-import {
-  documentToEditorMarkdown,
-  isDocumentEffectivelyEmpty,
-} from "../body-document-projection";
+import type { NodeBodyDocument } from "tome-graph-interfaces";
+import { isDocumentEffectivelyEmpty } from "tome-graph-interfaces";
 import { SectionTitle } from "./NodeNameLink";
 import "./node-page-view.css";
 import "./page-actions-menu.css";
+
+/** Focus the Milkdown body after leaving the page title (e.g. Enter). */
+export function focusPageBodyEditor(pageRoot: HTMLElement | null): void {
+  const prose = pageRoot?.querySelector<HTMLElement>(".tome-editor-body .ProseMirror");
+  prose?.focus();
+}
 
 interface NodePageViewProps {
   api: EditorApi;
@@ -26,8 +30,8 @@ interface NodePageViewProps {
   saveState: "idle" | "dirty" | "saving" | "saved" | "error";
   metadataExpanded: boolean;
   onMetadataExpandedChange: (expanded: boolean) => void;
-  onBodyChange: (body: string) => void;
-  onEditorBaseline?: (body: string) => void;
+  onBodyChange: (document: NodeBodyDocument) => void;
+  onEditorBaseline?: (document: NodeBodyDocument) => void;
   onTitleChange: (title: string) => void;
   onTabSelect: (tabId: string) => void;
   onDatabaseViewChange: (view: DatabaseViewDetail) => void;
@@ -70,11 +74,14 @@ export function NodePageView({
   onAddQuickLink,
   onRemoveQuickLink,
 }: NodePageViewProps) {
+  const pageRootRef = useRef<HTMLDivElement>(null);
   const emptyMarkdown = isDocumentEffectivelyEmpty(node.document);
-  const editorBody = emptyMarkdown ? "" : documentToEditorMarkdown(node.document);
   const showPageActions =
     !isDraftNodeId(node.id) && !isProtectedEditorNode(node.id, protectedNodeIds);
   const [relateOpen, setRelateOpen] = useState(false);
+  const focusBodyFromTitle = useCallback(() => {
+    focusPageBodyEditor(pageRootRef.current);
+  }, []);
 
   const saveStatusLabel =
     saveState === "dirty"
@@ -92,14 +99,14 @@ export function NodePageView({
       key={node.id}
       api={api}
       nodeId={node.id}
-      initialBody={editorBody}
+      initialDocument={node.document}
       onEditorBaseline={onEditorBaseline}
       onBodyChange={onBodyChange}
     />
   );
 
   return (
-    <div className="tome-record-page">
+    <div className="tome-record-page" ref={pageRootRef}>
       <div className="tome-record-sections">
         <section className="tome-record-section tome-page-title-section">
           {node.archived ? (
@@ -109,6 +116,7 @@ export function NodePageView({
             <PageTitle
               value={title}
               onChange={onTitleChange}
+              onEnter={focusBodyFromTitle}
               selectOnMount={selectTitleOnMount}
               onSelected={onTitleSelected}
             />

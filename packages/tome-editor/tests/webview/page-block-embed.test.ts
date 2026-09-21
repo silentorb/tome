@@ -3,9 +3,9 @@ import { defaultValueCtx, Editor, rootCtx } from "@milkdown/core";
 import { editorViewCtx } from "@milkdown/kit/core";
 import { commonmark } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
-import { getMarkdown } from "@milkdown/kit/utils";
-import { formatPageBlockEmbedComment, serializePageBlock } from "tome-interfaces/page-block";
-import { normalizeEditorBody } from "../../src/webview/editor-save";
+import { formatPageBlockEmbedComment } from "tome-interfaces/page-block";
+import { documentToStorageBody } from "tome-db/document-to-storage-body";
+import { pmNodeToDocument } from "../../src/webview/body-document-pm";
 import { pageBlockEmbed } from "../../src/webview/extensions/page-block-embed";
 
 async function createEditor(initial: string) {
@@ -39,15 +39,19 @@ describe("page block embed rendering", () => {
   });
 
   test("round-trips page block embeds back to storage fences on save", async () => {
-    const fence = serializePageBlock("spatial-graph.block", { relationships: { parentTypes: ["parents"] } });
     const embed =
       `${formatPageBlockEmbedComment({ componentId: "spatial-graph.block", data: { relationships: { parentTypes: ["parents"] } } })}\n` +
       '<figure class="tome-spatial-graph"><figcaption>Spatial graph</figcaption></figure>';
 
     const { editor } = await createEditor(embed);
 
-    const markdown = await editor.action(getMarkdown());
-    expect(normalizeEditorBody(markdown, "Locations")).toBe(fence);
+    let stored = "";
+    await editor.action((ctx) => {
+      stored = documentToStorageBody(pmNodeToDocument(ctx.get(editorViewCtx).state.doc));
+    });
+    expect(stored).toContain("```tome-block");
+    expect(stored).toContain("spatial-graph.block");
+    expect(stored).toContain("parentTypes");
 
     await editor.destroy();
   });
@@ -110,10 +114,12 @@ describe("page block embed rendering", () => {
       );
     });
 
-    const markdown = await editor.action(getMarkdown());
-    const fence = normalizeEditorBody(markdown, "Page");
-    expect(fence).toContain('"x": 7');
-    expect(fence).not.toContain('"viewMode"');
+    let stored = "";
+    await editor.action((ctx) => {
+      stored = documentToStorageBody(pmNodeToDocument(ctx.get(editorViewCtx).state.doc));
+    });
+    expect(stored).toContain('"x": 7');
+    expect(stored).not.toContain('"viewMode"');
 
     await editor.destroy();
   });

@@ -1,7 +1,10 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
 import { createHttpClient } from "../src/create-http-client";
 
-const hiDoc = { segments: [{ type: "prose" as const, markdown: "Hi" }] };
+const hiDoc = {
+  version: 1 as const,
+  content: [{ type: "paragraph" as const, content: [{ type: "text" as const, text: "Hi" }] }],
+};
 
 describe("saveNode keepalive", () => {
   const originalFetch = globalThis.fetch;

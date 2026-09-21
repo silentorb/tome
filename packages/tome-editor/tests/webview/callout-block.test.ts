@@ -6,13 +6,14 @@ import { gfm } from "@milkdown/preset-gfm";
 import { getMarkdown } from "@milkdown/kit/utils";
 import { TextSelection } from "@milkdown/prose/state";
 import { DEFAULT_CALLOUT_PREFIX, hasLeadingCalloutEmoji } from "tome-flatfile/callout";
+import { calloutPlugin } from "../../src/webview/callout-schema";
 import { insertCalloutBlock } from "../../src/webview/callout-block";
 import { installCalloutDecoration } from "../../src/webview/callout-decoration";
 
-function countBlockquotes(doc: { descendants: (f: (node: { type: { name: string } }) => void) => void }): number {
+function countCallouts(doc: { descendants: (f: (node: { type: { name: string } }) => void) => void }): number {
   let count = 0;
   doc.descendants((node) => {
-    if (node.type.name === "blockquote") count += 1;
+    if (node.type.name === "callout" || node.type.name === "blockquote") count += 1;
   });
   return count;
 }
@@ -27,6 +28,7 @@ async function createEditor(initial: string) {
     })
     .use(commonmark)
     .use(gfm)
+    .use(calloutPlugin)
     .create();
   return { editor, root };
 }
@@ -76,7 +78,7 @@ describe("callout block insertion", () => {
 
     expect(root.querySelectorAll("blockquote.tome-callout").length).toBe(2);
     await editor.action((ctx) => {
-      expect(countBlockquotes(ctx.get(editorViewCtx).state.doc)).toBe(2);
+      expect(countCallouts(ctx.get(editorViewCtx).state.doc)).toBe(2);
     });
 
     await editor.destroy();
@@ -97,7 +99,7 @@ describe("callout block insertion", () => {
     expect(root.querySelectorAll("blockquote.tome-callout").length).toBe(2);
     await editor.action((ctx) => {
       const view = ctx.get(editorViewCtx);
-      expect(countBlockquotes(view.state.doc)).toBe(2);
+      expect(countCallouts(view.state.doc)).toBe(2);
       const md = getMarkdown()(ctx);
       expect(md).toContain("> >");
       expect(md).toContain("💡");
@@ -121,7 +123,7 @@ describe("callout block insertion", () => {
 
     await editor.action((ctx) => {
       const view = ctx.get(editorViewCtx);
-      expect(countBlockquotes(view.state.doc)).toBe(2);
+      expect(countCallouts(view.state.doc)).toBe(2);
       const md = getMarkdown()(ctx);
       expect(md).toContain("Outer text");
       expect(md).toContain("> >");

@@ -1,6 +1,5 @@
-import type { NodeBodyDocument } from "tome-graph-interfaces";
+import { inlinePlainText, type NodeBodyDocument } from "tome-graph-interfaces";
 import { extractPageIconFromMarkdown } from "./callout-decoration";
-import { extractPageIconFromDocument } from "./body-document-projection";
 import { HOME_ICON, VIEW_ICONS } from "./quick-links-nav";
 import type { AppView } from "../shared/types";
 
@@ -19,7 +18,23 @@ export interface DocumentIconContext {
   documentIconImageUrl?: string | null;
 }
 
-/** Build the API URL for a corpus branding document icon image. */
+const EMOJI_ONLY_LINE = /^(\p{Extended_Pictographic})\s*$/u;
+
+/** First page icon from a semantic body: callout emoji or an emoji-only opening paragraph. */
+export function extractPageIconFromDocument(document: NodeBodyDocument): string | null {
+  for (const block of document.content) {
+    if (block.type === "callout") return block.emoji;
+    if (block.type === "paragraph" || block.type === "heading") {
+      const text = inlinePlainText(block.content).trim();
+      if (!text) continue;
+      const emoji = EMOJI_ONLY_LINE.exec(text);
+      return emoji?.[1] ?? null;
+    }
+    return null;
+  }
+  return null;
+}
+
 export function documentIconImageApiUrl(corpusId?: string | null): string {
   if (corpusId?.trim()) {
     return `/api/workspace/document-icon?corpusId=${encodeURIComponent(corpusId.trim())}`;

@@ -23,13 +23,13 @@ For HTTP use-case / no client fan-out rules, read [`web-api-design.md`](./web-ap
 ### Editing model
 
 - The editor **must** read and write node bodies via `tome-db` (`ContentStore` → `content/data/{shard}/{id}.md`).
-- Every node **must** render as a **universal page** with this block order: **page title** (standalone textarea) → collapsible **metadata** panel (timestamps, backlinks, and optional **Properties** when expanded) → **markdown body** (Milkdown) → optional relationship and database table sections derived from graph relationships.
+- Every node **must** render as a **universal page** with this block order: **page title** (standalone single-line textarea — titles **must not** contain newlines; **Enter** moves focus to the markdown body) → collapsible **metadata** panel (timestamps, backlinks, and optional **Properties** when expanded) → **markdown body** (Milkdown) → optional relationship and database table sections derived from graph relationships.
 - Because the page title is rendered outside the markdown body, heading levels in stored markdown **must** render one level deeper in the page body (`h1` → rendered `h2`, `h2` → rendered `h3`, etc.).
 - Instance pages (nodes with a member-side set projection to a type table) **must** show a **Properties** section inside the expanded metadata panel when the type defines one or more stored scalar fields and/or dynamic computed fields for that database. Stored scalars (e.g. Priority) are editable; computed dynamic fields are read-only. Properties **must** show singular stored scalars and computed fields on the member-side set edge only — not relationship membership. When Properties is shown, a **Membership** relation table section (title from the association's member-side perspective label in `associations.json`; Marloth default: **Membership**) **must** still appear below the markdown body with one row per parent type-table node; membership is edited there (Link / Remove), not in Properties.
 - Relationship tables **must** group outgoing relationships by label; relationship properties (except import metadata like `ordinal`) **must** appear as table columns.
 - Database table sections **must** appear on type-table nodes, built from incoming `IS_A` relationships (Name from linked pages; scalar columns from `IS_A` properties; relation columns from linked targets on outgoing graph relationships — see [tome-db.md](./tome-db.md) `getDatabaseViewDetail`).
 - The API **must** load `content/` on startup (full cache rebuild if stale), watch `content/data/` and `content/model/` for changes, and sync into `TOME_DB_PATH (fallback: MARLOTH_DB_PATH)` (see tome-db). While startup cache sync runs, the editor **must** show a syncing progress indicator (not a generic connection error) when the API returns `cache_syncing` / health `ready: false`, and resume loading once the cache is ready.
-- Autosave **should** debounce writes (default ~2s after last edit). Pending document/title **must** flush on `pagehide` via `fetch` with `keepalive: true` (`PATCH /api/nodes/:id` with `{ document?, title? }`), and **must** flush (awaited) before in-app `loadNode` / archive / delete when dirty. The load baseline **must** be captured when the editor finishes creating (not from the first `markdownUpdated`), so the first user edit — including interactive page-block attr changes such as tome-query graph edits — is saved. Autosave is a **side channel**: dirty fields live in refs, flushes update save status (and related chrome such as recent nodes), and **must not** remount the Milkdown body or reload the page detail. The live page title draft is independent UI state from the loaded node model; the body editor remounts only when the loaded node id or body changes.
+- Autosave **should** debounce writes (default ~2s after last edit). Pending document/title **must** flush on `pagehide` via `fetch` with `keepalive: true` (`PATCH /api/nodes/:id` with `{ document?, title? }`), and **must** flush (awaited) before in-app `loadNode` / archive / delete when dirty. The load baseline **must** be captured from the ProseMirror doc when the editor finishes creating (not from the first listener tick), so the first user edit — including interactive page-block attr changes such as tome-query graph edits — is saved. Autosave is a **side channel**: dirty fields live in refs, flushes update save status (and related chrome such as recent nodes), and **must not** remount the Milkdown body or reload the page detail. The live page title draft is independent UI state from the loaded node model; the body editor remounts only when the loaded node id or body equality key changes.
 - Local UI preferences (table sort order, active table tab, Imp graph block parameters, etc.) **must** persist in a gitignored user settings file (`.tome/user-settings.json (legacy: .marloth/user-settings.json)` by default), storing sparse overrides only—not full copies of graph data.
 - Section tables **must** support sortable columns; default sort is Name ascending. Sort preferences **must** persist per section table across sessions. For windowed (infinite-scroll) tables, sort header clicks **must** refetch from the server (`offset=0`) rather than reordering only the loaded batch.
 - Multi-row tables (type-table Items, ordered collections, relation sections) **must** lazy-load rows in batches via infinite scroll on the page shell scroll (`.tome-main`; default batch 50)—no page-number controls and no inner table scroll viewport. Tables **must** grow vertically with loaded rows. Name filter (`q`) is server-side. See [views.md](./views.md) § Lazy-loaded rows.
@@ -47,6 +47,24 @@ For panels and canvases that expose **view/visualization toggles** (not page con
 - Trigger is an icon button (⚙ or equivalent) with `aria-label` / `title` naming the surface (e.g. “Graph settings”, “Timeline settings”).
 - The menu holds checkboxes / selects for display options; prefer **session UI state** unless the feature already persists preferences (Graph Explorer uses `localStorage`; Imp graph `parameter` values use `.tome/user-settings.json` `blockParameters`; sequencing **Show dependency edges** uses `.tome/user-settings.json` `sequencing.showDependencyEdges`; Relate/Move **Only active** uses `.tome/user-settings.json` `relationships.onlyActiveTargets`, default **on**).
 - Reference implementations: Graph Explorer (`GraphView` settings), sequencing timeline (`tome-sequencing` settings), query table parameter gear (`tome-query`).
+
+### Extended Markdown (storage only)
+
+Git-tracked node bodies are **Extended Markdown**: CommonMark + GFM, plus Tome encodings for semantics that standard Markdown does not have. Storage is a **persistence transport**. It is not the editor interchange format and not the HTTP body shape.
+
+`NodeBodyDocument` (`version: 1`, `content` block tree in `tome-graph-interfaces`) is the semantic document. It matches the editor’s CommonMark/GFM baseline plus Tome supersets, and maps 1:1 to the live ProseMirror schema (`body-document-pm.ts`). Crepe only hosts that ProseMirror doc (`defaultValue` JSON + `listener.updated` / `doc.toJSON()`). There is no editor-markdown projection.
+
+| Semantic node | Storage encoding |
+| --- | --- |
+| CommonMark/GFM blocks and inlines | Ordinary markdown (remark parse/stringify) |
+| `dynamic_link` (`nodeId`; `title` resolved on GET) | `[[{nodeId}]]` |
+| `static_link` (`nodeId` + `label`) | `[label](./{nodeId}.md)` |
+| `page_block` (`componentId` + `data`; `editorHtml` is GET enrichment only) | ` ```tome-block ` fence |
+| `callout` (`emoji`) | Emoji-lead blockquote: `> 💡 …` |
+
+**Callouts** are first-class (`callout` in the document and a ProseMirror `callout` node). The emoji-lead blockquote is a **Tome convention**. It is in the same family as alert/callout extensions, but it is **not** GitHub Alerts (`> [!NOTE]`) and **not** Obsidian callouts (`> [!info]`). Detection lives in `tome-flatfile/src/callout.ts`. Do not rewrite corpus files to another alert syntax. New storage forms should mimic an existing Markdown extension standard when one already covers the feature.
+
+A leading `#` heading whose text matches the page title is stripped when building the GET document (`stripDuplicateTitleHeading`). It is not stripped again on every save.
 
 ### Cross-linking and navigation links
 
@@ -82,12 +100,12 @@ Keyboard shortcuts in combobox-style pickers (global search, Relate, record link
 - Internal links **must** be stored in git-tracked markdown in one of two forms:
   - **Static title:** `[Custom text](./{nodeId}.md)` (see `canonicalNodeMarkdownHref` in `tome-flatfile` markdown-links) when the author overrides the displayed label.
   - **Dynamic title:** `[[{nodeId}]]` — no title stored; the displayed label is resolved from the target node’s `title` property at render time.
-- **`GET /api/nodes/:id`** (editor page-load use case) **must** return a structured **`NodeBodyDocument`** (`document.segments`: prose / `dynamic_link` / `static_link` / `page_block` with resolved titles and page-block `editorHtml`). The client **must not** parse storage markdown or fan out title fetches for that body.
-- **`PATCH /api/nodes/:id`** **must** accept `{ document?, title? }` (omitted fields unchanged). The server encodes the document to storage markdown. Milkdown/Crepe markdown is a **client-local projection** only (`documentToEditorMarkdown` / `editorMarkdownToDocument`).
-- Crepe projection hrefs: static label `?node={id}`; dynamic title `?node={id}&dynamicTitle=1` (boolean flag; tolerate GFM-escaped `\&`). App chrome URLs **must** strip `dynamicTitle` (and never use `dynnode`).
-- `@` autocomplete **must** search existing nodes by title and insert a **dynamic-title** link (`formatEditorDynamicNodeLink` → `dynamic_link` segment → `[[{nodeId}]]` in storage).
+- **`GET /api/nodes/:id`** (editor page-load use case) **must** return a **`NodeBodyDocument`** (`version` + `content` block/inline tree, resolved dynamic-link titles, page-block `editorHtml`). The client **must not** parse storage markdown or fan out title fetches for that body. Load maps the document to ProseMirror JSON.
+- **`PATCH /api/nodes/:id`** **must** accept `{ document?, title? }` (omitted fields unchanged; `document.version` is `1`). The client sends the ProseMirror doc mapped back to `NodeBodyDocument`. The server encodes that document to Extended Markdown.
+- Inside the editor, node links are ProseMirror link marks: static label `?node={id}`; dynamic title `?node={id}&dynamicTitle=1` (boolean flag; tolerate GFM-escaped `\&`). App chrome URLs **must** strip `dynamicTitle` (and never use `dynnode`).
+- `@` autocomplete **must** search existing nodes by title and insert a **dynamic-title** link mark (`dynamic_link` → `[[{nodeId}]]` in storage).
 - Dynamic-title links **must** show the same file icon as relation table cells (prefix before the link in Milkdown). Static-titled links do not show the icon.
-- If the user edits the text of a dynamic-title link in Milkdown, the link **must** demote to a `static_link` segment on save. Demotion applies only to edits of **existing** dynamic link text; pasted or otherwise inserted dynamic links stay dynamic. The demote plugin **must** map positions through the transaction mapping between old and new documents — never reuse raw new-document positions on the pre-edit document (that throws `RangeError: Position N outside of fragment` and aborts the editor state update while autosave can still write the paste).
+- If the user edits the text of a dynamic-title link in Milkdown, the link **must** demote to a `static_link` on save. Demotion applies only to edits of **existing** dynamic link text; pasted or otherwise inserted dynamic links stay dynamic. The demote plugin **must** map positions through the transaction mapping between old and new documents — never reuse raw new-document positions on the pre-edit document (that throws `RangeError: Position N outside of fragment` and aborts the editor state update while autosave can still write the paste).
 - Clicking a cross-link in the Milkdown body: plain click → soft same-tab (`navigateStandaloneNode`); Ctrl/Cmd+click → JS-emulated new tab (ProseMirror would otherwise select the enclosing block); shift/middle-click and right-click → native hard open / context menu on the real `href`.
 - **Global search** result rows **should** be `<a href="…">` elements using `?node=` URLs so hard-open gestures stay native; same-tab activation is soft via the chrome interceptor.
 - Database relation column cell labels, edit-popup row links, section table name cells, and sidebar nav follow the **native-link behavior parity** rule above.
@@ -96,9 +114,9 @@ Keyboard shortcuts in combobox-style pickers (global search, Relate, record link
 ### Page blocks (extensions)
 
 - Canonical storage uses ` ```tome-block ` JSON fences (see [page-blocks.md](../extensions/page-blocks.md)).
-- Page-block HTML for the open page **must** be included on `GET /api/nodes/:id` as `page_block.editorHtml` (comment + HTML). Initial load **must not** call `POST …/prepare-editor-body`.
-- **`POST /api/nodes/:id/prepare-editor-body`** remains for the **slash-menu insert/preview** use case (expand a newly inserted fence), not page load.
-- On save, page blocks travel as `page_block` segments in `document`; the server writes fences.
+- Page-block HTML for the open page **must** be included on `GET /api/nodes/:id` as `page_block.editorHtml` (rendered HTML only). The editor mapper rebuilds the embed comment from `componentId` + `data`. Initial load **must not** call `POST …/prepare-editor-body`.
+- **`POST /api/nodes/:id/prepare-editor-body`** remains for the **slash-menu insert/preview** use case (expand a newly inserted fence into HTML), not page load.
+- On save, page blocks travel as `page_block` nodes in `document.content`; the server writes fences. `editorHtml` is ignored for dirty equality and is not required on PATCH.
 
 ### Entry / navigation
 

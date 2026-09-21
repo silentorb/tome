@@ -5,9 +5,8 @@ import { editorViewCtx } from "@milkdown/kit/core";
 import { TextSelection } from "@milkdown/prose/state";
 import { commonmark } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
-import { getMarkdown } from "@milkdown/kit/utils";
-import { serializePageBlock } from "tome-interfaces/page-block";
-import { normalizeEditorBody } from "../../src/webview/editor-save";
+import { documentToStorageBody } from "tome-db/document-to-storage-body";
+import { pmNodeToDocument } from "../../src/webview/body-document-pm";
 
 try {
   GlobalRegistrator.register();
@@ -63,11 +62,13 @@ describe("insertPageBlock slash menu", () => {
       });
     });
 
-    const markdown = await editor.action((ctx) => getMarkdown()(ctx));
-    const normalized = normalizeEditorBody(markdown, "Test");
-    expect(normalized).toContain("```tome-block");
-    expect(normalized).toContain('"componentId": "schema-diagram.block"');
-    expect(normalized).not.toContain("/sch");
+    let stored = "";
+    await editor.action((ctx) => {
+      stored = documentToStorageBody(pmNodeToDocument(ctx.get(editorViewCtx).state.doc));
+    });
+    expect(stored).toContain("```tome-block");
+    expect(stored).toContain('"componentId": "schema-diagram.block"');
+    expect(stored).not.toContain("/sch");
 
     await editor.destroy();
   });
