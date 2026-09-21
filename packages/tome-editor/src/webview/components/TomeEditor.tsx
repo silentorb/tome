@@ -24,6 +24,7 @@ import { installCalloutDecoration } from "../callout-decoration";
 import { installCalloutPaste } from "../callout-paste";
 import { installDynamicLinkDecoration } from "../dynamic-node-link-decoration";
 import { installDynamicLinkDemote } from "../dynamic-node-link-demote";
+import { installLinkTooltip } from "../link-tooltip";
 import { installBlockHandleMenu } from "../block-handle-menu";
 import { installHeadingKeymap } from "../heading-keymap";
 import { installListItemDeleteKeymap } from "../list-item-delete-keymap";
@@ -145,6 +146,7 @@ export function TomeEditor({
     let detachEditorLinkNavigation: (() => void) | null = null;
     let detachBlockHandleMenu: (() => void) | null = null;
     let detachHeadingKeymap: (() => void) | null = null;
+    let detachLinkTooltip: (() => void) | null = null;
     const generation = Symbol("tome-editor-mount");
     let activeGeneration: symbol | null = generation;
     setInitError(null);
@@ -184,7 +186,7 @@ export function TomeEditor({
       defaultValue: { type: "json", value: documentToPmJson(initialDocument) as never },
       features: {
         [Crepe.Feature.Toolbar]: true,
-        [Crepe.Feature.LinkTooltip]: true,
+        [Crepe.Feature.LinkTooltip]: false,
         [Crepe.Feature.BlockEdit]: true,
         [Crepe.Feature.Placeholder]: true,
         [Crepe.Feature.Cursor]: true,
@@ -260,6 +262,12 @@ export function TomeEditor({
         installLinkHardOpen(view);
         installDynamicLinkDecoration(view);
         installDynamicLinkDemote(view);
+        detachLinkTooltip = installLinkTooltip(view, root, {
+          resolveTitle: async (id) => {
+            const node = await api.getNode(id);
+            return node.title || "Untitled";
+          },
+        }).dispose;
         installListItemDeleteKeymap(view);
         detachHeadingKeymap = installHeadingKeymap(view, (level) => {
           activeCrepe.editor.action((ctx) => {
@@ -350,6 +358,7 @@ export function TomeEditor({
       detachEditorLinkNavigation?.();
       detachHeadingKeymap?.();
       detachBlockHandleMenu?.();
+      detachLinkTooltip?.();
       const toDestroy = crepe;
       crepeRef.current = null;
       void (async () => {

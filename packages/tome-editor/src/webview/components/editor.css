@@ -343,6 +343,91 @@
   font-size: 0.85rem;
 }
 
+/* Tome body-link tooltip (replaces Crepe LinkTooltip). */
+.tome-link-tooltip {
+  position: absolute;
+  z-index: 20;
+}
+
+.tome-link-tooltip[data-show="false"] {
+  display: none;
+}
+
+.tome-link-tooltip-preview,
+.tome-link-tooltip-edit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 32px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: var(--crepe-color-surface, var(--tome-surface));
+  box-shadow: var(--crepe-shadow-1, 0 8px 24px rgba(0, 0, 0, 0.18));
+}
+
+.tome-link-tooltip-edit {
+  gap: 8px;
+  padding: 4px 10px 4px 20px;
+}
+
+.tome-link-tooltip-display {
+  width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  line-height: 24px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tome-link-tooltip-display:hover {
+  text-decoration: underline;
+}
+
+.tome-link-tooltip-input {
+  width: 200px;
+  outline: none;
+  border: 0;
+  background: transparent;
+  font-size: 14px;
+  color: var(--crepe-color-on-background, var(--tome-text));
+}
+
+.tome-link-tooltip-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--crepe-color-outline, var(--tome-muted));
+  line-height: 24px;
+  cursor: pointer;
+}
+
+.tome-link-tooltip-button:hover {
+  background: var(--crepe-color-hover, var(--tome-hover));
+}
+
+.tome-link-tooltip-button > svg,
+.tome-link-tooltip-button .tome-node-link-page-icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.tome-link-tooltip-convert .tome-node-link-icon {
+  display: inline-flex;
+  margin: 0;
+  width: 18px;
+  height: 18px;
+  color: inherit;
+}
+
 .tome-loading,
 .tome-error,
 .tome-syncing {

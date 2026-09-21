@@ -91,25 +91,26 @@ Applies to: sidebar nav, **Recent**, global search result rows, database relatio
 | --- | --- |
 | Browser editor (display) | `?node={id}` (see `standaloneNodeUrl` in `src/webview/node-links.ts`) |
 
-**Milkdown body links.** Use Crepe/Milkdown defaults unless there is a product reason not to — **`LinkTooltip` enabled** (hover preview, edit/remove). Cross-link navigation uses JS on the Milkdown root (`handleEditorLinkPointerEvent` in `src/webview/editor-link-navigation.ts`): plain click soft-navigates; Ctrl/Cmd+click is JS-emulated (`openStandaloneNodeInNewTab`) because ProseMirror claims that gesture for node selection (`handleClick` in `editor-link-hard-open.ts`); shift / middle / right-click leave the real anchor to the browser. Skip when `defaultPrevented` is already set, and skip anchors inside `[data-type="tome-page-block-react"]` (interactive page blocks own those clicks; chrome soft-nav still applies if the event bubbles). Do not add custom ProseMirror plugins whose goal is to force full document navigation inside contenteditable.
+**Milkdown body links.** Crepe’s stock `LinkTooltip` is disabled — it cannot add product actions. Tome installs a body-link tooltip (`installLinkTooltip` in `src/webview/link-tooltip.ts`) with hover preview (copy / edit / remove) plus **Use dynamic title** for static node links. Cross-link navigation uses JS on the Milkdown root (`handleEditorLinkPointerEvent` in `src/webview/editor-link-navigation.ts`): plain click soft-navigates; Ctrl/Cmd+click is JS-emulated (`openStandaloneNodeInNewTab`) because ProseMirror claims that gesture for node selection (`handleClick` in `editor-link-hard-open.ts`); shift / middle / right-click leave the real anchor to the browser. Skip when `defaultPrevented` is already set, and skip anchors inside `[data-type="tome-page-block-react"]` (interactive page blocks own those clicks; chrome soft-nav still applies if the event bubbles). Do not add custom ProseMirror plugins whose goal is to force full document navigation inside contenteditable.
 
 When the Milkdown body has focus, **Ctrl/Cmd+1–6** turn the current block into heading levels 1–6 (`heading-keymap.ts`; overrides browser tab-switch defaults for those digits).
 
 Keyboard shortcuts in combobox-style pickers (global search, Relate, record link picker) may simulate anchor clicks on **Enter** when focus is in the search field; result rows themselves remain anchors for pointer navigation.
 
 - Internal links **must** be stored in git-tracked markdown in one of two forms:
-  - **Static title:** `[Custom text](./{nodeId}.md)` (see `canonicalNodeMarkdownHref` in `tome-flatfile` markdown-links) when the author overrides the displayed label.
-  - **Dynamic title:** `[[{nodeId}]]` — no title stored; the displayed label is resolved from the target node’s `title` property at render time.
+  - **Dynamic title (preferred):** `[[{nodeId}]]` — no title stored; the displayed label is resolved from the target node’s `title` property at render time.
+  - **Static title (exceptional):** `[Custom text](./{nodeId}.md)` (see `canonicalNodeMarkdownHref` in `tome-flatfile` markdown-links) when the author overrides the displayed label.
 - **`GET /api/nodes/:id`** (editor page-load use case) **must** return a **`NodeBodyDocument`** (`version` + `content` block/inline tree, resolved dynamic-link titles, page-block `editorHtml`). The client **must not** parse storage markdown or fan out title fetches for that body. Load maps the document to ProseMirror JSON.
 - **`PATCH /api/nodes/:id`** **must** accept `{ document?, title? }` (omitted fields unchanged; `document.version` is `1`). The client sends the ProseMirror doc mapped back to `NodeBodyDocument`. The server encodes that document to Extended Markdown.
 - Inside the editor, node links are ProseMirror link marks: static label `?node={id}`; dynamic title `?node={id}&dynamicTitle=1` (boolean flag; tolerate GFM-escaped `\&`). App chrome URLs **must** strip `dynamicTitle` (and never use `dynnode`).
 - `@` autocomplete **must** search existing nodes by title and insert a **dynamic-title** link mark (`dynamic_link` → `[[{nodeId}]]` in storage).
 - Dynamic-title links **must** show the same file icon as relation table cells (prefix before the link in Milkdown). Static-titled links do not show the icon.
+- The body-link tooltip **must** offer **Use dynamic title** on static node links: fetch the target’s current title (`GET /api/nodes/:id`), replace the label, set `dynamicTitle=1`, and show the page icon. Dynamic and external links omit that control.
 - If the user edits the text of a dynamic-title link in Milkdown, the link **must** demote to a `static_link` on save. Demotion applies only to edits of **existing** dynamic link text; pasted or otherwise inserted dynamic links stay dynamic. The demote plugin **must** map positions through the transaction mapping between old and new documents — never reuse raw new-document positions on the pre-edit document (that throws `RangeError: Position N outside of fragment` and aborts the editor state update while autosave can still write the paste).
 - Clicking a cross-link in the Milkdown body: plain click → soft same-tab (`navigateStandaloneNode`); Ctrl/Cmd+click → JS-emulated new tab (ProseMirror would otherwise select the enclosing block); shift/middle-click and right-click → native hard open / context menu on the real `href`.
 - **Global search** result rows **should** be `<a href="…">` elements using `?node=` URLs so hard-open gestures stay native; same-tab activation is soft via the chrome interceptor.
 - Database relation column cell labels, edit-popup row links, section table name cells, and sidebar nav follow the **native-link behavior parity** rule above.
-- ProseMirror plugins handle dynamic-title icon decoration and demotion on text edit only — not storage parsing.
+- ProseMirror plugins handle dynamic-title icon decoration, demotion on text edit, and the Tome link tooltip — not storage parsing.
 
 ### Page blocks (extensions)
 
@@ -249,6 +250,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 | Table sort persistence | `packages/tome-editor/tests/shared/user-settings.test.ts`, `user-settings-api.test.ts` |
 | Recent sidebar panel | `packages/tome-db/tests/queries.test.ts`, `packages/tome-editor/tests/api/recent-nodes-api.test.ts`, `RecentNodesPanel.test.tsx` |
 | Dynamic-title demotion / paste | `packages/tome-editor/tests/webview/mention-link.test.ts`, `dynamic-link-demote-paste.test.ts` |
+| Static→dynamic link conversion / Tome link tooltip | `packages/tome-editor/tests/webview/link-tooltip-convert.test.ts` |
 | Properties section (stored + dynamic) | `NodePageView.test.tsx`, `node-type-properties.test.ts` |
 
 - Manual: open home → edit → reload → body persisted
