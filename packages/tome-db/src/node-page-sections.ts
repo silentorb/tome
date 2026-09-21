@@ -39,9 +39,16 @@ import type {
   TableRowsQuery,
   ViewSortSpec,
 } from "tome-graph-interfaces";
-import { applyNameFilterAndWindow } from "./table-rows-window";
+import { applyNameFilterAndWindow, buildTableRowsWindow, resolveWindowBounds } from "./table-rows-window";
 import {
+  relationWindowSortsFromQuery,
+  shouldUseSqlRelationWindow,
+} from "./table-sql-window";
+import {
+  listOutgoingProjectionPropertyKeys,
+  listOutgoingProjectionTypes,
   listRelationshipsFromSource,
+  listRelationshipsFromSourceWindow,
   readStoreCompositeTypeForRelationship,
   readStoreGetNode,
   type RelationshipReadStore,
@@ -105,11 +112,6 @@ function ordinalFromProperties(properties: Record<string, unknown>): number {
   return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
 }
 
-function relationGroupKey(connection: { type: string }): string {
-  return connection.type;
-}
-
-/** Group key for a table-schemas relation column; aligns with {@link relationGroupKey}. */
 function relationGroupKeyFromColumn(
   registry: ReturnType<typeof loadAssociationsFromContent>,
   hostTypeId: string,
@@ -220,12 +222,15 @@ function buildRelationSectionForPerspective(
     associations: ReturnType<typeof loadAssociationsFromContent>;
     tableRelationByGroupKey: Map<string, TableRelationColumn>;
     rowsQuery?: TableRowsQuery;
+    /** When set, `connections` are already ordered+windowed; skip JS sort/slice. */
+    sqlWindow?: { total: number; columnKeys: string[] };
   },
 ): RelationTableSection | null {
-  const { contentDir, typeTableIds, associations, tableRelationByGroupKey, rowsQuery } = options;
+  const { contentDir, typeTableIds, associations, tableRelationByGroupKey, rowsQuery, sqlWindow } =
+    options;
   if (isSetSideProjectionType(associations, perspective)) return null;
 
-  const columnSet = new Set<string>();
+  const columnSet = new Set<string>(sqlWindow?.columnKeys ?? []);
   const rows: RelationRow[] = [];
 
   for (const connection of connections) {
@@ -240,18 +245,22 @@ function buildRelationSectionForPerspective(
     });
   }
 
-  const q = rowsQuery?.q?.trim() ?? "";
-  if (!q && rowsQuery?.sorts?.length) {
-    sortRelationRows(rows, rowsQuery.sorts);
-  } else {
-    rows.sort((a, b) => {
-      const connA = connections.find((connection) => connection.targetNodeId === a.targetId);
-      const connB = connections.find((connection) => connection.targetNodeId === b.targetId);
-      const ordA = connA ? ordinalFromProperties(connA.properties) : Number.MAX_SAFE_INTEGER;
-      const ordB = connB ? ordinalFromProperties(connB.properties) : Number.MAX_SAFE_INTEGER;
-      if (ordA !== ordB) return ordA - ordB;
-      return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
-    });
+  if (!sqlWindow) {
+    const q = rowsQuery?.q?.trim() ?? "";
+    if (!q && rowsQuery?.sorts?.length) {
+      sortRelationRows(rows, rowsQuery.sorts);
+    } else {
+      const ordinalByTarget = new Map<string, number>();
+      for (const connection of connections) {
+        ordinalByTarget.set(connection.targetNodeId, ordinalFromProperties(connection.properties));
+      }
+      rows.sort((a, b) => {
+        const ordA = ordinalByTarget.get(a.targetId) ?? Number.MAX_SAFE_INTEGER;
+        const ordB = ordinalByTarget.get(b.targetId) ?? Number.MAX_SAFE_INTEGER;
+        if (ordA !== ordB) return ordA - ordB;
+        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+      });
+    }
   }
 
   const isSetMembership = isSetTraitProjectionType(associations, perspective);
@@ -314,11 +323,17 @@ function buildRelationSectionForPerspective(
     tableRelation,
   );
 
-  const { rows: windowedRows, rowsWindow } = applyNameFilterAndWindow(
-    rows,
-    rowsQuery,
-    (row) => row.name,
-  );
+  let windowedRows = rows;
+  let rowsWindow;
+  if (sqlWindow) {
+    const { offset, limit } = resolveWindowBounds(rowsQuery);
+    rowsWindow = buildTableRowsWindow(offset, limit, sqlWindow.total);
+    windowedRows = rows;
+  } else {
+    const windowed = applyNameFilterAndWindow(rows, rowsQuery, (row) => row.name);
+    windowedRows = windowed.rows;
+    rowsWindow = windowed.rowsWindow;
+  }
 
   return {
     type: "relations",
@@ -345,6 +360,35 @@ function buildRelationSectionForPerspective(
   };
 }
 
+function loadRelationSectionConnections(
+  db: RelationshipReadStore,
+  nodeId: string,
+  perspective: string,
+  rowsQuery: TableRowsQuery | undefined,
+): {
+  connections: Relationship[];
+  sqlWindow?: { total: number; columnKeys: string[] };
+} {
+  if (shouldUseSqlRelationWindow(db, rowsQuery)) {
+    const { offset, limit } = resolveWindowBounds(rowsQuery);
+    const { relationships, total } = listRelationshipsFromSourceWindow(db, nodeId, perspective, {
+      sorts: relationWindowSortsFromQuery(rowsQuery),
+      limit,
+      offset,
+    });
+    return {
+      connections: relationships,
+      sqlWindow: {
+        total,
+        columnKeys: listOutgoingProjectionPropertyKeys(db, nodeId, perspective),
+      },
+    };
+  }
+  return {
+    connections: listRelationshipsFromSource(db, nodeId, perspective),
+  };
+}
+
 function buildRelationSections(
   db: RelationshipReadStore,
   nodeId: string,
@@ -357,36 +401,40 @@ function buildRelationSections(
   const contentDir = options?.contentDir ?? resolveContentPath();
   const typeTableIds = typeTableIdsFromContent(contentDir);
   const associations = loadAssociationsFromContent(contentDir);
-  const outgoing = listRelationshipsFromSource(db, nodeId);
-  const byType = new Map<string, typeof outgoing>();
   const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
+  const rowsQuery = options?.rowsQuery;
 
-  for (const connection of outgoing) {
-    const groupType = relationGroupKey(connection);
-    const group = byType.get(groupType) ?? [];
-    group.push(connection);
-    byType.set(groupType, group);
-  }
-
+  const typeKeys = new Set<string>(listOutgoingProjectionTypes(db, nodeId));
   if (options?.includeSchemaEmptySections) {
     for (const key of tableRelationByGroupKey.keys()) {
-      if (!byType.has(key)) {
-        byType.set(key, []);
-      }
+      typeKeys.add(key);
     }
   }
 
   const sections: RelationTableSection[] = [];
 
-  for (const label of [...byType.keys()].sort((a, b) =>
+  for (const label of [...typeKeys].sort((a, b) =>
     relationTypeSortKey(a, associations).localeCompare(relationTypeSortKey(b, associations)),
   )) {
-    const section = buildRelationSectionForPerspective(db, nodeId, label, byType.get(label)!, {
+    const { connections, sqlWindow } = loadRelationSectionConnections(
+      db,
+      nodeId,
+      label,
+      rowsQuery,
+    );
+    if (
+      connections.length === 0 &&
+      !(options?.includeSchemaEmptySections && tableRelationByGroupKey.has(label))
+    ) {
+      continue;
+    }
+    const section = buildRelationSectionForPerspective(db, nodeId, label, connections, {
       contentDir,
       typeTableIds,
       associations,
       tableRelationByGroupKey,
-      rowsQuery: options?.rowsQuery,
+      rowsQuery,
+      sqlWindow,
     });
     if (section) sections.push(section);
   }
@@ -409,24 +457,28 @@ export function getRelationTableSection(
   if (!readStoreGetNode(db, nodeId)) return null;
 
   const associations = loadAssociationsFromContent(contentDir);
-  const outgoing = listRelationshipsFromSource(db, nodeId).filter(
-    (connection) => relationGroupKey(connection) === perspective,
-  );
   const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
+  const { connections, sqlWindow } = loadRelationSectionConnections(
+    db,
+    nodeId,
+    perspective,
+    options?.rowsQuery,
+  );
 
   if (
-    outgoing.length === 0 &&
+    connections.length === 0 &&
     !(options?.includeSchemaEmptySections && tableRelationByGroupKey.has(perspective))
   ) {
     return null;
   }
 
-  return buildRelationSectionForPerspective(db, nodeId, perspective, outgoing, {
+  return buildRelationSectionForPerspective(db, nodeId, perspective, connections, {
     contentDir,
     typeTableIds: typeTableIdsFromContent(contentDir),
     associations,
     tableRelationByGroupKey,
     rowsQuery: options?.rowsQuery,
+    sqlWindow,
   });
 }
 

@@ -299,4 +299,58 @@ describe("GraphDatabase", () => {
     expect(ids).toEqual([member]);
     db.close();
   });
+
+  test("lists outgoing projection types and windows with ORDER BY LIMIT OFFSET", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "window.sqlite");
+    const db = new GraphDatabase(dbPath);
+    const source = "01SOURCE000000000000000000";
+    const typeA = "assocA:0";
+    const typeB = "assocB:0";
+
+    db.upsertNode(source, { title: "Source" });
+    for (let i = 0; i < 5; i++) {
+      const id = `01TARGET${String(i).padStart(18, "0")}`;
+      db.upsertNode(id, { title: `Target ${i}` });
+      db.upsertRelationship(source, id, typeA, { ordinal: 4 - i });
+    }
+    db.upsertNode("01OTHER00000000000000000", { title: "Other" });
+    db.upsertRelationship(source, "01OTHER00000000000000000", typeB, { ordinal: 0 });
+
+    expect(db.listOutgoingProjectionTypes(source)).toEqual([typeA, typeB]);
+
+    const page0 = db.listRelationshipsFromSourceWindow(source, typeA, {
+      limit: 2,
+      offset: 0,
+    });
+    expect(page0.total).toBe(5);
+    expect(page0.relationships).toHaveLength(2);
+    // Default ordinal ascending: ordinal 0 then 1 → Target 4, Target 3
+    expect(page0.relationships.map((r) => r.targetNodeId)).toEqual([
+      "01TARGET000000000000000004",
+      "01TARGET000000000000000003",
+    ]);
+
+    const page1 = db.listRelationshipsFromSourceWindow(source, typeA, {
+      limit: 2,
+      offset: 2,
+    });
+    expect(page1.total).toBe(5);
+    expect(page1.relationships.map((r) => r.targetNodeId)).toEqual([
+      "01TARGET000000000000000002",
+      "01TARGET000000000000000001",
+    ]);
+
+    const byName = db.listRelationshipsFromSourceWindow(source, typeA, {
+      sorts: [{ column: "name", direction: "asc" }],
+      limit: 2,
+      offset: 0,
+    });
+    expect(byName.relationships.map((r) => r.targetNodeId)).toEqual([
+      "01TARGET000000000000000000",
+      "01TARGET000000000000000001",
+    ]);
+
+    db.close();
+  });
 });

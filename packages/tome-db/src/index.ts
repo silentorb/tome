@@ -74,6 +74,11 @@ export {
 } from "./table-rows-window";
 export type { TableRowsQuery, TableRowsWindow } from "./table-rows-window";
 export {
+  relationWindowSortsFromQuery,
+  shouldUseSqlRelationWindow,
+  tableRowsQueryUsesDeferredSearch,
+} from "./table-sql-window";
+export {
   linkOutgoingRelationship,
   moveRelationshipConnection,
   unlinkOutgoingRelationship,

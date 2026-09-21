@@ -313,6 +313,26 @@ export interface TomeDataStore {
 /**
  * Query cache (SQLite today). No content-path coupling.
  */
+
+/** Sort key for {@link TomeQueryCache.listRelationshipsFromSourceWindow}. */
+export interface RelationshipProjectionWindowSort {
+  column: string;
+  direction: "asc" | "desc";
+}
+
+/** Window + sort for outgoing projection listing (SQL ORDER BY / LIMIT / OFFSET). */
+export interface RelationshipProjectionWindowQuery {
+  sorts?: RelationshipProjectionWindowSort[];
+  /** Omit or null → return the full ordered set (static export). */
+  limit?: number | null;
+  offset?: number;
+}
+
+export interface RelationshipProjectionWindowResult {
+  relationships: Relationship[];
+  total: number;
+}
+
 export interface TomeQueryCache {
   readonly path: string;
 
@@ -378,6 +398,25 @@ export interface TomeQueryCache {
   }[];
   listRelationshipsFromSource(sourceNodeId: string, type?: string): Relationship[];
   listRelationshipsToTarget(targetNodeId: string, type?: string): Relationship[];
+  /**
+   * Distinct projection `type` values for outgoing edges from `sourceNodeId`.
+   * Used to discover relation sections without loading every projection row.
+   */
+  listOutgoingProjectionTypes(sourceNodeId: string): string[];
+  /**
+   * Distinct EAV property keys (plus promoted cell keys such as `priority` when set)
+   * on outgoing projections of `type` from `sourceNodeId`.
+   */
+  listOutgoingProjectionPropertyKeys(sourceNodeId: string, type: string): string[];
+  /**
+   * Ordered window of outgoing projections for one type. Sort/limit/offset run in SQL.
+   * `total` is the full matching count (before limit/offset).
+   */
+  listRelationshipsFromSourceWindow(
+    sourceNodeId: string,
+    type: string,
+    query?: RelationshipProjectionWindowQuery,
+  ): RelationshipProjectionWindowResult;
   countIncidentRelationships(nodeId: string): number;
   listDistinctRelationshipTypes(): string[];
 

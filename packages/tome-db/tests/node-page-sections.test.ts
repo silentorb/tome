@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
-import { getNodePageDetail } from "../src/node-page-sections";
+import { getNodePageDetail, getRelationTableSection } from "../src/node-page-sections";
 import { contentModelDir, associationsFilePath, tableSchemasFilePath, projectionTypeForEndpoint } from "tome-flatfile";
 import {
   serializeAssociationsFile,
@@ -712,6 +712,43 @@ describe("node-sections bible passages regression", () => {
       columns: [],
       rows: [{ targetId: biblePassagesId, name: "Bible passages", cells: {} }],
     });
+  });
+
+  test("SQL-windows relation sections by ordinal without materializing the full set in the response", () => {
+    writeMembershipAssociations(contentDir);
+    const hostId = "01WINDOWHOST0000000000000";
+    const perspective = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0);
+    db.upsertNode(hostId, { title: "Busy node", body: "" });
+    for (let i = 0; i < 120; i++) {
+      const targetId = `01WINDOWTGT${String(i).padStart(15, "0")}`;
+      db.upsertNode(targetId, { title: `Feature ${String(i).padStart(3, "0")}` });
+      db.upsertRelationship(hostId, targetId, perspective, { ordinal: i });
+    }
+
+    const section = getRelationTableSection(db, hostId, perspective, {
+      contentDir,
+      rowsQuery: { limit: 50, offset: 50 },
+    });
+    expect(section?.rowsWindow).toEqual({
+      offset: 50,
+      limit: 50,
+      total: 120,
+      hasMore: true,
+    });
+    expect(section?.rows).toHaveLength(50);
+    expect(section?.rows[0]?.name).toBe("Feature 050");
+    expect(section?.rows[49]?.name).toBe("Feature 099");
+
+    const page = getNodePageDetail(db, hostId, {
+      contentDir,
+      rows: { limit: 50, offset: 0 },
+    });
+    const relations = page?.sections.find(
+      (section) => section.type === "relations" && section.label === perspective,
+    );
+    expect(relations?.type === "relations" && relations.rows).toHaveLength(50);
+    expect(relations?.type === "relations" && relations.rowsWindow?.total).toBe(120);
+    expect(relations?.type === "relations" && relations.rows[0]?.name).toBe("Feature 000");
   });
 
   afterAll(() => {

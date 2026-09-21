@@ -1,5 +1,9 @@
 import type { Node, Relationship, TomeGraphStoreBase } from "tome-graph-interfaces";
-import type { TomeQueryCache } from "tome-service-interfaces";
+import type {
+  RelationshipProjectionWindowQuery,
+  RelationshipProjectionWindowResult,
+  TomeQueryCache,
+} from "tome-service-interfaces";
 import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
 import { normalizeAssociationId } from "tome-flatfile";
 
@@ -8,6 +12,24 @@ export type RelationshipReadStore = TomeGraphStoreBase | TomeQueryCache;
 
 export function isGraphStoreBase(store: RelationshipReadStore): store is TomeGraphStoreBase {
   return typeof (store as TomeGraphStoreBase).listRelationshipProjections === "function";
+}
+
+/**
+ * SQLite query cache when available (raw `TomeQueryCache` or `ComposedGraphStore.queryCache`).
+ * Pure flatfile Base stores return null — flatfile is exempt from SQL windowing.
+ */
+export function getQueryCache(store: RelationshipReadStore): TomeQueryCache | null {
+  if (!isGraphStoreBase(store)) {
+    return store;
+  }
+  const withCache = store as TomeGraphStoreBase & { queryCache?: TomeQueryCache };
+  if (
+    withCache.queryCache &&
+    typeof withCache.queryCache.listRelationshipsFromSource === "function"
+  ) {
+    return withCache.queryCache;
+  }
+  return null;
 }
 
 /** Outgoing directed projections from `sourceNodeId`, optionally filtered by projection type. */
@@ -23,6 +45,56 @@ export function listRelationshipsFromSource(
     });
   }
   return store.listRelationshipsFromSource(sourceNodeId, type);
+}
+
+/** Distinct outgoing projection types for a source node (SQL when cache present). */
+export function listOutgoingProjectionTypes(
+  store: RelationshipReadStore,
+  sourceNodeId: string,
+): string[] {
+  const cache = getQueryCache(store);
+  if (cache && typeof cache.listOutgoingProjectionTypes === "function") {
+    return cache.listOutgoingProjectionTypes(sourceNodeId);
+  }
+  const types = new Set<string>();
+  for (const rel of listRelationshipsFromSource(store, sourceNodeId)) {
+    types.add(rel.type);
+  }
+  return [...types].sort((a, b) => a.localeCompare(b));
+}
+
+/** Distinct edge property keys for one outgoing perspective (SQL when cache present). */
+export function listOutgoingProjectionPropertyKeys(
+  store: RelationshipReadStore,
+  sourceNodeId: string,
+  type: string,
+): string[] {
+  const cache = getQueryCache(store);
+  if (cache && typeof cache.listOutgoingProjectionPropertyKeys === "function") {
+    return cache.listOutgoingProjectionPropertyKeys(sourceNodeId, type);
+  }
+  const keys = new Set<string>();
+  for (const rel of listRelationshipsFromSource(store, sourceNodeId, type)) {
+    for (const key of Object.keys(rel.properties)) {
+      if (key === "ordinal" || key === "order" || key === "row_name") continue;
+      keys.add(key);
+    }
+  }
+  return [...keys].sort((a, b) => a.localeCompare(b));
+}
+
+/** Ordered SQL window of outgoing projections; throws if no query cache. */
+export function listRelationshipsFromSourceWindow(
+  store: RelationshipReadStore,
+  sourceNodeId: string,
+  type: string,
+  query?: RelationshipProjectionWindowQuery,
+): RelationshipProjectionWindowResult {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listRelationshipsFromSourceWindow !== "function") {
+    throw new Error("listRelationshipsFromSourceWindow requires a SQLite query cache");
+  }
+  return cache.listRelationshipsFromSourceWindow(sourceNodeId, type, query);
 }
 
 /** Incoming directed projections to `targetNodeId`, optionally filtered by projection type. */

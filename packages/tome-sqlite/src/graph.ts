@@ -5,6 +5,8 @@ import type { Node, Properties, PropertyValue, Relationship } from "tome-graph-i
 import type {
   GraphCounts,
   RelationshipProjectionRow,
+  RelationshipProjectionWindowQuery,
+  RelationshipProjectionWindowResult,
   RelationshipPropertyCodec,
   RelationshipRecordRow,
   TomeQueryCache,
@@ -37,6 +39,48 @@ const IDENTITY_CODEC: RelationshipPropertyCodec = {
 };
 
 const NODE_DISPLAY_TITLE_SQL = `COALESCE(NULLIF(title, ''), NULLIF(alias, ''), 'Untitled')`;
+const TARGET_DISPLAY_TITLE_SQL = `COALESCE(NULLIF(n.title, ''), NULLIF(n.alias, ''), 'Untitled')`;
+
+function isSafeSqlPropertyKey(key: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(key);
+}
+
+function edgePropertyOrderExpression(propertyKey: string): string {
+  if (propertyKey === "ordinal") return "rp.ordinal";
+  if (propertyKey === "order") return `rp."order"`;
+  if (propertyKey === "priority") return "rp.priority";
+  // EAV values are JSON-encoded; extract scalar for ordering.
+  return `(SELECT json_extract(value, '$') FROM relationship_projection_properties WHERE projection_id = rp.id AND key = '${propertyKey}')`;
+}
+
+function buildOutgoingProjectionOrderBy(
+  sorts: readonly { column: string; direction: "asc" | "desc" }[] | undefined,
+): string {
+  const clauses: string[] = [];
+  if (sorts && sorts.length > 0) {
+    for (const sort of sorts) {
+      const dir = sort.direction === "desc" ? "DESC" : "ASC";
+      const col = sort.column.trim();
+      if (!col || !isSafeSqlPropertyKey(col)) continue;
+      if (col === "name") {
+        clauses.push(`${TARGET_DISPLAY_TITLE_SQL} COLLATE NOCASE ${dir}`);
+      } else {
+        clauses.push(`${edgePropertyOrderExpression(col)} ${dir}`);
+      }
+    }
+  }
+  if (clauses.length === 0) {
+    // Default: ordinal ascending (nulls last), then target display title.
+    clauses.push("CASE WHEN rp.ordinal IS NULL THEN 1 ELSE 0 END ASC");
+    clauses.push("rp.ordinal ASC");
+    clauses.push(`${TARGET_DISPLAY_TITLE_SQL} COLLATE NOCASE ASC`);
+  } else {
+    // Stable tie-break.
+    clauses.push(`${TARGET_DISPLAY_TITLE_SQL} COLLATE NOCASE ASC`);
+    clauses.push("rp.id ASC");
+  }
+  return `ORDER BY ${clauses.join(", ")}`;
+}
 
 function decodePropertyValue(raw: string): PropertyValue {
   try {
@@ -817,6 +861,88 @@ export class GraphDatabase implements TomeQueryCache {
           .all(targetNodeId) as ProjectionRow[]);
 
     return this.mapProjectionRows(rows);
+  }
+
+  listOutgoingProjectionTypes(sourceNodeId: string): string[] {
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT type FROM relationship_projections
+         WHERE source_node_id = ? ORDER BY type`,
+      )
+      .all(sourceNodeId) as { type: string }[];
+    return rows.map((row) => row.type);
+  }
+
+  listOutgoingProjectionPropertyKeys(sourceNodeId: string, type: string): string[] {
+    const keys = new Set<string>();
+    const eavRows = this.db
+      .prepare(
+        `SELECT DISTINCT rpp.key AS key
+         FROM relationship_projection_properties rpp
+         INNER JOIN relationship_projections rp ON rp.id = rpp.projection_id
+         WHERE rp.source_node_id = ? AND rp.type = ?`,
+      )
+      .all(sourceNodeId, type) as { key: string }[];
+    for (const row of eavRows) {
+      if (row.key) keys.add(row.key);
+    }
+    const hasPriority = this.db
+      .prepare(
+        `SELECT 1 AS ok FROM relationship_projections
+         WHERE source_node_id = ? AND type = ? AND priority IS NOT NULL LIMIT 1`,
+      )
+      .get(sourceNodeId, type) as { ok: number } | null;
+    if (hasPriority) keys.add("priority");
+    return [...keys].sort((a, b) => a.localeCompare(b));
+  }
+
+  listRelationshipsFromSourceWindow(
+    sourceNodeId: string,
+    type: string,
+    query?: RelationshipProjectionWindowQuery,
+  ): RelationshipProjectionWindowResult {
+    const totalRow = this.db
+      .prepare(
+        `SELECT COUNT(*) AS c FROM relationship_projections
+         WHERE source_node_id = ? AND type = ?`,
+      )
+      .get(sourceNodeId, type) as { c: number };
+    const total = totalRow.c;
+
+    const orderBy = buildOutgoingProjectionOrderBy(query?.sorts);
+    const offsetRaw = query?.offset;
+    const offset =
+      typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
+        ? Math.floor(offsetRaw)
+        : 0;
+    const limitRaw = query?.limit;
+    const limit =
+      limitRaw === undefined || limitRaw === null
+        ? null
+        : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
+          ? Math.floor(limitRaw)
+          : null;
+
+    const selectSql = `SELECT rp.id, rp.record_id, rp.source_node_id, rp.target_node_id, rp.type,
+              rp.ordinal, rp."order", rp.priority
+       FROM relationship_projections rp
+       LEFT JOIN nodes n ON n.id = rp.target_node_id
+       WHERE rp.source_node_id = ? AND rp.type = ?
+       ${orderBy}`;
+
+    let rows: ProjectionRow[];
+    if (limit === null) {
+      rows = this.db.prepare(selectSql).all(sourceNodeId, type) as ProjectionRow[];
+    } else {
+      rows = this.db
+        .prepare(`${selectSql} LIMIT ? OFFSET ?`)
+        .all(sourceNodeId, type, limit, offset) as ProjectionRow[];
+    }
+
+    return {
+      relationships: this.mapProjectionRows(rows),
+      total,
+    };
   }
 
   countIncidentRelationships(nodeId: string): number {

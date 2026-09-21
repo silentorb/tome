@@ -99,6 +99,16 @@ Must not depend on `tome-db`. Hosts execute SQL via `queryAll` (or equivalent).
 | This doc | Binder contract |
 | `packages/tome-imp-sql` | Implementation + tests |
 
+### Collection ops (SQL path)
+
+When query results come from the **SQLite / Imp SQL** database:
+
+- **Must not** filter, sort, join, or group those collections in application TypeScript/JavaScript.
+- Express filter / sort / join / group / `limit` / `offset` in Imp (or equivalent SQL on the cache); TS only hydrates DTOs from the result rows.
+- **Flatfile** Imp execution is **exempt** — in-memory collection eval remains allowed there.
+
+Editor table windows apply this rule with **binary routing**: SQL-expressible sorts use SQL windows; deferred modes (dynamic property **sorts**, table `q` / search relevance) keep the legacy full-materialize path until a dedicated design lands. Table `q` is an exploration hold for **next-level Tome search** — do not treat `LIKE` as the intended search architecture. Details: [views.md](./views.md) § Lazy-loaded rows.
+
 ## Quick start
 
 ```ts

@@ -53,8 +53,24 @@ Table view configuration for type-table member relationships lives in [`content/
 Multi-row Items tables **must not** block page load on the full member set. The editor requests rows in batches (default **`limit=50`**) with **`offset`**, optional name filter **`q`**, and optional **`sorts`** JSON. There is **no paging UI** (no page numbers): the client appends the next batch when the user scrolls the **page shell** (`.tome-main`) near the table sentinel—not an inner table scroll box. Tables size to their loaded rows (natural page height).
 
 - Responses include `rowsWindow: { offset, limit, total, hasMore }` on `DatabaseViewDetail` and `RelationTableSection`.
-- Name filter and column sorts are applied **server-side** before slicing. Relation-cell hydration runs for the returned window only (dynamic columns still evaluate over the full set when needed for sort correctness).
 - Endpoints: `GET /api/databases/:id`, `GET /api/nodes/:id/relation-tables/:perspective`, and the multi-row sections embedded in `GET /api/nodes/:id` (editor default limit). Omit `limit` for a full result (static site export).
+
+### SQLite path: filter / sort / window in SQL
+
+When the editor is backed by the **SQLite query cache**, filter, sort, join, and group for table windows **must** run in SQL (typically via Imp → Imp SQL / tome-imp-sql, or equivalent parameterized SQL on the cache). Application TypeScript may only **hydrate** DTOs from already-ordered, already-windowed SQL rows. See [tome-imp-sql.md](./tome-imp-sql.md) § Collection ops (SQL path).
+
+**Flatfile** backends are exempt and may still use in-memory collection ops.
+
+**Binary routing (no hybrids):** if the request uses a deferred mode below, keep the **entire** legacy full-materialize path. Otherwise use the **entire** SQL window path. Never SQL-`LIMIT` then sort/filter in JS.
+
+**Deferred (exploration holds — not a LIKE end state):**
+
+| Mode | Why deferred |
+| --- | --- |
+| Dynamic fixed / column-set **sort** keys | Need a product/SQL story for dyn values before they join the SQL-window path |
+| Table name filter **`q`** (relevance ranking) | Expect **next-level Tome search**, not `title LIKE` as the architecture |
+
+Relation-cell hydration for **display** runs for the returned window only. Sorting *by* a dynamic column stays on the deferred path until that exploration lands.
 
 ## Migration
 
