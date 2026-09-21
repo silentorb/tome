@@ -353,4 +353,78 @@ describe("GraphDatabase", () => {
 
     db.close();
   });
+
+  test("windows set membership with ORDER BY LIMIT OFFSET and relation counts", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "set-member-window.sqlite");
+    const db = new GraphDatabase(dbPath);
+    const setId = "01SET0000000000000000000000";
+    const setProjection = "assocSet:0";
+    const memberProjection = "assocSet:1";
+    const linkType = "assocLink:0";
+
+    db.upsertNode(setId, { title: "Type table" });
+    for (let i = 0; i < 5; i++) {
+      const id = `01MEMBER${String(i).padStart(18, "0")}`;
+      db.upsertNode(id, { title: `Member ${i}` });
+      db.upsertRelationship(setId, id, setProjection, { ordinal: i });
+      for (let j = 0; j < i; j++) {
+        const other = `01OTHER${i}${j}000000000000000`;
+        db.upsertNode(other, { title: `Other ${i}-${j}` });
+        db.upsertRelationship(id, other, linkType, {});
+      }
+    }
+
+    const page0 = db.listSetMemberRowConnectionsWindow(setId, {
+      projections: [{ setProjection, memberProjection }],
+      sorts: [{ column: "name", direction: "asc" }],
+      limit: 2,
+      offset: 0,
+    });
+    expect(page0.total).toBe(5);
+    expect(page0.relationships).toHaveLength(2);
+    expect(page0.relationships.map((r) => r.sourceNodeId)).toEqual([
+      "01MEMBER000000000000000000",
+      "01MEMBER000000000000000001",
+    ]);
+    expect(page0.relationships.every((r) => r.targetNodeId === setId)).toBe(true);
+
+    const page1 = db.listSetMemberRowConnectionsWindow(setId, {
+      projections: [{ setProjection, memberProjection }],
+      sorts: [{ column: "name", direction: "asc" }],
+      limit: 2,
+      offset: 2,
+    });
+    expect(page1.relationships.map((r) => r.sourceNodeId)).toEqual([
+      "01MEMBER000000000000000002",
+      "01MEMBER000000000000000003",
+    ]);
+
+    const byRelCount = db.listSetMemberRowConnectionsWindow(setId, {
+      projections: [{ setProjection, memberProjection }],
+      sorts: [{ column: "links", direction: "desc" }],
+      relationCounts: [{ column: "links", projectionTypes: [linkType] }],
+      limit: 2,
+      offset: 0,
+    });
+    expect(byRelCount.relationships.map((r) => r.sourceNodeId)).toEqual([
+      "01MEMBER000000000000000004",
+      "01MEMBER000000000000000003",
+    ]);
+
+    // Member-side edges only (no set-side) still appear, normalized.
+    const memberOnly = "01MEMBERONLY00000000000000";
+    db.upsertNode(memberOnly, { title: "AAA member-side" });
+    db.upsertRelationship(memberOnly, setId, memberProjection, {});
+    const withMemberSide = db.listSetMemberRowConnectionsWindow(setId, {
+      projections: [{ setProjection, memberProjection }],
+      sorts: [{ column: "name", direction: "asc" }],
+      limit: 1,
+      offset: 0,
+    });
+    expect(withMemberSide.total).toBe(6);
+    expect(withMemberSide.relationships[0]?.sourceNodeId).toBe(memberOnly);
+
+    db.close();
+  });
 });

@@ -9,6 +9,8 @@ import type {
   RelationshipProjectionWindowResult,
   RelationshipPropertyCodec,
   RelationshipRecordRow,
+  SetMemberWindowQuery,
+  SetMemberWindowResult,
   TomeQueryCache,
 } from "tome-service-interfaces";
 import {
@@ -40,6 +42,7 @@ const IDENTITY_CODEC: RelationshipPropertyCodec = {
 
 const NODE_DISPLAY_TITLE_SQL = `COALESCE(NULLIF(title, ''), NULLIF(alias, ''), 'Untitled')`;
 const TARGET_DISPLAY_TITLE_SQL = `COALESCE(NULLIF(n.title, ''), NULLIF(n.alias, ''), 'Untitled')`;
+const MEMBER_DISPLAY_TITLE_SQL = `COALESCE(NULLIF(n.title, ''), NULLIF(n.alias, ''), 'Untitled')`;
 
 function isSafeSqlPropertyKey(key: string): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]*$/.test(key);
@@ -51,6 +54,13 @@ function edgePropertyOrderExpression(propertyKey: string): string {
   if (propertyKey === "priority") return "rp.priority";
   // EAV values are JSON-encoded; extract scalar for ordering.
   return `(SELECT json_extract(value, '$') FROM relationship_projection_properties WHERE projection_id = rp.id AND key = '${propertyKey}')`;
+}
+
+function memberEdgePropertyOrderExpression(propertyKey: string): string {
+  if (propertyKey === "ordinal") return "m.ordinal";
+  if (propertyKey === "order") return `m."order"`;
+  if (propertyKey === "priority") return "m.priority";
+  return `(SELECT json_extract(value, '$') FROM relationship_projection_properties WHERE projection_id = m.id AND key = '${propertyKey}')`;
 }
 
 function buildOutgoingProjectionOrderBy(
@@ -80,6 +90,56 @@ function buildOutgoingProjectionOrderBy(
     clauses.push("rp.id ASC");
   }
   return `ORDER BY ${clauses.join(", ")}`;
+}
+
+type MemberOrderBy = { sql: string; params: SQLQueryBindings[] };
+
+function buildSetMemberOrderBy(
+  sorts: readonly { column: string; direction: "asc" | "desc" }[] | undefined,
+  relationCounts: readonly { column: string; projectionTypes: string[] }[] | undefined,
+  defaultOrdered: boolean,
+): MemberOrderBy {
+  const clauses: string[] = [];
+  const params: SQLQueryBindings[] = [];
+  if (sorts && sorts.length > 0) {
+    for (const sort of sorts) {
+      const dir = sort.direction === "desc" ? "DESC" : "ASC";
+      const col = sort.column.trim();
+      if (!col) continue;
+      if (col === "name") {
+        if (!isSafeSqlPropertyKey(col)) continue;
+        clauses.push(`${MEMBER_DISPLAY_TITLE_SQL} COLLATE NOCASE ${dir}`);
+        continue;
+      }
+      if (!isSafeSqlPropertyKey(col)) continue;
+      const relationEntry = relationCounts?.find((r) => r.column === col);
+      if (relationEntry) {
+        const safeTypes = relationEntry.projectionTypes.filter(
+          (t) => typeof t === "string" && /^[A-Za-z0-9_.:-]+$/.test(t.trim()),
+        );
+        if (safeTypes.length === 0) continue;
+        const placeholders = safeTypes.map(() => "?").join(", ");
+        clauses.push(
+          `(SELECT COUNT(*) FROM relationship_projections rcount WHERE rcount.source_node_id = m.member_id AND rcount.type IN (${placeholders})) ${dir}`,
+        );
+        params.push(...safeTypes.map((t) => t.trim()));
+        continue;
+      }
+      clauses.push(`${memberEdgePropertyOrderExpression(col)} ${dir}`);
+    }
+  }
+  if (clauses.length === 0) {
+    if (defaultOrdered) {
+      clauses.push(`CASE WHEN m."order" IS NULL THEN 1 ELSE 0 END ASC`);
+      clauses.push(`m."order" ASC`);
+    }
+    clauses.push(`${MEMBER_DISPLAY_TITLE_SQL} COLLATE NOCASE ASC`);
+    clauses.push("m.id ASC");
+  } else {
+    clauses.push(`${MEMBER_DISPLAY_TITLE_SQL} COLLATE NOCASE ASC`);
+    clauses.push("m.id ASC");
+  }
+  return { sql: `ORDER BY ${clauses.join(", ")}`, params };
 }
 
 function decodePropertyValue(raw: string): PropertyValue {
@@ -937,6 +997,103 @@ export class GraphDatabase implements TomeQueryCache {
       rows = this.db
         .prepare(`${selectSql} LIMIT ? OFFSET ?`)
         .all(sourceNodeId, type, limit, offset) as ProjectionRow[];
+    }
+
+    return {
+      relationships: this.mapProjectionRows(rows),
+      total,
+    };
+  }
+
+  listSetMemberRowConnectionsWindow(
+    setId: string,
+    query: SetMemberWindowQuery,
+  ): SetMemberWindowResult {
+    const pairs = query.projections ?? [];
+    if (pairs.length === 0) {
+      return { relationships: [], total: 0 };
+    }
+
+    const unionParts: string[] = [];
+    const unionParams: SQLQueryBindings[] = [];
+    for (const pair of pairs) {
+      const setProjection = pair.setProjection?.trim();
+      const memberProjection = pair.memberProjection?.trim();
+      if (!setProjection || !memberProjection) continue;
+      unionParts.push(
+        `SELECT rp.id, rp.record_id, rp.target_node_id AS member_id, rp.source_node_id AS set_id,
+                rp.type, rp.ordinal, rp."order", rp.priority, 0 AS side_rank
+         FROM relationship_projections rp
+         WHERE rp.source_node_id = ? AND rp.type = ?`,
+      );
+      unionParams.push(setId, setProjection);
+      unionParts.push(
+        `SELECT rp.id, rp.record_id, rp.source_node_id AS member_id, rp.target_node_id AS set_id,
+                rp.type, rp.ordinal, rp."order", rp.priority, 1 AS side_rank
+         FROM relationship_projections rp
+         WHERE rp.target_node_id = ? AND rp.type = ?`,
+      );
+      unionParams.push(setId, memberProjection);
+    }
+    if (unionParts.length === 0) {
+      return { relationships: [], total: 0 };
+    }
+
+    const membershipCte = unionParts.join("\nUNION ALL\n");
+    const dedupedCte = `
+      WITH membership AS (
+        ${membershipCte}
+      ),
+      ranked AS (
+        SELECT *,
+          ROW_NUMBER() OVER (PARTITION BY member_id ORDER BY side_rank ASC, id ASC) AS rn
+        FROM membership
+      ),
+      members AS (
+        SELECT id, record_id, member_id, set_id, type, ordinal, "order", priority
+        FROM ranked
+        WHERE rn = 1
+      )`;
+
+    const totalRow = this.db
+      .prepare(`${dedupedCte} SELECT COUNT(*) AS c FROM members`)
+      .get(...unionParams) as { c: number };
+    const total = totalRow.c;
+
+    const { sql: orderBySql, params: orderParams } = buildSetMemberOrderBy(
+      query.sorts,
+      query.relationCounts,
+      Boolean(query.defaultOrdered),
+    );
+
+    const offsetRaw = query.offset;
+    const offset =
+      typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
+        ? Math.floor(offsetRaw)
+        : 0;
+    const limitRaw = query.limit;
+    const limit =
+      limitRaw === undefined || limitRaw === null
+        ? null
+        : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
+          ? Math.floor(limitRaw)
+          : null;
+
+    const selectSql = `${dedupedCte}
+      SELECT m.id, m.record_id, m.member_id AS source_node_id, m.set_id AS target_node_id,
+             m.type, m.ordinal, m."order", m.priority
+      FROM members m
+      LEFT JOIN nodes n ON n.id = m.member_id
+      ${orderBySql}`;
+
+    const selectParams = [...unionParams, ...orderParams];
+    let rows: ProjectionRow[];
+    if (limit === null) {
+      rows = this.db.prepare(selectSql).all(...selectParams) as ProjectionRow[];
+    } else {
+      rows = this.db
+        .prepare(`${selectSql} LIMIT ? OFFSET ?`)
+        .all(...selectParams, limit, offset) as ProjectionRow[];
     }
 
     return {

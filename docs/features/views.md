@@ -70,7 +70,9 @@ When the editor is backed by the **SQLite query cache**, filter, sort, join, and
 | Dynamic fixed / column-set **sort** keys | Need a product/SQL story for dyn values before they join the SQL-window path |
 | Table name filter **`q`** (relevance ranking) | Expect **next-level Tome search**, not `title LIKE` as the architecture |
 
-Relation-cell hydration for **display** runs for the returned window only. Sorting *by* a dynamic column stays on the deferred path until that exploration lands.
+**Coverage today:** relation table sections and **Items / database custom views** (set membership) use SQL windows when not deferred. Composed / generated presentations remain on the legacy path until a later session.
+
+Relation-cell hydration for **display** (and dyn **display** cells on Items) runs for the returned window only. Sorting *by* a dynamic column stays on the deferred path until that exploration lands.
 
 ## Migration
 

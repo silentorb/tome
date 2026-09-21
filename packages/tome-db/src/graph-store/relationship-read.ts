@@ -2,6 +2,8 @@ import type { Node, Relationship, TomeGraphStoreBase } from "tome-graph-interfac
 import type {
   RelationshipProjectionWindowQuery,
   RelationshipProjectionWindowResult,
+  SetMemberWindowQuery,
+  SetMemberWindowResult,
   TomeQueryCache,
 } from "tome-service-interfaces";
 import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
@@ -95,6 +97,19 @@ export function listRelationshipsFromSourceWindow(
     throw new Error("listRelationshipsFromSourceWindow requires a SQLite query cache");
   }
   return cache.listRelationshipsFromSourceWindow(sourceNodeId, type, query);
+}
+
+/** Ordered SQL window of set membership edges; throws if no query cache. */
+export function listSetMemberRowConnectionsWindow(
+  store: RelationshipReadStore,
+  setId: string,
+  query: SetMemberWindowQuery,
+): SetMemberWindowResult {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listSetMemberRowConnectionsWindow !== "function") {
+    throw new Error("listSetMemberRowConnectionsWindow requires a SQLite query cache");
+  }
+  return cache.listSetMemberRowConnectionsWindow(setId, query);
 }
 
 /** Incoming directed projections to `targetNodeId`, optionally filtered by projection type. */

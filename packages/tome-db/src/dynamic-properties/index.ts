@@ -1,5 +1,9 @@
 import type { EvalRow } from "../row-sort";
-import { applyDynamicProperties as enrichEvalRows, type DynamicEnrichmentResult } from "./enrich";
+import {
+  applyDynamicProperties as enrichEvalRows,
+  listDynamicColumnDefs as listDynamicColumnDefsFromEnrich,
+  type DynamicEnrichmentResult,
+} from "./enrich";
 import {
   createResolverRegistry,
   registerColumnSetResolver,
@@ -60,6 +64,16 @@ export function applyDynamicProperties(
   return enrichEvalRows(db, owner, viewName, evalRows, registry, options);
 }
 
+export function listDynamicColumnDefs(
+  db: RelationshipReadStore,
+  owner: string,
+  viewName: string,
+  registry: ResolverRegistry = getDefaultResolverRegistry(),
+  options?: import("./enrich").ApplyDynamicPropertiesOptions,
+): import("./enrich").DynamicColumnDefsResult {
+  return listDynamicColumnDefsFromEnrich(db, owner, viewName, registry, options);
+}
+
 export {
   loadDynamicColumnSets,
   loadDynamicProperties,
@@ -72,4 +86,8 @@ export type {
   SeedDynamicColumnSetInput,
   SeedDynamicPropertyInput,
 } from "./overlay";
-export type { DynamicEnrichmentResult, ApplyDynamicPropertiesOptions } from "./enrich";
+export type {
+  DynamicEnrichmentResult,
+  DynamicColumnDefsResult,
+  ApplyDynamicPropertiesOptions,
+} from "./enrich";

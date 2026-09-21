@@ -76,6 +76,9 @@ export type { TableRowsQuery, TableRowsWindow } from "./table-rows-window";
 export {
   relationWindowSortsFromQuery,
   shouldUseSqlRelationWindow,
+  shouldUseSqlDatabaseWindow,
+  tableRowsQueryUsesDynSort,
+  tableRowsQueryUsesNonExpressibleSort,
   tableRowsQueryUsesDeferredSearch,
 } from "./table-sql-window";
 export {
@@ -218,6 +221,7 @@ export {
 export { openContentGraph } from "./content/sync";
 export {
   applyDynamicProperties,
+  listDynamicColumnDefs,
   getDefaultResolverRegistry,
   loadDynamicColumnSets,
   loadDynamicProperties,
@@ -229,9 +233,11 @@ export type {
   DynamicPropertyRecord,
   SeedDynamicColumnSetInput,
   SeedDynamicPropertyInput,
+  DynamicColumnDefsResult,
 } from "./dynamic-properties";
 export {
   listSetMemberRowConnections,
+  listSetMemberProjectionPairs,
   memberSetIds,
   setMemberIds,
   setKindForNode,

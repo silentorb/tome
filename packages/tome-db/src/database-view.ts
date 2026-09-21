@@ -1,12 +1,16 @@
 import type { Relationship } from "tome-graph-interfaces";
-import { listSetMemberRowConnections } from "./set-membership";
+import {
+  listSetMemberProjectionPairs,
+  listSetMemberRowConnections,
+} from "./set-membership";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
-import { applyDynamicProperties } from "./dynamic-properties";
+import { applyDynamicProperties, listDynamicColumnDefs } from "./dynamic-properties";
 import { hydrateRelationCellsForRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import { resolveContentPath } from "tome-flatfile";
 import {
+  listSetMemberRowConnectionsWindow,
   readStoreGetNode,
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
@@ -27,9 +31,17 @@ import {
   setRoleProjectionTypesForComposite,
   loadAssociationsFromContent,
   associationIdFromTypeOrProjection,
+  parseProjectionType,
+  projectionTypeForEndpoint,
+  isSymmetricAssociation,
 } from "tome-flatfile";
 import { perspectiveDisplayLabel } from "./association-label";
-import { applyNameFilterAndWindow } from "./table-rows-window";
+import {
+  applyNameFilterAndWindow,
+  buildTableRowsWindow,
+  resolveWindowBounds,
+} from "./table-rows-window";
+import { shouldUseSqlDatabaseWindow } from "./table-sql-window";
 import type {
   DatabaseColumnDef,
   DatabaseRow,
@@ -37,6 +49,7 @@ import type {
   TableRowsQuery,
   ViewSortSpec,
 } from "tome-graph-interfaces";
+import type { SetMemberRelationCountSort } from "tome-service-interfaces";
 import { getCompositionById } from "./table-presentation/load";
 import { buildComposedDatabaseView } from "./table-presentation/compose";
 
@@ -115,30 +128,38 @@ function sortsNeedRelationHydration(
   return sorts.some((sort) => relationKeys.has(sort.column));
 }
 
-function buildCustomViewDetail(
-  store: RelationshipReadStore,
-  databaseId: string,
-  databaseTitle: string,
-  incoming: Relationship[],
+function relationCountSortsFromColumnDefs(
+  sorts: ViewSortSpec[],
+  columnDefs: DatabaseColumnDef[],
   contentDir: string,
-  requestedTabId?: string,
-  rowsQuery?: TableRowsQuery,
-): DatabaseViewDetail {
-  const { viewAssociation, memberSidePerspective, setSideProjection } = setPerspectives(
-    databaseId,
-    contentDir,
-  );
-  const resolved = resolveCustomTabsForNode(
-    contentDir,
-    databaseId,
-    requestedTabId,
-    viewAssociation,
-  );
-  const tabName = activeTabName(resolved);
-  const ordered = setUsesOrderedAssociation(databaseId, contentDir);
+): SetMemberRelationCountSort[] {
+  const registry = loadAssociationsFromContent(contentDir);
+  const byKey = new Map(columnDefs.map((def) => [def.key, def]));
+  const out: SetMemberRelationCountSort[] = [];
+  for (const sort of sorts) {
+    const def = byKey.get(sort.column);
+    if (!def || def.type !== "relation" || !def.relationType?.trim()) continue;
+    const projectionTypes = new Set<string>([def.relationType.trim()]);
+    const parsed = parseProjectionType(def.relationType);
+    if (parsed) {
+      const assocDef = registry.associations[parsed.associationId];
+      if (assocDef && isSymmetricAssociation(assocDef)) {
+        const otherIndex: 0 | 1 = parsed.endpointIndex === 0 ? 1 : 0;
+        projectionTypes.add(projectionTypeForEndpoint(parsed.associationId, otherIndex));
+      }
+    }
+    out.push({ column: sort.column, projectionTypes: [...projectionTypes] });
+  }
+  return out;
+}
 
+function evalRowsFromMembershipConnections(
+  store: RelationshipReadStore,
+  connections: Relationship[],
+  ordered: boolean,
+): EvalRow[] {
   const evalRows: EvalRow[] = [];
-  for (const connection of incoming) {
+  for (const connection of connections) {
     const page = readStoreGetNode(store, connection.sourceNodeId);
     const name = page ? titleFromProperties(page.properties) : "Untitled";
     const rowIndex = ordered
@@ -153,39 +174,40 @@ function buildCustomViewDetail(
       modifiedAt: page ? isoFromProperties(page.properties, "modified_at") : null,
     });
   }
+  return evalRows;
+}
 
-  const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
-    store,
+function finishCustomViewDetail(args: {
+  databaseId: string;
+  databaseTitle: string;
+  contentDir: string;
+  viewAssociation: string;
+  memberSidePerspective: string;
+  setSideProjection: string;
+  resolved: ReturnType<typeof resolveCustomTabsForNode>;
+  tabName: string;
+  mergedColumnDefs: DatabaseColumnDef[];
+  windowedEvalRows: EvalRow[];
+  rowsWindow: DatabaseViewDetail["rowsWindow"];
+}): DatabaseViewDetail {
+  const {
     databaseId,
+    databaseTitle,
+    contentDir,
+    viewAssociation,
+    memberSidePerspective,
+    setSideProjection,
+    resolved,
     tabName,
-    evalRows,
-    undefined,
-    { contentDir },
-  );
-
-  const mergedColumnDefs = buildDatabaseColumnDefs(
-    store,
-    databaseId,
-    dynamicColumnDefs,
-    hiddenColumnKeys,
-    { contentDir },
-  );
-
-  const sorts = rowsQuery?.sorts ?? resolved.activeDefinition.sorts;
-  const q = rowsQuery?.q?.trim() ?? "";
-  const hydrateBeforeSort =
-    !q && sortsNeedRelationHydration(sorts, mergedColumnDefs);
-
-  if (hydrateBeforeSort) {
-    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
-  }
-
-  const sorted = q ? enrichedRows : sortEvalRowsFromViewSorts(enrichedRows, sorts);
+    mergedColumnDefs,
+    windowedEvalRows,
+    rowsWindow,
+  } = args;
 
   const defaultColumns =
     mergedColumnDefs.length > 0
       ? mergedColumnDefs.map((c) => c.key)
-      : [...new Set(sorted.flatMap((r) => Object.keys(r.cells)))].sort((a, b) =>
+      : [...new Set(windowedEvalRows.flatMap((r) => Object.keys(r.cells)))].sort((a, b) =>
           a.localeCompare(b),
         );
 
@@ -203,16 +225,6 @@ function buildCustomViewDetail(
     mergedColumnDefs.length > 0
       ? reorderColumnDefs(mergedColumnDefs, defaultColumns)
       : undefined;
-
-  const { rows: windowedEvalRows, rowsWindow } = applyNameFilterAndWindow(
-    sorted,
-    rowsQuery,
-    (row) => row.name,
-  );
-
-  if (!hydrateBeforeSort) {
-    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, windowedEvalRows, contentDir);
-  }
 
   const rows: DatabaseRow[] = windowedEvalRows.map((row, index) => ({
     rowIndex: rowsWindow.offset + index,
@@ -247,6 +259,131 @@ function buildCustomViewDetail(
   };
 }
 
+function buildCustomViewDetail(
+  store: RelationshipReadStore,
+  databaseId: string,
+  databaseTitle: string,
+  contentDir: string,
+  requestedTabId?: string,
+  rowsQuery?: TableRowsQuery,
+): DatabaseViewDetail {
+  const { viewAssociation, memberSidePerspective, setSideProjection } = setPerspectives(
+    databaseId,
+    contentDir,
+  );
+  const resolved = resolveCustomTabsForNode(
+    contentDir,
+    databaseId,
+    requestedTabId,
+    viewAssociation,
+  );
+  const tabName = activeTabName(resolved);
+  const ordered = setUsesOrderedAssociation(databaseId, contentDir);
+  const sorts = rowsQuery?.sorts ?? resolved.activeDefinition.sorts;
+
+  const { dynamicColumnDefs, hiddenColumnKeys } = listDynamicColumnDefs(
+    store,
+    databaseId,
+    tabName,
+    undefined,
+    { contentDir },
+  );
+  const gateColumnDefs = buildDatabaseColumnDefs(
+    store,
+    databaseId,
+    dynamicColumnDefs,
+    hiddenColumnKeys,
+    { contentDir },
+  );
+
+  if (shouldUseSqlDatabaseWindow(store, rowsQuery, sorts, gateColumnDefs)) {
+    const { offset, limit } = resolveWindowBounds(rowsQuery);
+    const { relationships, total } = listSetMemberRowConnectionsWindow(store, databaseId, {
+      projections: listSetMemberProjectionPairs(contentDir),
+      sorts: sorts.length > 0 ? sorts : undefined,
+      relationCounts: relationCountSortsFromColumnDefs(sorts, gateColumnDefs, contentDir),
+      defaultOrdered: ordered,
+      limit,
+      offset,
+    });
+
+    const evalRows = evalRowsFromMembershipConnections(store, relationships, ordered);
+    const {
+      rows: enrichedRows,
+      dynamicColumnDefs: enrichDynDefs,
+      hiddenColumnKeys: enrichHidden,
+    } = applyDynamicProperties(store, databaseId, tabName, evalRows, undefined, { contentDir });
+    const mergedColumnDefs = buildDatabaseColumnDefs(
+      store,
+      databaseId,
+      enrichDynDefs,
+      enrichHidden,
+      { contentDir },
+    );
+    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+    const rowsWindow = buildTableRowsWindow(offset, limit, total);
+
+    return finishCustomViewDetail({
+      databaseId,
+      databaseTitle,
+      contentDir,
+      viewAssociation,
+      memberSidePerspective,
+      setSideProjection,
+      resolved,
+      tabName,
+      mergedColumnDefs,
+      windowedEvalRows: enrichedRows,
+      rowsWindow,
+    });
+  }
+
+  const incoming = listSetMemberRowConnections(store, databaseId, contentDir);
+  const evalRows = evalRowsFromMembershipConnections(store, incoming, ordered);
+  const { rows: enrichedRows, dynamicColumnDefs: enrichDynDefs, hiddenColumnKeys: enrichHidden } =
+    applyDynamicProperties(store, databaseId, tabName, evalRows, undefined, { contentDir });
+
+  const mergedColumnDefs = buildDatabaseColumnDefs(
+    store,
+    databaseId,
+    enrichDynDefs,
+    enrichHidden,
+    { contentDir },
+  );
+
+  const q = rowsQuery?.q?.trim() ?? "";
+  const hydrateBeforeSort = !q && sortsNeedRelationHydration(sorts, mergedColumnDefs);
+
+  if (hydrateBeforeSort) {
+    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+  }
+
+  const sorted = q ? enrichedRows : sortEvalRowsFromViewSorts(enrichedRows, sorts);
+  const { rows: windowedEvalRows, rowsWindow } = applyNameFilterAndWindow(
+    sorted,
+    rowsQuery,
+    (row) => row.name,
+  );
+
+  if (!hydrateBeforeSort) {
+    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, windowedEvalRows, contentDir);
+  }
+
+  return finishCustomViewDetail({
+    databaseId,
+    databaseTitle,
+    contentDir,
+    viewAssociation,
+    memberSidePerspective,
+    setSideProjection,
+    resolved,
+    tabName,
+    mergedColumnDefs,
+    windowedEvalRows,
+    rowsWindow,
+  });
+}
+
 /** Build a database table view from set edges and linked page titles. */
 export function getDatabaseViewDetail(
   store: RelationshipReadStore,
@@ -258,8 +395,6 @@ export function getDatabaseViewDetail(
   const database = readStoreGetNode(store, databaseId);
   const dir = contentDir ?? resolveContentPath();
   if (!database || !isTypeTableNode(store, databaseId, dir)) return null;
-
-  const incoming = listSetMemberRowConnections(store, databaseId, dir);
 
   const title = titleFromProperties(database.properties);
   const views = loadViewsFromContent(dir);
@@ -274,13 +409,5 @@ export function getDatabaseViewDetail(
     return buildComposedDatabaseView(store, composition, requestedTabId, dir, rowsQuery);
   }
 
-  return buildCustomViewDetail(
-    store,
-    databaseId,
-    title,
-    incoming,
-    dir,
-    requestedTabId,
-    rowsQuery,
-  );
+  return buildCustomViewDetail(store, databaseId, title, dir, requestedTabId, rowsQuery);
 }

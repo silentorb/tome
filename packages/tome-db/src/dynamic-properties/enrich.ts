@@ -1,6 +1,5 @@
 import type { DatabaseColumnDef } from "../database-view";
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
-import { readStoreGetNode, readStoreListNodeIds } from "../graph-store/relationship-read";
 import type { EvalRow } from "../row-sort";
 import { loadDynamicColumnSets, loadDynamicProperties } from "./overlay";
 import {
@@ -11,7 +10,6 @@ import {
 } from "./registry";
 import {
   buildAllSceneCountPrefetch,
-  buildSceneCountByProductPrefetch,
   buildWeightedUsePrefetch,
   buildWonderPrefetch,
 } from "./resolvers/index";
@@ -22,14 +20,26 @@ export interface DynamicEnrichmentResult {
   hiddenColumnKeys: Set<string>;
 }
 
+export interface DynamicColumnDefsResult {
+  dynamicColumnDefs: DatabaseColumnDef[];
+  hiddenColumnKeys: Set<string>;
+}
+
 export interface ApplyDynamicPropertiesOptions {
   /** Content directory for dynamic-properties.json (defaults to TOME_CONTENT_PATH / repo content/). */
   contentDir?: string;
 }
 
+type DynCtx = {
+  db: RelationshipReadStore;
+  owner: string;
+  viewName: string;
+  rowNodeIds: string[];
+};
+
 function buildFixedPrefetch(
   resolverId: string,
-  ctx: { db: RelationshipReadStore; owner: string; viewName: string; rowNodeIds: string[] },
+  ctx: DynCtx,
   params: Record<string, unknown>,
 ): unknown {
   switch (resolverId) {
@@ -42,6 +52,49 @@ function buildFixedPrefetch(
     default:
       return undefined;
   }
+}
+
+/**
+ * Column defs and hideLegacyKeys for dynamic properties / column sets — no cell resolve.
+ * Used to gate SQL windowing (dyn-sort detection) before loading membership rows.
+ */
+export function listDynamicColumnDefs(
+  db: RelationshipReadStore,
+  owner: string,
+  viewName: string,
+  registry: ResolverRegistry,
+  options?: ApplyDynamicPropertiesOptions,
+): DynamicColumnDefsResult {
+  const properties = loadDynamicProperties(db, owner, options?.contentDir);
+  const columnSets = loadDynamicColumnSets(db, owner, options?.contentDir);
+  const dynamicColumnDefs: DatabaseColumnDef[] = [];
+  const hiddenColumnKeys = new Set<string>();
+  const ctx: DynCtx = { db, owner, viewName, rowNodeIds: [] };
+
+  for (const set of columnSets) {
+    for (const key of set.hideLegacyKeys) hiddenColumnKeys.add(key);
+    const resolver = registry.columnSets.get(set.resolverId);
+    if (!resolver) continue;
+    for (const dimension of resolver.discoverDimensions(ctx, set.params)) {
+      dynamicColumnDefs.push({
+        key: materializeColumnKey(set.columnKeyPattern, dimension.id),
+        name: materializeColumnName(set.columnNamePattern, dimension.title),
+        type: set.columnType,
+        source: "dynamic",
+      });
+    }
+  }
+
+  for (const property of properties) {
+    dynamicColumnDefs.push({
+      key: property.columnKey,
+      name: property.columnName,
+      type: property.columnType,
+      source: "dynamic",
+    });
+  }
+
+  return { dynamicColumnDefs, hiddenColumnKeys };
 }
 
 export function applyDynamicProperties(
@@ -60,7 +113,7 @@ export function applyDynamicProperties(
   const materializedSetColumns: MaterializedColumnSetColumn[] = [];
 
   const rowNodeIds = evalRows.map((r) => r.nodeId);
-  const ctx = { db, owner, viewName, rowNodeIds };
+  const ctx: DynCtx = { db, owner, viewName, rowNodeIds };
 
   const setPrefetches = new Map<string, unknown>();
   const fixedPrefetches = new Map<string, unknown>();

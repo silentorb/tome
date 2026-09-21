@@ -333,6 +333,46 @@ export interface RelationshipProjectionWindowResult {
   total: number;
 }
 
+/** One set-trait composite's directed projections for membership listing. */
+export interface SetMemberProjectionPair {
+  setProjection: string;
+  memberProjection: string;
+}
+
+/** Sort key for {@link TomeQueryCache.listSetMemberRowConnectionsWindow}. */
+export interface SetMemberWindowSort {
+  column: string;
+  direction: "asc" | "desc";
+}
+
+/**
+ * Relation-count ORDER BY: count outgoing projections of these types from the member.
+ * Include both symmetric endpoints when the association is symmetric.
+ */
+export interface SetMemberRelationCountSort {
+  column: string;
+  projectionTypes: string[];
+}
+
+/** Window + sort for type-table set membership (SQL ORDER BY / LIMIT / OFFSET). */
+export interface SetMemberWindowQuery {
+  projections: SetMemberProjectionPair[];
+  sorts?: SetMemberWindowSort[];
+  /** Relation column → projection types for COUNT ORDER BY. */
+  relationCounts?: SetMemberRelationCountSort[];
+  /** When true and sorts empty, default ORDER BY edge `order` then member title. */
+  defaultOrdered?: boolean;
+  /** Omit or null → return the full ordered set (static export). */
+  limit?: number | null;
+  offset?: number;
+}
+
+export interface SetMemberWindowResult {
+  /** Membership edges normalized with member as `sourceNodeId` and set as `targetNodeId`. */
+  relationships: Relationship[];
+  total: number;
+}
+
 export interface TomeQueryCache {
   readonly path: string;
 
@@ -417,6 +457,15 @@ export interface TomeQueryCache {
     type: string,
     query?: RelationshipProjectionWindowQuery,
   ): RelationshipProjectionWindowResult;
+  /**
+   * Ordered window of set membership edges for a type table.
+   * Sort/limit/offset run in SQL. `total` is the full member count (before limit/offset).
+   * Returned relationships are normalized (member as source, set as target).
+   */
+  listSetMemberRowConnectionsWindow(
+    setId: string,
+    query: SetMemberWindowQuery,
+  ): SetMemberWindowResult;
   countIncidentRelationships(nodeId: string): number;
   listDistinctRelationshipTypes(): string[];
 

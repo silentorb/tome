@@ -16,6 +16,7 @@ export {
   listOutgoingProjectionPropertyKeys,
   listRelationshipsFromSource,
   listRelationshipsFromSourceWindow,
+  listSetMemberRowConnectionsWindow,
   listRelationshipsToTarget,
   getQueryCache,
   readStoreCompositeTypeForRelationship,

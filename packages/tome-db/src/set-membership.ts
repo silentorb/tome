@@ -127,3 +127,15 @@ export function listSetMemberRowConnections(
   }
   return [...byMember.values()];
 }
+
+/** Set-trait projection pairs used by {@link listSetMemberRowConnections} / SQL windows. */
+export function listSetMemberProjectionPairs(
+  contentDir?: string,
+): { setProjection: string; memberProjection: string }[] {
+  const dir = contentDir ?? resolveContentPath();
+  const registry = loadAssociationsFromContent(dir);
+  return typesWithTrait(registry, SET_TRAIT).map((composite) => ({
+    setProjection: setSideProjectionType(registry, composite),
+    memberProjection: memberSideProjectionType(registry, composite),
+  }));
+}
