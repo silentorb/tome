@@ -10,9 +10,8 @@ import { hydrateRelationCellsForRows, relationFieldSelectsFromColumnDefs, applyR
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import { resolveContentPath } from "tome-flatfile";
 import {
-  listSetMemberRowConnectionsWindow,
-  listSetMemberNodeIds,
-  listSetMemberRowConnectionsForMemberIds,
+  listMemberPage,
+  listMemberPageNodeIds,
   readStoreGetNode,
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
@@ -33,9 +32,6 @@ import {
   setRoleProjectionTypesForComposite,
   loadAssociationsFromContent,
   associationIdFromTypeOrProjection,
-  parseProjectionType,
-  projectionTypeForEndpoint,
-  isSymmetricAssociation,
 } from "tome-flatfile";
 import { perspectiveDisplayLabel } from "./association-label";
 import {
@@ -60,9 +56,12 @@ import type {
   TableRowsQuery,
   ViewSortSpec,
 } from "tome-graph-interfaces";
-import type { SetMemberRelationCountSort, SetMemberRelationFieldLink } from "tome-service-interfaces";
+import type {
+  MemberPageRelationFieldLink,
+} from "tome-service-interfaces";
 import { getCompositionById } from "./table-presentation/load";
 import { buildComposedDatabaseView } from "./table-presentation/compose";
+import { relationCountSortsFromColumnDefs } from "./member-page-query";
 
 const ROW_META_KEYS = ORDER_META_KEYS;
 const DEFAULT_SET_SECTION_TITLE = "Contents";
@@ -137,31 +136,6 @@ function sortsNeedRelationHydration(
     columnDefs.filter((def) => def.type === "relation").map((def) => def.key),
   );
   return sorts.some((sort) => relationKeys.has(sort.column));
-}
-
-function relationCountSortsFromColumnDefs(
-  sorts: ViewSortSpec[],
-  columnDefs: DatabaseColumnDef[],
-  contentDir: string,
-): SetMemberRelationCountSort[] {
-  const registry = loadAssociationsFromContent(contentDir);
-  const byKey = new Map(columnDefs.map((def) => [def.key, def]));
-  const out: SetMemberRelationCountSort[] = [];
-  for (const sort of sorts) {
-    const def = byKey.get(sort.column);
-    if (!def || def.type !== "relation" || !def.relationType?.trim()) continue;
-    const projectionTypes = new Set<string>([def.relationType.trim()]);
-    const parsed = parseProjectionType(def.relationType);
-    if (parsed) {
-      const assocDef = registry.associations[parsed.associationId];
-      if (assocDef && isSymmetricAssociation(assocDef)) {
-        const otherIndex: 0 | 1 = parsed.endpointIndex === 0 ? 1 : 0;
-        projectionTypes.add(projectionTypeForEndpoint(parsed.associationId, otherIndex));
-      }
-    }
-    out.push({ column: sort.column, projectionTypes: [...projectionTypes] });
-  }
-  return out;
 }
 
 function evalRowsFromMembershipConnections(
@@ -309,7 +283,7 @@ function buildCustomViewDetail(
 
   if (shouldUseSqlDatabaseSearchWindow(store, rowsQuery)) {
     const projections = listSetMemberProjectionPairs(contentDir);
-    const scopeIds = listSetMemberNodeIds(store, databaseId, { projections });
+    const scopeIds = listMemberPageNodeIds(store, databaseId, { projections });
     const { hits, rowsWindow } = runTableSearchWindow(
       resolveTableSearcher(store),
       rowsQuery,
@@ -317,14 +291,12 @@ function buildCustomViewDetail(
     );
     const hitIds = hits.map((h) => h.id);
     const relationFields = relationFieldSelectsFromColumnDefs(gateColumnDefs, contentDir);
-    const memberResult = listSetMemberRowConnectionsForMemberIds(
-      store,
-      databaseId,
+    const memberResult = listMemberPage(store, databaseId, {
       projections,
-      hitIds,
-      relationFields.length > 0 ? relationFields : undefined,
-    );
-    const fieldsByMember = new Map<string, Record<string, SetMemberRelationFieldLink[]>>();
+      memberIds: hitIds,
+      relationFields: relationFields.length > 0 ? relationFields : undefined,
+    });
+    const fieldsByMember = new Map<string, Record<string, MemberPageRelationFieldLink[]>>();
     if (memberResult.relationFieldsByRow) {
       for (let i = 0; i < memberResult.relationships.length; i++) {
         const edge = memberResult.relationships[i]!;
@@ -384,7 +356,7 @@ function buildCustomViewDetail(
         ? ensureDynSortIndexes(store, databaseId, dynPlans, contentDir)
         : undefined;
     const relationFields = relationFieldSelectsFromColumnDefs(gateColumnDefs, contentDir);
-    const { relationships, total, relationFieldsByRow } = listSetMemberRowConnectionsWindow(
+    const { relationships, total, relationFieldsByRow } = listMemberPage(
       store,
       databaseId,
       {

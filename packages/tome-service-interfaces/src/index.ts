@@ -373,8 +373,8 @@ export interface SetMemberProjectionPair {
   memberProjection: string;
 }
 
-/** Sort key for {@link TomeQueryCache.listSetMemberRowConnectionsWindow}. */
-export interface SetMemberWindowSort {
+/** Sort key for {@link TomeQueryCache.listMemberPage}. */
+export interface MemberPageSort {
   column: string;
   direction: "asc" | "desc";
 }
@@ -383,7 +383,7 @@ export interface SetMemberWindowSort {
  * Relation-count ORDER BY: count outgoing projections of these types from the member.
  * Include both symmetric endpoints when the association is symmetric.
  */
-export interface SetMemberRelationCountSort {
+export interface MemberPageRelationCountSort {
   column: string;
   projectionTypes: string[];
 }
@@ -392,64 +392,97 @@ export interface SetMemberRelationCountSort {
  * Expression-index ORDER BY: sort by precomputed `expression_index_values.sort_value`
  * for the given content-addressed digest (dyn aggregate / Imp sub-expression).
  */
-export interface SetMemberExpressionIndexSort {
+export interface MemberPageExpressionIndexSort {
   column: string;
   digest: string;
 }
 
 /**
- * Relation-column display selected in the membership window SQL (Select stage).
+ * Relation-column display selected in the member-page SQL (bound display field).
  * `projectionTypes` includes symmetric partner types when applicable.
  * When `compositeType` is set, prefer outgoing composite edges when any exist;
  * otherwise fall back to typed outgoing projections.
  */
-export interface SetMemberRelationFieldSelect {
+export interface MemberPageRelationFieldSelect {
   /** Table column key; used to map SQL payloads onto `relationCells`. */
   column: string;
   projectionTypes: string[];
   compositeType?: string;
 }
 
-/** One relation link as returned from window SQL JSON aggregates. */
-export interface SetMemberRelationFieldLink {
+/** One relation link as returned from member-page SQL JSON aggregates. */
+export interface MemberPageRelationFieldLink {
   targetId: string;
   title: string;
 }
 
-/** Window + sort for type-table set membership (SQL ORDER BY / LIMIT / OFFSET). */
-export interface SetMemberWindowQuery {
+/** Optional scope predicate on a member-page read (composition scope layer). */
+export interface MemberPageScopeFilter {
+  projectionType: string;
+  scopeNodeId: string;
+}
+
+/** Optional group enrichment on a member-page read (composition groups layer). */
+export interface MemberPageGroupsQuery {
+  /** Directed projection type from member → group. */
+  memberToGroupProjectionType: string;
+  /** Group type-table id (set node for group headers). */
+  groupTypeDatabaseId: string;
+  /** Set-trait pairs for the group type table (membership edges). */
+  groupSetProjections: SetMemberProjectionPair[];
+  /** When set with scopeNodeId, only groups linked to that scope. */
+  groupToScopeProjectionType?: string;
+  scopeNodeId?: string;
+  /** Remap duplicate group nodes by title within the scoped header set (default true). */
+  canonicalGroupByTitle?: boolean;
+}
+
+/**
+ * Unified member-page read for plain Items and composed presentations.
+ * Optional scope/groups/sorts/display/window fields are filled by the orchestrator.
+ */
+export interface MemberPageQuery {
   projections: SetMemberProjectionPair[];
-  sorts?: SetMemberWindowSort[];
+  sorts?: MemberPageSort[];
   /** Relation column → projection types for COUNT ORDER BY. */
-  relationCounts?: SetMemberRelationCountSort[];
+  relationCounts?: MemberPageRelationCountSort[];
   /** Fixed dyn / expression-index sorts (digest must be ready in the catalog). */
-  expressionIndexSorts?: SetMemberExpressionIndexSort[];
+  expressionIndexSorts?: MemberPageExpressionIndexSort[];
   /**
    * Relation-column display fields to select in the page query (JSON link arrays).
-   * Parallel payloads appear on {@link SetMemberWindowResult.relationFieldsByRow}.
+   * Parallel payloads appear on {@link MemberPageResult.relationFieldsByRow}.
    */
-  relationFields?: SetMemberRelationFieldSelect[];
+  relationFields?: MemberPageRelationFieldSelect[];
   /** When true and sorts empty, default ORDER BY edge `order` then member title. */
   defaultOrdered?: boolean;
+  /** Composition scope layer: keep members linked to this scope node. */
+  scope?: MemberPageScopeFilter;
+  /** Composition groups layer: resolve group id / group-major order. */
+  groups?: MemberPageGroupsQuery;
+  /**
+   * When set, return only these member ids (table search hydrate).
+   * Ignores limit/offset; caller reorders to search rank.
+   */
+  memberIds?: readonly string[];
   /** Omit or null → return the full ordered set (static export). */
   limit?: number | null;
   offset?: number;
 }
 
-export interface SetMemberWindowResult {
+export interface MemberPageResult {
   /** Membership edges normalized with member as `sourceNodeId` and set as `targetNodeId`. */
   relationships: Relationship[];
   total: number;
   /**
+   * Parallel to `relationships`: resolved group id, or `null` for unassigned.
+   * Present when the query requested `groups` (may be an empty array).
+   */
+  groupIds?: (string | null)[];
+  /**
    * Parallel to `relationships`: per-row map of column key → relation links.
    * Present when the query requested `relationFields` (may be empty maps).
    */
-  relationFieldsByRow?: Record<string, SetMemberRelationFieldLink[]>[];
-}
-
-/** Lightweight set-member node ids (no edge DTO hydration). */
-export interface SetMemberNodeIdsQuery {
-  projections: SetMemberProjectionPair[];
+  relationFieldsByRow?: Record<string, MemberPageRelationFieldLink[]>[];
 }
 
 /** Scope discovery among set members (composed table tabs). */
@@ -468,65 +501,6 @@ export interface DistinctSetMemberScopeRow {
   id: string;
   title: string;
   sortKey: number;
-}
-
-/** Optional scope filter for composed membership windows. */
-export interface ComposedMemberScopeFilter {
-  projectionType: string;
-  scopeNodeId: string;
-}
-
-/** Optional groups join / ORDER BY for composed membership windows. */
-export interface ComposedMemberGroupsQuery {
-  /** Directed projection type from member → group. */
-  memberToGroupProjectionType: string;
-  /** Group type-table id (set node for group headers). */
-  groupTypeDatabaseId: string;
-  /** Set-trait pairs for the group type table (membership edges). */
-  groupSetProjections: SetMemberProjectionPair[];
-  /** When set with scopeNodeId, only groups linked to that scope. */
-  groupToScopeProjectionType?: string;
-  scopeNodeId?: string;
-  /** Remap duplicate group nodes by title within the scoped header set (default true). */
-  canonicalGroupByTitle?: boolean;
-}
-
-/** Window + scope/group for composed / generated table presentations. */
-export interface ComposedMemberWindowQuery {
-  projections: SetMemberProjectionPair[];
-  scope?: ComposedMemberScopeFilter;
-  groups?: ComposedMemberGroupsQuery;
-  /** When true, ORDER BY membership `order` (within group when groups set). */
-  defaultOrdered?: boolean;
-  /**
-   * Relation-column display fields to select in the page query (JSON link arrays).
-   * Parallel payloads appear on {@link ComposedMemberWindowResult.relationFieldsByRow}.
-   */
-  relationFields?: SetMemberRelationFieldSelect[];
-  /**
-   * When set, return only these member ids (table search hydrate).
-   * Ignores limit/offset; caller reorders to search rank.
-   */
-  memberIds?: readonly string[];
-  /** Omit or null → return the full ordered set (static export). */
-  limit?: number | null;
-  offset?: number;
-}
-
-export interface ComposedMemberWindowResult {
-  /** Membership edges normalized with member as `sourceNodeId` and set as `targetNodeId`. */
-  relationships: Relationship[];
-  /**
-   * Parallel to `relationships`: resolved group id, or `null` for unassigned.
-   * Empty array when `groups` was not requested.
-   */
-  groupIds: (string | null)[];
-  total: number;
-  /**
-   * Parallel to `relationships`: per-row map of column key → relation links.
-   * Present when the query requested `relationFields` (may be empty maps).
-   */
-  relationFieldsByRow?: Record<string, SetMemberRelationFieldLink[]>[];
 }
 
 /** Group headers for a composed presentation (optional scope filter). */
@@ -644,26 +618,18 @@ export interface TomeQueryCache {
     query?: RelationshipProjectionWindowQuery,
   ): RelationshipProjectionWindowResult;
   /**
-   * Ordered window of set membership edges for a type table.
-   * Sort/limit/offset run in SQL. `total` is the full member count (before limit/offset).
+   * Ordered window of set membership edges for a type-table member page.
+   * Optional scope/groups/sorts/display run in SQL (Analyze→Bind→Plan→Emit).
+   * `total` is the full matching count (before limit/offset).
    * Returned relationships are normalized (member as source, set as target).
+   * When `memberIds` is set, returns only those members (search hydrate; ignores limit/offset).
    */
-  listSetMemberRowConnectionsWindow(
-    setId: string,
-    query: SetMemberWindowQuery,
-  ): SetMemberWindowResult;
-  /** Distinct member node ids for a set (no Relationship DTOs). */
-  listSetMemberNodeIds(setId: string, query: SetMemberNodeIdsQuery): string[];
+  listMemberPage(setId: string, query: MemberPageQuery): MemberPageResult;
   /**
-   * Membership edges for specific member ids (normalized); caller reorders to search rank.
-   * Optional `relationFields` selects relation-column display in the same query.
+   * Distinct member node ids for a set (optional scope filter via `query.scope`).
+   * No Relationship DTOs / display fields.
    */
-  listSetMemberRowConnectionsForMemberIds(
-    setId: string,
-    projections: SetMemberProjectionPair[],
-    memberIds: readonly string[],
-    relationFields?: readonly SetMemberRelationFieldSelect[],
-  ): SetMemberWindowResult;
+  listMemberPageNodeIds(setId: string, query: MemberPageQuery): string[];
   /** Distinct related (target) node ids for an outgoing projection. */
   listRelatedTargetNodeIds(sourceNodeId: string, type: string): string[];
   /** Outgoing edges whose target is in `targetIds`; caller reorders to search rank. */
@@ -696,25 +662,6 @@ export interface TomeQueryCache {
   ): void;
   /** Mark one digest (or all when omitted) as stale so the next read rebuilds. */
   markExpressionIndexesStale(digest?: string): void;
-  /**
-   * Ordered window of set members for a composed presentation.
-   * Optional scope filter + group join/order run in SQL.
-   */
-  listComposedSetMemberRowConnectionsWindow(
-    setId: string,
-    query: ComposedMemberWindowQuery,
-  ): ComposedMemberWindowResult;
-  /** Scoped composed member node ids (no edge DTOs). */
-  listComposedMemberNodeIds(setId: string, query: ComposedMemberWindowQuery): string[];
-  /**
-   * Composed membership edges (+ group ids) for specific member ids.
-   * Caller reorders to search rank; `total` is unused (0).
-   */
-  listComposedSetMemberRowConnectionsForMemberIds(
-    setId: string,
-    query: ComposedMemberWindowQuery,
-    memberIds: readonly string[],
-  ): ComposedMemberWindowResult;
   /** Group-type members for composed group headers (optional scope filter). */
   listComposedGroupHeaders(query: ComposedGroupHeadersQuery): ComposedGroupHeaderRow[];
   countIncidentRelationships(nodeId: string): number;

@@ -3,7 +3,7 @@
  * (lazy single-flight build from DynAggregate IR).
  */
 
-import type { SetMemberExpressionIndexSort, TomeQueryCache } from "tome-service-interfaces";
+import type { MemberPageExpressionIndexSort, TomeQueryCache } from "tome-service-interfaces";
 import type { ViewSortSpec } from "tome-graph-interfaces";
 import {
   columnSetAggregateForResolver,
@@ -172,7 +172,7 @@ export function ensureDynSortIndexes(
   ownerId: string,
   plans: readonly DynSortIndexPlan[],
   contentDir?: string,
-): SetMemberExpressionIndexSort[] {
+): MemberPageExpressionIndexSort[] {
   const cache = getQueryCache(store);
   if (!cache || typeof cache.replaceExpressionIndexValues !== "function") {
     throw new Error("Expression indexes require a SQLite query cache");
@@ -195,7 +195,7 @@ export function ensureFixedDynSortIndexes(
   ownerId: string,
   plans: readonly DynSortIndexPlan[],
   contentDir?: string,
-): SetMemberExpressionIndexSort[] {
+): MemberPageExpressionIndexSort[] {
   return ensureDynSortIndexes(store, ownerId, plans, contentDir);
 }
 

@@ -1,9 +1,8 @@
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import {
   listComposedGroupHeaders,
-  listComposedSetMemberRowConnectionsWindow,
-  listComposedMemberNodeIds,
-  listComposedSetMemberRowConnectionsForMemberIds,
+  listMemberPage,
+  listMemberPageNodeIds,
   listDistinctSetMemberScopeIds,
   readStoreGetNode,
 } from "../graph-store/relationship-read";
@@ -19,8 +18,13 @@ import {
   SET_TRAIT,
   typesWithTrait,
 } from "tome-flatfile";
-import { applyDynamicProperties } from "../dynamic-properties";
+import { applyDynamicProperties, listDynamicColumnDefs } from "../dynamic-properties";
+import {
+  ensureDynSortIndexes,
+  planDynSortIndexes,
+} from "../dynamic-properties/expression-index";
 import { hydrateRelationCellsForRows, relationFieldSelectsFromColumnDefs, applyRelationFieldsToEvalRows } from "../database-view-relations";
+import { relationCountSortsFromColumnDefs } from "../member-page-query";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "../database-column-defs";
 import type { EvalRow } from "../row-sort";
 import { applySectionColumnOrder } from "../views/column-order";
@@ -35,7 +39,10 @@ import {
   buildTableRowsWindow,
   resolveWindowBounds,
 } from "../table-rows-window";
-import { shouldUseSqlComposedWindow, shouldUseSqlComposedSearchWindow } from "../table-sql-window";
+import {
+  shouldUseSqlComposedWindow,
+  shouldUseSqlComposedSearchWindow,
+} from "../table-sql-window";
 import {
   membershipEdgesForHits,
   resolveTableSearcher,
@@ -49,7 +56,7 @@ import type {
   TablePresentationComposition,
   TableRowsQuery,
 } from "tome-graph-interfaces";
-import type { SetMemberRelationFieldLink } from "tome-service-interfaces";
+import type { MemberPageQuery, MemberPageRelationFieldLink } from "tome-service-interfaces";
 import { memberLinkPerspective, numericSortKey, titleFromProperties } from "./helpers";
 import { discoverRelationScopes, memberMatchesScope } from "./relation-scope-tabs";
 import {
@@ -349,16 +356,47 @@ function buildComposedDatabaseViewSql(
     : undefined;
 
   const excludeKeys = excludedKeys(composition);
-  const gateColumnDefs = buildDatabaseColumnDefs(db, databaseId, [], new Set(), {
-    excludeKeys,
-    contentDir: dir,
-  });
+  const { dynamicColumnDefs, hiddenColumnKeys } = listDynamicColumnDefs(
+    db,
+    databaseId,
+    "default",
+    undefined,
+    { contentDir: dir },
+  );
+  const gateColumnDefs = buildDatabaseColumnDefs(
+    db,
+    databaseId,
+    dynamicColumnDefs,
+    new Set([...hiddenColumnKeys, ...excludeKeys]),
+    {
+      excludeKeys,
+      contentDir: dir,
+    },
+  );
   const relationFields = relationFieldSelectsFromColumnDefs(gateColumnDefs, dir);
+  const sorts = rowsQuery?.sorts ?? [];
+  const dynKeys = new Set(
+    gateColumnDefs.filter((def) => def.source === "dynamic").map((def) => def.key),
+  );
+  const dynPlans =
+    sorts.length > 0
+      ? planDynSortIndexes(db, databaseId, sorts, dynKeys, dir) ?? []
+      : [];
+  const expressionIndexSorts =
+    dynPlans.length > 0
+      ? ensureDynSortIndexes(db, databaseId, dynPlans, dir)
+      : undefined;
 
-  const composedQuery = {
+  const memberPageQuery: MemberPageQuery = {
     projections,
     scope: scopeFilter,
     groups: groupsQuery,
+    sorts: sorts.length > 0 ? sorts : undefined,
+    relationCounts:
+      sorts.length > 0
+        ? relationCountSortsFromColumnDefs(sorts, gateColumnDefs, dir)
+        : undefined,
+    expressionIndexSorts,
     defaultOrdered: Boolean(composition.reorder),
     relationFields: relationFields.length > 0 ? relationFields : undefined,
     limit,
@@ -368,29 +406,29 @@ function buildComposedDatabaseViewSql(
   let relationships: Relationship[];
   let groupIds: (string | null)[];
   let rowsWindow: ReturnType<typeof buildTableRowsWindow>;
-  let relationFieldsByRow: Record<string, SetMemberRelationFieldLink[]>[] | undefined;
+  let relationFieldsByRow: Record<string, MemberPageRelationFieldLink[]>[] | undefined;
 
   if (tableSearch) {
-    const scopeIds = listComposedMemberNodeIds(db, databaseId, composedQuery);
+    const scopeIds = listMemberPageNodeIds(db, databaseId, memberPageQuery);
     const { hits, rowsWindow: searchWindow } = runTableSearchWindow(
       resolveTableSearcher(db),
       rowsQuery,
       new Set(scopeIds),
     );
     const hitIds = hits.map((h) => h.id);
-    const hydrated = listComposedSetMemberRowConnectionsForMemberIds(
-      db,
-      databaseId,
-      composedQuery,
-      hitIds,
-    );
+    const hydrated = listMemberPage(db, databaseId, {
+      ...memberPageQuery,
+      memberIds: hitIds,
+      limit: null,
+      offset: 0,
+    });
     relationships = membershipEdgesForHits(hydrated.relationships, hits);
     if (groupsQuery) {
       const groupByMember = new Map<string, string | null>();
       for (let i = 0; i < hydrated.relationships.length; i++) {
         groupByMember.set(
           hydrated.relationships[i]!.sourceNodeId,
-          hydrated.groupIds[i] ?? null,
+          hydrated.groupIds?.[i] ?? null,
         );
       }
       groupIds = relationships.map((edge) => groupByMember.get(edge.sourceNodeId) ?? null);
@@ -398,7 +436,7 @@ function buildComposedDatabaseViewSql(
       groupIds = [];
     }
     if (hydrated.relationFieldsByRow) {
-      const fieldsByMember = new Map<string, Record<string, SetMemberRelationFieldLink[]>>();
+      const fieldsByMember = new Map<string, Record<string, MemberPageRelationFieldLink[]>>();
       for (let i = 0; i < hydrated.relationships.length; i++) {
         fieldsByMember.set(
           hydrated.relationships[i]!.sourceNodeId,
@@ -411,9 +449,9 @@ function buildComposedDatabaseViewSql(
     }
     rowsWindow = searchWindow;
   } else {
-    const windowed = listComposedSetMemberRowConnectionsWindow(db, databaseId, composedQuery);
+    const windowed = listMemberPage(db, databaseId, memberPageQuery);
     relationships = windowed.relationships;
-    groupIds = windowed.groupIds;
+    groupIds = windowed.groupIds ?? [];
     relationFieldsByRow = windowed.relationFieldsByRow;
     rowsWindow = buildTableRowsWindow(offset, limit, windowed.total);
   }
@@ -733,7 +771,23 @@ export function buildComposedDatabaseView(
     );
   }
 
-  if (shouldUseSqlComposedWindow(db, rowsQuery)) {
+  const excludeKeysForGate = excludedKeys(composition);
+  const { dynamicColumnDefs: gateDynDefs, hiddenColumnKeys: gateHidden } =
+    listDynamicColumnDefs(db, databaseId, "default", undefined, { contentDir: dir });
+  const gateDefs = buildDatabaseColumnDefs(
+    db,
+    databaseId,
+    gateDynDefs,
+    new Set([...gateHidden, ...excludeKeysForGate]),
+    { excludeKeys: excludeKeysForGate, contentDir: dir },
+  );
+
+  if (
+    shouldUseSqlComposedWindow(db, rowsQuery, gateDefs, {
+      ownerId: databaseId,
+      contentDir: dir,
+    })
+  ) {
     return buildComposedDatabaseViewSql(
       db,
       composition,

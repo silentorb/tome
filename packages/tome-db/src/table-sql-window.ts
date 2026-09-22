@@ -165,14 +165,28 @@ export function shouldUseSqlDatabaseSearchWindow(
 
 /**
  * Composed / generated presentations: SQL window when cache present and not searching.
- * Compose ignores column sorts (reorder = membership `order`).
+ * Column sorts use the same expressibility gates as plain Items when present.
  */
 export function shouldUseSqlComposedWindow(
   store: RelationshipReadStore,
   query?: TableRowsQuery,
+  columnDefs?: readonly DatabaseColumnDef[],
+  options?: { ownerId?: string; contentDir?: string },
 ): boolean {
   if (tableRowsQueryUsesTableSearch(query)) return false;
-  return getQueryCache(store) !== null;
+  if (getQueryCache(store) === null) return false;
+  const sorts = query?.sorts;
+  if (!sorts?.length) return true;
+  const defs = columnDefs ?? [];
+  if (tableRowsQueryUsesNonExpressibleSort(sorts, defs)) return false;
+  const ownerId = options?.ownerId;
+  if (
+    ownerId &&
+    tableRowsQueryUsesUnresolvedDynSort(store, ownerId, sorts, defs, options?.contentDir)
+  ) {
+    return false;
+  }
+  return true;
 }
 
 /** Composed `q`: cache present (searcher may be null → empty window). */

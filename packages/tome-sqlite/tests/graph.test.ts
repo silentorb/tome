@@ -408,7 +408,7 @@ describe("GraphDatabase", () => {
       }
     }
 
-    const page0 = db.listSetMemberRowConnectionsWindow(setId, {
+    const page0 = db.listMemberPage(setId, {
       projections: [{ setProjection, memberProjection }],
       sorts: [{ column: "name", direction: "asc" }],
       limit: 2,
@@ -422,7 +422,7 @@ describe("GraphDatabase", () => {
     ]);
     expect(page0.relationships.every((r) => r.targetNodeId === setId)).toBe(true);
 
-    const page1 = db.listSetMemberRowConnectionsWindow(setId, {
+    const page1 = db.listMemberPage(setId, {
       projections: [{ setProjection, memberProjection }],
       sorts: [{ column: "name", direction: "asc" }],
       limit: 2,
@@ -433,7 +433,7 @@ describe("GraphDatabase", () => {
       "01MEMBER000000000000000003",
     ]);
 
-    const byRelCount = db.listSetMemberRowConnectionsWindow(setId, {
+    const byRelCount = db.listMemberPage(setId, {
       projections: [{ setProjection, memberProjection }],
       sorts: [{ column: "links", direction: "desc" }],
       relationCounts: [{ column: "links", projectionTypes: [linkType] }],
@@ -449,7 +449,7 @@ describe("GraphDatabase", () => {
     const memberOnly = "01MEMBERONLY00000000000000";
     db.upsertNode(memberOnly, { title: "AAA member-side" });
     db.upsertRelationship(memberOnly, setId, memberProjection, {});
-    const withMemberSide = db.listSetMemberRowConnectionsWindow(setId, {
+    const withMemberSide = db.listMemberPage(setId, {
       projections: [{ setProjection, memberProjection }],
       sorts: [{ column: "name", direction: "asc" }],
       limit: 1,
@@ -465,7 +465,7 @@ describe("GraphDatabase", () => {
       { memberId: memberOnly, sortValue: 1 },
     ]);
     expect(db.getExpressionIndexStatus(digest)).toBe("ready");
-    const byExpr = db.listSetMemberRowConnectionsWindow(setId, {
+    const byExpr = db.listMemberPage(setId, {
       projections: [{ setProjection, memberProjection }],
       sorts: [{ column: "dyn_metric", direction: "desc" }],
       expressionIndexSorts: [{ column: "dyn_metric", digest }],
@@ -507,7 +507,7 @@ describe("GraphDatabase", () => {
     db.upsertRelationship(memberA, target2, linkType, { ordinal: 0 });
     db.upsertRelationship(memberB, target1, linkType, { ordinal: 0 });
 
-    const page = db.listSetMemberRowConnectionsWindow(setId, {
+    const page = db.listMemberPage(setId, {
       projections: [{ setProjection, memberProjection }],
       defaultOrdered: true,
       relationFields: [{ column: "links", projectionTypes: [linkType] }],
@@ -583,7 +583,7 @@ describe("GraphDatabase", () => {
     });
     expect(headers.map((h) => h.id)).toEqual([part1, part2]);
 
-    const page0 = db.listComposedSetMemberRowConnectionsWindow(setId, {
+    const page0 = db.listMemberPage(setId, {
       projections: [{ setProjection, memberProjection }],
       scope: { projectionType: scopeType, scopeNodeId: bookA },
       groups: {
@@ -597,18 +597,27 @@ describe("GraphDatabase", () => {
         canonicalGroupByTitle: true,
       },
       defaultOrdered: true,
+      relationFields: [
+        {
+          column: "book",
+          projectionTypes: [scopeType],
+        },
+      ],
       limit: 2,
       offset: 0,
     });
     expect(page0.total).toBe(4);
     expect(page0.relationships).toHaveLength(2);
     expect(page0.groupIds).toEqual([part1, part1]);
+    expect(page0.relationFieldsByRow?.[0]?.book).toEqual([
+      { targetId: bookA, title: "Book A" },
+    ]);
     expect(page0.relationships.map((r) => r.sourceNodeId)).toEqual([
       "01SCENE0000000000000000000",
       "01SCENE0000000000000000001",
     ]);
 
-    const page1 = db.listComposedSetMemberRowConnectionsWindow(setId, {
+    const page1 = db.listMemberPage(setId, {
       projections: [{ setProjection, memberProjection }],
       scope: { projectionType: scopeType, scopeNodeId: bookA },
       groups: {

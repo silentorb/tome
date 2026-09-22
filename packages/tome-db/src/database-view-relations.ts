@@ -18,8 +18,8 @@ import {
 } from "tome-flatfile";
 import type { AssociationsFile } from "tome-flatfile";
 import type {
-  SetMemberRelationFieldLink,
-  SetMemberRelationFieldSelect,
+  MemberPageRelationFieldLink,
+  MemberPageRelationFieldSelect,
 } from "tome-service-interfaces";
 import {
   listRelationshipsFromSource,
@@ -161,9 +161,9 @@ function formatRelationCell(links: RelationLink[]): string {
 export function relationFieldSelectsFromColumnDefs(
   columnDefs: readonly DatabaseColumnDef[],
   contentDir?: string,
-): SetMemberRelationFieldSelect[] {
+): MemberPageRelationFieldSelect[] {
   const registry = contentDir ? loadAssociationsFromContent(contentDir) : null;
-  const out: SetMemberRelationFieldSelect[] = [];
+  const out: MemberPageRelationFieldSelect[] = [];
   for (const col of columnDefs) {
     if (col.type !== "relation") continue;
     const type = (col.relationType ?? relationType(col.name)).trim();
@@ -179,7 +179,7 @@ export function relationFieldSelectsFromColumnDefs(
         }
       }
     }
-    const select: SetMemberRelationFieldSelect = {
+    const select: MemberPageRelationFieldSelect = {
       column: col.key,
       projectionTypes: [...projectionTypes],
     };
@@ -193,7 +193,7 @@ export function relationFieldSelectsFromColumnDefs(
 /** Apply window SQL relation payloads onto eval rows (parallel arrays). */
 export function applyRelationFieldsToEvalRows(
   rows: EvalRow[],
-  relationFieldsByRow: readonly Record<string, SetMemberRelationFieldLink[]>[] | undefined,
+  relationFieldsByRow: readonly Record<string, MemberPageRelationFieldLink[]>[] | undefined,
 ): void {
   if (!relationFieldsByRow || relationFieldsByRow.length === 0) return;
   const n = Math.min(rows.length, relationFieldsByRow.length);

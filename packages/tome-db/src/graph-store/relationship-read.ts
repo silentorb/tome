@@ -2,17 +2,12 @@ import type { Node, Relationship, TomeGraphStoreBase } from "tome-graph-interfac
 import type {
   RelationshipProjectionWindowQuery,
   RelationshipProjectionWindowResult,
-  SetMemberWindowQuery,
-  SetMemberWindowResult,
-  SetMemberNodeIdsQuery,
-  SetMemberProjectionPair,
+  MemberPageQuery,
+  MemberPageResult,
   DistinctSetMemberScopeQuery,
   DistinctSetMemberScopeRow,
-  ComposedMemberWindowQuery,
-  ComposedMemberWindowResult,
   ComposedGroupHeadersQuery,
   ComposedGroupHeaderRow,
-  SetMemberRelationFieldSelect,
   TomeQueryCache,
 } from "tome-service-interfaces";
 import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
@@ -109,49 +104,29 @@ export function listRelationshipsFromSourceWindow(
 }
 
 /** Ordered SQL window of set membership edges; throws if no query cache. */
-export function listSetMemberRowConnectionsWindow(
+export function listMemberPage(
   store: RelationshipReadStore,
   setId: string,
-  query: SetMemberWindowQuery,
-): SetMemberWindowResult {
+  query: MemberPageQuery,
+): MemberPageResult {
   const cache = getQueryCache(store);
-  if (!cache || typeof cache.listSetMemberRowConnectionsWindow !== "function") {
-    throw new Error("listSetMemberRowConnectionsWindow requires a SQLite query cache");
+  if (!cache || typeof cache.listMemberPage !== "function") {
+    throw new Error("listMemberPage requires a SQLite query cache");
   }
-  return cache.listSetMemberRowConnectionsWindow(setId, query);
+  return cache.listMemberPage(setId, query);
 }
 
 /** Distinct member node ids for a set; throws if no query cache. */
-export function listSetMemberNodeIds(
+export function listMemberPageNodeIds(
   store: RelationshipReadStore,
   setId: string,
-  query: SetMemberNodeIdsQuery,
+  query: MemberPageQuery,
 ): string[] {
   const cache = getQueryCache(store);
-  if (!cache || typeof cache.listSetMemberNodeIds !== "function") {
-    throw new Error("listSetMemberNodeIds requires a SQLite query cache");
+  if (!cache || typeof cache.listMemberPageNodeIds !== "function") {
+    throw new Error("listMemberPageNodeIds requires a SQLite query cache");
   }
-  return cache.listSetMemberNodeIds(setId, query);
-}
-
-/** Membership edges for specific members; throws if no query cache. */
-export function listSetMemberRowConnectionsForMemberIds(
-  store: RelationshipReadStore,
-  setId: string,
-  projections: SetMemberProjectionPair[],
-  memberIds: readonly string[],
-  relationFields?: readonly SetMemberRelationFieldSelect[],
-): SetMemberWindowResult {
-  const cache = getQueryCache(store);
-  if (!cache || typeof cache.listSetMemberRowConnectionsForMemberIds !== "function") {
-    throw new Error("listSetMemberRowConnectionsForMemberIds requires a SQLite query cache");
-  }
-  return cache.listSetMemberRowConnectionsForMemberIds(
-    setId,
-    projections,
-    memberIds,
-    relationFields,
-  );
+  return cache.listMemberPageNodeIds(setId, query);
 }
 
 /** Related target node ids for an outgoing projection; throws if no query cache. */
@@ -192,48 +167,6 @@ export function listDistinctSetMemberScopeIds(
     throw new Error("listDistinctSetMemberScopeIds requires a SQLite query cache");
   }
   return cache.listDistinctSetMemberScopeIds(setId, query);
-}
-
-/** Composed membership window with optional scope/group; throws if no query cache. */
-export function listComposedSetMemberRowConnectionsWindow(
-  store: RelationshipReadStore,
-  setId: string,
-  query: ComposedMemberWindowQuery,
-): ComposedMemberWindowResult {
-  const cache = getQueryCache(store);
-  if (!cache || typeof cache.listComposedSetMemberRowConnectionsWindow !== "function") {
-    throw new Error("listComposedSetMemberRowConnectionsWindow requires a SQLite query cache");
-  }
-  return cache.listComposedSetMemberRowConnectionsWindow(setId, query);
-}
-
-/** Scoped composed member node ids; throws if no query cache. */
-export function listComposedMemberNodeIds(
-  store: RelationshipReadStore,
-  setId: string,
-  query: ComposedMemberWindowQuery,
-): string[] {
-  const cache = getQueryCache(store);
-  if (!cache || typeof cache.listComposedMemberNodeIds !== "function") {
-    throw new Error("listComposedMemberNodeIds requires a SQLite query cache");
-  }
-  return cache.listComposedMemberNodeIds(setId, query);
-}
-
-/** Composed edges for specific members; throws if no query cache. */
-export function listComposedSetMemberRowConnectionsForMemberIds(
-  store: RelationshipReadStore,
-  setId: string,
-  query: ComposedMemberWindowQuery,
-  memberIds: readonly string[],
-): ComposedMemberWindowResult {
-  const cache = getQueryCache(store);
-  if (!cache || typeof cache.listComposedSetMemberRowConnectionsForMemberIds !== "function") {
-    throw new Error(
-      "listComposedSetMemberRowConnectionsForMemberIds requires a SQLite query cache",
-    );
-  }
-  return cache.listComposedSetMemberRowConnectionsForMemberIds(setId, query, memberIds);
 }
 
 /** Composed group headers; throws if no query cache. */

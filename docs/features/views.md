@@ -67,9 +67,9 @@ When the editor is backed by the **SQLite query cache**, filter, sort, join, and
 
 **Dyn sorts** (fixed keys such as `weighted_use` / `wonder` / `all_scene_count`, and column-set keys such as `scene_count__*`): content-addressed **expression indexes** in the SQLite cache (lazy-built from a DynAggregate IR on miss; column-set digests bind `dimensionId`). Items windows `ORDER BY` the indexed values; display still hydrates dyn cells on the returned window only. See [dynamic-properties.md](./dynamic-properties.md) § Expression indexes and [expression-indexes.md](./expression-indexes.md).
 
-**Coverage today:** relation table sections, **Items / database custom views**, and **composed / generated presentations** use SQL windows when `q` is empty; with `q`, they use scoped searcher windows (flatfile remains on the legacy name-filter path).
+**Coverage today:** relation table sections, **Items / database custom views**, and **composed / generated presentations** use one **member-page read** (`listMemberPage`) when `q` is empty; with `q`, they use scoped searcher windows (flatfile remains on the legacy name-filter path). Composition layers only fill optional request fields (scope, groups, sorts); plain Items and composed share the same cache contract.
 
-On SQLite, **relation-column display** for Items / composed windows is **field selection in the membership page query** (correlated JSON aggregates per relation column), not a post-window TypeScript edge/`getNode` walk. Flatfile still hydrates relation cells in TypeScript after the window. Dyn **display** cells remain window-hydrated in TypeScript.
+**Member-page SQL compiler (SQLite):** membership windows compile through **Analyze → Bind → Plan → Emit** in `tome-sqlite` (`membership-query/`). Analyze gathers the full problem Intent; Bind lowers sort keys and relation display fields into a shared expression catalog; Plan chooses layered relational structure; Emit renders parameterized SQL. Relation-column **display** is a bound field on that page query (correlated JSON aggregates), not a post-window TypeScript edge/`getNode` walk. Flatfile still hydrates relation cells in TypeScript after the window. Dyn **display** cells remain window-hydrated in TypeScript. Table search ranking stays outside this compiler except an optional member-id restrict on the same read.
 
 ## Migration
 
