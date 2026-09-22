@@ -17,6 +17,10 @@ import {
   isSymmetricAssociation,
 } from "tome-flatfile";
 import type { AssociationsFile } from "tome-flatfile";
+import type {
+  SetMemberRelationFieldLink,
+  SetMemberRelationFieldSelect,
+} from "tome-service-interfaces";
 import {
   listRelationshipsFromSource,
   type RelationshipReadStore,
@@ -151,7 +155,68 @@ function formatRelationCell(links: RelationLink[]): string {
 }
 
 /**
+ * Build Select-stage specs for relation columns (including symmetric partner types).
+ * Projection type strings must match SQLite `relationship_projections.type` casing.
+ */
+export function relationFieldSelectsFromColumnDefs(
+  columnDefs: readonly DatabaseColumnDef[],
+  contentDir?: string,
+): SetMemberRelationFieldSelect[] {
+  const registry = contentDir ? loadAssociationsFromContent(contentDir) : null;
+  const out: SetMemberRelationFieldSelect[] = [];
+  for (const col of columnDefs) {
+    if (col.type !== "relation") continue;
+    const type = (col.relationType ?? relationType(col.name)).trim();
+    if (!type) continue;
+    const projectionTypes = new Set<string>([type]);
+    if (registry) {
+      const parsed = parseProjectionType(type);
+      if (parsed) {
+        const def = registry.associations[parsed.associationId];
+        if (def && isSymmetricAssociation(def)) {
+          projectionTypes.add(projectionTypeForEndpoint(parsed.associationId, 0));
+          projectionTypes.add(projectionTypeForEndpoint(parsed.associationId, 1));
+        }
+      }
+    }
+    const select: SetMemberRelationFieldSelect = {
+      column: col.key,
+      projectionTypes: [...projectionTypes],
+    };
+    const composite = col.relationshipCompositeType?.trim();
+    if (composite) select.compositeType = composite;
+    out.push(select);
+  }
+  return out;
+}
+
+/** Apply window SQL relation payloads onto eval rows (parallel arrays). */
+export function applyRelationFieldsToEvalRows(
+  rows: EvalRow[],
+  relationFieldsByRow: readonly Record<string, SetMemberRelationFieldLink[]>[] | undefined,
+): void {
+  if (!relationFieldsByRow || relationFieldsByRow.length === 0) return;
+  const n = Math.min(rows.length, relationFieldsByRow.length);
+  for (let i = 0; i < n; i++) {
+    const row = rows[i]!;
+    const fields = relationFieldsByRow[i]!;
+    if (!row.relationCells) row.relationCells = {};
+    for (const [key, links] of Object.entries(fields)) {
+      const relationLinks: RelationLink[] = links.map((link) => ({
+        targetId: link.targetId,
+        title: link.title,
+      }));
+      row.relationCells[key] = relationLinks;
+      if (relationLinks.length > 0) {
+        row.cells[key] = formatRelationCell(relationLinks);
+      }
+    }
+  }
+}
+
+/**
  * Fill relation-type table cells from outgoing graph relationships (not IS_A properties).
+ * Flatfile / legacy path — SQLite window paths prefer {@link applyRelationFieldsToEvalRows}.
  */
 export function hydrateRelationCellsForRows(
   db: RelationshipReadStore,

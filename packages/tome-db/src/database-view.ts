@@ -6,7 +6,7 @@ import {
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
 import { applyDynamicProperties, listDynamicColumnDefs } from "./dynamic-properties";
-import { hydrateRelationCellsForRows } from "./database-view-relations";
+import { hydrateRelationCellsForRows, relationFieldSelectsFromColumnDefs, applyRelationFieldsToEvalRows } from "./database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-defs";
 import { resolveContentPath } from "tome-flatfile";
 import {
@@ -60,7 +60,7 @@ import type {
   TableRowsQuery,
   ViewSortSpec,
 } from "tome-graph-interfaces";
-import type { SetMemberRelationCountSort } from "tome-service-interfaces";
+import type { SetMemberRelationCountSort, SetMemberRelationFieldLink } from "tome-service-interfaces";
 import { getCompositionById } from "./table-presentation/load";
 import { buildComposedDatabaseView } from "./table-presentation/compose";
 
@@ -316,11 +316,29 @@ function buildCustomViewDetail(
       new Set(scopeIds),
     );
     const hitIds = hits.map((h) => h.id);
-    const relationships = membershipEdgesForHits(
-      listSetMemberRowConnectionsForMemberIds(store, databaseId, projections, hitIds),
-      hits,
+    const relationFields = relationFieldSelectsFromColumnDefs(gateColumnDefs, contentDir);
+    const memberResult = listSetMemberRowConnectionsForMemberIds(
+      store,
+      databaseId,
+      projections,
+      hitIds,
+      relationFields.length > 0 ? relationFields : undefined,
     );
+    const fieldsByMember = new Map<string, Record<string, SetMemberRelationFieldLink[]>>();
+    if (memberResult.relationFieldsByRow) {
+      for (let i = 0; i < memberResult.relationships.length; i++) {
+        const edge = memberResult.relationships[i]!;
+        fieldsByMember.set(edge.sourceNodeId, memberResult.relationFieldsByRow[i] ?? {});
+      }
+    }
+    const relationships = membershipEdgesForHits(memberResult.relationships, hits);
     const evalRows = evalRowsFromMembershipConnections(store, relationships, ordered);
+    if (relationFields.length > 0) {
+      applyRelationFieldsToEvalRows(
+        evalRows,
+        relationships.map((edge) => fieldsByMember.get(edge.sourceNodeId) ?? {}),
+      );
+    }
     const {
       rows: enrichedRows,
       dynamicColumnDefs: enrichDynDefs,
@@ -333,7 +351,9 @@ function buildCustomViewDetail(
       enrichHidden,
       { contentDir },
     );
-    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+    if (relationFields.length === 0) {
+      hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+    }
 
     return finishCustomViewDetail({
       databaseId,
@@ -363,17 +383,24 @@ function buildCustomViewDetail(
       dynPlans.length > 0
         ? ensureDynSortIndexes(store, databaseId, dynPlans, contentDir)
         : undefined;
-    const { relationships, total } = listSetMemberRowConnectionsWindow(store, databaseId, {
-      projections: listSetMemberProjectionPairs(contentDir),
-      sorts: sorts.length > 0 ? sorts : undefined,
-      relationCounts: relationCountSortsFromColumnDefs(sorts, gateColumnDefs, contentDir),
-      expressionIndexSorts,
-      defaultOrdered: ordered,
-      limit,
-      offset,
-    });
+    const relationFields = relationFieldSelectsFromColumnDefs(gateColumnDefs, contentDir);
+    const { relationships, total, relationFieldsByRow } = listSetMemberRowConnectionsWindow(
+      store,
+      databaseId,
+      {
+        projections: listSetMemberProjectionPairs(contentDir),
+        sorts: sorts.length > 0 ? sorts : undefined,
+        relationCounts: relationCountSortsFromColumnDefs(sorts, gateColumnDefs, contentDir),
+        expressionIndexSorts,
+        relationFields: relationFields.length > 0 ? relationFields : undefined,
+        defaultOrdered: ordered,
+        limit,
+        offset,
+      },
+    );
 
     const evalRows = evalRowsFromMembershipConnections(store, relationships, ordered);
+    applyRelationFieldsToEvalRows(evalRows, relationFieldsByRow);
     const {
       rows: enrichedRows,
       dynamicColumnDefs: enrichDynDefs,
@@ -386,7 +413,9 @@ function buildCustomViewDetail(
       enrichHidden,
       { contentDir },
     );
-    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+    if (relationFields.length === 0) {
+      hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+    }
     const rowsWindow = buildTableRowsWindow(offset, limit, total);
 
     return finishCustomViewDetail({

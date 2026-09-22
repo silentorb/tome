@@ -20,7 +20,7 @@ import {
   typesWithTrait,
 } from "tome-flatfile";
 import { applyDynamicProperties } from "../dynamic-properties";
-import { hydrateRelationCellsForRows } from "../database-view-relations";
+import { hydrateRelationCellsForRows, relationFieldSelectsFromColumnDefs, applyRelationFieldsToEvalRows } from "../database-view-relations";
 import { buildDatabaseColumnDefs, normalizeRowCells } from "../database-column-defs";
 import type { EvalRow } from "../row-sort";
 import { applySectionColumnOrder } from "../views/column-order";
@@ -49,6 +49,7 @@ import type {
   TablePresentationComposition,
   TableRowsQuery,
 } from "tome-graph-interfaces";
+import type { SetMemberRelationFieldLink } from "tome-service-interfaces";
 import { memberLinkPerspective, numericSortKey, titleFromProperties } from "./helpers";
 import { discoverRelationScopes, memberMatchesScope } from "./relation-scope-tabs";
 import {
@@ -139,6 +140,8 @@ function finishComposedView(args: {
   rowsWindow: DatabaseViewDetail["rowsWindow"];
   memberGroupIds?: Map<string, string | null>;
   groupHeaders?: GroupHeader[];
+  /** When true, relation cells were selected in window SQL — skip TypeScript hydrate. */
+  relationFieldsFromSql?: boolean;
 }): DatabaseViewDetail {
   const {
     db,
@@ -155,6 +158,7 @@ function finishComposedView(args: {
     rowsWindow,
     memberGroupIds,
     groupHeaders,
+    relationFieldsFromSql,
   } = args;
 
   const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
@@ -191,7 +195,9 @@ function finishComposedView(args: {
     associationId,
   );
 
-  hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, enrichedRows, dir);
+  if (!relationFieldsFromSql) {
+    hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, enrichedRows, dir);
+  }
 
   const windowedRows: DatabaseRow[] = enrichedRows.map((row, index) => ({
     rowIndex: rowsWindow.offset + index,
@@ -342,11 +348,19 @@ function buildComposedDatabaseViewSql(
       }
     : undefined;
 
+  const excludeKeys = excludedKeys(composition);
+  const gateColumnDefs = buildDatabaseColumnDefs(db, databaseId, [], new Set(), {
+    excludeKeys,
+    contentDir: dir,
+  });
+  const relationFields = relationFieldSelectsFromColumnDefs(gateColumnDefs, dir);
+
   const composedQuery = {
     projections,
     scope: scopeFilter,
     groups: groupsQuery,
     defaultOrdered: Boolean(composition.reorder),
+    relationFields: relationFields.length > 0 ? relationFields : undefined,
     limit,
     offset,
   };
@@ -354,6 +368,7 @@ function buildComposedDatabaseViewSql(
   let relationships: Relationship[];
   let groupIds: (string | null)[];
   let rowsWindow: ReturnType<typeof buildTableRowsWindow>;
+  let relationFieldsByRow: Record<string, SetMemberRelationFieldLink[]>[] | undefined;
 
   if (tableSearch) {
     const scopeIds = listComposedMemberNodeIds(db, databaseId, composedQuery);
@@ -382,15 +397,29 @@ function buildComposedDatabaseViewSql(
     } else {
       groupIds = [];
     }
+    if (hydrated.relationFieldsByRow) {
+      const fieldsByMember = new Map<string, Record<string, SetMemberRelationFieldLink[]>>();
+      for (let i = 0; i < hydrated.relationships.length; i++) {
+        fieldsByMember.set(
+          hydrated.relationships[i]!.sourceNodeId,
+          hydrated.relationFieldsByRow[i] ?? {},
+        );
+      }
+      relationFieldsByRow = relationships.map(
+        (edge) => fieldsByMember.get(edge.sourceNodeId) ?? {},
+      );
+    }
     rowsWindow = searchWindow;
   } else {
     const windowed = listComposedSetMemberRowConnectionsWindow(db, databaseId, composedQuery);
     relationships = windowed.relationships;
     groupIds = windowed.groupIds;
+    relationFieldsByRow = windowed.relationFieldsByRow;
     rowsWindow = buildTableRowsWindow(offset, limit, windowed.total);
   }
 
   const evalRows = evalRowsFromMembership(db, relationships, false);
+  applyRelationFieldsToEvalRows(evalRows, relationFieldsByRow);
 
   let memberGroupIds: Map<string, string | null> | undefined;
   let groupHeaders: GroupHeader[] | undefined;
@@ -428,6 +457,7 @@ function buildComposedDatabaseViewSql(
     rowsWindow,
     memberGroupIds,
     groupHeaders,
+    relationFieldsFromSql: relationFields.length > 0,
   });
 }
 

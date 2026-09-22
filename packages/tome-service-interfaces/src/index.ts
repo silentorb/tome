@@ -397,6 +397,25 @@ export interface SetMemberExpressionIndexSort {
   digest: string;
 }
 
+/**
+ * Relation-column display selected in the membership window SQL (Select stage).
+ * `projectionTypes` includes symmetric partner types when applicable.
+ * When `compositeType` is set, prefer outgoing composite edges when any exist;
+ * otherwise fall back to typed outgoing projections.
+ */
+export interface SetMemberRelationFieldSelect {
+  /** Table column key; used to map SQL payloads onto `relationCells`. */
+  column: string;
+  projectionTypes: string[];
+  compositeType?: string;
+}
+
+/** One relation link as returned from window SQL JSON aggregates. */
+export interface SetMemberRelationFieldLink {
+  targetId: string;
+  title: string;
+}
+
 /** Window + sort for type-table set membership (SQL ORDER BY / LIMIT / OFFSET). */
 export interface SetMemberWindowQuery {
   projections: SetMemberProjectionPair[];
@@ -405,6 +424,11 @@ export interface SetMemberWindowQuery {
   relationCounts?: SetMemberRelationCountSort[];
   /** Fixed dyn / expression-index sorts (digest must be ready in the catalog). */
   expressionIndexSorts?: SetMemberExpressionIndexSort[];
+  /**
+   * Relation-column display fields to select in the page query (JSON link arrays).
+   * Parallel payloads appear on {@link SetMemberWindowResult.relationFieldsByRow}.
+   */
+  relationFields?: SetMemberRelationFieldSelect[];
   /** When true and sorts empty, default ORDER BY edge `order` then member title. */
   defaultOrdered?: boolean;
   /** Omit or null → return the full ordered set (static export). */
@@ -416,6 +440,11 @@ export interface SetMemberWindowResult {
   /** Membership edges normalized with member as `sourceNodeId` and set as `targetNodeId`. */
   relationships: Relationship[];
   total: number;
+  /**
+   * Parallel to `relationships`: per-row map of column key → relation links.
+   * Present when the query requested `relationFields` (may be empty maps).
+   */
+  relationFieldsByRow?: Record<string, SetMemberRelationFieldLink[]>[];
 }
 
 /** Lightweight set-member node ids (no edge DTO hydration). */
@@ -470,6 +499,11 @@ export interface ComposedMemberWindowQuery {
   /** When true, ORDER BY membership `order` (within group when groups set). */
   defaultOrdered?: boolean;
   /**
+   * Relation-column display fields to select in the page query (JSON link arrays).
+   * Parallel payloads appear on {@link ComposedMemberWindowResult.relationFieldsByRow}.
+   */
+  relationFields?: SetMemberRelationFieldSelect[];
+  /**
    * When set, return only these member ids (table search hydrate).
    * Ignores limit/offset; caller reorders to search rank.
    */
@@ -488,6 +522,11 @@ export interface ComposedMemberWindowResult {
    */
   groupIds: (string | null)[];
   total: number;
+  /**
+   * Parallel to `relationships`: per-row map of column key → relation links.
+   * Present when the query requested `relationFields` (may be empty maps).
+   */
+  relationFieldsByRow?: Record<string, SetMemberRelationFieldLink[]>[];
 }
 
 /** Group headers for a composed presentation (optional scope filter). */
@@ -615,12 +654,16 @@ export interface TomeQueryCache {
   ): SetMemberWindowResult;
   /** Distinct member node ids for a set (no Relationship DTOs). */
   listSetMemberNodeIds(setId: string, query: SetMemberNodeIdsQuery): string[];
-  /** Membership edges for specific member ids (normalized); caller reorders to search rank. */
+  /**
+   * Membership edges for specific member ids (normalized); caller reorders to search rank.
+   * Optional `relationFields` selects relation-column display in the same query.
+   */
   listSetMemberRowConnectionsForMemberIds(
     setId: string,
     projections: SetMemberProjectionPair[],
     memberIds: readonly string[],
-  ): Relationship[];
+    relationFields?: readonly SetMemberRelationFieldSelect[],
+  ): SetMemberWindowResult;
   /** Distinct related (target) node ids for an outgoing projection. */
   listRelatedTargetNodeIds(sourceNodeId: string, type: string): string[];
   /** Outgoing edges whose target is in `targetIds`; caller reorders to search rank. */

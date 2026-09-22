@@ -19,6 +19,8 @@ import type {
   ComposedGroupHeadersQuery,
   ComposedGroupHeaderRow,
   SetMemberProjectionPair,
+  SetMemberRelationFieldSelect,
+  SetMemberRelationFieldLink,
   TomeQueryCache,
 } from "tome-service-interfaces";
 import {
@@ -103,6 +105,158 @@ function buildOutgoingProjectionOrderBy(
 type MemberOrderBy = { sql: string; params: SQLQueryBindings[] };
 
 type MembershipCte = { sql: string; params: SQLQueryBindings[] };
+
+type RelationFieldSelectSql = {
+  /** Extra SELECT list fragments including leading commas, e.g. `, (SELECT ...) AS rf_0`. */
+  selectSql: string;
+  params: SQLQueryBindings[];
+  /** Column keys parallel to `rf_0` … `rf_N` aliases. */
+  columns: string[];
+};
+
+function isSafeProjectionType(type: string): boolean {
+  return /^[A-Za-z0-9_.:-]+$/.test(type.trim());
+}
+
+function isSafeRelationFieldColumn(key: string): boolean {
+  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(key.trim());
+}
+
+const RELATION_LINK_TITLE_SQL = `COALESCE(NULLIF(n.title, ''), NULLIF(n.alias, ''), 'Untitled')`;
+
+/**
+ * Ordered JSON array of `{ targetId, title }` for outgoing projections of the given types
+ * from member alias `memberAlias` (e.g. `m.member_id` or `mwg.member_id`).
+ */
+function relationLinksSubquerySql(
+  memberAlias: string,
+  typePlaceholders: string,
+  options?: { compositeTypeParam?: boolean },
+): string {
+  const compositeJoin = options?.compositeTypeParam
+    ? `INNER JOIN relationship_records r ON r.id = rp.record_id AND r.composite_type = ?`
+    : "";
+  const compositeFilter = options?.compositeTypeParam ? "" : "";
+  return `(
+    SELECT COALESCE(json_group_array(
+      json_object('targetId', x.target_id, 'title', x.title)
+    ), '[]')
+    FROM (
+      SELECT rp.target_node_id AS target_id,
+             ${RELATION_LINK_TITLE_SQL} AS title
+      FROM relationship_projections rp
+      ${compositeJoin}
+      LEFT JOIN nodes n ON n.id = rp.target_node_id
+      WHERE rp.source_node_id = ${memberAlias}
+        AND rp.type IN (${typePlaceholders})
+        ${compositeFilter}
+      ORDER BY CASE WHEN rp.ordinal IS NULL THEN 1 ELSE 0 END ASC,
+               rp.ordinal ASC,
+               rp.id ASC
+    ) AS x
+  )`;
+}
+
+function relationFieldExistsSql(
+  memberAlias: string,
+  typePlaceholders: string,
+): string {
+  return `EXISTS (
+    SELECT 1
+    FROM relationship_projections rp
+    INNER JOIN relationship_records r ON r.id = rp.record_id AND r.composite_type = ?
+    WHERE rp.source_node_id = ${memberAlias}
+      AND rp.type IN (${typePlaceholders})
+  )`;
+}
+
+/**
+ * Select-stage fragments for relation-column display on a membership window.
+ * `memberAlias` is the SQL expression for the member node id (e.g. `m.member_id`).
+ */
+function buildSetMemberRelationFieldSelects(
+  fields: readonly SetMemberRelationFieldSelect[] | undefined,
+  memberAlias: string,
+): RelationFieldSelectSql {
+  if (!fields || fields.length === 0) {
+    return { selectSql: "", params: [], columns: [] };
+  }
+  const fragments: string[] = [];
+  const params: SQLQueryBindings[] = [];
+  const columns: string[] = [];
+  let aliasIndex = 0;
+  for (const field of fields) {
+    const column = field.column.trim();
+    if (!column || !isSafeRelationFieldColumn(column)) continue;
+    const safeTypes = field.projectionTypes
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0 && isSafeProjectionType(t));
+    if (safeTypes.length === 0) continue;
+    const placeholders = safeTypes.map(() => "?").join(", ");
+    const alias = `rf_${aliasIndex}`;
+    aliasIndex += 1;
+    columns.push(column);
+
+    const compositeType = field.compositeType?.trim();
+    if (compositeType && isSafeProjectionType(compositeType)) {
+      const compositeSub = relationLinksSubquerySql(memberAlias, placeholders, {
+        compositeTypeParam: true,
+      });
+      const plainSub = relationLinksSubquerySql(memberAlias, placeholders);
+      const existsSql = relationFieldExistsSql(memberAlias, placeholders);
+      fragments.push(
+        `, CASE WHEN ${existsSql} THEN ${compositeSub} ELSE ${plainSub} END AS ${alias}`,
+      );
+      // EXISTS composite + types, THEN composite + types, ELSE plain types
+      params.push(compositeType, ...safeTypes, compositeType, ...safeTypes, ...safeTypes);
+    } else {
+      fragments.push(
+        `, ${relationLinksSubquerySql(memberAlias, placeholders)} AS ${alias}`,
+      );
+      params.push(...safeTypes);
+    }
+  }
+  return { selectSql: fragments.join(""), params, columns };
+}
+
+function parseRelationFieldJson(raw: unknown): SetMemberRelationFieldLink[] {
+  if (raw === null || raw === undefined) return [];
+  const text = typeof raw === "string" ? raw : String(raw);
+  if (!text || text === "[]") return [];
+  try {
+    const parsed = JSON.parse(text) as unknown;
+    if (!Array.isArray(parsed)) return [];
+    const links: SetMemberRelationFieldLink[] = [];
+    for (const entry of parsed) {
+      if (!entry || typeof entry !== "object") continue;
+      const record = entry as Record<string, unknown>;
+      const targetId = record.targetId;
+      const title = record.title;
+      if (typeof targetId !== "string" || !targetId) continue;
+      links.push({
+        targetId,
+        title: typeof title === "string" && title.trim() ? title.trim() : "Untitled",
+      });
+    }
+    return links;
+  } catch {
+    return [];
+  }
+}
+
+function relationFieldsByRowFromSqlRows(
+  rows: Record<string, unknown>[],
+  columns: readonly string[],
+): Record<string, SetMemberRelationFieldLink[]>[] {
+  if (columns.length === 0) return rows.map(() => ({}));
+  return rows.map((row) => {
+    const map: Record<string, SetMemberRelationFieldLink[]> = {};
+    for (let i = 0; i < columns.length; i++) {
+      map[columns[i]!] = parseRelationFieldJson(row[`rf_${i}`]);
+    }
+    return map;
+  });
+}
 
 /** Shared membership union + dedupe CTE used by Items and composed windows. */
 function buildMembershipCte(
@@ -1239,16 +1393,26 @@ export class GraphDatabase implements TomeQueryCache {
       Boolean(query.defaultOrdered),
     );
 
+    const relationSelect = buildSetMemberRelationFieldSelects(
+      query.relationFields,
+      "m.member_id",
+    );
+
     const { limit, offset } = parseLimitOffset(query);
 
     const selectSql = `${membership.sql}
       SELECT m.id, m.record_id, m.member_id AS source_node_id, m.set_id AS target_node_id,
              m.type, m.ordinal, m."order", m.priority
+             ${relationSelect.selectSql}
       FROM members m
       LEFT JOIN nodes n ON n.id = m.member_id
       ${orderBySql}`;
 
-    const selectParams = [...membership.params, ...orderParams];
+    const selectParams = [
+      ...membership.params,
+      ...relationSelect.params,
+      ...orderParams,
+    ];
     let rows: ProjectionRow[];
     if (limit === null) {
       rows = this.db.prepare(selectSql).all(...selectParams) as ProjectionRow[];
@@ -1258,10 +1422,17 @@ export class GraphDatabase implements TomeQueryCache {
         .all(...selectParams, limit, offset) as ProjectionRow[];
     }
 
-    return {
+    const result: SetMemberWindowResult = {
       relationships: this.mapProjectionRows(rows),
       total,
     };
+    if (query.relationFields && query.relationFields.length > 0) {
+      result.relationFieldsByRow = relationFieldsByRowFromSqlRows(
+        rows as unknown as Record<string, unknown>[],
+        relationSelect.columns,
+      );
+    }
+    return result;
   }
 
   listSetMemberNodeIds(setId: string, query: SetMemberNodeIdsQuery): string[] {
@@ -1277,21 +1448,54 @@ export class GraphDatabase implements TomeQueryCache {
     setId: string,
     projections: SetMemberProjectionPair[],
     memberIds: readonly string[],
-  ): Relationship[] {
-    if (memberIds.length === 0) return [];
+    relationFields?: readonly SetMemberRelationFieldSelect[],
+  ): SetMemberWindowResult {
+    if (memberIds.length === 0) {
+      return {
+        relationships: [],
+        total: 0,
+        ...(relationFields && relationFields.length > 0
+          ? { relationFieldsByRow: [] }
+          : {}),
+      };
+    }
     const membership = buildMembershipCte(setId, projections);
-    if (!membership) return [];
+    if (!membership) {
+      return {
+        relationships: [],
+        total: 0,
+        ...(relationFields && relationFields.length > 0
+          ? { relationFieldsByRow: [] }
+          : {}),
+      };
+    }
+    const relationSelect = buildSetMemberRelationFieldSelects(
+      relationFields,
+      "m.member_id",
+    );
     const placeholders = memberIds.map(() => "?").join(", ");
     const rows = this.db
       .prepare(
         `${membership.sql}
          SELECT m.id, m.record_id, m.member_id AS source_node_id, m.set_id AS target_node_id,
                 m.type, m.ordinal, m."order", m.priority
+                ${relationSelect.selectSql}
          FROM members m
          WHERE m.member_id IN (${placeholders})`,
       )
-      .all(...membership.params, ...memberIds) as ProjectionRow[];
-    return this.mapProjectionRows(rows);
+      .all(...membership.params, ...relationSelect.params, ...memberIds) as ProjectionRow[];
+    const relationships = this.mapProjectionRows(rows);
+    const result: SetMemberWindowResult = {
+      relationships,
+      total: relationships.length,
+    };
+    if (relationFields && relationFields.length > 0) {
+      result.relationFieldsByRow = relationFieldsByRowFromSqlRows(
+        rows as unknown as Record<string, unknown>[],
+        relationSelect.columns,
+      );
+    }
+    return result;
   }
 
   listRelatedTargetNodeIds(sourceNodeId: string, type: string): string[] {
@@ -1724,10 +1928,16 @@ export class GraphDatabase implements TomeQueryCache {
 
     const { limit, offset } = parseLimitOffset(query);
 
+    const relationSelect = buildSetMemberRelationFieldSelects(
+      query.relationFields,
+      "mwg.member_id",
+    );
+
     const selectSql = `${withSql}
       SELECT mwg.id, mwg.record_id, mwg.member_id AS source_node_id, mwg.set_id AS target_node_id,
              mwg.type, mwg.ordinal, mwg."order", mwg.priority,
              mwg.group_id AS resolved_group_id
+             ${relationSelect.selectSql}
       FROM member_with_group mwg
       LEFT JOIN nodes n ON n.id = mwg.member_id
       ${filterMemberIds ? `WHERE mwg.member_id IN (${memberIds!.map(() => "?").join(", ")})` : ""}
@@ -1735,8 +1945,8 @@ export class GraphDatabase implements TomeQueryCache {
 
     type Row = ProjectionRow & { resolved_group_id: string | null };
     const selectParams = filterMemberIds
-      ? [...params, ...memberIds!]
-      : params;
+      ? [...params, ...relationSelect.params, ...memberIds!]
+      : [...params, ...relationSelect.params];
     let rows: Row[];
     if (filterMemberIds || limit === null) {
       rows = this.db.prepare(selectSql).all(...selectParams) as Row[];
@@ -1755,7 +1965,18 @@ export class GraphDatabase implements TomeQueryCache {
         )
       : [];
 
-    return { relationships, groupIds, total: filterMemberIds ? relationships.length : total };
+    const result: ComposedMemberWindowResult = {
+      relationships,
+      groupIds,
+      total,
+    };
+    if (query.relationFields && query.relationFields.length > 0) {
+      result.relationFieldsByRow = relationFieldsByRowFromSqlRows(
+        rows as unknown as Record<string, unknown>[],
+        relationSelect.columns,
+      );
+    }
+    return result;
   }
 
   listComposedMemberNodeIds(setId: string, query: ComposedMemberWindowQuery): string[] {

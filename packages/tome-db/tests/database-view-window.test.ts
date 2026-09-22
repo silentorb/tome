@@ -359,4 +359,74 @@ describe("database-view SQL windows", () => {
     );
     invalidateDynamicPropertiesCache();
   });
+
+  test("selects relation cells in window SQL without per-row edge or getNode walks", () => {
+    const databaseId = "YYYYYYYYYYYYYYYYYYYYYYYYYY";
+    const parentsProjection = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1);
+    const childrenProjection = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 0);
+    writeTableSchema(databaseId, [
+      {
+        key: "parents",
+        name: "Parents",
+        type: "relation",
+        association: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
+        endpoint: 1,
+      },
+      {
+        key: "children",
+        name: "Children",
+        type: "relation",
+        association: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
+        endpoint: 0,
+      },
+    ]);
+    db.upsertNode(databaseId, { ...typeTableMarkerProperties("Nodes") });
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const parent = "01RELPAR000000000000000001";
+    const childA = "01RELCHA000000000000000001";
+    const childB = "01RELCHB000000000000000001";
+    db.upsertNode(parent, { title: "Parent" });
+    db.upsertNode(childA, { title: "Child A" });
+    db.upsertNode(childB, { title: "Child B" });
+    for (const id of [parent, childA, childB]) {
+      db.upsertRelationship(id, databaseId, memberProjection, {});
+    }
+    db.upsertRelationship(parent, childA, childrenProjection, { ordinal: 0 });
+    db.upsertRelationship(parent, childB, childrenProjection, { ordinal: 1 });
+    db.upsertRelationship(childA, parent, parentsProjection, { ordinal: 0 });
+    db.upsertRelationship(childB, parent, parentsProjection, { ordinal: 0 });
+
+    let listFromSourceCalls = 0;
+    const originalList = db.listRelationshipsFromSource.bind(db);
+    db.listRelationshipsFromSource = ((...args: Parameters<typeof db.listRelationshipsFromSource>) => {
+      listFromSourceCalls += 1;
+      return originalList(...args);
+    }) as typeof db.listRelationshipsFromSource;
+
+    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+      limit: 50,
+      offset: 0,
+      sorts: [{ column: "name", direction: "asc" }],
+    });
+
+    db.listRelationshipsFromSource = originalList;
+
+    expect(detail?.rows.find((r) => r.nodeId === parent)).toBeTruthy();
+    expect(detail?.rows.find((r) => r.nodeId === childA)).toBeTruthy();
+    expect(detail?.rows.find((r) => r.nodeId === childB)).toBeTruthy();
+    const parentRow = detail?.rows.find((r) => r.nodeId === parent);
+    expect(parentRow?.relationCells?.children).toEqual([
+      { targetId: childA, title: "Child A" },
+      { targetId: childB, title: "Child B" },
+    ]);
+    expect(parentRow?.cells.children).toBe("Child A, Child B");
+    const childRow = detail?.rows.find((r) => r.nodeId === childA);
+    expect(childRow?.relationCells?.parents).toEqual([
+      { targetId: parent, title: "Parent" },
+    ]);
+
+    // Membership / title reads may call getNode for row names; relation hydrate must not
+    // fan out via listRelationshipsFromSource (Select stage owns relation payloads).
+    expect(listFromSourceCalls).toBe(0);
+  });
 });

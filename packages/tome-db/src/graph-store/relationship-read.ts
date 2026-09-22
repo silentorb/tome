@@ -12,6 +12,7 @@ import type {
   ComposedMemberWindowResult,
   ComposedGroupHeadersQuery,
   ComposedGroupHeaderRow,
+  SetMemberRelationFieldSelect,
   TomeQueryCache,
 } from "tome-service-interfaces";
 import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
@@ -139,12 +140,18 @@ export function listSetMemberRowConnectionsForMemberIds(
   setId: string,
   projections: SetMemberProjectionPair[],
   memberIds: readonly string[],
-): Relationship[] {
+  relationFields?: readonly SetMemberRelationFieldSelect[],
+): SetMemberWindowResult {
   const cache = getQueryCache(store);
   if (!cache || typeof cache.listSetMemberRowConnectionsForMemberIds !== "function") {
     throw new Error("listSetMemberRowConnectionsForMemberIds requires a SQLite query cache");
   }
-  return cache.listSetMemberRowConnectionsForMemberIds(setId, projections, memberIds);
+  return cache.listSetMemberRowConnectionsForMemberIds(
+    setId,
+    projections,
+    memberIds,
+    relationFields,
+  );
 }
 
 /** Related target node ids for an outgoing projection; throws if no query cache. */

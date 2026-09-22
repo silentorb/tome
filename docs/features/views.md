@@ -69,7 +69,7 @@ When the editor is backed by the **SQLite query cache**, filter, sort, join, and
 
 **Coverage today:** relation table sections, **Items / database custom views**, and **composed / generated presentations** use SQL windows when `q` is empty; with `q`, they use scoped searcher windows (flatfile remains on the legacy name-filter path).
 
-Relation-cell hydration for **display** (and dyn **display** cells on Items / composed) runs for the returned window only.
+On SQLite, **relation-column display** for Items / composed windows is **field selection in the membership page query** (correlated JSON aggregates per relation column), not a post-window TypeScript edge/`getNode` walk. Flatfile still hydrates relation cells in TypeScript after the window. Dyn **display** cells remain window-hydrated in TypeScript.
 
 ## Migration
 

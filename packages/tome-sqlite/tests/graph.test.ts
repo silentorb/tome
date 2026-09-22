@@ -483,6 +483,50 @@ describe("GraphDatabase", () => {
     db.close();
   });
 
+  test("selects relation field link arrays in set membership window SQL", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "set-member-relation-fields.sqlite");
+    const db = new GraphDatabase(dbPath);
+    const setId = "01SET0000000000000000000000";
+    const setProjection = "assocSet:0";
+    const memberProjection = "assocSet:1";
+    const linkType = "assocLink:0";
+    const memberA = "01MEMBERA00000000000000000";
+    const memberB = "01MEMBERB00000000000000000";
+    const target1 = "01TARGET100000000000000000";
+    const target2 = "01TARGET200000000000000000";
+
+    db.upsertNode(setId, { title: "Type table" });
+    db.upsertNode(memberA, { title: "Member A" });
+    db.upsertNode(memberB, { title: "Member B" });
+    db.upsertNode(target1, { title: "Alpha" });
+    db.upsertNode(target2, { title: "Beta" });
+    db.upsertRelationship(setId, memberA, setProjection, { order: 10 });
+    db.upsertRelationship(setId, memberB, setProjection, { order: 20 });
+    db.upsertRelationship(memberA, target1, linkType, { ordinal: 1 });
+    db.upsertRelationship(memberA, target2, linkType, { ordinal: 0 });
+    db.upsertRelationship(memberB, target1, linkType, { ordinal: 0 });
+
+    const page = db.listSetMemberRowConnectionsWindow(setId, {
+      projections: [{ setProjection, memberProjection }],
+      defaultOrdered: true,
+      relationFields: [{ column: "links", projectionTypes: [linkType] }],
+      limit: 2,
+      offset: 0,
+    });
+    expect(page.relationships.map((r) => r.sourceNodeId)).toEqual([memberA, memberB]);
+    expect(page.relationFieldsByRow).toHaveLength(2);
+    expect(page.relationFieldsByRow?.[0]?.links).toEqual([
+      { targetId: target2, title: "Beta" },
+      { targetId: target1, title: "Alpha" },
+    ]);
+    expect(page.relationFieldsByRow?.[1]?.links).toEqual([
+      { targetId: target1, title: "Alpha" },
+    ]);
+
+    db.close();
+  });
+
   test("windows composed membership with scope filter, groups, and LIMIT OFFSET", () => {
     tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "composed-window.sqlite");

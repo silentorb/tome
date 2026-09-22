@@ -105,7 +105,7 @@ GET /api/nodes/:databaseId?tab=:scopeId
   → database section with groups + presentation
 ```
 
-**SQL windowing (SQLite cache):** when the store has a query cache and `q` is empty, scope discovery, scope filter, group assignment/`canonicalGroupByTitle`, reorder sort, and `limit`/`offset` run in parameterized SQL (`listDistinctSetMemberScopeIds` / `listComposedSetMemberRowConnectionsWindow` / `listComposedGroupHeaders`). With `q`, the same surfaces use scoped `TomeSearch.searchWindow` over composed member ids, then hydrate only the hit page (including group ids). Dyn and relation **display** hydrate only the returned window. Without a cache (flatfile), the full-materialize path remains (Imp related-id hops + `applyNameFilterAndWindow`). See [views.md](./views.md) § Lazy-loaded rows and [search.md](./search.md).
+**SQL windowing (SQLite cache):** when the store has a query cache and `q` is empty, scope discovery, scope filter, group assignment/`canonicalGroupByTitle`, reorder sort, and `limit`/`offset` run in parameterized SQL (`listDistinctSetMemberScopeIds` / `listComposedSetMemberRowConnectionsWindow` / `listComposedGroupHeaders`). Relation-column **display** is selected in that same page query (JSON link aggregates). With `q`, the same surfaces use scoped `TomeSearch.searchWindow` over composed member ids, then materialize only the hit page (including group ids and relation fields). Dyn **display** still hydrates only the returned window in TypeScript. Without a cache (flatfile), the full-materialize path remains (Imp related-id hops + `applyNameFilterAndWindow`). See [views.md](./views.md) § Lazy-loaded rows and [search.md](./search.md).
 
 Reorder:
 
