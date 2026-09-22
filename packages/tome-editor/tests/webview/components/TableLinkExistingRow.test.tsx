@@ -33,9 +33,12 @@ describe("TableLinkExistingRow", () => {
   });
 
   test("keeps picker open after linking a record", async () => {
-    const search = mock(async () => [
-      { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Linked feature", primaryTypeTitle: null },
-    ]);
+    const search = mock(async () => ({
+      results: [
+        { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Linked feature", primaryTypeTitle: null },
+      ],
+      searchAvailable: true,
+    }));
     const onLink = mock(async () => {});
     const api = {
       ...makeMockEditorApi(),

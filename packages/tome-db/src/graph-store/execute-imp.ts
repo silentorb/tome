@@ -27,6 +27,7 @@ export interface RunExecuteImpOptions {
   context?: ExecuteImpContext;
   cache?: GraphDatabase;
   corpus?: TomeCorpusLookup;
+  search?: import("tome-interfaces/search").TomeSearch | null;
 }
 
 function impGraphToGraph(graph: ImpGraph): Graph {
@@ -87,7 +88,13 @@ export async function runExecuteImp(options: RunExecuteImpOptions): Promise<ImpC
         throw new Error("SQL executeImp backend requires a query cache");
       }
       return filterRowsByCorpus(
-        runSearchImpGraphSql(options.store, options.cache, graph, options.context),
+        runSearchImpGraphSql(
+          options.store,
+          options.cache,
+          graph,
+          options.context,
+          options.search,
+        ),
         constraint.nodeIds,
       );
     }
@@ -124,13 +131,14 @@ export function runExecuteImpSql(
   cache: GraphDatabase,
   graph: ImpGraph,
   context?: ExecuteImpContext,
+  search?: import("tome-interfaces/search").TomeSearch | null,
 ): ImpCollectionResult {
   const corpus = corpusLookupFromStore(store);
   let impGraph = applyParameters(impGraphToGraph(graph), context?.parameters);
   resolveCorpusConstraint(impGraph, { pageNodeId: context?.pageNodeId, corpus });
   impGraph = spliceCorpusNodes(impGraph);
   if (graphHasSearchNode(impGraph)) {
-    return runSearchImpGraphSql(store, cache, impGraph as ImpGraph, context);
+    return runSearchImpGraphSql(store, cache, impGraph as ImpGraph, context, search);
   }
   const compiled = compileImpGraphToTomeSql(impGraph, {
     schema: loadSchemaFromContent(store.contentDir),

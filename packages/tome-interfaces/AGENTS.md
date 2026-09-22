@@ -21,6 +21,7 @@
 | `tome-interfaces/extension-services/graph-query` | `ExtensionGraphQueryServices` for host-provided graph reads |
 | `tome-interfaces/extension-services/corpus-query` | `ExtensionCorpusQueryServices` for store corpus routing (pre-SQL) |
 | `tome-interfaces/extension-services/graph-mutate` | `ExtensionGraphMutateServices` for host-provided relationship writes |
+| `tome-interfaces/search` | `TomeSearch`, `SearcherHost` / `registerSearcher` for searcher extensions |
 
 ## Run / test
 

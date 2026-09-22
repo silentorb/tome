@@ -16,6 +16,8 @@
     "tome-db": "workspace:^0.8.0",
     "tome-graph-interfaces": "workspace:^0.3.0",
     "tome-interfaces": "workspace:^0.3.0",
+    "tome-search-like": "workspace:^0.1.0",
+    "tome-search-sqlite": "workspace:^0.1.0",
     "tome-service-interfaces": "workspace:^0.3.0"
   },
   "devDependencies": {
@@ -29,3 +31,4 @@
     "typescript": "5.8.2"
   }
 }
+

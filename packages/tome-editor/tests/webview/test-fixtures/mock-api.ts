@@ -97,7 +97,10 @@ export function makeMockEditorApi(): EditorApi {
       valuesCleared: 0,
     }),
     listTypeTables: async () => [],
-    search: async (_query, _limit, _allowedTypeIds, _options) => [],
+    search: async (_query, _limit, _allowedTypeIds, _options) => ({
+      results: [],
+      searchAvailable: true,
+    }),
     listRecent: async () => [],
     saveNode: async () => {},
     saveDocument: async () => {},

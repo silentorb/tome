@@ -42,6 +42,10 @@ import {
   resolveWindowBounds,
 } from "./table-rows-window";
 import { shouldUseSqlDatabaseWindow } from "./table-sql-window";
+import {
+  ensureFixedDynSortIndexes,
+  planFixedDynSortIndexes,
+} from "./dynamic-properties/expression-index";
 import type {
   DatabaseColumnDef,
   DatabaseRow,
@@ -296,12 +300,21 @@ function buildCustomViewDetail(
     { contentDir },
   );
 
-  if (shouldUseSqlDatabaseWindow(store, rowsQuery, sorts, gateColumnDefs)) {
+  if (shouldUseSqlDatabaseWindow(store, rowsQuery, sorts, gateColumnDefs, {
+    ownerId: databaseId,
+    contentDir,
+  })) {
     const { offset, limit } = resolveWindowBounds(rowsQuery);
+    const dynPlans = planFixedDynSortIndexes(store, databaseId, sorts, contentDir) ?? [];
+    const expressionIndexSorts =
+      dynPlans.length > 0
+        ? ensureFixedDynSortIndexes(store, databaseId, dynPlans, contentDir)
+        : undefined;
     const { relationships, total } = listSetMemberRowConnectionsWindow(store, databaseId, {
       projections: listSetMemberProjectionPairs(contentDir),
       sorts: sorts.length > 0 ? sorts : undefined,
       relationCounts: relationCountSortsFromColumnDefs(sorts, gateColumnDefs, contentDir),
+      expressionIndexSorts,
       defaultOrdered: ordered,
       limit,
       offset,

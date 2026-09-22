@@ -68,7 +68,15 @@ function isFlatfileEntry(entry: TomeServerModuleConfigEntry): boolean {
 }
 
 function isSqliteEntry(entry: TomeServerModuleConfigEntry): boolean {
-  return entry.module === "tome-sqlite" || entry.export.includes("Sqlite");
+  return entry.module === "tome-sqlite" || entry.export === "createSqliteModule";
+}
+
+function isSearchSqliteEntry(entry: TomeServerModuleConfigEntry): boolean {
+  return (
+    entry.module === "tome-search-sqlite" ||
+    entry.export.includes("SearchSqlite") ||
+    entry.export.includes("createSearchSqliteModule")
+  );
 }
 
 /**
@@ -87,8 +95,13 @@ export async function openDataStoreSession(
   const flatfileConfigs: TomeCorpusConfig[] = [];
   const flatfileIds: string[] = [];
   let sqliteEntry: { id: string; entry: TomeServerModuleConfigEntry } | null = null;
+  const sinkEntries: Array<{ id: string; entry: TomeServerModuleConfigEntry }> = [];
 
   for (const [id, entry] of entries) {
+    if (isSearchSqliteEntry(entry)) {
+      sinkEntries.push({ id, entry });
+      continue;
+    }
     if (isSqliteEntry(entry)) {
       if (sqliteEntry) {
         throw new Error("openDataStoreSession: multiple sqlite dataStores not supported yet");
@@ -199,6 +212,54 @@ export async function openDataStoreSession(
     endpoint: sqliteEndpoint,
   });
 
+  const ftsClosers: Array<() => void> = [];
+  for (const { id, entry } of sinkEntries) {
+    const mod = (await import(entry.module)) as Record<string, unknown>;
+    const factory = mod[entry.export];
+    if (typeof factory !== "function") {
+      throw new Error(
+        `dataStores.${id}: ${entry.module} export "${entry.export}" is not a function`,
+      );
+    }
+    const created = (factory as () => {
+      open: (opts: Record<string, unknown>) => {
+        endpoint: import("./registry").SyncEndpoint;
+        search: import("tome-interfaces/search").TomeSearch;
+        close: () => void;
+      };
+    })();
+    if (!created || typeof created.open !== "function") {
+      throw new Error(`dataStores.${id}: module factory must return { open() }`);
+    }
+    const opts = optionsRecord(entry.options);
+    const opened = created.open({
+      ...opts,
+      dbPath:
+        typeof opts.dbPath === "string" && opts.dbPath.trim()
+          ? opts.dbPath.trim()
+          : options.defaultDbPath
+            ? `${options.defaultDbPath.replace(/\.sqlite$/, "")}-fts.sqlite`
+            : undefined,
+    });
+    // Ensure endpoint id matches dataStore key for sync.graph storeId refs.
+    const endpoint = {
+      ...opened.endpoint,
+      id,
+      capabilities: {
+        ...opened.endpoint.capabilities,
+        kind: "fts" as const,
+      },
+    };
+    registry.set({
+      id,
+      kind: "fts",
+      endpoint,
+      search: opened.search,
+      close: opened.close,
+    });
+    ftsClosers.push(opened.close);
+  }
+
   const graph =
     options.syncGraph ?? buildDefaultSyncGraph(flatfileIds, queryStoreId);
 
@@ -226,6 +287,7 @@ export async function openDataStoreSession(
     flatfileStoreIds: flatfileIds,
     dispose() {
       wire?.dispose();
+      for (const close of ftsClosers) close();
       composed.close();
     },
   };

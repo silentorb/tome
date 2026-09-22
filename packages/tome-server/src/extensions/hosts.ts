@@ -6,6 +6,10 @@ import type {
   ServerPageBlockHandler,
   ServerPageBlockHost,
 } from "tome-interfaces/page-block/server";
+import type {
+  SearcherHost,
+  SearcherRegistration,
+} from "tome-interfaces/search";
 
 export class EditorPageBlockHostImpl implements EditorPageBlockHost {
   readonly #blocks = new Map<string, EditorPageBlockRegistration>();
@@ -40,5 +44,21 @@ export class ServerPageBlockHostImpl implements ServerPageBlockHost {
 
   clear(): void {
     this.#handlers.clear();
+  }
+}
+
+export class SearcherHostImpl implements SearcherHost {
+  readonly #searchers = new Map<string, SearcherRegistration>();
+
+  registerSearcher(registration: SearcherRegistration): void {
+    this.#searchers.set(registration.implementationId, registration);
+  }
+
+  get(implementationId: string): SearcherRegistration | undefined {
+    return this.#searchers.get(implementationId);
+  }
+
+  clear(): void {
+    this.#searchers.clear();
   }
 }

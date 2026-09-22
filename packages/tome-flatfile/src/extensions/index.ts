@@ -14,6 +14,11 @@ export type {
 export { invalidateExtensionsCache, loadExtensionsFromContent } from "./load";
 export {
   findComponentById,
+  findSearcherById,
   resolveExtensionsManifest,
 } from "./manifest";
-export type { ExtensionsManifest, ResolvedExtensionComponent } from "./manifest";
+export type {
+  ExtensionsManifest,
+  ResolvedExtensionComponent,
+  ResolvedSearcherComponent,
+} from "./manifest";

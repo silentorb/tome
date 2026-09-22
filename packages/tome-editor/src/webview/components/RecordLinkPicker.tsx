@@ -100,7 +100,7 @@ export function RecordLinkPicker({
           participatesInProjectionType,
           onlyActivePickingRole,
         })
-        .then((items) => setResults(items))
+        .then((response) => setResults(response.results))
         .catch((err) => {
           setResults([]);
           setError(err instanceof Error ? err.message : String(err));

@@ -5,6 +5,7 @@ Index of **integration domains** defined in [`tome-interfaces`](../../packages/t
 | Domain | Doc | Status |
 | --- | --- | --- |
 | Page blocks (in-body custom blocks) | [page-blocks.md](./page-blocks.md) | v1 |
+| Searchers (node search backends) | [searchers.md](./searchers.md) | v1 |
 
 Future domains (sidebar panels, graph overlays, …) add subpaths under `tome-interfaces/` when scoped.
 

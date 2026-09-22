@@ -133,7 +133,10 @@ export function TomeEditor({
   useEffect(() => {
     if (!mention) return;
     const handle = window.setTimeout(() => {
-      void api.search(mention.query, 12).then(setResults).catch(() => setResults([]));
+      void api
+        .search(mention.query, 12)
+        .then((response) => setResults(response.results))
+        .catch(() => setResults([]));
     }, 120);
     return () => window.clearTimeout(handle);
   }, [api, mention]);

@@ -24,13 +24,16 @@ describe("AddRelationshipDialog", () => {
           participatesInProjectionType?: string;
           onlyActivePickingRole?: "source" | "target";
         },
-      ) => [
-        {
-          id: FIXTURE_TARGET_ID,
-          title: "Target record",
-          primaryTypeTitle: null,
-        },
-      ],
+      ) => ({
+        results: [
+          {
+            id: FIXTURE_TARGET_ID,
+            title: "Target record",
+            primaryTypeTitle: null,
+          },
+        ],
+        searchAvailable: true,
+      }),
     );
     const api: EditorApi = {
       ...makeMockEditorApi(),
@@ -106,7 +109,7 @@ describe("AddRelationshipDialog", () => {
           participatesInProjectionType?: string;
           onlyActivePickingRole?: "source" | "target";
         },
-      ) => [],
+      ) => ({ results: [], searchAvailable: true }),
     );
     const api: EditorApi = {
       ...makeMockEditorApi(),

@@ -107,12 +107,17 @@ export type OpenTomeGraphServicesArgs = {
 function buildGraphServices(
   writeCtx: TomeWriteContext,
   contentPath: string,
-  options?: { startWatching?: boolean },
-): TomeGraphServices {
+  options?: {
+    startWatching?: boolean;
+    searchBackends?: Map<string, unknown>;
+  },
+): { services: TomeGraphServices; extensionsReady: Promise<void> } {
   if (options?.startWatching !== false) {
     writeCtx.graphStore.startWatching();
   }
   const graphStore = writeCtx.graphStore;
+
+  const searchBackends = options?.searchBackends ?? new Map<string, unknown>();
 
   const extensions = new ExtensionServerRuntime(
     contentPath,
@@ -121,10 +126,27 @@ function buildGraphServices(
     () => createExtensionExecuteImpServices(writeCtx.graphStore),
     () => createExtensionGraphMutateServices(writeCtx),
     () => createExtensionCorpusQueryServices(writeCtx.graphStore),
+    {
+      getQueryCache: () => writeCtx.cache,
+      getSearcherBackend: (dataStoreId: string) => searchBackends.get(dataStoreId),
+    },
   );
-  const extensionsReady = extensions.ensureLoaded().catch((err: unknown) => {
-    console.error("[tome-extensions] failed to load:", err);
-  });
+
+  const syncSearchIntoGraphStore = () => {
+    const composed = writeCtx.graphStore as {
+      setSearch?: (search: import("tome-interfaces/search").TomeSearch | null) => void;
+    };
+    composed.setSearch?.(extensions.activeSearch);
+  };
+
+  const extensionsReady = extensions
+    .ensureLoaded()
+    .then(() => {
+      syncSearchIntoGraphStore();
+    })
+    .catch((err: unknown) => {
+      console.error("[tome-extensions] failed to load:", err);
+    });
 
   const schema = () => loadSchemaFromContent(contentPath);
 
@@ -167,7 +189,7 @@ function buildGraphServices(
     };
   };
 
-  return {
+  const services: TomeGraphServices = {
     getWorkspace(corpusId?: string): WorkspacePublic {
       return workspaceForCorpus(corpusId);
     },
@@ -382,6 +404,9 @@ function buildGraphServices(
         };
       });
     },
+    isSearchAvailable(): boolean {
+      return extensions.isSearchAvailable();
+    },
     listRecent(limit?: number): NodeSummary[] {
       const cap = Math.max(1, Math.min(limit ?? 20, 100));
       const executed = writeCtx.graphStore.executeImp(recentNodesGraph(cap));
@@ -537,6 +562,11 @@ function buildGraphServices(
       writeCtx.graphStore.close();
     },
   };
+
+  return {
+    services,
+    extensionsReady: extensionsReady.then(() => undefined),
+  };
 }
 
 /**
@@ -551,16 +581,18 @@ export function openTomeGraphServices(
 ): TomeGraphServices {
   if (typeof args === "object" && args !== null && "store" in args && "cache" in args) {
     const writeCtx = openTomeWriteContext(args.store as FlatfileStore, args.cache);
-    return buildGraphServices(writeCtx, args.store.contentDir);
+    return buildGraphServices(writeCtx, args.store.contentDir).services;
   }
   const writeCtx = openContentGraph(contentPath, args);
-  return buildGraphServices(writeCtx, contentPath);
+  return buildGraphServices(writeCtx, contentPath).services;
 }
 
 export type DeferredTomeGraphServices = {
   services: TomeGraphServices;
   writeCtx: TomeWriteContext;
   startWatching: () => void;
+  /** Resolves when extension modules (including searcher) have loaded. */
+  extensionsReady: Promise<void>;
 };
 
 /**
@@ -577,6 +609,8 @@ export function openTomeGraphServicesDeferred(
     writeContext?: TomeWriteContext;
     /** When true, observers are already installed (SyncGraphWire); skip CacheSync subscribe. */
     skipStoreSyncSubscribe?: boolean;
+    /** dataStore id → TomeSearch (or FTS handle) for searcher extensions. */
+    searchBackends?: Map<string, unknown>;
   },
 ): DeferredTomeGraphServices {
   const writeCtx =
@@ -585,13 +619,15 @@ export function openTomeGraphServicesDeferred(
       deferReady: true,
       progress: options?.progress,
     });
-  const services = buildGraphServices(writeCtx, args.store.contentDir, {
+  const built = buildGraphServices(writeCtx, args.store.contentDir, {
     startWatching: false,
+    searchBackends: options?.searchBackends,
   });
   return {
-    services,
+    services: built.services,
     writeCtx,
     startWatching: () => writeCtx.graphStore.startWatching(),
+    extensionsReady: built.extensionsReady,
   };
 }
 

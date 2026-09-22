@@ -172,6 +172,7 @@ function parseLimitOffset(query: {
 function buildSetMemberOrderBy(
   sorts: readonly { column: string; direction: "asc" | "desc" }[] | undefined,
   relationCounts: readonly { column: string; projectionTypes: string[] }[] | undefined,
+  expressionIndexSorts: readonly { column: string; digest: string }[] | undefined,
   defaultOrdered: boolean,
 ): MemberOrderBy {
   const clauses: string[] = [];
@@ -187,6 +188,14 @@ function buildSetMemberOrderBy(
         continue;
       }
       if (!isSafeSqlPropertyKey(col)) continue;
+      const exprEntry = expressionIndexSorts?.find((r) => r.column === col);
+      if (exprEntry && /^[a-f0-9]{16,64}$/i.test(exprEntry.digest.trim())) {
+        clauses.push(
+          `COALESCE((SELECT eiv.sort_value FROM expression_index_values eiv WHERE eiv.digest = ? AND eiv.member_id = m.member_id), 0) ${dir}`,
+        );
+        params.push(exprEntry.digest.trim());
+        continue;
+      }
       const relationEntry = relationCounts?.find((r) => r.column === col);
       if (relationEntry) {
         const safeTypes = relationEntry.projectionTypes.filter(
@@ -617,15 +626,23 @@ export class GraphDatabase implements TomeQueryCache {
   clearRelationshipCache(): void {
     this.db.exec("DELETE FROM relationship_projections");
     this.db.exec("DELETE FROM relationship_records");
+    this.markExpressionIndexesStale();
   }
 
   upsertRelationshipRecord(record: RelationshipRecordRow): void {
     this.insertRecord.run(record.id, record.nodeA, record.nodeB, record.compositeType);
-    if (Object.keys(record.properties).length === 0) return;
+    if (Object.keys(record.properties).length === 0) {
+      this.markExpressionIndexesStale();
+      return;
+    }
     const existing = this.getRelationshipRecord(record.id);
-    if (!existing) return;
+    if (!existing) {
+      this.markExpressionIndexesStale();
+      return;
+    }
     const merged = mergeProperties(existing.properties, record.properties);
     this.writeRecordProperties(record.id, this.propertyCodec.encode(merged));
+    this.markExpressionIndexesStale();
   }
 
   upsertRelationshipProjection(projection: RelationshipProjectionRow): void {
@@ -636,11 +653,18 @@ export class GraphDatabase implements TomeQueryCache {
       projection.targetNodeId,
       projection.type,
     );
-    if (Object.keys(projection.properties).length === 0) return;
+    if (Object.keys(projection.properties).length === 0) {
+      this.markExpressionIndexesStale();
+      return;
+    }
     const existing = this.getRelationship(projection.id);
-    if (!existing) return;
+    if (!existing) {
+      this.markExpressionIndexesStale();
+      return;
+    }
     const merged = mergeProperties(existing.properties, projection.properties);
     this.writeProjectionProperties(projection.id, this.propertyCodec.encode(merged));
+    this.markExpressionIndexesStale();
   }
 
   /** @deprecated Use upsertRelationshipProjection via sync expander. Kept for test helpers. */
@@ -653,13 +677,20 @@ export class GraphDatabase implements TomeQueryCache {
     const id = relationshipId(sourceNodeId, type, targetNodeId);
     this.insertRecord.run(id, sourceNodeId, targetNodeId, type);
     this.insertProjection.run(id, id, sourceNodeId, targetNodeId, type);
-    if (Object.keys(properties).length === 0) return;
+    if (Object.keys(properties).length === 0) {
+      this.markExpressionIndexesStale();
+      return;
+    }
     const existing = this.getRelationship(id);
-    if (!existing) return;
+    if (!existing) {
+      this.markExpressionIndexesStale();
+      return;
+    }
     const merged = mergeProperties(existing.properties, properties);
     const encoded = this.propertyCodec.encode(merged);
     this.writeRecordProperties(id, encoded);
     this.writeProjectionProperties(id, encoded);
+    this.markExpressionIndexesStale();
   }
 
   mergeRelationshipProperties(id: string, properties: Properties): void {
@@ -671,6 +702,7 @@ export class GraphDatabase implements TomeQueryCache {
     if (existing.recordId) {
       this.writeRecordProperties(existing.recordId, encoded);
     }
+    this.markExpressionIndexesStale();
   }
 
   deleteRelationship(sourceNodeId: string, targetNodeId: string, type: string): boolean {
@@ -680,16 +712,19 @@ export class GraphDatabase implements TomeQueryCache {
       const result = this.db
         .prepare("DELETE FROM relationship_projections WHERE id = ?")
         .run(id);
+      if (result.changes > 0) this.markExpressionIndexesStale();
       return result.changes > 0;
     }
     const result = this.db
       .prepare("DELETE FROM relationship_records WHERE id = ?")
       .run(row.recordId);
+    if (result.changes > 0) this.markExpressionIndexesStale();
     return result.changes > 0;
   }
 
   deleteNode(id: string): boolean {
     const result = this.db.prepare("DELETE FROM nodes WHERE id = ?").run(id);
+    if (result.changes > 0) this.markExpressionIndexesStale();
     return result.changes > 0;
   }
 
@@ -792,59 +827,62 @@ export class GraphDatabase implements TomeQueryCache {
     pattern: string,
     limit: number,
     allowedTypeIds?: readonly string[],
+    allowedNodeIds?: ReadonlySet<string>,
   ): { id: string; title: string }[] {
-    const fetchBatch = (batchLimit: number) =>
-      this.db
-        .prepare(
-          `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
-           FROM nodes
-           WHERE is_archived = 0
-             AND COALESCE(title, alias, '') LIKE ? ESCAPE '\\'
-           ORDER BY title COLLATE NOCASE
-           LIMIT ?`,
-        )
-        .all(pattern, batchLimit) as { id: string; title: string }[];
-
-    return this.collectTitleOrderedNodes(limit, allowedTypeIds, fetchBatch);
+    if (allowedNodeIds && allowedNodeIds.size === 0) return [];
+    const filter = this.buildSearchFilterSql(allowedTypeIds, allowedNodeIds);
+    return this.db
+      .prepare(
+        `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
+         FROM nodes
+         WHERE is_archived = 0
+           AND COALESCE(title, alias, '') LIKE ? ESCAPE '\\'
+           ${filter.sql}
+         ORDER BY title COLLATE NOCASE
+         LIMIT ?`,
+      )
+      .all(pattern, ...filter.params, limit) as { id: string; title: string }[];
   }
 
   searchNodesByBody(
     pattern: string,
     limit: number,
     allowedTypeIds?: readonly string[],
+    allowedNodeIds?: ReadonlySet<string>,
   ): { id: string; title: string }[] {
-    const fetchBatch = (batchLimit: number) =>
-      this.db
-        .prepare(
-          `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
-           FROM nodes
-           WHERE is_archived = 0
-             AND COALESCE(body, '') LIKE ? ESCAPE '\\'
-           ORDER BY title COLLATE NOCASE
-           LIMIT ?`,
-        )
-        .all(pattern, batchLimit) as { id: string; title: string }[];
-
-    return this.collectTitleOrderedNodes(limit, allowedTypeIds, fetchBatch);
+    if (allowedNodeIds && allowedNodeIds.size === 0) return [];
+    const filter = this.buildSearchFilterSql(allowedTypeIds, allowedNodeIds);
+    return this.db
+      .prepare(
+        `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
+         FROM nodes
+         WHERE is_archived = 0
+           AND COALESCE(body, '') LIKE ? ESCAPE '\\'
+           ${filter.sql}
+         ORDER BY title COLLATE NOCASE
+         LIMIT ?`,
+      )
+      .all(pattern, ...filter.params, limit) as { id: string; title: string }[];
   }
 
   listNodesByTitle(
     limit: number,
     allowedTypeIds?: readonly string[],
+    allowedNodeIds?: ReadonlySet<string>,
   ): { id: string; title: string }[] {
-    const fetchBatch = (batchLimit: number) =>
-      this.db
-        .prepare(
-          `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
-           FROM nodes
-           WHERE is_archived = 0
-             AND (title IS NOT NULL OR alias IS NOT NULL)
-           ORDER BY title COLLATE NOCASE
-           LIMIT ?`,
-        )
-        .all(batchLimit) as { id: string; title: string }[];
-
-    return this.collectTitleOrderedNodes(limit, allowedTypeIds, fetchBatch);
+    if (allowedNodeIds && allowedNodeIds.size === 0) return [];
+    const filter = this.buildSearchFilterSql(allowedTypeIds, allowedNodeIds);
+    return this.db
+      .prepare(
+        `SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title
+         FROM nodes
+         WHERE is_archived = 0
+           AND (title IS NOT NULL OR alias IS NOT NULL)
+           ${filter.sql}
+         ORDER BY title COLLATE NOCASE
+         LIMIT ?`,
+      )
+      .all(...filter.params, limit) as { id: string; title: string }[];
   }
 
   listNodesByModifiedAt(
@@ -881,41 +919,42 @@ export class GraphDatabase implements TomeQueryCache {
     return false;
   }
 
-  private filterTitleOrderedNodesByAllowedType(
-    rows: readonly { id: string; title: string }[],
-    limit: number,
-    allowedTypeIds: readonly string[],
-  ): { id: string; title: string }[] {
-    const matched: { id: string; title: string }[] = [];
-    for (const row of rows) {
-      if (!this.nodeMatchesAnyAllowedType(row.id, allowedTypeIds)) continue;
-      matched.push(row);
-      if (matched.length >= limit) break;
-    }
-    return matched;
-  }
-
-  private collectTitleOrderedNodes(
-    limit: number,
+  /**
+   * SQL predicates for search/list filters.
+   * - allowedNodeIds → `AND id IN (...)`
+   * - allowedTypeIds → EXISTS over relationship_projections using member perspectives
+   */
+  private buildSearchFilterSql(
     allowedTypeIds: readonly string[] | undefined,
-    fetchBatch: (batchLimit: number) => { id: string; title: string }[],
-  ): { id: string; title: string }[] {
-    if (!allowedTypeIds || allowedTypeIds.length === 0) {
-      return fetchBatch(limit);
+    allowedNodeIds: ReadonlySet<string> | undefined,
+  ): { sql: string; params: Array<string | number> } {
+    const parts: string[] = [];
+    const params: Array<string | number> = [];
+
+    if (allowedNodeIds && allowedNodeIds.size > 0) {
+      const ids = [...allowedNodeIds];
+      parts.push(`AND id IN (${ids.map(() => "?").join(", ")})`);
+      params.push(...ids);
     }
 
-    let fetchLimit = limit;
-    const maxFetch = 5000;
-    while (fetchLimit <= maxFetch) {
-      const rows = fetchBatch(fetchLimit);
-      const matched = this.filterTitleOrderedNodesByAllowedType(rows, limit, allowedTypeIds);
-      if (matched.length >= limit || rows.length < fetchLimit) {
-        return matched;
+    if (allowedTypeIds && allowedTypeIds.length > 0) {
+      const perspectives = this.memberPerspectives?.() ?? [];
+      if (perspectives.length === 0) {
+        parts.push("AND 0");
+      } else {
+        const typePlaceholders = allowedTypeIds.map(() => "?").join(", ");
+        const perspectivePlaceholders = perspectives.map(() => "?").join(", ");
+        parts.push(`AND EXISTS (
+          SELECT 1 FROM relationship_projections rp
+          WHERE rp.source_node_id = nodes.id
+            AND rp.type IN (${perspectivePlaceholders})
+            AND rp.target_node_id IN (${typePlaceholders})
+        )`);
+        params.push(...perspectives, ...allowedTypeIds);
       }
-      fetchLimit = Math.min(fetchLimit * 2, maxFetch);
     }
 
-    return this.filterTitleOrderedNodesByAllowedType(fetchBatch(maxFetch), limit, allowedTypeIds);
+    return { sql: parts.length > 0 ? ` ${parts.join(" ")}` : "", params };
   }
 
   listNodesWithBodyLike(pattern: string): { id: string; body: string }[] {
@@ -1097,6 +1136,7 @@ export class GraphDatabase implements TomeQueryCache {
     const { sql: orderBySql, params: orderParams } = buildSetMemberOrderBy(
       query.sorts,
       query.relationCounts,
+      query.expressionIndexSorts,
       Boolean(query.defaultOrdered),
     );
 
@@ -1123,6 +1163,60 @@ export class GraphDatabase implements TomeQueryCache {
       relationships: this.mapProjectionRows(rows),
       total,
     };
+  }
+
+  getExpressionIndexStatus(digest: string): "ready" | "stale" | "building" | "missing" {
+    const row = this.db
+      .prepare("SELECT status FROM expression_indexes WHERE digest = ?")
+      .get(digest) as { status: string } | undefined;
+    if (!row) return "missing";
+    if (row.status === "ready" || row.status === "stale" || row.status === "building") {
+      return row.status;
+    }
+    return "stale";
+  }
+
+  replaceExpressionIndexValues(
+    digest: string,
+    expressionJson: string,
+    values: readonly { memberId: string; sortValue: number }[],
+  ): void {
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `INSERT INTO expression_indexes (digest, status, built_at, expression_json)
+           VALUES (?, 'building', NULL, ?)
+           ON CONFLICT(digest) DO UPDATE SET
+             status = 'building',
+             expression_json = excluded.expression_json`,
+        )
+        .run(digest, expressionJson);
+      this.db.prepare("DELETE FROM expression_index_values WHERE digest = ?").run(digest);
+      const insert = this.db.prepare(
+        `INSERT INTO expression_index_values (digest, member_id, sort_value) VALUES (?, ?, ?)`,
+      );
+      for (const row of values) {
+        insert.run(digest, row.memberId, row.sortValue);
+      }
+      this.db
+        .prepare(
+          `UPDATE expression_indexes SET status = 'ready', built_at = ? WHERE digest = ?`,
+        )
+        .run(new Date().toISOString(), digest);
+    });
+    tx();
+  }
+
+  markExpressionIndexesStale(digest?: string): void {
+    if (digest?.trim()) {
+      this.db
+        .prepare(
+          `UPDATE expression_indexes SET status = 'stale' WHERE digest = ? AND status = 'ready'`,
+        )
+        .run(digest.trim());
+      return;
+    }
+    this.db.exec(`UPDATE expression_indexes SET status = 'stale' WHERE status = 'ready'`);
   }
 
   listDistinctSetMemberScopeIds(

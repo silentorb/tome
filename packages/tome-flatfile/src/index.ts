@@ -274,6 +274,7 @@ export {
   loadExtensionsFromContent,
   resolveExtensionsManifest,
   findComponentById,
+  findSearcherById,
 } from "./extensions";
 export type {
   ExtensionComponentEntry,
@@ -282,6 +283,7 @@ export type {
   ExtensionsFile,
   ExtensionsManifest,
   ResolvedExtensionComponent,
+  ResolvedSearcherComponent,
 } from "./extensions";
 
 export {

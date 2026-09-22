@@ -23,6 +23,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Graph Explorer (LOD graph visualization) | [graph-explorer.md](./graph-explorer.md) |
 | Table presentation (scope tabs, groups, reorder) | [table-presentation.md](./table-presentation.md) |
 | Dynamic properties (computed columns) | [dynamic-properties.md](./dynamic-properties.md) |
+| Expression indexes (fixed dyn sorts) | [expression-indexes.md](./expression-indexes.md) |
 | Table view tabs (`views.json`) | [views.md](./views.md) |
 | Static website generation (Astro) | [static-website.md](./static-website.md) |
 | Static website deploy (GitHub Actions → S3/CloudFront) | [static-website-deploy.md](./static-website-deploy.md) |
@@ -38,6 +39,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Multi-corpus editor sessions | [multi-corpus.md](./multi-corpus.md) |
 | Graph store API (Base / Queryable, executeImp) | [graph-store.md](./graph-store.md) |
 | Imp sync wiring + dataStores registry | [tome-sync.md](./tome-sync.md) |
+| Node search (searcher extensions + FTS) | [search.md](./search.md) |
 | Dev / release containers (GHCR) | [container.md](./container.md) |
 | Test tiers and weighted gating | [testing.md](./testing.md) |
 

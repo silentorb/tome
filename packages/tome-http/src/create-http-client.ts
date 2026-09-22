@@ -386,7 +386,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         participatesInProjectionType?: string;
         onlyActivePickingRole?: "source" | "target";
       },
-    ): Promise<NodeSummary[]> {
+    ): Promise<{ results: NodeSummary[]; searchAvailable: boolean }> {
       const params = new URLSearchParams({ q: query, limit: String(limit) });
       if (allowedTypeIds?.length) {
         params.set("allowedTypeIds", allowedTypeIds.join(","));
@@ -403,10 +403,14 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       if (options?.onlyActivePickingRole) {
         params.set("onlyActivePickingRole", options.onlyActivePickingRole);
       }
-      const data = await fetchJson<{ results: NodeSummary[] }>(
-        `/api/nodes/search?${params}`,
-      );
-      return data.results;
+      const data = await fetchJson<{
+        results: NodeSummary[];
+        searchAvailable?: boolean;
+      }>(`/api/nodes/search?${params}`);
+      return {
+        results: data.results,
+        searchAvailable: data.searchAvailable !== false,
+      };
     },
     async listRecent(limit = 8): Promise<NodeSummary[]> {
       const params = new URLSearchParams({ limit: String(limit) });

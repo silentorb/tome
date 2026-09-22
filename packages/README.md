@@ -15,6 +15,8 @@ Each subdirectory is a **workspace package** in the Tome monorepo. Packages are 
 | [`tome-static-site`](./tome-static-site/) | Static HTML export |
 | [`tome-theme-midnight`](./tome-theme-midnight/) | Midnight theme tokens and shared cross-surface CSS |
 | [`tome-interfaces`](./tome-interfaces/) | Extension / page-block integration contracts |
+| [`tome-search-like`](./tome-search-like/) | SQL LIKE searcher extension (`kind: searcher`) |
+| [`tome-search-sqlite`](./tome-search-sqlite/) | FTS5 searcher + Imp sync sink (`dataStores` + `kind: searcher`) |
 | [`tome-extension-fixture`](./tome-extension-fixture/) | Reference/test extension (not production) |
 | [`tome-spatial-graph`](./tome-spatial-graph/) | Compound spatial graph page block (cytoscape SVG) |
 | [`tome-imp-sql`](./tome-imp-sql/) | Imp → Tome SQL schema/registry binder (above tome-db) |

@@ -388,12 +388,23 @@ export interface SetMemberRelationCountSort {
   projectionTypes: string[];
 }
 
+/**
+ * Expression-index ORDER BY: sort by precomputed `expression_index_values.sort_value`
+ * for the given content-addressed digest (dyn aggregate / Imp sub-expression).
+ */
+export interface SetMemberExpressionIndexSort {
+  column: string;
+  digest: string;
+}
+
 /** Window + sort for type-table set membership (SQL ORDER BY / LIMIT / OFFSET). */
 export interface SetMemberWindowQuery {
   projections: SetMemberProjectionPair[];
   sorts?: SetMemberWindowSort[];
   /** Relation column → projection types for COUNT ORDER BY. */
   relationCounts?: SetMemberRelationCountSort[];
+  /** Fixed dyn / expression-index sorts (digest must be ready in the catalog). */
+  expressionIndexSorts?: SetMemberExpressionIndexSort[];
   /** When true and sorts empty, default ORDER BY edge `order` then member title. */
   defaultOrdered?: boolean;
   /** Omit or null → return the full ordered set (static export). */
@@ -520,15 +531,18 @@ export interface TomeQueryCache {
     pattern: string,
     limit: number,
     allowedTypeIds?: readonly string[],
+    allowedNodeIds?: ReadonlySet<string>,
   ): { id: string; title: string }[];
   searchNodesByBody(
     pattern: string,
     limit: number,
     allowedTypeIds?: readonly string[],
+    allowedNodeIds?: ReadonlySet<string>,
   ): { id: string; title: string }[];
   listNodesByTitle(
     limit: number,
     allowedTypeIds?: readonly string[],
+    allowedNodeIds?: ReadonlySet<string>,
   ): { id: string; title: string }[];
   listNodesByModifiedAt(
     limit: number,
@@ -584,6 +598,22 @@ export interface TomeQueryCache {
     setId: string,
     query: DistinctSetMemberScopeQuery,
   ): DistinctSetMemberScopeRow[];
+  /**
+   * Expression-index catalog: status for a content-addressed digest.
+   * `ready` means values may be used in ORDER BY; `missing` / `stale` need rebuild.
+   */
+  getExpressionIndexStatus(digest: string): "ready" | "stale" | "building" | "missing";
+  /**
+   * Replace all values for `digest` and mark the catalog row ready.
+   * Callers hold single-flight coordination outside the DB.
+   */
+  replaceExpressionIndexValues(
+    digest: string,
+    expressionJson: string,
+    values: readonly { memberId: string; sortValue: number }[],
+  ): void;
+  /** Mark one digest (or all when omitted) as stale so the next read rebuilds. */
+  markExpressionIndexesStale(digest?: string): void;
   /**
    * Ordered window of set members for a composed presentation.
    * Optional scope filter + group join/order run in SQL.

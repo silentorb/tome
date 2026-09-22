@@ -67,3 +67,4 @@ Seven linked features have `THEME → Wonderland` after theme-relationship migra
 
 - Unit test: inspiration with 3 wonder-themed features → `"3"`.
 - Integration: Inspirations Wonder view; Big Trouble in Little China row equals `7`.
+- Items sorts on this column use a query-cache **expression index** (see [expression-indexes.md](../features/expression-indexes.md)).

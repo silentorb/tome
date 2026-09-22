@@ -56,6 +56,33 @@ function seedCorpus(
     join(content, "model", "associations.json"),
     serializeAssociationsFile(associations),
   );
+  writeFileSync(
+    join(content, "model", "extensions.json"),
+    JSON.stringify(
+      {
+        version: 1,
+        extensions: [
+          {
+            id: "tome-search-like",
+            enabled: true,
+            searcherModule: "tome-search-like/search",
+          },
+        ],
+        components: [
+          {
+            id: "tome-search-like.searcher",
+            extensionId: "tome-search-like",
+            kind: "searcher",
+            implementationId: "tome-search-like",
+            label: "SQL LIKE search",
+            enabled: true,
+          },
+        ],
+      },
+      null,
+      2,
+    ),
+  );
   return content;
 }
 
@@ -63,7 +90,7 @@ describe("search corpusLabel enrichment", () => {
   // Full weighted suite can make SQLite sync + search exceed the default 5s.
   test(
     "labels foreign hits when activeCorpusId is set in a multi-corpus session",
-    () => {
+    async () => {
     const temp = mkdtempSync(join(tmpdir(), "tome-search-corpus-label-"));
     try {
       const contentA = seedCorpus(join(temp, "a"), HOME_A, ARCHIVE_A, "Corpus A");
@@ -77,6 +104,7 @@ describe("search corpusLabel enrichment", () => {
 
       const cache = new GraphDatabase(join(temp, "session.sqlite"));
       const services = openTomeGraphServices({ store, cache });
+      await services.getExtensionsManifest();
 
       const foreign = services.search("Shared", 10, undefined, { activeCorpusId: "a" });
       const beta = foreign.find((row) => row.id === NODE_B);
@@ -99,7 +127,7 @@ describe("search corpusLabel enrichment", () => {
 
   test(
     "never sets corpusLabel in a solo corpus session",
-    () => {
+    async () => {
     const temp = mkdtempSync(join(tmpdir(), "tome-search-corpus-label-solo-"));
     try {
       const contentA = seedCorpus(join(temp, "a"), HOME_A, ARCHIVE_A, "Corpus A");
@@ -108,6 +136,7 @@ describe("search corpusLabel enrichment", () => {
 
       const cache = new GraphDatabase(join(temp, "session.sqlite"));
       const services = openTomeGraphServices({ store, cache });
+      await services.getExtensionsManifest();
 
       const hits = services.search("Solo", 10, undefined, { activeCorpusId: "other" });
       expect(hits).toHaveLength(1);

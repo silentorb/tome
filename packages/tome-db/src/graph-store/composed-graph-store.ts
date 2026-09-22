@@ -61,6 +61,8 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     impExecution: "sql",
   };
 
+  #search: import("tome-interfaces/search").TomeSearch | null = null;
+
   constructor(
     readonly flatfile: FlatfileGraphStore,
     private readonly cache: GraphDatabase,
@@ -304,7 +306,16 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
   }
 
   executeImp(graph: ImpGraph, context?: ExecuteImpContext): ImpCollectionResult {
-    return runExecuteImpSql(this.flatfile, this.cache, graph, context);
+    return runExecuteImpSql(this.flatfile, this.cache, graph, context, this.#search);
+  }
+
+  /** Injected searcher for Imp `type: "search"` graphs (null = unavailable). */
+  setSearch(search: import("tome-interfaces/search").TomeSearch | null): void {
+    this.#search = search;
+  }
+
+  getSearch(): import("tome-interfaces/search").TomeSearch | null {
+    return this.#search;
   }
 
   queryAll(sql: string, ...params: unknown[]): Record<string, unknown>[] {

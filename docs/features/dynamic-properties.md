@@ -86,19 +86,25 @@ Separating configuration lets the overlay be rebuilt without touching imported d
 
 Pure config DSLs are insufficient for graph traversals and dimension expansion. TypeScript resolvers provide power; overlay bindings avoid hard-coding owner/column bindings in code.
 
+### Expression indexes (fixed dyn sorts)
+
+Sorting Items tables by a fixed dyn column must not full-materialize every member on every page. Fixed resolvers have a **DynAggregate IR** (`packages/tome-db/src/dynamic-properties/aggregate.ts`) that:
+
+1. **Builds** a content-addressed sort index in the SQLite query cache (`expression_indexes` / `expression_index_values`) on first miss (lazy, single-flight).
+2. Drives Items `ORDER BY` via `SetMemberWindowQuery.expressionIndexSorts` (indexed `sort_value`).
+3. Remains the definition source for index rebuilds after graph writes mark indexes **stale**.
+
+Digest = hash(canonical IR + bound params + context fingerprint: schema enum weights, associations, format version). Display cells still come from `applyDynamicProperties` on the returned window (not from reading the index), until parity is proven end-to-end.
+
+**Still deferred:** column-set dyn sorts; table `q`. Do not write dyn answers onto flatfile `IS_A` properties.
+
 ## Behavior / pipeline
 
 ```
 getDatabaseViewDetail(db, databaseId, view)
-  → build EvalRow[] from IS_A relationships
-  → applyDynamicProperties(db, owner, viewName, evalRows)
-       load overlay rows for owner
-       expand columnSets → concrete columns
-       batch prefetch graph data
-       invoke resolvers → merge cells
-  → sortEvalRowsFromViewSorts (views.json tab sorts)
-  → build columnDefs (inject dynamic defs; dynamic wins over stored)
-  → DatabaseViewDetail
+  → (SQL path) ensure expression indexes for fixed dyn sorts → set-member window ORDER BY index
+  → hydrate dyn display on returned window only
+  → (legacy path) full membership → applyDynamicProperties → JS sort → window
 ```
 
 ## Inputs / outputs / artifacts

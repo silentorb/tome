@@ -19,6 +19,7 @@ Optional Git-tracked backlog for Tome ideas and investigations. Not every change
 | Tool to migrate data from Confluence | open | [confluence-migration-tool.md](./confluence-migration-tool.md) |
 | User workflow automation (contextual semantics) | open | [user-workflow-automation.md](./user-workflow-automation.md) |
 | Editor AI integration | open | [editor-ai-integration.md](./editor-ai-integration.md) |
+| Meilisearch searcher + Imp sync sink | open | [tome-meilisearch.md](./tome-meilisearch.md) |
 
 ## Adding a task
 

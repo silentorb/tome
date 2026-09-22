@@ -4,7 +4,7 @@
 
 The **extension system** lets projects register external packages that add Tome capabilities. Extensions are **libraries of components** configured in `content/model/extensions.json` and **loaded at runtime**. Each component kind exposes **separate integration contracts per consumer subsystem** (editor, html, server) defined in [`tome-interfaces`](../packages/tome-interfaces/) — not in this doc.
 
-v1 implements the **page-block** kind (custom in-body blocks).
+v1 implements **page-block** (custom in-body blocks) and **searcher** (node search backends).
 
 ## When to read this
 
@@ -20,12 +20,18 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 ### Registration
 
 - Extension registration **must** live in `content/model/extensions.json` under the content root.
-- Each enabled extension **must** list subsystem module paths it implements: `editorModule`, `htmlModule`, `serverModule` (all optional).
+- Each enabled extension **must** list subsystem module paths it implements: `editorModule`, `htmlModule`, `serverModule`, `searcherModule` (all optional).
 - Components **must** declare `kind`, `implementationId`, and `extensionId`; hosts merge extension-level and component-level `params`.
 - Hosts **must** dynamically import enabled extension modules at runtime (Bun `import()`).
 - Extension packages **must not** depend on `tome-editor`, `tome-db`, or `tome-static-site`; they **must** depend on `tome-interfaces` for contracts.
 
-### Page blocks (v1)
+### Searchers
+
+- Components with `kind: "searcher"` register a `TomeSearch` via `searcherModule` (see [searchers.md](../extensions/searchers.md)).
+- Exactly one enabled searcher is allowed; zero means search is unavailable (`searchAvailable: false`).
+- `slashMenu` is forbidden on searcher components.
+
+### Page blocks
 
 - Storage **must** use shared `tome-block` fenced JSON (see [page-blocks.md](../extensions/page-blocks.md)).
 - Editor-only blocks **are valid** (no html module required).
@@ -44,7 +50,6 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 ### Out of scope (v1)
 
 - Config UI for extensions
-- Non–page-block component kinds
 - Marketplace / remote unsigned extensions
 - Independent front/back configuration rows for a single logical component
 

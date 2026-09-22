@@ -17,6 +17,7 @@ export function GlobalSearch({ api, open, onOpenChange }: GlobalSearchProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<NodeSummary[]>([]);
+  const [searchAvailable, setSearchAvailable] = useState(true);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +53,10 @@ export function GlobalSearch({ api, open, onOpenChange }: GlobalSearchProps) {
       setError(null);
       void api
         .search(query, 25)
-        .then((items) => setResults(items))
+        .then((response) => {
+          setResults(response.results);
+          setSearchAvailable(response.searchAvailable);
+        })
         .catch((err) => {
           setResults([]);
           setError(err instanceof Error ? err.message : String(err));
@@ -151,7 +155,11 @@ export function GlobalSearch({ api, open, onOpenChange }: GlobalSearchProps) {
           ) : null}
           {!loading && results.length === 0 ? (
             <div className="tome-global-search-empty">
-              {query.trim() ? "No matching nodes" : "No nodes found"}
+              {query.trim()
+                ? searchAvailable
+                  ? "No matching nodes"
+                  : "Search is not configured"
+                : "No nodes found"}
             </div>
           ) : (
             results.map((item, index) => {

@@ -2,7 +2,7 @@ import type { TomeDataStore, TomeQueryCache } from "tome-service-interfaces";
 import type { TomeGraphStoreQueryable } from "tome-graph-interfaces";
 import type { SyncSourceRead, SyncSignal } from "./types";
 
-export type DataStoreKind = "flatfile" | "sqlite" | "unknown";
+export type DataStoreKind = "flatfile" | "sqlite" | "fts" | "unknown";
 
 export type DataStoreCapabilities = {
   canBeObserved: boolean;
@@ -32,6 +32,13 @@ export type OpenedDataStore =
       kind: "sqlite";
       cache: TomeQueryCache;
       endpoint: SyncEndpoint;
+    }
+  | {
+      id: string;
+      kind: "fts";
+      endpoint: SyncEndpoint;
+      search: import("tome-interfaces/search").TomeSearch;
+      close: () => void;
     }
   | {
       id: string;

@@ -69,3 +69,4 @@ Sum of priority weights across all linked features for this inspiration equals 3
 
 - Unit test: inspiration with features at Medium+High → `6`.
 - Integration: Inspirations Weighted view sorts/filters on computed `weighted_use`.
+- Items sorts on this column use a query-cache **expression index** (see [expression-indexes.md](../features/expression-indexes.md)).

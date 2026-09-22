@@ -79,6 +79,7 @@ export {
   shouldUseSqlDatabaseWindow,
   shouldUseSqlComposedWindow,
   tableRowsQueryUsesDynSort,
+  tableRowsQueryUsesUnresolvedDynSort,
   tableRowsQueryUsesNonExpressibleSort,
   tableRowsQueryUsesDeferredSearch,
 } from "./table-sql-window";
@@ -412,6 +413,7 @@ export {
   loadExtensionsFromContent,
   resolveExtensionsManifest,
   findComponentById,
+  findSearcherById,
 } from "tome-flatfile";
 export { createExtensionGraphQueryServices } from "./extension-graph-query";
 export { createExtensionExecuteImpServices } from "./extension-execute-imp";
@@ -451,4 +453,5 @@ export type {
   ExtensionsFile,
   ExtensionsManifest,
   ResolvedExtensionComponent,
+  ResolvedSearcherComponent,
 } from "tome-flatfile";

@@ -1,0 +1,23 @@
+{
+  "name": "tome-search-sqlite",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/module.ts",
+    "./search": "./src/search.ts"
+  },
+  "scripts": {
+    "test": "bun test tests",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "tome-db": "workspace:^0.8.0",
+    "tome-graph-interfaces": "workspace:^0.3.0",
+    "tome-interfaces": "workspace:^0.3.0"
+  },
+  "devDependencies": {
+    "@types/bun": "1.2.23",
+    "typescript": "5.8.2"
+  }
+}

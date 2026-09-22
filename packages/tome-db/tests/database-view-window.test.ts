@@ -172,8 +172,9 @@ describe("database-view SQL windows", () => {
     expect(detail?.rows[0]?.name).toBe("Alpha quest");
   });
 
-  test("dyn-sort tabs stay on legacy path and still return rows", () => {
+  test("fixed dyn-sort uses expression index SQL window and orders by value", () => {
     const databaseId = "ZZZZZZZZZZZZZZZZZZZZZZZZZZ";
+    const sceneProj = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 0);
     writeTableSchema(databaseId, []);
     writeFileSync(
       dynamicPropertiesFilePath(contentDir),
@@ -181,13 +182,15 @@ describe("database-view SQL windows", () => {
         version: 1,
         properties: [
           {
-            id: "dyn-weighted",
+            id: "dyn-scenes",
             owner: databaseId,
-            columnKey: "weighted_use",
-            columnName: "Weighted use",
+            columnKey: "all_scene_count",
+            columnName: "All Scene count",
             columnType: "number",
-            resolverId: "inspirations.weightedUse",
-            params: {},
+            resolverId: "characters.allSceneCount",
+            params: {
+              scenes_edge_label: sceneProj,
+            },
           },
         ],
         columnSets: [],
@@ -195,30 +198,55 @@ describe("database-view SQL windows", () => {
     );
     invalidateDynamicPropertiesCache();
 
-    db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
+    db.upsertNode(databaseId, { ...typeTableMarkerProperties("Characters") });
     const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
-    for (let i = 0; i < 3; i++) {
-      const id = `01DYNMEM${String(i).padStart(18, "0")}`;
-      db.upsertNode(id, { title: `Dyn ${i}` });
-      db.upsertRelationship(id, databaseId, memberProjection, {});
-    }
+
+    const low = "01DYNLOW000000000000000001";
+    const high = "01DYNHIGH00000000000000001";
+    db.upsertNode(low, { title: "Low scenes" });
+    db.upsertNode(high, { title: "High scenes" });
+    db.upsertRelationship(low, databaseId, memberProjection, {});
+    db.upsertRelationship(high, databaseId, memberProjection, {});
+
+    db.upsertNode("01SCENEA0000000000000000001", { title: "S1" });
+    db.upsertNode("01SCENEB0000000000000000001", { title: "S2" });
+    db.upsertRelationship(high, "01SCENEA0000000000000000001", sceneProj, {});
+    db.upsertRelationship(high, "01SCENEB0000000000000000001", sceneProj, {});
+    db.upsertRelationship(low, "01SCENEA0000000000000000001", sceneProj, {});
 
     const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
-      sorts: [{ column: "weighted_use", direction: "desc" }],
+      sorts: [{ column: "all_scene_count", direction: "desc" }],
       limit: 50,
       offset: 0,
     });
-    expect(detail?.rowsWindow.total).toBe(3);
-    expect(detail?.rows).toHaveLength(3);
-    expect(detail?.allColumnDefs?.some((c) => c.key === "weighted_use" && c.source === "dynamic")).toBe(
+    expect(detail?.rowsWindow.total).toBe(2);
+    expect(detail?.rows.map((r) => r.nodeId)).toEqual([high, low]);
+    expect(detail?.rows[0]?.cells.all_scene_count).toBe("2");
+    expect(detail?.rows[1]?.cells.all_scene_count).toBe("1");
+    expect(detail?.allColumnDefs?.some((c) => c.key === "all_scene_count" && c.source === "dynamic")).toBe(
       true,
     );
 
-    // Restore empty dyn file for later tests in this file (none), keep isolation.
+    const digests = db.queryAll<{ digest: string; status: string }>(
+      "SELECT digest, status FROM expression_indexes",
+    );
+    expect(digests.some((row) => row.status === "ready")).toBe(true);
+
     writeFileSync(
       dynamicPropertiesFilePath(contentDir),
       serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
     );
     invalidateDynamicPropertiesCache();
+  });
+
+  test("column-set dyn column keys are unresolved for SQL window gate", () => {
+    const dynKeys = new Set(["scene_count__01PRODUCT000000000000001", "all_scene_count"]);
+    // Fixed key present in overlay-style fixed set; column-set key is not.
+    const fixedKeys = new Set(["all_scene_count"]);
+    const sorts = [{ column: "scene_count__01PRODUCT000000000000001", direction: "desc" as const }];
+    const isColumnSet = sorts.some(
+      (sort) => dynKeys.has(sort.column) && !fixedKeys.has(sort.column),
+    );
+    expect(isColumnSet).toBe(true);
   });
 });

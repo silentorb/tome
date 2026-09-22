@@ -1,5 +1,6 @@
-import { afterAll, describe, expect, test } from "bun:test";
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { searchNodesGraph } from "../../src/graph-store/standard-graphs";
+import { performTomeTextSearch } from "../../src/search-text";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -8,6 +9,7 @@ import {
   seedTestRelationships,
   type TestContentFixture,
 } from "../../src/content/test-helpers";
+import type { ComposedGraphStore } from "../../src/graph-store/composed-graph-store";
 
 describe("searchNodesGraph via executeImp", () => {
   const fixture: TestContentFixture = createTestContentFixture("tome-db-search-imp-");
@@ -17,6 +19,25 @@ describe("searchNodesGraph via executeImp", () => {
   const memberId = "0000000000000000000000003B";
   const outsiderId = "0000000000000000000000003C";
   const associationType = "000000000000000000000000AA";
+
+  beforeAll(() => {
+    const composed = fixture.ctx.graphStore as ComposedGraphStore;
+    composed.setSearch({
+      search(request) {
+        return performTomeTextSearch(
+          fixture.ctx.cache,
+          request.query,
+          request.limit,
+          request.allowedTypeIds,
+          request.allowedNodeIds,
+        ).map((row) => ({
+          id: row.id,
+          title: row.title,
+          ...(row.matchPreview ? { matchPreview: row.matchPreview } : {}),
+        }));
+      },
+    });
+  });
 
   seedTestNode(fixture, {
     id: titleMatchId,

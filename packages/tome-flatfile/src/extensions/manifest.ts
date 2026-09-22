@@ -8,12 +8,29 @@ import type {
 export interface ResolvedExtensionComponent extends PageBlockComponentRef {
   kind: "page-block";
   slashMenu?: { group?: string; order?: number };
-  extension: Pick<ExtensionEntry, "id" | "editorModule" | "htmlModule" | "serverModule">;
+  extension: Pick<
+    ExtensionEntry,
+    "id" | "editorModule" | "htmlModule" | "serverModule" | "searcherModule"
+  >;
+}
+
+export interface ResolvedSearcherComponent {
+  id: string;
+  extensionId: string;
+  implementationId: string;
+  label: string;
+  kind: "searcher";
+  params: Record<string, unknown>;
+  extension: Pick<
+    ExtensionEntry,
+    "id" | "editorModule" | "htmlModule" | "serverModule" | "searcherModule"
+  >;
 }
 
 export interface ExtensionsManifest {
   extensions: ExtensionEntry[];
   components: ResolvedExtensionComponent[];
+  searchers: ResolvedSearcherComponent[];
 }
 
 function mergeParams(
@@ -32,16 +49,32 @@ export function resolveExtensionsManifest(file: ExtensionsFile): ExtensionsManif
   }
 
   const components: ResolvedExtensionComponent[] = [];
+  const searchers: ResolvedSearcherComponent[] = [];
   for (const component of file.components) {
-    if (!component.enabled || component.kind !== "page-block") continue;
+    if (!component.enabled) continue;
     const extension = enabledExtensions.get(component.extensionId);
     if (!extension) continue;
-    components.push(toResolvedComponent(component, extension));
+    if (component.kind === "page-block") {
+      components.push(toResolvedComponent(component, extension));
+    } else if (component.kind === "searcher") {
+      searchers.push(toResolvedSearcher(component, extension));
+    }
   }
 
   return {
     extensions: [...enabledExtensions.values()],
     components,
+    searchers,
+  };
+}
+
+function extensionPick(extension: ExtensionEntry) {
+  return {
+    id: extension.id,
+    editorModule: extension.editorModule,
+    htmlModule: extension.htmlModule,
+    serverModule: extension.serverModule,
+    searcherModule: extension.searcherModule,
   };
 }
 
@@ -57,12 +90,22 @@ function toResolvedComponent(
     kind: "page-block",
     params: mergeParams(extension.params, component.params),
     slashMenu: component.slashMenu,
-    extension: {
-      id: extension.id,
-      editorModule: extension.editorModule,
-      htmlModule: extension.htmlModule,
-      serverModule: extension.serverModule,
-    },
+    extension: extensionPick(extension),
+  };
+}
+
+function toResolvedSearcher(
+  component: ExtensionComponentEntry,
+  extension: ExtensionEntry,
+): ResolvedSearcherComponent {
+  return {
+    id: component.id,
+    extensionId: component.extensionId,
+    implementationId: component.implementationId,
+    label: component.label,
+    kind: "searcher",
+    params: mergeParams(extension.params, component.params),
+    extension: extensionPick(extension),
   };
 }
 
@@ -71,4 +114,11 @@ export function findComponentById(
   componentId: string,
 ): ResolvedExtensionComponent | undefined {
   return manifest.components.find((component) => component.id === componentId);
+}
+
+export function findSearcherById(
+  manifest: ExtensionsManifest,
+  componentId: string,
+): ResolvedSearcherComponent | undefined {
+  return manifest.searchers.find((component) => component.id === componentId);
 }

@@ -86,9 +86,10 @@ describe("RelationCellEditor", () => {
   });
 
   test("adds link inside dialog without closing", async () => {
-    const search = mock(async () => [
-      { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Child", primaryTypeTitle: null },
-    ]);
+    const search = mock(async () => ({
+      results: [{ id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Child", primaryTypeTitle: null }],
+      searchAvailable: true,
+    }));
     const onAdd = mock(async () => {});
     const api = {
       ...makeMockEditorApi(),
@@ -118,9 +119,10 @@ describe("RelationCellEditor", () => {
 
   test("defers onEditingComplete until popup closes after mutations", async () => {
     const onEditingComplete = mock(() => {});
-    const search = mock(async () => [
-      { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Child", primaryTypeTitle: null },
-    ]);
+    const search = mock(async () => ({
+      results: [{ id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Child", primaryTypeTitle: null }],
+      searchAvailable: true,
+    }));
     const onAdd = mock(async () => {});
     const api = {
       ...makeMockEditorApi(),

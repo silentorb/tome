@@ -45,13 +45,17 @@ export async function startTomeServer(options?: {
         dataStores[id] = { ...entry, options: opts };
       }
     }
-    if (entry.module.includes("sqlite")) {
+    if (entry.module.includes("sqlite") || entry.module.includes("search-sqlite")) {
       const opts =
         entry.options && typeof entry.options === "object"
           ? { ...(entry.options as Record<string, unknown>) }
           : {};
       if (typeof opts.dbPath !== "string" || !String(opts.dbPath).trim()) {
-        opts.dbPath = dbPath;
+        if (entry.module.includes("search-sqlite")) {
+          opts.dbPath = `${dbPath.replace(/\.sqlite$/, "")}-fts.sqlite`;
+        } else {
+          opts.dbPath = dbPath;
+        }
         dataStores[id] = { ...entry, options: opts };
       }
     }
@@ -90,12 +94,20 @@ export async function startTomeServer(options?: {
       .join(",")}`,
   );
 
+  const searchBackends = new Map<string, unknown>();
+  for (const entry of session.registry.list()) {
+    if (entry.kind === "fts") {
+      searchBackends.set(entry.id, entry.search);
+    }
+  }
+
   const deferred = openTomeGraphServicesDeferred(
     { store: session.writeContext.store, cache: session.writeContext.cache },
     {
       progress,
       writeContext: session.writeContext,
       skipStoreSyncSubscribe: true,
+      searchBackends,
     },
   );
 
@@ -107,6 +119,10 @@ export async function startTomeServer(options?: {
   const graphStartedAt = performance.now();
   console.log("[tome-server] cache sync starting…");
   await session.writeContext.sync.ensureReadyAsync();
+  if (session.wire) {
+    await session.wire.runInitialFull();
+  }
+  await deferred.extensionsReady;
   syncStatus.markReady();
   // Observers already installed by SyncGraphWire — do not subscribeStoreToCacheSync again.
   deferred.startWatching();

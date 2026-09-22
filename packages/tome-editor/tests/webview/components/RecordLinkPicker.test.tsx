@@ -34,11 +34,14 @@ describe("RecordLinkPicker CSS", () => {
 
 describe("RecordLinkPicker", () => {
   test("preserves API result order without re-sorting", async () => {
-    const search = mock(async () => [
-      { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Zeta", primaryTypeTitle: null },
-      { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Alpha", primaryTypeTitle: null },
-      { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Mike", primaryTypeTitle: null },
-    ]);
+    const search = mock(async () => ({
+      results: [
+        { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Zeta", primaryTypeTitle: null },
+        { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Alpha", primaryTypeTitle: null },
+        { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Mike", primaryTypeTitle: null },
+      ],
+      searchAvailable: true,
+    }));
     const api = {
       ...makeMockEditorApi(),
       search,
@@ -64,19 +67,22 @@ describe("RecordLinkPicker", () => {
   });
 
   test("shows corpus label suffix when present on a result", async () => {
-    const search = mock(async () => [
-      {
-        id: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
-        title: "Alpha",
-        primaryTypeTitle: null,
-        corpusLabel: "Corpus B",
-      },
-      {
-        id: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
-        title: "Beta",
-        primaryTypeTitle: null,
-      },
-    ]);
+    const search = mock(async () => ({
+      results: [
+        {
+          id: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
+          title: "Alpha",
+          primaryTypeTitle: null,
+          corpusLabel: "Corpus B",
+        },
+        {
+          id: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
+          title: "Beta",
+          primaryTypeTitle: null,
+        },
+      ],
+      searchAvailable: true,
+    }));
     const api = {
       ...makeMockEditorApi(),
       search,
@@ -101,11 +107,14 @@ describe("RecordLinkPicker", () => {
   });
 
   test("omits excluded ids from search results", async () => {
-    const search = mock(async () => [
-      { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Alpha", primaryTypeTitle: null },
-      { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Beta", primaryTypeTitle: null },
-      { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Gamma", primaryTypeTitle: null },
-    ]);
+    const search = mock(async () => ({
+      results: [
+        { id: "AAAAAAAAAAAAAAAAAAAAAAAAAA", title: "Alpha", primaryTypeTitle: null },
+        { id: "BBBBBBBBBBBBBBBBBBBBBBBBBB", title: "Beta", primaryTypeTitle: null },
+        { id: "CCCCCCCCCCCCCCCCCCCCCCCCCC", title: "Gamma", primaryTypeTitle: null },
+      ],
+      searchAvailable: true,
+    }));
     const api = {
       ...makeMockEditorApi(),
       search,
@@ -131,7 +140,7 @@ describe("RecordLinkPicker", () => {
   });
 
   test("requests full type-scoped result set when allowedTypeIds is set", async () => {
-    const search = mock(async () => []);
+    const search = mock(async () => ({ results: [], searchAvailable: true }));
     const api = {
       ...makeMockEditorApi(),
       search,
@@ -158,7 +167,7 @@ describe("RecordLinkPicker", () => {
   });
 
   test("focuses search input when autoFocus is set on embedded picker", async () => {
-    const search = mock(async () => []);
+    const search = mock(async () => ({ results: [], searchAvailable: true }));
     const api = {
       ...makeMockEditorApi(),
       search,
@@ -187,7 +196,7 @@ describe("RecordLinkPicker", () => {
       title: `Record ${String(index + 1).padStart(2, "0")}`,
       primaryTypeTitle: null,
     }));
-    const search = mock(async () => items);
+    const search = mock(async () => ({ results: items, searchAvailable: true }));
     const onSelect = mock(async (_targetId: string) => {});
     const api = {
       ...makeMockEditorApi(),

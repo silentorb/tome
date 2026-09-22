@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 13;
+export const SCHEMA_VERSION = 14;
 
 /** Hot node fields stored as real columns on `nodes` (never in `node_properties`). */
 export const PROMOTED_NODE_COLUMNS = [
@@ -89,6 +89,23 @@ CREATE INDEX IF NOT EXISTS idx_rel_proj_source ON relationship_projections(sourc
 CREATE INDEX IF NOT EXISTS idx_rel_proj_target ON relationship_projections(target_node_id, type);
 CREATE INDEX IF NOT EXISTS idx_rel_record_properties_key ON relationship_record_properties(key);
 CREATE INDEX IF NOT EXISTS idx_rel_proj_properties_key ON relationship_projection_properties(key);
+
+CREATE TABLE IF NOT EXISTS expression_indexes (
+  digest TEXT PRIMARY KEY NOT NULL,
+  status TEXT NOT NULL,
+  built_at TEXT,
+  expression_json TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE TABLE IF NOT EXISTS expression_index_values (
+  digest TEXT NOT NULL REFERENCES expression_indexes(digest) ON DELETE CASCADE,
+  member_id TEXT NOT NULL,
+  sort_value REAL NOT NULL,
+  PRIMARY KEY (digest, member_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_expression_index_sort
+  ON expression_index_values(digest, sort_value);
 `;
 
 /** @deprecated Dynamic property configuration lives in content/model/dynamic-properties.json (schema v4+). */

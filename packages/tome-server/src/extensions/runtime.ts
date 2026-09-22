@@ -8,6 +8,7 @@ import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-serv
 import type { EditorPageBlockModule } from "tome-interfaces/page-block/editor";
 import type { HtmlPageBlockModule } from "tome-interfaces/page-block/html";
 import type { ServerPageBlockModule } from "tome-interfaces/page-block/server";
+import type { SearcherModule, TomeSearch } from "tome-interfaces/search";
 import {
   findComponentById,
   loadExtensionsFromContent,
@@ -17,8 +18,9 @@ import {
   schemaDiagramPageBlockServices,
   type ExtensionsManifest,
   type ResolvedExtensionComponent,
+  type ResolvedSearcherComponent,
 } from "tome-db";
-import { EditorPageBlockHostImpl, ServerPageBlockHostImpl } from "./hosts";
+import { EditorPageBlockHostImpl, SearcherHostImpl, ServerPageBlockHostImpl } from "./hosts";
 import { HtmlPageBlockHostImpl } from "./html-host";
 import {
   prepareEditorBodyWithPageBlocks,
@@ -36,6 +38,7 @@ export interface LoadedExtensionModules {
   editorModule?: string;
   htmlModule?: string;
   serverModule?: string;
+  searcherModule?: string;
 }
 
 interface CachedEditorBundle {
@@ -76,6 +79,17 @@ async function importServerModule(modulePath: string, host: ServerPageBlockHostI
   register(host);
 }
 
+async function importSearcherModule(modulePath: string, host: SearcherHostImpl): Promise<void> {
+  const loaded = (await import(modulePath)) as SearcherModule & {
+    default?: SearcherModule;
+  };
+  const register = loaded.register ?? loaded.default?.register;
+  if (typeof register !== "function") {
+    throw new Error(`Extension module ${modulePath} must export register(host)`);
+  }
+  register(host);
+}
+
 /** Serialize Bun.build across extensions — concurrent builds are flaky in long-lived server processes. */
 let editorBuildChain: Promise<unknown> = Promise.resolve();
 
@@ -88,6 +102,11 @@ function enqueueEditorBuild<T>(fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+export type ExtensionSearcherHostHooks = {
+  getQueryCache?: () => unknown;
+  getSearcherBackend?: (dataStoreId: string) => unknown;
+};
+
 export class ExtensionServerRuntime {
   readonly #contentPath: string;
   readonly #getGraphQueryServices?: () => ExtensionGraphQueryServices | undefined;
@@ -95,14 +114,17 @@ export class ExtensionServerRuntime {
   readonly #getExecuteImpServices?: () => ExtensionExecuteImpServices | undefined;
   readonly #getCorpusQueryServices?: () => ExtensionCorpusQueryServices | undefined;
   readonly #getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined;
+  readonly #searcherHooks: ExtensionSearcherHostHooks;
   readonly #editorHost = new EditorPageBlockHostImpl();
   readonly #htmlHost = new HtmlPageBlockHostImpl();
   readonly #serverHost = new ServerPageBlockHostImpl();
+  readonly #searcherHost = new SearcherHostImpl();
   readonly #editorBundleCache = new Map<string, CachedEditorBundle>();
   readonly #editorBundleInflight = new Map<string, Promise<string | null>>();
-  #manifest: ExtensionsManifest = { extensions: [], components: [] };
+  #manifest: ExtensionsManifest = { extensions: [], components: [], searchers: [] };
   #loadedModules: LoadedExtensionModules[] = [];
   #lastConfigMtime = -1;
+  #activeSearch: TomeSearch | null = null;
 
   constructor(
     contentPath: string,
@@ -111,6 +133,7 @@ export class ExtensionServerRuntime {
     getExecuteImpServices?: () => ExtensionExecuteImpServices | undefined,
     getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined,
     getCorpusQueryServices?: () => ExtensionCorpusQueryServices | undefined,
+    searcherHooks?: ExtensionSearcherHostHooks,
   ) {
     this.#contentPath = contentPath;
     this.#getGraphQueryServices = getGraphQueryServices;
@@ -118,6 +141,7 @@ export class ExtensionServerRuntime {
     this.#getExecuteImpServices = getExecuteImpServices;
     this.#getGraphMutateServices = getGraphMutateServices;
     this.#getCorpusQueryServices = getCorpusQueryServices;
+    this.#searcherHooks = searcherHooks ?? {};
   }
 
   get editorHost(): EditorPageBlockHostImpl {
@@ -130,6 +154,14 @@ export class ExtensionServerRuntime {
 
   get manifest(): ExtensionsManifest {
     return this.#manifest;
+  }
+
+  get activeSearch(): TomeSearch | null {
+    return this.#activeSearch;
+  }
+
+  isSearchAvailable(): boolean {
+    return this.#activeSearch !== null;
   }
 
   configMtime(): number {
@@ -147,11 +179,14 @@ export class ExtensionServerRuntime {
   }
 
   async reload(): Promise<void> {
+    const previousSearch = this.#activeSearch;
     const file = loadExtensionsFromContent(this.#contentPath);
     this.#manifest = resolveExtensionsManifest(file);
     this.#editorHost.clear();
     this.#htmlHost.clear();
     this.#serverHost.clear();
+    this.#searcherHost.clear();
+    this.#activeSearch = null;
     this.#editorBundleCache.clear();
     this.#editorBundleInflight.clear();
     this.#loadedModules = [];
@@ -164,6 +199,7 @@ export class ExtensionServerRuntime {
         editorModule: extension.editorModule,
         htmlModule: extension.htmlModule,
         serverModule: extension.serverModule,
+        searcherModule: extension.searcherModule,
       };
       this.#loadedModules.push(record);
 
@@ -178,22 +214,72 @@ export class ExtensionServerRuntime {
         if (extension.serverModule) {
           await importServerModule(extension.serverModule, this.#serverHost);
         }
+        if (extension.searcherModule) {
+          await importSearcherModule(extension.searcherModule, this.#searcherHost);
+        }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         loadErrors.push(`${extension.id}: ${message}`);
         console.error(`[tome-server] Failed to load extension ${extension.id}:`, err);
       }
     }
+
+    this.#activeSearch = await this.#openActiveSearcher();
+    if (previousSearch && previousSearch !== this.#activeSearch) {
+      await previousSearch.close?.();
+    }
+
     if (loadErrors.length > 0 && this.#manifest.extensions.length > 0) {
-      const loadedAny = this.#manifest.components.some(
-        (c) =>
-          this.#editorHost.get(c.implementationId) ||
-          this.#htmlHost.get(c.implementationId) ||
-          this.#serverHost.get(c.implementationId),
-      );
+      const loadedAny =
+        this.#manifest.components.some(
+          (c) =>
+            this.#editorHost.get(c.implementationId) ||
+            this.#htmlHost.get(c.implementationId) ||
+            this.#serverHost.get(c.implementationId),
+        ) || this.#activeSearch !== null;
       if (!loadedAny) {
         throw new Error(`All extensions failed to load:\n${loadErrors.join("\n")}`);
       }
+    }
+  }
+
+  async #openActiveSearcher(): Promise<TomeSearch | null> {
+    const searchers = this.#manifest.searchers;
+    if (searchers.length === 0) return null;
+    if (searchers.length > 1) {
+      const ids = searchers.map((s) => s.id).join(", ");
+      throw new Error(
+        `Exactly one enabled searcher is allowed; found ${searchers.length}: ${ids}`,
+      );
+    }
+    const component = searchers[0]!;
+    const registration = this.#searcherHost.get(component.implementationId);
+    if (!registration) {
+      console.error(
+        `[tome-server] Searcher "${component.id}" implementation "${component.implementationId}" was not registered; search unavailable`,
+      );
+      return null;
+    }
+    const dataStoreId =
+      typeof component.params.dataStoreId === "string"
+        ? component.params.dataStoreId.trim()
+        : undefined;
+    try {
+      return await registration.open({
+        params: component.params,
+        dataStoreId: dataStoreId || undefined,
+        host: {
+          getQueryCache: this.#searcherHooks.getQueryCache,
+          getSearcherBackend: this.#searcherHooks.getSearcherBackend,
+        },
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(
+        `[tome-server] Failed to open searcher "${component.id}"; search unavailable:`,
+        message,
+      );
+      return null;
     }
   }
 

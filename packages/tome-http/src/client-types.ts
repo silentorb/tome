@@ -190,7 +190,7 @@ export interface TomeHttpClient {
       participatesInProjectionType?: string;
       onlyActivePickingRole?: "source" | "target";
     },
-  ): Promise<NodeSummary[]>;
+  ): Promise<{ results: NodeSummary[]; searchAvailable: boolean }>;
   listRecent(limit?: number): Promise<NodeSummary[]>;
   saveNode(
     id: string,

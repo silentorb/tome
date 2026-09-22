@@ -44,7 +44,7 @@ function makeApi(
   let settings = options?.settings ?? emptyUserSettings();
   const search =
     options?.search ??
-    mock(async () => results);
+    mock(async () => ({ results, searchAvailable: true }));
   return {
     search,
     getUserSettings: mock(async () => settings),
@@ -98,7 +98,10 @@ describe("GlobalSearch", () => {
   });
 
   test("shows body match preview when adapter returns matchPreview", async () => {
-    const search = mock(async () => resultsWithPreview);
+    const search = mock(async () => ({
+      results: resultsWithPreview,
+      searchAvailable: true,
+    }));
     const api = makeApi(resultsWithPreview, { search });
 
     const { container } = renderGlobalSearch({
@@ -116,7 +119,10 @@ describe("GlobalSearch", () => {
   });
 
   test("calls search without includeBody option", async () => {
-    const search = mock(async () => sampleResults);
+    const search = mock(async () => ({
+      results: sampleResults,
+      searchAvailable: true,
+    }));
     const api = makeApi(sampleResults, { search });
 
     renderGlobalSearch({

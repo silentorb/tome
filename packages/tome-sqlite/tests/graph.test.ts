@@ -105,6 +105,39 @@ describe("GraphDatabase", () => {
     db.close();
   });
 
+  test("searchNodesByTitle filters allowedNodeIds in SQL", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "search-node-ids.sqlite");
+    const db = new GraphDatabase(dbPath);
+    db.upsertNode("a", { title: "Alpha" });
+    db.upsertNode("b", { title: "Alphabet" });
+    expect(
+      db.searchNodesByTitle("%Alph%", 10, undefined, new Set(["b"])).map((r) => r.id),
+    ).toEqual(["b"]);
+    expect(db.searchNodesByTitle("%Alph%", 10, undefined, new Set())).toEqual([]);
+    db.close();
+  });
+
+  test("searchNodesByTitle filters allowedTypeIds via EXISTS", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "search-types.sqlite");
+    const perspective = "000000000000000000000000A1:1";
+    const typeId = "type-table";
+    const memberId = "member-a";
+    const outsiderId = "outsider-b";
+    const db = new GraphDatabase(dbPath, {
+      memberPerspectives: () => [perspective],
+    });
+    db.upsertNode(typeId, { title: "Type" });
+    db.upsertNode(memberId, { title: "Alpha Member" });
+    db.upsertNode(outsiderId, { title: "Alpha Outsider" });
+    db.upsertRelationship(memberId, typeId, perspective);
+    expect(
+      db.searchNodesByTitle("%Alpha%", 10, [typeId]).map((r) => r.id),
+    ).toEqual([memberId]);
+    db.close();
+  });
+
   test("stores relationship promoted columns and EAV leftovers separately", () => {
     tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "rel-eav.sqlite");
@@ -424,6 +457,28 @@ describe("GraphDatabase", () => {
     });
     expect(withMemberSide.total).toBe(6);
     expect(withMemberSide.relationships[0]?.sourceNodeId).toBe(memberOnly);
+
+    const digest = "aabbccddeeff00112233445566778899";
+    db.replaceExpressionIndexValues(digest, "{}", [
+      { memberId: "01MEMBER000000000000000000", sortValue: 10 },
+      { memberId: "01MEMBER000000000000000001", sortValue: 50 },
+      { memberId: memberOnly, sortValue: 1 },
+    ]);
+    expect(db.getExpressionIndexStatus(digest)).toBe("ready");
+    const byExpr = db.listSetMemberRowConnectionsWindow(setId, {
+      projections: [{ setProjection, memberProjection }],
+      sorts: [{ column: "dyn_metric", direction: "desc" }],
+      expressionIndexSorts: [{ column: "dyn_metric", digest }],
+      limit: 2,
+      offset: 0,
+    });
+    expect(byExpr.relationships.map((r) => r.sourceNodeId)).toEqual([
+      "01MEMBER000000000000000001",
+      "01MEMBER000000000000000000",
+    ]);
+
+    db.upsertRelationship(setId, "01MEMBER000000000000000002", setProjection, {});
+    expect(db.getExpressionIndexStatus(digest)).toBe("stale");
 
     db.close();
   });

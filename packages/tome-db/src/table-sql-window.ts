@@ -8,6 +8,10 @@ import {
   getQueryCache,
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
+import {
+  planFixedDynSortIndexes,
+  sortsIncludeColumnSetDynKey,
+} from "./dynamic-properties/expression-index";
 
 /**
  * True when table `q` (name filter / relevance) is set — deferred exploration hold
@@ -29,13 +33,35 @@ export function tableRowsQueryUsesDynSort(
   return sorts.some((sort) => dynKeys.has(sort.column));
 }
 
+/**
+ * Dyn sorts that cannot use expression indexes yet (column-sets, or fixed without IR).
+ * Fixed dyn sorts with a registered aggregate return false here when plans succeed.
+ */
+export function tableRowsQueryUsesUnresolvedDynSort(
+  store: RelationshipReadStore,
+  ownerId: string,
+  sorts: readonly ViewSortSpec[] | undefined,
+  columnDefs: readonly DatabaseColumnDef[],
+  contentDir?: string,
+): boolean {
+  if (!tableRowsQueryUsesDynSort(sorts, columnDefs)) return false;
+  const dynKeys = new Set(
+    columnDefs.filter((def) => def.source === "dynamic").map((def) => def.key),
+  );
+  if (sortsIncludeColumnSetDynKey(store, ownerId, sorts, dynKeys, contentDir)) {
+    return true;
+  }
+  const plans = planFixedDynSortIndexes(store, ownerId, sorts, contentDir);
+  return plans === null;
+}
+
 function isSafeSqlPropertyKey(key: string): boolean {
   return /^[A-Za-z_][A-Za-z0-9_]*$/.test(key);
 }
 
 /**
  * Sorts that cannot be expressed in the Items SQL window (unknown / unsafe keys).
- * Dyn sorts are checked separately via {@link tableRowsQueryUsesDynSort}.
+ * Dyn sorts are checked separately via {@link tableRowsQueryUsesUnresolvedDynSort}.
  */
 export function tableRowsQueryUsesNonExpressibleSort(
   sorts: readonly ViewSortSpec[] | undefined,
@@ -73,18 +99,27 @@ export function shouldUseSqlRelationWindow(
 
 /**
  * Items / database custom views: SQL window when cache present and not deferred
- * (`q`, dyn sort, or non-expressible sort).
+ * (`q`, unresolved dyn sort, or non-expressible sort).
+ * Fixed dyn sorts with expression indexes are allowed on the SQL path.
  */
 export function shouldUseSqlDatabaseWindow(
   store: RelationshipReadStore,
   query: TableRowsQuery | undefined,
   sorts: readonly ViewSortSpec[] | undefined,
   columnDefs: readonly DatabaseColumnDef[],
+  options?: { ownerId?: string; contentDir?: string },
 ): boolean {
   if (tableRowsQueryUsesDeferredSearch(query)) return false;
-  if (tableRowsQueryUsesDynSort(sorts, columnDefs)) return false;
+  if (getQueryCache(store) === null) return false;
   if (tableRowsQueryUsesNonExpressibleSort(sorts, columnDefs)) return false;
-  return getQueryCache(store) !== null;
+  const ownerId = options?.ownerId;
+  if (ownerId && tableRowsQueryUsesUnresolvedDynSort(store, ownerId, sorts, columnDefs, options?.contentDir)) {
+    return false;
+  }
+  if (!ownerId && tableRowsQueryUsesDynSort(sorts, columnDefs)) {
+    return false;
+  }
+  return true;
 }
 
 /**

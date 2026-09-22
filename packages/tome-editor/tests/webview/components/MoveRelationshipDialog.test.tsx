@@ -19,13 +19,16 @@ describe("MoveRelationshipDialog", () => {
           participatesInProjectionType?: string;
           onlyActivePickingRole?: "source" | "target";
         },
-      ) => [
-        {
-          id: FIXTURE_TARGET_ID,
-          title: "Destination",
-          primaryTypeTitle: null,
-        },
-      ],
+      ) => ({
+        results: [
+          {
+            id: FIXTURE_TARGET_ID,
+            title: "Destination",
+            primaryTypeTitle: null,
+          },
+        ],
+        searchAvailable: true,
+      }),
     );
     const onMove = mock(async () => {});
     const api: EditorApi = {

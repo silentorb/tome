@@ -136,6 +136,8 @@ export interface TomeGraphServices {
     allowedTypeIds?: string[],
     options?: SearchNodesOptions,
   ): NodeSummary[];
+  /** Whether a searcher extension is active (non-empty queries are supported). */
+  isSearchAvailable(): boolean;
   listRecent(limit?: number): NodeSummary[];
   saveDocument(id: string, document: NodeBodyDocument): boolean;
   saveTitle(id: string, title: string): boolean;

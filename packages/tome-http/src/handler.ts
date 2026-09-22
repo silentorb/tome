@@ -307,6 +307,7 @@ async function dispatchApiRequest(
             participatesInProjectionType,
             onlyActivePickingRole,
           }),
+          searchAvailable: db.isSearchAvailable(),
         });
       }
 

@@ -55,3 +55,4 @@ James has 113 outgoing `SCENES` relationships in the current graph.
 
 - Unit test: character with N `SCENES` relationships returns `"N"`.
 - Integration: Characters type table view includes `all_scene_count`; James row equals 113.
+- Items sorts on this column use a query-cache **expression index** built from the DynAggregate IR (see [expression-indexes.md](../features/expression-indexes.md)).

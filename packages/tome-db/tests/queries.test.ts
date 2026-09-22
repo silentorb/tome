@@ -45,7 +45,7 @@ describe("queries", () => {
     expect(hits.some((h) => h.id === "00000000000000000000000004")).toBe(true);
   });
 
-  test("searchNodes ranks exact title matches before longer substring matches", () => {
+  test("searchNodes orders title matches by title ascending (SQL only)", () => {
     const exactId = "0000000000000000000000001T";
     const longerId = "00000000000000000000000024";
     seedTestNode(fixture, {
@@ -58,7 +58,8 @@ describe("queries", () => {
     });
 
     const hits = searchNodes(fixture.ctx.cache, "Surreal", 10);
-    expect(hits.map((row) => row.id)).toEqual([exactId, longerId]);
+    // LIKE path uses ORDER BY title COLLATE NOCASE — no TS relevance ranking.
+    expect(hits.map((row) => row.id)).toEqual([longerId, exactId]);
   });
 
   test("performTomeTextSearch lists title matches before body-only matches", () => {

@@ -114,6 +114,8 @@ See [tome-server.md](./tome-server.md). Example:
 
 Default when `sync.graph` omitted: each flatfile storeId → query sqlite storeId.
 
+Non-SQLite sinks (e.g. `tome-search-sqlite` FTS) are additional `dataStores` entries wired with explicit observe edges (e.g. marloth → fts) so indexing can be corpus-selective. See [search.md](./search.md).
+
 ## Verification
 
 - Package tests under `packages/tome-db/tests/sync/` and `packages/tome-server/tests/`.

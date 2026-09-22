@@ -1,6 +1,6 @@
 export const EXTENSIONS_FILE_VERSION = 1;
 
-export type ExtensionComponentKind = "page-block";
+export type ExtensionComponentKind = "page-block" | "searcher";
 
 export interface ExtensionSlashMenuConfig {
   group?: string;
@@ -14,6 +14,7 @@ export interface ExtensionEntry {
   editorModule?: string;
   htmlModule?: string;
   serverModule?: string;
+  searcherModule?: string;
   params?: Record<string, unknown>;
 }
 
@@ -79,6 +80,8 @@ function parseExtensionEntry(raw: unknown, path: string): ExtensionEntry {
   if (htmlModule) entry.htmlModule = htmlModule;
   const serverModule = parseOptionalString(obj.serverModule, `${path}.serverModule`);
   if (serverModule) entry.serverModule = serverModule;
+  const searcherModule = parseOptionalString(obj.searcherModule, `${path}.searcherModule`);
+  if (searcherModule) entry.searcherModule = searcherModule;
   const params = parseParams(obj.params, `${path}.params`);
   if (params) entry.params = params;
   return entry;
@@ -86,7 +89,7 @@ function parseExtensionEntry(raw: unknown, path: string): ExtensionEntry {
 
 function parseComponentKind(value: unknown, path: string): ExtensionComponentKind {
   const kind = parseRequiredString(value, path);
-  if (kind !== "page-block") {
+  if (kind !== "page-block" && kind !== "searcher") {
     throw new Error(`${path}: unsupported kind "${kind}"`);
   }
   return kind;
@@ -123,8 +126,12 @@ function parseComponentEntry(raw: unknown, path: string): ExtensionComponentEntr
     label: parseRequiredString(obj.label, `${path}.label`),
     enabled: parseBoolean(obj.enabled, `${path}.enabled`, true),
   };
-  const slashMenu = parseSlashMenu(obj.slashMenu, `${path}.slashMenu`);
-  if (slashMenu) entry.slashMenu = slashMenu;
+  if (entry.kind === "page-block") {
+    const slashMenu = parseSlashMenu(obj.slashMenu, `${path}.slashMenu`);
+    if (slashMenu) entry.slashMenu = slashMenu;
+  } else if (obj.slashMenu !== undefined) {
+    throw new Error(`${path}.slashMenu: not allowed for kind "searcher"`);
+  }
   const params = parseParams(obj.params, `${path}.params`);
   if (params) entry.params = params;
   return entry;

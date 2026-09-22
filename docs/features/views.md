@@ -67,12 +67,14 @@ When the editor is backed by the **SQLite query cache**, filter, sort, join, and
 
 | Mode | Why deferred |
 | --- | --- |
-| Dynamic fixed / column-set **sort** keys | Need a product/SQL story for dyn values before they join the SQL-window path |
+| Dynamic **column-set** sort keys (`scene_count__*`, …) | Dimension-expanded columns need index/discovery story beyond fixed aggregates |
 | Table name filter **`q`** (relevance ranking) | Expect **next-level Tome search**, not `title LIKE` as the architecture |
 
-**Coverage today:** relation table sections, **Items / database custom views**, and **composed / generated presentations** use SQL windows when not deferred (`q` → non-SQL full-materialize path; flatfile remains exempt).
+**Fixed dyn sorts** (`weighted_use`, `wonder`, `all_scene_count`, …): content-addressed **expression indexes** in the SQLite cache (lazy-built from a DynAggregate IR on miss). Items windows `ORDER BY` the indexed values; display still hydrates dyn cells on the returned window only. See [dynamic-properties.md](./dynamic-properties.md) § Expression indexes.
 
-Relation-cell hydration for **display** (and dyn **display** cells on Items / composed) runs for the returned window only. Sorting *by* a dynamic column stays on the deferred path until that exploration lands.
+**Coverage today:** relation table sections, **Items / database custom views**, and **composed / generated presentations** use SQL windows when not deferred (`q` or column-set dyn sort → non-SQL full-materialize path; flatfile remains exempt).
+
+Relation-cell hydration for **display** (and dyn **display** cells on Items / composed) runs for the returned window only.
 
 ## Migration
 

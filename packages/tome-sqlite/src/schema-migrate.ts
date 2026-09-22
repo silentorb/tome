@@ -403,6 +403,7 @@ export function migrateSchema(db: Database): void {
   migrateSchemaToV10(db);
   migrateSchemaToV12(db);
   migrateSchemaToV13(db);
+  migrateSchemaToV14(db);
 
   const versionRow = db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get() as
     | { value: string }
@@ -414,6 +415,27 @@ export function migrateSchema(db: Database): void {
       "INSERT INTO meta (key, value) VALUES ('schema_version', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
     ).run(String(SCHEMA_VERSION));
   }
+}
+
+/** Expression index catalog + values for dyn / Imp sort keys (schema v13 → v14). */
+export function migrateSchemaToV14(db: Database): void {
+  if (tableExists(db, "expression_indexes")) return;
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS expression_indexes (
+      digest TEXT PRIMARY KEY NOT NULL,
+      status TEXT NOT NULL,
+      built_at TEXT,
+      expression_json TEXT NOT NULL DEFAULT '{}'
+    );
+    CREATE TABLE IF NOT EXISTS expression_index_values (
+      digest TEXT NOT NULL REFERENCES expression_indexes(digest) ON DELETE CASCADE,
+      member_id TEXT NOT NULL,
+      sort_value REAL NOT NULL,
+      PRIMARY KEY (digest, member_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_expression_index_sort
+      ON expression_index_values(digest, sort_value);
+  `);
 }
 
 /** @deprecated Use migrateSchema */
