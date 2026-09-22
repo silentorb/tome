@@ -147,4 +147,52 @@ describe("tome-search-like", () => {
     const hits = await opened.search({ query: "Filter Keep", limit: 5 });
     expect(hits.some((h) => h.id === "000000000000000000000000C6")).toBe(true);
   });
+
+  test("searchWindow returns total, offset, and uncapped pages", async () => {
+    const ids = [
+      "000000000000000000000000D1",
+      "000000000000000000000000D2",
+      "000000000000000000000000D3",
+    ];
+    for (const [i, id] of ids.entries()) {
+      seedTestNode(fixture, {
+        id,
+        properties: { title: `Window Like Item ${String.fromCharCode(65 + i)}` },
+      });
+    }
+
+    const page1 = await search.searchWindow({
+      query: "Window Like Item",
+      limit: 2,
+      offset: 0,
+      allowedNodeIds: new Set(ids),
+    });
+    expect(page1.total).toBe(3);
+    expect(page1.hits).toHaveLength(2);
+
+    const page2 = await search.searchWindow({
+      query: "Window Like Item",
+      limit: 2,
+      offset: 2,
+      allowedNodeIds: new Set(ids),
+    });
+    expect(page2.total).toBe(3);
+    expect(page2.hits).toHaveLength(1);
+
+    const all = await search.searchWindow({
+      query: "Window Like Item",
+      limit: null,
+      allowedNodeIds: new Set(ids),
+    });
+    expect(all.hits).toHaveLength(3);
+  });
+
+  test("searchWindow empty scope returns zero total", async () => {
+    const result = await search.searchWindow({
+      query: "anything",
+      limit: 10,
+      allowedNodeIds: new Set(),
+    });
+    expect(result).toEqual({ hits: [], total: 0 });
+  });
 });

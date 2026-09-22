@@ -371,7 +371,31 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     expect(windowed?.rows.map((row) => row.name)).toEqual(["Many inspirations"]);
     expect(windowed?.rowsWindow).toEqual({ offset: 0, limit: 1, total: 3, hasMore: true });
 
-    const filtered = getDatabaseViewDetail(db, featuresDb, "by-inspirations", contentDir, {
+    const pattern = (q: string) => `%${q.replace(/[%_\\]/g, "\\$&")}%`;
+    const search = {
+      search() {
+        return [];
+      },
+      searchWindow(request: {
+        query: string;
+        limit?: number | null;
+        offset?: number;
+        allowedNodeIds?: ReadonlySet<string>;
+      }) {
+        const result = db.searchNodesLikeWindow(pattern(request.query), {
+          offset: request.offset,
+          limit: request.limit,
+          allowedNodeIds: request.allowedNodeIds,
+        });
+        return {
+          hits: result.rows.map((row) => ({ id: row.id, title: row.title })),
+          total: result.total,
+        };
+      },
+    };
+    const store = Object.assign(db, { getSearch: () => search });
+
+    const filtered = getDatabaseViewDetail(store, featuresDb, "by-inspirations", contentDir, {
       q: "few",
       limit: 10,
       offset: 0,

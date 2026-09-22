@@ -7,10 +7,25 @@ export type TomeSearchRequest = {
   allowedNodeIds?: ReadonlySet<string>;
 };
 
+/** Windowed search for table `q` (offset + total; no picker-style 100-cap). */
+export type TomeSearchWindowRequest = {
+  query: string;
+  /** Omit or null → return all matches after offset. */
+  limit?: number | null;
+  offset?: number;
+  allowedTypeIds?: readonly string[];
+  allowedNodeIds?: ReadonlySet<string>;
+};
+
 export type TomeSearchHit = {
   id: string;
   title: string;
   matchPreview?: SearchMatchPreview;
+};
+
+export type TomeSearchWindowResult = {
+  hits: TomeSearchHit[];
+  total: number;
 };
 
 /**
@@ -19,6 +34,13 @@ export type TomeSearchHit = {
  */
 export interface TomeSearch {
   search(request: TomeSearchRequest): TomeSearchHit[] | Promise<TomeSearchHit[]>;
+  /**
+   * Scoped, paginated search for editor table `q`.
+   * Must return accurate `total` and honor offset/limit without a hard 100-cap.
+   */
+  searchWindow(
+    request: TomeSearchWindowRequest,
+  ): TomeSearchWindowResult | Promise<TomeSearchWindowResult>;
   ensureReady?(): void | Promise<void>;
   close?(): void | Promise<void>;
 }

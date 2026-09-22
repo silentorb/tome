@@ -6,6 +6,8 @@ export type {
   TomeSearch,
   TomeSearchHit,
   TomeSearchRequest,
+  TomeSearchWindowRequest,
+  TomeSearchWindowResult,
   SearcherHost,
   SearcherModule,
   SearcherRegistration,

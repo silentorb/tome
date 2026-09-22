@@ -2,19 +2,20 @@
 
 ## Summary
 
-Node search (`GET /api/nodes/search`, Imp `type: "search"`) is provided by a **`searcher`** extension component. Host packages never hardcode a backend: configure which searcher is enabled in `content/model/extensions.json`. Indexing for FTS (and future Meilisearch) uses Imp **`sync.graph`** sinks registered as `dataStores`.
+Node search (`GET /api/nodes/search`, Imp `type: "search"`) and **editor table `q`** are provided by a **`searcher`** extension component. Host packages never hardcode a backend: configure which searcher is enabled in `content/model/extensions.json`. Indexing for FTS (and future Meilisearch) uses Imp **`sync.graph`** sinks registered as `dataStores`.
 
 | Concern | Mechanism |
 | --- | --- |
 | Who answers queries | `kind: "searcher"` + `searcherModule` |
 | Who maintains an FTS index | `dataStores` entry + `sync.graph` observe edges |
+| Table utility-bar `q` | Same searcher via `searchWindow` + `allowedNodeIds` (set members / related / composed scope) |
 
 Shipped backends:
 
 | Package | Role |
 | --- | --- |
-| `tome-search-like` | SQL `LIKE` only (title then body; SQL order; no TS relevance ranking) |
-| `tome-search-sqlite` | SQLite FTS5 sink + searcher (default for workbench) |
+| `tome-search-like` | SQL `LIKE` only (title then body; SQL order; no TS relevance ranking); implements `search` + `searchWindow` |
+| `tome-search-sqlite` | SQLite FTS5 sink + searcher (default for workbench); implements `search` + `searchWindow` |
 
 Meilisearch is deferred — see [tasks/tome-meilisearch.md](../../tasks/tome-meilisearch.md).
 

@@ -2,6 +2,8 @@ import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import {
   listComposedGroupHeaders,
   listComposedSetMemberRowConnectionsWindow,
+  listComposedMemberNodeIds,
+  listComposedSetMemberRowConnectionsForMemberIds,
   listDistinctSetMemberScopeIds,
   readStoreGetNode,
 } from "../graph-store/relationship-read";
@@ -33,7 +35,12 @@ import {
   buildTableRowsWindow,
   resolveWindowBounds,
 } from "../table-rows-window";
-import { shouldUseSqlComposedWindow } from "../table-sql-window";
+import { shouldUseSqlComposedWindow, shouldUseSqlComposedSearchWindow } from "../table-sql-window";
+import {
+  membershipEdgesForHits,
+  resolveTableSearcher,
+  runTableSearchWindow,
+} from "../table-search-window";
 import type {
   DatabaseRow,
   DatabaseViewDetail,
@@ -265,6 +272,7 @@ function buildComposedDatabaseViewSql(
   associationId: string,
   memberSidePerspective: string,
   sectionLabel: string,
+  tableSearch = false,
 ): DatabaseViewDetail {
   const projections = listSetMemberProjectionPairs(dir);
   const { offset, limit } = resolveWindowBounds(rowsQuery);
@@ -334,21 +342,55 @@ function buildComposedDatabaseViewSql(
       }
     : undefined;
 
-  const { relationships, groupIds, total } = listComposedSetMemberRowConnectionsWindow(
-    db,
-    databaseId,
-    {
-      projections,
-      scope: scopeFilter,
-      groups: groupsQuery,
-      defaultOrdered: Boolean(composition.reorder),
-      limit,
-      offset,
-    },
-  );
+  const composedQuery = {
+    projections,
+    scope: scopeFilter,
+    groups: groupsQuery,
+    defaultOrdered: Boolean(composition.reorder),
+    limit,
+    offset,
+  };
+
+  let relationships: Relationship[];
+  let groupIds: (string | null)[];
+  let rowsWindow: ReturnType<typeof buildTableRowsWindow>;
+
+  if (tableSearch) {
+    const scopeIds = listComposedMemberNodeIds(db, databaseId, composedQuery);
+    const { hits, rowsWindow: searchWindow } = runTableSearchWindow(
+      resolveTableSearcher(db),
+      rowsQuery,
+      new Set(scopeIds),
+    );
+    const hitIds = hits.map((h) => h.id);
+    const hydrated = listComposedSetMemberRowConnectionsForMemberIds(
+      db,
+      databaseId,
+      composedQuery,
+      hitIds,
+    );
+    relationships = membershipEdgesForHits(hydrated.relationships, hits);
+    if (groupsQuery) {
+      const groupByMember = new Map<string, string | null>();
+      for (let i = 0; i < hydrated.relationships.length; i++) {
+        groupByMember.set(
+          hydrated.relationships[i]!.sourceNodeId,
+          hydrated.groupIds[i] ?? null,
+        );
+      }
+      groupIds = relationships.map((edge) => groupByMember.get(edge.sourceNodeId) ?? null);
+    } else {
+      groupIds = [];
+    }
+    rowsWindow = searchWindow;
+  } else {
+    const windowed = listComposedSetMemberRowConnectionsWindow(db, databaseId, composedQuery);
+    relationships = windowed.relationships;
+    groupIds = windowed.groupIds;
+    rowsWindow = buildTableRowsWindow(offset, limit, windowed.total);
+  }
 
   const evalRows = evalRowsFromMembership(db, relationships, false);
-  const rowsWindow = buildTableRowsWindow(offset, limit, total);
 
   let memberGroupIds: Map<string, string | null> | undefined;
   let groupHeaders: GroupHeader[] | undefined;
@@ -644,6 +686,22 @@ export function buildComposedDatabaseView(
   );
   const sectionLabel = perspectiveDisplayLabel(associations, setSideProjection, associationId);
   const databaseTitle = titleFromProperties(database.properties);
+
+  if (shouldUseSqlComposedSearchWindow(db, rowsQuery)) {
+    return buildComposedDatabaseViewSql(
+      db,
+      composition,
+      requestedTabId,
+      dir,
+      rowsQuery,
+      databaseId,
+      databaseTitle,
+      associationId,
+      memberSidePerspective,
+      sectionLabel,
+      true,
+    );
+  }
 
   if (shouldUseSqlComposedWindow(db, rowsQuery)) {
     return buildComposedDatabaseViewSql(

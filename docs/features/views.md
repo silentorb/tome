@@ -61,17 +61,13 @@ When the editor is backed by the **SQLite query cache**, filter, sort, join, and
 
 **Flatfile** backends are exempt and may still use in-memory collection ops.
 
-**Binary routing (no hybrids):** if the request uses a deferred mode below, keep the **entire** legacy full-materialize path. Otherwise use the **entire** SQL window path. Never SQL-`LIMIT` then sort/filter in JS.
+**Binary routing (no hybrids):** when table `q` is set, use the **scoped searcher window** path (not view sorts + SQL limit, and not JS substring relevance). When `q` is empty, use the **SQL window** path for expressible sorts. Never SQL-`LIMIT` then sort/filter in JS. Flatfile remains exempt (in-memory `applyNameFilterAndWindow`).
 
-**Deferred (exploration holds — not a LIKE end state):**
-
-| Mode | Why deferred |
-| --- | --- |
-| Table name filter **`q`** (relevance ranking) | Expect **next-level Tome search**, not `title LIKE` as the architecture |
+**Table `q` (lifted):** editor table name filter goes through the active [`TomeSearch`](./search.md) via `searchWindow` scoped with `allowedNodeIds` (set members / related nodes / composed scope). Ranking and pagination (`total` / `offset` / `limit`) come from the searcher (FTS or LIKE). Dyn and relation **display** still hydrate only the returned window. No searcher → empty window (`total: 0`), matching global search unavailability.
 
 **Dyn sorts** (fixed keys such as `weighted_use` / `wonder` / `all_scene_count`, and column-set keys such as `scene_count__*`): content-addressed **expression indexes** in the SQLite cache (lazy-built from a DynAggregate IR on miss; column-set digests bind `dimensionId`). Items windows `ORDER BY` the indexed values; display still hydrates dyn cells on the returned window only. See [dynamic-properties.md](./dynamic-properties.md) § Expression indexes and [expression-indexes.md](./expression-indexes.md).
 
-**Coverage today:** relation table sections, **Items / database custom views**, and **composed / generated presentations** use SQL windows when not deferred (`q` → non-SQL full-materialize path; flatfile remains exempt).
+**Coverage today:** relation table sections, **Items / database custom views**, and **composed / generated presentations** use SQL windows when `q` is empty; with `q`, they use scoped searcher windows (flatfile remains on the legacy name-filter path).
 
 Relation-cell hydration for **display** (and dyn **display** cells on Items / composed) runs for the returned window only.
 

@@ -16,7 +16,7 @@ Content-addressed **sort indexes** in the SQLite query cache for expressions tha
 - For **column-set** sorts, the digest also binds **`dimensionId`** (parsed from the materialized column key) so each expanded column has its own index.
 - Index tables live only in the query cache; never write computed dyn answers onto flatfile `IS_A` props.
 - On relationship/node mutations, mark ready indexes **stale**; next Items sort rebuilds (v1 full rebuild).
-- Table `q` stays on the legacy full-materialize path (next-level search hold).
+- Table `q` uses scoped `TomeSearch.searchWindow` (see [search.md](./search.md) and [views.md](./views.md)).
 
 ## Code
 

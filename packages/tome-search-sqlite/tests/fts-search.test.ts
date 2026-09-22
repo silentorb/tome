@@ -198,4 +198,52 @@ describe("tome-search-sqlite", () => {
     expect(hits.map((h) => h.id)).toEqual(["r1"]);
     handle.close();
   });
+
+  test("searchWindow returns total, offset, and uncapped pages", async () => {
+    const docs = Array.from({ length: 5 }, (_, i) => ({
+      id: `w${i}`,
+      title: `Window Fts ${i}`,
+      body: "shared-fts-window-token",
+    }));
+    const handle = openWithDocs(docs);
+    await handle.endpoint.apply({ source: emptySource, scope: { mode: "full" } });
+
+    const page1 = await handle.search.searchWindow({
+      query: "shared-fts-window-token",
+      limit: 2,
+      offset: 0,
+      allowedNodeIds: new Set(docs.map((d) => d.id)),
+    });
+    expect(page1.total).toBe(5);
+    expect(page1.hits).toHaveLength(2);
+
+    const page2 = await handle.search.searchWindow({
+      query: "shared-fts-window-token",
+      limit: 2,
+      offset: 2,
+      allowedNodeIds: new Set(docs.map((d) => d.id)),
+    });
+    expect(page2.total).toBe(5);
+    expect(page2.hits).toHaveLength(2);
+
+    const all = await handle.search.searchWindow({
+      query: "shared-fts-window-token",
+      limit: null,
+      allowedNodeIds: new Set(docs.map((d) => d.id)),
+    });
+    expect(all.hits).toHaveLength(5);
+    handle.close();
+  });
+
+  test("searchWindow empty scope returns zero total", async () => {
+    const handle = openWithDocs([{ id: "e1", title: "Empty Scope" }]);
+    await handle.endpoint.apply({ source: emptySource, scope: { mode: "full" } });
+    const result = await handle.search.searchWindow({
+      query: "Empty",
+      limit: 10,
+      allowedNodeIds: new Set(),
+    });
+    expect(result).toEqual({ hits: [], total: 0 });
+    handle.close();
+  });
 });

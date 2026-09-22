@@ -11,6 +11,8 @@ import { buildDatabaseColumnDefs, normalizeRowCells } from "./database-column-de
 import { resolveContentPath } from "tome-flatfile";
 import {
   listSetMemberRowConnectionsWindow,
+  listSetMemberNodeIds,
+  listSetMemberRowConnectionsForMemberIds,
   readStoreGetNode,
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
@@ -41,7 +43,12 @@ import {
   buildTableRowsWindow,
   resolveWindowBounds,
 } from "./table-rows-window";
-import { shouldUseSqlDatabaseWindow } from "./table-sql-window";
+import { shouldUseSqlDatabaseWindow, shouldUseSqlDatabaseSearchWindow } from "./table-sql-window";
+import {
+  membershipEdgesForHits,
+  resolveTableSearcher,
+  runTableSearchWindow,
+} from "./table-search-window";
 import {
   ensureDynSortIndexes,
   planDynSortIndexes,
@@ -299,6 +306,49 @@ function buildCustomViewDetail(
     hiddenColumnKeys,
     { contentDir },
   );
+
+  if (shouldUseSqlDatabaseSearchWindow(store, rowsQuery)) {
+    const projections = listSetMemberProjectionPairs(contentDir);
+    const scopeIds = listSetMemberNodeIds(store, databaseId, { projections });
+    const { hits, rowsWindow } = runTableSearchWindow(
+      resolveTableSearcher(store),
+      rowsQuery,
+      new Set(scopeIds),
+    );
+    const hitIds = hits.map((h) => h.id);
+    const relationships = membershipEdgesForHits(
+      listSetMemberRowConnectionsForMemberIds(store, databaseId, projections, hitIds),
+      hits,
+    );
+    const evalRows = evalRowsFromMembershipConnections(store, relationships, ordered);
+    const {
+      rows: enrichedRows,
+      dynamicColumnDefs: enrichDynDefs,
+      hiddenColumnKeys: enrichHidden,
+    } = applyDynamicProperties(store, databaseId, tabName, evalRows, undefined, { contentDir });
+    const mergedColumnDefs = buildDatabaseColumnDefs(
+      store,
+      databaseId,
+      enrichDynDefs,
+      enrichHidden,
+      { contentDir },
+    );
+    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+
+    return finishCustomViewDetail({
+      databaseId,
+      databaseTitle,
+      contentDir,
+      viewAssociation,
+      memberSidePerspective,
+      setSideProjection,
+      resolved,
+      tabName,
+      mergedColumnDefs,
+      windowedEvalRows: enrichedRows,
+      rowsWindow,
+    });
+  }
 
   if (shouldUseSqlDatabaseWindow(store, rowsQuery, sorts, gateColumnDefs, {
     ownerId: databaseId,

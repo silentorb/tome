@@ -96,7 +96,7 @@ Sorting Items tables by a dyn column must not full-materialize every member on e
 
 Digest = hash(canonical IR + bound params + context fingerprint: schema enum weights, associations, format version). Column-set sorts also bind **`dimensionId`** into the params bag so each expanded key (`scene_count__{productId}`, …) gets its own digest. Display cells still come from `applyDynamicProperties` on the returned window (not from reading the index), until parity is proven end-to-end.
 
-**Still deferred:** table `q`. Do not write dyn answers onto flatfile `IS_A` properties.
+**Table `q`:** scoped searcher windows (not dyn indexes). Do not write dyn answers onto flatfile `IS_A` properties.
 
 ## Behavior / pipeline
 

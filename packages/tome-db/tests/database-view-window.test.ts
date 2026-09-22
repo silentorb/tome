@@ -153,7 +153,7 @@ describe("database-view SQL windows", () => {
     expect(detail?.rows[0]?.relationCells?.parents).toHaveLength(2);
   });
 
-  test("q keeps legacy filter path and returns matching rows", () => {
+  test("q without searcher returns empty SQL search window", () => {
     const databaseId = "YYYYYYYYYYYYYYYYYYYYYYYYYY";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
@@ -168,8 +168,53 @@ describe("database-view SQL windows", () => {
       limit: 50,
       offset: 0,
     });
+    expect(detail?.rowsWindow.total).toBe(0);
+    expect(detail?.rows).toHaveLength(0);
+  });
+
+  test("q with searcher windows via scoped search without full materialize", () => {
+    const databaseId = "Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1";
+    writeTableSchema(databaseId, []);
+    db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const matchId = "01QMATCH000000000000000001";
+    const otherId = "01QOTHER000000000000000001";
+    db.upsertNode(matchId, { title: "Scoped quest hit" });
+    db.upsertNode(otherId, { title: "Other note" });
+    db.upsertRelationship(matchId, databaseId, memberProjection, {});
+    db.upsertRelationship(otherId, databaseId, memberProjection, {});
+
+    const pattern = (q: string) => `%${q.replace(/[%_\\]/g, "\\$&")}%`;
+    const search = {
+      search() {
+        return [];
+      },
+      searchWindow(request: {
+        query: string;
+        limit?: number | null;
+        offset?: number;
+        allowedNodeIds?: ReadonlySet<string>;
+      }) {
+        const result = db.searchNodesLikeWindow(pattern(request.query), {
+          offset: request.offset,
+          limit: request.limit,
+          allowedNodeIds: request.allowedNodeIds,
+        });
+        return {
+          hits: result.rows.map((row) => ({ id: row.id, title: row.title })),
+          total: result.total,
+        };
+      },
+    };
+    const store = Object.assign(db, { getSearch: () => search });
+
+    const detail = getDatabaseViewDetail(store, databaseId, undefined, contentDir, {
+      q: "quest",
+      limit: 50,
+      offset: 0,
+    });
     expect(detail?.rowsWindow.total).toBe(1);
-    expect(detail?.rows[0]?.name).toBe("Alpha quest");
+    expect(detail?.rows.map((r) => r.nodeId)).toEqual([matchId]);
   });
 
   test("fixed dyn-sort uses expression index SQL window and orders by value", () => {

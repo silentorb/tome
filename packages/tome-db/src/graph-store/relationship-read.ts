@@ -4,6 +4,8 @@ import type {
   RelationshipProjectionWindowResult,
   SetMemberWindowQuery,
   SetMemberWindowResult,
+  SetMemberNodeIdsQuery,
+  SetMemberProjectionPair,
   DistinctSetMemberScopeQuery,
   DistinctSetMemberScopeRow,
   ComposedMemberWindowQuery,
@@ -118,6 +120,60 @@ export function listSetMemberRowConnectionsWindow(
   return cache.listSetMemberRowConnectionsWindow(setId, query);
 }
 
+/** Distinct member node ids for a set; throws if no query cache. */
+export function listSetMemberNodeIds(
+  store: RelationshipReadStore,
+  setId: string,
+  query: SetMemberNodeIdsQuery,
+): string[] {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listSetMemberNodeIds !== "function") {
+    throw new Error("listSetMemberNodeIds requires a SQLite query cache");
+  }
+  return cache.listSetMemberNodeIds(setId, query);
+}
+
+/** Membership edges for specific members; throws if no query cache. */
+export function listSetMemberRowConnectionsForMemberIds(
+  store: RelationshipReadStore,
+  setId: string,
+  projections: SetMemberProjectionPair[],
+  memberIds: readonly string[],
+): Relationship[] {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listSetMemberRowConnectionsForMemberIds !== "function") {
+    throw new Error("listSetMemberRowConnectionsForMemberIds requires a SQLite query cache");
+  }
+  return cache.listSetMemberRowConnectionsForMemberIds(setId, projections, memberIds);
+}
+
+/** Related target node ids for an outgoing projection; throws if no query cache. */
+export function listRelatedTargetNodeIds(
+  store: RelationshipReadStore,
+  sourceNodeId: string,
+  type: string,
+): string[] {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listRelatedTargetNodeIds !== "function") {
+    throw new Error("listRelatedTargetNodeIds requires a SQLite query cache");
+  }
+  return cache.listRelatedTargetNodeIds(sourceNodeId, type);
+}
+
+/** Outgoing edges for specific targets; throws if no query cache. */
+export function listRelationshipsFromSourceForTargetIds(
+  store: RelationshipReadStore,
+  sourceNodeId: string,
+  type: string,
+  targetIds: readonly string[],
+): Relationship[] {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listRelationshipsFromSourceForTargetIds !== "function") {
+    throw new Error("listRelationshipsFromSourceForTargetIds requires a SQLite query cache");
+  }
+  return cache.listRelationshipsFromSourceForTargetIds(sourceNodeId, type, targetIds);
+}
+
 /** Distinct scope ids among set members; throws if no query cache. */
 export function listDistinctSetMemberScopeIds(
   store: RelationshipReadStore,
@@ -142,6 +198,35 @@ export function listComposedSetMemberRowConnectionsWindow(
     throw new Error("listComposedSetMemberRowConnectionsWindow requires a SQLite query cache");
   }
   return cache.listComposedSetMemberRowConnectionsWindow(setId, query);
+}
+
+/** Scoped composed member node ids; throws if no query cache. */
+export function listComposedMemberNodeIds(
+  store: RelationshipReadStore,
+  setId: string,
+  query: ComposedMemberWindowQuery,
+): string[] {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listComposedMemberNodeIds !== "function") {
+    throw new Error("listComposedMemberNodeIds requires a SQLite query cache");
+  }
+  return cache.listComposedMemberNodeIds(setId, query);
+}
+
+/** Composed edges for specific members; throws if no query cache. */
+export function listComposedSetMemberRowConnectionsForMemberIds(
+  store: RelationshipReadStore,
+  setId: string,
+  query: ComposedMemberWindowQuery,
+  memberIds: readonly string[],
+): ComposedMemberWindowResult {
+  const cache = getQueryCache(store);
+  if (!cache || typeof cache.listComposedSetMemberRowConnectionsForMemberIds !== "function") {
+    throw new Error(
+      "listComposedSetMemberRowConnectionsForMemberIds requires a SQLite query cache",
+    );
+  }
+  return cache.listComposedSetMemberRowConnectionsForMemberIds(setId, query, memberIds);
 }
 
 /** Composed group headers; throws if no query cache. */

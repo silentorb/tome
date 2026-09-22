@@ -76,13 +76,24 @@ export type { TableRowsQuery, TableRowsWindow } from "./table-rows-window";
 export {
   relationWindowSortsFromQuery,
   shouldUseSqlRelationWindow,
+  shouldUseSqlRelationSearchWindow,
   shouldUseSqlDatabaseWindow,
+  shouldUseSqlDatabaseSearchWindow,
   shouldUseSqlComposedWindow,
+  shouldUseSqlComposedSearchWindow,
   tableRowsQueryUsesDynSort,
   tableRowsQueryUsesUnresolvedDynSort,
   tableRowsQueryUsesNonExpressibleSort,
   tableRowsQueryUsesDeferredSearch,
+  tableRowsQueryUsesTableSearch,
 } from "./table-sql-window";
+export {
+  getStoreSearch,
+  runTableSearchWindow,
+  resolveTableSearcher,
+  membershipEdgesForHits,
+  relationEdgesForHits,
+} from "./table-search-window";
 export {
   linkOutgoingRelationship,
   moveRelationshipConnection,

@@ -166,7 +166,7 @@ describe("composed table SQL windows", () => {
 
   afterAll(() => destroyTestContentFixture(fixture));
 
-  const db = () => fixture.ctx.graphStore;
+  const db = () => fixture.ctx.graphStore as import("../src/graph-store/composed-graph-store").ComposedGraphStore;
   const contentDir = () => fixture.ctx.store.contentDir;
 
   test("SQL-windows composed view by scope with bounded page size", () => {
@@ -202,7 +202,41 @@ describe("composed table SQL windows", () => {
     expect(page?.rows).toHaveLength(10);
   });
 
-  test("q keeps non-SQL path but still returns a window", () => {
+  test("q without searcher returns empty composed search window", () => {
+    db().setSearch(null);
+    const page = getDatabaseViewDetail(db(), SCENES_DB, bookA, contentDir(), {
+      limit: 5,
+      offset: 0,
+      q: "Scene 01",
+    });
+    expect(page?.rowsWindow.total).toBe(0);
+    expect(page?.rows).toHaveLength(0);
+  });
+
+  test("q with searcher windows composed members via scoped search", () => {
+    const cache = fixture.ctx.cache;
+    const pattern = (q: string) => `%${q.replace(/[%_\\]/g, "\\$&")}%`;
+    db().setSearch({
+      search() {
+        return [];
+      },
+      searchWindow(request: {
+        query: string;
+        limit?: number | null;
+        offset?: number;
+        allowedNodeIds?: ReadonlySet<string>;
+      }) {
+        const result = cache.searchNodesLikeWindow(pattern(request.query), {
+          offset: request.offset,
+          limit: request.limit,
+          allowedNodeIds: request.allowedNodeIds,
+        });
+        return {
+          hits: result.rows.map((row) => ({ id: row.id, title: row.title })),
+          total: result.total,
+        };
+      },
+    });
     const page = getDatabaseViewDetail(db(), SCENES_DB, bookA, contentDir(), {
       limit: 5,
       offset: 0,
@@ -210,5 +244,6 @@ describe("composed table SQL windows", () => {
     });
     expect(page?.rowsWindow.total).toBe(1);
     expect(page?.rows.map((r) => r.name)).toEqual(["Scene 01"]);
+    db().setSearch(null);
   });
 });

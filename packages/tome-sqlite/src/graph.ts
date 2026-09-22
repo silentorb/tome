@@ -11,6 +11,7 @@ import type {
   RelationshipRecordRow,
   SetMemberWindowQuery,
   SetMemberWindowResult,
+  SetMemberNodeIdsQuery,
   DistinctSetMemberScopeQuery,
   DistinctSetMemberScopeRow,
   ComposedMemberWindowQuery,
@@ -865,6 +866,104 @@ export class GraphDatabase implements TomeQueryCache {
       .all(pattern, ...filter.params, limit) as { id: string; title: string }[];
   }
 
+  searchNodesLikeWindow(
+    pattern: string,
+    options: {
+      offset?: number;
+      limit?: number | null;
+      allowedTypeIds?: readonly string[];
+      allowedNodeIds?: ReadonlySet<string>;
+    },
+  ): { rows: { id: string; title: string }[]; total: number } {
+    const allowedNodeIds = options.allowedNodeIds;
+    if (allowedNodeIds && allowedNodeIds.size === 0) {
+      return { rows: [], total: 0 };
+    }
+
+    const offsetRaw = options.offset;
+    const offset =
+      typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
+        ? Math.floor(offsetRaw)
+        : 0;
+    const limitRaw = options.limit;
+    const limit =
+      limitRaw === undefined || limitRaw === null
+        ? null
+        : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
+          ? Math.floor(limitRaw)
+          : null;
+
+    const filter = this.buildSearchFilterSql(options.allowedTypeIds, allowedNodeIds);
+    const combinedSql = `
+      WITH title_hits AS (
+        SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title, 0 AS phase
+        FROM nodes
+        WHERE is_archived = 0
+          AND COALESCE(title, alias, '') LIKE ? ESCAPE '\\'
+          ${filter.sql}
+      ),
+      body_hits AS (
+        SELECT id, ${NODE_DISPLAY_TITLE_SQL} AS title, 1 AS phase
+        FROM nodes
+        WHERE is_archived = 0
+          AND COALESCE(body, '') LIKE ? ESCAPE '\\'
+          ${filter.sql}
+          AND id NOT IN (SELECT id FROM title_hits)
+      ),
+      combined AS (
+        SELECT id, title, phase FROM title_hits
+        UNION ALL
+        SELECT id, title, phase FROM body_hits
+      )
+    `;
+    const baseParams: Array<string | number> = [
+      pattern,
+      ...filter.params,
+      pattern,
+      ...filter.params,
+    ];
+
+    const countRow = this.db
+      .prepare(`${combinedSql} SELECT COUNT(*) AS c FROM combined`)
+      .get(...baseParams) as { c: number };
+    const total = countRow.c;
+    if (total === 0 || offset >= total) {
+      return { rows: [], total };
+    }
+
+    let rows: { id: string; title: string }[];
+    if (limit === null) {
+      if (offset === 0) {
+        rows = this.db
+          .prepare(
+            `${combinedSql}
+             SELECT id, title FROM combined
+             ORDER BY phase ASC, title COLLATE NOCASE`,
+          )
+          .all(...baseParams) as { id: string; title: string }[];
+      } else {
+        rows = this.db
+          .prepare(
+            `${combinedSql}
+             SELECT id, title FROM combined
+             ORDER BY phase ASC, title COLLATE NOCASE
+             LIMIT -1 OFFSET ?`,
+          )
+          .all(...baseParams, offset) as { id: string; title: string }[];
+      }
+    } else {
+      rows = this.db
+        .prepare(
+          `${combinedSql}
+           SELECT id, title FROM combined
+           ORDER BY phase ASC, title COLLATE NOCASE
+           LIMIT ? OFFSET ?`,
+        )
+        .all(...baseParams, limit, offset) as { id: string; title: string }[];
+    }
+    return { rows, total };
+  }
+
   listNodesByTitle(
     limit: number,
     allowedTypeIds?: readonly string[],
@@ -1163,6 +1262,66 @@ export class GraphDatabase implements TomeQueryCache {
       relationships: this.mapProjectionRows(rows),
       total,
     };
+  }
+
+  listSetMemberNodeIds(setId: string, query: SetMemberNodeIdsQuery): string[] {
+    const membership = buildMembershipCte(setId, query.projections ?? []);
+    if (!membership) return [];
+    const rows = this.db
+      .prepare(`${membership.sql} SELECT member_id AS id FROM members`)
+      .all(...membership.params) as { id: string }[];
+    return rows.map((row) => row.id);
+  }
+
+  listSetMemberRowConnectionsForMemberIds(
+    setId: string,
+    projections: SetMemberProjectionPair[],
+    memberIds: readonly string[],
+  ): Relationship[] {
+    if (memberIds.length === 0) return [];
+    const membership = buildMembershipCte(setId, projections);
+    if (!membership) return [];
+    const placeholders = memberIds.map(() => "?").join(", ");
+    const rows = this.db
+      .prepare(
+        `${membership.sql}
+         SELECT m.id, m.record_id, m.member_id AS source_node_id, m.set_id AS target_node_id,
+                m.type, m.ordinal, m."order", m.priority
+         FROM members m
+         WHERE m.member_id IN (${placeholders})`,
+      )
+      .all(...membership.params, ...memberIds) as ProjectionRow[];
+    return this.mapProjectionRows(rows);
+  }
+
+  listRelatedTargetNodeIds(sourceNodeId: string, type: string): string[] {
+    const rows = this.db
+      .prepare(
+        `SELECT DISTINCT target_node_id AS id
+         FROM relationship_projections
+         WHERE source_node_id = ? AND type = ?`,
+      )
+      .all(sourceNodeId, type) as { id: string }[];
+    return rows.map((row) => row.id);
+  }
+
+  listRelationshipsFromSourceForTargetIds(
+    sourceNodeId: string,
+    type: string,
+    targetIds: readonly string[],
+  ): Relationship[] {
+    if (targetIds.length === 0) return [];
+    const placeholders = targetIds.map(() => "?").join(", ");
+    const rows = this.db
+      .prepare(
+        `SELECT rp.id, rp.record_id, rp.source_node_id, rp.target_node_id, rp.type,
+                rp.ordinal, rp."order", rp.priority
+         FROM relationship_projections rp
+         WHERE rp.source_node_id = ? AND rp.type = ?
+           AND rp.target_node_id IN (${placeholders})`,
+      )
+      .all(sourceNodeId, type, ...targetIds) as ProjectionRow[];
+    return this.mapProjectionRows(rows);
   }
 
   getExpressionIndexStatus(digest: string): "ready" | "stale" | "building" | "missing" {
@@ -1557,6 +1716,12 @@ export class GraphDatabase implements TomeQueryCache {
     orderClauses.push("mwg.id ASC");
     const orderBySql = `ORDER BY ${orderClauses.join(", ")}`;
 
+    const memberIds = query.memberIds;
+    const filterMemberIds = memberIds && memberIds.length > 0;
+    if (memberIds && memberIds.length === 0) {
+      return { relationships: [], groupIds: hasGroups ? [] : [], total: 0 };
+    }
+
     const { limit, offset } = parseLimitOffset(query);
 
     const selectSql = `${withSql}
@@ -1565,16 +1730,20 @@ export class GraphDatabase implements TomeQueryCache {
              mwg.group_id AS resolved_group_id
       FROM member_with_group mwg
       LEFT JOIN nodes n ON n.id = mwg.member_id
+      ${filterMemberIds ? `WHERE mwg.member_id IN (${memberIds!.map(() => "?").join(", ")})` : ""}
       ${orderBySql}`;
 
     type Row = ProjectionRow & { resolved_group_id: string | null };
+    const selectParams = filterMemberIds
+      ? [...params, ...memberIds!]
+      : params;
     let rows: Row[];
-    if (limit === null) {
-      rows = this.db.prepare(selectSql).all(...params) as Row[];
+    if (filterMemberIds || limit === null) {
+      rows = this.db.prepare(selectSql).all(...selectParams) as Row[];
     } else {
       rows = this.db
         .prepare(`${selectSql} LIMIT ? OFFSET ?`)
-        .all(...params, limit, offset) as Row[];
+        .all(...selectParams, limit, offset) as Row[];
     }
 
     const relationships = this.mapProjectionRows(rows);
@@ -1586,7 +1755,56 @@ export class GraphDatabase implements TomeQueryCache {
         )
       : [];
 
-    return { relationships, groupIds, total };
+    return { relationships, groupIds, total: filterMemberIds ? relationships.length : total };
+  }
+
+  listComposedMemberNodeIds(setId: string, query: ComposedMemberWindowQuery): string[] {
+    const membership = buildMembershipCte(setId, query.projections ?? []);
+    if (!membership) return [];
+
+    const scopeType = query.scope?.projectionType?.trim();
+    const scopeId = query.scope?.scopeNodeId?.trim();
+    const hasScope = Boolean(scopeType && scopeId);
+    const params: SQLQueryBindings[] = [...membership.params];
+    let withSql = membership.sql.trim();
+
+    if (hasScope && scopeType && scopeId) {
+      withSql += `,
+      scoped_members AS (
+        SELECT m.*
+        FROM members m
+        WHERE EXISTS (
+          SELECT 1 FROM relationship_projections sp
+          WHERE sp.source_node_id = m.member_id AND sp.type = ? AND sp.target_node_id = ?
+        )
+        OR EXISTS (
+          SELECT 1 FROM relationship_projections sp
+          WHERE sp.target_node_id = m.member_id AND sp.type = ? AND sp.source_node_id = ?
+        )
+      )`;
+      params.push(scopeType, scopeId, scopeType, scopeId);
+    } else {
+      withSql += `,
+      scoped_members AS (SELECT * FROM members)`;
+    }
+
+    const rows = this.db
+      .prepare(`${withSql} SELECT member_id AS id FROM scoped_members`)
+      .all(...params) as { id: string }[];
+    return rows.map((row) => row.id);
+  }
+
+  listComposedSetMemberRowConnectionsForMemberIds(
+    setId: string,
+    query: ComposedMemberWindowQuery,
+    memberIds: readonly string[],
+  ): ComposedMemberWindowResult {
+    return this.listComposedSetMemberRowConnectionsWindow(setId, {
+      ...query,
+      memberIds,
+      limit: null,
+      offset: 0,
+    });
   }
 
   countIncidentRelationships(nodeId: string): number {

@@ -1,4 +1,10 @@
-import type { TomeSearch, TomeSearchHit, TomeSearchRequest } from "tome-interfaces/search";
+import type {
+  TomeSearch,
+  TomeSearchHit,
+  TomeSearchRequest,
+  TomeSearchWindowRequest,
+  TomeSearchWindowResult,
+} from "tome-interfaces/search";
 import type { TomeQueryCache } from "tome-service-interfaces";
 import { buildSearchMatchPreview } from "tome-db";
 
@@ -73,6 +79,33 @@ export function createLikeSearch(cache: TomeQueryCache): TomeSearch {
 
       attachMatchPreviews(cache, hits, trimmed);
       return hits;
+    },
+
+    searchWindow(request: TomeSearchWindowRequest): TomeSearchWindowResult {
+      const { query, allowedTypeIds, allowedNodeIds } = request;
+      if (allowedNodeIds && allowedNodeIds.size === 0) {
+        return { hits: [], total: 0 };
+      }
+
+      const trimmed = query.trim();
+      if (!trimmed) {
+        return { hits: [], total: 0 };
+      }
+
+      const pattern = escapeLikePattern(trimmed);
+      const { rows, total } = cache.searchNodesLikeWindow(pattern, {
+        offset: request.offset,
+        limit: request.limit,
+        allowedTypeIds,
+        allowedNodeIds,
+      });
+
+      const hits: TomeSearchHit[] = rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+      }));
+      attachMatchPreviews(cache, hits, trimmed);
+      return { hits, total };
     },
   };
 }

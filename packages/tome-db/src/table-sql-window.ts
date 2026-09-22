@@ -15,11 +15,16 @@ import { loadDynamicColumnSets } from "./dynamic-properties/overlay";
 import { parseDimensionIdFromColumnKey } from "./dynamic-properties/registry";
 
 /**
- * True when table `q` (name filter / relevance) is set — deferred exploration hold
- * for next-level Tome search; keeps the full legacy materialize path.
+ * True when table `q` is set — routes to scoped TomeSearch windows on the SQL path
+ * (or empty results when no searcher). Flatfile keeps the legacy name-filter path.
  */
-export function tableRowsQueryUsesDeferredSearch(query?: TableRowsQuery): boolean {
+export function tableRowsQueryUsesTableSearch(query?: TableRowsQuery): boolean {
   return Boolean(query?.q?.trim());
+}
+
+/** @deprecated Use {@link tableRowsQueryUsesTableSearch}. */
+export function tableRowsQueryUsesDeferredSearch(query?: TableRowsQuery): boolean {
+  return tableRowsQueryUsesTableSearch(query);
 }
 
 /** True when any sort column is a dynamic property / column-set key. */
@@ -104,21 +109,31 @@ export function tableRowsQueryUsesNonExpressibleSort(
 }
 
 /**
- * Relation sections have no dynamic-property sort keys today.
- * Deferred gate for Session 1 is search `q` only (plus lack of a SQL cache).
+ * Relation sections: SQL window when cache present.
+ * Table `q` uses scoped searcher windows (still SQL path); see {@link shouldUseSqlRelationSearchWindow}.
  */
 export function shouldUseSqlRelationWindow(
   store: RelationshipReadStore,
   query?: TableRowsQuery,
 ): boolean {
-  if (tableRowsQueryUsesDeferredSearch(query)) return false;
+  if (tableRowsQueryUsesTableSearch(query)) {
+    // Search path handled separately; do not use sort/limit SQL window.
+    return false;
+  }
   return getQueryCache(store) !== null;
 }
 
+/** Relation `q`: cache present (searcher may be null → empty window). */
+export function shouldUseSqlRelationSearchWindow(
+  store: RelationshipReadStore,
+  query?: TableRowsQuery,
+): boolean {
+  return tableRowsQueryUsesTableSearch(query) && getQueryCache(store) !== null;
+}
+
 /**
- * Items / database custom views: SQL window when cache present and not deferred
- * (`q`, unresolved dyn sort, or non-expressible sort).
- * Fixed and column-set dyn sorts with expression indexes are allowed on the SQL path.
+ * Items / database custom views: SQL window when cache present and sorts are expressible.
+ * Table `q` uses the searcher path ({@link shouldUseSqlDatabaseSearchWindow}).
  */
 export function shouldUseSqlDatabaseWindow(
   store: RelationshipReadStore,
@@ -127,7 +142,7 @@ export function shouldUseSqlDatabaseWindow(
   columnDefs: readonly DatabaseColumnDef[],
   options?: { ownerId?: string; contentDir?: string },
 ): boolean {
-  if (tableRowsQueryUsesDeferredSearch(query)) return false;
+  if (tableRowsQueryUsesTableSearch(query)) return false;
   if (getQueryCache(store) === null) return false;
   if (tableRowsQueryUsesNonExpressibleSort(sorts, columnDefs)) return false;
   const ownerId = options?.ownerId;
@@ -140,16 +155,37 @@ export function shouldUseSqlDatabaseWindow(
   return true;
 }
 
+/** Items `q`: cache present (searcher may be null → empty window). */
+export function shouldUseSqlDatabaseSearchWindow(
+  store: RelationshipReadStore,
+  query?: TableRowsQuery,
+): boolean {
+  return tableRowsQueryUsesTableSearch(query) && getQueryCache(store) !== null;
+}
+
 /**
- * Composed / generated presentations: SQL window when cache present and not deferred (`q`).
+ * Composed / generated presentations: SQL window when cache present and not searching.
  * Compose ignores column sorts (reorder = membership `order`).
  */
 export function shouldUseSqlComposedWindow(
   store: RelationshipReadStore,
   query?: TableRowsQuery,
 ): boolean {
-  if (tableRowsQueryUsesDeferredSearch(query)) return false;
+  if (tableRowsQueryUsesTableSearch(query)) return false;
   return getQueryCache(store) !== null;
+}
+
+/** Composed `q`: cache present (searcher may be null → empty window). */
+export function shouldUseSqlComposedSearchWindow(
+  store: RelationshipReadStore,
+  query?: TableRowsQuery,
+): boolean {
+  return tableRowsQueryUsesTableSearch(query) && getQueryCache(store) !== null;
+}
+
+/** Whether the store has an injectable searcher (may still be null). */
+export function storeSupportsSearchInjection(store: RelationshipReadStore): boolean {
+  return typeof (store as { getSearch?: unknown }).getSearch === "function";
 }
 
 /** Map editor view sorts into cache window sorts (identity for relation edge keys). */

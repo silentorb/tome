@@ -30,6 +30,7 @@ export function register(host: SearcherHost): void {
       const search = store.asSearch();
       return {
         search: (request) => search.search(request),
+        searchWindow: (request) => search.searchWindow(request),
         close: () => store.close(),
       };
     },

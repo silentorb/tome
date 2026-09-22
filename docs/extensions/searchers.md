@@ -20,6 +20,9 @@ export function register(host: SearcherHost): void {
         search(request) {
           return [];
         },
+        searchWindow(request) {
+          return { hits: [], total: 0 };
+        },
       };
     },
   });

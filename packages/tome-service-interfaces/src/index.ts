@@ -418,6 +418,11 @@ export interface SetMemberWindowResult {
   total: number;
 }
 
+/** Lightweight set-member node ids (no edge DTO hydration). */
+export interface SetMemberNodeIdsQuery {
+  projections: SetMemberProjectionPair[];
+}
+
 /** Scope discovery among set members (composed table tabs). */
 export interface DistinctSetMemberScopeQuery {
   projections: SetMemberProjectionPair[];
@@ -464,6 +469,11 @@ export interface ComposedMemberWindowQuery {
   groups?: ComposedMemberGroupsQuery;
   /** When true, ORDER BY membership `order` (within group when groups set). */
   defaultOrdered?: boolean;
+  /**
+   * When set, return only these member ids (table search hydrate).
+   * Ignores limit/offset; caller reorders to search rank.
+   */
+  memberIds?: readonly string[];
   /** Omit or null → return the full ordered set (static export). */
   limit?: number | null;
   offset?: number;
@@ -539,6 +549,19 @@ export interface TomeQueryCache {
     allowedTypeIds?: readonly string[],
     allowedNodeIds?: ReadonlySet<string>,
   ): { id: string; title: string }[];
+  /**
+   * Title-then-body LIKE window for table `q` (SQL order; accurate total).
+   * `limit: null` returns all matches after offset.
+   */
+  searchNodesLikeWindow(
+    pattern: string,
+    options: {
+      offset?: number;
+      limit?: number | null;
+      allowedTypeIds?: readonly string[];
+      allowedNodeIds?: ReadonlySet<string>;
+    },
+  ): { rows: { id: string; title: string }[]; total: number };
   listNodesByTitle(
     limit: number,
     allowedTypeIds?: readonly string[],
@@ -590,6 +613,22 @@ export interface TomeQueryCache {
     setId: string,
     query: SetMemberWindowQuery,
   ): SetMemberWindowResult;
+  /** Distinct member node ids for a set (no Relationship DTOs). */
+  listSetMemberNodeIds(setId: string, query: SetMemberNodeIdsQuery): string[];
+  /** Membership edges for specific member ids (normalized); caller reorders to search rank. */
+  listSetMemberRowConnectionsForMemberIds(
+    setId: string,
+    projections: SetMemberProjectionPair[],
+    memberIds: readonly string[],
+  ): Relationship[];
+  /** Distinct related (target) node ids for an outgoing projection. */
+  listRelatedTargetNodeIds(sourceNodeId: string, type: string): string[];
+  /** Outgoing edges whose target is in `targetIds`; caller reorders to search rank. */
+  listRelationshipsFromSourceForTargetIds(
+    sourceNodeId: string,
+    type: string,
+    targetIds: readonly string[],
+  ): Relationship[];
   /**
    * Distinct scope node ids among set members (composed scope tabs).
    * Ordered by optional scope membership `order`, then title.
@@ -621,6 +660,17 @@ export interface TomeQueryCache {
   listComposedSetMemberRowConnectionsWindow(
     setId: string,
     query: ComposedMemberWindowQuery,
+  ): ComposedMemberWindowResult;
+  /** Scoped composed member node ids (no edge DTOs). */
+  listComposedMemberNodeIds(setId: string, query: ComposedMemberWindowQuery): string[];
+  /**
+   * Composed membership edges (+ group ids) for specific member ids.
+   * Caller reorders to search rank; `total` is unused (0).
+   */
+  listComposedSetMemberRowConnectionsForMemberIds(
+    setId: string,
+    query: ComposedMemberWindowQuery,
+    memberIds: readonly string[],
   ): ComposedMemberWindowResult;
   /** Group-type members for composed group headers (optional scope filter). */
   listComposedGroupHeaders(query: ComposedGroupHeadersQuery): ComposedGroupHeaderRow[];

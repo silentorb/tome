@@ -43,12 +43,20 @@ import { applyNameFilterAndWindow, buildTableRowsWindow, resolveWindowBounds } f
 import {
   relationWindowSortsFromQuery,
   shouldUseSqlRelationWindow,
+  shouldUseSqlRelationSearchWindow,
 } from "./table-sql-window";
+import {
+  relationEdgesForHits,
+  resolveTableSearcher,
+  runTableSearchWindow,
+} from "./table-search-window";
 import {
   listOutgoingProjectionPropertyKeys,
   listOutgoingProjectionTypes,
   listRelationshipsFromSource,
   listRelationshipsFromSourceWindow,
+  listRelatedTargetNodeIds,
+  listRelationshipsFromSourceForTargetIds,
   readStoreCompositeTypeForRelationship,
   readStoreGetNode,
   type RelationshipReadStore,
@@ -369,6 +377,26 @@ function loadRelationSectionConnections(
   connections: Relationship[];
   sqlWindow?: { total: number; columnKeys: string[] };
 } {
+  if (shouldUseSqlRelationSearchWindow(db, rowsQuery)) {
+    const scopeIds = listRelatedTargetNodeIds(db, nodeId, perspective);
+    const { hits, rowsWindow } = runTableSearchWindow(
+      resolveTableSearcher(db),
+      rowsQuery,
+      new Set(scopeIds),
+    );
+    const hitIds = hits.map((h) => h.id);
+    const relationships = relationEdgesForHits(
+      listRelationshipsFromSourceForTargetIds(db, nodeId, perspective, hitIds),
+      hits,
+    );
+    return {
+      connections: relationships,
+      sqlWindow: {
+        total: rowsWindow.total,
+        columnKeys: listOutgoingProjectionPropertyKeys(db, nodeId, perspective),
+      },
+    };
+  }
   if (shouldUseSqlRelationWindow(db, rowsQuery)) {
     const { offset, limit } = resolveWindowBounds(rowsQuery);
     const { relationships, total } = listRelationshipsFromSourceWindow(db, nodeId, perspective, {

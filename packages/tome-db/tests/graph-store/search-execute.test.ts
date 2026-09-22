@@ -36,6 +36,21 @@ describe("searchNodesGraph via executeImp", () => {
           ...(row.matchPreview ? { matchPreview: row.matchPreview } : {}),
         }));
       },
+      searchWindow(request) {
+        const result = fixture.ctx.cache.searchNodesLikeWindow(
+          `%${request.query.replace(/[%_\\]/g, "\\$&")}%`,
+          {
+            offset: request.offset,
+            limit: request.limit,
+            allowedTypeIds: request.allowedTypeIds,
+            allowedNodeIds: request.allowedNodeIds,
+          },
+        );
+        return {
+          hits: result.rows.map((row) => ({ id: row.id, title: row.title })),
+          total: result.total,
+        };
+      },
     });
   });
 
