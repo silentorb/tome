@@ -15,6 +15,7 @@ import type {
   TomeQueryCacheOpenOptions,
   TomeCorpusConfig,
   CacheSyncPublicStatus,
+  NormalizedTomeServerConfig,
 } from "tome-service-interfaces";
 import type { TomeGraphServices } from "tome-graph-interfaces";
 
@@ -60,6 +61,114 @@ function optionsRecord(options: unknown): Record<string, unknown> {
   return {};
 }
 
+function parseDataStoresMap(raw: unknown): Record<string, TomeServerModuleConfigEntry> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("tome-server config: dataStores must be an object");
+  }
+  const out: Record<string, TomeServerModuleConfigEntry> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const entry = parseModuleEntry(value, `dataStores.${key}`);
+    out[key] = { ...entry, id: key };
+  }
+  if (Object.keys(out).length === 0) {
+    throw new Error("tome-server config: dataStores must not be empty");
+  }
+  return out;
+}
+
+function parseSyncBlock(raw: unknown): TomeServerConfig["sync"] {
+  if (raw == null) return {};
+  if (typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error("tome-server config: sync must be an object");
+  }
+  const s = raw as Record<string, unknown>;
+  const libraries = Array.isArray(s.libraries)
+    ? s.libraries.map((entry, i) => parseModuleEntry(entry, `sync.libraries[${i}]`))
+    : undefined;
+  return {
+    graph: s.graph,
+    queryStoreId: typeof s.queryStoreId === "string" ? s.queryStoreId.trim() : undefined,
+    libraries,
+  };
+}
+
+/**
+ * Migrate legacy store+cache(+corpora) into dataStores + sync.
+ * Prefer explicit dataStores when present.
+ */
+export function normalizeServerConfig(config: TomeServerConfig): NormalizedTomeServerConfig {
+  let dataStores = config.dataStores ? { ...config.dataStores } : {};
+
+  if (Object.keys(dataStores).length === 0) {
+    if (!config.store || !config.cache) {
+      throw new Error("tome-server config: dataStores or store+cache required");
+    }
+    const storeOpts = optionsRecord(config.store.options);
+    const corporaFromOptions = parseCorporaOption(storeOpts.corpora);
+    const corporaFromEnv = parseTomeCorporaEnv(readEnv("TOME_CORPORA"));
+    const corpora = corporaFromOptions ?? corporaFromEnv;
+
+    if (corpora && corpora.length > 0) {
+      for (const corpus of corpora) {
+        dataStores[corpus.id] = {
+          id: corpus.id,
+          module: config.store.module,
+          export: config.store.export,
+          options: {
+            contentPath: corpus.contentPath,
+            access: corpus.access ?? "readwrite",
+          },
+        };
+      }
+    } else {
+      const contentPath =
+        typeof storeOpts.contentPath === "string" && storeOpts.contentPath.trim()
+          ? storeOpts.contentPath.trim()
+          : undefined;
+      dataStores[config.store.id] = {
+        ...config.store,
+        options: {
+          ...storeOpts,
+          ...(contentPath ? { contentPath } : {}),
+        },
+      };
+    }
+
+    dataStores[config.cache.id] = { ...config.cache };
+  }
+
+  const flatfileIds = Object.entries(dataStores)
+    .filter(([, e]) => e.module.includes("flatfile") || e.export.includes("Flatfile"))
+    .map(([id]) => id);
+  const sqliteIds = Object.entries(dataStores)
+    .filter(([, e]) => e.module.includes("sqlite") || e.export.includes("Sqlite"))
+    .map(([id]) => id);
+
+  if (flatfileIds.length === 0) {
+    throw new Error("tome-server config: at least one flatfile dataStore required");
+  }
+  if (sqliteIds.length === 0) {
+    throw new Error("tome-server config: at least one sqlite dataStore required");
+  }
+
+  const queryStoreId = config.sync?.queryStoreId ?? sqliteIds[0]!;
+  const store = dataStores[flatfileIds[0]!]!;
+  const cache = dataStores[queryStoreId] ?? dataStores[sqliteIds[0]!]!;
+
+  return {
+    version: config.version,
+    dataStores,
+    sync: {
+      graph: config.sync?.graph,
+      queryStoreId,
+      libraries: config.sync?.libraries,
+    },
+    services: config.services,
+    store,
+    cache,
+  };
+}
+
 export function parseServerConfig(raw: unknown): TomeServerConfig {
   if (!raw || typeof raw !== "object") {
     throw new Error("tome-server config: root must be an object");
@@ -69,8 +178,7 @@ export function parseServerConfig(raw: unknown): TomeServerConfig {
   if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
     throw new Error("tome-server config: version must be a positive integer");
   }
-  const store = parseModuleEntry(obj.store, "store");
-  const cache = parseModuleEntry(obj.cache, "cache");
+
   const servicesRaw = obj.services;
   if (!Array.isArray(servicesRaw)) {
     throw new Error("tome-server config: services must be an array");
@@ -78,7 +186,28 @@ export function parseServerConfig(raw: unknown): TomeServerConfig {
   const services: TomeServerModuleConfigEntry[] = servicesRaw.map((entry, index) =>
     parseModuleEntry(entry, `services[${index}]`),
   );
-  return { version, store, cache, services };
+
+  const hasDataStores = obj.dataStores != null;
+  const hasLegacy = obj.store != null || obj.cache != null;
+
+  if (hasDataStores) {
+    const dataStores = parseDataStoresMap(obj.dataStores);
+    const sync = parseSyncBlock(obj.sync);
+    // Keep legacy fields when present for older callers; normalize fills convenience.
+    const store =
+      obj.store != null ? parseModuleEntry(obj.store, "store") : undefined;
+    const cache =
+      obj.cache != null ? parseModuleEntry(obj.cache, "cache") : undefined;
+    return { version, dataStores, sync, store, cache, services };
+  }
+
+  if (!hasLegacy) {
+    throw new Error("tome-server config: dataStores or store+cache required");
+  }
+  const store = parseModuleEntry(obj.store, "store");
+  const cache = parseModuleEntry(obj.cache, "cache");
+  const sync = obj.sync != null ? parseSyncBlock(obj.sync) : undefined;
+  return { version, store, cache, sync, services };
 }
 
 export function loadServerConfig(path = resolveServerConfigPath()): TomeServerConfig {
@@ -87,6 +216,12 @@ export function loadServerConfig(path = resolveServerConfigPath()): TomeServerCo
   }
   const raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
   return parseServerConfig(raw);
+}
+
+export function loadNormalizedServerConfig(
+  path = resolveServerConfigPath(),
+): NormalizedTomeServerConfig {
+  return normalizeServerConfig(loadServerConfig(path));
 }
 
 async function loadServiceModule(entry: TomeServerModuleConfigEntry): Promise<TomeServiceModule> {

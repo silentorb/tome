@@ -17,8 +17,8 @@ describe("tome-service-interfaces", () => {
       services: [],
     };
     expect(config.services).toEqual([]);
-    expect(config.store.id).toBe("flatfile");
-    expect(config.cache.id).toBe("sqlite");
+    expect(config.store!.id).toBe("flatfile");
+    expect(config.cache!.id).toBe("sqlite");
   });
 
   test("service module contract is structural", () => {

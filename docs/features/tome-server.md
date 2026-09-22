@@ -2,9 +2,9 @@
 
 ## Summary
 
-**tome-server** is the process **host** for the design graph: it loads a singular **data store** and **query cache** from JSON config, wires them through `tome-db` into `TomeGraphServices`, then starts **zero or more** **service modules** (default: `tome-http`). The editor webview is a client of the HTTP service, not part of this package.
+**tome-server** is the process **host** for the design graph: it loads heterogeneous **`dataStores`** (flatfile corpora + sqlite cache) from JSON config, wires observer sync via Imp **`sync.graph`** (see [tome-sync.md](./tome-sync.md)), builds `TomeGraphServices` through `tome-db`, then starts **zero or more** **service modules** (default: `tome-http`). Legacy singular `store` + `cache` still parse and migrate into `dataStores`. The editor webview is a client of the HTTP service, not part of this package.
 
-The store module remains singular, but flatfile may open **one corpus** (`contentPath` / `TOME_CONTENT_PATH`) or a **composite of corpora** (`store.options.corpora` / `TOME_CORPORA`) — see [`multi-corpus.md`](./multi-corpus.md). Mixed sessions must use a dedicated session `TOME_DB_PATH`, not any corpus’s own SQLite cache.
+Multi-corpus sessions use multiple flatfile entries in `dataStores` (or legacy `store.options.corpora` / `TOME_CORPORA`) — see [`multi-corpus.md`](./multi-corpus.md). Mixed sessions must use a dedicated session `TOME_DB_PATH`, not any corpus’s own SQLite cache.
 
 ## When to read this
 
@@ -31,6 +31,37 @@ The store module remains singular, but flatfile may open **one corpus** (`conten
 
 File: `packages/tome-server/config/tome-server.json` (override with `TOME_SERVER_CONFIG`).
 
+Preferred (`dataStores` + optional `sync`):
+
+```json
+{
+  "version": 2,
+  "dataStores": {
+    "flatfile": {
+      "module": "tome-flatfile",
+      "export": "createFlatfileModule",
+      "options": {}
+    },
+    "sqlite": {
+      "module": "tome-sqlite",
+      "export": "createSqliteModule",
+      "options": {}
+    }
+  },
+  "sync": { "queryStoreId": "sqlite" },
+  "services": [
+    {
+      "id": "http",
+      "module": "tome-http",
+      "export": "createTomeHttpService",
+      "options": { "port": 3847 }
+    }
+  ]
+}
+```
+
+Legacy singular `store` + `cache` (still accepted; normalized at load):
+
 ```json
 {
   "version": 1,
@@ -46,23 +77,15 @@ File: `packages/tome-server/config/tome-server.json` (override with `TOME_SERVER
     "export": "createSqliteModule",
     "options": {}
   },
-  "services": [
-    {
-      "id": "http",
-      "module": "tome-http",
-      "export": "createTomeHttpService",
-      "options": { "port": 3847 }
-    }
-  ]
+  "services": []
 }
 ```
 
-- **`store` and `cache` are required** (singular each). The store may still front multiple corpora via composite options.
+- **`dataStores`** (or legacy **`store` + `cache`**) required. Flatfile entries may omit `contentPath` (host fills `TOME_CONTENT_PATH`); sqlite may omit `dbPath` (`TOME_DB_PATH`).
 - `services` may be **empty**: the host logs a warning and stays up.
-- Multiple services are allowed (each typically binds its own port in v1).
-- Path defaults (`TOME_CONTENT_PATH`, `TOME_DB_PATH`) are merged into module options by the host when omitted. Pass `corpora` in `store.options` (or `TOME_CORPORA`) for a multi-corpus session.
+- Path defaults and `TOME_CORPORA` expand into flatfile `dataStores` during normalize — see [tome-sync.md](./tome-sync.md) and [multi-corpus.md](./multi-corpus.md).
 
-Bootstrap order: open store → open cache (with enum codec + set perspectives from content) → open graph services **without** blocking sync or file watchers → **start service modules (HTTP binds)** → run `CacheSync.ensureReadyAsync()` (cooperative; emits `[tome-sync]` progress on stderr and updates the sync status tracker) → mark ready, subscribe store→cache, `startWatching()`.
+Bootstrap order: normalize config → `openDataStoreSession` (open stores, wire Imp sync observers) → open graph services **without** blocking sync or file watchers → **start service modules (HTTP binds)** → run `CacheSync.ensureReadyAsync()` → mark ready, `startWatching()` (observers already installed; do not double-subscribe).
 
 While syncing, `/api/health` reports `ready: false` / `syncing: true` with optional numeric `progress`; other API routes return **503** `cache_syncing`. After sync completes, health reports `ready: true` and data routes work normally. See [tome-db.md](./tome-db.md) § Cache sync at startup.
 

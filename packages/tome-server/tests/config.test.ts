@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, writeFileSync, rmSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { parseServerConfig, startConfiguredServices } from "../src/load-services";
+import { parseServerConfig, startConfiguredServices, normalizeServerConfig } from "../src/load-services";
 import type { TomeGraphServices } from "tome-graph-interfaces";
 import type { TomeServerModuleConfigEntry } from "tome-service-interfaces";
 
@@ -35,15 +35,50 @@ describe("tome-server config", () => {
       services: [],
     });
     expect(config.services).toEqual([]);
-    expect(config.store.module).toBe("tome-flatfile");
-    expect(config.cache.module).toBe("tome-sqlite");
+    expect(config.store?.module).toBe("tome-flatfile");
+    expect(config.cache?.module).toBe("tome-sqlite");
   });
 
-  test("requires store and cache", () => {
-    expect(() => parseServerConfig({ version: 1, services: [] })).toThrow(/store/);
-    expect(() =>
-      parseServerConfig({ version: 1, store: STORE_ENTRY, services: [] }),
-    ).toThrow(/cache/);
+  test("requires store+cache or dataStores", () => {
+    expect(() => parseServerConfig({ version: 1, services: [] })).toThrow(/dataStores|store/);
+  });
+
+  test("normalizes legacy store+cache into dataStores", () => {
+    const normalized = normalizeServerConfig({
+      version: 1,
+      store: STORE_ENTRY,
+      cache: CACHE_ENTRY,
+      services: [],
+    });
+    expect(normalized.dataStores.flatfile?.module).toBe("tome-flatfile");
+    expect(normalized.dataStores.sqlite?.module).toBe("tome-sqlite");
+    expect(normalized.sync.queryStoreId).toBe("sqlite");
+  });
+
+  test("parses dataStores config", () => {
+    const config = parseServerConfig({
+      version: 2,
+      dataStores: {
+        marloth: {
+          id: "marloth",
+          module: "tome-flatfile",
+          export: "createFlatfileModule",
+          options: { contentPath: "/tmp/m", access: "readwrite" },
+        },
+        cache: {
+          id: "cache",
+          module: "tome-sqlite",
+          export: "createSqliteModule",
+          options: { dbPath: "/tmp/t.sqlite" },
+        },
+      },
+      sync: { queryStoreId: "cache" },
+      services: [],
+    });
+    expect(config.dataStores?.marloth?.module).toBe("tome-flatfile");
+    const n = normalizeServerConfig(config);
+    expect(n.sync.queryStoreId).toBe("cache");
+    expect(n.store.id).toBe("marloth");
   });
 
   test("startConfiguredServices warns and continues when empty", async () => {
@@ -89,8 +124,8 @@ describe("tome-server config", () => {
     const raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
     const config = parseServerConfig(raw);
     expect(config.services[0]?.module).toBe("tome-http");
-    expect(config.store.id).toBe("flatfile");
-    expect(config.cache.id).toBe("sqlite");
+    expect(config.store?.id).toBe("flatfile");
+    expect(config.cache?.id).toBe("sqlite");
     rmSync(dir, { recursive: true, force: true });
   });
 });

@@ -74,6 +74,11 @@ export class CompositeStore implements TomeDataStore {
   private readonly unsubscribes: Array<() => void> = [];
   private closed = false;
 
+  /** Per-corpus ContentStore instances (for sync observer wire-up). */
+  corpusStores(): readonly ContentStore[] {
+    return this.stores;
+  }
+
   constructor(corpora: readonly TomeCorpusConfig[], options?: { onWatchError?: (err: Error) => void }) {
     if (corpora.length < 2) {
       throw new Error("CompositeStore requires at least two corpora");

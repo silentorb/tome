@@ -62,12 +62,46 @@ export interface TomeServerModuleConfigEntry {
 
 export interface TomeServerConfig {
   version: number;
-  /** Singular data store (required). */
-  store: TomeServerModuleConfigEntry;
-  /** Singular query cache (required). */
-  cache: TomeServerModuleConfigEntry;
+  /**
+   * Heterogeneous data stores keyed by id (flatfile corpora, sqlite cache, …).
+   * Preferred over singular `store` / `cache`.
+   */
+  dataStores?: Record<string, TomeServerModuleConfigEntry>;
+  /**
+   * Sync wiring: Imp graph + optional query store id and node libraries.
+   * When omitted with dataStores, host synthesizes flatfile→sqlite observe edges.
+   */
+  sync?: {
+    graph?: unknown;
+    queryStoreId?: string;
+    libraries?: TomeServerModuleConfigEntry[];
+  };
+  /**
+   * @deprecated Prefer `dataStores`. Still accepted; migrated at parse time.
+   */
+  store?: TomeServerModuleConfigEntry;
+  /**
+   * @deprecated Prefer `dataStores`. Still accepted; migrated at parse time.
+   */
+  cache?: TomeServerModuleConfigEntry;
   /** Zero or more protocol adapters (e.g. HTTP). */
   services: TomeServerModuleConfigEntry[];
+}
+
+/** Normalized host config after legacy migrate. */
+export interface NormalizedTomeServerConfig {
+  version: number;
+  dataStores: Record<string, TomeServerModuleConfigEntry>;
+  sync: {
+    graph?: unknown;
+    queryStoreId?: string;
+    libraries?: TomeServerModuleConfigEntry[];
+  };
+  services: TomeServerModuleConfigEntry[];
+  /** Convenience: primary flatfile module entry (first flatfile in dataStores). */
+  store: TomeServerModuleConfigEntry;
+  /** Convenience: sqlite module entry. */
+  cache: TomeServerModuleConfigEntry;
 }
 
 // ---------------------------------------------------------------------------

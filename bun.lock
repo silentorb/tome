@@ -131,6 +131,7 @@
       "name": "tome-db",
       "version": "0.8.0",
       "dependencies": {
+        "imp-core-types": "workspace:^0.5.0",
         "imp-execution": "workspace:^0.6.0",
         "imp-pathing": "workspace:^0.6.0",
         "remark-gfm": "4.0.1",

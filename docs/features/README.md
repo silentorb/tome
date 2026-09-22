@@ -37,6 +37,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Sequencing constraint resolution | [tome-sequencing-resolution.md](./tome-sequencing-resolution.md) |
 | Multi-corpus editor sessions | [multi-corpus.md](./multi-corpus.md) |
 | Graph store API (Base / Queryable, executeImp) | [graph-store.md](./graph-store.md) |
+| Imp sync wiring + dataStores registry | [tome-sync.md](./tome-sync.md) |
 | Dev / release containers (GHCR) | [container.md](./container.md) |
 | Test tiers and weighted gating | [testing.md](./testing.md) |
 

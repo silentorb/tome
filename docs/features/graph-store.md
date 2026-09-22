@@ -87,7 +87,7 @@ type GraphStoreCapabilities =
 
 **Tome host (composed):**
 
-1. Writes → `FlatfileGraphStore` → change events → `CacheSync` → SQLite
+1. Writes → `FlatfileGraphStore` → change events → sync observers (Imp **wiring** graph installs observers at boot — see [tome-sync.md](./tome-sync.md)) → `CacheSync` / SQLite
 2. Reads → `executeImp` → `tome-imp-sql` → SQLite `queryAll`
 
 **Flatfile integrator (no SQL):**
@@ -149,6 +149,7 @@ Phase 2 removes direct `searchNodes(cache)` and extension raw SQL for Imp graphs
 ## See also
 
 - [tome-db.md](./tome-db.md) — storage and sync
+- [tome-sync.md](./tome-sync.md) — dataStores registry + Imp observer wiring
 - [tome-imp-sql.md](./tome-imp-sql.md) — SQL binder
 - [tome-query.md](./tome-query.md) — Imp query page block
 - [table-presentation.md](./table-presentation.md) — scope/group hops via Imp semantic paths

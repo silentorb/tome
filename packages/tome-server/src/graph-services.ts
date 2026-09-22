@@ -565,17 +565,26 @@ export type DeferredTomeGraphServices = {
 
 /**
  * Open graph services without blocking on cache sync or starting file watchers.
- * Caller runs `writeCtx.sync.ensureReadyAsync()`, then `finishDeferredWriteContextReady`
- * and `startWatching()`.
+ * Caller runs cache sync (ensureReadyAsync / SyncGraphWire.runInitialFull), then
+ * `startWatching()`. When `skipStoreSyncSubscribe` is set, do not call
+ * `finishDeferredWriteContextReady` — observers are already wired.
  */
 export function openTomeGraphServicesDeferred(
   args: OpenTomeGraphServicesArgs,
-  options?: { progress?: SyncProgressReporter },
+  options?: {
+    progress?: SyncProgressReporter;
+    /** Reuse an existing write context (e.g. from openDataStoreSession). */
+    writeContext?: TomeWriteContext;
+    /** When true, observers are already installed (SyncGraphWire); skip CacheSync subscribe. */
+    skipStoreSyncSubscribe?: boolean;
+  },
 ): DeferredTomeGraphServices {
-  const writeCtx = openTomeWriteContext(args.store as FlatfileStore, args.cache, {
-    deferReady: true,
-    progress: options?.progress,
-  });
+  const writeCtx =
+    options?.writeContext ??
+    openTomeWriteContext(args.store as FlatfileStore, args.cache, {
+      deferReady: true,
+      progress: options?.progress,
+    });
   const services = buildGraphServices(writeCtx, args.store.contentDir, {
     startWatching: false,
   });

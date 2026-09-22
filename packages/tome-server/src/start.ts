@@ -1,20 +1,14 @@
-import {
-  decodeEnumProperties,
-  encodeEnumProperties,
-  loadSchemaFromContent,
-  setTraitProjectionTypes,
-} from "tome-db";
+import type { Graph } from "imp-core-types";
 import {
   composeSyncProgressReporters,
   createCacheSyncStatusTracker,
   createConsoleSyncProgressReporter,
-  finishDeferredWriteContextReady,
 } from "tome-db/content";
+import { openDataStoreSession } from "tome-db/sync";
 import { openTomeGraphServicesDeferred } from "./graph-services";
 import {
-  loadConfiguredCache,
-  loadConfiguredStore,
   loadServerConfig,
+  normalizeServerConfig,
   resolveServerConfigPath,
   startConfiguredServices,
 } from "./load-services";
@@ -28,31 +22,40 @@ export async function startTomeServer(options?: {
   const contentPath = options?.contentPath ?? resolveContentPath();
   const dbPath = options?.dbPath ?? resolveDbPath();
   const configPath = options?.configPath ?? resolveServerConfigPath();
-  const config = loadServerConfig(configPath);
+  const rawConfig = loadServerConfig(configPath);
+  const config = normalizeServerConfig(rawConfig);
 
   console.log(`[tome-server] content=${contentPath}`);
   console.log(`[tome-server] db=${dbPath}`);
   console.log(`[tome-server] config=${configPath}`);
-
-  const store = await loadConfiguredStore(config.store, contentPath);
-  const contentDir = store.contentDir;
   console.log(
-    `[tome-server] corpora=${store
-      .listCorpora()
-      .map((c) => `${c.id}:${c.access}`)
-      .join(",")}`,
+    `[tome-server] dataStores=${Object.keys(config.dataStores).join(",")}`,
   );
-  const propertyCodec = {
-    encode: (properties: Parameters<typeof encodeEnumProperties>[0]) =>
-      encodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
-    decode: (properties: Parameters<typeof decodeEnumProperties>[0]) =>
-      decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
-  };
-  const memberPerspectives = () => setTraitProjectionTypes(store.readAssociationsFile());
-  const cache = await loadConfiguredCache(config.cache, dbPath, {
-    propertyCodec,
-    memberPerspectives,
-  });
+
+  // Inject default paths into store options when omitted (solo / env-driven).
+  const dataStores = { ...config.dataStores };
+  for (const [id, entry] of Object.entries(dataStores)) {
+    if (entry.module.includes("flatfile")) {
+      const opts =
+        entry.options && typeof entry.options === "object"
+          ? { ...(entry.options as Record<string, unknown>) }
+          : {};
+      if (typeof opts.contentPath !== "string" || !String(opts.contentPath).trim()) {
+        opts.contentPath = contentPath;
+        dataStores[id] = { ...entry, options: opts };
+      }
+    }
+    if (entry.module.includes("sqlite")) {
+      const opts =
+        entry.options && typeof entry.options === "object"
+          ? { ...(entry.options as Record<string, unknown>) }
+          : {};
+      if (typeof opts.dbPath !== "string" || !String(opts.dbPath).trim()) {
+        opts.dbPath = dbPath;
+        dataStores[id] = { ...entry, options: opts };
+      }
+    }
+  }
 
   const syncStatus = createCacheSyncStatusTracker();
   const progress = composeSyncProgressReporters(
@@ -60,24 +63,52 @@ export async function startTomeServer(options?: {
     syncStatus.report,
   );
 
+  const syncGraph =
+    config.sync.graph && typeof config.sync.graph === "object"
+      ? (config.sync.graph as Graph)
+      : undefined;
+
   console.log(
     "[tome-server] opening graph services (HTTP will listen during cache sync)…",
   );
-  const deferred = openTomeGraphServicesDeferred(
-    { store, cache },
-    { progress },
+
+  const session = await openDataStoreSession({
+    dataStores,
+    syncGraph,
+    queryStoreId: config.sync.queryStoreId,
+    defaultContentPath: contentPath,
+    defaultDbPath: dbPath,
+    progress,
+    deferReady: true,
+  });
+
+  const store = session.writeContext.store;
+  console.log(
+    `[tome-server] corpora=${store
+      .listCorpora()
+      .map((c) => `${c.id}:${c.access}`)
+      .join(",")}`,
   );
 
-  const started = await startConfiguredServices(deferred.services, config, {
+  const deferred = openTomeGraphServicesDeferred(
+    { store: session.writeContext.store, cache: session.writeContext.cache },
+    {
+      progress,
+      writeContext: session.writeContext,
+      skipStoreSyncSubscribe: true,
+    },
+  );
+
+  const started = await startConfiguredServices(deferred.services, rawConfig, {
     getCacheSyncStatus: () => syncStatus.getStatus(),
     cacheDbPath: dbPath,
   });
 
   const graphStartedAt = performance.now();
   console.log("[tome-server] cache sync starting…");
-  await deferred.writeCtx.sync.ensureReadyAsync();
+  await session.writeContext.sync.ensureReadyAsync();
   syncStatus.markReady();
-  finishDeferredWriteContextReady(deferred.writeCtx);
+  // Observers already installed by SyncGraphWire — do not subscribeStoreToCacheSync again.
   deferred.startWatching();
   console.log(
     `[tome-server] graph ready (${Math.round(performance.now() - graphStartedAt)}ms)`,
@@ -86,9 +117,10 @@ export async function startTomeServer(options?: {
   return {
     graph: deferred.services,
     services: started.modules,
+    session,
     async stop() {
       await started.stop();
-      deferred.services.close();
+      session.dispose();
     },
   };
 }

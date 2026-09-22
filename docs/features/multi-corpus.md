@@ -26,10 +26,12 @@ API field: `corpusId`. Config key: `corpora`.
 
 ### Host shape
 
-- `tome-server` still loads a **singular** store module and **singular** query cache.
-- Flatfile `open` may receive either `contentPath` (solo corpus) or `corpora: [{ id, contentPath, access? }, …]` (two or more).
+- Prefer **`dataStores`** (heterogeneous flatfile corpora + sqlite cache) plus **`sync.graph`** observer wiring — see [tome-sync.md](./tome-sync.md).
+- Legacy: `tome-server` may still load singular `store` + `cache`; parse migrates into `dataStores` (and nested `corpora` / `TOME_CORPORA` become flatfile entries).
+- Flatfile `open` may receive either `contentPath` (solo corpus) or `corpora: [{ id, contentPath, access? }, …]` (two or more) when using the legacy store module path.
 - Mixed sessions **must not** reuse any corpus’s `data/tome.sqlite`; use a dedicated session cache path (`TOME_DB_PATH`).
 - Solo mode (`TOME_CONTENT_PATH` only) remains the default and must keep existing behavior.
+- Cross-corpus **dual-write** of edges is separate from cache **observation** (Imp sync wiring).
 
 ### Routing map
 
@@ -105,7 +107,40 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 
 ## Configuration
 
-Store options (via `tome-server.json` `store.options` or env):
+Preferred host shape uses **`dataStores`** + optional **`sync`** (see [tome-sync.md](./tome-sync.md)):
+
+```json
+{
+  "version": 2,
+  "dataStores": {
+    "marloth": {
+      "module": "tome-flatfile",
+      "export": "createFlatfileModule",
+      "options": {
+        "contentPath": "/workspaces/silentorb-workbench/.mnt/marloth-story/content",
+        "access": "readwrite"
+      }
+    },
+    "translucence": {
+      "module": "tome-flatfile",
+      "export": "createFlatfileModule",
+      "options": {
+        "contentPath": "/workspaces/silentorb-workbench/.mnt/translucence/content",
+        "access": "readonly"
+      }
+    },
+    "session-cache": {
+      "module": "tome-sqlite",
+      "export": "createSqliteModule",
+      "options": { "dbPath": "/tmp/session.sqlite" }
+    }
+  },
+  "sync": { "queryStoreId": "session-cache" },
+  "services": []
+}
+```
+
+Legacy store options (via `tome-server.json` `store.options` or env) still migrate at parse:
 
 ```json
 {
