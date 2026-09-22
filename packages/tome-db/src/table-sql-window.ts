@@ -9,9 +9,10 @@ import {
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
 import {
-  planFixedDynSortIndexes,
-  sortsIncludeColumnSetDynKey,
+  planDynSortIndexes,
 } from "./dynamic-properties/expression-index";
+import { loadDynamicColumnSets } from "./dynamic-properties/overlay";
+import { parseDimensionIdFromColumnKey } from "./dynamic-properties/registry";
 
 /**
  * True when table `q` (name filter / relevance) is set — deferred exploration hold
@@ -25,17 +26,33 @@ export function tableRowsQueryUsesDeferredSearch(query?: TableRowsQuery): boolea
 export function tableRowsQueryUsesDynSort(
   sorts: readonly ViewSortSpec[] | undefined,
   columnDefs: readonly DatabaseColumnDef[],
+  options?: {
+    store?: RelationshipReadStore;
+    ownerId?: string;
+    contentDir?: string;
+  },
 ): boolean {
   if (!sorts?.length) return false;
   const dynKeys = new Set(
     columnDefs.filter((def) => def.source === "dynamic").map((def) => def.key),
   );
-  return sorts.some((sort) => dynKeys.has(sort.column));
+  if (sorts.some((sort) => dynKeys.has(sort.column))) return true;
+  const store = options?.store;
+  const ownerId = options?.ownerId;
+  if (!store || !ownerId) return false;
+  const columnSets = loadDynamicColumnSets(store, ownerId, options?.contentDir);
+  return sorts.some((sort) => {
+    const col = sort.column.trim();
+    if (!col) return false;
+    return columnSets.some(
+      (set) => parseDimensionIdFromColumnKey(set.columnKeyPattern, col) != null,
+    );
+  });
 }
 
 /**
- * Dyn sorts that cannot use expression indexes yet (column-sets, or fixed without IR).
- * Fixed dyn sorts with a registered aggregate return false here when plans succeed.
+ * Dyn sorts that cannot use expression indexes (unknown resolver / unparseable column-set key).
+ * Fixed and indexed column-set dyn sorts return false when plans succeed.
  */
 export function tableRowsQueryUsesUnresolvedDynSort(
   store: RelationshipReadStore,
@@ -44,14 +61,15 @@ export function tableRowsQueryUsesUnresolvedDynSort(
   columnDefs: readonly DatabaseColumnDef[],
   contentDir?: string,
 ): boolean {
-  if (!tableRowsQueryUsesDynSort(sorts, columnDefs)) return false;
+  if (
+    !tableRowsQueryUsesDynSort(sorts, columnDefs, { store, ownerId, contentDir })
+  ) {
+    return false;
+  }
   const dynKeys = new Set(
     columnDefs.filter((def) => def.source === "dynamic").map((def) => def.key),
   );
-  if (sortsIncludeColumnSetDynKey(store, ownerId, sorts, dynKeys, contentDir)) {
-    return true;
-  }
-  const plans = planFixedDynSortIndexes(store, ownerId, sorts, contentDir);
+  const plans = planDynSortIndexes(store, ownerId, sorts, dynKeys, contentDir);
   return plans === null;
 }
 
@@ -100,7 +118,7 @@ export function shouldUseSqlRelationWindow(
 /**
  * Items / database custom views: SQL window when cache present and not deferred
  * (`q`, unresolved dyn sort, or non-expressible sort).
- * Fixed dyn sorts with expression indexes are allowed on the SQL path.
+ * Fixed and column-set dyn sorts with expression indexes are allowed on the SQL path.
  */
 export function shouldUseSqlDatabaseWindow(
   store: RelationshipReadStore,

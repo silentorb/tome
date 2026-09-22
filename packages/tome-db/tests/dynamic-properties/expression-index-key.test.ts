@@ -1,12 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
   canonicalizeDynAggregate,
+  COLUMN_SET_AGGREGATE_BY_RESOLVER,
   FIXED_AGGREGATE_BY_RESOLVER,
 } from "../../src/dynamic-properties/aggregate";
 import {
+  expressionIndexKeyForColumnSetDyn,
   expressionIndexKeyForFixedDyn,
   hashExpressionIndexKey,
 } from "../../src/dynamic-properties/expression-index-key";
+import { parseDimensionIdFromColumnKey } from "../../src/dynamic-properties/registry";
 
 describe("expression index digests", () => {
   test("same fixed dyn params produce stable digests", () => {
@@ -48,5 +51,48 @@ describe("expression index digests", () => {
     const hashed = hashExpressionIndexKey(canonical, { formatVersion: 1 });
     expect(hashed).toMatch(/^[a-f0-9]{32}$/);
     expect(JSON.stringify(canonical)).toContain('"a_first"');
+  });
+
+  test("column-set digests bind dimensionId and stay stable", () => {
+    const params = {
+      scenes_edge_label: "SCENES",
+      product_edge_label: "PRODUCT",
+    };
+    const contentDir = "/tmp/colset-fp";
+    const a = expressionIndexKeyForColumnSetDyn(
+      "characters.sceneCountByProduct",
+      params,
+      "01PRODUCTAAAAAAAAAAAAAAA1",
+      contentDir,
+    );
+    const b = expressionIndexKeyForColumnSetDyn(
+      "characters.sceneCountByProduct",
+      params,
+      "01PRODUCTAAAAAAAAAAAAAAA1",
+      contentDir,
+    );
+    const other = expressionIndexKeyForColumnSetDyn(
+      "characters.sceneCountByProduct",
+      params,
+      "01PRODUCTBBBBBBBBBBBBBBB1",
+      contentDir,
+    );
+    expect(a?.digest).toBeTruthy();
+    expect(a?.digest).toBe(b?.digest);
+    expect(a?.digest).not.toBe(other?.digest);
+    expect(COLUMN_SET_AGGREGATE_BY_RESOLVER["characters.sceneCountByProduct"].kind).toBe(
+      "countReachWhereRelated",
+    );
+  });
+
+  test("parseDimensionIdFromColumnKey inverts materialize patterns", () => {
+    expect(
+      parseDimensionIdFromColumnKey(
+        "scene_count__{productId}",
+        "scene_count__01PRODUCTAAAAAAAAAAAAAAA1",
+      ),
+    ).toBe("01PRODUCTAAAAAAAAAAAAAAA1");
+    expect(parseDimensionIdFromColumnKey("scene_count__{productId}", "all_scene_count")).toBeNull();
+    expect(parseDimensionIdFromColumnKey("{productId}__{dimensionId}", "a__b")).toBeNull();
   });
 });

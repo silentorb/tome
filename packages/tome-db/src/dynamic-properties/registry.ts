@@ -77,6 +77,25 @@ export function materializeColumnKey(pattern: string, dimensionId: string): stri
   return pattern.replace("{productId}", dimensionId).replace("{dimensionId}", dimensionId);
 }
 
+/**
+ * Invert {@link materializeColumnKey} for a single `{productId}` / `{dimensionId}` placeholder.
+ * Returns null when the pattern is ambiguous (multiple placeholders) or the key does not match.
+ */
+export function parseDimensionIdFromColumnKey(pattern: string, columnKey: string): string | null {
+  const placeholders = ["{productId}", "{dimensionId}"].filter((p) => pattern.includes(p));
+  if (placeholders.length !== 1) return null;
+  const placeholder = placeholders[0]!;
+  const idx = pattern.indexOf(placeholder);
+  const prefix = pattern.slice(0, idx);
+  const suffix = pattern.slice(idx + placeholder.length);
+  if (!columnKey.startsWith(prefix) || !columnKey.endsWith(suffix)) return null;
+  const dimensionId = columnKey.slice(prefix.length, columnKey.length - suffix.length);
+  if (!dimensionId) return null;
+  // Reject if re-materializing would not round-trip (embedded placeholder / mismatch).
+  if (materializeColumnKey(pattern, dimensionId) !== columnKey) return null;
+  return dimensionId;
+}
+
 export function materializeColumnName(pattern: string, dimensionTitle: string): string {
   return pattern.replace("{productTitle}", dimensionTitle).replace("{dimensionTitle}", dimensionTitle);
 }

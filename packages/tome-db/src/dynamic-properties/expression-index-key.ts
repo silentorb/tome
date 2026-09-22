@@ -10,7 +10,9 @@ import {
 } from "tome-flatfile";
 import {
   canonicalizeDynAggregate,
+  columnSetAggregateForResolver,
   fixedAggregateForResolver,
+  paramsWithDimensionId,
   type DynAggregateSpec,
 } from "./aggregate";
 
@@ -63,6 +65,22 @@ export function expressionIndexKeyForFixedDyn(
   const spec = fixedAggregateForResolver(resolverId);
   if (!spec) return null;
   return expressionIndexKeyForAggregate(resolverId, spec, params, contentDir);
+}
+
+export function expressionIndexKeyForColumnSetDyn(
+  resolverId: string,
+  params: Record<string, unknown>,
+  dimensionId: string,
+  contentDir?: string,
+): ExpressionIndexKeyParts | null {
+  const spec = columnSetAggregateForResolver(resolverId);
+  if (!spec) return null;
+  return expressionIndexKeyForAggregate(
+    resolverId,
+    spec,
+    paramsWithDimensionId(params, dimensionId),
+    contentDir,
+  );
 }
 
 export function expressionIndexKeyForAggregate(

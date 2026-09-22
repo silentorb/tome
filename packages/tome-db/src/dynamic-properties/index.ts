@@ -93,20 +93,28 @@ export type {
 } from "./enrich";
 export {
   FIXED_AGGREGATE_BY_RESOLVER,
+  COLUMN_SET_AGGREGATE_BY_RESOLVER,
   canonicalizeDynAggregate,
   evaluateFixedAggregate,
+  evaluateColumnSetAggregate,
   fixedAggregateForResolver,
+  columnSetAggregateForResolver,
+  paramsWithDimensionId,
 } from "./aggregate";
 export type { DynAggregateSpec, ReachSpec } from "./aggregate";
 export {
   EXPRESSION_INDEX_FORMAT_VERSION,
   buildExpressionIndexContextFingerprint,
   expressionIndexKeyForFixedDyn,
+  expressionIndexKeyForColumnSetDyn,
   hashExpressionIndexKey,
 } from "./expression-index-key";
 export {
+  ensureDynSortIndexes,
   ensureFixedDynSortIndexes,
+  planDynSortIndexes,
   planFixedDynSortIndexes,
   sortsIncludeColumnSetDynKey,
 } from "./expression-index";
-export type { FixedDynSortIndexPlan } from "./expression-index";
+export type { DynSortIndexPlan, FixedDynSortIndexPlan } from "./expression-index";
+export { parseDimensionIdFromColumnKey, materializeColumnKey } from "./registry";

@@ -239,14 +239,79 @@ describe("database-view SQL windows", () => {
     invalidateDynamicPropertiesCache();
   });
 
-  test("column-set dyn column keys are unresolved for SQL window gate", () => {
-    const dynKeys = new Set(["scene_count__01PRODUCT000000000000001", "all_scene_count"]);
-    // Fixed key present in overlay-style fixed set; column-set key is not.
-    const fixedKeys = new Set(["all_scene_count"]);
-    const sorts = [{ column: "scene_count__01PRODUCT000000000000001", direction: "desc" as const }];
-    const isColumnSet = sorts.some(
-      (sort) => dynKeys.has(sort.column) && !fixedKeys.has(sort.column),
+  test("column-set dyn-sort uses expression index SQL window and orders by value", () => {
+    const databaseId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
+    const productId = "01PRODUCTCOLSET000000000001";
+    const columnKey = `scene_count__${productId}`;
+    const sceneProj = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 0);
+    const productProj = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1);
+
+    writeTableSchema(databaseId, []);
+    writeFileSync(
+      dynamicPropertiesFilePath(contentDir),
+      serializeDynamicPropertiesFile({
+        version: 1,
+        properties: [],
+        columnSets: [
+          {
+            id: "dyn-colset-scenes",
+            owner: databaseId,
+            columnKeyPattern: "scene_count__{productId}",
+            columnNamePattern: "{productTitle} Scene count",
+            columnType: "number",
+            resolverId: "characters.sceneCountByProduct",
+            params: {
+              scenes_edge_label: sceneProj,
+              product_edge_label: productProj,
+            },
+          },
+        ],
+      }),
     );
-    expect(isColumnSet).toBe(true);
+    invalidateDynamicPropertiesCache();
+
+    db.upsertNode(databaseId, { ...typeTableMarkerProperties("Characters") });
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+
+    const low = "01COLLOW000000000000000001";
+    const high = "01COLHIGH00000000000000001";
+    db.upsertNode(low, { title: "Low product scenes" });
+    db.upsertNode(high, { title: "High product scenes" });
+    db.upsertRelationship(low, databaseId, memberProjection, {});
+    db.upsertRelationship(high, databaseId, memberProjection, {});
+
+    db.upsertNode(productId, { title: "TWOLD" });
+    db.upsertNode("01COLSCEA000000000000000001", { title: "S1" });
+    db.upsertNode("01COLSCEB000000000000000001", { title: "S2" });
+    db.upsertNode("01COLSCEC000000000000000001", { title: "S3" });
+
+    // high: 2 scenes with product; low: 1 scene with product
+    db.upsertRelationship(high, "01COLSCEA000000000000000001", sceneProj, {});
+    db.upsertRelationship(high, "01COLSCEB000000000000000001", sceneProj, {});
+    db.upsertRelationship(low, "01COLSCEC000000000000000001", sceneProj, {});
+    db.upsertRelationship("01COLSCEA000000000000000001", productId, productProj, {});
+    db.upsertRelationship("01COLSCEB000000000000000001", productId, productProj, {});
+    db.upsertRelationship("01COLSCEC000000000000000001", productId, productProj, {});
+
+    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+      sorts: [{ column: columnKey, direction: "desc" }],
+      limit: 50,
+      offset: 0,
+    });
+    expect(detail?.rowsWindow.total).toBe(2);
+    expect(detail?.rows.map((r) => r.nodeId)).toEqual([high, low]);
+    expect(detail?.rows[0]?.cells[columnKey]).toBe("2");
+    expect(detail?.rows[1]?.cells[columnKey]).toBe("1");
+
+    const digests = db.queryAll<{ digest: string; status: string }>(
+      "SELECT digest, status FROM expression_indexes",
+    );
+    expect(digests.some((row) => row.status === "ready")).toBe(true);
+
+    writeFileSync(
+      dynamicPropertiesFilePath(contentDir),
+      serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
+    );
+    invalidateDynamicPropertiesCache();
   });
 });

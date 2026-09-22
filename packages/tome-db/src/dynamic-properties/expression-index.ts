@@ -1,12 +1,27 @@
 /**
- * Ensure expression indexes for fixed dyn sorts (lazy single-flight build from DynAggregate IR).
+ * Ensure expression indexes for fixed and column-set dyn sorts
+ * (lazy single-flight build from DynAggregate IR).
  */
 
 import type { SetMemberExpressionIndexSort, TomeQueryCache } from "tome-service-interfaces";
 import type { ViewSortSpec } from "tome-graph-interfaces";
-import { evaluateFixedAggregate, fixedAggregateForResolver } from "./aggregate";
-import { expressionIndexKeyForFixedDyn } from "./expression-index-key";
-import { loadDynamicProperties, type DynamicPropertyRecord } from "./overlay";
+import {
+  columnSetAggregateForResolver,
+  evaluateColumnSetAggregate,
+  evaluateFixedAggregate,
+  fixedAggregateForResolver,
+} from "./aggregate";
+import {
+  expressionIndexKeyForColumnSetDyn,
+  expressionIndexKeyForFixedDyn,
+} from "./expression-index-key";
+import {
+  loadDynamicColumnSets,
+  loadDynamicProperties,
+  type DynamicColumnSetRecord,
+  type DynamicPropertyRecord,
+} from "./overlay";
+import { parseDimensionIdFromColumnKey } from "./registry";
 import {
   getQueryCache,
   type RelationshipReadStore,
@@ -16,55 +31,121 @@ import { listSetMemberRowConnections } from "../set-membership";
 /** In-process single-flight builds keyed by digest. */
 const buildsInFlight = new Map<string, Promise<void>>();
 
-export type FixedDynSortIndexPlan = {
+export type DynSortIndexPlan = {
   column: string;
   digest: string;
   resolverId: string;
   params: Record<string, unknown>;
-  property: DynamicPropertyRecord;
+  owner: string;
+  dimensionId?: string;
+  property?: DynamicPropertyRecord;
+  columnSet?: DynamicColumnSetRecord;
 };
 
+/** @deprecated Prefer DynSortIndexPlan — fixed-only plans share the same shape. */
+export type FixedDynSortIndexPlan = DynSortIndexPlan;
+
 /**
- * Resolve fixed dyn sort columns to index plans. Returns null if any dyn sort is
- * a column-set key or an unknown/unindexed fixed resolver (caller keeps legacy path).
+ * Resolve dyn sort columns (fixed + column-set) to index plans.
+ * Returns null if any dyn sort cannot be indexed (caller keeps legacy path).
+ * Non-dyn sort columns are ignored here (handled by SQL window sorts elsewhere).
+ *
+ * Column-set keys are matched by pattern even when not yet present in
+ * {@link dynColumnKeys} (gate discovery may run with empty row ids).
+ */
+export function planDynSortIndexes(
+  store: RelationshipReadStore,
+  ownerId: string,
+  sorts: readonly ViewSortSpec[] | undefined,
+  dynColumnKeys: ReadonlySet<string>,
+  contentDir?: string,
+): DynSortIndexPlan[] | null {
+  if (!sorts?.length) return [];
+  const properties = loadDynamicProperties(store, ownerId, contentDir);
+  const byFixedKey = new Map(properties.map((p) => [p.columnKey, p]));
+  const columnSets = loadDynamicColumnSets(store, ownerId, contentDir);
+  const plans: DynSortIndexPlan[] = [];
+
+  for (const sort of sorts) {
+    const col = sort.column.trim();
+    if (!col) continue;
+
+    const property = byFixedKey.get(col);
+    if (property) {
+      if (!fixedAggregateForResolver(property.resolverId)) return null;
+      const key = expressionIndexKeyForFixedDyn(
+        property.resolverId,
+        property.params ?? {},
+        contentDir,
+      );
+      if (!key) return null;
+      plans.push({
+        column: col,
+        digest: key.digest,
+        resolverId: property.resolverId,
+        params: property.params ?? {},
+        owner: property.owner,
+        property,
+      });
+      continue;
+    }
+
+    const matched = matchColumnSetSort(columnSets, col);
+    if (matched) {
+      const { columnSet, dimensionId } = matched;
+      if (!columnSetAggregateForResolver(columnSet.resolverId)) return null;
+      const key = expressionIndexKeyForColumnSetDyn(
+        columnSet.resolverId,
+        columnSet.params ?? {},
+        dimensionId,
+        contentDir,
+      );
+      if (!key) return null;
+      plans.push({
+        column: col,
+        digest: key.digest,
+        resolverId: columnSet.resolverId,
+        params: columnSet.params ?? {},
+        owner: columnSet.owner,
+        dimensionId,
+        columnSet,
+      });
+      continue;
+    }
+
+    if (dynColumnKeys.has(col)) {
+      // Dyn column (from defs) with no fixed/column-set plan → unresolved.
+      return null;
+    }
+  }
+  return plans;
+}
+
+function matchColumnSetSort(
+  columnSets: readonly DynamicColumnSetRecord[],
+  columnKey: string,
+): { columnSet: DynamicColumnSetRecord; dimensionId: string } | null {
+  for (const columnSet of columnSets) {
+    const dimensionId = parseDimensionIdFromColumnKey(columnSet.columnKeyPattern, columnKey);
+    if (dimensionId) return { columnSet, dimensionId };
+  }
+  return null;
+}
+
+/**
+ * Resolve fixed dyn sort columns to index plans.
+ * Prefer {@link planDynSortIndexes} when column-set keys may appear.
  */
 export function planFixedDynSortIndexes(
   store: RelationshipReadStore,
   ownerId: string,
   sorts: readonly ViewSortSpec[] | undefined,
   contentDir?: string,
-): FixedDynSortIndexPlan[] | null {
+): DynSortIndexPlan[] | null {
   if (!sorts?.length) return [];
   const properties = loadDynamicProperties(store, ownerId, contentDir);
-  const byKey = new Map(properties.map((p) => [p.columnKey, p]));
-  const plans: FixedDynSortIndexPlan[] = [];
-
-  for (const sort of sorts) {
-    const col = sort.column.trim();
-    if (!col) continue;
-    const property = byKey.get(col);
-    if (!property) {
-      // Not a fixed dyn column — may still be relation/name/edge (handled elsewhere).
-      continue;
-    }
-    if (!fixedAggregateForResolver(property.resolverId)) {
-      return null;
-    }
-    const key = expressionIndexKeyForFixedDyn(
-      property.resolverId,
-      property.params ?? {},
-      contentDir,
-    );
-    if (!key) return null;
-    plans.push({
-      column: col,
-      digest: key.digest,
-      resolverId: property.resolverId,
-      params: property.params ?? {},
-      property,
-    });
-  }
-  return plans;
+  const fixedKeys = new Set(properties.map((p) => p.columnKey));
+  return planDynSortIndexes(store, ownerId, sorts, fixedKeys, contentDir);
 }
 
 /** True when sorts include a dyn column-set key (pattern-expanded), not a fixed property. */
@@ -86,10 +167,10 @@ export function sortsIncludeColumnSetDynKey(
   });
 }
 
-export function ensureFixedDynSortIndexes(
+export function ensureDynSortIndexes(
   store: RelationshipReadStore,
   ownerId: string,
-  plans: readonly FixedDynSortIndexPlan[],
+  plans: readonly DynSortIndexPlan[],
   contentDir?: string,
 ): SetMemberExpressionIndexSort[] {
   const cache = getQueryCache(store);
@@ -108,10 +189,20 @@ export function ensureFixedDynSortIndexes(
   return plans.map((plan) => ({ column: plan.column, digest: plan.digest }));
 }
 
+/** @deprecated Prefer ensureDynSortIndexes */
+export function ensureFixedDynSortIndexes(
+  store: RelationshipReadStore,
+  ownerId: string,
+  plans: readonly DynSortIndexPlan[],
+  contentDir?: string,
+): SetMemberExpressionIndexSort[] {
+  return ensureDynSortIndexes(store, ownerId, plans, contentDir);
+}
+
 function ensureExpressionIndex(
   cache: TomeQueryCache,
   store: RelationshipReadStore,
-  plan: FixedDynSortIndexPlan,
+  plan: DynSortIndexPlan,
   memberIds: readonly string[],
   contentDir?: string,
 ): void {
@@ -125,16 +216,16 @@ function ensureExpressionIndex(
   }
 
   const build = () => {
-    const values = evaluateFixedAggregate(
-      {
-        db: store,
-        owner: plan.property.owner,
-        viewName: "",
-        rowNodeIds: [...memberIds],
-      },
-      plan.resolverId,
-      plan.params,
-    );
+    const ctx = {
+      db: store,
+      owner: plan.owner,
+      viewName: "",
+      rowNodeIds: [...memberIds],
+    };
+    const values =
+      plan.dimensionId != null
+        ? evaluateColumnSetAggregate(ctx, plan.resolverId, plan.params, plan.dimensionId)
+        : evaluateFixedAggregate(ctx, plan.resolverId, plan.params);
     const rows = [...values.entries()].map(([memberId, sortValue]) => ({
       memberId,
       sortValue,
@@ -149,7 +240,8 @@ function ensureExpressionIndex(
       JSON.stringify({
         resolverId: plan.resolverId,
         columnKey: plan.column,
-        owner: plan.property.owner,
+        owner: plan.owner,
+        dimensionId: plan.dimensionId ?? null,
       }),
       rows,
     );

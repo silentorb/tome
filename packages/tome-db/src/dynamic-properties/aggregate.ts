@@ -1,14 +1,16 @@
 /**
- * DynAggregate IR — single semantic description for fixed dyn rollups.
+ * DynAggregate IR — single semantic description for fixed and column-set dyn rollups.
  * Used to build expression-index values and (as fallback) to evaluate sort keys.
  */
 
 import type { DynamicResolverContext } from "./registry";
 import {
   buildAllSceneCountPrefetch,
+  buildSceneCountByProductPrefetch,
   buildWeightedUsePrefetch,
   buildWonderPrefetch,
   resolveAllSceneCount,
+  resolveSceneCountByProduct,
   resolveWeightedUse,
   resolveWonder,
 } from "./resolvers/index";
@@ -29,6 +31,13 @@ export type DynAggregateSpec =
       reachFallback?: ReachSpec;
       whereProjectionParam: string;
       whereTargetParam: string;
+    }
+  | {
+      kind: "countReachWhereRelated";
+      reachPrimary: ReachSpec;
+      reachFallback?: ReachSpec;
+      relatedPrimary: ReachSpec;
+      relatedFallback?: ReachSpec;
     }
   | {
       kind: "sumEnumWeightAlong";
@@ -63,8 +72,31 @@ export const FIXED_AGGREGATE_BY_RESOLVER: Readonly<Record<string, DynAggregateSp
   },
 };
 
+/** Machine authority for each column-set resolverId (dimension bound at sort time). */
+export const COLUMN_SET_AGGREGATE_BY_RESOLVER: Readonly<Record<string, DynAggregateSpec>> = {
+  "characters.sceneCountByProduct": {
+    kind: "countReachWhereRelated",
+    reachPrimary: { kind: "composite", paramKey: "characters_scene_composite" },
+    reachFallback: { kind: "projection", paramKey: "scenes_edge_label" },
+    relatedPrimary: { kind: "composite", paramKey: "scene_product_composite" },
+    relatedFallback: { kind: "projection", paramKey: "product_edge_label" },
+  },
+};
+
 export function fixedAggregateForResolver(resolverId: string): DynAggregateSpec | null {
   return FIXED_AGGREGATE_BY_RESOLVER[resolverId] ?? null;
+}
+
+export function columnSetAggregateForResolver(resolverId: string): DynAggregateSpec | null {
+  return COLUMN_SET_AGGREGATE_BY_RESOLVER[resolverId] ?? null;
+}
+
+/** Bind dimension into overlay params for digest / evaluation (column-set sorts). */
+export function paramsWithDimensionId(
+  params: Record<string, unknown>,
+  dimensionId: string,
+): Record<string, unknown> {
+  return { ...params, dimensionId };
 }
 
 /**
@@ -128,6 +160,32 @@ export function evaluateFixedAggregate(
       const prefetch = buildWeightedUsePrefetch(ctx, params);
       for (const nodeId of ctx.rowNodeIds) {
         out.set(nodeId, Number(resolveWeightedUse(ctx, params, nodeId, prefetch)) || 0);
+      }
+      return out;
+    }
+    default:
+      return out;
+  }
+}
+
+/**
+ * Evaluate a column-set aggregate for every member for one bound dimension.
+ */
+export function evaluateColumnSetAggregate(
+  ctx: DynamicResolverContext,
+  resolverId: string,
+  params: Record<string, unknown>,
+  dimensionId: string,
+): Map<string, number> {
+  const out = new Map<string, number>();
+  switch (resolverId) {
+    case "characters.sceneCountByProduct": {
+      const prefetch = buildSceneCountByProductPrefetch(ctx, params);
+      for (const nodeId of ctx.rowNodeIds) {
+        out.set(
+          nodeId,
+          Number(resolveSceneCountByProduct(ctx, params, nodeId, dimensionId, prefetch)) || 0,
+        );
       }
       return out;
     }
