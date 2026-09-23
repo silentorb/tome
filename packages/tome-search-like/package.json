@@ -1,6 +1,6 @@
 {
   "name": "tome-search-like",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -12,10 +12,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "tome-db": "workspace:^0.8.0",
-    "tome-graph-interfaces": "workspace:^0.3.0",
-    "tome-interfaces": "workspace:^0.3.0",
-    "tome-service-interfaces": "workspace:^0.3.0"
+    "tome-db": "workspace:^0.9.0",
+    "tome-graph-interfaces": "workspace:^0.4.0",
+    "tome-interfaces": "workspace:^0.4.0",
+    "tome-service-interfaces": "workspace:^0.4.0"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",

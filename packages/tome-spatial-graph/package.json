@@ -1,6 +1,6 @@
 {
   "name": "tome-spatial-graph",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -15,7 +15,7 @@
     "cytoscape-svg": "0.4.0",
     "canvas": "3.1.0",
     "jsdom": "26.1.0",
-    "tome-interfaces": "workspace:^0.3.0",
+    "tome-interfaces": "workspace:^0.4.0",
     "react": "19.0.0"
   },
   "devDependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "tome-flatfile",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -25,8 +25,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "tome-graph-interfaces": "workspace:^0.3.0",
-    "tome-service-interfaces": "workspace:^0.3.0",
+    "tome-graph-interfaces": "workspace:^0.4.0",
+    "tome-service-interfaces": "workspace:^0.4.0",
     "ulid": "^3.0.2",
     "yaml": "2.8.0"
   },

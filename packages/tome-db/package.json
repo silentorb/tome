@@ -1,6 +1,6 @@
 {
   "name": "tome-db",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -23,18 +23,18 @@
   "dependencies": {
     "imp-core-types": "workspace:^0.5.0",
     "imp-execution": "workspace:^0.6.0",
-    "tome-sqlite": "workspace:^0.3.0",
-    "tome-graph-interfaces": "workspace:^0.3.0",
-    "tome-interfaces": "workspace:^0.3.0",
-    "tome-service-interfaces": "workspace:^0.3.0",
+    "tome-sqlite": "workspace:^0.4.0",
+    "tome-graph-interfaces": "workspace:^0.4.0",
+    "tome-interfaces": "workspace:^0.4.0",
+    "tome-service-interfaces": "workspace:^0.4.0",
     "remark-gfm": "4.0.1",
     "remark-parse": "11.0.0",
     "remark-stringify": "11.0.0",
-    "tome-flatfile": "workspace:^0.3.0",
+    "tome-flatfile": "workspace:^0.4.0",
     "unified": "11.0.5",
     "unist-util-visit": "5.0.0",
-    "tome-imp-sql": "workspace:^0.7.0",
-    "tome-imp-flatfile": "workspace:^0.8.0",
+    "tome-imp-sql": "workspace:^0.8.0",
+    "tome-imp-flatfile": "workspace:^0.9.0",
     "imp-pathing": "workspace:^0.6.0"
   },
   "devDependencies": {

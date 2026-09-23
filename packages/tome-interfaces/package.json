@@ -1,6 +1,6 @@
 {
   "name": "tome-interfaces",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -19,7 +19,7 @@
     "./search": "./src/search/index.ts"
   },
   "dependencies": {
-    "tome-graph-interfaces": "workspace:^0.3.0"
+    "tome-graph-interfaces": "workspace:^0.4.0"
   },
   "scripts": {
     "test": "bun test tests",
