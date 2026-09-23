@@ -11,6 +11,7 @@ export {
 } from "./schema";
 export type { PromotedNodeColumn, PromotedRelationshipColumn } from "./schema";
 export { createSqliteModule } from "./module";
+export { isSafeSqlPropertyKey, isSafeProjectionType } from "./membership-query";
 export type {
   RelationshipProjectionRow,
   RelationshipPropertyCodec,

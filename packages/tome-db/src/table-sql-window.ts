@@ -4,6 +4,7 @@ import type {
   ViewSortSpec,
 } from "tome-graph-interfaces";
 import type { TomeQueryCache } from "tome-service-interfaces";
+import { isSafeSqlPropertyKey } from "tome-sqlite";
 import {
   getQueryCache,
   type RelationshipReadStore,
@@ -78,13 +79,10 @@ export function tableRowsQueryUsesUnresolvedDynSort(
   return plans === null;
 }
 
-function isSafeSqlPropertyKey(key: string): boolean {
-  return /^[A-Za-z_][A-Za-z0-9_]*$/.test(key);
-}
-
 /**
  * Sorts that cannot be expressed in the Items SQL window (unknown / unsafe keys).
  * Dyn sorts are checked separately via {@link tableRowsQueryUsesUnresolvedDynSort}.
+ * On SQLite, callers should {@link resolveSqlWindowSorts} instead of full-materializing.
  */
 export function tableRowsQueryUsesNonExpressibleSort(
   sorts: readonly ViewSortSpec[] | undefined,
@@ -108,9 +106,93 @@ export function tableRowsQueryUsesNonExpressibleSort(
   return false;
 }
 
+export type ResolvedSqlWindowSorts = {
+  sorts: ViewSortSpec[];
+  refusedReasons: string[];
+};
+
+function isDynSortColumn(
+  col: string,
+  dynKeys: ReadonlySet<string>,
+  store: RelationshipReadStore | undefined,
+  ownerId: string | undefined,
+  contentDir: string | undefined,
+): boolean {
+  if (dynKeys.has(col)) return true;
+  if (!store || !ownerId) return false;
+  const columnSets = loadDynamicColumnSets(store, ownerId, contentDir);
+  return columnSets.some(
+    (set) => parseDimensionIdFromColumnKey(set.columnKeyPattern, col) != null,
+  );
+}
+
+/**
+ * Drop non-expressible / unresolved dyn sorts so the SQL window can still run.
+ * Refused sorts fall back to default membership order; flatfile is not this path.
+ */
+export function resolveSqlWindowSorts(
+  store: RelationshipReadStore,
+  ownerId: string | undefined,
+  sorts: readonly ViewSortSpec[] | undefined,
+  columnDefs: readonly DatabaseColumnDef[],
+  contentDir?: string,
+): ResolvedSqlWindowSorts {
+  if (!sorts?.length) {
+    return { sorts: [], refusedReasons: [] };
+  }
+  const byKey = new Map(columnDefs.map((def) => [def.key, def]));
+  const dynKeys = new Set(
+    columnDefs.filter((def) => def.source === "dynamic").map((def) => def.key),
+  );
+  const kept: ViewSortSpec[] = [];
+  const refusedReasons: string[] = [];
+
+  for (const sort of sorts) {
+    const col = sort.column.trim();
+    if (!col) continue;
+    if (col === "name") {
+      kept.push(sort);
+      continue;
+    }
+    if (!isSafeSqlPropertyKey(col)) {
+      refusedReasons.push(`${col}: unsafe SQL property key`);
+      continue;
+    }
+    const def = byKey.get(col);
+    if (def?.type === "relation" && !def.relationType?.trim()) {
+      refusedReasons.push(`${col}: relation column missing relationType`);
+      continue;
+    }
+    const dyn = isDynSortColumn(col, dynKeys, store, ownerId, contentDir);
+    if (dyn) {
+      if (!ownerId) {
+        refusedReasons.push(`${col}: dyn sort requires ownerId`);
+        continue;
+      }
+      const plans = planDynSortIndexes(store, ownerId, [sort], dynKeys, contentDir);
+      if (plans === null) {
+        refusedReasons.push(`${col}: unresolved dyn sort (no expression index plan)`);
+        continue;
+      }
+      kept.push(sort);
+      continue;
+    }
+    kept.push(sort);
+  }
+
+  if (refusedReasons.length > 0) {
+    for (const reason of refusedReasons) {
+      console.warn(`[tome-db] refused SQL window sort: ${reason}`);
+    }
+  }
+
+  return { sorts: kept, refusedReasons };
+}
+
 /**
  * Relation sections: SQL window when cache present.
  * Table `q` uses scoped searcher windows (still SQL path); see {@link shouldUseSqlRelationSearchWindow}.
+ * Unknown sort keys are ignored in bind (fail-closed at ORDER BY), not a full-materialize escape.
  */
 export function shouldUseSqlRelationWindow(
   store: RelationshipReadStore,
@@ -132,27 +214,20 @@ export function shouldUseSqlRelationSearchWindow(
 }
 
 /**
- * Items / database custom views: SQL window when cache present and sorts are expressible.
+ * Items / database custom views: SQL window when cache present.
+ * Non-expressible / unresolved dyn sorts are refused via {@link resolveSqlWindowSorts}
+ * (default membership order) — they do not fall back to full materialize.
  * Table `q` uses the searcher path ({@link shouldUseSqlDatabaseSearchWindow}).
  */
 export function shouldUseSqlDatabaseWindow(
   store: RelationshipReadStore,
   query: TableRowsQuery | undefined,
-  sorts: readonly ViewSortSpec[] | undefined,
-  columnDefs: readonly DatabaseColumnDef[],
-  options?: { ownerId?: string; contentDir?: string },
+  _sorts?: readonly ViewSortSpec[] | undefined,
+  _columnDefs?: readonly DatabaseColumnDef[],
+  _options?: { ownerId?: string; contentDir?: string },
 ): boolean {
   if (tableRowsQueryUsesTableSearch(query)) return false;
-  if (getQueryCache(store) === null) return false;
-  if (tableRowsQueryUsesNonExpressibleSort(sorts, columnDefs)) return false;
-  const ownerId = options?.ownerId;
-  if (ownerId && tableRowsQueryUsesUnresolvedDynSort(store, ownerId, sorts, columnDefs, options?.contentDir)) {
-    return false;
-  }
-  if (!ownerId && tableRowsQueryUsesDynSort(sorts, columnDefs)) {
-    return false;
-  }
-  return true;
+  return getQueryCache(store) !== null;
 }
 
 /** Items `q`: cache present (searcher may be null → empty window). */
@@ -165,28 +240,16 @@ export function shouldUseSqlDatabaseSearchWindow(
 
 /**
  * Composed / generated presentations: SQL window when cache present and not searching.
- * Column sorts use the same expressibility gates as plain Items when present.
+ * Sort expressibility uses {@link resolveSqlWindowSorts} on the SQL path (fail-closed).
  */
 export function shouldUseSqlComposedWindow(
   store: RelationshipReadStore,
   query?: TableRowsQuery,
-  columnDefs?: readonly DatabaseColumnDef[],
-  options?: { ownerId?: string; contentDir?: string },
+  _columnDefs?: readonly DatabaseColumnDef[],
+  _options?: { ownerId?: string; contentDir?: string },
 ): boolean {
   if (tableRowsQueryUsesTableSearch(query)) return false;
-  if (getQueryCache(store) === null) return false;
-  const sorts = query?.sorts;
-  if (!sorts?.length) return true;
-  const defs = columnDefs ?? [];
-  if (tableRowsQueryUsesNonExpressibleSort(sorts, defs)) return false;
-  const ownerId = options?.ownerId;
-  if (
-    ownerId &&
-    tableRowsQueryUsesUnresolvedDynSort(store, ownerId, sorts, defs, options?.contentDir)
-  ) {
-    return false;
-  }
-  return true;
+  return getQueryCache(store) !== null;
 }
 
 /** Composed `q`: cache present (searcher may be null → empty window). */

@@ -39,7 +39,11 @@ import {
   buildTableRowsWindow,
   resolveWindowBounds,
 } from "./table-rows-window";
-import { shouldUseSqlDatabaseWindow, shouldUseSqlDatabaseSearchWindow } from "./table-sql-window";
+import {
+  resolveSqlWindowSorts,
+  shouldUseSqlDatabaseWindow,
+  shouldUseSqlDatabaseSearchWindow,
+} from "./table-sql-window";
 import {
   membershipEdgesForHits,
   resolveTableSearcher,
@@ -347,10 +351,20 @@ function buildCustomViewDetail(
     contentDir,
   })) {
     const { offset, limit } = resolveWindowBounds(rowsQuery);
+    const { sorts: windowSorts } = resolveSqlWindowSorts(
+      store,
+      databaseId,
+      sorts,
+      gateColumnDefs,
+      contentDir,
+    );
     const dynKeys = new Set(
       gateColumnDefs.filter((def) => def.source === "dynamic").map((def) => def.key),
     );
-    const dynPlans = planDynSortIndexes(store, databaseId, sorts, dynKeys, contentDir) ?? [];
+    const dynPlans =
+      windowSorts.length > 0
+        ? planDynSortIndexes(store, databaseId, windowSorts, dynKeys, contentDir) ?? []
+        : [];
     const expressionIndexSorts =
       dynPlans.length > 0
         ? ensureDynSortIndexes(store, databaseId, dynPlans, contentDir)
@@ -361,8 +375,11 @@ function buildCustomViewDetail(
       databaseId,
       {
         projections: listSetMemberProjectionPairs(contentDir),
-        sorts: sorts.length > 0 ? sorts : undefined,
-        relationCounts: relationCountSortsFromColumnDefs(sorts, gateColumnDefs, contentDir),
+        sorts: windowSorts.length > 0 ? windowSorts : undefined,
+        relationCounts:
+          windowSorts.length > 0
+            ? relationCountSortsFromColumnDefs(windowSorts, gateColumnDefs, contentDir)
+            : undefined,
         expressionIndexSorts,
         relationFields: relationFields.length > 0 ? relationFields : undefined,
         defaultOrdered: ordered,

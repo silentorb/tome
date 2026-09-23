@@ -40,6 +40,7 @@ import {
   resolveWindowBounds,
 } from "../table-rows-window";
 import {
+  resolveSqlWindowSorts,
   shouldUseSqlComposedWindow,
   shouldUseSqlComposedSearchWindow,
 } from "../table-sql-window";
@@ -374,7 +375,14 @@ function buildComposedDatabaseViewSql(
     },
   );
   const relationFields = relationFieldSelectsFromColumnDefs(gateColumnDefs, dir);
-  const sorts = rowsQuery?.sorts ?? [];
+  const rawSorts = rowsQuery?.sorts ?? [];
+  const { sorts } = resolveSqlWindowSorts(
+    db,
+    databaseId,
+    rawSorts,
+    gateColumnDefs,
+    dir,
+  );
   const dynKeys = new Set(
     gateColumnDefs.filter((def) => def.source === "dynamic").map((def) => def.key),
   );

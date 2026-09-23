@@ -102,10 +102,12 @@ Digest = hash(canonical IR + bound params + context fingerprint: schema enum wei
 
 ```
 getDatabaseViewDetail(db, databaseId, view)
-  → (SQL path) ensure expression indexes for fixed / column-set dyn sorts → set-member window ORDER BY index
+  → (SQL path) resolveSqlWindowSorts (refuse non-expressible / unresolved dyn) → ensure expression indexes for kept dyn sorts → set-member window ORDER BY index (or default membership order)
   → hydrate dyn display on returned window only
-  → (legacy path) full membership → applyDynamicProperties → JS sort → window
+  → (flatfile / no-cache only) full membership → applyDynamicProperties → JS sort → window
 ```
+
+On SQLite, leftovers are **fail-closed**: a bad sort never silently full-materializes the set. See [views.md](./views.md) § Lazy-loaded rows binary routing table.
 
 ## Inputs / outputs / artifacts
 

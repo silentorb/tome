@@ -61,7 +61,14 @@ When the editor is backed by the **SQLite query cache**, filter, sort, join, and
 
 **Flatfile** backends are exempt and may still use in-memory collection ops.
 
-**Binary routing (no hybrids):** when table `q` is set, use the **scoped searcher window** path (not view sorts + SQL limit, and not JS substring relevance). When `q` is empty, use the **SQL window** path for expressible sorts. Never SQL-`LIMIT` then sort/filter in JS. Flatfile remains exempt (in-memory `applyNameFilterAndWindow`).
+**Binary routing (no hybrids):** when table `q` is set, use the **scoped searcher window** path (not view sorts + SQL limit, and not JS substring relevance). When `q` is empty, use the **SQL window** path. Never SQL-`LIMIT` then sort/filter in JS. Flatfile remains exempt (in-memory `applyNameFilterAndWindow`).
+
+| Backend | Non-expressible / unresolved dyn sort |
+| --- | --- |
+| SQLite + cache | **Fail-closed:** refuse that sort (warning), keep the SQL window, default membership/`ORDER BY` title·id (or ordered edge order when applicable) |
+| Flatfile / no cache | Exempt: full membership + JS sort/window |
+
+Unsafe schema column keys and relation columns missing `relationType` are stripped at column-def build (warning), not used as a silent full-materialize escape. Relation-section bind already ignores unknown sort keys safely.
 
 **Table `q` (lifted):** editor table name filter goes through the active [`TomeSearch`](./search.md) via `searchWindow` scoped with `allowedNodeIds` (set members / related nodes / composed scope). Ranking and pagination (`total` / `offset` / `limit`) come from the searcher (FTS or LIKE). Dyn and relation **display** still hydrate only the returned window. No searcher → empty window (`total: 0`), matching global search unavailability.
 

@@ -75,6 +75,7 @@ export {
 export type { TableRowsQuery, TableRowsWindow } from "./table-rows-window";
 export {
   relationWindowSortsFromQuery,
+  resolveSqlWindowSorts,
   shouldUseSqlRelationWindow,
   shouldUseSqlRelationSearchWindow,
   shouldUseSqlDatabaseWindow,
@@ -87,6 +88,7 @@ export {
   tableRowsQueryUsesDeferredSearch,
   tableRowsQueryUsesTableSearch,
 } from "./table-sql-window";
+export type { ResolvedSqlWindowSorts } from "./table-sql-window";
 export {
   getStoreSearch,
   runTableSearchWindow,

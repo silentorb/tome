@@ -2,7 +2,7 @@ import {
   TEST_MEMBER_OF_ASSOCIATION_ID,
   TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
 } from "../src/content/test-helpers";
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, afterAll, spyOn } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -466,5 +466,102 @@ describe("database-view SQL windows", () => {
     // Membership / title reads may call getNode for row names; relation hydrate must not
     // fan out via listRelationshipsFromSource (Select stage owns relation payloads).
     expect(listFromSourceCalls).toBe(0);
+  });
+
+  test("refuses unsafe sort and still SQL-windows without full membership load", () => {
+    const databaseId = "01FC0SAFE00000000000000001";
+    writeTableSchema(databaseId, []);
+    db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    for (let i = 0; i < 80; i++) {
+      const id = `01FC0MSF${String(i).padStart(18, "0")}`;
+      db.upsertNode(id, { title: `Feature ${String(i).padStart(3, "0")}` });
+      db.upsertRelationship(id, databaseId, memberProjection, {});
+    }
+
+    let listFromSourceCalls = 0;
+    const originalList = db.listRelationshipsFromSource.bind(db);
+    db.listRelationshipsFromSource = ((...args: Parameters<typeof db.listRelationshipsFromSource>) => {
+      listFromSourceCalls += 1;
+      return originalList(...args);
+    }) as typeof db.listRelationshipsFromSource;
+
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const page = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+        limit: 20,
+        offset: 20,
+        sorts: [{ column: "bad-key!", direction: "asc" }],
+      });
+      expect(page?.rowsWindow).toEqual({
+        offset: 20,
+        limit: 20,
+        total: 80,
+        hasMore: true,
+      });
+      expect(page?.rows).toHaveLength(20);
+      expect(warn.mock.calls.some((c) => String(c[0]).includes("refused SQL window sort"))).toBe(
+        true,
+      );
+      // Legacy full membership walks set→member edges via listRelationshipsFromSource.
+      expect(listFromSourceCalls).toBe(0);
+    } finally {
+      db.listRelationshipsFromSource = originalList;
+      warn.mockRestore();
+    }
+  });
+
+  test("refuses unresolved dyn sort and still SQL-windows with default order", () => {
+    const databaseId = "01FC0NDYN00000000000000001";
+    writeTableSchema(databaseId, []);
+    writeFileSync(
+      dynamicPropertiesFilePath(contentDir),
+      serializeDynamicPropertiesFile({
+        version: 1,
+        properties: [
+          {
+            id: "dyn-unknown",
+            owner: databaseId,
+            columnKey: "mystery_score",
+            columnName: "Mystery",
+            columnType: "number",
+            resolverId: "test.unknownResolver",
+            params: {},
+          },
+        ],
+        columnSets: [],
+      }),
+    );
+    invalidateDynamicPropertiesCache();
+
+    db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const first = "01FC0DYNA00000000000000001";
+    const second = "01FC0DYNB00000000000000001";
+    db.upsertNode(first, { title: "A first" });
+    db.upsertNode(second, { title: "B second" });
+    db.upsertRelationship(first, databaseId, memberProjection, {});
+    db.upsertRelationship(second, databaseId, memberProjection, {});
+
+    const warn = spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+        sorts: [{ column: "mystery_score", direction: "desc" }],
+        limit: 50,
+        offset: 0,
+      });
+      expect(detail?.rowsWindow.total).toBe(2);
+      expect(detail?.rows).toHaveLength(2);
+      // Refused dyn → SQL default title/id order (not a JS dyn enrich of the full set).
+      expect(detail?.rows.map((r) => r.nodeId)).toEqual([first, second]);
+      expect(warn.mock.calls.some((c) => String(c[0]).includes("unresolved dyn"))).toBe(true);
+    } finally {
+      warn.mockRestore();
+      writeFileSync(
+        dynamicPropertiesFilePath(contentDir),
+        serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
+      );
+      invalidateDynamicPropertiesCache();
+    }
   });
 });

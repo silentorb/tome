@@ -14,6 +14,7 @@ import {
 import { enrichColumnDef, enrichColumnDefs, coalescePriorityValue, isPriorityColumnKey } from "./property-enums";
 import { loadSchemaFromContent } from "tome-flatfile";
 import type { SchemaFile } from "tome-flatfile/schema-file";
+import { isSafeSqlPropertyKey } from "tome-sqlite";
 
 export interface BuildDatabaseColumnDefsOptions {
   excludeKeys?: Set<string>;
@@ -25,14 +26,27 @@ function databaseColumnFromTableColumn(
   schema: SchemaFile,
   databaseId: string,
   contentDir: string,
-): DatabaseColumnDef {
+): DatabaseColumnDef | null {
+  if (!isSafeSqlPropertyKey(col.key)) {
+    console.warn(
+      `[tome-db] stripped table column with unsafe SQL key: ${col.key} (database ${databaseId})`,
+    );
+    return null;
+  }
   if (col.type === "relation") {
     const registry = loadAssociationsFromContent(contentDir);
+    const relationType = projectionTypeForRelationColumn(registry, databaseId, col);
+    if (!relationType?.trim()) {
+      console.warn(
+        `[tome-db] stripped relation column missing relationType: ${col.key} (database ${databaseId})`,
+      );
+      return null;
+    }
     return {
       key: col.key,
       name: col.name,
       type: col.type,
-      relationType: projectionTypeForRelationColumn(registry, databaseId, col),
+      relationType,
       relationshipCompositeType: relationColumnCompositeType(col),
       relationEndpoint: col.endpoint,
       targetDatabaseId: targetTypeIdForRelationColumn(registry, databaseId, col) ?? undefined,
@@ -93,11 +107,20 @@ export function buildDatabaseColumnDefs(
   if (schema) {
     for (const col of schema.columns) {
       if (excludeKeys.has(col.key)) continue;
-      columnDefs.push(databaseColumnFromTableColumn(col, schemaFile, databaseId, contentDir));
+      const built = databaseColumnFromTableColumn(col, schemaFile, databaseId, contentDir);
+      if (built) columnDefs.push(built);
     }
   }
 
-  const merged = mergeDynamicColumnDefs(columnDefs, dynamicColumnDefs, hiddenColumnKeys);
+  const safeDynDefs = dynamicColumnDefs.filter((col) => {
+    if (isSafeSqlPropertyKey(col.key)) return true;
+    console.warn(
+      `[tome-db] stripped dynamic column with unsafe SQL key: ${col.key} (database ${databaseId})`,
+    );
+    return false;
+  });
+
+  const merged = mergeDynamicColumnDefs(columnDefs, safeDynDefs, hiddenColumnKeys);
   return enrichColumnDefs(merged.filter((col) => !excludeKeys.has(col.key)), schemaFile);
 }
 
