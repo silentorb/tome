@@ -125,7 +125,6 @@ export {
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
-  TABLE_PRESENTATION_FILENAME,
   SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
   REDIRECTS_FILENAME,
@@ -150,7 +149,6 @@ export {
   viewsFilePath,
   tableSchemasFilePath,
   workspaceFilePath,
-  tablePresentationFilePath,
   sequencingFilePath,
   extensionsFilePath,
   redirectsFilePath,
@@ -359,23 +357,14 @@ export {
   targetTypeIdForRelationColumn,
 } from "./table-relation-column";
 
-export {
-  emptyTablePresentationFile,
-  parseTablePresentationFile,
-  serializeTablePresentationFile,
-  TABLE_PRESENTATION_FILE_VERSION,
-} from "./table-presentation/table-presentation-file";
 export type {
   RelationGroupsLayerConfig,
   RelationScopeLayerConfig,
   SequenceLayerConfig,
+  TablePresentationLayers,
   TablePresentationComposition,
-  TablePresentationFile,
-} from "./table-presentation/table-presentation-file";
-export {
-  loadTablePresentationFromContent,
-  invalidateTablePresentationCache,
-} from "./table-presentation/load";
+} from "tome-graph-interfaces";
+export { parsePresentationLayers } from "./content/presentation-layers";
 
 export {
   emptySequencingFile,

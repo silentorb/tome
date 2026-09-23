@@ -26,7 +26,9 @@ describe("views-file", () => {
         {
           nodeId: "EEEEEEEEEEEEEEEEEEEEEEEEEE",
           association: TEST_MEMBER_OF_ASSOCIATION_ID,
-          generator: "scenes-by-book",
+          presentation: {
+            sequence: { excludeColumnKeys: ["order"] },
+          },
         },
       ],
     };

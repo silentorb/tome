@@ -41,7 +41,8 @@ export function getSectionTabsConfig(
 ): { kind: "generated"; provider: string } | { kind: "custom"; definitions: TabDefinitionSummary[] } | null {
   const generated = generatedViewForRelationship(views, nodeId, association);
   if (generated) {
-    return { kind: "generated", provider: generated.generator };
+    // provider is the type-table nodeId (composition identity after views merge)
+    return { kind: "generated", provider: generated.nodeId };
   }
   const definitions = viewsForRelationship(views, nodeId, association);
   if (definitions.length === 0) return null;
@@ -103,7 +104,7 @@ export function generatedProviderId(
   nodeId: string,
   association: string,
 ): string | null {
-  return generatedViewForRelationship(views, nodeId, association)?.generator ?? null;
+  return generatedViewForRelationship(views, nodeId, association)?.nodeId ?? null;
 }
 
 export function loadSectionTabsConfig(
@@ -159,7 +160,7 @@ export function sectionUsesGeneratedTabs(
   const views = loadViewsFromContent(contentDir);
   const generated = generatedViewForRelationship(views, nodeId, association);
   if (generated) {
-    return { provider: generated.generator };
+    return { provider: generated.nodeId };
   }
   return null;
 }

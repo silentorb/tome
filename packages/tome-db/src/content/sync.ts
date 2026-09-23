@@ -14,7 +14,6 @@ import {
   invalidateAssociationsCache,
   invalidateWorkspaceCache,
   loadWorkspaceFromContent,
-  invalidateTablePresentationCache,
   invalidateExtensionsCache,
   loadAssociationsFromContent,
   RELATIONSHIPS_SYNC_MARKER,
@@ -24,7 +23,6 @@ import {
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
   WORKSPACE_FILENAME,
-  TABLE_PRESENTATION_FILENAME,
   SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
   RELATIONSHIP_FILE_PATTERN,
@@ -342,7 +340,6 @@ export class CacheSync {
       scanFile(modelDir, SCHEMA_FILENAME);
       scanFile(modelDir, VIEWS_FILENAME);
       scanFile(modelDir, WORKSPACE_FILENAME);
-      scanFile(modelDir, TABLE_PRESENTATION_FILENAME);
       scanFile(modelDir, SEQUENCING_FILENAME);
       scanFile(modelDir, EXTENSIONS_FILENAME);
     }
@@ -679,12 +676,6 @@ export class CacheSync {
     if (relativeName === WORKSPACE_FILENAME) {
       invalidateWorkspaceCache();
       this.recomputeArchivedFlags();
-      this.updateCacheMarkers();
-      return;
-    }
-
-    if (relativeName === TABLE_PRESENTATION_FILENAME) {
-      invalidateTablePresentationCache();
       this.updateCacheMarkers();
       return;
     }

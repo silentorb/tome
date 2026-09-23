@@ -1,4 +1,5 @@
 import { isNodeId } from "./paths";
+import { parsePresentationLayers } from "./presentation-layers";
 import type {
   CustomTabDefinition,
   GeneratedViewRecord,
@@ -23,7 +24,11 @@ export const VIEWS_FILE_VERSION = 2;
 
 
 export function isGeneratedViewRecord(record: ViewRecord): record is GeneratedViewRecord {
-  return "generator" in record && typeof (record as GeneratedViewRecord).generator === "string";
+  return (
+    "presentation" in record &&
+    (record as GeneratedViewRecord).presentation !== undefined &&
+    typeof (record as GeneratedViewRecord).presentation === "object"
+  );
 }
 
 export function isViewDefinition(record: ViewRecord): record is ViewDefinition {
@@ -71,8 +76,13 @@ function parseViewDefinition(raw: unknown, index: number): ViewDefinition {
     throw new Error(`${path}: must be an object`);
   }
   const obj = raw as Record<string, unknown>;
+  if (obj.presentation !== undefined) {
+    throw new Error(`${path}: custom views must not include presentation`);
+  }
   if (typeof obj.generator === "string") {
-    throw new Error(`${path}: custom views must not include generator`);
+    throw new Error(
+      `${path}: generator was removed; use presentation layers on a composed view`,
+    );
   }
   if (typeof obj.id !== "string" || !obj.id.trim()) {
     throw new Error(`${path}: id is required`);
@@ -125,8 +135,10 @@ function parseGeneratedViewRecord(raw: unknown, index: number): GeneratedViewRec
   if (typeof obj.association !== "string" || !isNodeId(obj.association.trim())) {
     throw new Error(`${path}: association must be an association id (ULID)`);
   }
-  if (typeof obj.generator !== "string" || !obj.generator.trim()) {
-    throw new Error(`${path}: generator is required`);
+  if (typeof obj.generator === "string") {
+    throw new Error(
+      `${path}: generator was removed; inline presentation layers on this record`,
+    );
   }
   if ("id" in obj || "name" in obj || "sorts" in obj) {
     throw new Error(`${path}: generated views must not include id, name, or sorts`);
@@ -142,11 +154,12 @@ function parseGeneratedViewRecord(raw: unknown, index: number): GeneratedViewRec
   ) {
     throw new Error(`${path}: properties must be a string array (not { columnOrder })`);
   }
+  const presentation = parsePresentationLayers(obj.presentation, `${path}.presentation`);
   const properties = parsePropertiesArray(obj.properties, `${path}.properties`);
   return {
     nodeId: obj.nodeId.trim(),
     association: obj.association.trim(),
-    generator: obj.generator.trim(),
+    presentation,
     ...(properties ? { properties } : {}),
   };
 }
@@ -156,8 +169,13 @@ function parseViewRecord(raw: unknown, index: number): ViewRecord {
     throw new Error(`views.json views[${index}]: must be an object`);
   }
   const obj = raw as Record<string, unknown>;
-  if (typeof obj.generator === "string" && obj.generator.trim()) {
+  if (obj.presentation !== undefined) {
     return parseGeneratedViewRecord(raw, index);
+  }
+  if (typeof obj.generator === "string" && obj.generator.trim()) {
+    throw new Error(
+      `views.json views[${index}]: generator was removed; use presentation layers`,
+    );
   }
   return parseViewDefinition(raw, index);
 }

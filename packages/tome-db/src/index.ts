@@ -219,7 +219,7 @@ export { buildComposedDatabaseView } from "./table-presentation/compose";
 export { rewriteDatabaseSequence } from "./table-presentation/rewrite-sequence";
 export type {
   TablePresentationComposition,
-  TablePresentationFile,
+  TablePresentationLayers,
   DatabaseRowGroup,
   DatabaseViewPresentation,
   RewriteDatabaseSequenceParams,
@@ -318,8 +318,6 @@ export {
   loadWorkspaceFromContent,
   loadWorkspace,
   invalidateWorkspaceCache,
-  loadTablePresentationFromContent,
-  invalidateTablePresentationCache,
   resolveWorkspace,
   archiveNodeId,
   protectedNodeIds,
@@ -355,10 +353,7 @@ export {
   type QuickLinkError,
 } from "./workspace/quick-links";
 export {
-  parseTablePresentationFile,
-  serializeTablePresentationFile,
-  emptyTablePresentationFile,
-  TABLE_PRESENTATION_FILE_VERSION,
+  parsePresentationLayers,
 } from "tome-flatfile";
 export {
   resolveCustomTabs,

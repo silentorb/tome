@@ -21,7 +21,15 @@ Table view configuration for type-table member relationships lives in [`content/
     {
       "nodeId": "204dba198db74611b0b49a98dd53e8f5",
       "association": "01KXBNPNJDENZ9BXN5BYZ7JKPT",
-      "generator": "scenes-by-book",
+      "presentation": {
+        "scope": { "memberToScopeComposite": "01KXBNPNJDENZ9BXN5BYZ7JKQD" },
+        "groups": {
+          "memberToGroupComposite": "01KXBNPNJDENZ9BXN5BYZ7JKQB",
+          "groupTypeDatabaseId": "01KWN86X6NJZMP5ZESZTNDXXZQ",
+          "unassignedGroupTitle": "Unassigned"
+        },
+        "sequence": {}
+      },
       "properties": ["parents", "children", "scenes"]
     }
   ]
@@ -30,12 +38,12 @@ Table view configuration for type-table member relationships lives in [`content/
 
 - **`association`**: set-trait association ULID from `associations.json` (not a display label).
 - **Custom views**: require `id`, `name`, `sorts` (array, may be empty).
-- **Generated views**: use `generator` (e.g. `scenes-by-book`); tabs are computed at runtime from the matching composition in [`table-presentation.json`](./table-presentation.md).
+- **Generated (composed) views**: require `presentation` with at least one of `scope` / `groups` / `sequence`; tabs are computed at runtime (e.g. one per scope node). See [table-presentation.md](./table-presentation.md).
 - **`properties`**: optional string array of visible column keys in display order (additive allowlist).
   - Absent → all columns visible, default order.
   - Present → only listed keys are visible, in listed order (unknown keys ignored; missing keys are not appended).
   - **Custom views:** per-view (not synced across sibling tabs). Reorder, visibility toggles, and UI column-add update the active view only.
-  - **Generated views:** shared on the single generated record for all tabs produced by that generator.
+  - **Generated views:** shared on the single generated record for all tabs produced by that composition.
 - **Tab order**: array order of views sharing the same pair; the UI derives tabs when more than one view exists.
 
 ## Editor behavior
@@ -46,7 +54,7 @@ Table view configuration for type-table member relationships lives in [`content/
 - Column order and visibility for a custom view are updated via `PATCH .../views/:viewId` with `{ properties: string[] }`.
 - Shared properties for a generated association are updated via `PATCH .../associations/:associationId` with `{ properties: string[] }`.
 - Adding a stored column via the UI passes `viewId` so the new key is appended only to the active custom view’s `properties` (when that allowlist already exists). Sibling custom views are unchanged.
-- Generated views (Scenes) switch scope only; no CRUD chrome. Grouped rows and drag-and-drop for a generated view come from its composition — see [table-presentation.md](./table-presentation.md).
+- Generated views (Scenes) switch scope only; no CRUD chrome. Grouped rows and drag-and-drop for a generated view come from its `presentation` layers — see [table-presentation.md](./table-presentation.md).
 
 ## Lazy-loaded rows (infinite scroll)
 

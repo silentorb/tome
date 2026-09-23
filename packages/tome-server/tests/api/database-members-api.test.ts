@@ -1,6 +1,6 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import { typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
-import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestRelationships, seedTestNode, seedTestTableSchema, seedTestViews, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID } from "tome-db/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestRelationships, seedTestNode, seedTestTableSchema, seedTestViews, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, defaultTestPresentationLayers } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
 
 const SCENES_DB = "0000000000000000000000000D";
@@ -92,17 +92,7 @@ describe("database members API", () => {
       {
         nodeId: SCENES_DB,
         association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: "scenes-by-book",
-      },
-      {
-        nodeId: PARTS_DB,
-        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: "scenes-by-book",
-      },
-      {
-        nodeId: PRODUCTS_DB,
-        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: "scenes-by-book",
+        presentation: defaultTestPresentationLayers(),
       },
     ],
   });
@@ -134,7 +124,7 @@ describe("database members API", () => {
     };
     const section = payload.node.sections.find((entry) => entry.type === "database");
     expect(section?.databaseView?.presentation).toMatchObject({
-      compositionId: "scenes-by-book",
+      compositionId: SCENES_DB,
       scopeId: book,
       sequenced: true,
     });

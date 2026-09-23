@@ -17,6 +17,7 @@ import {
   seedTestTableSchema,
   seedTestViews,
   TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+  defaultTestPresentationLayers,
 } from "../../src/content/test-helpers";
 import {
   VIEWS_FILE_VERSION,
@@ -181,7 +182,7 @@ describe("ComposedGraphStore SQLite read path", () => {
       {
         nodeId: SCENES_DB,
         association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: "scenes-by-book",
+        presentation: defaultTestPresentationLayers(),
       },
     ],
   });

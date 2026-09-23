@@ -64,7 +64,7 @@ const view: DatabaseViewDetail = {
     { key: "location", name: "📁 Location", type: "relation", relationType: "location" },
   ],
   presentation: {
-    compositionId: "scenes-by-book",
+    compositionId: "0000000000000000000000000D",
     scopeId: BOOK_A,
     scopeRelationType: "product:0",
     groupRelationType: "part:0",

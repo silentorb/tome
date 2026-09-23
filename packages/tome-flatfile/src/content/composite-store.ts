@@ -611,8 +611,8 @@ export class CompositeStore implements TomeDataStore {
         const key =
           "id" in view && typeof view.id === "string"
             ? view.id
-            : "generator" in view
-              ? `gen:${(view as { generator: string }).generator}`
+            : "presentation" in view
+              ? `composed:${view.nodeId}:${view.association}`
               : JSON.stringify(view);
         if (seen.has(key)) continue;
         seen.add(key);

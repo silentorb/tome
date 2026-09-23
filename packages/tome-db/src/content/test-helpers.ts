@@ -14,12 +14,7 @@ import type { SeedDynamicColumnSetInput, SeedDynamicPropertyInput } from "tome-f
 import { invalidateDynamicPropertiesCache } from "./sync";
 import { invalidateViewsCache } from "tome-flatfile";
 import { invalidateWorkspaceCache } from "tome-flatfile";
-import { invalidateTablePresentationCache } from "tome-flatfile";
-import {
-  serializeTablePresentationFile,
-  type TablePresentationFile,
-  TABLE_PRESENTATION_FILE_VERSION,
-} from "tome-flatfile";
+import type { TablePresentationLayers } from "tome-graph-interfaces";
 import { openContentGraph } from "./sync";
 import type { TomeWriteContext } from "./write-context";
 import {
@@ -42,7 +37,6 @@ import {
 import {
   contentModelDir,
   nodeFilePath,
-  tablePresentationFilePath,
   associationsFilePath,
   workspaceFilePath,
 } from "tome-flatfile";
@@ -115,31 +109,25 @@ export function seedTestWorkspace(
   invalidateWorkspaceCache();
 }
 
-export function defaultTestTablePresentationFile(): TablePresentationFile {
+export const TEST_SCENES_DATABASE_ID = "0000000000000000000000000D";
+
+export function defaultTestPresentationLayers(): TablePresentationLayers {
   return {
-    version: TABLE_PRESENTATION_FILE_VERSION,
-    compositions: [
-      {
-        id: "scenes-by-book",
-        typeDatabaseId: "0000000000000000000000000D",
-        scope: {
-          memberToScopeComposite: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
-          excludeColumnKeys: ["product"],
-        },
-        groups: {
-          memberToGroupComposite: TEST_SCENES_PART_ASSOCIATION_ID,
-          groupTypeDatabaseId: "0000000000000000000000000Z",
-          groupToScopeComposite: TEST_PRODUCTS_PARTS_ASSOCIATION_ID,
-          unassignedGroupTitle: "Unassigned",
-          excludeColumnKeys: ["part"],
-        },
-        sequence: {
-          excludeColumnKeys: ["order"],
-        },
-        columnViewName: "TWOLD Active",
-        excludeColumnKeys: ["status"],
-      },
-    ],
+    scope: {
+      memberToScopeComposite: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+      excludeColumnKeys: ["product"],
+    },
+    groups: {
+      memberToGroupComposite: TEST_SCENES_PART_ASSOCIATION_ID,
+      groupTypeDatabaseId: "0000000000000000000000000Z",
+      groupToScopeComposite: TEST_PRODUCTS_PARTS_ASSOCIATION_ID,
+      unassignedGroupTitle: "Unassigned",
+      excludeColumnKeys: ["part"],
+    },
+    sequence: {
+      excludeColumnKeys: ["order"],
+    },
+    excludeColumnKeys: ["status"],
   };
 }
 
@@ -256,33 +244,41 @@ export function seedDefaultTablePresentationTableSchemas(fixture: TestContentFix
   invalidateTableSchemasCache();
 
   const views = fixture.ctx.store.readViewsFile();
-  const orderedSetViews = [scenesDb, partsDb, productsDb].map((nodeId) => ({
-    nodeId,
-    association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-    generator: "scenes-by-book",
-  }));
-  const otherViews = views.views.filter(
-    (view) => !orderedSetViews.some((entry) => entry.nodeId === view.nodeId),
-  );
+  const otherViews = views.views.filter((view) => view.nodeId !== scenesDb);
   fixture.ctx.store.writeViewsFile({
     version: views.version || VIEWS_FILE_VERSION,
-    views: [...otherViews, ...orderedSetViews],
+    views: [
+      ...otherViews,
+      {
+        nodeId: scenesDb,
+        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+        presentation: defaultTestPresentationLayers(),
+      },
+    ],
   });
   invalidateViewsCache();
 }
 
 export function seedTestTablePresentation(
   fixture: TestContentFixture,
-  overrides?: Partial<TablePresentationFile>,
+  overrides?: Partial<TablePresentationLayers>,
 ): void {
-  const file = { ...defaultTestTablePresentationFile(), ...overrides };
-  mkdirSync(contentModelDir(fixture.ctx.store.contentDir), { recursive: true });
-  writeFileSync(
-    tablePresentationFilePath(fixture.ctx.store.contentDir),
-    serializeTablePresentationFile(file),
-    "utf-8",
-  );
-  invalidateTablePresentationCache();
+  const scenesDb = TEST_SCENES_DATABASE_ID;
+  const presentation = { ...defaultTestPresentationLayers(), ...overrides };
+  const views = fixture.ctx.store.readViewsFile();
+  const otherViews = views.views.filter((view) => view.nodeId !== scenesDb);
+  fixture.ctx.store.writeViewsFile({
+    version: views.version || VIEWS_FILE_VERSION,
+    views: [
+      ...otherViews,
+      {
+        nodeId: scenesDb,
+        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+        presentation,
+      },
+    ],
+  });
+  invalidateViewsCache();
 }
 
 export function createTestContentFixture(prefix = "tome-content-test-"): TestContentFixture {

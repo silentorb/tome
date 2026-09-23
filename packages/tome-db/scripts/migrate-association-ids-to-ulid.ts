@@ -1,6 +1,6 @@
 /**
  * Remap association registry keys from semantic slugs to ULIDs, and rewrite
- * every content reference (relationships, table-schemas, table-presentation,
+ * every content reference (relationships, table-schemas, views presentation,
  * dynamic-properties).
  *
  * Usage:
@@ -13,7 +13,7 @@ import { monotonicFactory } from "ulid";
 import {
   associationsFilePath,
   dynamicPropertiesFilePath,
-  tablePresentationFilePath,
+  viewsFilePath,
   relationshipsFilePath,
   tableSchemasFilePath,
   isAssociationId,
@@ -24,6 +24,9 @@ import {
   parseTableSchemasFile,
   serializeTableSchemasFile,
   serializeAssociationsFile,
+  parseViewsFile,
+  serializeViewsFile,
+  isGeneratedViewRecord,
   type RelationshipEntry,
 } from "tome-flatfile";
 
@@ -126,28 +129,27 @@ export function migrateAssociationIdsToUlid(contentDir: string): {
     "utf-8",
   );
 
-  const presentationPath = tablePresentationFilePath(contentDir);
-  const presentationRaw = JSON.parse(readFileSync(presentationPath, "utf-8")) as {
-    version: number;
-    compositions: Array<Record<string, unknown>>;
-  };
+  const viewsPath = viewsFilePath(contentDir);
+  const viewsFile = parseViewsFile(readFileSync(viewsPath, "utf-8"));
   const layerAssociationFields: Array<[layer: string, field: string]> = [
     ["scope", "memberToScopeComposite"],
     ["groups", "memberToGroupComposite"],
     ["groups", "groupToScopeComposite"],
   ];
-  for (const composition of presentationRaw.compositions) {
+  for (const view of viewsFile.views) {
+    if (!isGeneratedViewRecord(view)) continue;
+    const presentation = view.presentation as Record<string, unknown>;
     for (const [layerKey, field] of layerAssociationFields) {
-      const layer = composition[layerKey] as Record<string, unknown> | undefined;
+      const layer = presentation[layerKey] as Record<string, unknown> | undefined;
       if (!layer || typeof layer[field] !== "string") continue;
       layer[field] = remapAssociationRef(
         layer[field] as string,
         slugToUlid,
-        `table-presentation.${String(composition.id)}.${layerKey}.${field}`,
+        `views.${view.nodeId}.presentation.${layerKey}.${field}`,
       );
     }
   }
-  writeFileSync(presentationPath, `${JSON.stringify(presentationRaw, null, 2)}\n`, "utf-8");
+  writeFileSync(viewsPath, serializeViewsFile(viewsFile), "utf-8");
 
   const dynamicPath = dynamicPropertiesFilePath(contentDir);
   const dynamicRaw = JSON.parse(readFileSync(dynamicPath, "utf-8")) as {

@@ -107,7 +107,7 @@ These files concentrate type-name special casing:
 | [`content/model/table-schemas.json`](../../../../marloth-story/content/model/table-schemas.json) | Type-table column defs; relation columns carry `perspective` and `targetTypeId`. Keys are set node IDs. |
 | [`content/model/workspace.json`](../../../../marloth-story/content/model/workspace.json) | `archiveNodeId` (archive hub set node). |
 | [`content/model/schema.json`](../../../../marloth-story/content/model/schema.json) | `relationshipRules` — allowed target types per source type + perspective. |
-| [`content/model/table-presentation.json`](../../../../marloth-story/content/model/table-presentation.json) | Composed table presentation (scope tabs, groups, reorder). |
+| [`content/model/views.json`](../../../../marloth-story/content/model/views.json) | Table views and composed presentation layers (scope tabs, groups, sequence). |
 
 Domain values above are from the Marloth corpus; `silentorb-web` has an empty `associations.json` registry.
 

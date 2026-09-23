@@ -7,7 +7,6 @@ export type StoreChangeKind =
   | "dynamic-properties"
   | "views"
   | "workspace"
-  | "table-presentation"
   | "sequencing"
   | "extensions"
   | "table-schemas"

@@ -19,7 +19,6 @@ import {
   resolveCustomTabsForNode,
   activeTabName,
   getSectionTabsConfig,
-  generatedProviderId,
 } from "./views/resolve-tabs";
 import { loadViewsFromContent } from "tome-flatfile";
 import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
@@ -63,7 +62,7 @@ import type {
 import type {
   MemberPageRelationFieldLink,
 } from "tome-service-interfaces";
-import { getCompositionById } from "./table-presentation/load";
+import { getCompositionForDatabase } from "./table-presentation/load";
 import { buildComposedDatabaseView } from "./table-presentation/compose";
 import { relationCountSortsFromColumnDefs } from "./member-page-query";
 
@@ -486,9 +485,7 @@ export function getDatabaseViewDetail(
   const sectionConfig = getSectionTabsConfig(views, databaseId, sectionKey);
 
   if (sectionConfig?.kind === "generated") {
-    const provider = generatedProviderId(views, databaseId, sectionKey);
-    if (!provider) return null;
-    const composition = getCompositionById(provider, dir);
+    const composition = getCompositionForDatabase(databaseId, dir);
     if (!composition) return null;
     return buildComposedDatabaseView(store, composition, requestedTabId, dir, rowsQuery);
   }

@@ -1,3 +1,5 @@
+import type { TablePresentationLayers } from "./table-presentation";
+
 export type ViewSortDirection = "asc" | "desc";
 
 export interface ViewSortSpec {
@@ -20,14 +22,17 @@ export interface ViewDefinition {
   properties?: string[];
 }
 
-/** Generated views computed at runtime from a provider (e.g. scenes-by-book). */
+/**
+ * Composed Items view: scope tabs / groups / sequence come from `presentation`.
+ * Tabs are computed at runtime (e.g. one tab per scope node).
+ */
 export interface GeneratedViewRecord {
   nodeId: string;
   /** Set-trait association ULID (not a display label). */
   association: string;
-  generator: string;
+  presentation: TablePresentationLayers;
   /**
-   * Shared allowlist for all tabs produced by this generator.
+   * Shared allowlist for all tabs produced by this composition.
    * Absent → all columns visible in default order.
    */
   properties?: string[];

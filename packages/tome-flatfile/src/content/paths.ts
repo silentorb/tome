@@ -22,7 +22,6 @@ export const SCHEMA_FILENAME = "schema.json";
 export const VIEWS_FILENAME = "views.json";
 export const TABLE_SCHEMAS_FILENAME = "table-schemas.json";
 export const WORKSPACE_FILENAME = "workspace.json";
-export const TABLE_PRESENTATION_FILENAME = "table-presentation.json";
 export const SEQUENCING_FILENAME = "sequencing.json";
 export const EXTENSIONS_FILENAME = "extensions.json";
 export const REDIRECTS_FILENAME = "redirects.json";
@@ -151,10 +150,6 @@ export function tableSchemasFilePath(contentRoot: string): string {
 
 export function workspaceFilePath(contentRoot: string): string {
   return resolve(contentModelDir(contentRoot), WORKSPACE_FILENAME);
-}
-
-export function tablePresentationFilePath(contentRoot: string): string {
-  return resolve(contentModelDir(contentRoot), TABLE_PRESENTATION_FILENAME);
 }
 
 export function sequencingFilePath(contentRoot: string): string {

@@ -31,7 +31,6 @@ The content root is a directory conventionally named `content/`. Tools discover 
     table-schemas.json
     views.json
     dynamic-properties.json
-    table-presentation.json
     extensions.json
     redirects.json
 ```
@@ -307,7 +306,22 @@ Strict version **2**. Table tab definitions (custom and generated).
     {
       "nodeId": "01EXAMPLETYPENODEID000000001",
       "association": "member_of",
-      "generator": "some_provider",
+      "presentation": {
+        "scope": {
+          "memberToScopeComposite": "01EXAMPLEASSOCIATIONID00003",
+          "excludeColumnKeys": ["product"]
+        },
+        "groups": {
+          "memberToGroupComposite": "01EXAMPLEASSOCIATIONID00004",
+          "groupTypeDatabaseId": "01EXAMPLECHAPTERTYPENODE0001",
+          "groupToScopeComposite": "01EXAMPLEASSOCIATIONID00005",
+          "unassignedGroupTitle": "Unassigned",
+          "canonicalGroupByTitle": true,
+          "excludeColumnKeys": ["part"]
+        },
+        "sequence": { "excludeColumnKeys": ["order"] },
+        "excludeColumnKeys": ["status"]
+      },
       "properties": ["name", "status"]
     }
   ]
@@ -320,7 +334,13 @@ Strict version **2**. Table tab definitions (custom and generated).
 - `properties`: optional string array of visible column keys in display order (absent → all columns, default order)
 - Unique custom key: `(nodeId, association, id)`
 
-**Generated view:** `{ nodeId, association, generator, properties? }` — must not include `id`, `name`, or `sorts`. Shared `properties` apply to all tabs from the generator.
+**Generated view:** `{ nodeId, association, presentation, properties? }` — must not include `id`, `name`, or `sorts`. `presentation` requires at least one of `scope` / `groups` / `sequence`. Shared `properties` apply to all tabs from the composition. Structural `excludeColumnKeys` on layers (denylist) stay separate from the UI allowlist.
+
+| Layer | Fields |
+| --- | --- |
+| `scope` | `memberToScopeComposite` (association id, required); optional `excludeColumnKeys` |
+| `groups` | `memberToGroupComposite`, `groupTypeDatabaseId`, `unassignedGroupTitle`; optional `groupToScopeComposite`, `canonicalGroupByTitle`, `excludeColumnKeys` |
+| `sequence` | optional `excludeColumnKeys` only |
 
 Do not mix generated and custom views for the same `(nodeId, association)` pair. At most one generated view per pair.
 
@@ -415,53 +435,6 @@ Bindings for computed type-table columns. Parser validates the wrapper; entry fi
 
 **Column-set entry:** same pattern with `columnKeyPattern` / `columnNamePattern` instead of fixed keys/names.
 
-### `table-presentation.json` (version 1)
-
-Compositions that layer scope tabs, row groups, and reordering onto a type table's Items section (e.g. scenes by book).
-
-```json
-{
-  "version": 1,
-  "compositions": [
-    {
-      "id": "scenes-by-book",
-      "typeDatabaseId": "01EXAMPLESCENETYPENODE000001",
-      "scope": {
-        "memberToScopeComposite": "01EXAMPLEASSOCIATIONID00003",
-        "excludeColumnKeys": ["product"]
-      },
-      "groups": {
-        "memberToGroupComposite": "01EXAMPLEASSOCIATIONID00004",
-        "groupTypeDatabaseId": "01EXAMPLECHAPTERTYPENODE0001",
-        "groupToScopeComposite": "01EXAMPLEASSOCIATIONID00005",
-        "unassignedGroupTitle": "Unassigned",
-        "canonicalGroupByTitle": true,
-        "excludeColumnKeys": ["part"]
-      },
-      "reorder": {
-        "excludeColumnKeys": ["order"]
-      },
-      "excludeColumnKeys": ["status"]
-    }
-  ]
-}
-```
-
-| Field | Notes |
-| --- | --- |
-| `version` | must be `1` |
-| `compositions` | array; `id` unique |
-
-**Composition fields:** `id`, `typeDatabaseId` (node id); optional `scope`, `groups`, `sequence`, `excludeColumnKeys`, `columnViewName` (deprecated).
-
-| Layer | Fields |
-| --- | --- |
-| `scope` | `memberToScopeComposite` (association id, required); optional `excludeColumnKeys` |
-| `groups` | `memberToGroupComposite` (association id), `groupTypeDatabaseId` (node id), `unassignedGroupTitle` (all required); optional `groupToScopeComposite`, `canonicalGroupByTitle`, `excludeColumnKeys` |
-| `sequence` | optional `excludeColumnKeys` |
-
-Layers are independent: any subset may be present. A composition takes effect when `views.json` has a generated view record whose `generator` equals the composition `id`. The `sequence` layer requires that the type database's set association carries the **ordered** trait in `associations.json`.
-
 ### `extensions.json` (version 1)
 
 Runtime extension registration. Version defaults to `1` if omitted on read.
@@ -530,9 +503,8 @@ Path keys are normalized like static-site `url_alias` (trim, strip slashes, lowe
 | `model/workspace.json` | required | Home, archive, anchors, quick links |
 | `model/schema.json` | optional | Needed when using enums / rules |
 | `model/table-schemas.json` | optional | Needed for type-table columns |
-| `model/views.json` | optional | Needed for custom/generated table tabs |
+| `model/views.json` | optional | Needed for custom/generated table tabs (including presentation layers) |
 | `model/dynamic-properties.json` | optional | Computed columns |
-| `model/table-presentation.json` | optional | Scope tabs, row groups, sequenced Items tables |
 | `model/extensions.json` | optional | Extension packages |
 | `model/redirects.json` | optional | Static-site path → node id redirects |
 

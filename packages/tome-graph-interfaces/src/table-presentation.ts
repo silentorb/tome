@@ -28,24 +28,24 @@ export interface SequenceLayerConfig {
 }
 
 /**
- * Composable table presentation for a type-table Items section.
- * Layers are independent: scope tabs, relation groups, and sequence may each be absent.
+ * Presentation layers stored on a generated `views.json` record.
+ * At least one of `scope`, `groups`, or `sequence` must be present.
  */
-export interface TablePresentationComposition {
-  id: string;
-  typeDatabaseId: string;
+export interface TablePresentationLayers {
   scope?: RelationScopeLayerConfig;
   groups?: RelationGroupsLayerConfig;
   sequence?: SequenceLayerConfig;
   /** Extra column keys hidden for this composition (e.g. deprecated status). */
   excludeColumnKeys?: string[];
-  /** @deprecated Legacy column view name; ignored when properties come from views.json. */
-  columnViewName?: string;
 }
 
-export interface TablePresentationFile {
-  version: number;
-  compositions: TablePresentationComposition[];
+/**
+ * Runtime composition: layers plus identity synthesized from the generated view
+ * (`id` / `typeDatabaseId` = type-table `nodeId`).
+ */
+export interface TablePresentationComposition extends TablePresentationLayers {
+  id: string;
+  typeDatabaseId: string;
 }
 
 export interface RelationScopeTab {

@@ -1,22 +1,11 @@
-import { isNodeId } from "../content/paths";
-import { isAssociationId, normalizeAssociationId } from "../content/associations-file";
+import { isNodeId } from "./paths";
+import { isAssociationId, normalizeAssociationId } from "./associations-file";
 import type {
   RelationGroupsLayerConfig,
   RelationScopeLayerConfig,
   SequenceLayerConfig,
-  TablePresentationComposition,
-  TablePresentationFile,
+  TablePresentationLayers,
 } from "tome-graph-interfaces";
-
-export type {
-  RelationGroupsLayerConfig,
-  RelationScopeLayerConfig,
-  SequenceLayerConfig,
-  TablePresentationComposition,
-  TablePresentationFile,
-} from "tome-graph-interfaces";
-
-export const TABLE_PRESENTATION_FILE_VERSION = 1;
 
 function parseNodeId(value: unknown, path: string): string {
   if (typeof value !== "string" || !isNodeId(value)) {
@@ -111,7 +100,8 @@ function parseSequenceLayer(raw: unknown, path: string): SequenceLayerConfig {
   return layer;
 }
 
-function parseComposition(raw: unknown, path: string): TablePresentationComposition {
+/** Parse presentation layers for a generated views.json record. */
+export function parsePresentationLayers(raw: unknown, path: string): TablePresentationLayers {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`${path}: must be an object`);
   }
@@ -121,61 +111,33 @@ function parseComposition(raw: unknown, path: string): TablePresentationComposit
       `${path}.reorder: removed; use "sequence" for intrinsic edge-sequence pin (no reorder alias)`,
     );
   }
-  const composition: TablePresentationComposition = {
-    id: parseRequiredString(obj.id, `${path}.id`),
-    typeDatabaseId: parseNodeId(obj.typeDatabaseId, `${path}.typeDatabaseId`),
-  };
-  if (obj.scope !== undefined) {
-    composition.scope = parseScopeLayer(obj.scope, `${path}.scope`);
-  }
-  if (obj.groups !== undefined) {
-    composition.groups = parseGroupsLayer(obj.groups, `${path}.groups`);
-  }
-  if (obj.sequence !== undefined) {
-    composition.sequence = parseSequenceLayer(obj.sequence, `${path}.sequence`);
+  if (obj.generator !== undefined) {
+    throw new Error(`${path}: generator is not supported; inline layers on the view record`);
   }
   if (obj.columnViewName !== undefined) {
-    composition.columnViewName = parseRequiredString(obj.columnViewName, `${path}.columnViewName`);
+    throw new Error(`${path}: columnViewName was removed; use view properties allowlist`);
+  }
+  if (obj.id !== undefined || obj.typeDatabaseId !== undefined) {
+    throw new Error(
+      `${path}: id and typeDatabaseId are not allowed; use the view nodeId`,
+    );
+  }
+
+  const layers: TablePresentationLayers = {};
+  if (obj.scope !== undefined) {
+    layers.scope = parseScopeLayer(obj.scope, `${path}.scope`);
+  }
+  if (obj.groups !== undefined) {
+    layers.groups = parseGroupsLayer(obj.groups, `${path}.groups`);
+  }
+  if (obj.sequence !== undefined) {
+    layers.sequence = parseSequenceLayer(obj.sequence, `${path}.sequence`);
   }
   const excludeColumnKeys = parseStringArray(obj.excludeColumnKeys, `${path}.excludeColumnKeys`);
-  if (excludeColumnKeys) composition.excludeColumnKeys = excludeColumnKeys;
-  return composition;
-}
+  if (excludeColumnKeys) layers.excludeColumnKeys = excludeColumnKeys;
 
-export function emptyTablePresentationFile(): TablePresentationFile {
-  return { version: TABLE_PRESENTATION_FILE_VERSION, compositions: [] };
-}
-
-export function parseTablePresentationFile(raw: string): TablePresentationFile {
-  const data = JSON.parse(raw) as unknown;
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    throw new Error("table-presentation.json: root must be an object");
+  if (!layers.scope && !layers.groups && !layers.sequence) {
+    throw new Error(`${path}: must include at least one of scope, groups, or sequence`);
   }
-  const obj = data as Record<string, unknown>;
-
-  if (obj.version !== TABLE_PRESENTATION_FILE_VERSION) {
-    throw new Error(`table-presentation.json: unsupported version ${String(obj.version)}`);
-  }
-
-  if (!Array.isArray(obj.compositions)) {
-    throw new Error("table-presentation.json compositions: must be an array");
-  }
-
-  const compositions = obj.compositions.map((entry, index) =>
-    parseComposition(entry, `table-presentation.json compositions[${index}]`),
-  );
-
-  const seenIds = new Set<string>();
-  for (const composition of compositions) {
-    if (seenIds.has(composition.id)) {
-      throw new Error(`table-presentation.json: duplicate composition id "${composition.id}"`);
-    }
-    seenIds.add(composition.id);
-  }
-
-  return { version: TABLE_PRESENTATION_FILE_VERSION, compositions };
-}
-
-export function serializeTablePresentationFile(file: TablePresentationFile): string {
-  return `${JSON.stringify(file, null, 2)}\n`;
+  return layers;
 }

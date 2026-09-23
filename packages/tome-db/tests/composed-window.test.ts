@@ -11,14 +11,13 @@ import {
   seedTestDynamicProperties,
   seedTestTableSchema,
   TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+  defaultTestPresentationLayers,
 } from "../src/content/test-helpers";
 import { VIEWS_FILE_VERSION } from "tome-flatfile";
 
 const SCENES_DB = "0000000000000000000000000D";
 const PARTS_DB = "0000000000000000000000000Z";
 const PRODUCTS_DB = "0000000000000000000000000S";
-const COMPOSITION_ID = "scenes-by-book";
-
 const bookA = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 const bookB = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 const part1 = "11111111111111111111111111";
@@ -158,7 +157,7 @@ describe("composed table SQL windows", () => {
       {
         nodeId: SCENES_DB,
         association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: COMPOSITION_ID,
+        presentation: defaultTestPresentationLayers(),
       },
     ],
   });
@@ -174,7 +173,7 @@ describe("composed table SQL windows", () => {
       limit: 10,
       offset: 0,
     });
-    expect(page?.presentation?.compositionId).toBe(COMPOSITION_ID);
+    expect(page?.presentation?.compositionId).toBe(SCENES_DB);
     expect(page?.presentation?.scopeId).toBe(bookA);
     expect(page?.rowsWindow).toEqual({
       offset: 0,

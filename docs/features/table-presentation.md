@@ -2,7 +2,7 @@
 
 ## Summary
 
-**Table presentation** composes optional presentation layers onto a type table's Items section. A *composition* names a type database and turns on any combination of three independent layers:
+**Table presentation** composes optional presentation layers onto a type table's Items section. Layers live on a **generated view record** in `views.json` (`presentation`). The type table is the view's `nodeId`. Any combination of three independent layers may be present:
 
 | Layer | Effect |
 | --- | --- |
@@ -10,7 +10,7 @@
 | `groups` | Rows partition into subsections keyed by a relation to a group type table |
 | `sequence` | Pin rows to the intrinsic `ordered`-trait edge `order` sequence; enable drag-and-drop that **edits those edges** |
 
-The result is still a **database section** (`DatabaseViewDetail`) — layers add `groups` and `presentation` metadata rather than producing a separate section type. The first configured composition is `scenes-by-book`: scenes scoped by book (Product), grouped by Part, and sequenced.
+The result is still a **database section** (`DatabaseViewDetail`) — layers add `groups` and `presentation` metadata rather than producing a separate section type. Marloth's Scenes Items table uses all three: scenes scoped by book (Product), grouped by Part, and sequenced.
 
 Intrinsic sequence is **not** view sorting: `ViewSortSpec` / column sorts use the same view plumbing as tabs and may persist in `views.json`, but they do not rewrite edge `order`. The `sequence` layer forces the shared Items member-page path to use intrinsic edge order (`intrinsicSequence`) and sets `presentation.sequenced`.
 
@@ -20,7 +20,7 @@ Read this doc when your task involves:
 
 - Scope tabs, row groups, or intrinsic edge-sequence editing on a type table's Items section
 - The `order` property on **ordered set-trait** edges
-- Adding or changing a composition in `content/model/table-presentation.json`
+- Adding or changing `presentation` on a generated view in `content/model/views.json`
 
 For graph storage basics, read [tome-db.md](./tome-db.md). For view tabs and view sorts, read [views.md](./views.md). For the editor UI, read [tome-editor.md](./tome-editor.md). For Marloth domain semantics (Scene, Part, Product), read [`../ontology.md`](../ontology.md). For set / ordered traits, read [sets.md](./sets.md).
 
@@ -28,16 +28,15 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For view tabs and vie
 
 ### Core model
 
-- Compositions **must** be defined in `content/model/table-presentation.json`; there is no UI for adding compositions.
-- A composition **must** name a `typeDatabaseId` and a unique `id`. Every layer is optional and each layer **must** work without the others.
-- A database opts into a composition through `views.json`: a generated view record whose `generator` is the composition id (see [views.md](./views.md)).
+- Presentation layers **must** be defined on a generated view record in `content/model/views.json` (`presentation`); there is no UI for adding compositions.
+- The type table is the view's `nodeId`. Every layer is optional and each layer **must** work without the others; at least one of `scope` / `groups` / `sequence` **must** be present.
 - Intrinsic sequence **must** be stored in the `order` property on **ordered set-trait** edges (default key from the `ordered` trait). It **must** be treated as metadata: excluded from columns and never editable as a field cell.
-- Each layer **may** declare `excludeColumnKeys`; the composition **may** declare its own. All of them union into the hidden column set, because scope tabs, group headings, and drag handles replace the columns they stand in for.
+- Each layer **may** declare `excludeColumnKeys`; the presentation **may** declare its own. All of them union into the hidden column set, because scope tabs, group headings, and drag handles replace the columns they stand in for. Optional view `properties` remain a separate UI allowlist.
 
 ### `scope` layer
 
 - `memberToScopeComposite` is the association between a row and its scope node.
-- At read time the host **must** resolve that composite to the matching table-schema relation column key on `typeDatabaseId`, then hop via Imp semantic bind (`semanticPathFromAnchorGraph` + `executeImp`). Missing or ambiguous columns **must** fail loudly — there is no composite-SQL fallback for related-id hops.
+- At read time the host **must** resolve that composite to the matching table-schema relation column key on the type table (`nodeId`), then hop via Imp semantic bind (`semanticPathFromAnchorGraph` + `executeImp`). Missing or ambiguous columns **must** fail loudly — there is no composite-SQL fallback for related-id hops.
 - Tabs **must** be generated from the scope nodes that actually have rows; the first tab is active by default.
 - Rows **must** filter to the active scope.
 - Sequence is **scoped**: with `sequence` also enabled, intrinsic order applies within the active scope, not globally across the database.
@@ -93,7 +92,7 @@ For Marloth, scene order is meaningful per book. Parts organize narrative struct
 
 ### Config in git-tracked JSON
 
-Compositions live in `content/model/table-presentation.json` so the engine in `packages/tome-db/src/table-presentation/` stays domain-agnostic.
+Presentation layers live on generated records in `content/model/views.json` so the engine in `packages/tome-db/src/table-presentation/` stays domain-agnostic.
 
 ## Behavior / pipeline
 
@@ -102,7 +101,7 @@ View load:
 ```
 GET /api/nodes/:databaseId?tab=:scopeId
   → getNodePageDetail
-  → getDatabaseViewDetail → generated view → getCompositionById
+  → getDatabaseViewDetail → generated view.presentation
   → buildComposedDatabaseView
   → database section with groups + presentation.sequenced
 ```
@@ -127,7 +126,7 @@ User drag-drop (webview)
 
 ## Verification
 
-- `bun test packages/tome-flatfile/tests` — composition file parsing and loading
+- `bun test packages/tome-flatfile/tests` — views-file presentation layer parsing
 - `bun test packages/tome-db/tests` — composed view, groups, sequence mutations, Imp semantic related-id hops
 - `bun test packages/tome-server/tests/api` — node page section and sequence endpoint
 - `bun test packages/tome-editor/tests` — `GroupedDatabaseView` rendering, filtering, unlink
@@ -137,9 +136,10 @@ User drag-drop (webview)
 
 | Module | Responsibility |
 | --- | --- |
-| `content/model/table-presentation.json` | Composition entries (layers, composites, column exclusions) |
-| `packages/tome-graph-interfaces/src/table-presentation.ts` | Composition, group, and presentation DTOs |
-| `packages/tome-flatfile/src/table-presentation/` | Parse / load / invalidate the composition file |
+| `content/model/views.json` | Generated view `presentation` layers (composites, column exclusions) |
+| `packages/tome-graph-interfaces/src/table-presentation.ts` | Layer and presentation DTOs |
+| `packages/tome-flatfile/src/content/presentation-layers.ts` | Parse presentation layers on views |
+| `packages/tome-db/src/table-presentation/load.ts` | Resolve composition from generated views |
 | `packages/tome-db/src/table-presentation/compose.ts` | Build the composed `DatabaseViewDetail` |
 | `packages/tome-db/src/semantic-related-ids.ts` | Composite → table-schema token → Imp `executeImp` related ids |
 | `packages/tome-db/src/table-presentation/relation-scope-tabs.ts` | Scope discovery and row filtering |

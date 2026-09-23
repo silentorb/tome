@@ -15,6 +15,7 @@ import {
   seedTestDynamicProperties,
   seedTestTableSchema,
   TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+  defaultTestPresentationLayers,
 } from "../src/content/test-helpers";
 import { VIEWS_FILE_VERSION, projectionTypeForEndpoint } from "tome-flatfile";
 import { firstRelatedNodeId, loadSemanticRelatedPathContext } from "../src/semantic-related-ids";
@@ -23,8 +24,6 @@ const SCENES_DB = "0000000000000000000000000D";
 const PARTS_DB = "0000000000000000000000000Z";
 const PRODUCTS_DB = "0000000000000000000000000S";
 const CHARACTERS_DB = "00000000000000000000000035";
-const COMPOSITION_ID = "scenes-by-book";
-
 const bookA = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 const bookB = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 const part1 = "11111111111111111111111111";
@@ -197,17 +196,7 @@ describe("table-presentation", () => {
       {
         nodeId: SCENES_DB,
         association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: COMPOSITION_ID,
-      },
-      {
-        nodeId: PARTS_DB,
-        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: COMPOSITION_ID,
-      },
-      {
-        nodeId: PRODUCTS_DB,
-        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
-        generator: COMPOSITION_ID,
+        presentation: defaultTestPresentationLayers(),
       },
     ],
   });
@@ -223,7 +212,7 @@ describe("table-presentation", () => {
     expect(detail?.tabs.items.map((tab) => tab.label)).toEqual(["Book A", "Book B"]);
     expect(detail?.tabs.activeTabId).toBe(bookA);
     expect(detail?.presentation).toMatchObject({
-      compositionId: COMPOSITION_ID,
+      compositionId: SCENES_DB,
       scopeId: bookA,
       sequenced: true,
     });
@@ -362,7 +351,7 @@ describe("table-presentation", () => {
     const section = detail?.sections.find((s) => s.type === "database");
     expect(section?.type).toBe("database");
     expect(section?.type === "database" ? section.databaseView.presentation : undefined).
-      toMatchObject({ compositionId: COMPOSITION_ID, scopeId: bookA });
+      toMatchObject({ compositionId: SCENES_DB, scopeId: bookA });
     expect(
       section?.type === "database" ? section.databaseView.groups?.map((g) => g.title) : undefined,
     ).toEqual(["Part 1", "Part 2", "Unassigned"]);

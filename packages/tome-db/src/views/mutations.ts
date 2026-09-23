@@ -16,7 +16,7 @@ import {
   viewsForNode,
   viewsForRelationship,
 } from "./index";
-import type { ViewsMutationError } from "tome-graph-interfaces";
+import type { ViewsMutationError, TablePresentationLayers } from "tome-graph-interfaces";
 
 export type { ViewsMutationError } from "tome-graph-interfaces";
 
@@ -285,14 +285,14 @@ export function ensureGeneratedView(
   store: TomeGraphStoreBase,
   nodeId: string,
   association: string,
-  generator: string,
+  presentation: TablePresentationLayers,
 ): void {
   const file = store.readViews();
   const normalized = nodeId;
   file.views = file.views.filter(
     (view) => !(view.nodeId === normalized && view.association === association),
   );
-  file.views.push({ nodeId: normalized, association, generator });
+  file.views.push({ nodeId: normalized, association, presentation });
   writeViews(store, file);
 }
 
