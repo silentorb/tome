@@ -102,7 +102,7 @@ Use `bare` for landing pages that should not look like Tome node pages (e.g. a c
 | --- | --- |
 | Title + archived badge | From node detail |
 | Metadata | Collapsible; created/modified, relationship count, backlinks, and Properties on instance pages when expanded (`?meta=1` expands) |
-| Markdown body | Callouts, dynamic `[[id]]` links, extension page blocks (`bodyHtml` when pre-rendered) |
+| Markdown body | Callouts (structured as `.tome-callout` with `.tome-callout-icon` + `.tome-callout-body` from emoji-lead blockquotes), dynamic `[[id]]` links, extension page blocks (`bodyHtml` when pre-rendered) |
 | Items table | Type-table hubs; row name links, relation-cell links, sortable columns |
 | Relation tables | Per outgoing relationship group; name links |
 

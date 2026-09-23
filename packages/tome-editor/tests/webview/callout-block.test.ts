@@ -5,8 +5,9 @@ import { commonmark } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
 import { getMarkdown } from "@milkdown/kit/utils";
 import { TextSelection } from "@milkdown/prose/state";
-import { DEFAULT_CALLOUT_PREFIX, hasLeadingCalloutEmoji } from "tome-flatfile/callout";
+import { DEFAULT_CALLOUT_EMOJI } from "tome-flatfile/callout";
 import { calloutPlugin } from "../../src/webview/callout-schema";
+import { calloutViewPlugin } from "../../src/webview/callout-view";
 import { insertCalloutBlock } from "../../src/webview/callout-block";
 import { installCalloutDecoration } from "../../src/webview/callout-decoration";
 
@@ -29,6 +30,7 @@ async function createEditor(initial: string) {
     .use(commonmark)
     .use(gfm)
     .use(calloutPlugin)
+    .use(calloutViewPlugin)
     .create();
   return { editor, root };
 }
@@ -47,7 +49,7 @@ function selectAtParagraphEnd(
 }
 
 describe("callout block insertion", () => {
-  test("insertCalloutBlock creates blockquote with default emoji prefix", async () => {
+  test("insertCalloutBlock creates callout with emoji chrome, not body prefix", async () => {
     const { editor, root } = await createEditor("Hello");
 
     await editor.action((ctx) => {
@@ -56,16 +58,32 @@ describe("callout block insertion", () => {
       insertCalloutBlock(ctx);
     });
 
-    const blockquote = root.querySelector("blockquote");
-    expect(blockquote).toBeTruthy();
-    const text = blockquote?.textContent ?? "";
-    expect(hasLeadingCalloutEmoji(text)).toBe(true);
-    expect(text.startsWith(DEFAULT_CALLOUT_PREFIX.trim())).toBe(true);
+    const callout = root.querySelector("blockquote.tome-callout");
+    expect(callout).toBeTruthy();
+    expect(callout?.getAttribute("data-emoji")).toBe(DEFAULT_CALLOUT_EMOJI);
+    expect(callout?.querySelector(".tome-callout-icon")?.textContent).toBe(DEFAULT_CALLOUT_EMOJI);
+    const bodyText = callout?.querySelector(".tome-callout-body")?.textContent ?? "";
+    expect(bodyText.includes(DEFAULT_CALLOUT_EMOJI)).toBe(false);
+
+    await editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      let found = false;
+      view.state.doc.descendants((node) => {
+        if (node.type.name === "callout") {
+          found = true;
+          expect(node.attrs.emoji).toBe(DEFAULT_CALLOUT_EMOJI);
+          expect(node.textContent.includes(DEFAULT_CALLOUT_EMOJI)).toBe(false);
+        }
+      });
+      expect(found).toBe(true);
+      const md = getMarkdown()(ctx);
+      expect(md).toContain(`> ${DEFAULT_CALLOUT_EMOJI}`);
+    });
 
     await editor.destroy();
   });
 
-  test("nested markdown loads with two decorated callouts", async () => {
+  test("nested markdown loads with two structured callouts", async () => {
     const nested = `> 💡 Outer callout
 > > 💡 Inner callout
 > >
@@ -77,8 +95,15 @@ describe("callout block insertion", () => {
     });
 
     expect(root.querySelectorAll("blockquote.tome-callout").length).toBe(2);
+    expect(root.querySelectorAll(".tome-callout-icon").length).toBe(2);
     await editor.action((ctx) => {
       expect(countCallouts(ctx.get(editorViewCtx).state.doc)).toBe(2);
+      const view = ctx.get(editorViewCtx);
+      view.state.doc.descendants((node) => {
+        if (node.type.name === "callout") {
+          expect(node.textContent.includes("💡")).toBe(false);
+        }
+      });
     });
 
     await editor.destroy();

@@ -2,7 +2,7 @@ import { Plugin } from "@milkdown/prose/state";
 import type { EditorView } from "@milkdown/prose/view";
 import { selectionInsideCallout } from "./callout-nesting";
 
-/** Use the native caret inside callouts; virtual cursor breaks with hanging-indent layout. */
+/** Use the native caret inside callouts; virtual cursor can still mis-measure nested panels. */
 export function createCalloutCursorPlugin(): Plugin {
   return new Plugin({
     view(view: EditorView) {

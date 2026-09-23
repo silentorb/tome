@@ -1,8 +1,10 @@
 import type { MilkdownPlugin } from "@milkdown/kit/ctx";
 import { $nodeSchema, $remark } from "@milkdown/kit/utils";
 import type { Node as MdastNode, Root as MdastRoot } from "mdast";
-import { extractLeadingCalloutEmoji } from "tome-flatfile/callout";
-import { DEFAULT_CALLOUT_EMOJI } from "tome-flatfile/callout";
+import {
+  DEFAULT_CALLOUT_EMOJI,
+  extractLeadingCalloutEmoji,
+} from "tome-flatfile/callout";
 
 interface TomeCalloutMdast extends MdastNode {
   type: "tomeCallout";
@@ -17,6 +19,38 @@ function paragraphLeadText(node: MdastNode): string {
     .join("");
 }
 
+/** Strip leading callout emoji (+ following space) from the first paragraph's text nodes. */
+function stripLeadingEmojiFromMdast(children: MdastNode[], emoji: string): MdastNode[] {
+  if (children.length === 0) return children;
+  const [first, ...rest] = children;
+  if (!first || first.type !== "paragraph" || !("children" in first) || !Array.isArray(first.children)) {
+    return children;
+  }
+  let stripped = false;
+  const nextInlines: MdastNode[] = [];
+  for (const child of first.children as MdastNode[]) {
+    if (
+      !stripped &&
+      child &&
+      typeof child === "object" &&
+      child.type === "text" &&
+      "value" in child
+    ) {
+      const value = String(child.value ?? "");
+      const trimmedStart = value.trimStart();
+      if (trimmedStart.startsWith(emoji)) {
+        const without = trimmedStart.slice(emoji.length).replace(/^\s+/, "");
+        stripped = true;
+        if (without) nextInlines.push({ ...child, value: without } as MdastNode);
+        continue;
+      }
+    }
+    nextInlines.push(child);
+  }
+  if (!stripped) return children;
+  return [{ ...first, children: nextInlines } as MdastNode, ...rest];
+}
+
 function convertCalloutNodes(nodes: MdastNode[]): MdastNode[] {
   return nodes.map((node) => {
     const children =
@@ -26,7 +60,11 @@ function convertCalloutNodes(nodes: MdastNode[]): MdastNode[] {
     if (node.type === "blockquote" && children) {
       const emoji = extractLeadingCalloutEmoji(paragraphLeadText(children[0] as MdastNode));
       if (emoji) {
-        const callout: TomeCalloutMdast = { type: "tomeCallout", emoji, children };
+        const callout: TomeCalloutMdast = {
+          type: "tomeCallout",
+          emoji,
+          children: stripLeadingEmojiFromMdast(children, emoji),
+        };
         return callout;
       }
       return { ...node, children } as MdastNode;
@@ -58,6 +96,12 @@ export const calloutSchema = $nodeSchema("callout", () => ({
         if (!(dom instanceof HTMLElement)) return false;
         return { emoji: dom.dataset.emoji || DEFAULT_CALLOUT_EMOJI };
       },
+      contentElement: (dom) => {
+        if (!(dom instanceof HTMLElement)) return dom as HTMLElement;
+        return (
+          (dom.querySelector(":scope > .tome-callout-body") as HTMLElement | null) ?? dom
+        );
+      },
     },
   ],
   toDOM: (node) => [
@@ -66,7 +110,8 @@ export const calloutSchema = $nodeSchema("callout", () => ({
       class: "tome-callout",
       "data-emoji": node.attrs.emoji,
     },
-    0,
+    ["span", { class: "tome-callout-icon", contenteditable: "false" }, String(node.attrs.emoji)],
+    ["div", { class: "tome-callout-body" }, 0],
   ],
   parseMarkdown: {
     match: ({ type }) => type === "tomeCallout",
@@ -80,9 +125,36 @@ export const calloutSchema = $nodeSchema("callout", () => ({
   toMarkdown: {
     match: (node) => node.type.name === "callout",
     runner: (state, node) => {
-      state.openNode("blockquote").next(node.content).closeNode();
+      const emoji = String(node.attrs.emoji || DEFAULT_CALLOUT_EMOJI);
+      const prefix = `${emoji} `;
+      state.openNode("blockquote");
+      const first = node.firstChild;
+      if (first && first.type.name === "paragraph") {
+        state.openNode("paragraph");
+        state.addNode("text", undefined, prefix);
+        if (first.content.size > 0) {
+          state.next(first.content);
+        }
+        state.closeNode();
+        for (let i = 1; i < node.childCount; i++) {
+          state.next(node.child(i));
+        }
+      } else if (node.childCount > 0) {
+        state.openNode("paragraph");
+        state.addNode("text", undefined, prefix.trimEnd());
+        state.closeNode();
+        state.next(node.content);
+      } else {
+        state.openNode("paragraph");
+        state.addNode("text", undefined, prefix.trimEnd());
+        state.closeNode();
+      }
+      state.closeNode();
     },
   },
 }));
 
-export const calloutPlugin: MilkdownPlugin[] = [...remarkCalloutPlugin, ...calloutSchema];
+export const calloutPlugin: MilkdownPlugin[] = [
+  ...remarkCalloutPlugin,
+  ...calloutSchema,
+];

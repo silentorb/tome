@@ -4,7 +4,7 @@ import type { ResolvedPos } from "@milkdown/prose/model";
 import type { EditorState } from "@milkdown/prose/state";
 import type { EditorView } from "@milkdown/prose/view";
 import { paragraphSchema } from "@milkdown/kit/preset/commonmark";
-import { DEFAULT_CALLOUT_EMOJI, DEFAULT_CALLOUT_PREFIX } from "tome-flatfile/callout";
+import { DEFAULT_CALLOUT_EMOJI } from "tome-flatfile/callout";
 import { calloutSchema } from "./callout-schema";
 import { isCalloutBlockquoteNode } from "./callout-decoration";
 
@@ -46,7 +46,7 @@ export function createCalloutBlockquoteNode(
   calloutType: NodeType,
   paragraphType: NodeType,
 ): ProseNode {
-  const paragraph = paragraphType.create(null, schema.text(DEFAULT_CALLOUT_PREFIX));
+  const paragraph = paragraphType.create(null);
   return calloutType.create({ emoji: DEFAULT_CALLOUT_EMOJI }, paragraph);
 }
 
@@ -60,9 +60,14 @@ export function calloutBlockquoteTypes(ctx: Ctx): {
   };
 }
 
-/** Caret position immediately after the default emoji prefix in a callout node. */
+/** Caret position at the start of the first paragraph inside a callout node. */
+export function caretAtCalloutBodyStart(calloutPos: number): number {
+  return calloutPos + 2;
+}
+
+/** @deprecated Use caretAtCalloutBodyStart — emoji is no longer in body text. */
 export function caretAfterCalloutPrefix(blockquotePos: number): number {
-  return blockquotePos + 1 + 1 + DEFAULT_CALLOUT_PREFIX.length;
+  return caretAtCalloutBodyStart(blockquotePos);
 }
 
 /** Whether a pasted slice contains a top-level callout. */

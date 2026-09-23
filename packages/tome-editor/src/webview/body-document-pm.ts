@@ -90,20 +90,6 @@ function inlinesToPm(inlines: readonly NodeBodyInline[]): PmNode[] {
   return out;
 }
 
-function prefixCalloutEmoji(blocks: NodeBodyBlock[], emoji: string): NodeBodyBlock[] {
-  const [first, ...rest] = blocks;
-  const prefix = `${emoji} `;
-  if (!first || first.type !== "paragraph") {
-    return [{ type: "paragraph", content: [{ type: "text", text: prefix }] }, ...blocks];
-  }
-  const [lead, ...tail] = first.content;
-  if (!lead || lead.type !== "text" || lead.marks?.length) {
-    return [{ ...first, content: [{ type: "text", text: prefix }, ...first.content] }, ...rest];
-  }
-  if (lead.text.startsWith(prefix) || lead.text.startsWith(emoji)) return blocks;
-  return [{ ...first, content: [{ ...lead, text: prefix + lead.text }, ...tail] }, ...rest];
-}
-
 function listItemToPm(item: NodeBodyListItem): PmNode {
   let content = blocksToPm(item.content);
   if (content.length === 0 || content[0]?.type !== "paragraph") {
@@ -151,7 +137,7 @@ function blocksToPm(blocks: readonly NodeBodyBlock[]): PmNode[] {
         out.push({
           type: "callout",
           attrs: { emoji: block.emoji || DEFAULT_CALLOUT_EMOJI },
-          content: blocksToPm(prefixCalloutEmoji(block.content, block.emoji || DEFAULT_CALLOUT_EMOJI)),
+          content: blocksToPm(block.content),
         });
         break;
       case "bullet_list":

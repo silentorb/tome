@@ -2,10 +2,13 @@ import { describe, expect, test } from "bun:test";
 import { decorateCalloutHtml } from "../src/lib/callout-html";
 
 describe("decorateCalloutHtml", () => {
-  test("adds tome-callout class when first paragraph has leading emoji", () => {
+  test("structures emoji-lead blockquotes as icon + body", () => {
     const html = "<blockquote><p>💡 Important note</p></blockquote>";
     expect(decorateCalloutHtml(html)).toBe(
-      '<blockquote class="tome-callout"><p>💡 Important note</p></blockquote>',
+      '<blockquote class="tome-callout" data-emoji="💡">' +
+        '<span class="tome-callout-icon" aria-hidden="true">💡</span>' +
+        '<div class="tome-callout-body"><p>Important note</p></div>' +
+        "</blockquote>",
     );
   });
 
@@ -18,7 +21,16 @@ describe("decorateCalloutHtml", () => {
     const html =
       "<blockquote><p>💡 Outer</p><blockquote><p>💡 Inner</p></blockquote></blockquote>";
     expect(decorateCalloutHtml(html)).toBe(
-      '<blockquote class="tome-callout"><p>💡 Outer</p><blockquote class="tome-callout"><p>💡 Inner</p></blockquote></blockquote>',
+      '<blockquote class="tome-callout" data-emoji="💡">' +
+        '<span class="tome-callout-icon" aria-hidden="true">💡</span>' +
+        '<div class="tome-callout-body">' +
+        "<p>Outer</p>" +
+        '<blockquote class="tome-callout" data-emoji="💡">' +
+        '<span class="tome-callout-icon" aria-hidden="true">💡</span>' +
+        '<div class="tome-callout-body"><p>Inner</p></div>' +
+        "</blockquote>" +
+        "</div>" +
+        "</blockquote>",
     );
   });
 });

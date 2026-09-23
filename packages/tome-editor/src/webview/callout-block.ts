@@ -4,13 +4,11 @@ import {
   clearTextInCurrentBlockCommand,
   wrapInBlockTypeCommand,
 } from "@milkdown/kit/preset/commonmark";
-import { replaceRange } from "@milkdown/kit/utils";
 import type { BlockEditFeatureConfig } from "@milkdown/crepe/feature/block-edit";
-import { DEFAULT_CALLOUT_PREFIX } from "tome-flatfile/callout";
 import { TextSelection } from "@milkdown/prose/state";
 import {
   calloutBlockquoteTypes,
-  caretAfterCalloutPrefix,
+  caretAtCalloutBodyStart,
   createCalloutBlockquoteNode,
   findBlockquoteDepth,
 } from "./callout-nesting";
@@ -41,8 +39,16 @@ function insertTopLevelCalloutBlock(ctx: Ctx): void {
   commands.call(wrapInBlockTypeCommand.key, { nodeType: blockquoteType });
 
   const view = ctx.get(editorViewCtx);
-  const { from, to } = view.state.selection;
-  replaceRange(DEFAULT_CALLOUT_PREFIX, { from, to })(ctx);
+  const { $from } = view.state.selection;
+  for (let depth = $from.depth; depth > 0; depth--) {
+    if ($from.node(depth).type.name === "callout") {
+      const calloutPos = $from.before(depth);
+      view.dispatch(
+        view.state.tr.setSelection(TextSelection.create(view.state.doc, caretAtCalloutBodyStart(calloutPos))),
+      );
+      break;
+    }
+  }
 }
 
 function insertNestedCalloutBlock(ctx: Ctx): void {
@@ -66,16 +72,16 @@ function insertNestedCalloutBlock(ctx: Ctx): void {
     const paraPos = $from.before();
     const paraEnd = $from.after();
     tr = tr.replaceWith(paraPos, paraEnd, nested);
-    tr = tr.setSelection(TextSelection.create(tr.doc, caretAfterCalloutPrefix(paraPos)));
+    tr = tr.setSelection(TextSelection.create(tr.doc, caretAtCalloutBodyStart(paraPos)));
   } else if (atEnd) {
     const insertPos = $from.after();
     tr = tr.insert(insertPos, nested);
-    tr = tr.setSelection(TextSelection.create(tr.doc, caretAfterCalloutPrefix(insertPos)));
+    tr = tr.setSelection(TextSelection.create(tr.doc, caretAtCalloutBodyStart(insertPos)));
   } else {
     tr = tr.split(from);
     const splitPos = tr.selection.from;
     tr = tr.insert(splitPos, nested);
-    tr = tr.setSelection(TextSelection.create(tr.doc, caretAfterCalloutPrefix(splitPos)));
+    tr = tr.setSelection(TextSelection.create(tr.doc, caretAtCalloutBodyStart(splitPos)));
   }
 
   view.dispatch(tr.scrollIntoView());
@@ -83,8 +89,8 @@ function insertNestedCalloutBlock(ctx: Ctx): void {
 }
 
 /**
- * Insert a callout block. Stored as markdown blockquote for compatibility;
- * the editor renders callouts as tinted panels (see `.tome-callout` CSS).
+ * Insert a callout block. Storage remains an emoji-lead markdown blockquote;
+ * the editor keeps emoji in node attrs and renders it as fixed chrome.
  */
 export function insertCalloutBlock(ctx: Ctx): void {
   const view = ctx.get(editorViewCtx);

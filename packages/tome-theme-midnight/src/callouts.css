@@ -1,5 +1,8 @@
 blockquote.tome-callout {
-  --tome-callout-gutter: 1.75em;
+  --tome-callout-icon-size: 1.5em;
+  display: flex;
+  gap: 0.65em;
+  align-items: flex-start;
   border-left: none;
   margin: 1em 0;
   padding: 12px 14px;
@@ -9,33 +12,50 @@ blockquote.tome-callout {
   color: var(--tome-text);
 }
 
-blockquote.tome-callout > p:first-child {
+blockquote.tome-callout > .tome-callout-icon {
+  flex: 0 0 var(--tome-callout-icon-size);
+  width: var(--tome-callout-icon-size);
+  line-height: 1.35;
+  font-size: 1.05em;
+  text-align: center;
+  user-select: none;
+}
+
+blockquote.tome-callout > .tome-callout-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+blockquote.tome-callout > .tome-callout-body > p:first-child {
   margin-top: 0;
-  padding-left: var(--tome-callout-gutter);
-  text-indent: calc(-1 * var(--tome-callout-gutter));
 }
 
-blockquote.tome-callout > p:last-child {
+blockquote.tome-callout > .tome-callout-body > p:last-child {
   margin-bottom: 0;
-}
-
-blockquote.tome-callout > p ~ p,
-blockquote.tome-callout > blockquote,
-blockquote.tome-callout > ul,
-blockquote.tome-callout > ol {
-  padding-left: var(--tome-callout-gutter);
 }
 
 blockquote.tome-callout blockquote.tome-callout {
   margin: 0.75em 0;
 }
 
-blockquote.tome-callout blockquote.tome-callout > p:first-child {
+/* Fallback: emoji still in text (decorated plain blockquotes) — hang icon in gutter. */
+blockquote.tome-callout:not(:has(> .tome-callout-icon)) {
+  --tome-callout-gutter: 1.75em;
+}
+
+blockquote.tome-callout:not(:has(> .tome-callout-icon)) > p:first-child {
   margin-top: 0;
   padding-left: var(--tome-callout-gutter);
   text-indent: calc(-1 * var(--tome-callout-gutter));
 }
 
-blockquote.tome-callout blockquote.tome-callout > p:last-child {
+blockquote.tome-callout:not(:has(> .tome-callout-icon)) > p:last-child {
   margin-bottom: 0;
+}
+
+blockquote.tome-callout:not(:has(> .tome-callout-icon)) > p ~ p,
+blockquote.tome-callout:not(:has(> .tome-callout-icon)) > blockquote,
+blockquote.tome-callout:not(:has(> .tome-callout-icon)) > ul,
+blockquote.tome-callout:not(:has(> .tome-callout-icon)) > ol {
+  padding-left: var(--tome-callout-gutter);
 }

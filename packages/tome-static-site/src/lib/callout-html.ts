@@ -1,8 +1,46 @@
-import { hasLeadingCalloutEmoji } from "tome-flatfile/callout";
+import { extractLeadingCalloutEmoji, hasLeadingCalloutEmoji } from "tome-flatfile/callout";
+
+function firstParagraphMatch(inner: string): RegExpExecArray | null {
+  return /<p>([\s\S]*?)<\/p>/i.exec(inner);
+}
 
 function isCalloutBlockquoteInner(inner: string): boolean {
-  const firstParagraph = /<p>([^<]*)<\/p>/i.exec(inner);
-  return Boolean(firstParagraph && hasLeadingCalloutEmoji(firstParagraph[1]!));
+  const firstParagraph = firstParagraphMatch(inner);
+  if (!firstParagraph) return false;
+  const text = firstParagraph[1]!.replace(/<[^>]+>/g, "");
+  return hasLeadingCalloutEmoji(text);
+}
+
+function stripLeadingEmojiFromParagraphHtml(paragraphInner: string, emoji: string): string {
+  const textOnly = paragraphInner.replace(/<[^>]+>/g, "");
+  if (!hasLeadingCalloutEmoji(textOnly)) return paragraphInner;
+
+  // Prefer stripping from a leading text run so nested tags stay intact when possible.
+  const escaped = emoji.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const leading = new RegExp(`^(\\s*)${escaped}\\s*`);
+  if (leading.test(paragraphInner)) {
+    return paragraphInner.replace(leading, "$1");
+  }
+
+  // Fallback: strip emoji from decoded plain text and re-wrap as a simple paragraph body.
+  const trimmed = textOnly.trimStart();
+  if (!trimmed.startsWith(emoji)) return paragraphInner;
+  return trimmed.slice(emoji.length).replace(/^\s+/, "");
+}
+
+function structureCalloutInner(inner: string): { emoji: string; bodyInner: string } | null {
+  const firstParagraph = firstParagraphMatch(inner);
+  if (!firstParagraph) return null;
+  const paragraphInner = firstParagraph[1]!;
+  const text = paragraphInner.replace(/<[^>]+>/g, "");
+  const emoji = extractLeadingCalloutEmoji(text);
+  if (!emoji) return null;
+
+  const strippedParagraphInner = stripLeadingEmojiFromParagraphHtml(paragraphInner, emoji);
+  const rebuiltFirst = `<p>${strippedParagraphInner}</p>`;
+  const rest = inner.slice(firstParagraph.index! + firstParagraph[0].length);
+  const bodyInner = rebuiltFirst + rest;
+  return { emoji, bodyInner };
 }
 
 function decorateBlockquoteTags(html: string): string {
@@ -57,13 +95,32 @@ function decorateBlockquoteTags(html: string): string {
     const hasClass = /\bclass\s*=/.test(openTag);
 
     if (isCalloutBlockquoteInner(inner)) {
-      const taggedOpen = hasClass
+      const structured = structureCalloutInner(inner);
+      const decoratedInner = decorateBlockquoteTags(structured?.bodyInner ?? inner);
+      let taggedOpen = hasClass
         ? openTag.replace(/\bclass\s*=\s*(["'])([^"']*)\1/, (_match, quote, classes) => {
             const next = `${classes} tome-callout`.trim();
             return `class=${quote}${next}${quote}`;
           })
         : openTag.replace("<blockquote", '<blockquote class="tome-callout"');
-      result += taggedOpen + decorateBlockquoteTags(inner) + closeTag;
+
+      if (structured) {
+        if (/\bdata-emoji\s*=/.test(taggedOpen)) {
+          taggedOpen = taggedOpen.replace(
+            /\bdata-emoji\s*=\s*(["'])[^"']*\1/,
+            `data-emoji="${structured.emoji}"`,
+          );
+        } else {
+          taggedOpen = taggedOpen.replace(/>$/, ` data-emoji="${structured.emoji}">`);
+        }
+        result +=
+          taggedOpen +
+          `<span class="tome-callout-icon" aria-hidden="true">${structured.emoji}</span>` +
+          `<div class="tome-callout-body">${decoratedInner}</div>` +
+          closeTag;
+      } else {
+        result += taggedOpen + decoratedInner + closeTag;
+      }
     } else {
       result += openTag + decorateBlockquoteTags(inner) + closeTag;
     }
@@ -74,7 +131,10 @@ function decorateBlockquoteTags(html: string): string {
   return result;
 }
 
-/** Add `tome-callout` to blockquotes whose first paragraph starts with a callout emoji. */
+/**
+ * Promote emoji-lead blockquotes to structured callouts:
+ * `blockquote.tome-callout[data-emoji]` with `.tome-callout-icon` + `.tome-callout-body`.
+ */
 export function decorateCalloutHtml(html: string): string {
   return decorateBlockquoteTags(html);
 }

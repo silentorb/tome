@@ -43,6 +43,7 @@ import { documentEqualityKey, isDocumentEffectivelyEmpty } from "tome-graph-inte
 import { editorDynamicNodeHref } from "tome-flatfile/dynamic-node-links";
 import { documentToPmJson, pmNodeToDocument } from "../body-document-pm";
 import { calloutPlugin } from "../callout-schema";
+import { calloutViewPlugin } from "../callout-view";
 import { classifyDocumentUpdate } from "../editor-markdown-update";
 import "./editor.css";
 
@@ -219,6 +220,7 @@ export function TomeEditor({
     });
     installMilkdownKitFeatures(crepe.editor);
     crepe.editor.use(calloutPlugin);
+    crepe.editor.use(calloutViewPlugin);
     crepe.editor.use(pageBlockEmbed);
     await replaceBlockquoteInputRule(crepe.editor);
     if (destroyed || activeGeneration !== generation) return;

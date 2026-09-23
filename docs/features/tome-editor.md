@@ -64,6 +64,7 @@ Git-tracked node bodies are **Extended Markdown**: CommonMark + GFM, plus Tome e
 
 **Callouts** are first-class (`callout` in the document and a ProseMirror `callout` node). The emoji-lead blockquote is a **Tome convention**. It is in the same family as alert/callout extensions, but it is **not** GitHub Alerts (`> [!NOTE]`) and **not** Obsidian callouts (`> [!info]`). Detection lives in `tome-flatfile/src/callout.ts`. Do not rewrite corpus files to another alert syntax. New storage forms should mimic an existing Markdown extension standard when one already covers the feature.
 
+In the semantic document and live editor, `emoji` is structured chrome: it lives on the callout node (`attrs.emoji` / `NodeBodyCallout.emoji`) and is **not** part of editable body text. The editor renders a fixed icon button; clicking it opens a curated emoji picker (plus a custom single-emoji field). Storage still round-trips as `> {emoji} {body}` via parse/serialize in `tome-db`.
 A leading `#` heading whose text matches the page title is stripped when building the GET document (`stripDuplicateTitleHeading`). It is not stripped again on every save.
 
 ### Cross-linking and navigation links
