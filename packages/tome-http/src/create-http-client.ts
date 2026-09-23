@@ -7,7 +7,7 @@ import type {
   DatabaseViewDetail,
   RelationTableSection,
   RelationshipTypeOption,
-  ReorderDatabaseMembersParams,
+  RewriteDatabaseSequenceParams,
   TableRowsQuery,
 } from "tome-graph-interfaces";
 import type { UserSettings, UserSettingsPatch } from "./user-settings";
@@ -363,12 +363,12 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       );
       return data.typeTables;
     },
-    async reorderDatabaseMembers(
+    async rewriteDatabaseSequence(
       databaseId: string,
-      params: ReorderDatabaseMembersParams,
+      params: RewriteDatabaseSequenceParams,
     ): Promise<DatabaseViewDetail> {
       const data = await fetchJson<{ databaseView: DatabaseViewDetail }>(
-        `/api/databases/${databaseId}/members/reorder`,
+        `/api/databases/${databaseId}/sequence`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

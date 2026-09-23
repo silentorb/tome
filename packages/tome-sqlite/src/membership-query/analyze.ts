@@ -11,7 +11,7 @@ export type MemberPageQueryLike = {
     projectionTypes: string[];
     compositeType?: string;
   }[];
-  defaultOrdered?: boolean;
+  intrinsicSequence?: boolean;
   scope?: { projectionType: string; scopeNodeId: string };
   groups?: {
     memberToGroupProjectionType: string;
@@ -80,7 +80,7 @@ export function analyzeMemberPage(
         ? { compositeType: f.compositeType }
         : {}),
     })),
-    defaultOrdered: Boolean(query.defaultOrdered),
+    intrinsicSequence: Boolean(query.intrinsicSequence),
     limit,
     offset,
     mode: query.mode === "ids" ? "ids" : "page",

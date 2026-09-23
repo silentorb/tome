@@ -142,7 +142,7 @@ export function makeMockEditorApi(): EditorApi {
     getRelationshipLinkOptions: async () => ({ allowedTargetTypeIds: null }),
     getUserSettings: async () => emptyUserSettings(),
     patchUserSettings: async () => emptyUserSettings(),
-    reorderDatabaseMembers: async () => {
+    rewriteDatabaseSequence: async () => {
       throw new Error("not implemented in mock");
     },
     getExtensionsManifest: async () => ({ components: [], editorBundles: [] }),

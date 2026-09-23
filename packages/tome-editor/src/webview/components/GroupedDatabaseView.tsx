@@ -139,7 +139,7 @@ interface SortableGroupedProps {
   groupId: string;
   index: number;
   columns: string[];
-  reorderable: boolean;
+  sequenced: boolean;
   renderCell: (column: string, row: DatabaseRow) => ReactNode;
   renderNameCell: (rowId: string, name: string) => ReactNode;
   rowPageActions?: {
@@ -157,7 +157,7 @@ function SortableGroupedRow({
   groupId,
   index,
   columns,
-  reorderable,
+  sequenced,
   renderCell,
   renderNameCell,
   rowPageActions,
@@ -167,7 +167,7 @@ function SortableGroupedRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: row.nodeId,
     data: { groupId, index, type: "ordered-row" },
-    disabled: !reorderable,
+    disabled: !sequenced,
   });
 
   const style = {
@@ -182,12 +182,12 @@ function SortableGroupedRow({
       className={isDragging ? "is-dragging" : undefined}
       data-row-id={row.nodeId}
     >
-      {reorderable ? (
+      {sequenced ? (
         <td className="tome-grouped-database-drag-cell">
           <button
             type="button"
             className="tome-grouped-database-drag-handle"
-            aria-label={`Reorder ${row.name}`}
+            aria-label={`Move ${row.name} in sequence`}
             {...attributes}
             {...listeners}
           >
@@ -229,7 +229,7 @@ interface GroupTableProps {
   group: DatabaseRowGroup;
   columns: string[];
   columnLabels: Record<string, string>;
-  reorderable: boolean;
+  sequenced: boolean;
   renderCell: (column: string, row: DatabaseRow) => ReactNode;
   renderNameCell: (rowId: string, name: string) => ReactNode;
   onAddRow: (groupId: string, title: string) => Promise<void>;
@@ -247,7 +247,7 @@ function GroupTable({
   group,
   columns,
   columnLabels,
-  reorderable,
+  sequenced,
   renderCell,
   renderNameCell,
   onAddRow,
@@ -264,7 +264,7 @@ function GroupTable({
   const { setNodeRef } = useDroppable({
     id: groupDropId(group.groupId),
     data: { groupId: group.groupId, type: "group" },
-    disabled: !reorderable,
+    disabled: !sequenced,
   });
 
   return (
@@ -275,7 +275,7 @@ function GroupTable({
           <table className="tome-database-table">
             <thead>
               <tr>
-                {reorderable ? (
+                {sequenced ? (
                   <th scope="col" aria-label="Reorder" className="tome-grouped-database-drag-col" />
                 ) : null}
                 {rowPageActions ? (
@@ -303,10 +303,10 @@ function GroupTable({
                   <tr className="tome-grouped-database-empty-row">
                     <td
                       colSpan={
-                        columns.length + 1 + (reorderable ? 1 : 0) + (rowPageActions ? 1 : 0)
+                        columns.length + 1 + (sequenced ? 1 : 0) + (rowPageActions ? 1 : 0)
                       }
                     >
-                      {reorderable ? "Drop rows here" : "No rows"}
+                      {sequenced ? "Drop rows here" : "No rows"}
                     </td>
                   </tr>
                 ) : (
@@ -317,7 +317,7 @@ function GroupTable({
                       groupId={group.groupId}
                       index={index}
                       columns={columns}
-                      reorderable={reorderable}
+                      sequenced={sequenced}
                       renderCell={renderCell}
                       renderNameCell={renderNameCell}
                       rowPageActions={rowPageActions}
@@ -389,7 +389,7 @@ export function GroupedDatabaseView({
     setDisplayColumns(view.columns);
   }, [view.columns]);
 
-  const reorderable = Boolean(view.presentation?.reorderable);
+  const sequenced = Boolean(view.presentation?.sequenced);
   const presentation = view.presentation;
 
   const handleColumnsReorder = useCallback(
@@ -566,7 +566,7 @@ export function GroupedDatabaseView({
     async (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveRowId(null);
-      if (!over || active.id === over.id || !reorderable) return;
+      if (!over || active.id === over.id || !sequenced) return;
 
       const target = resolveDropTarget(windowedGroups, String(over.id));
       if (!target) return;
@@ -581,11 +581,11 @@ export function GroupedDatabaseView({
       setMoveError(null);
       setIsMoving(true);
       try {
-        const nextView = await api.reorderDatabaseMembers(view.id, {
-          orderedMemberIds: flattenGroupRows(nextGroups),
+        const nextView = await api.rewriteDatabaseSequence(view.id, {
+          orderedRowIds: flattenGroupRows(nextGroups),
           tabId: view.tabs.activeTabId,
           groupChange: {
-            memberId: String(active.id),
+            rowId: String(active.id),
             targetGroupId: target.targetGroupId,
           },
         });
@@ -596,7 +596,7 @@ export function GroupedDatabaseView({
         setIsMoving(false);
       }
     },
-    [api, onViewChange, reorderable, view.id, view.tabs.activeTabId, windowedGroups],
+    [api, onViewChange, sequenced, view.id, view.tabs.activeTabId, windowedGroups],
   );
 
   const handleColumnDragEnd = useCallback(
@@ -690,7 +690,7 @@ export function GroupedDatabaseView({
                 group={group}
                 columns={displayColumns}
                 columnLabels={columnLabels}
-                reorderable={reorderable}
+                sequenced={sequenced}
                 renderCell={renderCell}
                 renderNameCell={renderNameCell}
                 onAddRow={handleAddRow}

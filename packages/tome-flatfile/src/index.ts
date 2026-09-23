@@ -368,7 +368,7 @@ export {
 export type {
   RelationGroupsLayerConfig,
   RelationScopeLayerConfig,
-  ReorderLayerConfig,
+  SequenceLayerConfig,
   TablePresentationComposition,
   TablePresentationFile,
 } from "./table-presentation/table-presentation-file";

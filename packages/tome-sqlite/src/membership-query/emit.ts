@@ -289,7 +289,7 @@ function buildOrderBy(
         params.push(...bound.params);
         break;
       }
-      case "defaultOrder":
+      case "intrinsicSequence":
         clauses.push(
           `CASE WHEN ${memberRowAlias}."order" IS NULL THEN 1 ELSE 0 END ASC`,
         );

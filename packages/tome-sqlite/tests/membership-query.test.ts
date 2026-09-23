@@ -14,7 +14,7 @@ describe("membership-query Analyze→Bind→Plan→Emit", () => {
       sorts: [{ column: "name", direction: "asc" }],
       relationCounts: [{ column: "links", projectionTypes: ["link:0"] }],
       relationFields: [{ column: "links", projectionTypes: ["link:0"] }],
-      defaultOrdered: true,
+      intrinsicSequence: true,
       limit: 50,
       offset: 0,
     });
@@ -22,7 +22,7 @@ describe("membership-query Analyze→Bind→Plan→Emit", () => {
     expect(intent.groups).toBeUndefined();
     expect(intent.sorts).toHaveLength(1);
     expect(intent.relationFields).toHaveLength(1);
-    expect(intent.defaultOrdered).toBe(true);
+    expect(intent.intrinsicSequence).toBe(true);
   });
 
   test("Analyze: composition fills scope + groups need classes", () => {
@@ -64,7 +64,7 @@ describe("membership-query Analyze→Bind→Plan→Emit", () => {
     expect(catalog.displays[0]!.sql).toContain(MEMBER_ID_TOKEN);
   });
 
-  test("Plan: groups add groupPrefix; catalog sorts replace defaultOrdered", () => {
+  test("Plan: groups add groupPrefix; catalog sorts replace intrinsicSequence", () => {
     const intent = analyzeMemberPage("set1", {
       projections: [{ setProjection: "a:0", memberProjection: "a:1" }],
       groups: {
@@ -73,7 +73,7 @@ describe("membership-query Analyze→Bind→Plan→Emit", () => {
         groupSetProjections: [{ setProjection: "g:0", memberProjection: "g:1" }],
       },
       sorts: [{ column: "name", direction: "asc" }],
-      defaultOrdered: true,
+      intrinsicSequence: true,
     });
     const catalog = bindExpressions(intent);
     const plan = planMembershipQuery(intent, catalog);
@@ -89,7 +89,7 @@ describe("membership-query Analyze→Bind→Plan→Emit", () => {
   test("Emit: plain page and enriched page are one statement family", () => {
     const plain = compileMemberPage("set1", {
       projections: [{ setProjection: "a:0", memberProjection: "a:1" }],
-      defaultOrdered: true,
+      intrinsicSequence: true,
       relationFields: [{ column: "links", projectionTypes: ["link:0"] }],
       limit: 10,
       offset: 0,
@@ -109,7 +109,7 @@ describe("membership-query Analyze→Bind→Plan→Emit", () => {
         groupTypeDatabaseId: "groupSet",
         groupSetProjections: [{ setProjection: "g:0", memberProjection: "g:1" }],
       },
-      defaultOrdered: true,
+      intrinsicSequence: true,
       relationFields: [{ column: "links", projectionTypes: ["link:0"] }],
     });
     expect(composed.empty).toBe(false);

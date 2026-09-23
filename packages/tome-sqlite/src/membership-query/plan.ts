@@ -10,7 +10,7 @@ import type {
  * Sort + groups semantics:
  * - With groups: always group-major prefix first.
  * - When any Intent sort binds successfully: catalog sorts (Items-like), then title/id.
- * - When no bound sorts: optional defaultOrdered edge order (composed + Items), then title/id.
+ * - When no bound sorts: optional intrinsicSequence edge order (composed + Items), then title/id.
  */
 export function planMembershipQuery(
   intent: MembershipQueryIntent,
@@ -45,8 +45,8 @@ export function planMembershipQuery(
         direction: sort.direction === "desc" ? "desc" : "asc",
       });
     }
-  } else if (intent.defaultOrdered) {
-    orderKeys.push({ kind: "defaultOrder" });
+  } else if (intent.intrinsicSequence) {
+    orderKeys.push({ kind: "intrinsicSequence" });
   }
 
   orderKeys.push({ kind: "title" });

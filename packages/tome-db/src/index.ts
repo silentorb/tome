@@ -216,13 +216,13 @@ export {
   getCompositionForDatabase,
 } from "./table-presentation/load";
 export { buildComposedDatabaseView } from "./table-presentation/compose";
-export { reorderDatabaseMembers } from "./table-presentation/reorder-members";
+export { rewriteDatabaseSequence } from "./table-presentation/rewrite-sequence";
 export type {
   TablePresentationComposition,
   TablePresentationFile,
   DatabaseRowGroup,
   DatabaseViewPresentation,
-  ReorderDatabaseMembersParams,
+  RewriteDatabaseSequenceParams,
 } from "tome-graph-interfaces";
 export type { TomeWriteContext, FlatfileStore } from "./content/write-context";
 export {
@@ -301,7 +301,7 @@ export {
 } from "tome-flatfile";
 export {
   ORDER_META_KEYS,
-  applySparseOrderRewrite,
+  applySparseSequenceRewrite,
   listOrderedMemberConnections,
   maxOrderAtSet,
   stampOrderIfMissing,

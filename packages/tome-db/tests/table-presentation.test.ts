@@ -2,7 +2,7 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { createNode } from "../src/node-create";
-import { reorderDatabaseMembers } from "../src/table-presentation/reorder-members";
+import { rewriteDatabaseSequence } from "../src/table-presentation/rewrite-sequence";
 import { UNASSIGNED_GROUP_ID } from "tome-graph-interfaces";
 import { getNodePageDetail } from "../src/node-page-sections";
 import {
@@ -225,7 +225,7 @@ describe("table-presentation", () => {
     expect(detail?.presentation).toMatchObject({
       compositionId: COMPOSITION_ID,
       scopeId: bookA,
-      reorderable: true,
+      sequenced: true,
     });
   });
 
@@ -272,9 +272,9 @@ describe("table-presentation", () => {
     expect(group?.rows.map((row) => row.name)).toEqual(["Loose Scene"]);
   });
 
-  test("reorderDatabaseMembers renumbers membership order", () => {
-    const updated = reorderDatabaseMembers(fixture.ctx, SCENES_DB, {
-      orderedMemberIds: [scene2, scene1],
+  test("rewriteDatabaseSequence renumbers intrinsic edge order", () => {
+    const updated = rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
+      orderedRowIds: [scene2, scene1],
       tabId: bookA,
     });
 
@@ -288,11 +288,31 @@ describe("table-presentation", () => {
     expect(edge2?.properties.order).toBe("10");
   });
 
-  test("groupChange moves a member to a different group", () => {
-    const updated = reorderDatabaseMembers(fixture.ctx, SCENES_DB, {
-      orderedMemberIds: [scene2, scene1],
+  test("rewriteDatabaseSequence rewrites only submitted orderedRowIds", () => {
+    const memberProjection = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1);
+    const before3 = fixture.ctx.cache.getRelationship(
+      `${scene3}:${memberProjection}:${SCENES_DB}`,
+    )?.properties.order;
+    expect(before3).toBe("30");
+
+    rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
+      orderedRowIds: [scene2, scene1],
       tabId: bookA,
-      groupChange: { memberId: scene1, targetGroupId: part2 },
+    });
+
+    const edge1 = fixture.ctx.cache.getRelationship(`${scene1}:${memberProjection}:${SCENES_DB}`);
+    const edge2 = fixture.ctx.cache.getRelationship(`${scene2}:${memberProjection}:${SCENES_DB}`);
+    const edge3 = fixture.ctx.cache.getRelationship(`${scene3}:${memberProjection}:${SCENES_DB}`);
+    expect(edge1?.properties.order).toBe("20");
+    expect(edge2?.properties.order).toBe("10");
+    expect(edge3?.properties.order).toBe(before3);
+  });
+
+  test("groupChange moves a member to a different group", () => {
+    const updated = rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
+      orderedRowIds: [scene2, scene1],
+      tabId: bookA,
+      groupChange: { rowId: scene1, targetGroupId: part2 },
     });
 
     const part2Group = updated?.groups?.find((group) => group.groupId === part2);
@@ -320,10 +340,10 @@ describe("table-presentation", () => {
   });
 
   test("groupChange to Unassigned removes the group relation", () => {
-    reorderDatabaseMembers(fixture.ctx, SCENES_DB, {
-      orderedMemberIds: [scene2, scene1],
+    rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
+      orderedRowIds: [scene2, scene1],
       tabId: bookA,
-      groupChange: { memberId: scene2, targetGroupId: UNASSIGNED_GROUP_ID },
+      groupChange: { rowId: scene2, targetGroupId: UNASSIGNED_GROUP_ID },
     });
 
     expect(

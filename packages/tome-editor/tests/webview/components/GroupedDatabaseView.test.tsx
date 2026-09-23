@@ -69,7 +69,7 @@ const view: DatabaseViewDetail = {
     scopeRelationType: "product:0",
     groupRelationType: "part:0",
     groupCompositeType: "part",
-    reorderable: true,
+    sequenced: true,
   },
 };
 

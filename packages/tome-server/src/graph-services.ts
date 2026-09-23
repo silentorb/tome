@@ -20,7 +20,7 @@ import {
   storageBodyToDocument,
   documentToStorageBody,
   attachPageBlockEditorHtml,
-  reorderDatabaseMembers as reorderDatabaseMembersInDb,
+  rewriteDatabaseSequence as rewriteDatabaseSequenceInDb,
   DEFAULT_TABLE_ROW_LIMIT,
   loadSchemaFromContent,
   loadAssociationsFromContent,
@@ -50,7 +50,7 @@ import {
   type CreateNodeResult,
   type GraphLodSnapshot,
   type GraphSnapshot,
-  type ReorderDatabaseMembersParams,
+  type RewriteDatabaseSequenceParams,
   type NodeLifecycleError,
   type SchemaFile,
   type ViewSortSpec,
@@ -370,11 +370,11 @@ function buildGraphServices(
         allowedTargetTypeIds: rule ? [...rule.allowedTargetTypeIds] : null,
       };
     },
-    reorderDatabaseMembers(
+    rewriteDatabaseSequence(
       databaseId: string,
-      params: ReorderDatabaseMembersParams,
+      params: RewriteDatabaseSequenceParams,
     ) {
-      return reorderDatabaseMembersInDb(writeCtx, databaseId, params);
+      return rewriteDatabaseSequenceInDb(writeCtx, databaseId, params);
     },
     search(
       query: string,

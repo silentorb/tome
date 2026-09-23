@@ -1,7 +1,7 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import {
-  applySparseOrderRewrite,
+  applySparseSequenceRewrite,
   listOrderedMemberConnections,
   maxOrderAtSet,
   stampOrderIfMissing,
@@ -44,14 +44,8 @@ describe("ordered-relationships", () => {
     expect(stamped.order).toBe(31);
   });
 
-  test("applySparseOrderRewrite renumbers to sparse tens", () => {
-    const edges = listOrderedMemberConnections(ctx.cache, SCENES_DB, contentDir).map((edge) => ({
-      sourceNodeId: edge.sourceNodeId,
-      targetNodeId: edge.targetNodeId,
-      type: edge.type,
-      properties: { ...edge.properties },
-    }));
-    applySparseOrderRewrite(ctx, SCENES_DB, edges, [scene2, scene1]);
+  test("applySparseSequenceRewrite renumbers to sparse tens", () => {
+    applySparseSequenceRewrite(ctx, SCENES_DB, [scene2, scene1]);
     ctx.sync.syncRelationships();
 
     expect(ctx.cache.getRelationship(`${scene1}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1)}:${SCENES_DB}`)?.properties.order).toBe(

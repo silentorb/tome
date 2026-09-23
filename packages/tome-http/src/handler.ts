@@ -629,29 +629,29 @@ async function dispatchApiRequest(
         return json({ node: result });
       }
 
-      const reorderMembersMatch =
-        /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/members\/reorder$/i.exec(path);
-      if (reorderMembersMatch && req.method === "PATCH") {
-        const databaseId = reorderMembersMatch[1]!;
+      const sequenceMatch =
+        /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/sequence$/i.exec(path);
+      if (sequenceMatch && req.method === "PATCH") {
+        const databaseId = sequenceMatch[1]!;
         const payload = (await req.json()) as {
-          orderedMemberIds?: string[];
+          orderedRowIds?: string[];
           tabId?: string;
-          groupChange?: { memberId?: string; targetGroupId?: string };
+          groupChange?: { rowId?: string; targetGroupId?: string };
         };
-        if (!Array.isArray(payload.orderedMemberIds)) {
-          return json({ error: "orderedMemberIds required" }, 400);
+        if (!Array.isArray(payload.orderedRowIds)) {
+          return json({ error: "orderedRowIds required" }, 400);
         }
         const groupChange =
           payload.groupChange &&
-          typeof payload.groupChange.memberId === "string" &&
+          typeof payload.groupChange.rowId === "string" &&
           typeof payload.groupChange.targetGroupId === "string"
             ? {
-                memberId: payload.groupChange.memberId,
+                rowId: payload.groupChange.rowId,
                 targetGroupId: payload.groupChange.targetGroupId,
               }
             : undefined;
-        const databaseView = db.reorderDatabaseMembers(databaseId, {
-          orderedMemberIds: payload.orderedMemberIds.filter((id) => typeof id === "string"),
+        const databaseView = db.rewriteDatabaseSequence(databaseId, {
+          orderedRowIds: payload.orderedRowIds.filter((id) => typeof id === "string"),
           tabId: typeof payload.tabId === "string" ? payload.tabId : undefined,
           groupChange,
         });

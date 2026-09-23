@@ -7,7 +7,7 @@ import type {
   DatabaseViewDetail,
   RelationTableSection,
   RelationshipTypeOption,
-  ReorderDatabaseMembersParams,
+  RewriteDatabaseSequenceParams,
   TableRowsQuery,
 } from "tome-graph-interfaces";
 import type { UserSettings, UserSettingsPatch } from "./user-settings";
@@ -177,9 +177,9 @@ export interface TomeHttpClient {
     valuesCleared: number;
   }>;
   listTypeTables(): Promise<{ id: string; title: string }[]>;
-  reorderDatabaseMembers(
+  rewriteDatabaseSequence(
     databaseId: string,
-    params: ReorderDatabaseMembersParams,
+    params: RewriteDatabaseSequenceParams,
   ): Promise<DatabaseViewDetail>;
   search(
     query: string,

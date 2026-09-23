@@ -208,5 +208,5 @@ Historical scripts (marloth-story) and migrations that renamed `is_a` → `membe
 - [table-schemas.md](./table-schemas.md) — type-table columns
 - [views.md](./views.md) — Members section tabs
 - [schema.md](./schema.md) — relationship rules (peer association)
-- [table-presentation.md](./table-presentation.md) — scope tabs, row groups, and ordered set views
+- [table-presentation.md](./table-presentation.md) — scope tabs, row groups, and intrinsic sequence
 - [`/workspaces/marloth-story/docs/ontology.md`](../../marloth-story/docs/ontology.md) — design domain model

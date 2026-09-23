@@ -19,20 +19,24 @@ export interface RelationGroupsLayerConfig {
   excludeColumnKeys?: string[];
 }
 
-export interface ReorderLayerConfig {
+/**
+ * Pins an Items table to the intrinsic `ordered`-trait edge sequence and enables
+ * row drag-and-drop when the UI supports it (edits edge `order`, not view sorts).
+ */
+export interface SequenceLayerConfig {
   excludeColumnKeys?: string[];
 }
 
 /**
  * Composable table presentation for a type-table Items section.
- * Layers are independent: scope tabs, relation groups, and reorder may each be absent.
+ * Layers are independent: scope tabs, relation groups, and sequence may each be absent.
  */
 export interface TablePresentationComposition {
   id: string;
   typeDatabaseId: string;
   scope?: RelationScopeLayerConfig;
   groups?: RelationGroupsLayerConfig;
-  reorder?: ReorderLayerConfig;
+  sequence?: SequenceLayerConfig;
   /** Extra column keys hidden for this composition (e.g. deprecated status). */
   excludeColumnKeys?: string[];
   /** @deprecated Legacy column view name; ignored when properties come from views.json. */
@@ -66,16 +70,17 @@ export interface DatabaseViewPresentation {
   groupRelationType?: string;
   /** Group composite association id (for unlink-by-composite). */
   groupCompositeType?: string;
-  reorderable?: boolean;
+  /** When true, rows follow intrinsic edge sequence and may be drag-edited. */
+  sequenced?: boolean;
 }
 
-export interface ReorderDatabaseMembersParams {
-  orderedMemberIds: string[];
+export interface RewriteDatabaseSequenceParams {
+  orderedRowIds: string[];
   /** Active scope/custom tab id so the returned view matches the editor. */
   tabId?: string;
-  /** When set, also move this member's group relation after rewriting order. */
+  /** When set, also move this row's group relation after rewriting sequence. */
   groupChange?: {
-    memberId: string;
+    rowId: string;
     targetGroupId: string;
   };
 }

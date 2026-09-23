@@ -382,7 +382,7 @@ function buildCustomViewDetail(
             : undefined,
         expressionIndexSorts,
         relationFields: relationFields.length > 0 ? relationFields : undefined,
-        defaultOrdered: ordered,
+        intrinsicSequence: ordered,
         limit,
         offset,
       },

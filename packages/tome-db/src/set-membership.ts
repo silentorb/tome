@@ -94,10 +94,22 @@ export function findSetEdge(
   const registry = loadAssociationsFromContent(dir);
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     const memberProjection = memberSideProjectionType(registry, composite);
-    const edge = listRelationshipsFromSource(store, memberId, memberProjection).find(
+    const memberSide = listRelationshipsFromSource(store, memberId, memberProjection).find(
       (r) => r.targetNodeId === setId,
     );
-    if (edge) return edge;
+    if (memberSide) return memberSide;
+
+    const setProjection = setSideProjectionType(registry, composite);
+    const setSide = listRelationshipsFromSource(store, setId, setProjection).find(
+      (r) => r.targetNodeId === memberId,
+    );
+    if (setSide) {
+      return {
+        ...setSide,
+        sourceNodeId: memberId,
+        targetNodeId: setId,
+      };
+    }
   }
   return null;
 }

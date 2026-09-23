@@ -27,7 +27,7 @@ import type {
 } from "./relationship-link-mutations";
 import type { RelationshipPropertyUpdateError } from "./relationship-property-update";
 import type { SchemaFile } from "./schema";
-import type { ReorderDatabaseMembersParams } from "./table-presentation";
+import type { RewriteDatabaseSequenceParams } from "./table-presentation";
 import type { TableRowsQuery } from "./table-rows-window";
 import type {
   ViewDefinition,
@@ -126,9 +126,9 @@ export interface TomeGraphServices {
     sourceId: string,
     type: string,
   ): { allowedTargetTypeIds: string[] | null };
-  reorderDatabaseMembers(
+  rewriteDatabaseSequence(
     databaseId: string,
-    params: ReorderDatabaseMembersParams,
+    params: RewriteDatabaseSequenceParams,
   ): DatabaseViewDetail | null;
   search(
     query: string,

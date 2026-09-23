@@ -90,7 +90,7 @@ function excludedKeys(composition: TablePresentationComposition): Set<string> {
   const keys = new Set<string>(composition.excludeColumnKeys ?? []);
   for (const key of composition.scope?.excludeColumnKeys ?? []) keys.add(key);
   for (const key of composition.groups?.excludeColumnKeys ?? []) keys.add(key);
-  for (const key of composition.reorder?.excludeColumnKeys ?? []) keys.add(key);
+  for (const key of composition.sequence?.excludeColumnKeys ?? []) keys.add(key);
   return keys;
 }
 
@@ -232,7 +232,7 @@ function finishComposedView(args: {
   const presentation: DatabaseViewDetail["presentation"] = {
     compositionId: composition.id,
     scopeId: activeScopeId,
-    reorderable: Boolean(composition.reorder),
+    sequenced: Boolean(composition.sequence),
   };
   if (composition.scope) {
     presentation.scopeRelationType = memberLinkPerspective(
@@ -405,7 +405,7 @@ function buildComposedDatabaseViewSql(
         ? relationCountSortsFromColumnDefs(sorts, gateColumnDefs, dir)
         : undefined,
     expressionIndexSorts,
-    defaultOrdered: Boolean(composition.reorder),
+    intrinsicSequence: Boolean(composition.sequence),
     relationFields: relationFields.length > 0 ? relationFields : undefined,
     limit,
     offset,
@@ -567,7 +567,7 @@ function buildComposedDatabaseViewLegacy(
     scopedConnections.push(connection);
   }
 
-  const evalRows = evalRowsFromMembership(db, scopedConnections, Boolean(composition.reorder));
+  const evalRows = evalRowsFromMembership(db, scopedConnections, Boolean(composition.sequence));
 
   const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
     db,
@@ -695,7 +695,7 @@ function buildComposedDatabaseViewLegacy(
   const presentation: DatabaseViewDetail["presentation"] = {
     compositionId: composition.id,
     scopeId: activeScopeId,
-    reorderable: Boolean(composition.reorder),
+    sequenced: Boolean(composition.sequence),
   };
   if (composition.scope) {
     presentation.scopeRelationType = memberLinkPerspective(

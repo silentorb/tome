@@ -133,7 +133,7 @@ export function defaultTestTablePresentationFile(): TablePresentationFile {
           unassignedGroupTitle: "Unassigned",
           excludeColumnKeys: ["part"],
         },
-        reorder: {
+        sequence: {
           excludeColumnKeys: ["order"],
         },
         columnViewName: "TWOLD Active",

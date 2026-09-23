@@ -29,7 +29,7 @@ export type MembershipQueryIntent = {
     projectionTypes: string[];
     compositeType?: string;
   }[];
-  defaultOrdered: boolean;
+  intrinsicSequence: boolean;
   memberIds?: readonly string[];
   limit: number | null;
   offset: number;
@@ -60,7 +60,7 @@ export type MembershipQueryPlan = {
   layers: ("memberUniverse" | "scopeFilter" | "groupEnrichment")[];
   includeGroupId: boolean;
   orderKeys: {
-    kind: "groupPrefix" | "catalogSort" | "defaultOrder" | "title" | "id";
+    kind: "groupPrefix" | "catalogSort" | "intrinsicSequence" | "title" | "id";
     column?: string;
     direction?: "asc" | "desc";
   }[];

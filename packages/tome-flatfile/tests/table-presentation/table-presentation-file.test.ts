@@ -35,7 +35,7 @@ const VALID_COMPOSITION = {
     canonicalGroupByTitle: true,
     excludeColumnKeys: ["part"],
   },
-  reorder: {
+  sequence: {
     excludeColumnKeys: ["order"],
   },
   excludeColumnKeys: ["status"],
@@ -60,7 +60,7 @@ describe("parseTablePresentationFile", () => {
     expect(composition.scope?.memberToScopeComposite).toBe(SCENES_PRODUCT);
     expect(composition.groups?.groupToScopeComposite).toBe(PRODUCTS_PARTS);
     expect(composition.groups?.canonicalGroupByTitle).toBe(true);
-    expect(composition.reorder?.excludeColumnKeys).toEqual(["order"]);
+    expect(composition.sequence?.excludeColumnKeys).toEqual(["order"]);
     expect(composition.excludeColumnKeys).toEqual(["status"]);
   });
 
@@ -71,14 +71,22 @@ describe("parseTablePresentationFile", () => {
     const composition = file.compositions[0]!;
     expect(composition.scope).toBeUndefined();
     expect(composition.groups).toBeUndefined();
-    expect(composition.reorder).toBeUndefined();
+    expect(composition.sequence).toBeUndefined();
   });
 
-  test("accepts a reorder-only composition", () => {
+  test("accepts a sequence-only composition", () => {
     const file = parseTablePresentationFile(
-      serialized([{ id: "ordered", typeDatabaseId: SCENES_DB, reorder: {} }]),
+      serialized([{ id: "ordered", typeDatabaseId: SCENES_DB, sequence: {} }]),
     );
-    expect(file.compositions[0]?.reorder).toEqual({});
+    expect(file.compositions[0]?.sequence).toEqual({});
+  });
+
+  test("rejects a leftover reorder key", () => {
+    expect(() =>
+      parseTablePresentationFile(
+        serialized([{ id: "legacy", typeDatabaseId: SCENES_DB, reorder: {} }]),
+      ),
+    ).toThrow(/removed; use "sequence"/);
   });
 
   test("emptyTablePresentationFile has version and no compositions", () => {

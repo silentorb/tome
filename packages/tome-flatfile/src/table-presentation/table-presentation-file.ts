@@ -3,7 +3,7 @@ import { isAssociationId, normalizeAssociationId } from "../content/associations
 import type {
   RelationGroupsLayerConfig,
   RelationScopeLayerConfig,
-  ReorderLayerConfig,
+  SequenceLayerConfig,
   TablePresentationComposition,
   TablePresentationFile,
 } from "tome-graph-interfaces";
@@ -11,7 +11,7 @@ import type {
 export type {
   RelationGroupsLayerConfig,
   RelationScopeLayerConfig,
-  ReorderLayerConfig,
+  SequenceLayerConfig,
   TablePresentationComposition,
   TablePresentationFile,
 } from "tome-graph-interfaces";
@@ -100,12 +100,12 @@ function parseGroupsLayer(raw: unknown, path: string): RelationGroupsLayerConfig
   return layer;
 }
 
-function parseReorderLayer(raw: unknown, path: string): ReorderLayerConfig {
+function parseSequenceLayer(raw: unknown, path: string): SequenceLayerConfig {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`${path}: must be an object`);
   }
   const obj = raw as Record<string, unknown>;
-  const layer: ReorderLayerConfig = {};
+  const layer: SequenceLayerConfig = {};
   const excludeColumnKeys = parseStringArray(obj.excludeColumnKeys, `${path}.excludeColumnKeys`);
   if (excludeColumnKeys) layer.excludeColumnKeys = excludeColumnKeys;
   return layer;
@@ -116,6 +116,11 @@ function parseComposition(raw: unknown, path: string): TablePresentationComposit
     throw new Error(`${path}: must be an object`);
   }
   const obj = raw as Record<string, unknown>;
+  if (obj.reorder !== undefined) {
+    throw new Error(
+      `${path}.reorder: removed; use "sequence" for intrinsic edge-sequence pin (no reorder alias)`,
+    );
+  }
   const composition: TablePresentationComposition = {
     id: parseRequiredString(obj.id, `${path}.id`),
     typeDatabaseId: parseNodeId(obj.typeDatabaseId, `${path}.typeDatabaseId`),
@@ -126,8 +131,8 @@ function parseComposition(raw: unknown, path: string): TablePresentationComposit
   if (obj.groups !== undefined) {
     composition.groups = parseGroupsLayer(obj.groups, `${path}.groups`);
   }
-  if (obj.reorder !== undefined) {
-    composition.reorder = parseReorderLayer(obj.reorder, `${path}.reorder`);
+  if (obj.sequence !== undefined) {
+    composition.sequence = parseSequenceLayer(obj.sequence, `${path}.sequence`);
   }
   if (obj.columnViewName !== undefined) {
     composition.columnViewName = parseRequiredString(obj.columnViewName, `${path}.columnViewName`);

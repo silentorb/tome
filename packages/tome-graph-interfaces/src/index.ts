@@ -56,13 +56,13 @@ export type {
 export type {
   RelationScopeLayerConfig,
   RelationGroupsLayerConfig,
-  ReorderLayerConfig,
+  SequenceLayerConfig,
   TablePresentationComposition,
   TablePresentationFile,
   RelationScopeTab,
   DatabaseRowGroup,
   DatabaseViewPresentation,
-  ReorderDatabaseMembersParams,
+  RewriteDatabaseSequenceParams,
 } from "./table-presentation";
 export { UNASSIGNED_GROUP_ID } from "./table-presentation";
 

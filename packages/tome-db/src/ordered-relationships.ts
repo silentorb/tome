@@ -14,7 +14,7 @@ import {
   setRoleProjectionTypesForNode,
 } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
-import { listSetMemberRowConnections } from "./set-membership";
+import { findSetEdge, listSetMemberRowConnections } from "./set-membership";
 
 export const ORDER_META_KEYS = new Set([
   "ordinal",
@@ -107,41 +107,32 @@ export function stampOrderIfMissing(
   return { ...props, [property]: max + 1 };
 }
 
-export interface SparseOrderRewriteEdge {
-  sourceNodeId: string;
-  targetNodeId: string;
-  type: string;
-  properties: Properties;
-}
-
-export function applySparseOrderRewrite(
+/**
+ * Rewrite sparse integer `order` values on ordered-trait set edges for the given row sequence.
+ * Resolves each row via {@link findSetEdge}; merges only the order property.
+ */
+export function applySparseSequenceRewrite(
   ctx: TomeWriteContext,
   setId: string,
-  edges: SparseOrderRewriteEdge[],
-  orderedMemberIds: string[],
+  orderedRowIds: string[],
 ): void {
-  const dir = writeStoreContentDir(ctx.graphStore);
+  const store = ctx.graphStore;
+  const dir = writeStoreContentDir(store);
   const [, memberProjection] = setRoleProjectionTypesForNode(setId, dir);
   const property = orderPropertyForProjection(dir, memberProjection);
   if (!property) return;
-  const edgeByMemberId = new Map(
-    edges.map((edge) => [edge.sourceNodeId, edge]),
-  );
 
-  for (let index = 0; index < orderedMemberIds.length; index++) {
-    const memberId = orderedMemberIds[index]!;
-    const edge = edgeByMemberId.get(memberId);
+  for (let index = 0; index < orderedRowIds.length; index++) {
+    const rowId = orderedRowIds[index]!;
+    const edge = findSetEdge(store, rowId, setId, dir);
     if (!edge) continue;
     const newOrder = (index + 1) * 10;
     writeStoreMergeRelationshipProperties(
-      ctx.graphStore,
+      store,
       edge.sourceNodeId,
       edge.targetNodeId,
       edge.type,
-      {
-        ...edge.properties,
-        [property]: String(newOrder),
-      },
+      { [property]: String(newOrder) },
     );
   }
 }

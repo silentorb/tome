@@ -8,19 +8,21 @@
 | --- | --- |
 | `scope` | Generated tabs, one per related scope node; rows filter to the active scope |
 | `groups` | Rows partition into subsections keyed by a relation to a group type table |
-| `reorder` | Rows sort by the ordered set-trait `order` property and gain drag-and-drop |
+| `sequence` | Pin rows to the intrinsic `ordered`-trait edge `order` sequence; enable drag-and-drop that **edits those edges** |
 
-The result is still a **database section** (`DatabaseViewDetail`) — layers add `groups` and `presentation` metadata rather than producing a separate section type. The first configured composition is `scenes-by-book`: scenes scoped by book (Product), grouped by Part, and reorderable.
+The result is still a **database section** (`DatabaseViewDetail`) — layers add `groups` and `presentation` metadata rather than producing a separate section type. The first configured composition is `scenes-by-book`: scenes scoped by book (Product), grouped by Part, and sequenced.
+
+Intrinsic sequence is **not** view sorting: `ViewSortSpec` / column sorts use the same view plumbing as tabs and may persist in `views.json`, but they do not rewrite edge `order`. The `sequence` layer forces the shared Items member-page path to use intrinsic edge order (`intrinsicSequence`) and sets `presentation.sequenced`.
 
 ## When to read this
 
 Read this doc when your task involves:
 
-- Scope tabs, row groups, or drag-and-drop reordering on a type table's Items section
-- The `order` property on **ordered set-trait** membership edges
+- Scope tabs, row groups, or intrinsic edge-sequence editing on a type table's Items section
+- The `order` property on **ordered set-trait** edges
 - Adding or changing a composition in `content/model/table-presentation.json`
 
-For graph storage basics, read [tome-db.md](./tome-db.md). For view tabs generally, read [views.md](./views.md). For the editor UI, read [tome-editor.md](./tome-editor.md). For Marloth domain semantics (Scene, Part, Product), read [`../ontology.md`](../ontology.md).
+For graph storage basics, read [tome-db.md](./tome-db.md). For view tabs and view sorts, read [views.md](./views.md). For the editor UI, read [tome-editor.md](./tome-editor.md). For Marloth domain semantics (Scene, Part, Product), read [`../ontology.md`](../ontology.md). For set / ordered traits, read [sets.md](./sets.md).
 
 ## Requirements
 
@@ -29,33 +31,33 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For view tabs general
 - Compositions **must** be defined in `content/model/table-presentation.json`; there is no UI for adding compositions.
 - A composition **must** name a `typeDatabaseId` and a unique `id`. Every layer is optional and each layer **must** work without the others.
 - A database opts into a composition through `views.json`: a generated view record whose `generator` is the composition id (see [views.md](./views.md)).
-- Sequence **must** be stored in the `order` property on **ordered set-trait** membership edges (default key from the `ordered` trait). It **must** be treated as metadata: excluded from columns and never editable as a field.
+- Intrinsic sequence **must** be stored in the `order` property on **ordered set-trait** edges (default key from the `ordered` trait). It **must** be treated as metadata: excluded from columns and never editable as a field cell.
 - Each layer **may** declare `excludeColumnKeys`; the composition **may** declare its own. All of them union into the hidden column set, because scope tabs, group headings, and drag handles replace the columns they stand in for.
 
 ### `scope` layer
 
-- `memberToScopeComposite` is the association between a member row and its scope node.
+- `memberToScopeComposite` is the association between a row and its scope node.
 - At read time the host **must** resolve that composite to the matching table-schema relation column key on `typeDatabaseId`, then hop via Imp semantic bind (`semanticPathFromAnchorGraph` + `executeImp`). Missing or ambiguous columns **must** fail loudly — there is no composite-SQL fallback for related-id hops.
-- Tabs **must** be generated from the scope nodes that actually have members; the first tab is active by default.
+- Tabs **must** be generated from the scope nodes that actually have rows; the first tab is active by default.
 - Rows **must** filter to the active scope.
-- Order is **scoped**: with `reorder` also enabled, sequence applies within the active scope, not globally across the database.
+- Sequence is **scoped**: with `sequence` also enabled, intrinsic order applies within the active scope, not globally across the database.
 
 ### `groups` layer
 
-- `memberToGroupComposite` links a member to its group node; `groupTypeDatabaseId` is the group type table.
-- Related-id hops for member→group and optional `groupToScopeComposite` **must** use the same Imp semantic path pipeline (column key on the appropriate start type).
-- Group headers **must** sort by the group's own ordered-set membership `order`, with the `unassignedGroupTitle` group always last.
+- `memberToGroupComposite` links a row to its group node; `groupTypeDatabaseId` is the group type table.
+- Related-id hops for row→group and optional `groupToScopeComposite` **must** use the same Imp semantic path pipeline (column key on the appropriate start type).
+- Group headers **must** sort by the group's own ordered-set edge `order`, with the `unassignedGroupTitle` group always last.
 - `groupToScopeComposite` (optional) restricts visible groups to those linked to the active scope.
-- `canonicalGroupByTitle` (default on) resolves a member's group by title when import created duplicate group nodes.
-- Grouping is a **display dimension only**. With `reorder` enabled, all rows in the scope share one sequence; groups partition that sequence rather than defining their own.
-- Members with no group relation **must** appear in the synthetic `__unassigned__` group.
+- `canonicalGroupByTitle` (default on) resolves a row's group by title when import created duplicate group nodes.
+- Grouping is a **display dimension only**. With `sequence` enabled, all rows in the scope share one intrinsic sequence; groups partition that sequence rather than defining their own.
+- Rows with no group relation **must** appear in the synthetic `__unassigned__` group.
 
-### `reorder` layer
+### `sequence` layer
 
-- Rows **must** sort by the membership `order` property (server-provided). Column header sorting is not offered for reorderable tables.
+- Rows **must** sort by the intrinsic edge `order` property (server-provided via member-page `intrinsicSequence`). Column header / view sorts are not offered for sequenced tables.
 - Users **must** be able to drag a row within its group to change the sequence, and to a different group to change the group relation.
 - Dropping onto the `__unassigned__` group **must** remove the group relation.
-- Every move **must** rewrite sparse integer order values (`10, 20, 30, …`) across the submitted member sequence.
+- Every move **must** rewrite sparse integer order values (`10, 20, 30, …`) across the submitted row id sequence via `rewriteDatabaseSequence` (per-row edge resolve; not a full-set preload).
 
 ### Editor UI
 
@@ -73,17 +75,17 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For view tabs general
 ### Import interaction
 
 - Full re-import is **deprecated** for workflow: it would merge relationship properties and could overwrite adjusted `order` values.
-- **Authoritative:** graph `order` from editor reorders and direct writes. Preserve `order` when mining export data into existing rows.
+- **Authoritative:** graph `order` from editor sequence edits and direct writes. Preserve `order` when mining export data into existing rows.
 
 ## Design rationale
 
 ### Composable layers over a bespoke section type
 
-The original design shipped a dedicated `ordered-collection` node-page section with its own view detail, HTTP routes, and editor component — a parallel stack that duplicated the database table for one domain shape. Splitting the behavior into three independent layers on the existing database section means each capability (scope tabs, grouping, ordering) can be adopted alone, and every table feature (columns, dynamic properties, relation cells, windowing) works without being reimplemented.
+The original design shipped a dedicated `ordered-collection` node-page section with its own view detail, HTTP routes, and editor component — a parallel stack that duplicated the database table for one domain shape. Splitting the behavior into three independent layers on the existing database section means each capability (scope tabs, grouping, intrinsic sequence) can be adopted alone, and every table feature (columns, dynamic properties, relation cells, windowing) works without being reimplemented.
 
 ### Hidden automatic order
 
-Legacy tooling required manual juggling of an Order column. Reordering moves sequencing into first-class tooling: drag-and-drop reflects author intent without exposing implementation details.
+Legacy tooling required manual juggling of an Order column. The `sequence` layer pins the table to intrinsic edge order and uses drag-and-drop to edit that graph data without exposing implementation details as a column.
 
 ### Scope-wide order with group partitioning
 
@@ -102,18 +104,18 @@ GET /api/nodes/:databaseId?tab=:scopeId
   → getNodePageDetail
   → getDatabaseViewDetail → generated view → getCompositionById
   → buildComposedDatabaseView
-  → database section with groups + presentation
+  → database section with groups + presentation.sequenced
 ```
 
-**SQL windowing (SQLite cache):** when the store has a query cache and `q` is empty, scope discovery, the unified **member-page read** (`listMemberPage`: scope filter, group assignment/`canonicalGroupByTitle`, column/reorder sorts, relation display, `limit`/`offset`), and group headers (`listComposedGroupHeaders`) run in parameterized SQL. Plain Items and composed presentations share that member-page contract—composition only fills optional fields. Relation-column **display** is selected in the same page query (JSON link aggregates) via Analyze→Bind→Plan→Emit. With `q`, the same surfaces use scoped `TomeSearch.searchWindow` over member ids, then materialize only the hit page (including group ids and relation fields). Dyn **display** still hydrates only the returned window in TypeScript. Non-expressible or unresolved dyn sorts are refused (SQL window + default membership order + warning), not a full-materialize escape. Without a cache (flatfile), the full-materialize path remains (Imp related-id hops + `applyNameFilterAndWindow`). See [views.md](./views.md) § Lazy-loaded rows and [search.md](./search.md).
+**SQL windowing (SQLite cache):** when the store has a query cache and `q` is empty, scope discovery, the unified **member-page read** (`listMemberPage`: scope filter, group assignment/`canonicalGroupByTitle`, view sorts or intrinsic sequence, relation display, `limit`/`offset`), and group headers (`listComposedGroupHeaders`) run in parameterized SQL. Plain Items and composed presentations share that member-page contract—composition only fills optional fields. Relation-column **display** is selected in the same page query (JSON link aggregates) via Analyze→Bind→Plan→Emit. With `q`, the same surfaces use scoped `TomeSearch.searchWindow` over member ids, then materialize only the hit page (including group ids and relation fields). Dyn **display** still hydrates only the returned window in TypeScript. Non-expressible or unresolved dyn sorts are refused (SQL window + intrinsic edge order + warning), not a full-materialize escape. Without a cache (flatfile), the full-materialize path remains (Imp related-id hops + `applyNameFilterAndWindow`). See [views.md](./views.md) § Lazy-loaded rows and [search.md](./search.md).
 
-Reorder:
+Sequence edit:
 
 ```
 User drag-drop (webview)
-  → PATCH /api/databases/:databaseId/members/reorder
-  → reorderDatabaseMembers (tome-db)
-  → applySparseOrderRewrite + optional group relation move
+  → PATCH /api/databases/:databaseId/sequence
+  → rewriteDatabaseSequence (tome-db)
+  → applySparseSequenceRewrite (findSetEdge per row) + optional group relation move
   → content write + SQLite cache sync
 ```
 
@@ -126,8 +128,8 @@ User drag-drop (webview)
 ## Verification
 
 - `bun test packages/tome-flatfile/tests` — composition file parsing and loading
-- `bun test packages/tome-db/tests` — composed view, groups, reorder mutations, Imp semantic related-id hops
-- `bun test packages/tome-server/tests/api` — node page section and reorder endpoint
+- `bun test packages/tome-db/tests` — composed view, groups, sequence mutations, Imp semantic related-id hops
+- `bun test packages/tome-server/tests/api` — node page section and sequence endpoint
 - `bun test packages/tome-editor/tests` — `GroupedDatabaseView` rendering, filtering, unlink
 - Manual: open the Scenes database → scope tabs → drag within/across groups → reload → order persists
 
@@ -140,17 +142,18 @@ User drag-drop (webview)
 | `packages/tome-flatfile/src/table-presentation/` | Parse / load / invalidate the composition file |
 | `packages/tome-db/src/table-presentation/compose.ts` | Build the composed `DatabaseViewDetail` |
 | `packages/tome-db/src/semantic-related-ids.ts` | Composite → table-schema token → Imp `executeImp` related ids |
-| `packages/tome-db/src/table-presentation/relation-scope-tabs.ts` | Scope discovery and member filtering |
-| `packages/tome-db/src/table-presentation/relation-groups.ts` | Group headers, member→group resolution, windowing |
-| `packages/tome-db/src/table-presentation/reorder-members.ts` | Sparse order rewrite + group change |
+| `packages/tome-db/src/table-presentation/relation-scope-tabs.ts` | Scope discovery and row filtering |
+| `packages/tome-db/src/table-presentation/relation-groups.ts` | Group headers, row→group resolution, windowing |
+| `packages/tome-db/src/table-presentation/rewrite-sequence.ts` | Sparse sequence rewrite + group change |
 | `packages/tome-db/src/database-view.ts` | Routes generated views to the composition path |
-| `packages/tome-http/src/handler.ts` | `PATCH /api/databases/:id/members/reorder` |
-| `packages/tome-editor/src/webview/components/GroupedDatabaseView.tsx` | Tabs, group tables, drag-and-drop |
+| `packages/tome-http/src/handler.ts` | `PATCH /api/databases/:id/sequence` |
+| `packages/tome-editor/src/webview/components/GroupedDatabaseView.tsx` | Tabs, group tables, sequence drag-and-drop |
 | `packages/tome-static-site/src/components/DatabaseSection.astro` | Grouped static rendering |
 
 ## See also
 
 - [views.md](./views.md)
+- [sets.md](./sets.md)
 - [tome-db.md](./tome-db.md)
 - [tome-editor.md](./tome-editor.md)
 - [`../ontology.md`](../ontology.md)

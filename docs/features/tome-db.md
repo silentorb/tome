@@ -240,7 +240,7 @@ db.close();
 | `packages/tome-db/src/graph-export.ts` | Full graph and Graph Explorer LOD export |
 | `packages/tome-db/src/node-page-sections.ts` | Universal page sections |
 | `packages/tome-db/src/database-view-relations.ts` | Relation-column hydration |
-| `packages/tome-db/src/table-presentation/` | Scope / group / reorder layers composed onto database views |
+| `packages/tome-db/src/table-presentation/` | Scope / group / sequence layers composed onto database views |
 | `packages/tome-flatfile/src/table-schemas/load.ts` | `table-schemas.json` loader |
 
 ## See also

@@ -1,4 +1,3 @@
-import type { Relationship } from "tome-graph-interfaces";
 import { relationshipId } from "tome-sqlite";
 import {
   listRelationshipsToTarget,
@@ -229,12 +228,4 @@ export function windowRelationGroups(
     }
   }
   return ordered;
-}
-
-/** Set-membership edges used when rewriting order for a filtered member list. */
-export function membershipEdgesForMembers(
-  members: Relationship[],
-  memberIds: Set<string>,
-): Relationship[] {
-  return members.filter((edge) => memberIds.has(edge.sourceNodeId));
 }

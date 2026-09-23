@@ -453,8 +453,8 @@ export interface MemberPageQuery {
    * Parallel payloads appear on {@link MemberPageResult.relationFieldsByRow}.
    */
   relationFields?: MemberPageRelationFieldSelect[];
-  /** When true and sorts empty, default ORDER BY edge `order` then member title. */
-  defaultOrdered?: boolean;
+  /** When true and sorts empty, ORDER BY intrinsic edge `order` then member title. */
+  intrinsicSequence?: boolean;
   /** Composition scope layer: keep members linked to this scope node. */
   scope?: MemberPageScopeFilter;
   /** Composition groups layer: resolve group id / group-major order. */

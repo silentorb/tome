@@ -2,9 +2,8 @@ import type { Properties } from "tome-sqlite";
 import type { TomeWriteContext } from "../content/write-context";
 import { syncAfterRelationshipsWrite } from "../content/write-context";
 import { listRelationshipsForComposite } from "../relationship-traverse";
-import { listSetMemberRowConnections } from "../set-membership";
-import { applySparseOrderRewrite } from "../ordered-relationships";
-import type { DatabaseViewDetail, ReorderDatabaseMembersParams } from "tome-graph-interfaces";
+import { applySparseSequenceRewrite } from "../ordered-relationships";
+import type { DatabaseViewDetail, RewriteDatabaseSequenceParams } from "tome-graph-interfaces";
 import { UNASSIGNED_GROUP_ID } from "tome-graph-interfaces";
 import { getCompositionForDatabase } from "./load";
 import { memberLinkPerspective } from "./helpers";
@@ -17,40 +16,26 @@ import {
 } from "../graph-store/relationship-write";
 
 /**
- * Rewrite membership order for the given member sequence, optionally changing
- * one member's group relation using the database's relation-groups presentation layer.
+ * Rewrite intrinsic edge sequence for the given row ids, optionally changing
+ * one row's group relation using the database's relation-groups presentation layer.
  */
-export function reorderDatabaseMembers(
+export function rewriteDatabaseSequence(
   ctx: TomeWriteContext,
   databaseId: string,
-  params: ReorderDatabaseMembersParams,
+  params: RewriteDatabaseSequenceParams,
 ): DatabaseViewDetail | null {
   const store = ctx.graphStore;
   const contentDir = writeStoreContentDir(store);
   const composition = getCompositionForDatabase(databaseId, contentDir);
-  const memberIds = new Set(params.orderedMemberIds);
-  const edges = listSetMemberRowConnections(store, databaseId, contentDir).filter((edge) =>
-    memberIds.has(edge.sourceNodeId),
-  );
 
-  applySparseOrderRewrite(
-    ctx,
-    databaseId,
-    edges.map((edge) => ({
-      sourceNodeId: edge.sourceNodeId,
-      targetNodeId: edge.targetNodeId,
-      type: edge.type,
-      properties: edge.properties,
-    })),
-    params.orderedMemberIds,
-  );
+  applySparseSequenceRewrite(ctx, databaseId, params.orderedRowIds);
 
   if (params.groupChange && composition?.groups) {
-    const { memberId, targetGroupId } = params.groupChange;
+    const { rowId, targetGroupId } = params.groupChange;
     const groupConfig = composition.groups;
     const existing = listRelationshipsForComposite(
       store,
-      memberId,
+      rowId,
       groupConfig.memberToGroupComposite,
     );
     for (const connection of existing) {
@@ -71,7 +56,7 @@ export function reorderDatabaseMembers(
       }
       writeStoreUpsertRelationship(
         store,
-        memberId,
+        rowId,
         targetGroupId,
         memberLinkPerspective(
           databaseId,

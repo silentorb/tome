@@ -595,7 +595,7 @@ describe("GraphDatabase", () => {
 
     const page = db.listMemberPage(setId, {
       projections: [{ setProjection, memberProjection }],
-      defaultOrdered: true,
+      intrinsicSequence: true,
       relationFields: [{ column: "links", projectionTypes: [linkType] }],
       limit: 2,
       offset: 0,
@@ -682,7 +682,7 @@ describe("GraphDatabase", () => {
         scopeNodeId: bookA,
         canonicalGroupByTitle: true,
       },
-      defaultOrdered: true,
+      intrinsicSequence: true,
       relationFields: [
         {
           column: "book",
@@ -715,7 +715,7 @@ describe("GraphDatabase", () => {
         groupToScopeProjectionType: groupToScopeType,
         scopeNodeId: bookA,
       },
-      defaultOrdered: true,
+      intrinsicSequence: true,
       limit: 2,
       offset: 2,
     });

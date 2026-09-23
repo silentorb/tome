@@ -21,7 +21,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Application-specific web API design | [web-api-design.md](./web-api-design.md) |
 | Config-driven API host + service modules | [tome-server.md](./tome-server.md) |
 | Graph Explorer (LOD graph visualization) | [graph-explorer.md](./graph-explorer.md) |
-| Table presentation (scope tabs, groups, reorder) | [table-presentation.md](./table-presentation.md) |
+| Table presentation (scope tabs, groups, sequence) | [table-presentation.md](./table-presentation.md) |
 | Dynamic properties (computed columns) | [dynamic-properties.md](./dynamic-properties.md) |
 | Expression indexes (fixed dyn sorts) | [expression-indexes.md](./expression-indexes.md) |
 | Table view tabs (`views.json`) | [views.md](./views.md) |

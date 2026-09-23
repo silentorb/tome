@@ -15,7 +15,7 @@ const scene2 = "44444444444444444444444444";
 
 interface DatabaseViewPayload {
   databaseView: {
-    presentation?: { compositionId?: string; scopeId?: string; reorderable?: boolean };
+    presentation?: { compositionId?: string; scopeId?: string; sequenced?: boolean };
     groups?: Array<{ groupId: string; rows: Array<{ nodeId: string }> }>;
   };
 }
@@ -109,9 +109,9 @@ describe("database members API", () => {
 
   const api = createTestApiFromContent(fixture);
 
-  function reorder(body: unknown): Promise<Response> {
+  function rewriteSequence(body: unknown): Promise<Response> {
     return api.handler(
-      new Request(`http://127.0.0.1/api/databases/${SCENES_DB}/members/reorder`, {
+      new Request(`http://127.0.0.1/api/databases/${SCENES_DB}/sequence`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
@@ -136,7 +136,7 @@ describe("database members API", () => {
     expect(section?.databaseView?.presentation).toMatchObject({
       compositionId: "scenes-by-book",
       scopeId: book,
-      reorderable: true,
+      sequenced: true,
     });
     expect(section?.databaseView?.groups?.map((group) => group.groupId)).toEqual([
       part,
@@ -144,19 +144,19 @@ describe("database members API", () => {
     ]);
   });
 
-  test("PATCH members/reorder renumbers membership order", async () => {
-    const res = await reorder({ orderedMemberIds: [scene2, scene1], tabId: book });
+  test("PATCH sequence renumbers intrinsic edge order", async () => {
+    const res = await rewriteSequence({ orderedRowIds: [scene2, scene1], tabId: book });
     expect(res.status).toBe(200);
     const payload = (await res.json()) as DatabaseViewPayload;
     const group = payload.databaseView.groups?.find((entry) => entry.groupId === part);
     expect(group?.rows.map((row) => row.nodeId)).toEqual([scene2, scene1]);
   });
 
-  test("PATCH members/reorder applies a group change", async () => {
-    const res = await reorder({
-      orderedMemberIds: [scene2, scene1],
+  test("PATCH sequence applies a group change", async () => {
+    const res = await rewriteSequence({
+      orderedRowIds: [scene2, scene1],
       tabId: book,
-      groupChange: { memberId: scene1, targetGroupId: UNASSIGNED_GROUP_ID },
+      groupChange: { rowId: scene1, targetGroupId: UNASSIGNED_GROUP_ID },
     });
     expect(res.status).toBe(200);
     const payload = (await res.json()) as DatabaseViewPayload;
@@ -166,8 +166,8 @@ describe("database members API", () => {
     expect(unassigned?.rows.map((row) => row.nodeId)).toEqual([scene1]);
   });
 
-  test("PATCH members/reorder rejects a payload without orderedMemberIds", async () => {
-    const res = await reorder({ tabId: book });
+  test("PATCH sequence rejects a payload without orderedRowIds", async () => {
+    const res = await rewriteSequence({ tabId: book });
     expect(res.status).toBe(400);
   });
 

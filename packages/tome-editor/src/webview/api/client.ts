@@ -65,7 +65,7 @@ export function createEditorApi(): EditorApi {
     getRelationshipLinkOptions: rest.getRelationshipLinkOptions.bind(rest),
     getUserSettings: rest.getUserSettings.bind(rest),
     patchUserSettings: rest.patchUserSettings.bind(rest),
-    reorderDatabaseMembers: rest.reorderDatabaseMembers.bind(rest),
+    rewriteDatabaseSequence: rest.rewriteDatabaseSequence.bind(rest),
     getExtensionsManifest: rest.getExtensionsManifest.bind(rest),
     prepareEditorBody: rest.prepareEditorBody.bind(rest),
     invokeExtension: rest.invokeExtension.bind(rest),

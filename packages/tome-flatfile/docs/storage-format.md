@@ -452,15 +452,15 @@ Compositions that layer scope tabs, row groups, and reordering onto a type table
 | `version` | must be `1` |
 | `compositions` | array; `id` unique |
 
-**Composition fields:** `id`, `typeDatabaseId` (node id); optional `scope`, `groups`, `reorder`, `excludeColumnKeys`, `columnViewName` (deprecated).
+**Composition fields:** `id`, `typeDatabaseId` (node id); optional `scope`, `groups`, `sequence`, `excludeColumnKeys`, `columnViewName` (deprecated).
 
 | Layer | Fields |
 | --- | --- |
 | `scope` | `memberToScopeComposite` (association id, required); optional `excludeColumnKeys` |
 | `groups` | `memberToGroupComposite` (association id), `groupTypeDatabaseId` (node id), `unassignedGroupTitle` (all required); optional `groupToScopeComposite`, `canonicalGroupByTitle`, `excludeColumnKeys` |
-| `reorder` | optional `excludeColumnKeys` |
+| `sequence` | optional `excludeColumnKeys` |
 
-Layers are independent: any subset may be present. A composition takes effect when `views.json` has a generated view record whose `generator` equals the composition `id`. The `reorder` layer requires that the type database's set association carries the **ordered** trait in `associations.json`.
+Layers are independent: any subset may be present. A composition takes effect when `views.json` has a generated view record whose `generator` equals the composition `id`. The `sequence` layer requires that the type database's set association carries the **ordered** trait in `associations.json`.
 
 ### `extensions.json` (version 1)
 
@@ -532,7 +532,7 @@ Path keys are normalized like static-site `url_alias` (trim, strip slashes, lowe
 | `model/table-schemas.json` | optional | Needed for type-table columns |
 | `model/views.json` | optional | Needed for custom/generated table tabs |
 | `model/dynamic-properties.json` | optional | Computed columns |
-| `model/table-presentation.json` | optional | Scope tabs, row groups, reorderable Items tables |
+| `model/table-presentation.json` | optional | Scope tabs, row groups, sequenced Items tables |
 | `model/extensions.json` | optional | Extension packages |
 | `model/redirects.json` | optional | Static-site path → node id redirects |
 
