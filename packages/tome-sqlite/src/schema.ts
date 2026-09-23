@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 14;
+export const SCHEMA_VERSION = 15;
 
 /** Hot node fields stored as real columns on `nodes` (never in `node_properties`). */
 export const PROMOTED_NODE_COLUMNS = [
@@ -94,7 +94,8 @@ CREATE TABLE IF NOT EXISTS expression_indexes (
   digest TEXT PRIMARY KEY NOT NULL,
   status TEXT NOT NULL,
   built_at TEXT,
-  expression_json TEXT NOT NULL DEFAULT '{}'
+  expression_json TEXT NOT NULL DEFAULT '{}',
+  dirty_member_ids TEXT
 );
 
 CREATE TABLE IF NOT EXISTS expression_index_values (

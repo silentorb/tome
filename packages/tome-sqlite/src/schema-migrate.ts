@@ -404,6 +404,7 @@ export function migrateSchema(db: Database): void {
   migrateSchemaToV12(db);
   migrateSchemaToV13(db);
   migrateSchemaToV14(db);
+  migrateSchemaToV15(db);
 
   const versionRow = db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get() as
     | { value: string }
@@ -425,7 +426,8 @@ export function migrateSchemaToV14(db: Database): void {
       digest TEXT PRIMARY KEY NOT NULL,
       status TEXT NOT NULL,
       built_at TEXT,
-      expression_json TEXT NOT NULL DEFAULT '{}'
+      expression_json TEXT NOT NULL DEFAULT '{}',
+      dirty_member_ids TEXT
     );
     CREATE TABLE IF NOT EXISTS expression_index_values (
       digest TEXT NOT NULL REFERENCES expression_indexes(digest) ON DELETE CASCADE,
@@ -436,6 +438,13 @@ export function migrateSchemaToV14(db: Database): void {
     CREATE INDEX IF NOT EXISTS idx_expression_index_sort
       ON expression_index_values(digest, sort_value);
   `);
+}
+
+/** Dirty member tracking for incremental expression-index patches (v14 → v15). */
+export function migrateSchemaToV15(db: Database): void {
+  if (!tableExists(db, "expression_indexes")) return;
+  if (columnNames(db, "expression_indexes").includes("dirty_member_ids")) return;
+  db.exec(`ALTER TABLE expression_indexes ADD COLUMN dirty_member_ids TEXT`);
 }
 
 /** @deprecated Use migrateSchema */

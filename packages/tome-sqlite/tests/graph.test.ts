@@ -483,6 +483,92 @@ describe("GraphDatabase", () => {
     db.close();
   });
 
+  test("marks only digests whose reachTypes intersect the mutated type", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "expr-narrow-stale.sqlite");
+    const db = new GraphDatabase(dbPath);
+
+    const digestA = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+    const digestB = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    db.replaceExpressionIndexValues(
+      digestA,
+      JSON.stringify({ reachTypes: ["typeA", "assocSet:0"] }),
+      [{ memberId: "m1", sortValue: 1 }],
+    );
+    db.replaceExpressionIndexValues(
+      digestB,
+      JSON.stringify({ reachTypes: ["typeB"] }),
+      [{ memberId: "m1", sortValue: 2 }],
+    );
+    expect(db.getExpressionIndexStatus(digestA)).toBe("ready");
+    expect(db.getExpressionIndexStatus(digestB)).toBe("ready");
+
+    db.markExpressionIndexesStaleForTypes(["typeA"], ["m1", "other"]);
+    expect(db.getExpressionIndexStatus(digestA)).toBe("stale");
+    expect(db.getExpressionIndexStatus(digestB)).toBe("ready");
+    expect(db.getExpressionIndexDirtyMemberIds(digestA)?.sort()).toEqual(["m1", "other"]);
+    expect(db.getExpressionIndexDirtyMemberIds(digestB)).toBeNull();
+
+    db.close();
+  });
+
+  test("upserts expression index values without wiping siblings", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "expr-upsert.sqlite");
+    const db = new GraphDatabase(dbPath);
+    const digest = "cccccccccccccccccccccccccccccccc";
+    db.replaceExpressionIndexValues(digest, JSON.stringify({ reachTypes: ["t"] }), [
+      { memberId: "m1", sortValue: 10 },
+      { memberId: "m2", sortValue: 50 },
+    ]);
+    db.markExpressionIndexesStaleForTypes(["t"], ["m1"]);
+    expect(db.getExpressionIndexStatus(digest)).toBe("stale");
+
+    db.upsertExpressionIndexValues(digest, JSON.stringify({ reachTypes: ["t"] }), [
+      { memberId: "m1", sortValue: 99 },
+    ]);
+    expect(db.getExpressionIndexStatus(digest)).toBe("ready");
+    expect(db.getExpressionIndexDirtyMemberIds(digest)).toBeNull();
+    const rows = db.queryAll<{ member_id: string; sort_value: number }>(
+      "SELECT member_id, sort_value FROM expression_index_values WHERE digest = ? ORDER BY member_id",
+      digest,
+    );
+    expect(rows).toEqual([
+      { member_id: "m1", sort_value: 99 },
+      { member_id: "m2", sort_value: 50 },
+    ]);
+
+    db.deleteExpressionIndexValues(digest, ["m2"]);
+    const afterDelete = db.queryAll<{ member_id: string }>(
+      "SELECT member_id FROM expression_index_values WHERE digest = ?",
+      digest,
+    );
+    expect(afterDelete).toEqual([{ member_id: "m1" }]);
+
+    db.close();
+  });
+
+  test("global markExpressionIndexesStale clears dirty_member_ids", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "expr-global-stale.sqlite");
+    const db = new GraphDatabase(dbPath);
+    const digest = "dddddddddddddddddddddddddddddddd";
+    db.replaceExpressionIndexValues(digest, JSON.stringify({ reachTypes: ["t"] }), [
+      { memberId: "m1", sortValue: 1 },
+    ]);
+    db.markExpressionIndexesStaleForTypes(["t"], ["m1"]);
+    expect(db.getExpressionIndexDirtyMemberIds(digest)).toEqual(["m1"]);
+    // Re-ready then global stale
+    db.upsertExpressionIndexValues(digest, JSON.stringify({ reachTypes: ["t"] }), [
+      { memberId: "m1", sortValue: 2 },
+    ]);
+    db.markExpressionIndexesStale();
+    expect(db.getExpressionIndexStatus(digest)).toBe("stale");
+    expect(db.getExpressionIndexDirtyMemberIds(digest)).toBeNull();
+
+    db.close();
+  });
+
   test("selects relation field link arrays in set membership window SQL", () => {
     tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "set-member-relation-fields.sqlite");

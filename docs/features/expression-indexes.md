@@ -15,17 +15,21 @@ Content-addressed **sort indexes** in the SQLite query cache for expressions tha
 - Digest keys include canonical expression + context fingerprint (schema enum weights, associations, format version) — not `limit`/`offset`.
 - For **column-set** sorts, the digest also binds **`dimensionId`** (parsed from the materialized column key) so each expanded column has its own index.
 - Index tables live only in the query cache; never write computed dyn answers onto flatfile `IS_A` props.
-- On relationship/node mutations, mark ready indexes **stale**; next Items sort rebuilds (v1 full rebuild).
+- On relationship mutations, mark **matching** ready indexes **stale** via `expression_json.reachTypes` (IR reach + owner set-trait projections). Digests without `reachTypes` (legacy rows) match all types. Cache clears and node deletes still stale **all** ready indexes.
+- When the mutation supplies endpoint ids, record them as `dirty_member_ids` and **incrementally patch** those members on the next ensure (upsert / delete). Full rebuild only when status is `missing`, dirty set is unknown (`NULL`), or a global clear ran.
+- Concurrent ensures for the same digest are **single-flight** (sync Set; nested callers skip).
 - Table `q` uses scoped `TomeSearch.searchWindow` (see [search.md](./search.md) and [views.md](./views.md)).
+- Pure-SQL aggregate `ORDER BY` (like relation-counts) is a **later** follow-up — not required for this path.
 
 ## Code
 
 | Area | Path |
 | --- | --- |
 | IR | `packages/tome-db/src/dynamic-properties/aggregate.ts` |
+| Reach types | `packages/tome-db/src/dynamic-properties/expression-index-reach.ts` |
 | Digest | `packages/tome-db/src/dynamic-properties/expression-index-key.ts` |
 | Ensure / plan | `packages/tome-db/src/dynamic-properties/expression-index.ts` |
-| Catalog DDL | `packages/tome-sqlite` schema v14 (`expression_indexes`, `expression_index_values`) |
+| Catalog DDL | `packages/tome-sqlite` schema v15 (`expression_indexes` + `dirty_member_ids`, `expression_index_values`) |
 | Window ORDER BY | `SetMemberWindowQuery.expressionIndexSorts` |
 
 ## See also

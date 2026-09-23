@@ -92,7 +92,7 @@ Sorting Items tables by a dyn column must not full-materialize every member on e
 
 1. **Builds** a content-addressed sort index in the SQLite query cache (`expression_indexes` / `expression_index_values`) on first miss (lazy, single-flight).
 2. Drives Items `ORDER BY` via `SetMemberWindowQuery.expressionIndexSorts` (indexed `sort_value`).
-3. Remains the definition source for index rebuilds after graph writes mark indexes **stale**.
+3. Remains the definition source for rebuilds: graph writes mark only digests whose `reachTypes` intersect the mutated projection/composite (narrow stale); ensure then **incrementally patches** recorded dirty members, or full-rebuilds when dirty set is unknown / digest is missing.
 
 Digest = hash(canonical IR + bound params + context fingerprint: schema enum weights, associations, format version). Column-set sorts also bind **`dimensionId`** into the params bag so each expanded key (`scene_count__{productId}`, …) gets its own digest. Display cells still come from `applyDynamicProperties` on the returned window (not from reading the index), until parity is proven end-to-end.
 

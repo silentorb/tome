@@ -277,6 +277,44 @@ describe("database-view SQL windows", () => {
     );
     expect(digests.some((row) => row.status === "ready")).toBe(true);
 
+    // Unrelated projection type must not stale the dyn index.
+    const readyDigest = digests.find((row) => row.status === "ready")!.digest;
+    db.upsertRelationship(low, high, "UNRELATED:0", {});
+    expect(db.getExpressionIndexStatus(readyDigest)).toBe("ready");
+
+    // Scene-edge mutation dirties endpoints; re-ensure patches without full wipe of siblings.
+    const before = db.queryAll<{ member_id: string; sort_value: number }>(
+      "SELECT member_id, sort_value FROM expression_index_values WHERE digest = ? ORDER BY member_id",
+      readyDigest,
+    );
+    expect(before.length).toBe(2);
+    db.upsertNode("01SCENEC0000000000000000001", { title: "S3" });
+    db.upsertRelationship(low, "01SCENEC0000000000000000001", sceneProj, {});
+    expect(db.getExpressionIndexStatus(readyDigest)).toBe("stale");
+    const dirty = db.getExpressionIndexDirtyMemberIds(readyDigest);
+    expect(dirty?.includes(low)).toBe(true);
+
+    const detailAfter = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+      sorts: [{ column: "all_scene_count", direction: "desc" }],
+      limit: 50,
+      offset: 0,
+    });
+    expect(db.getExpressionIndexStatus(readyDigest)).toBe("ready");
+    expect(detailAfter?.rowsWindow.total).toBe(2);
+    const byId = new Map(detailAfter?.rows.map((r) => [r.nodeId, r.cells.all_scene_count]));
+    expect(byId.get(low)).toBe("2");
+    expect(byId.get(high)).toBe("2");
+    const after = db.queryAll<{ member_id: string; sort_value: number }>(
+      "SELECT member_id, sort_value FROM expression_index_values WHERE digest = ? ORDER BY member_id",
+      readyDigest,
+    );
+    expect(after).toHaveLength(2);
+    const highBefore = before.find((r) => r.member_id === high)!;
+    const highAfter = after.find((r) => r.member_id === high)!;
+    expect(highAfter.sort_value).toBe(highBefore.sort_value);
+    const lowAfter = after.find((r) => r.member_id === low)!;
+    expect(lowAfter.sort_value).toBe(2);
+
     writeFileSync(
       dynamicPropertiesFilePath(contentDir),
       serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),

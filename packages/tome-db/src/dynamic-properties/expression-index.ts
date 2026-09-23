@@ -15,6 +15,7 @@ import {
   expressionIndexKeyForColumnSetDyn,
   expressionIndexKeyForFixedDyn,
 } from "./expression-index-key";
+import { collectExpressionIndexReachTypes } from "./expression-index-reach";
 import {
   loadDynamicColumnSets,
   loadDynamicProperties,
@@ -24,12 +25,15 @@ import {
 import { parseDimensionIdFromColumnKey } from "./registry";
 import {
   getQueryCache,
+  isGraphStoreBase,
+  listMemberPageNodeIds,
   type RelationshipReadStore,
 } from "../graph-store/relationship-read";
-import { listSetMemberRowConnections } from "../set-membership";
+import { listSetMemberProjectionPairs } from "../set-membership";
+import { resolveContentPath } from "tome-flatfile";
 
-/** In-process single-flight builds keyed by digest. */
-const buildsInFlight = new Map<string, Promise<void>>();
+/** In-process sync single-flight: digests currently building. */
+const buildsInFlight = new Set<string>();
 
 export type DynSortIndexPlan = {
   column: string;
@@ -178,12 +182,17 @@ export function ensureDynSortIndexes(
     throw new Error("Expression indexes require a SQLite query cache");
   }
 
-  const memberIds = listSetMemberRowConnections(store, ownerId, contentDir).map(
-    (rel) => rel.sourceNodeId,
-  );
+  const dir =
+    contentDir ??
+    (isGraphStoreBase(store) ? store.contentDir : resolveContentPath());
+  const projections = listSetMemberProjectionPairs(dir);
+  const memberIds =
+    projections.length > 0
+      ? listMemberPageNodeIds(store, ownerId, { projections })
+      : [];
 
   for (const plan of plans) {
-    ensureExpressionIndex(cache, store, plan, memberIds, contentDir);
+    ensureExpressionIndex(cache, store, plan, memberIds, dir);
   }
 
   return plans.map((plan) => ({ column: plan.column, digest: plan.digest }));
@@ -199,6 +208,52 @@ export function ensureFixedDynSortIndexes(
   return ensureDynSortIndexes(store, ownerId, plans, contentDir);
 }
 
+function expressionJsonForPlan(
+  plan: DynSortIndexPlan,
+  contentDir?: string,
+): string {
+  const spec =
+    plan.dimensionId != null
+      ? columnSetAggregateForResolver(plan.resolverId)
+      : fixedAggregateForResolver(plan.resolverId);
+  const reachTypes = spec
+    ? collectExpressionIndexReachTypes(spec, plan.params, plan.owner, contentDir)
+    : [];
+  return JSON.stringify({
+    resolverId: plan.resolverId,
+    columnKey: plan.column,
+    owner: plan.owner,
+    dimensionId: plan.dimensionId ?? null,
+    reachTypes,
+  });
+}
+
+function evaluatePlanValues(
+  store: RelationshipReadStore,
+  plan: DynSortIndexPlan,
+  rowNodeIds: readonly string[],
+): { memberId: string; sortValue: number }[] {
+  const ctx = {
+    db: store,
+    owner: plan.owner,
+    viewName: "",
+    rowNodeIds: [...rowNodeIds],
+  };
+  const values =
+    plan.dimensionId != null
+      ? evaluateColumnSetAggregate(ctx, plan.resolverId, plan.params, plan.dimensionId)
+      : evaluateFixedAggregate(ctx, plan.resolverId, plan.params);
+  const rows = [...values.entries()].map(([memberId, sortValue]) => ({
+    memberId,
+    sortValue,
+  }));
+  const seen = new Set(rows.map((r) => r.memberId));
+  for (const id of rowNodeIds) {
+    if (!seen.has(id)) rows.push({ memberId: id, sortValue: 0 });
+  }
+  return rows;
+}
+
 function ensureExpressionIndex(
   cache: TomeQueryCache,
   store: RelationshipReadStore,
@@ -209,47 +264,45 @@ function ensureExpressionIndex(
   const status = cache.getExpressionIndexStatus(plan.digest);
   if (status === "ready") return;
 
-  const existing = buildsInFlight.get(plan.digest);
-  if (existing) {
-    // Synchronous API: wait via deasync is unavailable — rebuild inline if another
-    // request is in flight on the same tick we just join by rebuilding (idempotent).
+  if (buildsInFlight.has(plan.digest)) {
+    // Another caller on this stack owns the build; skip duplicate work.
+    return;
   }
 
-  const build = () => {
-    const ctx = {
-      db: store,
-      owner: plan.owner,
-      viewName: "",
-      rowNodeIds: [...memberIds],
-    };
-    const values =
-      plan.dimensionId != null
-        ? evaluateColumnSetAggregate(ctx, plan.resolverId, plan.params, plan.dimensionId)
-        : evaluateFixedAggregate(ctx, plan.resolverId, plan.params);
-    const rows = [...values.entries()].map(([memberId, sortValue]) => ({
-      memberId,
-      sortValue,
-    }));
-    // Members with no map entry still need a row; evaluate covers rowNodeIds.
-    const seen = new Set(rows.map((r) => r.memberId));
-    for (const id of memberIds) {
-      if (!seen.has(id)) rows.push({ memberId: id, sortValue: 0 });
-    }
-    cache.replaceExpressionIndexValues(
-      plan.digest,
-      JSON.stringify({
-        resolverId: plan.resolverId,
-        columnKey: plan.column,
-        owner: plan.owner,
-        dimensionId: plan.dimensionId ?? null,
-      }),
-      rows,
-    );
-  };
-
-  buildsInFlight.set(plan.digest, Promise.resolve().then(build));
+  buildsInFlight.add(plan.digest);
   try {
-    build();
+    const expressionJson = expressionJsonForPlan(plan, contentDir);
+    const dirtyIds =
+      typeof cache.getExpressionIndexDirtyMemberIds === "function"
+        ? cache.getExpressionIndexDirtyMemberIds(plan.digest)
+        : null;
+
+    const canPatch =
+      status === "stale" &&
+      dirtyIds != null &&
+      dirtyIds.length > 0 &&
+      typeof cache.upsertExpressionIndexValues === "function" &&
+      typeof cache.deleteExpressionIndexValues === "function";
+
+    if (canPatch) {
+      const memberSet = new Set(memberIds);
+      const stillMembers = dirtyIds.filter((id) => memberSet.has(id));
+      const removed = dirtyIds.filter((id) => !memberSet.has(id));
+      if (removed.length > 0) {
+        cache.deleteExpressionIndexValues(plan.digest, removed);
+      }
+      if (stillMembers.length > 0) {
+        const rows = evaluatePlanValues(store, plan, stillMembers);
+        cache.upsertExpressionIndexValues(plan.digest, expressionJson, rows);
+      } else {
+        // Only removals — mark ready without re-evaluating.
+        cache.upsertExpressionIndexValues(plan.digest, expressionJson, []);
+      }
+      return;
+    }
+
+    const rows = evaluatePlanValues(store, plan, memberIds);
+    cache.replaceExpressionIndexValues(plan.digest, expressionJson, rows);
   } finally {
     buildsInFlight.delete(plan.digest);
   }

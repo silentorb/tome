@@ -660,8 +660,33 @@ export interface TomeQueryCache {
     expressionJson: string,
     values: readonly { memberId: string; sortValue: number }[],
   ): void;
+  /**
+   * Upsert value rows for `digest` without deleting other members.
+   * Clears `dirty_member_ids` and marks the catalog row ready.
+   */
+  upsertExpressionIndexValues(
+    digest: string,
+    expressionJson: string,
+    values: readonly { memberId: string; sortValue: number }[],
+  ): void;
+  /** Remove value rows for the given member ids (membership removals). */
+  deleteExpressionIndexValues(digest: string, memberIds: readonly string[]): void;
+  /**
+   * Dirty member ids recorded when this digest was marked stale, or `null`
+   * when a full rebuild is required (unknown dirty set).
+   */
+  getExpressionIndexDirtyMemberIds(digest: string): string[] | null;
   /** Mark one digest (or all when omitted) as stale so the next read rebuilds. */
   markExpressionIndexesStale(digest?: string): void;
+  /**
+   * Mark ready digests whose `expression_json.reachTypes` intersect `types`
+   * as stale. Digests without `reachTypes` (legacy) are treated as matching.
+   * When `dirtyMemberIds` is omitted, clears dirty tracking (full rebuild).
+   */
+  markExpressionIndexesStaleForTypes(
+    types: readonly string[],
+    dirtyMemberIds?: readonly string[],
+  ): void;
   /** Group-type members for composed group headers (optional scope filter). */
   listComposedGroupHeaders(query: ComposedGroupHeadersQuery): ComposedGroupHeaderRow[];
   countIncidentRelationships(nodeId: string): number;

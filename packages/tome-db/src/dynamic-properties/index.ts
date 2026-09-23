@@ -117,4 +117,5 @@ export {
   sortsIncludeColumnSetDynKey,
 } from "./expression-index";
 export type { DynSortIndexPlan, FixedDynSortIndexPlan } from "./expression-index";
+export { collectExpressionIndexReachTypes } from "./expression-index-reach";
 export { parseDimensionIdFromColumnKey, materializeColumnKey } from "./registry";

@@ -500,17 +500,26 @@ export class GraphDatabase implements TomeQueryCache {
   upsertRelationshipRecord(record: RelationshipRecordRow): void {
     this.insertRecord.run(record.id, record.nodeA, record.nodeB, record.compositeType);
     if (Object.keys(record.properties).length === 0) {
-      this.markExpressionIndexesStale();
+      this.markExpressionIndexesStaleForTypes(
+        [record.compositeType],
+        [record.nodeA, record.nodeB],
+      );
       return;
     }
     const existing = this.getRelationshipRecord(record.id);
     if (!existing) {
-      this.markExpressionIndexesStale();
+      this.markExpressionIndexesStaleForTypes(
+        [record.compositeType],
+        [record.nodeA, record.nodeB],
+      );
       return;
     }
     const merged = mergeProperties(existing.properties, record.properties);
     this.writeRecordProperties(record.id, this.propertyCodec.encode(merged));
-    this.markExpressionIndexesStale();
+    this.markExpressionIndexesStaleForTypes(
+      [record.compositeType],
+      [record.nodeA, record.nodeB],
+    );
   }
 
   upsertRelationshipProjection(projection: RelationshipProjectionRow): void {
@@ -522,17 +531,26 @@ export class GraphDatabase implements TomeQueryCache {
       projection.type,
     );
     if (Object.keys(projection.properties).length === 0) {
-      this.markExpressionIndexesStale();
+      this.markExpressionIndexesStaleForTypes(
+        [projection.type],
+        [projection.sourceNodeId, projection.targetNodeId],
+      );
       return;
     }
     const existing = this.getRelationship(projection.id);
     if (!existing) {
-      this.markExpressionIndexesStale();
+      this.markExpressionIndexesStaleForTypes(
+        [projection.type],
+        [projection.sourceNodeId, projection.targetNodeId],
+      );
       return;
     }
     const merged = mergeProperties(existing.properties, projection.properties);
     this.writeProjectionProperties(projection.id, this.propertyCodec.encode(merged));
-    this.markExpressionIndexesStale();
+    this.markExpressionIndexesStaleForTypes(
+      [projection.type],
+      [projection.sourceNodeId, projection.targetNodeId],
+    );
   }
 
   /** @deprecated Use upsertRelationshipProjection via sync expander. Kept for test helpers. */
@@ -546,19 +564,19 @@ export class GraphDatabase implements TomeQueryCache {
     this.insertRecord.run(id, sourceNodeId, targetNodeId, type);
     this.insertProjection.run(id, id, sourceNodeId, targetNodeId, type);
     if (Object.keys(properties).length === 0) {
-      this.markExpressionIndexesStale();
+      this.markExpressionIndexesStaleForTypes([type], [sourceNodeId, targetNodeId]);
       return;
     }
     const existing = this.getRelationship(id);
     if (!existing) {
-      this.markExpressionIndexesStale();
+      this.markExpressionIndexesStaleForTypes([type], [sourceNodeId, targetNodeId]);
       return;
     }
     const merged = mergeProperties(existing.properties, properties);
     const encoded = this.propertyCodec.encode(merged);
     this.writeRecordProperties(id, encoded);
     this.writeProjectionProperties(id, encoded);
-    this.markExpressionIndexesStale();
+    this.markExpressionIndexesStaleForTypes([type], [sourceNodeId, targetNodeId]);
   }
 
   mergeRelationshipProperties(id: string, properties: Properties): void {
@@ -570,7 +588,10 @@ export class GraphDatabase implements TomeQueryCache {
     if (existing.recordId) {
       this.writeRecordProperties(existing.recordId, encoded);
     }
-    this.markExpressionIndexesStale();
+    this.markExpressionIndexesStaleForTypes(
+      [existing.type],
+      [existing.sourceNodeId, existing.targetNodeId],
+    );
   }
 
   deleteRelationship(sourceNodeId: string, targetNodeId: string, type: string): boolean {
@@ -580,13 +601,17 @@ export class GraphDatabase implements TomeQueryCache {
       const result = this.db
         .prepare("DELETE FROM relationship_projections WHERE id = ?")
         .run(id);
-      if (result.changes > 0) this.markExpressionIndexesStale();
+      if (result.changes > 0) {
+        this.markExpressionIndexesStaleForTypes([type], [sourceNodeId, targetNodeId]);
+      }
       return result.changes > 0;
     }
     const result = this.db
       .prepare("DELETE FROM relationship_records WHERE id = ?")
       .run(row.recordId);
-    if (result.changes > 0) this.markExpressionIndexesStale();
+    if (result.changes > 0) {
+      this.markExpressionIndexesStaleForTypes([type], [sourceNodeId, targetNodeId]);
+    }
     return result.changes > 0;
   }
 
@@ -1205,6 +1230,21 @@ export class GraphDatabase implements TomeQueryCache {
     return "stale";
   }
 
+  getExpressionIndexDirtyMemberIds(digest: string): string[] | null {
+    const row = this.db
+      .prepare("SELECT dirty_member_ids FROM expression_indexes WHERE digest = ?")
+      .get(digest) as { dirty_member_ids: string | null } | undefined;
+    if (!row) return null;
+    if (row.dirty_member_ids == null) return null;
+    try {
+      const parsed = JSON.parse(row.dirty_member_ids) as unknown;
+      if (!Array.isArray(parsed)) return null;
+      return parsed.filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+    } catch {
+      return null;
+    }
+  }
+
   replaceExpressionIndexValues(
     digest: string,
     expressionJson: string,
@@ -1213,11 +1253,12 @@ export class GraphDatabase implements TomeQueryCache {
     const tx = this.db.transaction(() => {
       this.db
         .prepare(
-          `INSERT INTO expression_indexes (digest, status, built_at, expression_json)
-           VALUES (?, 'building', NULL, ?)
+          `INSERT INTO expression_indexes (digest, status, built_at, expression_json, dirty_member_ids)
+           VALUES (?, 'building', NULL, ?, NULL)
            ON CONFLICT(digest) DO UPDATE SET
              status = 'building',
-             expression_json = excluded.expression_json`,
+             expression_json = excluded.expression_json,
+             dirty_member_ids = NULL`,
         )
         .run(digest, expressionJson);
       this.db.prepare("DELETE FROM expression_index_values WHERE digest = ?").run(digest);
@@ -1229,23 +1270,144 @@ export class GraphDatabase implements TomeQueryCache {
       }
       this.db
         .prepare(
-          `UPDATE expression_indexes SET status = 'ready', built_at = ? WHERE digest = ?`,
+          `UPDATE expression_indexes SET status = 'ready', built_at = ?, dirty_member_ids = NULL WHERE digest = ?`,
         )
         .run(new Date().toISOString(), digest);
     });
     tx();
   }
 
+  upsertExpressionIndexValues(
+    digest: string,
+    expressionJson: string,
+    values: readonly { memberId: string; sortValue: number }[],
+  ): void {
+    const tx = this.db.transaction(() => {
+      this.db
+        .prepare(
+          `INSERT INTO expression_indexes (digest, status, built_at, expression_json, dirty_member_ids)
+           VALUES (?, 'building', NULL, ?, NULL)
+           ON CONFLICT(digest) DO UPDATE SET
+             status = 'building',
+             expression_json = excluded.expression_json`,
+        )
+        .run(digest, expressionJson);
+      const upsert = this.db.prepare(
+        `INSERT INTO expression_index_values (digest, member_id, sort_value) VALUES (?, ?, ?)
+         ON CONFLICT(digest, member_id) DO UPDATE SET sort_value = excluded.sort_value`,
+      );
+      for (const row of values) {
+        upsert.run(digest, row.memberId, row.sortValue);
+      }
+      this.db
+        .prepare(
+          `UPDATE expression_indexes SET status = 'ready', built_at = ?, dirty_member_ids = NULL WHERE digest = ?`,
+        )
+        .run(new Date().toISOString(), digest);
+    });
+    tx();
+  }
+
+  deleteExpressionIndexValues(digest: string, memberIds: readonly string[]): void {
+    if (memberIds.length === 0) return;
+    const placeholders = memberIds.map(() => "?").join(", ");
+    this.db
+      .prepare(
+        `DELETE FROM expression_index_values WHERE digest = ? AND member_id IN (${placeholders})`,
+      )
+      .run(digest, ...memberIds);
+  }
+
   markExpressionIndexesStale(digest?: string): void {
     if (digest?.trim()) {
       this.db
         .prepare(
-          `UPDATE expression_indexes SET status = 'stale' WHERE digest = ? AND status = 'ready'`,
+          `UPDATE expression_indexes
+           SET status = 'stale', dirty_member_ids = NULL
+           WHERE digest = ? AND status = 'ready'`,
         )
         .run(digest.trim());
       return;
     }
-    this.db.exec(`UPDATE expression_indexes SET status = 'stale' WHERE status = 'ready'`);
+    this.db.exec(
+      `UPDATE expression_indexes SET status = 'stale', dirty_member_ids = NULL WHERE status = 'ready'`,
+    );
+  }
+
+  markExpressionIndexesStaleForTypes(
+    types: readonly string[],
+    dirtyMemberIds?: readonly string[],
+  ): void {
+    const typeSet = new Set(
+      types.map((t) => t.trim()).filter((t) => t.length > 0),
+    );
+    if (typeSet.size === 0) return;
+
+    const rows = this.db
+      .prepare(
+        `SELECT digest, expression_json, dirty_member_ids FROM expression_indexes WHERE status = 'ready'`,
+      )
+      .all() as {
+      digest: string;
+      expression_json: string;
+      dirty_member_ids: string | null;
+    }[];
+
+    const dirtyProvided = dirtyMemberIds !== undefined;
+    const incomingDirty = dirtyProvided
+      ? [
+          ...new Set(
+            dirtyMemberIds
+              .map((id) => id.trim())
+              .filter((id) => id.length > 0),
+          ),
+        ]
+      : null;
+
+    const mark = this.db.prepare(
+      `UPDATE expression_indexes SET status = 'stale', dirty_member_ids = ? WHERE digest = ?`,
+    );
+
+    for (const row of rows) {
+      let reachTypes: string[] | null = null;
+      try {
+        const parsed = JSON.parse(row.expression_json) as unknown;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          const raw = (parsed as { reachTypes?: unknown }).reachTypes;
+          if (Array.isArray(raw)) {
+            reachTypes = raw.filter((t): t is string => typeof t === "string");
+          }
+        }
+      } catch {
+        /* legacy / corrupt → treat as matching all */
+      }
+
+      const matches =
+        reachTypes == null ||
+        reachTypes.length === 0 ||
+        reachTypes.some((t) => typeSet.has(t));
+      if (!matches) continue;
+
+      let dirtyJson: string | null = null;
+      if (dirtyProvided && incomingDirty) {
+        const prior = new Set<string>();
+        if (row.dirty_member_ids != null) {
+          try {
+            const priorParsed = JSON.parse(row.dirty_member_ids) as unknown;
+            if (Array.isArray(priorParsed)) {
+              for (const id of priorParsed) {
+                if (typeof id === "string" && id.trim()) prior.add(id.trim());
+              }
+            }
+          } catch {
+            /* ignore */
+          }
+        }
+        for (const id of incomingDirty) prior.add(id);
+        dirtyJson = JSON.stringify([...prior]);
+      }
+      mark.run(dirtyJson, row.digest);
+    }
   }
 
   listDistinctSetMemberScopeIds(
