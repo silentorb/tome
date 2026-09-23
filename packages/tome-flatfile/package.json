@@ -17,7 +17,8 @@
     "./content": "./src/content/index.ts",
     "./associations-file": "./src/content/associations-file.ts",
     "./migrations/relationships-to-shards": "./src/migrations/relationships-to-shards.ts",
-    "./migrations/content-data-archive-layout": "./src/migrations/content-data-archive-layout.ts"
+    "./migrations/content-data-archive-layout": "./src/migrations/content-data-archive-layout.ts",
+    "./migrations/relationship-order": "./src/migrations/relationship-order.ts"
   },
   "scripts": {
     "test": "bun test tests",

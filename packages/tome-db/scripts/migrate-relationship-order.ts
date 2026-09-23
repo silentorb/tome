@@ -1,14 +1,17 @@
 #!/usr/bin/env bun
 /**
- * Reorder relationships.json tuples into meaningful order (Step 1), then rebuild
+ * Reorder relationship shard tuples into meaningful order, then rebuild
  * and validate the SQLite cache.
  *
  *   bun run scripts/migrate-relationship-order.ts <contentDir>
  *   TOME_CONTENT_PATH=... bun run scripts/migrate-relationship-order.ts
  */
 import { resolve } from "node:path";
-import { migrateRelationshipOrder } from "../src/migrations/relationship-order";
-import { defaultDbPathForContent } from "../src/content/paths";
+import {
+  auditRelationColumnOrientation,
+  migrateRelationshipOrder,
+} from "tome-flatfile/migrations/relationship-order";
+import { defaultDbPathForContent } from "../src/content";
 import { openContentGraph } from "../src/content/sync";
 
 const target = process.argv[2] ?? process.env.TOME_CONTENT_PATH;
@@ -36,23 +39,22 @@ if (report.ambiguous.length > 0) {
   }
 }
 
-const dbPath = process.env.TOME_DB_PATH ?? defaultDbPathForContent(contentDir);
-const { store, sync, cache } = openContentGraph(contentDir, dbPath);
-sync.fullRebuild();
+const remaining = auditRelationColumnOrientation(contentDir);
+if (remaining.length > 0) {
+  console.error(`  ERROR: ${remaining.length} relation column(s) still majority-inverted:`);
+  for (const issue of remaining.slice(0, 20)) {
+    console.error(
+      `    ${issue.ownerTypeId} .${issue.columnKey} (ep ${issue.endpoint}): right=${issue.right} wrong=${issue.wrong}`,
+    );
+  }
+  process.exit(1);
+}
 
-const rels = store.readRelationshipsFile().relationships;
-if (rels.length !== report.total) {
-  console.error(`  ERROR: relationship count changed: ${report.total} -> ${rels.length}`);
-  cache.close();
-  process.exit(1);
-}
-if (store.readRelationshipsFile().version !== 3) {
-  console.error("  ERROR: relationships.json version was not bumped to 3");
-  cache.close();
-  process.exit(1);
-}
+const dbPath = process.env.TOME_DB_PATH ?? defaultDbPathForContent(contentDir);
+const { sync, cache } = openContentGraph(contentDir, dbPath);
+sync.fullRebuild();
 const counts = cache.counts();
 cache.close();
 console.log(
-  `  OK: ${rels.length} relationships (version 3); cache rebuilt at ${dbPath} (${counts.relationships} projections)`,
+  `  OK: ${report.reordered} reordered; cache rebuilt at ${dbPath} (${counts.relationships} projections)`,
 );

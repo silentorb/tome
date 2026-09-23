@@ -1,7 +1,5 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import {
-  parseRelationshipsFile,
-  serializeRelationshipsFile,
   RELATIONSHIPS_FILE_VERSION,
   type RelationshipEntry,
   type RelationshipsFile,
@@ -17,42 +15,39 @@ import {
   projectionTypeForRelationColumn,
   targetTypeIdForRelationColumn,
 } from "../table-relation-column";
-import { isSymmetricAssociation } from "../association-traits";
+import {
+  isSetTraitType,
+  isSymmetricAssociation,
+} from "../association-traits";
 import { parseWorkspaceFile } from "../workspace/workspace-file";
 import { normalizeRelationshipType } from "../relation-type";
 import {
-  relationshipsFilePath,
   associationsFilePath,
   tableSchemasFilePath,
   workspaceFilePath,
 } from "../content/paths";
+import { ContentStore } from "../content/store";
 
 /**
- * Step 1 content migration: reorder each `relationships.json` tuple into a
- * *meaningful* order so relative semantics come from the tuple position, then
- * bump the file to version {@link RELATIONSHIPS_FILE_VERSION}.
- *
- * Prior to this, endpoints were stored lexicographically sorted with no stored
- * direction; `member_of` direction was re-derived at cache time from set
- * membership, and asymmetric composites bound endpoint 0 to the
- * lexicographically-smaller node. Now the SQLite expander binds strictly by
- * tuple order, so the authored order must carry the intent.
+ * Reorder relationship tuples into a *meaningful* order so relative semantics
+ * come from tuple position (`a` = association endpoint 0).
  *
  * Orientation source of truth (in priority):
- *   - **"member_of"**: parent (set) at index 0, child (member) at index 1.
+ *   - **set membership** (set-trait associations, or legacy `"member_of"`):
+ *     parent (set) at index 0, child (member) at index 1.
  *   - **asymmetric cross-type**: place the endpoint whose node type owns the
  *     endpoint-0 relation column (targeting the other endpoint's type) at
  *     index 0, derived from `table-schemas.json` (`association` + `endpoint`).
  *   - **symmetric** (`symmetric` trait): order is irrelevant, left as-is.
- *   - **ambiguous** (same-type asymmetric like parents_children, or missing node
- *     types): left in their current order and reported for manual review.
+ *   - **ambiguous** (same-type asymmetric, or missing node types): left as-is
+ *     and reported for manual review.
  */
 
 const TRIPLE_SEP = "\u0000";
 
 export interface RelationshipOrderContext {
   registry: AssociationsFile;
-  /** node id -> type-table ids it is a member of (derived from "member_of" edges). */
+  /** node id -> type-table ids it is a member of (from set-trait / member_of edges). */
   nodeTypes: Map<string, Set<string>>;
   /** Type-table ids plus the archive hub id. */
   setNodeIds: Set<string>;
@@ -65,6 +60,15 @@ export interface RelationshipOrderReport {
   reordered: number;
   unchanged: number;
   ambiguous: Array<{ type: string; a: string; b: string; reason: string }>;
+}
+
+export interface OrientationAuditIssue {
+  ownerTypeId: string;
+  columnKey: string;
+  association: string;
+  endpoint: 0 | 1;
+  right: number;
+  wrong: number;
 }
 
 function typesOf(nodeId: string, ctx: RelationshipOrderContext): Set<string> {
@@ -89,7 +93,16 @@ function ownsProjection(
   return false;
 }
 
-/** Orient a `member_of` tuple as (parent/set, child/member). Returns null when undecidable. */
+function isMembershipType(
+  registry: AssociationsFile,
+  type: string,
+): boolean {
+  if (normalizeRelationshipType(type) === "member_of") return true;
+  const def = registry.associations[normalizeAssociationId(type)];
+  return isSetTraitType(def);
+}
+
+/** Orient a membership tuple as (parent/set, child/member). Returns null when undecidable. */
 function orientMemberOf(
   entry: RelationshipEntry,
   ctx: RelationshipOrderContext,
@@ -148,18 +161,16 @@ export function reorderRelationshipsFile(
       return entry;
     }
 
-    const oriented =
-      normalizeRelationshipType(entry.type) === "member_of"
-        ? orientMemberOf(entry, ctx)
-        : orientAsymmetric(entry, associationId, ctx);
+    const oriented = isMembershipType(ctx.registry, entry.type)
+      ? orientMemberOf(entry, ctx)
+      : orientAsymmetric(entry, associationId, ctx);
 
     if (!oriented) {
-      // "member_of" with both/neither endpoint a set: keep current order, flag it.
       report.ambiguous.push({
         type: entry.type,
         a: entry.a,
         b: entry.b,
-        reason: "member_of: exactly one endpoint must be a set",
+        reason: "membership: exactly one endpoint must be a set",
       });
       report.unchanged += 1;
       return entry;
@@ -186,6 +197,18 @@ export function reorderRelationshipsFile(
   };
 }
 
+function mergeReports(
+  live: RelationshipOrderReport,
+  archived: RelationshipOrderReport,
+): RelationshipOrderReport {
+  return {
+    total: live.total + archived.total,
+    reordered: live.reordered + archived.reordered,
+    unchanged: live.unchanged + archived.unchanged,
+    ambiguous: [...live.ambiguous, ...archived.ambiguous],
+  };
+}
+
 function safeReadJson(path: string): string | null {
   try {
     return readFileSync(path, "utf-8");
@@ -195,7 +218,7 @@ function safeReadJson(path: string): string | null {
   }
 }
 
-/** Build orientation context from a content corpus's model config + "member_of" edges. */
+/** Build orientation context from a content corpus's model config + membership edges. */
 export function buildRelationshipOrderContext(
   contentDir: string,
   relationships: readonly RelationshipEntry[],
@@ -236,7 +259,7 @@ export function buildRelationshipOrderContext(
     nodeTypes.set(node, set);
   };
   for (const entry of relationships) {
-    if (normalizeRelationshipType(entry.type) !== "member_of") continue;
+    if (!isMembershipType(registry, entry.type)) continue;
     const aIsSet = setNodeIds.has(entry.a);
     const bIsSet = setNodeIds.has(entry.b);
     if (aIsSet && !bIsSet) addType(entry.b, entry.a);
@@ -246,13 +269,100 @@ export function buildRelationshipOrderContext(
   return { registry, nodeTypes, setNodeIds, relationTriples };
 }
 
-/** Migrate `relationships.json` in place; returns the reorder report. */
+/**
+ * Reorder live (+ archived) relationship shards in place via {@link ContentStore}.
+ * Returns a combined reorder report.
+ */
 export function migrateRelationshipOrder(contentDir: string): RelationshipOrderReport {
-  const path = relationshipsFilePath(contentDir);
-  const raw = readFileSync(path, "utf-8");
-  const file = parseRelationshipsFile(raw);
-  const ctx = buildRelationshipOrderContext(contentDir, file.relationships);
-  const { file: next, report } = reorderRelationshipsFile(file, ctx);
-  writeFileSync(path, serializeRelationshipsFile(next), "utf-8");
-  return report;
+  const store = new ContentStore(contentDir);
+  const live = store.readRelationshipsFile();
+  const archived = store.readArchivedRelationships();
+  const ctx = buildRelationshipOrderContext(contentDir, [
+    ...live.relationships,
+    ...archived,
+  ]);
+  const { file: nextLive, report: liveReport } = reorderRelationshipsFile(live, ctx);
+  const { file: nextArchived, report: archivedReport } = reorderRelationshipsFile(
+    { version: RELATIONSHIPS_FILE_VERSION, relationships: archived },
+    ctx,
+  );
+  store.writeRelationshipsFile(nextLive, {
+    archivedEntries: nextArchived.relationships,
+  });
+  return mergeReports(liveReport, archivedReport);
+}
+
+/**
+ * Flag relation columns whose live edges are mostly on the wrong tuple side
+ * relative to the column's pinned `endpoint` (empty table cells after endpoint pins).
+ */
+export function auditRelationColumnOrientation(
+  contentDir: string,
+  options?: { minWrong?: number },
+): OrientationAuditIssue[] {
+  const minWrong = options?.minWrong ?? 3;
+  const store = new ContentStore(contentDir);
+  const relationships = store.readRelationshipsFile().relationships;
+  const ctx = buildRelationshipOrderContext(contentDir, relationships);
+  const schemasRaw = safeReadJson(tableSchemasFilePath(contentDir));
+  if (!schemasRaw) return [];
+  const schemas = parseTableSchemasFile(schemasRaw);
+
+  const membersOf = new Map<string, Set<string>>();
+  for (const [nodeId, types] of ctx.nodeTypes) {
+    for (const typeId of types) {
+      const set = membersOf.get(typeId) ?? new Set<string>();
+      set.add(nodeId);
+      membersOf.set(typeId, set);
+    }
+  }
+
+  const issues: OrientationAuditIssue[] = [];
+  for (const [ownerTypeId, schema] of Object.entries(schemas.tables)) {
+    const members = membersOf.get(ownerTypeId) ?? new Set<string>();
+    if (members.size === 0) continue;
+    for (const col of schema.columns) {
+      if (col.type !== "relation") continue;
+      const association = normalizeAssociationId(col.association);
+      const def = ctx.registry.associations[association];
+      // Same-type asymmetries (parents/children) cannot be oriented by type triples.
+      if (
+        def?.endpoints &&
+        def.endpoints[0]?.typeId &&
+        def.endpoints[0].typeId === def.endpoints[1]?.typeId
+      ) {
+        continue;
+      }
+      const endpoint = col.endpoint;
+      let right = 0;
+      let wrong = 0;
+      for (const entry of relationships) {
+        if (normalizeAssociationId(entry.type) !== association) continue;
+        const aMember = members.has(entry.a);
+        const bMember = members.has(entry.b);
+        if (!aMember && !bMember) continue;
+        // Both ends in the same type table → orientation is not type-decidable.
+        if (aMember && bMember) continue;
+        if (endpoint === 0) {
+          if (aMember) right += 1;
+          else wrong += 1;
+        } else if (bMember) {
+          right += 1;
+        } else {
+          wrong += 1;
+        }
+      }
+      if (wrong >= minWrong && wrong > right) {
+        issues.push({
+          ownerTypeId,
+          columnKey: col.key,
+          association,
+          endpoint,
+          right,
+          wrong,
+        });
+      }
+    }
+  }
+  return issues;
 }

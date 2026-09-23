@@ -40,7 +40,7 @@ See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./s
 | --- | --- |
 | **Identity** | Column identity is `key` (slug), not legacy property ids |
 | **Scalars** | `select`, `multi_select`, `checkbox`, `number`, `text`, `date`, `url`, `email`, `phone_number` |
-| **Relations** | `association` is a registered ULID in [`associations.json`](../../content/model/associations.json); **`endpoint` is `0` or `1`** (which association endpoint this column hosts). Perspective titles are display-only and must not be used as keys. Directed projection identity is `{association}:{endpoint}`. |
+| **Relations** | `association` is a registered ULID in [`associations.json`](../../content/model/associations.json); **`endpoint` is `0` or `1`** (which association endpoint this column hosts). Perspective titles are display-only and must not be used as keys. Directed projection identity is `{association}:{endpoint}`. Authored relationship tuples must place the **endpoint-0 host at `a`** (and endpoint 1 at `b`); the Members table only hydrates outgoing `{association}:{endpoint}` from each row. Empty relation cells after pinning `endpoint` usually mean inverted `a`/`b` order, not missing links — re-run `bun packages/tome-db/scripts/migrate-relationship-order.ts <contentDir>`. |
 | **Enums** | `enumId` references [`schema.json`](../../content/model/schema.json) `enums` |
 | **Computed** | Formula/rollup columns are **not** stored here; use [`dynamic-properties.json`](./dynamic-properties.md) |
 

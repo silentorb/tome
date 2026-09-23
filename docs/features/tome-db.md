@@ -194,7 +194,7 @@ Writes go to `content/` via `ContentStore`; sync expands to SQLite projections.
 | `content/` | Canonical property graph root (`data/` + `model/`) |
 | `data/marloth.sqlite` | Local query cache |
 | `scripts/consolidate-relationships.ts` | One-time / re-run migration v1 → v2 relationships |
-| `packages/tome-db/scripts/migrate-relationship-order.ts` | Reorder relationship tuples into meaningful order + drop `directedFrom` + bump v2 → v3, then rebuild cache and validate |
+| `packages/tome-db/scripts/migrate-relationship-order.ts` | Reorder relationship shard tuples for pinned relation endpoints (set-trait membership + per-file layout), audit orientation, rebuild cache |
 | `scripts/migrate-to-includes.ts` | Migrate associative relationship types to `includes` |
 | `scripts/migrate-remove-via-database.ts` | Strip legacy `via_database` edge properties (scoping uses row `is_a`) |
 | `scripts/migrate-archive-to-includes.ts` | Migrate archive membership from hub links / legacy paths to `includes` on the Archive hub |
@@ -231,7 +231,7 @@ db.close();
 | `packages/tome-sqlite/src/schema.ts` | DDL and version |
 | `packages/tome-sqlite/src/graph.ts` | GraphDatabase API (reads projections) |
 | `packages/tome-flatfile/src/content/relationships-file.ts` | Per-edge relationship JSON parse/serialize (ordered `(a, b)` tuples) |
-| `packages/tome-flatfile/src/migrations/relationship-order.ts` | Reorder tuples into meaningful `(index0, index1)` order; bump v2→v3 |
+| `packages/tome-flatfile/src/migrations/relationship-order.ts` | Orient tuples so endpoint-0 host is `a`; `auditRelationColumnOrientation` guard |
 | `packages/tome-flatfile/src/content/associations-file.ts` | `associations.json` parse/serialize + composite helpers |
 | `packages/tome-flatfile/src/associations/load.ts` | Cached `associations.json` loader |
 | `packages/tome-db/src/association-label.ts` | `perspectiveDisplayLabel`, `perspectiveLinkAddLabel` |
