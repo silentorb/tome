@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { defaultValueCtx, Editor, rootCtx } from "@milkdown/core";
 import { editorViewCtx } from "@milkdown/kit/core";
 import { codeBlockConfig } from "@milkdown/kit/component/code-block";
+import { listItemBlockConfig } from "@milkdown/kit/component/list-item-block";
 import { dropIndicatorConfig } from "@milkdown/kit/plugin/cursor";
 import { commonmark } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
@@ -64,6 +65,14 @@ describe("milkdown kit features", () => {
       const codeConfig = ctx.get(codeBlockConfig.key);
       expect(codeConfig.languages.length).toBeGreaterThan(0);
       expect(codeConfig.extensions.length).toBeGreaterThan(0);
+
+      const listConfig = ctx.get(listItemBlockConfig.key);
+      const bulletLabel = listConfig.renderLabel({
+        label: "•",
+        listType: "bullet",
+      });
+      expect(bulletLabel).toContain("<svg");
+      expect(bulletLabel).not.toContain("⦿");
 
       const view = ctx.get(editorViewCtx);
       expect(view.state.doc.childCount).toBeGreaterThan(0);
