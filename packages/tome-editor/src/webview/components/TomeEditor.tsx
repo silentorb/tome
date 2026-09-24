@@ -45,7 +45,10 @@ import { documentToPmJson, pmNodeToDocument } from "../body-document-pm";
 import { calloutPlugin } from "../callout-schema";
 import { calloutViewPlugin } from "../callout-view";
 import { classifyDocumentUpdate } from "../editor-markdown-update";
+import { TOME_EDITOR_MOUNT_DEPS } from "../tome-editor-mount-deps";
 import "./editor.css";
+
+export { TOME_EDITOR_MOUNT_DEPS };
 
 interface MentionState {
   query: string;
@@ -65,9 +68,6 @@ interface TomeEditorProps {
   onEditorBaseline?: (document: NodeBodyDocument) => void;
   onBodyChange?: (document: NodeBodyDocument) => void;
 }
-
-/** Effect deps that remount Milkdown — callbacks are read via refs and must not appear here. */
-export const TOME_EDITOR_MOUNT_DEPS = ["api", "nodeId", "initialDocumentKey"] as const;
 
 export function TomeEditor({
   api,
@@ -389,7 +389,8 @@ export function TomeEditor({
         }
       })();
     };
-  }, [api, initialDocumentKey, nodeId]);
+    // Keep in sync with TOME_EDITOR_MOUNT_DEPS (contract test + re-export).
+  }, [api, nodeId, initialDocumentKey]);
 
   return (
     <div className="tome-editor-shell">

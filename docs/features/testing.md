@@ -36,6 +36,8 @@ Helpers and gate math live in [`tome-test-support`](../../packages/tome-test-sup
 Brittleness is the intrinsic reason for nonessential. Race conditions are one of the worst forms. Examples (not exhaustive):
 
 - `fireEvent` on a node whose handler synchronously unmounts that node (self-unmount during `act()` / `removeChild`)
+- Asserting `document.activeElement` after `fireEvent` that moves focus (happy-dom + RTL `act` can throw `removeChild`); stub `element.focus` or assert a focus spy instead
+- Importing named exports from a module that other tests `mock.module` (Bun mocks leak across files — e.g. `TomeEditor` stubs omitting `TOME_EDITOR_MOUNT_DEPS`); put contracts in a tiny unmocked module
 - Hard-coded `setTimeout` sleeps instead of fake timers or stable `waitFor` conditions
 - `waitFor` with async callbacks or mock-only assertions without DOM settlement
 - Window/document keyboard listeners without guaranteed teardown

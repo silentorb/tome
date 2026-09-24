@@ -12,10 +12,29 @@ mock.module("../../../src/webview/components/TomeEditor", () => ({
 }));
 
 import { PropertiesSectionView } from "../../../src/webview/components/PropertiesSectionView";
-import { NodePageView } from "../../../src/webview/components/NodePageView";
+import {
+  focusPageBodyEditor,
+  NodePageView,
+} from "../../../src/webview/components/NodePageView";
 import { UserSettingsProvider } from "../../../src/webview/hooks/useUserSettings";
 import { makeNodePageDetail, makeDatabaseViewDetail, makeRelationSection } from "../test-fixtures/node-page";
 import { makeMockEditorApi } from "../test-fixtures/mock-api";
+
+describe("focusPageBodyEditor", () => {
+  test("focuses the ProseMirror element under the page root", () => {
+    const root = document.createElement("div");
+    root.innerHTML =
+      '<div class="tome-editor-body"><div class="ProseMirror" tabindex="0"></div></div>';
+    const prose = root.querySelector(".ProseMirror") as HTMLElement;
+    const focus = mock(() => {});
+    prose.focus = focus;
+
+    focusPageBodyEditor(root);
+
+    expect(focus).toHaveBeenCalledTimes(1);
+  });
+});
+
 
 describe("NodePageView", () => {
   test("renders title, metadata, markdown, and relation sections", () => {
@@ -241,11 +260,15 @@ describe("NodePageView", () => {
     const title = screen.getByRole("textbox", { name: "Page title" }) as HTMLTextAreaElement;
     const body = document.querySelector(".tome-editor-body .ProseMirror") as HTMLElement;
     expect(body).toBeTruthy();
+    // Stub focus: real focus during fireEvent/act can throw happy-dom removeChild
+    // (documented brittle pattern in docs/features/testing.md).
+    const focus = mock(() => {});
+    body.focus = focus;
 
     title.focus();
     fireEvent.keyDown(title, { key: "Enter" });
 
-    expect(document.activeElement).toBe(body);
+    expect(focus).toHaveBeenCalledTimes(1);
     expect(title.value).toBe("Draft title");
   });
 

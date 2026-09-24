@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { TOME_EDITOR_MOUNT_DEPS } from "../../src/webview/components/TomeEditor";
+import { TOME_EDITOR_MOUNT_DEPS } from "../../src/webview/tome-editor-mount-deps";
 
 describe("TomeEditor mount deps", () => {
   test("Milkdown remount deps exclude save callbacks and title", () => {
