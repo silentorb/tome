@@ -48,7 +48,7 @@ export {
   syncScopeForRelationshipDelete,
 } from "./scope-from-events";
 
-export { wireSyncGraph, buildDefaultSyncGraph } from "./wire";
+export { wireSyncGraph, buildDefaultSyncGraph, ensureFtsObserveEdges } from "./wire";
 export type { WiredObserveEdge, SyncGraphWireResult, WireSyncGraphOptions } from "./wire";
 
 export {

@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
   buildDefaultSyncGraph,
+  ensureFtsObserveEdges,
   createDefaultSyncNodeTypeRegistry,
   createStubSyncEndpointRecording,
   DataStoreRegistry,
@@ -220,6 +221,26 @@ describe("SyncGraphWire", () => {
     const g = buildDefaultSyncGraph(["marloth", "translucence"], "session-cache");
     expect(Object.keys(g.nodes)).toHaveLength(3);
     expect(Object.keys(g.edges)).toHaveLength(2);
+  });
+
+  test("buildDefaultSyncGraph wires flatfile→fts sinks", () => {
+    const g = buildDefaultSyncGraph(["marloth"], "session-cache", ["fts"]);
+    expect(g.nodes["sink:fts"]?.inputs?.storeId).toBe("fts");
+    expect(g.edges["obs:marloth->fts"]).toBeTruthy();
+    expect(Object.keys(g.edges)).toHaveLength(2);
+  });
+
+  test("ensureFtsObserveEdges is idempotent when edges already exist", () => {
+    const g = buildDefaultSyncGraph(["marloth"], "session-cache", ["fts"]);
+    const again = ensureFtsObserveEdges(g, ["marloth"], ["fts"]);
+    expect(Object.keys(again.edges)).toEqual(Object.keys(g.edges));
+  });
+
+  test("ensureFtsObserveEdges adds missing fts edges to an explicit graph", () => {
+    const g = buildDefaultSyncGraph(["marloth"], "session-cache");
+    const patched = ensureFtsObserveEdges(g, ["marloth"], ["fts"]);
+    expect(patched.nodes["sink:fts"]).toBeTruthy();
+    expect(patched.edges["obs:marloth->fts"]).toBeTruthy();
   });
 });
 

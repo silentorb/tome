@@ -52,7 +52,61 @@ describe("tome-server config", () => {
     });
     expect(normalized.dataStores.flatfile?.module).toBe("tome-flatfile");
     expect(normalized.dataStores.sqlite?.module).toBe("tome-sqlite");
+    expect(normalized.dataStores.fts?.module).toBe("tome-search-sqlite");
     expect(normalized.sync.queryStoreId).toBe("sqlite");
+  });
+
+  test("does not treat FTS dataStore as the query cache", () => {
+    const normalized = normalizeServerConfig({
+      version: 2,
+      dataStores: {
+        marloth: {
+          id: "marloth",
+          module: "tome-flatfile",
+          export: "createFlatfileModule",
+          options: { contentPath: "/tmp/m" },
+        },
+        fts: {
+          id: "fts",
+          module: "tome-search-sqlite",
+          export: "createSearchSqliteModule",
+          options: {},
+        },
+        sqlite: {
+          id: "sqlite",
+          module: "tome-sqlite",
+          export: "createSqliteModule",
+          options: { dbPath: "/tmp/t.sqlite" },
+        },
+      },
+      services: [],
+    });
+    expect(normalized.sync.queryStoreId).toBe("sqlite");
+    expect(normalized.dataStores.fts?.module).toBe("tome-search-sqlite");
+  });
+
+  test("injects FTS sink when dataStores omit search-sqlite", () => {
+    const normalized = normalizeServerConfig({
+      version: 2,
+      dataStores: {
+        marloth: {
+          id: "marloth",
+          module: "tome-flatfile",
+          export: "createFlatfileModule",
+          options: { contentPath: "/tmp/m" },
+        },
+        cache: {
+          id: "cache",
+          module: "tome-sqlite",
+          export: "createSqliteModule",
+          options: { dbPath: "/tmp/t.sqlite" },
+        },
+      },
+      sync: { queryStoreId: "cache" },
+      services: [],
+    });
+    expect(normalized.dataStores.fts?.export).toBe("createSearchSqliteModule");
+    expect(normalized.sync.queryStoreId).toBe("cache");
   });
 
   test("parses dataStores config", () => {
@@ -79,6 +133,7 @@ describe("tome-server config", () => {
     const n = normalizeServerConfig(config);
     expect(n.sync.queryStoreId).toBe("cache");
     expect(n.store.id).toBe("marloth");
+    expect(n.dataStores.fts?.module).toBe("tome-search-sqlite");
   });
 
   test("startConfiguredServices warns and continues when empty", async () => {

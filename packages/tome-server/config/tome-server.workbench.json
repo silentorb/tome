@@ -1,0 +1,70 @@
+{
+  "version": 2,
+  "dataStores": {
+    "marloth": {
+      "id": "marloth",
+      "module": "tome-flatfile",
+      "export": "createFlatfileModule",
+      "options": {
+        "contentPath": "/workspaces/silentorb-workbench/.mnt/marloth-story/content",
+        "access": "readwrite"
+      }
+    },
+    "session-cache": {
+      "id": "session-cache",
+      "module": "tome-sqlite",
+      "export": "createSqliteModule",
+      "options": {
+        "dbPath": "/workspaces/silentorb-workbench/.mnt/marloth-story/data/tome.sqlite"
+      }
+    },
+    "fts": {
+      "id": "fts",
+      "module": "tome-search-sqlite",
+      "export": "createSearchSqliteModule",
+      "options": {
+        "dbPath": "/workspaces/silentorb-workbench/.mnt/marloth-story/data/tome-fts.sqlite"
+      }
+    }
+  },
+  "sync": {
+    "queryStoreId": "session-cache",
+    "graph": {
+      "nodes": {
+        "src:marloth": {
+          "id": "src:marloth",
+          "type": "tome.sync.store",
+          "inputs": { "storeId": "marloth" }
+        },
+        "sink:session-cache": {
+          "id": "sink:session-cache",
+          "type": "tome.sync.store",
+          "inputs": { "storeId": "session-cache" }
+        },
+        "sink:fts": {
+          "id": "sink:fts",
+          "type": "tome.sync.store",
+          "inputs": { "storeId": "fts" }
+        }
+      },
+      "edges": {
+        "obs:marloth->cache": {
+          "from": { "node": "src:marloth", "port": "observeOut" },
+          "to": { "node": "sink:session-cache", "port": "observeIn" }
+        },
+        "obs:marloth->fts": {
+          "from": { "node": "src:marloth", "port": "observeOut" },
+          "to": { "node": "sink:fts", "port": "observeIn" }
+        }
+      }
+    }
+  },
+  "services": [
+    {
+      "id": "http",
+      "module": "tome-http",
+      "export": "createTomeHttpService",
+      "options": { "port": 3847 }
+    }
+  ]
+}

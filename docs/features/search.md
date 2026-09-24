@@ -30,7 +30,8 @@ Meilisearch is deferred — see [tasks/tome-meilisearch.md](../../tasks/tome-mei
 - **Zero** enabled searchers → non-empty queries return `{ results: [], searchAvailable: false }`; empty `q` still browses via title-ordered cache list.
 - **Exactly one** enabled searcher → active; more than one fails at extension load.
 - If the enabled searcher fails to open (missing FTS backend / `dbPath`), search is unavailable (`searchAvailable: false`); other extensions keep loading.
-- Empty query is **browse**, not a searcher responsibility.
+- Empty query is **browse**, not a searcher responsibility. Editor `@` mentions use the same API: bare `@` browses; typing filters via the searcher — if search is unavailable the menu shows no matches after the first character.
+- Host normalize **auto-injects** a `tome-search-sqlite` `dataStores` entry (`fts`) when none is configured, and the default sync graph (or `ensureFtsObserveEdges`) wires every flatfile corpus into that sink so FTS stays indexed without every host JSON listing it by hand.
 - LIKE and FTS must not post-filter/sort the corpus in TypeScript for correctness (presentation-only `matchPreview` enrichment is allowed).
 
 ## Behavior

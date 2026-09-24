@@ -28,7 +28,7 @@ import {
   createSqliteCacheSyncEndpoint,
   syncSourceFromQueryable,
 } from "./adapters";
-import { buildDefaultSyncGraph, wireSyncGraph, type SyncGraphWireResult } from "./wire";
+import { buildDefaultSyncGraph, ensureFtsObserveEdges, wireSyncGraph, type SyncGraphWireResult } from "./wire";
 
 export type OpenDataStoreSessionOptions = {
   /** Normalized data store module entries keyed by id. */
@@ -260,8 +260,10 @@ export async function openDataStoreSession(
     ftsClosers.push(opened.close);
   }
 
-  const graph =
-    options.syncGraph ?? buildDefaultSyncGraph(flatfileIds, queryStoreId);
+  const ftsStoreIds = sinkEntries.map((e) => e.id);
+  const baseGraph =
+    options.syncGraph ?? buildDefaultSyncGraph(flatfileIds, queryStoreId, ftsStoreIds);
+  const graph = ensureFtsObserveEdges(baseGraph, flatfileIds, ftsStoreIds);
 
   let wire: SyncGraphWireResult | null = null;
   if (!options.deferReady) {

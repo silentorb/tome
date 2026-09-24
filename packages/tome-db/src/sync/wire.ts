@@ -171,10 +171,14 @@ export function wireSyncGraph(options: WireSyncGraphOptions): SyncGraphWireResul
   };
 }
 
-/** Build default observe graph: each flatfile storeId → queryStoreId. */
+/**
+ * Build default observe graph: each flatfile storeId → queryStoreId,
+ * and each flatfile → each FTS sink (so search indexing stays in lock-step with the cache).
+ */
 export function buildDefaultSyncGraph(
   flatfileStoreIds: readonly string[],
   queryStoreId: string,
+  ftsStoreIds: readonly string[] = [],
 ): Graph {
   const nodes: Graph["nodes"] = {};
   const edges: Graph["edges"] = {};
@@ -184,6 +188,14 @@ export function buildDefaultSyncGraph(
     type: SYNC_STORE_NODE_TYPE,
     inputs: { [SYNC_STORE_ID_INPUT]: queryStoreId },
   };
+
+  for (const ftsId of ftsStoreIds) {
+    nodes[`sink:${ftsId}`] = {
+      id: `sink:${ftsId}`,
+      type: SYNC_STORE_NODE_TYPE,
+      inputs: { [SYNC_STORE_ID_INPUT]: ftsId },
+    };
+  }
 
   for (const storeId of flatfileStoreIds) {
     const nodeId = `src:${storeId}`;
@@ -196,6 +208,72 @@ export function buildDefaultSyncGraph(
       from: { node: nodeId, port: SYNC_OBSERVE_OUT_PORT },
       to: { node: `sink:${queryStoreId}`, port: SYNC_OBSERVE_IN_PORT },
     };
+    for (const ftsId of ftsStoreIds) {
+      edges[`obs:${storeId}->${ftsId}`] = {
+        from: { node: nodeId, port: SYNC_OBSERVE_OUT_PORT },
+        to: { node: `sink:${ftsId}`, port: SYNC_OBSERVE_IN_PORT },
+      };
+    }
+  }
+
+  return { nodes, edges };
+}
+
+/**
+ * Ensure every FTS sink is observed by every flatfile source.
+ * Idempotent: skips edges/nodes that already exist for the same storeIds.
+ */
+export function ensureFtsObserveEdges(
+  graph: Graph,
+  flatfileStoreIds: readonly string[],
+  ftsStoreIds: readonly string[],
+): Graph {
+  if (ftsStoreIds.length === 0 || flatfileStoreIds.length === 0) return graph;
+
+  const nodes = { ...graph.nodes };
+  const edges = { ...graph.edges };
+
+  const storeIdByNodeId = new Map<string, string>();
+  for (const node of Object.values(nodes)) {
+    if (node.type !== SYNC_STORE_NODE_TYPE) continue;
+    try {
+      storeIdByNodeId.set(node.id, storeIdFromNode(node));
+    } catch {
+      /* ignore malformed; wireSyncGraph will reject later */
+    }
+  }
+
+  const nodeIdForStore = (storeId: string, role: "src" | "sink"): string => {
+    for (const [nodeId, sid] of storeIdByNodeId) {
+      if (sid === storeId) return nodeId;
+    }
+    const nodeId = `${role}:${storeId}`;
+    nodes[nodeId] = {
+      id: nodeId,
+      type: SYNC_STORE_NODE_TYPE,
+      inputs: { [SYNC_STORE_ID_INPUT]: storeId },
+    };
+    storeIdByNodeId.set(nodeId, storeId);
+    return nodeId;
+  };
+
+  for (const ftsId of ftsStoreIds) {
+    const sinkNodeId = nodeIdForStore(ftsId, "sink");
+    for (const storeId of flatfileStoreIds) {
+      const srcNodeId = nodeIdForStore(storeId, "src");
+      const already = Object.values(edges).some(
+        (edge) =>
+          edge.from.node === srcNodeId &&
+          edge.to.node === sinkNodeId &&
+          edge.from.port === SYNC_OBSERVE_OUT_PORT &&
+          edge.to.port === SYNC_OBSERVE_IN_PORT,
+      );
+      if (already) continue;
+      edges[`obs:${storeId}->${ftsId}`] = {
+        from: { node: srcNodeId, port: SYNC_OBSERVE_OUT_PORT },
+        to: { node: sinkNodeId, port: SYNC_OBSERVE_IN_PORT },
+      };
+    }
   }
 
   return { nodes, edges };

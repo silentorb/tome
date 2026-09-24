@@ -92,9 +92,41 @@ function parseSyncBlock(raw: unknown): TomeServerConfig["sync"] {
   };
 }
 
+function isSearchSqliteModule(entry: TomeServerModuleConfigEntry): boolean {
+  return (
+    entry.module.includes("search-sqlite") ||
+    entry.export.includes("SearchSqlite") ||
+    entry.export.includes("createSearchSqliteModule")
+  );
+}
+
+function isQuerySqliteModule(entry: TomeServerModuleConfigEntry): boolean {
+  if (isSearchSqliteModule(entry)) return false;
+  return entry.module.includes("sqlite") || entry.export.includes("Sqlite");
+}
+
+/** Ensure an FTS5 sink exists so the default searcher can open via getSearcherBackend("fts"). */
+function ensureFtsDataStore(
+  dataStores: Record<string, TomeServerModuleConfigEntry>,
+): Record<string, TomeServerModuleConfigEntry> {
+  if (Object.values(dataStores).some(isSearchSqliteModule)) return dataStores;
+  const id = dataStores.fts ? "fts-index" : "fts";
+  return {
+    ...dataStores,
+    [id]: {
+      id,
+      module: "tome-search-sqlite",
+      export: "createSearchSqliteModule",
+      options: {},
+    },
+  };
+}
+
 /**
  * Migrate legacy store+cache(+corpora) into dataStores + sync.
  * Prefer explicit dataStores when present.
+ * Always ensures an FTS sink so typed node search (including editor @ mentions) works
+ * without requiring every host config to list tome-search-sqlite by hand.
  */
 export function normalizeServerConfig(config: TomeServerConfig): NormalizedTomeServerConfig {
   let dataStores = config.dataStores ? { ...config.dataStores } : {};
@@ -137,11 +169,13 @@ export function normalizeServerConfig(config: TomeServerConfig): NormalizedTomeS
     dataStores[config.cache.id] = { ...config.cache };
   }
 
+  dataStores = ensureFtsDataStore(dataStores);
+
   const flatfileIds = Object.entries(dataStores)
     .filter(([, e]) => e.module.includes("flatfile") || e.export.includes("Flatfile"))
     .map(([id]) => id);
   const sqliteIds = Object.entries(dataStores)
-    .filter(([, e]) => e.module.includes("sqlite") || e.export.includes("Sqlite"))
+    .filter(([, e]) => isQuerySqliteModule(e))
     .map(([id]) => id);
 
   if (flatfileIds.length === 0) {

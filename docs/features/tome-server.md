@@ -82,8 +82,9 @@ Legacy singular `store` + `cache` (still accepted; normalized at load):
 ```
 
 - **`dataStores`** (or legacy **`store` + `cache`**) required. Flatfile entries may omit `contentPath` (host fills `TOME_CONTENT_PATH`); sqlite may omit `dbPath` (`TOME_DB_PATH`).
+- Normalize **auto-injects** an FTS sink (`tome-search-sqlite`, id `fts`) when missing, and does **not** treat FTS modules as the query cache when picking `sync.queryStoreId`.
 - `services` may be **empty**: the host logs a warning and stays up.
-- Path defaults and `TOME_CORPORA` expand into flatfile `dataStores` during normalize — see [tome-sync.md](./tome-sync.md) and [multi-corpus.md](./multi-corpus.md).
+- Path defaults and `TOME_CORPORA` expand into flatfile `dataStores` during normalize — see [tome-sync.md](./tome-sync.md) and [multi-corpus.md](./multi-corpus.md). Explicit `dataStores` skip corpora env expansion; use legacy `store`+`cache` (or a multi-corpus `dataStores` map) when relying on `TOME_CORPORA`.
 
 Bootstrap order: normalize config → `openDataStoreSession` (open stores, wire Imp sync observers) → open graph services **without** blocking sync or file watchers → **start service modules (HTTP binds)** → run `CacheSync.ensureReadyAsync()` → mark ready, `startWatching()` (observers already installed; do not double-subscribe).
 
