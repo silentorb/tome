@@ -405,6 +405,7 @@ export function migrateSchema(db: Database): void {
   migrateSchemaToV13(db);
   migrateSchemaToV14(db);
   migrateSchemaToV15(db);
+  migrateSchemaToV16(db);
 
   const versionRow = db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get() as
     | { value: string }
@@ -445,6 +446,18 @@ export function migrateSchemaToV15(db: Database): void {
   if (!tableExists(db, "expression_indexes")) return;
   if (columnNames(db, "expression_indexes").includes("dirty_member_ids")) return;
   db.exec(`ALTER TABLE expression_indexes ADD COLUMN dirty_member_ids TEXT`);
+}
+
+/**
+ * Widen idx_rel_proj_source for default relation-window ORDER BY ordinal, id
+ * (v15 → v16). Prefix (source_node_id, type) still serves COUNT / type filters.
+ */
+export function migrateSchemaToV16(db: Database): void {
+  if (!tableExists(db, "relationship_projections")) return;
+  db.exec("DROP INDEX IF EXISTS idx_rel_proj_source");
+  db.exec(
+    "CREATE INDEX IF NOT EXISTS idx_rel_proj_source ON relationship_projections(source_node_id, type, ordinal, id)",
+  );
 }
 
 /** @deprecated Use migrateSchema */

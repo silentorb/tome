@@ -394,6 +394,31 @@ describe("GraphDatabase", () => {
     db.close();
   });
 
+  test("listRelationshipsFromSourceWindow ties equal ordinals by projection id", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-tie-"));
+    dbPath = join(tempDir, "tie.sqlite");
+    const db = new GraphDatabase(dbPath);
+    const source = "01SOURCE000000000000000000";
+    const typeA = "assocA:0";
+    const earlyId = "01TARGET00000000000000000A";
+    const lateId = "01TARGET00000000000000000Z";
+
+    db.upsertNode(source, { title: "Source" });
+    db.upsertNode(lateId, { title: "Zebra first alphabetically" });
+    db.upsertNode(earlyId, { title: "Alpha later alphabetically" });
+    // Same ordinal; default order must use projection id, not title.
+    db.upsertRelationship(source, lateId, typeA, { ordinal: 0 });
+    db.upsertRelationship(source, earlyId, typeA, { ordinal: 0 });
+
+    const page = db.listRelationshipsFromSourceWindow(source, typeA, {
+      limit: 2,
+      offset: 0,
+    });
+    expect(page.relationships.map((r) => r.targetNodeId)).toEqual([earlyId, lateId]);
+
+    db.close();
+  });
+
   test("listRelationshipsFromSourceWindow emits CLIENT sql spans when profiling", () => {
     tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-profiling-"));
     dbPath = join(tempDir, "test.sqlite");

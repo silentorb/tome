@@ -52,7 +52,6 @@ import {
   runTableSearchWindow,
 } from "./table-search-window";
 import {
-  listOutgoingProjectionPropertyKeys,
   listOutgoingProjectionTypes,
   listRelationshipsFromSource,
   listRelationshipsFromSourceWindow,
@@ -270,7 +269,7 @@ function buildRelationSectionForPerspective(
         const ordA = ordinalByTarget.get(a.targetId) ?? Number.MAX_SAFE_INTEGER;
         const ordB = ordinalByTarget.get(b.targetId) ?? Number.MAX_SAFE_INTEGER;
         if (ordA !== ordB) return ordA - ordB;
-        return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
+        return a.targetId.localeCompare(b.targetId);
       });
     }
   }
@@ -397,7 +396,7 @@ function loadRelationSectionConnections(
       connections: relationships,
       sqlWindow: {
         total: rowsWindow.total,
-        columnKeys: listOutgoingProjectionPropertyKeys(db, nodeId, perspective),
+        columnKeys: [],
       },
     };
   }
@@ -412,7 +411,7 @@ function loadRelationSectionConnections(
       connections: relationships,
       sqlWindow: {
         total,
-        columnKeys: listOutgoingProjectionPropertyKeys(db, nodeId, perspective),
+        columnKeys: [],
       },
     };
   }

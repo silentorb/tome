@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 15;
+export const SCHEMA_VERSION = 16;
 
 /** Hot node fields stored as real columns on `nodes` (never in `node_properties`). */
 export const PROMOTED_NODE_COLUMNS = [
@@ -85,6 +85,8 @@ CREATE INDEX IF NOT EXISTS idx_nodes_is_archived ON nodes(is_archived) WHERE is_
 CREATE INDEX IF NOT EXISTS idx_node_properties_key ON node_properties(key);
 CREATE INDEX IF NOT EXISTS idx_rel_records_node_a ON relationship_records(node_a);
 CREATE INDEX IF NOT EXISTS idx_rel_records_node_b ON relationship_records(node_b);
+-- Fresh DDL uses the v13 two-column shape so CREATE INDEX IF NOT EXISTS is safe on
+-- pre-ordinal upgrade DBs; migrateSchemaToV16 widens to (source_node_id, type, ordinal, id).
 CREATE INDEX IF NOT EXISTS idx_rel_proj_source ON relationship_projections(source_node_id, type);
 CREATE INDEX IF NOT EXISTS idx_rel_proj_target ON relationship_projections(target_node_id, type);
 CREATE INDEX IF NOT EXISTS idx_rel_record_properties_key ON relationship_record_properties(key);

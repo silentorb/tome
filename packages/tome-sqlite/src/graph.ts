@@ -67,7 +67,7 @@ function edgePropertyOrderExpression(propertyKey: string): string {
 
 function buildOutgoingProjectionOrderBy(
   sorts: readonly { column: string; direction: "asc" | "desc" }[] | undefined,
-): string {
+): { orderBy: string; needsTargetJoin: boolean } {
   const clauses: string[] = [];
   if (sorts && sorts.length > 0) {
     for (const sort of sorts) {
@@ -82,16 +82,15 @@ function buildOutgoingProjectionOrderBy(
     }
   }
   if (clauses.length === 0) {
-    // Default: ordinal ascending (nulls last), then target display title.
-    clauses.push("CASE WHEN rp.ordinal IS NULL THEN 1 ELSE 0 END ASC");
-    clauses.push("rp.ordinal ASC");
-    clauses.push(`${TARGET_DISPLAY_TITLE_SQL} COLLATE NOCASE ASC`);
-  } else {
-    // Stable tie-break.
-    clauses.push(`${TARGET_DISPLAY_TITLE_SQL} COLLATE NOCASE ASC`);
+    // Default: ordinal ascending (nulls last), then projection id — index-friendly.
+    clauses.push("rp.ordinal ASC NULLS LAST");
     clauses.push("rp.id ASC");
+    return { orderBy: `ORDER BY ${clauses.join(", ")}`, needsTargetJoin: false };
   }
-  return `ORDER BY ${clauses.join(", ")}`;
+  // Stable tie-break for explicit sorts (needs nodes join for title).
+  clauses.push(`${TARGET_DISPLAY_TITLE_SQL} COLLATE NOCASE ASC`);
+  clauses.push("rp.id ASC");
+  return { orderBy: `ORDER BY ${clauses.join(", ")}`, needsTargetJoin: true };
 }
 
 function decodePropertyValue(raw: string): PropertyValue {
@@ -1077,7 +1076,7 @@ export class GraphDatabase implements TomeQueryCache {
         return totalRow.c;
       });
 
-      const orderBy = buildOutgoingProjectionOrderBy(query?.sorts);
+      const { orderBy, needsTargetJoin } = buildOutgoingProjectionOrderBy(query?.sorts);
       const offsetRaw = query?.offset;
       const offset =
         typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
@@ -1091,10 +1090,13 @@ export class GraphDatabase implements TomeQueryCache {
             ? Math.floor(limitRaw)
             : null;
 
+      const joinSql = needsTargetJoin
+        ? "LEFT JOIN nodes n ON n.id = rp.target_node_id"
+        : "";
       const selectSql = `SELECT rp.id, rp.record_id, rp.source_node_id, rp.target_node_id, rp.type,
               rp.ordinal, rp."order", rp.priority
        FROM relationship_projections rp
-       LEFT JOIN nodes n ON n.id = rp.target_node_id
+       ${joinSql}
        WHERE rp.source_node_id = ? AND rp.type = ?
        ${orderBy}`;
 
