@@ -65,7 +65,7 @@ Multi-row Items tables **must not** block page load on the full member set. The 
 
 ### SQLite path: filter / sort / window in SQL
 
-When the editor is backed by the **SQLite query cache**, filter, sort, join, and group for table windows **must** run in SQL (typically via Imp → Imp SQL / tome-imp-sql, or equivalent parameterized SQL on the cache). Application TypeScript may only **hydrate** DTOs from already-ordered, already-windowed SQL rows. See [tome-imp-sql.md](./tome-imp-sql.md) § Collection ops (SQL path).
+When the editor is backed by the **SQLite query cache**, filter, sort, join, and group for table windows **must** run in SQL (typically via Imp → Imp SQL / tome-imp-sql, or equivalent parameterized SQL on the cache). Application TypeScript may only **hydrate** DTOs from already-ordered, already-windowed SQL rows — O(window), not O(graph). Section metadata such as `typeNodeId` must come from association/schema config (`endpoints` / relation columns), not from full-graph title scans. See [tome-imp-sql.md](./tome-imp-sql.md) § Collection ops (SQL path).
 
 **Flatfile** backends are exempt and may still use in-memory collection ops.
 

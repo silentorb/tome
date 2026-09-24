@@ -8,7 +8,7 @@ import {
   relationSectionSupportsLinkExisting,
   associationRuleContext,
 } from "./association-endpoints";
-import { findTypeNodeByTitle, typeIdsForInstance } from "./node-capabilities";
+import { typeIdsForInstance } from "./node-capabilities";
 import { normalizeAssociationId, parseProjectionType } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
 import {
@@ -151,18 +151,21 @@ function tableRelationByGroupKeyForInstance(
   return byGroupKey;
 }
 
+/** Section type-table id from association/schema config only (no title scan). */
 function resolveTypeNodeId(
-  db: RelationshipReadStore,
-  association: string,
-  connections: Relationship[],
+  perspective: string,
   registry: ReturnType<typeof loadAssociationsFromContent>,
+  tableRelation: TableRelationColumn | undefined,
+  hostTypeId: string | undefined,
 ): string | null {
-  if (isMemberSideProjectionType(registry, association)) {
-    const targetIds = [...new Set(connections.map((connection) => connection.targetNodeId))];
-    if (targetIds.length === 1) return targetIds[0]!;
+  if (tableRelation && hostTypeId) {
+    return targetTypeIdForRelationColumn(registry, hostTypeId, tableRelation);
   }
-
-  return findTypeNodeByTitle(db, perspectiveDisplayLabel(registry, association));
+  const parsed = parseProjectionType(perspective);
+  if (!parsed) return null;
+  const def = registry.associations[normalizeAssociationId(parsed.associationId)];
+  const typeId = def?.endpoints?.[parsed.endpointIndex]?.typeId;
+  return typeof typeId === "string" && typeId.trim() ? typeId : null;
 }
 
 function sectionTitleForType(
@@ -273,11 +276,11 @@ function buildRelationSectionForPerspective(
   }
 
   const isSetMembership = isSetTraitProjectionType(associations, perspective);
-  const typeNodeId = isSetMembership
-    ? null
-    : resolveTypeNodeId(db, perspective, connections, associations);
   const tableRelation = tableRelationByGroupKey.get(perspective);
   const hostTypeId = typeIdsForInstance(db, nodeId, contentDir)[0];
+  const typeNodeId = isSetMembership
+    ? null
+    : resolveTypeNodeId(perspective, associations, tableRelation, hostTypeId);
   const ruleContext =
     !isSetMembership && !tableRelation
       ? associationRuleContext(associations, db, nodeId, perspective, contentDir)

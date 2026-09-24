@@ -177,7 +177,6 @@ export type { NodeBacklink, NodePageMetadata } from "./node-metadata";
 export { buildPropertiesSection } from "./node-type-properties";
 export type { PropertiesSection } from "./node-type-properties";
 export {
-  findTypeNodeByTitle,
   graphGroupForNode,
   graphLabelsForNode,
   isTypeTableNode,

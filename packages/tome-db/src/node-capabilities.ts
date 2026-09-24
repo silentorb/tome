@@ -2,13 +2,12 @@ import type { Node, Properties } from "tome-graph-interfaces";
 import { memberSetIds } from "./set-membership";
 import { resolveContentPath } from "tome-flatfile";
 import { loadAssociationsFromContent } from "tome-flatfile";
-import { hasTableSchemaEntry, loadTableSchemasFromContent } from "tome-flatfile";
+import { hasTableSchemaEntry } from "tome-flatfile";
 import { memberSideProjectionTypes, setSideProjectionTypes } from "tome-flatfile";
 import {
   listRelationshipsFromSource,
   listRelationshipsToTarget,
   readStoreGetNode,
-  readStoreListNodeIds,
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
 
@@ -82,33 +81,6 @@ export function isTypeTableCandidate(
   }
   if (store && nodeId) return hasIncomingIsA(store, nodeId, contentDir);
   return false;
-}
-
-export function findTypeNodeByTitle(
-  store: RelationshipReadStore,
-  title: string,
-  contentDir?: string,
-): string | null {
-  const normalized = title.trim().toLowerCase();
-  if (!normalized) return null;
-
-  const dir = contentDir ?? resolveContentPath();
-  const schemas = loadTableSchemasFromContent(dir);
-  for (const typeId of Object.keys(schemas.tables)) {
-    const node = readStoreGetNode(store, typeId);
-    if (!node) continue;
-    if (titleFromProperties(node.properties).toLowerCase() === normalized) return typeId;
-  }
-
-  for (const id of readStoreListNodeIds(store)) {
-    const node = readStoreGetNode(store, id);
-    if (!node) continue;
-    if (!isTypeTableCandidate({ properties: node.properties }, store, id, dir)) {
-      continue;
-    }
-    if (titleFromProperties(node.properties).trim().toLowerCase() === normalized) return id;
-  }
-  return null;
 }
 
 export function graphGroupForNode(store: RelationshipReadStore, nodeId: string): string {

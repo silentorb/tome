@@ -173,8 +173,8 @@ describe("relation-window benchmark", () => {
         };
 
         if (PROFILE_BENCHMARK) {
-          // Prefer slowMs over verbose: verbose records every getNode and makes
-          // findTypeNodeByTitle's full-node scan pathologically slow at 9k scale.
+          // Prefer slowMs over verbose: verbose records every getNode and inflates
+          // span capture cost at 9k scale.
           configureProfiling({
             enabled: true,
             verbose: false,

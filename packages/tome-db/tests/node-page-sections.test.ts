@@ -294,40 +294,70 @@ describe("node-sections", () => {
     });
   });
 
-  test("resolves typeNodeId by matching FEATURES label to type-table title", () => {
-    const featuresTypeId = "f72345678901234567890123456789012";
+  test("resolves typeNodeId from association endpoint typeId", () => {
+    const featuresTypeId = "000000000000000000000000F7";
+    const inspirationsTypeId = "000000000000000000000000F8";
+    writeInspirationsFeaturesAssociations(contentDir, inspirationsTypeId, featuresTypeId);
+    db.upsertNode(featuresTypeId, { title: "Features Type Table" });
+    db.upsertNode(inspirationsTypeId, { title: "Inspirations Type Table" });
     db.upsertNode("scene2", { title: "Chase" });
-    db.upsertNode(featuresTypeId, { ...typeTableMarkerProperties("Features") });
-    db.upsertRelationship("scene2", featuresTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
     db.upsertNode("feat2", { title: "Desperation" });
     db.upsertRelationship("scene2", "feat2", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0), { ordinal: 0 });
 
-    const detail = getNodePageDetail(db, "scene2");
+    const detail = getNodePageDetail(db, "scene2", { contentDir });
     const features = detail?.sections.find(
       (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
     );
 
     expect(features).toMatchObject({
-      title: "Features",
+      title: "Features Type Table",
       typeNodeId: featuresTypeId,
     });
+    writeMembershipAssociations(contentDir);
   });
 
-  test("resolves typeNodeId by matching type-table title to relation label", () => {
-    const inspTypeId = "f82345678901234567890123456789012";
+  test("resolves typeNodeId from the perspective endpoint without title-matched type tables", () => {
+    const featuresTypeId = "000000000000000000000000G7";
+    const inspTypeId = "000000000000000000000000G8";
+    writeInspirationsFeaturesAssociations(contentDir, inspTypeId, featuresTypeId);
+    db.upsertNode(featuresTypeId, { title: "Features Type Table" });
+    db.upsertNode(inspTypeId, { title: "Inspirations Type Table" });
     db.upsertNode("scene3", { title: "Ball" });
-    db.upsertNode(inspTypeId, { ...typeTableMarkerProperties("Inspirations") });
-    db.upsertRelationship("scene3", inspTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
     db.upsertNode("insp2", { title: "Emma" });
     db.upsertRelationship("scene3", "insp2", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1), { ordinal: 0 });
 
-    const detail = getNodePageDetail(db, "scene3");
+    const detail = getNodePageDetail(db, "scene3", { contentDir });
     const inspirations = detail?.sections.find(
       (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1),
     );
 
     expect(inspirations?.type === "relations" ? inspirations.typeNodeId : undefined).toBe(inspTypeId);
-    expect(inspirations?.type === "relations" ? inspirations.title : undefined).toBe("Inspirations");
+    expect(inspirations?.type === "relations" ? inspirations.title : undefined).toBe("Inspirations Type Table");
+    writeMembershipAssociations(contentDir);
+  });
+
+  test("leaves typeNodeId null when peer association has no endpoints", () => {
+    writeMembershipAssociations(contentDir);
+    db.upsertNode("scene-no-ep", { title: "No endpoints host" });
+    db.upsertNode("feat-no-ep", { title: "Related" });
+    db.upsertRelationship(
+      "scene-no-ep",
+      "feat-no-ep",
+      projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
+      { ordinal: 0 },
+    );
+
+    const detail = getNodePageDetail(db, "scene-no-ep", { contentDir });
+    const features = detail?.sections.find(
+      (section) =>
+        section.type === "relations" &&
+        section.label === projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
+    );
+
+    expect(features).toMatchObject({
+      title: "Features",
+      typeNodeId: null,
+    });
   });
 
   test("groups multiple member_of parents in one Membership section", () => {
@@ -414,8 +444,8 @@ describe("node-sections table-schema empty relation placeholders", () => {
     expect(features).toMatchObject({
       type: "relations",
       label: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1),
-      title: "Inspirations",
-      typeNodeId: inspirationsTypeId,
+      title: "Features",
+      typeNodeId: featuresTypeId,
       addMode: "link-existing",
       allowedTargetTypeIds: [featuresTypeId],
       columns: [],
@@ -446,7 +476,8 @@ describe("node-sections table-schema empty relation placeholders", () => {
 
     expect(featuresSections).toHaveLength(1);
     expect(featuresSections?.[0]).toMatchObject({
-      title: "Inspirations",
+      title: "Features",
+      typeNodeId: featuresTypeId,
       rows: [{ targetId: featId, name: "Desperation" }],
     });
   });

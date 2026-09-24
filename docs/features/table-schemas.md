@@ -70,6 +70,7 @@ Row data for instances is stored on `is_a` relationship properties, not on the i
 
 - For each `type: relation` column on the instance's type table (`member_of` target), the editor shows a relation table section even when no outgoing edges exist yet (static site export still omits empty sections).
 - Section titles and link-existing pickers use the column's `association` (same grouping as populated `includes` edges).
+- Relation section `typeNodeId` comes from association/schema config only: schema relation columns use `targetTypeIdForRelationColumn`; otherwise `associations[].endpoints[endpointIndex].typeId`. Perspective titles are display-only — never resolve type identity by scanning nodes for a matching title.
 
 ## Editing
 

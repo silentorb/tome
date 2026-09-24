@@ -108,7 +108,7 @@ Only `member_of` has rich `perspectiveLabels` in Marloth registry today.
 
 - `relationshipRuleContextForType` supplies `allowedTargetTypeIds` from `schema.json`
 - `tableRelationByGroupKeyForInstance` adds empty sections for relation columns declared on the instance's type tables when `includeSchemaEmptySections` is set
-- `resolveTypeNodeId` — for `member_of`, uses single target set id; else tries title match via `findTypeNodeByTitle`
+- `resolveTypeNodeId` — set-trait sections stay `null`; otherwise `targetTypeIdForRelationColumn` when a schema relation column owns the section, else `associations[].endpoints[endpointIndex].typeId`. No title scan (display labels are not type identity).
 
 ---
 
