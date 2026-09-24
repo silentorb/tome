@@ -10,7 +10,9 @@ import {
   getProfilingConfig,
   getProfilingStore,
   isProfilingEnabled,
-  recordProfilingSample,
+  PROFILING_SPANS_TABLE,
+  runInProfilingTraceAsync,
+  withProfilingSpanAsync,
 } from "tome-service-interfaces";
 import { isPersistableNodeTitle } from "tome-graph-interfaces";
 import type { UserSettingsPatch } from "./user-settings";
@@ -115,31 +117,40 @@ export function createApiHandler(
 
     const url = new URL(req.url);
     const path = url.pathname;
-    const profiling = isProfilingEnabled();
-    const started = profiling ? performance.now() : 0;
-
-    try {
-      const response = await dispatchApiRequest(req, url, path, db, settingsStore, getCacheSyncStatus);
-      if (profiling) {
-        recordProfilingSample(
-          "http",
-          performance.now() - started,
-          `${req.method} ${path} → ${response.status}`,
-        );
-      }
-      return response;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error(`[tome-http] ${req.method} ${path} → 500:`, err);
-      if (profiling) {
-        recordProfilingSample(
-          "http",
-          performance.now() - started,
-          `${req.method} ${path} → 500`,
-        );
-      }
-      return json({ error: message }, 500);
+    if (!isProfilingEnabled()) {
+      return dispatchApiRequest(req, url, path, db, settingsStore, getCacheSyncStatus);
     }
+
+    return runInProfilingTraceAsync(async () => {
+      const httpAttrs: Record<string, string | number | boolean> = {
+        "http.method": req.method,
+        "http.route": path,
+      };
+      if (url.search) {
+        httpAttrs["url.query"] = url.search.slice(1);
+      }
+      const spanName = `${req.method} ${path}`;
+      return withProfilingSpanAsync(spanName, "SERVER", httpAttrs, async () => {
+        try {
+          const response = await dispatchApiRequest(
+            req,
+            url,
+            path,
+            db,
+            settingsStore,
+            getCacheSyncStatus,
+          );
+          // Mutable attrs bag — status is set before the span's finally records.
+          httpAttrs["http.status_code"] = response.status;
+          return response;
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error(`[tome-http] ${req.method} ${path} → 500:`, err);
+          httpAttrs["http.status_code"] = 500;
+          return json({ error: message }, 500);
+        }
+      });
+    });
   };
 
   fetchHandler.close = () => {};
@@ -168,6 +179,7 @@ async function dispatchApiRequest(
         return json({
           config: getProfilingConfig(),
           dbPath: store?.dbPath ?? null,
+          schema: PROFILING_SPANS_TABLE,
         });
       }
 

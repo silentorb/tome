@@ -5,8 +5,9 @@ import { join } from "node:path";
 import { createApiHandler, UserSettingsStore } from "../src/index";
 import {
   configureProfiling,
+  getProfilingStore,
   openProfilingStore,
-  recordProfilingSample,
+  recordProfilingSpan,
   resetProfilingForTests,
 } from "tome-service-interfaces";
 import type { TomeGraphServices } from "tome-graph-interfaces";
@@ -22,19 +23,19 @@ function stubServices(): TomeGraphServices {
   } as unknown as TomeGraphServices;
 }
 
-/** input → filter(kind = "http") → sort(ms desc) → limit(10) → output */
-function httpSamplesGraph(): Graph {
+/** input → filter(kind = "SERVER") → sort(duration_ms desc) → limit(10) → output */
+function serverSpansGraph(): Graph {
   return {
     nodes: {
       in: { id: "in", type: "input", inputs: {} },
       col: { id: "col", type: "column", inputs: { name: "kind" } },
-      lit: { id: "lit", type: "literal", inputs: { value: "http" } },
+      lit: { id: "lit", type: "literal", inputs: { value: "SERVER" } },
       eq: { id: "eq", type: "equals", inputs: {} },
       filter: { id: "filter", type: "filter", inputs: {} },
       sort: {
         id: "sort",
         type: "sort",
-        inputs: { column: "ms", direction: "desc" },
+        inputs: { column: "duration_ms", direction: "desc" },
       },
       limit: { id: "limit", type: "limit", inputs: { count: 10 } },
       out: { id: "out", type: "output", inputs: {} },
@@ -109,7 +110,7 @@ describe("createApiHandler profiling", () => {
     handler.close();
   });
 
-  test("records slow HTTP samples and exposes /api/debug/profiling when enabled", async () => {
+  test("records SERVER spans with trace_id and exposes /api/debug/profiling", async () => {
     configureProfiling({
       enabled: true,
       verbose: false,
@@ -134,15 +135,31 @@ describe("createApiHandler profiling", () => {
     const body = (await profilingRes.json()) as {
       config: { enabled: boolean; slowMs: number; maxMb: number; batchDeleteMb: number };
       dbPath: string | null;
+      schema: string;
     };
     expect(body.config.enabled).toBe(true);
     expect(body.config.maxMb).toBe(32);
     expect(body.dbPath).toBe(dbPath);
+    expect(body.schema).toBe("spans");
+
+    const spans = getProfilingStore()!.queryAll<{
+      kind: string;
+      trace_id: string;
+      span_id: string;
+      name: string;
+      attributes: string;
+    }>(`SELECT kind, trace_id, span_id, name, attributes FROM spans WHERE kind = 'SERVER'`);
+    expect(spans.length).toBeGreaterThanOrEqual(1);
+    const home = spans.find((s) => s.name === "GET /api/home");
+    expect(home).toBeDefined();
+    expect(home!.trace_id).toMatch(/^[0-9a-f]{32}$/);
+    expect(home!.span_id).toMatch(/^[0-9a-f]{16}$/);
+    expect(JSON.parse(home!.attributes)["http.status_code"]).toBe(200);
 
     handler.close();
   });
 
-  test("POST /api/debug/profiling/execute-imp filters samples via Imp", async () => {
+  test("POST /api/debug/profiling/execute-imp filters spans via Imp", async () => {
     configureProfiling({
       enabled: true,
       verbose: true,
@@ -154,9 +171,33 @@ describe("createApiHandler profiling", () => {
       batchDeleteRows: 1,
     });
     openTempStore();
-    recordProfilingSample("http", 12, "GET /api/a → 200");
-    recordProfilingSample("sql", 99, "SELECT 1 (0 params)");
-    recordProfilingSample("http", 40, "GET /api/b → 200");
+    recordProfilingSpan({
+      traceId: "a".repeat(32),
+      spanId: "1".padStart(16, "0"),
+      parentSpanId: null,
+      name: "GET /api/a",
+      kind: "SERVER",
+      durationMs: 12,
+      attributes: {},
+    });
+    recordProfilingSpan({
+      traceId: "a".repeat(32),
+      spanId: "2".padStart(16, "0"),
+      parentSpanId: null,
+      name: "db.query",
+      kind: "CLIENT",
+      durationMs: 99,
+      attributes: { "db.statement": "SELECT 1" },
+    });
+    recordProfilingSpan({
+      traceId: "a".repeat(32),
+      spanId: "3".padStart(16, "0"),
+      parentSpanId: null,
+      name: "GET /api/b",
+      kind: "SERVER",
+      durationMs: 40,
+      attributes: {},
+    });
 
     const handler = createApiHandler(
       stubServices(),
@@ -166,16 +207,16 @@ describe("createApiHandler profiling", () => {
       new Request("http://127.0.0.1/api/debug/profiling/execute-imp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ graph: httpSamplesGraph() }),
+        body: JSON.stringify({ graph: serverSpansGraph() }),
       }),
     );
     expect(res.status).toBe(200);
     const body = (await res.json()) as {
       columns: string[];
-      rows: { kind: string; ms: number; detail: string }[];
+      rows: { kind: string; duration_ms: number; name: string }[];
     };
-    expect(body.rows.every((r) => r.kind === "http")).toBe(true);
-    expect(body.rows[0]?.ms).toBe(40);
+    expect(body.rows.every((r) => r.kind === "SERVER")).toBe(true);
+    expect(body.rows[0]?.duration_ms).toBe(40);
     expect(body.rows).toHaveLength(2);
     handler.close();
   });
@@ -199,7 +240,7 @@ describe("createApiHandler profiling", () => {
       new Request("http://127.0.0.1/api/debug/profiling/execute-imp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ graph: httpSamplesGraph() }),
+        body: JSON.stringify({ graph: serverSpansGraph() }),
       }),
     );
     expect(res.status).toBe(404);

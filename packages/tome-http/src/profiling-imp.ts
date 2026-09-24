@@ -1,4 +1,4 @@
-/** Compile Imp collection graphs against the profiling samples SQLite table. */
+/** Compile Imp collection graphs against the profiling spans SQLite table. */
 
 import { coreNodeLibrary, type Graph } from "imp-core-types";
 import { collectionTransformsLibrary } from "imp-collection-transforms";
@@ -6,10 +6,11 @@ import { createRegistry, loadLibrary } from "imp-registry";
 import { compileSql, graphToKysely } from "imp-sql";
 import {
   getProfilingStore,
+  PROFILING_SPANS_TABLE,
   type ProfilingStore,
 } from "tome-service-interfaces";
 
-const PROFILING_SCHEMA = { table: "samples" } as const;
+const PROFILING_SCHEMA = { table: PROFILING_SPANS_TABLE } as const;
 
 let registryCache: ReturnType<typeof createRegistry> | null = null;
 

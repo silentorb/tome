@@ -13,6 +13,15 @@ import {
   serializeAssociationsFile,
   invalidateAssociationsCache,
 } from "tome-flatfile";
+import {
+  configureProfiling,
+  deriveRowCaps,
+  getProfilingContext,
+  getProfilingStore,
+  openProfilingStore,
+  resetProfilingForTests,
+  runInProfilingTrace,
+} from "tome-service-interfaces";
 
 const RELATED_COUNT = 9000;
 const WINDOW_LIMIT = 50;
@@ -24,6 +33,12 @@ const INSERT_BATCH = 500;
 const BENCHMARK_ENABLED = !["0", "false", "off"].includes(
   (process.env.TOME_BENCHMARK ?? "1").trim().toLowerCase(),
 );
+
+/** When TOME_PROFILING is truthy, dump span breakdown after the timed query. */
+const PROFILE_BENCHMARK = (() => {
+  const raw = (process.env.TOME_PROFILING ?? "").trim().toLowerCase();
+  return raw !== "" && raw !== "0" && raw !== "false" && raw !== "off" && raw !== "no";
+})();
 
 function writeInspirationsFeaturesAssociations(contentDir: string): void {
   writeFileSync(
@@ -103,6 +118,29 @@ function seedRelatedFanOut(
   return performance.now() - seedStarted;
 }
 
+function logSpanBreakdown(traceId: string): void {
+  const store = getProfilingStore();
+  if (!store) return;
+  const rows = store.queryAll<{
+    kind: string;
+    name: string;
+    duration_ms: number;
+    parent_span_id: string | null;
+  }>(
+    `SELECT kind, name, duration_ms, parent_span_id FROM spans
+     WHERE trace_id = ?
+     ORDER BY duration_ms DESC
+     LIMIT 20`,
+    [traceId],
+  );
+  console.log(`[relation-window-benchmark] profiling top spans for trace=${traceId}`);
+  for (const row of rows) {
+    console.log(
+      `  ${row.duration_ms.toFixed(2)}ms ${row.kind.padEnd(8)} ${row.name}`,
+    );
+  }
+}
+
 describe("relation-window benchmark", () => {
   // Setup lives inside the test so TOME_BENCHMARK=0 skips GraphDatabase / temp dirs too.
   test.skipIf(!BENCHMARK_ENABLED)(
@@ -115,35 +153,71 @@ describe("relation-window benchmark", () => {
       process.env.TOME_CONTENT_PATH = contentDir;
       const db = new GraphDatabase(join(dir, "test.sqlite"));
 
+      let profilingConfigured = false;
       try {
         const hostId = "01BENCHHOST00000000000000";
         const perspective = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0);
 
         const seedMs = seedRelatedFanOut(db.path, hostId, perspective);
 
-        const queryStarted = performance.now();
-        const section = getRelationTableSection(db, hostId, perspective, {
-          contentDir,
-          rowsQuery: { limit: WINDOW_LIMIT, offset: WINDOW_OFFSET },
-        });
-        const queryMs = performance.now() - queryStarted;
+        let queryMs = 0;
+        let section: NonNullable<ReturnType<typeof getRelationTableSection>> | null = null;
 
-        console.log(
-          `[relation-window-benchmark] query=${queryMs.toFixed(1)}ms seed=${seedMs.toFixed(1)}ms related=${RELATED_COUNT} window=${WINDOW_OFFSET}+${WINDOW_LIMIT}`,
-        );
+        const runQuery = () => {
+          const queryStarted = performance.now();
+          section = getRelationTableSection(db, hostId, perspective, {
+            contentDir,
+            rowsQuery: { limit: WINDOW_LIMIT, offset: WINDOW_OFFSET },
+          });
+          queryMs = performance.now() - queryStarted;
+        };
 
-        expect(section?.rowsWindow).toEqual({
+        if (PROFILE_BENCHMARK) {
+          // Prefer slowMs over verbose: verbose records every getNode and makes
+          // findTypeNodeByTitle's full-node scan pathologically slow at 9k scale.
+          configureProfiling({
+            enabled: true,
+            verbose: false,
+            slowMs: 1,
+            logToStderr: false,
+            maxMb: 32,
+            batchDeleteMb: 4,
+            maxRows: deriveRowCaps(32, 4).maxRows,
+            batchDeleteRows: deriveRowCaps(32, 4).batchDeleteRows,
+          });
+          openProfilingStore(join(dir, "tome-profiling.sqlite"));
+          profilingConfigured = true;
+          let capturedTraceId = "";
+          runInProfilingTrace(() => {
+            capturedTraceId = getProfilingContext()?.traceId ?? "";
+            runQuery();
+          });
+          console.log(
+            `[relation-window-benchmark] query=${queryMs.toFixed(1)}ms seed=${seedMs.toFixed(1)}ms related=${RELATED_COUNT} window=${WINDOW_OFFSET}+${WINDOW_LIMIT}`,
+          );
+          if (capturedTraceId) logSpanBreakdown(capturedTraceId);
+          expect(getProfilingStore()?.count() ?? 0).toBeGreaterThan(0);
+        } else {
+          runQuery();
+          console.log(
+            `[relation-window-benchmark] query=${queryMs.toFixed(1)}ms seed=${seedMs.toFixed(1)}ms related=${RELATED_COUNT} window=${WINDOW_OFFSET}+${WINDOW_LIMIT}`,
+          );
+        }
+
+        expect(section).not.toBeNull();
+        expect(section!.rowsWindow).toEqual({
           offset: WINDOW_OFFSET,
           limit: WINDOW_LIMIT,
           total: RELATED_COUNT,
           hasMore: true,
         });
-        expect(section?.rows).toHaveLength(WINDOW_LIMIT);
-        expect(section?.rows[0]?.name).toBe(`Feature ${String(WINDOW_OFFSET).padStart(4, "0")}`);
-        expect(section?.rows[WINDOW_LIMIT - 1]?.name).toBe(
+        expect(section!.rows).toHaveLength(WINDOW_LIMIT);
+        expect(section!.rows[0]?.name).toBe(`Feature ${String(WINDOW_OFFSET).padStart(4, "0")}`);
+        expect(section!.rows[WINDOW_LIMIT - 1]?.name).toBe(
           `Feature ${String(WINDOW_OFFSET + WINDOW_LIMIT - 1).padStart(4, "0")}`,
         );
       } finally {
+        if (profilingConfigured) resetProfilingForTests();
         db.close();
         rmSync(dir, { recursive: true, force: true });
       }

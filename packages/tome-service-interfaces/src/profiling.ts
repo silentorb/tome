@@ -1,26 +1,40 @@
-/** Opt-in request/SQL profiling shared by tome-http and tome-sqlite. */
+/** Opt-in request/SQL profiling shared by tome-http and tome-sqlite.
+ *
+ * Storage and vocabulary align with OpenTelemetry span concepts (trace_id,
+ * span_id, parent_span_id, SpanKind, attributes) without depending on the
+ * OTel SDK or OTLP exporters.
+ */
 
-import { Database } from "bun:sqlite";
+import { AsyncLocalStorage } from "node:async_hooks";
+import { randomBytes } from "node:crypto";
+import { Database, type SQLQueryBindings } from "bun:sqlite";
 import { dirname, join, resolve } from "node:path";
 import { mkdirSync } from "node:fs";
 
-export type ProfilingSampleKind = "http" | "sql";
+/** OTel SpanKind subset used by Tome profiling. */
+export type ProfilingSpanKind = "SERVER" | "CLIENT" | "INTERNAL";
 
-export type ProfilingSample = {
-  at: string;
-  kind: ProfilingSampleKind;
-  ms: number;
-  detail: string;
+export type ProfilingAttributes = Record<string, string | number | boolean>;
+
+export type ProfilingSpan = {
+  traceId: string;
+  spanId: string;
+  parentSpanId: string | null;
+  name: string;
+  kind: ProfilingSpanKind;
+  startTime: string;
+  durationMs: number;
+  attributes: ProfilingAttributes;
 };
 
 export type ProfilingConfig = {
   /** When false, record/timing helpers are no-ops (callers should skip timers). */
   enabled: boolean;
-  /** Record every sample, not only those >= slowMs. */
+  /** Record every span, not only those >= slowMs. */
   verbose: boolean;
-  /** Threshold in ms for slow samples (default 100). */
+  /** Threshold in ms for slow spans (default 100). */
   slowMs: number;
-  /** Mirror samples to stderr when true (default false). Env: `TOME_PROFILING_LOG`. */
+  /** Mirror spans to stderr when true (default false). Env: `TOME_PROFILING_LOG`. */
   logToStderr: boolean;
   /** Soft ceiling in MB (default 32). Env: `TOME_PROFILING_MAX_MB`. */
   maxMb: number;
@@ -35,10 +49,18 @@ export type ProfilingConfig = {
 export const DEFAULT_SLOW_MS = 100;
 export const DEFAULT_MAX_MB = 32;
 export const DEFAULT_BATCH_DELETE_MB = 4;
-/** Bytes-per-sample heuristic for MB → row conversion (row + detail + index overhead). */
+/** Bytes-per-span heuristic for MB → row conversion (row + attrs + index overhead). */
 export const BYTES_PER_SAMPLE_EST = 512;
-export const SQL_TRUNCATE = 200;
+export const SQL_TRUNCATE = 800;
 export const PROFILING_DB_FILENAME = "tome-profiling.sqlite";
+export const PROFILING_SPANS_TABLE = "spans";
+
+type ProfilingContext = {
+  traceId: string;
+  spanId: string | null;
+};
+
+const profilingAls = new AsyncLocalStorage<ProfilingContext>();
 
 function defaultConfig(): ProfilingConfig {
   const caps = deriveRowCaps(DEFAULT_MAX_MB, DEFAULT_BATCH_DELETE_MB);
@@ -215,6 +237,183 @@ export function truncateSql(sql: string, max = SQL_TRUNCATE): string {
   return `${oneLine.slice(0, max)}…`;
 }
 
+/** 16-byte trace id as 32 lowercase hex chars (OTel / W3C shape). */
+export function newProfilingTraceId(): string {
+  return randomBytes(16).toString("hex");
+}
+
+/** 8-byte span id as 16 lowercase hex chars. */
+export function newProfilingSpanId(): string {
+  return randomBytes(8).toString("hex");
+}
+
+export function getProfilingContext(): ProfilingContext | undefined {
+  return profilingAls.getStore();
+}
+
+/**
+ * Run `fn` under a profiling trace context. Nested spans inherit `traceId`.
+ * Does not record a span by itself.
+ */
+export function runInProfilingTrace<T>(fn: () => T, traceId?: string): T {
+  const id = traceId ?? newProfilingTraceId();
+  return profilingAls.run({ traceId: id, spanId: null }, fn);
+}
+
+/**
+ * Run async `fn` under a profiling trace context.
+ */
+export function runInProfilingTraceAsync<T>(fn: () => Promise<T>, traceId?: string): Promise<T> {
+  const id = traceId ?? newProfilingTraceId();
+  return profilingAls.run({ traceId: id, spanId: null }, fn);
+}
+
+function shouldRecord(durationMs: number): boolean {
+  if (!config.enabled) return false;
+  if (config.verbose) return true;
+  return durationMs >= config.slowMs;
+}
+
+function logSpanToStderr(span: ProfilingSpan): void {
+  const tag =
+    span.kind === "SERVER" ? "[tome-http]" : span.kind === "CLIENT" ? "[tome-sql]" : "[tome-phase]";
+  const attrKeys = Object.keys(span.attributes);
+  const attrPreview =
+    attrKeys.length === 0
+      ? ""
+      : ` ${attrKeys
+          .slice(0, 4)
+          .map((k) => `${k}=${JSON.stringify(span.attributes[k])}`)
+          .join(" ")}`;
+  console.error(
+    `${tag} ${span.durationMs}ms ${span.kind} ${span.name} trace=${span.traceId} span=${span.spanId}${
+      span.parentSpanId ? ` parent=${span.parentSpanId}` : ""
+    }${attrPreview}`,
+  );
+}
+
+/**
+ * Record a completed span when profiling is enabled and the span is slow
+ * (or verbose). Appends to the SQLite store when open; optionally logs to stderr.
+ */
+export function recordProfilingSpan(span: Omit<ProfilingSpan, "startTime"> & { startTime?: string }): void {
+  if (!shouldRecord(span.durationMs)) return;
+
+  const rounded = Math.round(span.durationMs * 100) / 100;
+  const full: ProfilingSpan = {
+    traceId: span.traceId,
+    spanId: span.spanId,
+    parentSpanId: span.parentSpanId,
+    name: span.name,
+    kind: span.kind,
+    startTime: span.startTime ?? new Date().toISOString(),
+    durationMs: rounded,
+    attributes: span.attributes ?? {},
+  };
+  store?.append(full);
+
+  if (config.logToStderr) {
+    logSpanToStderr(full);
+  }
+}
+
+/**
+ * Time `fn` as a nested span. Allocates span_id, sets ALS parent for children,
+ * records on completion. When profiling is off, runs `fn` with no timers.
+ */
+export function withProfilingSpan<T>(
+  name: string,
+  kind: ProfilingSpanKind,
+  attributes: ProfilingAttributes,
+  fn: () => T,
+): T {
+  if (!config.enabled) return fn();
+
+  const parent = profilingAls.getStore();
+  const traceId = parent?.traceId ?? newProfilingTraceId();
+  const spanId = newProfilingSpanId();
+  const parentSpanId = parent?.spanId ?? null;
+  const startTime = new Date().toISOString();
+  const started = performance.now();
+
+  const run = (): T => {
+    try {
+      return fn();
+    } finally {
+      recordProfilingSpan({
+        traceId,
+        spanId,
+        parentSpanId,
+        name,
+        kind,
+        startTime,
+        durationMs: performance.now() - started,
+        attributes,
+      });
+    }
+  };
+
+  return profilingAls.run({ traceId, spanId }, run);
+}
+
+/**
+ * Async variant of {@link withProfilingSpan}.
+ */
+export async function withProfilingSpanAsync<T>(
+  name: string,
+  kind: ProfilingSpanKind,
+  attributes: ProfilingAttributes,
+  fn: () => Promise<T>,
+): Promise<T> {
+  if (!config.enabled) return fn();
+
+  const parent = profilingAls.getStore();
+  const traceId = parent?.traceId ?? newProfilingTraceId();
+  const spanId = newProfilingSpanId();
+  const parentSpanId = parent?.spanId ?? null;
+  const startTime = new Date().toISOString();
+  const started = performance.now();
+
+  return profilingAls.run({ traceId, spanId }, async () => {
+    try {
+      return await fn();
+    } finally {
+      recordProfilingSpan({
+        traceId,
+        spanId,
+        parentSpanId,
+        name,
+        kind,
+        startTime,
+        durationMs: performance.now() - started,
+        attributes,
+      });
+    }
+  });
+}
+
+/**
+ * Record a CLIENT (SQL) span from statement timing. Uses ALS for trace/parent
+ * when present; synthesizes a root span otherwise.
+ */
+export function recordSqlProfilingSpan(
+  durationMs: number,
+  attributes: ProfilingAttributes,
+  name = "db.query",
+): void {
+  if (!shouldRecord(durationMs)) return;
+  const parent = profilingAls.getStore();
+  recordProfilingSpan({
+    traceId: parent?.traceId ?? newProfilingTraceId(),
+    spanId: newProfilingSpanId(),
+    parentSpanId: parent?.spanId ?? null,
+    name,
+    kind: "CLIENT",
+    durationMs,
+    attributes: { "db.system": "sqlite", ...attributes },
+  });
+}
+
 export class ProfilingStore {
   readonly dbPath: string;
   private readonly db: Database;
@@ -228,26 +427,41 @@ export class ProfilingStore {
     this.dbPath = resolve(dbPath);
     mkdirSync(dirname(this.dbPath), { recursive: true });
     this.db = new Database(this.dbPath, { create: true });
+    // Prototypal: drop legacy `samples` table if present (disposable diagnostic DB).
+    const tables = this.db
+      .prepare(`SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('samples', 'spans')`)
+      .all() as { name: string }[];
+    const names = new Set(tables.map((t) => t.name));
+    if (names.has("samples")) {
+      this.db.exec(`DROP TABLE samples`);
+    }
     this.db.exec(`
-      CREATE TABLE IF NOT EXISTS samples (
+      CREATE TABLE IF NOT EXISTS spans (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        at TEXT NOT NULL,
+        trace_id TEXT NOT NULL,
+        span_id TEXT NOT NULL,
+        parent_span_id TEXT,
+        name TEXT NOT NULL,
         kind TEXT NOT NULL,
-        ms REAL NOT NULL,
-        detail TEXT NOT NULL
+        start_time TEXT NOT NULL,
+        duration_ms REAL NOT NULL,
+        attributes TEXT NOT NULL
       );
-      CREATE INDEX IF NOT EXISTS samples_at ON samples(at);
-      CREATE INDEX IF NOT EXISTS samples_kind_ms ON samples(kind, ms);
+      CREATE INDEX IF NOT EXISTS spans_trace_id ON spans(trace_id);
+      CREATE INDEX IF NOT EXISTS spans_start_time ON spans(start_time);
+      CREATE INDEX IF NOT EXISTS spans_kind_duration ON spans(kind, duration_ms);
     `);
     this.maxRows = retention?.maxRows ?? config.maxRows;
     this.batchDeleteRows = retention?.batchDeleteRows ?? config.batchDeleteRows;
     this.insertStmt = this.db.prepare(
-      `INSERT INTO samples (at, kind, ms, detail) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO spans (
+         trace_id, span_id, parent_span_id, name, kind, start_time, duration_ms, attributes
+       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     );
-    this.countStmt = this.db.prepare(`SELECT COUNT(*) AS n FROM samples`);
+    this.countStmt = this.db.prepare(`SELECT COUNT(*) AS n FROM spans`);
     this.deleteBatchStmt = this.db.prepare(
-      `DELETE FROM samples WHERE id IN (
-         SELECT id FROM samples ORDER BY id ASC LIMIT ?
+      `DELETE FROM spans WHERE id IN (
+         SELECT id FROM spans ORDER BY id ASC LIMIT ?
        )`,
     );
   }
@@ -257,8 +471,17 @@ export class ProfilingStore {
     this.batchDeleteRows = Math.min(maxRows, Math.max(1, batchDeleteRows));
   }
 
-  append(sample: ProfilingSample): void {
-    this.insertStmt.run(sample.at, sample.kind, sample.ms, sample.detail);
+  append(span: ProfilingSpan): void {
+    this.insertStmt.run(
+      span.traceId,
+      span.spanId,
+      span.parentSpanId,
+      span.name,
+      span.kind,
+      span.startTime,
+      span.durationMs,
+      JSON.stringify(span.attributes ?? {}),
+    );
     this.pruneIfNeeded();
   }
 
@@ -288,7 +511,7 @@ export class ProfilingStore {
   }
 
   clear(): void {
-    this.db.exec(`DELETE FROM samples`);
+    this.db.exec(`DELETE FROM spans`);
   }
 
   close(): void {
@@ -335,30 +558,99 @@ export function ensureProfilingStore(cacheDbPath?: string, force = false): Profi
 }
 
 /**
- * Record a timed sample when profiling is enabled and the sample is slow
- * (or verbose). Appends to the SQLite store when open; optionally logs to stderr.
+ * Wrap a bun:sqlite `Database` so `.prepare(…).all/get/run` emit CLIENT spans
+ * when profiling is enabled (checked at execute time). Safe to call once at
+ * GraphDatabase construction; cost when off is one boolean check per execute.
  */
-export function recordProfilingSample(
-  kind: ProfilingSampleKind,
-  ms: number,
-  detail: string,
-): void {
-  if (!config.enabled) return;
-  const rounded = Math.round(ms * 100) / 100;
-  if (!config.verbose && rounded < config.slowMs) return;
+export function instrumentSqliteDatabaseForProfiling(db: Database): Database {
+  const originalPrepare = db.prepare.bind(db);
+  const prepareInstrumented = ((sql: string, params?: SQLQueryBindings) => {
+    const stmt =
+      params === undefined ? originalPrepare(sql) : originalPrepare(sql, params);
+    return wrapSqliteStatementForProfiling(stmt, sql);
+  }) as Database["prepare"];
+  (db as { prepare: Database["prepare"] }).prepare = prepareInstrumented;
+  return db;
+}
 
-  const sample: ProfilingSample = {
-    at: new Date().toISOString(),
-    kind,
-    ms: rounded,
-    detail,
-  };
-  store?.append(sample);
+type SqliteStatement = ReturnType<Database["prepare"]>;
 
-  if (config.logToStderr) {
-    const tag = kind === "http" ? "[tome-http]" : "[tome-sql]";
-    console.error(`${tag} ${rounded}ms ${detail}`);
-  }
+function wrapSqliteStatementForProfiling(stmt: SqliteStatement, sql: string): SqliteStatement {
+  const truncated = truncateSql(sql);
+  const originalAll = stmt.all.bind(stmt);
+  const originalGet = stmt.get.bind(stmt);
+  const originalRun = stmt.run.bind(stmt);
+
+  stmt.all = ((...params: SQLQueryBindings[]) => {
+    if (!isProfilingEnabled()) return originalAll(...params);
+    const started = performance.now();
+    try {
+      const rows = originalAll(...params);
+      recordSqlProfilingSpan(performance.now() - started, {
+        "db.operation": "all",
+        "db.statement": truncated,
+        "db.rows": Array.isArray(rows) ? rows.length : 0,
+        "db.params_count": params.length,
+      });
+      return rows;
+    } catch (err) {
+      recordSqlProfilingSpan(performance.now() - started, {
+        "db.operation": "all",
+        "db.statement": truncated,
+        "db.params_count": params.length,
+        "db.error": true,
+      });
+      throw err;
+    }
+  }) as typeof stmt.all;
+
+  stmt.get = ((...params: SQLQueryBindings[]) => {
+    if (!isProfilingEnabled()) return originalGet(...params);
+    const started = performance.now();
+    try {
+      const row = originalGet(...params);
+      recordSqlProfilingSpan(performance.now() - started, {
+        "db.operation": "get",
+        "db.statement": truncated,
+        "db.rows": row == null ? 0 : 1,
+        "db.params_count": params.length,
+      });
+      return row;
+    } catch (err) {
+      recordSqlProfilingSpan(performance.now() - started, {
+        "db.operation": "get",
+        "db.statement": truncated,
+        "db.params_count": params.length,
+        "db.error": true,
+      });
+      throw err;
+    }
+  }) as typeof stmt.get;
+
+  stmt.run = ((...params: SQLQueryBindings[]) => {
+    if (!isProfilingEnabled()) return originalRun(...params);
+    const started = performance.now();
+    try {
+      const result = originalRun(...params);
+      recordSqlProfilingSpan(performance.now() - started, {
+        "db.operation": "run",
+        "db.statement": truncated,
+        "db.rows": typeof result?.changes === "number" ? result.changes : 0,
+        "db.params_count": params.length,
+      });
+      return result;
+    } catch (err) {
+      recordSqlProfilingSpan(performance.now() - started, {
+        "db.operation": "run",
+        "db.statement": truncated,
+        "db.params_count": params.length,
+        "db.error": true,
+      });
+      throw err;
+    }
+  }) as typeof stmt.run;
+
+  return stmt;
 }
 
 /** Test helper: reset config and close store. */

@@ -39,6 +39,7 @@ import type {
   TableRowsQuery,
   ViewSortSpec,
 } from "tome-graph-interfaces";
+import { withProfilingSpan } from "tome-service-interfaces";
 import { applyNameFilterAndWindow, buildTableRowsWindow, resolveWindowBounds } from "./table-rows-window";
 import {
   relationWindowSortsFromQuery,
@@ -481,33 +482,39 @@ export function getRelationTableSection(
     rowsQuery?: TableRowsQuery;
   },
 ): RelationTableSection | null {
-  const contentDir = options?.contentDir ?? resolveContentPath();
-  if (!readStoreGetNode(db, nodeId)) return null;
+  const run = (): RelationTableSection | null => {
+    const contentDir = options?.contentDir ?? resolveContentPath();
+    if (!readStoreGetNode(db, nodeId)) return null;
 
-  const associations = loadAssociationsFromContent(contentDir);
-  const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
-  const { connections, sqlWindow } = loadRelationSectionConnections(
-    db,
-    nodeId,
-    perspective,
-    options?.rowsQuery,
-  );
+    const associations = loadAssociationsFromContent(contentDir);
+    const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
+    const { connections, sqlWindow } = withProfilingSpan(
+      "relation.loadConnections",
+      "INTERNAL",
+      {},
+      () => loadRelationSectionConnections(db, nodeId, perspective, options?.rowsQuery),
+    );
 
-  if (
-    connections.length === 0 &&
-    !(options?.includeSchemaEmptySections && tableRelationByGroupKey.has(perspective))
-  ) {
-    return null;
-  }
+    if (
+      connections.length === 0 &&
+      !(options?.includeSchemaEmptySections && tableRelationByGroupKey.has(perspective))
+    ) {
+      return null;
+    }
 
-  return buildRelationSectionForPerspective(db, nodeId, perspective, connections, {
-    contentDir,
-    typeTableIds: typeTableIdsFromContent(contentDir),
-    associations,
-    tableRelationByGroupKey,
-    rowsQuery: options?.rowsQuery,
-    sqlWindow,
-  });
+    return withProfilingSpan("relation.buildSection", "INTERNAL", {}, () =>
+      buildRelationSectionForPerspective(db, nodeId, perspective, connections, {
+        contentDir,
+        typeTableIds: typeTableIdsFromContent(contentDir),
+        associations,
+        tableRelationByGroupKey,
+        rowsQuery: options?.rowsQuery,
+        sqlWindow,
+      }),
+    );
+  };
+
+  return withProfilingSpan("getRelationTableSection", "INTERNAL", {}, run);
 }
 
 /** Build a universal node page view: markdown first, then database and relation table sections. */

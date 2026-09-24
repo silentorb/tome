@@ -3,6 +3,13 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, test } from "bun:test";
+import {
+  configureProfiling,
+  getProfilingStore,
+  openProfilingStore,
+  resetProfilingForTests,
+  runInProfilingTrace,
+} from "tome-service-interfaces";
 import { GraphDatabase } from "../src/graph";
 import { SCHEMA_VERSION } from "../src/schema";
 
@@ -385,6 +392,49 @@ describe("GraphDatabase", () => {
     ]);
 
     db.close();
+  });
+
+  test("listRelationshipsFromSourceWindow emits CLIENT sql spans when profiling", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-profiling-"));
+    dbPath = join(tempDir, "test.sqlite");
+    configureProfiling({
+      enabled: true,
+      verbose: true,
+      slowMs: 0,
+      logToStderr: false,
+      maxMb: 32,
+      batchDeleteMb: 4,
+      maxRows: 1000,
+      batchDeleteRows: 100,
+    });
+    openProfilingStore(join(tempDir, "tome-profiling.sqlite"));
+
+    const db = new GraphDatabase(dbPath);
+    const source = "01SOURCE000000000000000000";
+    const typeA = "assocA:0";
+    db.upsertNode(source, { title: "Source" });
+    for (let i = 0; i < 3; i++) {
+      const id = `01TARGET${String(i).padStart(18, "0")}`;
+      db.upsertNode(id, { title: `Target ${i}` });
+      db.upsertRelationship(source, id, typeA, { ordinal: i });
+    }
+
+    getProfilingStore()?.clear();
+    runInProfilingTrace(() => {
+      db.listRelationshipsFromSourceWindow(source, typeA, { limit: 2, offset: 0 });
+    });
+
+    const clientSpans = getProfilingStore()!.queryAll<{ kind: string; name: string }>(
+      `SELECT kind, name FROM spans WHERE kind = 'CLIENT'`,
+    );
+    expect(clientSpans.length).toBeGreaterThan(0);
+    const internal = getProfilingStore()!.queryAll<{ name: string }>(
+      `SELECT name FROM spans WHERE kind = 'INTERNAL'`,
+    );
+    expect(internal.some((r) => r.name === "relationWindow.page")).toBe(true);
+
+    db.close();
+    resetProfilingForTests();
   });
 
   test("windows set membership with ORDER BY LIMIT OFFSET and relation counts", () => {

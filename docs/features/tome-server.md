@@ -103,30 +103,52 @@ Requires `TOME_CONTENT_PATH` (and usually a populated content tree). Historical 
 
 ## Request / SQL profiling (opt-in)
 
-Default **off** (one boolean check per HTTP request and `queryAll`; no timers when disabled).
+Default **off** (one boolean check per HTTP request and per SQLite statement execute; no timers when disabled).
+
+Storage and debug vocabulary follow **OpenTelemetry span** concepts (`trace_id`, `span_id`, `parent_span_id`, SpanKind, attributes) without the OTel SDK or OTLP export.
 
 | Knob | Purpose |
 | --- | --- |
-| `TOME_PROFILING=1` | Enable slow-sample capture (HTTP + SQL) |
-| `TOME_PROFILING=verbose` | Record every timed sample, not only slow ones |
+| `TOME_PROFILING=1` | Enable slow-span capture (HTTP + SQL + INTERNAL phases) |
+| `TOME_PROFILING=verbose` | Record every timed span, not only slow ones |
 | `TOME_PROFILING_SLOW_MS` | Threshold in ms (default **100**) |
 | `TOME_PROFILING_DB_PATH` | Profiling SQLite path (default: sibling `tome-profiling.sqlite` next to the cache DB) |
-| `TOME_PROFILING_LOG=1` | Mirror samples to stderr (default **off**) |
-| `TOME_PROFILING_MAX_MB` | Soft retention ceiling in MB (default **32**; converted to a row cap via ~512 B/sample) |
-| `TOME_PROFILING_BATCH_DELETE_MB` | Oldest-sample batch to delete when over the ceiling (default **4**) |
+| `TOME_PROFILING_LOG=1` | Mirror spans to stderr (default **off**) |
+| `TOME_PROFILING_MAX_MB` | Soft retention ceiling in MB (default **32**; converted to a row cap via ~512 B/span) |
+| `TOME_PROFILING_BATCH_DELETE_MB` | Oldest-span batch to delete when over the ceiling (default **4**) |
 | `services[].options.profiling` | `true` or `"verbose"` in `tome-server.json` |
 | `services[].options.slowMs` | Same threshold via config |
 
+### Spans table (OTel-aligned)
+
+Spans are appended to a dedicated SQLite file, table **`spans`**:
+
+| Column | OTel analog |
+| --- | --- |
+| `trace_id` | 32-char hex (16 bytes) |
+| `span_id` | 16-char hex (8 bytes) |
+| `parent_span_id` | parent span, or null for roots |
+| `name` | span name |
+| `kind` | `SERVER` (HTTP), `CLIENT` (SQL), `INTERNAL` (JS phases) |
+| `start_time` | ISO start (maps to OTel start time later if needed) |
+| `duration_ms` | Imp-friendly duration (OTel uses start/end nanos) |
+| `attributes` | JSON object of flat string/number/bool attrs |
+
+Common attribute keys (semantic-convention inspired): `http.method`, `http.route`, `http.status_code`, `url.query`, `db.system`, `db.operation`, `db.statement`, `db.rows`, `db.params_count`.
+
+All `GraphDatabase` statement executes (`.all` / `.get` / `.run`) emit CLIENT spans when profiling is on — not only `queryAll`. Relation-table paths also emit INTERNAL spans (`getRelationTableSection`, `relation.loadConnections`, `relationWindow.*`, …). Nested work shares one `trace_id` via `AsyncLocalStorage`.
+
 When enabled:
 
-- Samples are appended to a dedicated SQLite file (`samples` table: `id`, `at`, `kind`, `ms`, `detail`), not an in-memory ring.
-- When the row ceiling is exceeded, the oldest **batch** of rows is deleted in one statement (not one delete per write).
-- Samples are **not** logged to stderr unless `TOME_PROFILING_LOG` is set.
-- `GET /api/debug/profiling` returns `{ config, dbPath }` (`config` includes `maxMb`, `batchDeleteMb`, derived `maxRows` / `batchDeleteRows`, `slowMs`, `verbose`, …). **404** when profiling is off.
-- `POST /api/debug/profiling/execute-imp` with `{ graph }` runs an Imp collection query via `imp-sql` against the profiling DB (filter / sort / limit / project — no pathing). **404** when off.
+- When the row ceiling is exceeded, the oldest **batch** of rows is deleted in one statement.
+- Spans are **not** logged to stderr unless `TOME_PROFILING_LOG` is set.
+- Legacy `samples` tables are dropped on open (disposable diagnostic DB).
+- `GET /api/debug/profiling` returns `{ config, dbPath, schema: "spans" }`. **404** when profiling is off.
+- `POST /api/debug/profiling/execute-imp` with `{ graph }` runs an Imp collection query via `imp-sql` against the **`spans`** table (filter / sort / limit / project — no pathing). **404** when off.
 
 Containers: pass env at runtime (no image rebuild). Workbench Compose forwards the `TOME_PROFILING*` vars into the `tome` service — see [container.md](./container.md).
 
+**Out of scope for now:** OTel npm packages, OTLP exporters, W3C `traceparent` propagation, span status/events/links/resource.
 ## See also
 
 - [`web-api-design.md`](./web-api-design.md) — application-specific HTTP use-case rules

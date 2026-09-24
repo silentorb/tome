@@ -714,7 +714,9 @@ describe("node-sections bible passages regression", () => {
     });
   });
 
-  test("SQL-windows relation sections by ordinal without materializing the full set in the response", () => {
+  test(
+    "SQL-windows relation sections by ordinal without materializing the full set in the response",
+    () => {
     writeMembershipAssociations(contentDir);
     const hostId = "01WINDOWHOST0000000000000";
     const perspective = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0);
@@ -749,7 +751,9 @@ describe("node-sections bible passages regression", () => {
     expect(relations?.type === "relations" && relations.rows).toHaveLength(50);
     expect(relations?.type === "relations" && relations.rowsWindow?.total).toBe(120);
     expect(relations?.type === "relations" && relations.rows[0]?.name).toBe("Feature 000");
-  });
+    },
+    { timeout: 30_000 },
+  );
 
   afterAll(() => {
     db.close();

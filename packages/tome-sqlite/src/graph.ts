@@ -18,9 +18,9 @@ import type {
   TomeQueryCache,
 } from "tome-service-interfaces";
 import {
+  instrumentSqliteDatabaseForProfiling,
   isProfilingEnabled,
-  recordProfilingSample,
-  truncateSql,
+  withProfilingSpan,
 } from "tome-service-interfaces";
 import { migrateSchema } from "./schema-migrate";
 import {
@@ -306,7 +306,7 @@ export class GraphDatabase implements TomeQueryCache {
       }
     }
     mkdirSync(dirname(path), { recursive: true });
-    this.db = new Database(path, { create: true });
+    this.db = instrumentSqliteDatabaseForProfiling(new Database(path, { create: true }));
     this.db.exec("PRAGMA foreign_keys = ON");
     this.db.exec("PRAGMA journal_mode = DELETE");
     this.db.exec(DDL);
@@ -1066,48 +1066,56 @@ export class GraphDatabase implements TomeQueryCache {
     type: string,
     query?: RelationshipProjectionWindowQuery,
   ): RelationshipProjectionWindowResult {
-    const totalRow = this.db
-      .prepare(
-        `SELECT COUNT(*) AS c FROM relationship_projections
-         WHERE source_node_id = ? AND type = ?`,
-      )
-      .get(sourceNodeId, type) as { c: number };
-    const total = totalRow.c;
+    const run = (): RelationshipProjectionWindowResult => {
+      const total = withProfilingSpan("relationWindow.count", "INTERNAL", {}, () => {
+        const totalRow = this.db
+          .prepare(
+            `SELECT COUNT(*) AS c FROM relationship_projections
+             WHERE source_node_id = ? AND type = ?`,
+          )
+          .get(sourceNodeId, type) as { c: number };
+        return totalRow.c;
+      });
 
-    const orderBy = buildOutgoingProjectionOrderBy(query?.sorts);
-    const offsetRaw = query?.offset;
-    const offset =
-      typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
-        ? Math.floor(offsetRaw)
-        : 0;
-    const limitRaw = query?.limit;
-    const limit =
-      limitRaw === undefined || limitRaw === null
-        ? null
-        : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
-          ? Math.floor(limitRaw)
-          : null;
+      const orderBy = buildOutgoingProjectionOrderBy(query?.sorts);
+      const offsetRaw = query?.offset;
+      const offset =
+        typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
+          ? Math.floor(offsetRaw)
+          : 0;
+      const limitRaw = query?.limit;
+      const limit =
+        limitRaw === undefined || limitRaw === null
+          ? null
+          : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
+            ? Math.floor(limitRaw)
+            : null;
 
-    const selectSql = `SELECT rp.id, rp.record_id, rp.source_node_id, rp.target_node_id, rp.type,
+      const selectSql = `SELECT rp.id, rp.record_id, rp.source_node_id, rp.target_node_id, rp.type,
               rp.ordinal, rp."order", rp.priority
        FROM relationship_projections rp
        LEFT JOIN nodes n ON n.id = rp.target_node_id
        WHERE rp.source_node_id = ? AND rp.type = ?
        ${orderBy}`;
 
-    let rows: ProjectionRow[];
-    if (limit === null) {
-      rows = this.db.prepare(selectSql).all(sourceNodeId, type) as ProjectionRow[];
-    } else {
-      rows = this.db
-        .prepare(`${selectSql} LIMIT ? OFFSET ?`)
-        .all(sourceNodeId, type, limit, offset) as ProjectionRow[];
-    }
+      const rows = withProfilingSpan("relationWindow.page", "INTERNAL", {}, () => {
+        if (limit === null) {
+          return this.db.prepare(selectSql).all(sourceNodeId, type) as ProjectionRow[];
+        }
+        return this.db
+          .prepare(`${selectSql} LIMIT ? OFFSET ?`)
+          .all(sourceNodeId, type, limit, offset) as ProjectionRow[];
+      });
 
-    return {
-      relationships: this.mapProjectionRows(rows),
-      total,
+      const relationships = withProfilingSpan("relationWindow.mapRows", "INTERNAL", {}, () =>
+        this.mapProjectionRows(rows),
+      );
+
+      return { relationships, total };
     };
+
+    if (!isProfilingEnabled()) return run();
+    return withProfilingSpan("listRelationshipsFromSourceWindow", "INTERNAL", {}, run);
   }
 
 
@@ -1587,19 +1595,8 @@ export class GraphDatabase implements TomeQueryCache {
 
   /** Run a read query (used by overlay / dynamic-field modules). */
   queryAll<T extends Record<string, unknown>>(sql: string, ...params: SQLQueryBindings[]): T[] {
-    if (!isProfilingEnabled()) {
-      return this.db.prepare(sql).all(...params) as T[];
-    }
-    const started = performance.now();
-    try {
-      return this.db.prepare(sql).all(...params) as T[];
-    } finally {
-      recordProfilingSample(
-        "sql",
-        performance.now() - started,
-        `${truncateSql(sql)} (${params.length} params)`,
-      );
-    }
+    // SQL timing comes from instrumentSqliteDatabaseForProfiling on prepare().all.
+    return this.db.prepare(sql).all(...params) as T[];
   }
 
   /** Run a write statement (used by overlay seed / migration scripts). */

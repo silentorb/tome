@@ -125,7 +125,7 @@ gunzip -c tome-release.tar.gz | docker load
 | `TOME_PROFILING` | Opt-in API/SQL profiling (`1` / `verbose`); default off — see [tome-server.md](./tome-server.md) § Request / SQL profiling |
 | `TOME_PROFILING_SLOW_MS` | Slow-sample threshold in ms when profiling (default 100) |
 | `TOME_PROFILING_DB_PATH` | Profiling SQLite path (default: `tome-profiling.sqlite` beside the cache DB) |
-| `TOME_PROFILING_LOG` | Mirror samples to stderr (`1`); default off |
+| `TOME_PROFILING_LOG` | Mirror spans to stderr (`1`); default off |
 | `TOME_PROFILING_MAX_MB` | Retention ceiling in MB (default 32) |
 | `TOME_PROFILING_BATCH_DELETE_MB` | Batch delete size in MB when pruning (default 4) |
 | `IMP_ROOT` | Imp sibling path (default `/opt/imp-ts` in release) |

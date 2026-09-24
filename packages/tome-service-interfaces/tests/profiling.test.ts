@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { Database } from "bun:sqlite";
 import {
   BYTES_PER_SAMPLE_EST,
   configureProfiling,
@@ -11,11 +12,13 @@ import {
   isProfilingEnabled,
   mbToRows,
   openProfilingStore,
-  recordProfilingSample,
+  recordProfilingSpan,
   resetProfilingForTests,
   resolveProfilingDbPath,
   resolveProfilingFromEnv,
+  runInProfilingTrace,
   truncateSql,
+  withProfilingSpan,
 } from "../src/profiling";
 
 describe("profiling", () => {
@@ -89,7 +92,7 @@ describe("profiling", () => {
     );
   });
 
-  test("recordProfilingSample is a no-op when disabled", () => {
+  test("recordProfilingSpan is a no-op when disabled", () => {
     configureProfiling({
       ...resolveProfilingFromEnv(),
       enabled: false,
@@ -98,11 +101,19 @@ describe("profiling", () => {
     });
     const dir = tempDir();
     openProfilingStore(join(dir, "tome-profiling.sqlite"));
-    recordProfilingSample("http", 500, "GET /api/x → 200");
+    recordProfilingSpan({
+      traceId: "a".repeat(32),
+      spanId: "b".repeat(16),
+      parentSpanId: null,
+      name: "GET /api/x",
+      kind: "SERVER",
+      durationMs: 500,
+      attributes: { "http.status_code": 200 },
+    });
     expect(getProfilingStore()?.count()).toBe(0);
   });
 
-  test("records slow samples into SQLite when enabled", () => {
+  test("records slow spans into SQLite when enabled", () => {
     const dir = tempDir();
     configureProfiling({
       ...resolveProfilingFromEnv(),
@@ -113,18 +124,34 @@ describe("profiling", () => {
     });
     openProfilingStore(join(dir, "tome-profiling.sqlite"));
     expect(isProfilingEnabled()).toBe(true);
-    recordProfilingSample("http", 50, "GET /api/fast → 200");
+    recordProfilingSpan({
+      traceId: "a".repeat(32),
+      spanId: "b".repeat(16),
+      parentSpanId: null,
+      name: "GET /api/fast",
+      kind: "SERVER",
+      durationMs: 50,
+      attributes: {},
+    });
     expect(getProfilingStore()?.count()).toBe(0);
-    recordProfilingSample("sql", 150, "SELECT 1 (0 params)");
+    recordProfilingSpan({
+      traceId: "a".repeat(32),
+      spanId: "c".repeat(16),
+      parentSpanId: null,
+      name: "db.query",
+      kind: "CLIENT",
+      durationMs: 150,
+      attributes: { "db.statement": "SELECT 1" },
+    });
     expect(getProfilingStore()?.count()).toBe(1);
-    const rows = getProfilingStore()!.queryAll<{ kind: string; ms: number }>(
-      "SELECT kind, ms FROM samples",
+    const rows = getProfilingStore()!.queryAll<{ kind: string; duration_ms: number }>(
+      "SELECT kind, duration_ms FROM spans",
     );
-    expect(rows[0]?.kind).toBe("sql");
-    expect(rows[0]?.ms).toBe(150);
+    expect(rows[0]?.kind).toBe("CLIENT");
+    expect(rows[0]?.duration_ms).toBe(150);
   });
 
-  test("verbose records every sample", () => {
+  test("verbose records every span", () => {
     const dir = tempDir();
     configureProfiling({
       ...resolveProfilingFromEnv(),
@@ -134,8 +161,91 @@ describe("profiling", () => {
       logToStderr: false,
     });
     openProfilingStore(join(dir, "tome-profiling.sqlite"));
-    recordProfilingSample("http", 1, "GET /api/health → 200");
+    recordProfilingSpan({
+      traceId: "a".repeat(32),
+      spanId: "b".repeat(16),
+      parentSpanId: null,
+      name: "GET /api/health",
+      kind: "SERVER",
+      durationMs: 1,
+      attributes: {},
+    });
     expect(getProfilingStore()?.count()).toBe(1);
+  });
+
+  test("withProfilingSpan nests parent_span_id under a shared trace_id", () => {
+    const dir = tempDir();
+    configureProfiling({
+      enabled: true,
+      verbose: true,
+      slowMs: 0,
+      logToStderr: false,
+      maxMb: 32,
+      batchDeleteMb: 4,
+      maxRows: 1,
+      batchDeleteRows: 1,
+    });
+    openProfilingStore(join(dir, "tome-profiling.sqlite"));
+
+    runInProfilingTrace(() => {
+      withProfilingSpan("root", "INTERNAL", {}, () => {
+        withProfilingSpan("child", "INTERNAL", { step: 1 }, () => "ok");
+      });
+    });
+
+    const rows = getProfilingStore()!.queryAll<{
+      name: string;
+      trace_id: string;
+      span_id: string;
+      parent_span_id: string | null;
+      attributes: string;
+    }>("SELECT name, trace_id, span_id, parent_span_id, attributes FROM spans ORDER BY id ASC");
+    expect(rows).toHaveLength(2);
+    const child = rows.find((r) => r.name === "child")!;
+    const root = rows.find((r) => r.name === "root")!;
+    expect(child.trace_id).toBe(root.trace_id);
+    expect(child.parent_span_id).toBe(root.span_id);
+    expect(root.parent_span_id).toBeNull();
+    expect(JSON.parse(child.attributes)).toEqual({ step: 1 });
+  });
+
+  test("opens spans table and drops legacy samples", () => {
+    const dir = tempDir();
+    const dbPath = join(dir, "tome-profiling.sqlite");
+    const legacy = new Database(dbPath, { create: true });
+    legacy.exec(`
+      CREATE TABLE samples (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        at TEXT NOT NULL,
+        kind TEXT NOT NULL,
+        ms REAL NOT NULL,
+        detail TEXT NOT NULL
+      );
+    `);
+    legacy.prepare(`INSERT INTO samples (at, kind, ms, detail) VALUES (?, ?, ?, ?)`).run(
+      new Date().toISOString(),
+      "http",
+      1,
+      "legacy",
+    );
+    legacy.close();
+
+    configureProfiling({
+      enabled: true,
+      verbose: true,
+      slowMs: 0,
+      logToStderr: false,
+      maxMb: 32,
+      batchDeleteMb: 4,
+      maxRows: 1,
+      batchDeleteRows: 1,
+    });
+    openProfilingStore(dbPath);
+    const tables = getProfilingStore()!.queryAll<{ name: string }>(
+      `SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`,
+    );
+    expect(tables.map((t) => t.name)).toContain("spans");
+    expect(tables.map((t) => t.name)).not.toContain("samples");
   });
 
   test("batch-deletes oldest rows when over maxRows", () => {
@@ -151,19 +261,33 @@ describe("profiling", () => {
       batchDeleteRows: 1,
     });
     const store = openProfilingStore(join(dir, "tome-profiling.sqlite"));
-    // Inject tiny caps so the test stays fast (MB heuristic would be huge).
     store.setRetention(5, 3);
     for (let i = 0; i < 5; i++) {
-      recordProfilingSample("http", 1, `row-${i}`);
+      recordProfilingSpan({
+        traceId: "a".repeat(32),
+        spanId: `${i}`.padStart(16, "0"),
+        parentSpanId: null,
+        name: `row-${i}`,
+        kind: "INTERNAL",
+        durationMs: 1,
+        attributes: { i },
+      });
     }
     expect(store.count()).toBe(5);
-    // 6th insert → count 6 > 5 → delete 3 oldest → 3 remain
-    recordProfilingSample("http", 1, "row-5");
+    recordProfilingSpan({
+      traceId: "a".repeat(32),
+      spanId: "5".padStart(16, "0"),
+      parentSpanId: null,
+      name: "row-5",
+      kind: "INTERNAL",
+      durationMs: 1,
+      attributes: {},
+    });
     expect(store.count()).toBe(3);
-    const details = store
-      .queryAll<{ detail: string }>("SELECT detail FROM samples ORDER BY id ASC")
-      .map((r) => r.detail);
-    expect(details).toEqual(["row-3", "row-4", "row-5"]);
+    const names = store
+      .queryAll<{ name: string }>("SELECT name FROM spans ORDER BY id ASC")
+      .map((r) => r.name);
+    expect(names).toEqual(["row-3", "row-4", "row-5"]);
   });
 
   test("getProfilingConfig exposes capacity fields", () => {
