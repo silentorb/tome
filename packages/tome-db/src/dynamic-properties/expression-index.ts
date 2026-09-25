@@ -3,7 +3,11 @@
  * (lazy single-flight build from DynAggregate IR).
  */
 
-import type { MemberPageExpressionIndexSort, TomeQueryCache } from "tome-service-interfaces";
+import {
+  withProfilingSpan,
+  type MemberPageExpressionIndexSort,
+  type TomeQueryCache,
+} from "tome-service-interfaces";
 import type { ViewSortSpec } from "tome-graph-interfaces";
 import {
   columnSetAggregateForResolver,
@@ -177,25 +181,34 @@ export function ensureDynSortIndexes(
   plans: readonly DynSortIndexPlan[],
   contentDir?: string,
 ): MemberPageExpressionIndexSort[] {
-  const cache = getQueryCache(store);
-  if (!cache || typeof cache.replaceExpressionIndexValues !== "function") {
-    throw new Error("Expression indexes require a SQLite query cache");
-  }
+  return withProfilingSpan(
+    "exprIndex.ensureAll",
+    "INTERNAL",
+    {
+      "exprIndex.plan_count": plans.length,
+    },
+    () => {
+      const cache = getQueryCache(store);
+      if (!cache || typeof cache.replaceExpressionIndexValues !== "function") {
+        throw new Error("Expression indexes require a SQLite query cache");
+      }
 
-  const dir =
-    contentDir ??
-    (isGraphStoreBase(store) ? store.contentDir : resolveContentPath());
-  const projections = listSetMemberProjectionPairs(dir);
-  const memberIds =
-    projections.length > 0
-      ? listMemberPageNodeIds(store, ownerId, { projections })
-      : [];
+      const dir =
+        contentDir ??
+        (isGraphStoreBase(store) ? store.contentDir : resolveContentPath());
+      const projections = listSetMemberProjectionPairs(dir);
+      const memberIds =
+        projections.length > 0
+          ? listMemberPageNodeIds(store, ownerId, { projections })
+          : [];
 
-  for (const plan of plans) {
-    ensureExpressionIndex(cache, store, plan, memberIds, dir);
-  }
+      for (const plan of plans) {
+        ensureExpressionIndex(cache, store, plan, memberIds, dir);
+      }
 
-  return plans.map((plan) => ({ column: plan.column, digest: plan.digest }));
+      return plans.map((plan) => ({ column: plan.column, digest: plan.digest }));
+    },
+  );
 }
 
 /** @deprecated Prefer ensureDynSortIndexes */
@@ -262,48 +275,63 @@ function ensureExpressionIndex(
   contentDir?: string,
 ): void {
   const status = cache.getExpressionIndexStatus(plan.digest);
-  if (status === "ready") return;
+  const attrs: Record<string, string | number | boolean> = {
+    "exprIndex.digest": plan.digest,
+    "exprIndex.status": status ?? "missing",
+    "exprIndex.path": "skip",
+  };
 
-  if (buildsInFlight.has(plan.digest)) {
-    // Another caller on this stack owns the build; skip duplicate work.
-    return;
-  }
-
-  buildsInFlight.add(plan.digest);
-  try {
-    const expressionJson = expressionJsonForPlan(plan, contentDir);
-    const dirtyIds =
-      typeof cache.getExpressionIndexDirtyMemberIds === "function"
-        ? cache.getExpressionIndexDirtyMemberIds(plan.digest)
-        : null;
-
-    const canPatch =
-      status === "stale" &&
-      dirtyIds != null &&
-      dirtyIds.length > 0 &&
-      typeof cache.upsertExpressionIndexValues === "function" &&
-      typeof cache.deleteExpressionIndexValues === "function";
-
-    if (canPatch) {
-      const memberSet = new Set(memberIds);
-      const stillMembers = dirtyIds.filter((id) => memberSet.has(id));
-      const removed = dirtyIds.filter((id) => !memberSet.has(id));
-      if (removed.length > 0) {
-        cache.deleteExpressionIndexValues(plan.digest, removed);
-      }
-      if (stillMembers.length > 0) {
-        const rows = evaluatePlanValues(store, plan, stillMembers);
-        cache.upsertExpressionIndexValues(plan.digest, expressionJson, rows);
-      } else {
-        // Only removals — mark ready without re-evaluating.
-        cache.upsertExpressionIndexValues(plan.digest, expressionJson, []);
-      }
+  withProfilingSpan("exprIndex.ensure", "INTERNAL", attrs, () => {
+    if (status === "ready") {
+      attrs["exprIndex.path"] = "skip";
       return;
     }
 
-    const rows = evaluatePlanValues(store, plan, memberIds);
-    cache.replaceExpressionIndexValues(plan.digest, expressionJson, rows);
-  } finally {
-    buildsInFlight.delete(plan.digest);
-  }
+    if (buildsInFlight.has(plan.digest)) {
+      // Another caller on this stack owns the build; skip duplicate work.
+      attrs["exprIndex.path"] = "skip";
+      attrs["exprIndex.in_flight"] = true;
+      return;
+    }
+
+    buildsInFlight.add(plan.digest);
+    try {
+      const expressionJson = expressionJsonForPlan(plan, contentDir);
+      const dirtyIds =
+        typeof cache.getExpressionIndexDirtyMemberIds === "function"
+          ? cache.getExpressionIndexDirtyMemberIds(plan.digest)
+          : null;
+
+      const canPatch =
+        status === "stale" &&
+        dirtyIds != null &&
+        dirtyIds.length > 0 &&
+        typeof cache.upsertExpressionIndexValues === "function" &&
+        typeof cache.deleteExpressionIndexValues === "function";
+
+      if (canPatch) {
+        attrs["exprIndex.path"] = "patch";
+        const memberSet = new Set(memberIds);
+        const stillMembers = dirtyIds.filter((id) => memberSet.has(id));
+        const removed = dirtyIds.filter((id) => !memberSet.has(id));
+        if (removed.length > 0) {
+          cache.deleteExpressionIndexValues(plan.digest, removed);
+        }
+        if (stillMembers.length > 0) {
+          const rows = evaluatePlanValues(store, plan, stillMembers);
+          cache.upsertExpressionIndexValues(plan.digest, expressionJson, rows);
+        } else {
+          // Only removals — mark ready without re-evaluating.
+          cache.upsertExpressionIndexValues(plan.digest, expressionJson, []);
+        }
+        return;
+      }
+
+      attrs["exprIndex.path"] = "rebuild";
+      const rows = evaluatePlanValues(store, plan, memberIds);
+      cache.replaceExpressionIndexValues(plan.digest, expressionJson, rows);
+    } finally {
+      buildsInFlight.delete(plan.digest);
+    }
+  });
 }

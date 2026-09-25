@@ -1122,81 +1122,111 @@ export class GraphDatabase implements TomeQueryCache {
 
 
   listMemberPage(setId: string, query: MemberPageQuery): MemberPageResult {
-    const emitted = compileMemberPage(setId, query, "page");
-    if (emitted.empty) {
-      const empty: MemberPageResult = { relationships: [], total: 0 };
-      if (query.groups) empty.groupIds = [];
-      if (query.relationFields && query.relationFields.length > 0) {
-        empty.relationFieldsByRow = [];
+    const parentAttrs: Record<string, string | number | boolean> = {
+      "member.mode": "page",
+      "member.has_member_ids": Boolean(query.memberIds && query.memberIds.length > 0),
+      "member.has_scope": query.scope != null,
+      "member.has_groups": query.groups != null,
+      "member.has_relation_fields": Boolean(
+        query.relationFields && query.relationFields.length > 0,
+      ),
+    };
+    return withProfilingSpan("listMemberPage", "INTERNAL", parentAttrs, () => {
+      const emitted = compileMemberPage(setId, query, "page");
+      parentAttrs["member.empty"] = emitted.empty;
+      parentAttrs["member.apply_limit_offset"] = emitted.applyLimitOffset;
+      if (emitted.empty) {
+        const empty: MemberPageResult = { relationships: [], total: 0 };
+        if (query.groups) empty.groupIds = [];
+        if (query.relationFields && query.relationFields.length > 0) {
+          empty.relationFieldsByRow = [];
+        }
+        return empty;
       }
-      return empty;
-    }
 
-    let total = 0;
-    if (emitted.countSql) {
-      const totalRow = this.db
-        .prepare(emitted.countSql)
-        .get(...emitted.countParams) as { c: number };
-      total = totalRow.c;
-    }
+      let total = 0;
+      if (emitted.countSql) {
+        total = withProfilingSpan("memberPage.count", "INTERNAL", {}, () => {
+          const totalRow = this.db
+            .prepare(emitted.countSql)
+            .get(...emitted.countParams) as { c: number };
+          return totalRow.c;
+        });
+      }
 
-    const { limit, offset } = (() => {
-      const offsetRaw = query.offset;
-      const off =
-        typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
-          ? Math.floor(offsetRaw)
-          : 0;
-      const limitRaw = query.limit;
-      const lim =
-        limitRaw === undefined || limitRaw === null
-          ? null
-          : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
-            ? Math.floor(limitRaw)
-            : null;
-      return { limit: lim, offset: off };
-    })();
+      const { limit, offset } = (() => {
+        const offsetRaw = query.offset;
+        const off =
+          typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
+            ? Math.floor(offsetRaw)
+            : 0;
+        const limitRaw = query.limit;
+        const lim =
+          limitRaw === undefined || limitRaw === null
+            ? null
+            : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
+              ? Math.floor(limitRaw)
+              : null;
+        return { limit: lim, offset: off };
+      })();
 
-    type Row = ProjectionRow & { resolved_group_id?: string | null };
-    let rows: Row[];
-    if (!emitted.applyLimitOffset || limit === null) {
-      rows = this.db.prepare(emitted.pageSql).all(...emitted.pageParams) as Row[];
-    } else {
-      rows = this.db
-        .prepare(`${emitted.pageSql} LIMIT ? OFFSET ?`)
-        .all(...emitted.pageParams, limit, offset) as Row[];
-    }
+      type Row = ProjectionRow & { resolved_group_id?: string | null };
+      const rows = withProfilingSpan("memberPage.page", "INTERNAL", {}, () => {
+        if (!emitted.applyLimitOffset || limit === null) {
+          return this.db.prepare(emitted.pageSql).all(...emitted.pageParams) as Row[];
+        }
+        return this.db
+          .prepare(`${emitted.pageSql} LIMIT ? OFFSET ?`)
+          .all(...emitted.pageParams, limit, offset) as Row[];
+      });
 
-    if (query.memberIds && query.memberIds.length > 0) {
-      total = rows.length;
-    }
+      if (query.memberIds && query.memberIds.length > 0) {
+        total = rows.length;
+      }
 
-    const relationships = this.mapProjectionRows(rows);
-    const result: MemberPageResult = { relationships, total };
+      const relationships = this.mapProjectionRows(rows);
+      const result: MemberPageResult = { relationships, total };
 
-    if (emitted.includeGroupId || query.groups) {
-      result.groupIds = rows.map((row) =>
-        typeof row.resolved_group_id === "string" && row.resolved_group_id
-          ? row.resolved_group_id
-          : null,
-      );
-    }
+      if (emitted.includeGroupId || query.groups) {
+        result.groupIds = rows.map((row) =>
+          typeof row.resolved_group_id === "string" && row.resolved_group_id
+            ? row.resolved_group_id
+            : null,
+        );
+      }
 
-    if (query.relationFields && query.relationFields.length > 0) {
-      result.relationFieldsByRow = relationFieldsByRowFromSqlRows(
-        rows as unknown as Record<string, unknown>[],
-        emitted.relationColumns,
-      );
-    }
-    return result;
+      if (query.relationFields && query.relationFields.length > 0) {
+        result.relationFieldsByRow = relationFieldsByRowFromSqlRows(
+          rows as unknown as Record<string, unknown>[],
+          emitted.relationColumns,
+        );
+      }
+      return result;
+    });
   }
 
   listMemberPageNodeIds(setId: string, query: MemberPageQuery): string[] {
-    const emitted = compileMemberPage(setId, query, "ids");
-    if (emitted.empty) return [];
-    const rows = this.db
-      .prepare(emitted.pageSql)
-      .all(...emitted.pageParams) as { member_id?: string; id?: string }[];
-    return rows.map((row) => row.member_id ?? row.id!).filter(Boolean);
+    const parentAttrs: Record<string, string | number | boolean> = {
+      "member.mode": "ids",
+      "member.has_member_ids": Boolean(query.memberIds && query.memberIds.length > 0),
+      "member.has_scope": query.scope != null,
+      "member.has_groups": query.groups != null,
+      "member.has_relation_fields": Boolean(
+        query.relationFields && query.relationFields.length > 0,
+      ),
+    };
+    return withProfilingSpan("listMemberPageNodeIds", "INTERNAL", parentAttrs, () => {
+      const emitted = compileMemberPage(setId, query, "ids");
+      parentAttrs["member.empty"] = emitted.empty;
+      parentAttrs["member.apply_limit_offset"] = emitted.applyLimitOffset;
+      if (emitted.empty) return [];
+      const rows = withProfilingSpan("memberPage.page", "INTERNAL", {}, () =>
+        this.db
+          .prepare(emitted.pageSql)
+          .all(...emitted.pageParams) as { member_id?: string; id?: string }[],
+      );
+      return rows.map((row) => row.member_id ?? row.id!).filter(Boolean);
+    });
   }
 
   listRelatedTargetNodeIds(sourceNodeId: string, type: string): string[] {

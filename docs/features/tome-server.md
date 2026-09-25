@@ -136,7 +136,18 @@ Spans are appended to a dedicated SQLite file, table **`spans`**:
 
 Common attribute keys (semantic-convention inspired): `http.method`, `http.route`, `http.status_code`, `url.query`, `db.system`, `db.operation`, `db.statement`, `db.rows`, `db.params_count`.
 
-All `GraphDatabase` statement executes (`.all` / `.get` / `.run`) emit CLIENT spans when profiling is on — not only `queryAll`. Relation-table paths also emit INTERNAL spans (`getRelationTableSection`, `relation.loadConnections`, `relationWindow.*`, …). Nested work shares one `trace_id` via `AsyncLocalStorage`.
+All `GraphDatabase` statement executes (`.all` / `.get` / `.run`) emit CLIENT spans when profiling is on — not only `queryAll`. Nested work shares one `trace_id` via `AsyncLocalStorage`.
+
+**INTERNAL phases (query pipelines):**
+
+| Area | Span names | Branch signal (attributes) |
+| --- | --- | --- |
+| Relation tables | `getRelationTableSection`, `relation.loadConnections`, `relation.buildSection`, `listRelationshipsFromSourceWindow`, `relationWindow.count` / `.page` / `.mapRows` | (phase names; attrs mostly empty today) |
+| Membership SQL compiler | `memberPage.analyze` / `.bind` / `.plan` / `.emit` | `member.mode`, `member.layers`, `member.order_kinds`, `member.has_member_ids`, `member.has_scope`, `member.has_groups`, `member.has_relation_fields`, `member.empty`, `member.apply_limit_offset` |
+| Membership execute | `listMemberPage` / `listMemberPageNodeIds`, `memberPage.count` / `.page` | Same `member.*` keys on the parent (self-describing without joining compile children) |
+| Dyn expression indexes | `exprIndex.ensureAll`, `exprIndex.ensure` | `exprIndex.path` (`skip` \| `patch` \| `rebuild`), `exprIndex.status`, `exprIndex.digest`, optional `exprIndex.in_flight` |
+
+Items and composed table windows share the membership compiler/execute spans (one instrumentation site). Relation-edge SQL remains a separate path with its own INTERNAL names above.
 
 When enabled:
 

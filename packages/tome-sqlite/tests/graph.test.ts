@@ -462,6 +462,100 @@ describe("GraphDatabase", () => {
     resetProfilingForTests();
   });
 
+  test("listMemberPage emits compile/execute INTERNAL spans with plan attrs", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-member-profiling-"));
+    dbPath = join(tempDir, "test.sqlite");
+    configureProfiling({
+      enabled: true,
+      verbose: true,
+      slowMs: 0,
+      logToStderr: false,
+      maxMb: 32,
+      batchDeleteMb: 4,
+      maxRows: 1000,
+      batchDeleteRows: 100,
+    });
+    openProfilingStore(join(tempDir, "tome-profiling.sqlite"));
+
+    const db = new GraphDatabase(dbPath);
+    const setId = "01SET0000000000000000000000";
+    const setProjection = "assocSet:0";
+    const memberProjection = "assocSet:1";
+    db.upsertNode(setId, { title: "Type table" });
+    for (let i = 0; i < 3; i++) {
+      const id = `01MEMBER${String(i).padStart(18, "0")}`;
+      db.upsertNode(id, { title: `Member ${i}` });
+      db.upsertRelationship(setId, id, setProjection, { ordinal: i });
+    }
+
+    getProfilingStore()?.clear();
+    runInProfilingTrace(() => {
+      db.listMemberPage(setId, {
+        projections: [{ setProjection, memberProjection }],
+        sorts: [{ column: "name", direction: "asc" }],
+        limit: 2,
+        offset: 0,
+      });
+    });
+
+    const internals = getProfilingStore()!.queryAll<{
+      name: string;
+      trace_id: string;
+      span_id: string;
+      parent_span_id: string | null;
+      attributes: string;
+    }>(`SELECT name, trace_id, span_id, parent_span_id, attributes FROM spans WHERE kind = 'INTERNAL'`);
+
+    const byName = (name: string) => internals.filter((r) => r.name === name);
+    expect(byName("listMemberPage")).toHaveLength(1);
+    expect(byName("memberPage.analyze")).toHaveLength(1);
+    expect(byName("memberPage.bind")).toHaveLength(1);
+    expect(byName("memberPage.plan")).toHaveLength(1);
+    expect(byName("memberPage.emit")).toHaveLength(1);
+    expect(byName("memberPage.count")).toHaveLength(1);
+    expect(byName("memberPage.page")).toHaveLength(1);
+
+    const parent = byName("listMemberPage")[0]!;
+    const traceIds = new Set(internals.map((r) => r.trace_id));
+    expect(traceIds.size).toBe(1);
+    expect(traceIds.has(parent.trace_id)).toBe(true);
+
+    for (const childName of [
+      "memberPage.analyze",
+      "memberPage.bind",
+      "memberPage.plan",
+      "memberPage.emit",
+      "memberPage.count",
+      "memberPage.page",
+    ]) {
+      const child = byName(childName)[0]!;
+      expect(child.parent_span_id).toBe(parent.span_id);
+    }
+
+    const planAttrs = JSON.parse(byName("memberPage.plan")[0]!.attributes) as Record<
+      string,
+      unknown
+    >;
+    expect(planAttrs["member.mode"]).toBe("page");
+    expect(String(planAttrs["member.layers"])).toContain("memberUniverse");
+    expect(String(planAttrs["member.order_kinds"])).toContain("catalogSort");
+    expect(planAttrs["member.empty"]).toBeUndefined();
+
+    const emitAttrs = JSON.parse(byName("memberPage.emit")[0]!.attributes) as Record<
+      string,
+      unknown
+    >;
+    expect(emitAttrs["member.empty"]).toBe(false);
+    expect(emitAttrs["member.apply_limit_offset"]).toBe(true);
+
+    const parentAttrs = JSON.parse(parent.attributes) as Record<string, unknown>;
+    expect(parentAttrs["member.mode"]).toBe("page");
+    expect(parentAttrs["member.empty"]).toBe(false);
+
+    db.close();
+    resetProfilingForTests();
+  });
+
   test("windows set membership with ORDER BY LIMIT OFFSET and relation counts", () => {
     tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "set-member-window.sqlite");

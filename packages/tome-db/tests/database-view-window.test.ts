@@ -7,6 +7,13 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GraphDatabase } from "tome-sqlite";
+import {
+  configureProfiling,
+  getProfilingStore,
+  openProfilingStore,
+  resetProfilingForTests,
+  runInProfilingTrace,
+} from "tome-service-interfaces";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import {
@@ -85,6 +92,7 @@ describe("database-view SQL windows", () => {
   writeSchema();
 
   afterAll(() => {
+    resetProfilingForTests();
     db.close();
     rmSync(dir, { recursive: true, force: true });
   });
@@ -259,11 +267,27 @@ describe("database-view SQL windows", () => {
     db.upsertRelationship(high, "01SCENEB0000000000000000001", sceneProj, {});
     db.upsertRelationship(low, "01SCENEA0000000000000000001", sceneProj, {});
 
-    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
-      sorts: [{ column: "all_scene_count", direction: "desc" }],
-      limit: 50,
-      offset: 0,
+    const profilingDir = mkdtempSync(join(tmpdir(), "tome-db-expr-profiling-"));
+    configureProfiling({
+      enabled: true,
+      verbose: true,
+      slowMs: 0,
+      logToStderr: false,
+      maxMb: 32,
+      batchDeleteMb: 4,
+      maxRows: 1000,
+      batchDeleteRows: 100,
     });
+    openProfilingStore(join(profilingDir, "tome-profiling.sqlite"));
+    getProfilingStore()?.clear();
+
+    const detail = runInProfilingTrace(() =>
+      getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+        sorts: [{ column: "all_scene_count", direction: "desc" }],
+        limit: 50,
+        offset: 0,
+      }),
+    );
     expect(detail?.rowsWindow.total).toBe(2);
     expect(detail?.rows.map((r) => r.nodeId)).toEqual([high, low]);
     expect(detail?.rows[0]?.cells.all_scene_count).toBe("2");
@@ -271,6 +295,17 @@ describe("database-view SQL windows", () => {
     expect(detail?.allColumnDefs?.some((c) => c.key === "all_scene_count" && c.source === "dynamic")).toBe(
       true,
     );
+
+    const rebuildSpans = getProfilingStore()!.queryAll<{ name: string; attributes: string }>(
+      `SELECT name, attributes FROM spans WHERE name = 'exprIndex.ensure'`,
+    );
+    expect(rebuildSpans.length).toBeGreaterThan(0);
+    expect(
+      rebuildSpans.some((row) => {
+        const attrs = JSON.parse(row.attributes) as Record<string, unknown>;
+        return attrs["exprIndex.path"] === "rebuild";
+      }),
+    ).toBe(true);
 
     const digests = db.queryAll<{ digest: string; status: string }>(
       "SELECT digest, status FROM expression_indexes",
@@ -281,6 +316,25 @@ describe("database-view SQL windows", () => {
     const readyDigest = digests.find((row) => row.status === "ready")!.digest;
     db.upsertRelationship(low, high, "UNRELATED:0", {});
     expect(db.getExpressionIndexStatus(readyDigest)).toBe("ready");
+
+    getProfilingStore()?.clear();
+    runInProfilingTrace(() =>
+      getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+        sorts: [{ column: "all_scene_count", direction: "desc" }],
+        limit: 50,
+        offset: 0,
+      }),
+    );
+    const skipSpans = getProfilingStore()!.queryAll<{ attributes: string }>(
+      `SELECT attributes FROM spans WHERE name = 'exprIndex.ensure'`,
+    );
+    expect(skipSpans.length).toBeGreaterThan(0);
+    expect(
+      skipSpans.every((row) => {
+        const attrs = JSON.parse(row.attributes) as Record<string, unknown>;
+        return attrs["exprIndex.path"] === "skip";
+      }),
+    ).toBe(true);
 
     // Scene-edge mutation dirties endpoints; re-ensure patches without full wipe of siblings.
     const before = db.queryAll<{ member_id: string; sort_value: number }>(
@@ -294,11 +348,24 @@ describe("database-view SQL windows", () => {
     const dirty = db.getExpressionIndexDirtyMemberIds(readyDigest);
     expect(dirty?.includes(low)).toBe(true);
 
-    const detailAfter = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
-      sorts: [{ column: "all_scene_count", direction: "desc" }],
-      limit: 50,
-      offset: 0,
-    });
+    getProfilingStore()?.clear();
+    const detailAfter = runInProfilingTrace(() =>
+      getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+        sorts: [{ column: "all_scene_count", direction: "desc" }],
+        limit: 50,
+        offset: 0,
+      }),
+    );
+    const patchSpans = getProfilingStore()!.queryAll<{ attributes: string }>(
+      `SELECT attributes FROM spans WHERE name = 'exprIndex.ensure'`,
+    );
+    expect(
+      patchSpans.some((row) => {
+        const attrs = JSON.parse(row.attributes) as Record<string, unknown>;
+        return attrs["exprIndex.path"] === "patch";
+      }),
+    ).toBe(true);
+
     expect(db.getExpressionIndexStatus(readyDigest)).toBe("ready");
     expect(detailAfter?.rowsWindow.total).toBe(2);
     const byId = new Map(detailAfter?.rows.map((r) => [r.nodeId, r.cells.all_scene_count]));
@@ -314,6 +381,9 @@ describe("database-view SQL windows", () => {
     expect(highAfter.sort_value).toBe(highBefore.sort_value);
     const lowAfter = after.find((r) => r.member_id === low)!;
     expect(lowAfter.sort_value).toBe(2);
+
+    resetProfilingForTests();
+    rmSync(profilingDir, { recursive: true, force: true });
 
     writeFileSync(
       dynamicPropertiesFilePath(contentDir),

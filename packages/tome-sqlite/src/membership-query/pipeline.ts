@@ -1,3 +1,7 @@
+import {
+  withProfilingSpan,
+  type ProfilingAttributes,
+} from "tome-service-interfaces";
 import { analyzeMemberPage, type MemberPageQueryLike } from "./analyze";
 import { bindExpressions } from "./bind";
 import { emitMembershipSql } from "./emit";
@@ -6,17 +10,54 @@ import type { EmittedSql } from "./types";
 
 /**
  * Analyze → Bind → Plan → Emit for a unified member-page (or ids) read.
+ * When profiling is on, each stage is an INTERNAL span with plan-branch attrs.
  */
 export function compileMemberPage(
   setId: string,
   query: MemberPageQueryLike,
   mode?: "page" | "ids",
 ): EmittedSql {
-  const intent = analyzeMemberPage(setId, {
-    ...query,
-    mode: mode ?? query.mode ?? "page",
+  const resolvedMode = mode ?? query.mode ?? "page";
+  const intent = withProfilingSpan(
+    "memberPage.analyze",
+    "INTERNAL",
+    { "member.mode": resolvedMode },
+    () =>
+      analyzeMemberPage(setId, {
+        ...query,
+        mode: resolvedMode,
+      }),
+  );
+
+  const baseAttrs: ProfilingAttributes = {
+    "member.mode": resolvedMode,
+    "member.has_member_ids": Boolean(intent.memberIds && intent.memberIds.length > 0),
+    "member.has_relation_fields": intent.relationFields.length > 0,
+    "member.has_scope": intent.scope != null,
+    "member.has_groups": intent.groups != null,
+  };
+
+  const catalog = withProfilingSpan("memberPage.bind", "INTERNAL", { ...baseAttrs }, () =>
+    bindExpressions(intent),
+  );
+
+  const planAttrs: ProfilingAttributes = { ...baseAttrs };
+  const plan = withProfilingSpan("memberPage.plan", "INTERNAL", planAttrs, () => {
+    const next = planMembershipQuery(intent, catalog);
+    planAttrs["member.layers"] = next.layers.join(",");
+    planAttrs["member.order_kinds"] = next.orderKeys.map((k) => k.kind).join(",");
+    return next;
   });
-  const catalog = bindExpressions(intent);
-  const plan = planMembershipQuery(intent, catalog);
-  return emitMembershipSql(plan);
+
+  const emitAttrs: ProfilingAttributes = {
+    ...baseAttrs,
+    "member.layers": planAttrs["member.layers"] ?? "",
+    "member.order_kinds": planAttrs["member.order_kinds"] ?? "",
+  };
+  return withProfilingSpan("memberPage.emit", "INTERNAL", emitAttrs, () => {
+    const emitted = emitMembershipSql(plan);
+    emitAttrs["member.empty"] = emitted.empty;
+    emitAttrs["member.apply_limit_offset"] = emitted.applyLimitOffset;
+    return emitted;
+  });
 }
