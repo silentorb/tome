@@ -37,12 +37,10 @@ import {
 import {
   applyNameFilterAndWindow,
   buildTableRowsWindow,
-  resolveWindowBounds,
 } from "../table-rows-window";
 import {
+  explodeTableWindowRequest,
   resolveSqlWindowSorts,
-  shouldUseSqlComposedWindow,
-  shouldUseSqlComposedSearchWindow,
 } from "../table-sql-window";
 import {
   membershipEdgesForHits,
@@ -286,10 +284,10 @@ function buildComposedDatabaseViewSql(
   associationId: string,
   memberSidePerspective: string,
   sectionLabel: string,
-  tableSearch = false,
 ): DatabaseViewDetail {
+  const plan = explodeTableWindowRequest(db, rowsQuery);
   const projections = listSetMemberProjectionPairs(dir);
-  const { offset, limit } = resolveWindowBounds(rowsQuery);
+  const { offset, limit } = plan;
 
   let activeScopeId: string | undefined;
   let tabs: DatabaseViewDetail["tabs"];
@@ -416,7 +414,7 @@ function buildComposedDatabaseViewSql(
   let rowsWindow: ReturnType<typeof buildTableRowsWindow>;
   let relationFieldsByRow: Record<string, MemberPageRelationFieldLink[]>[] | undefined;
 
-  if (tableSearch) {
+  if (plan.searchQuery) {
     const scopeIds = listMemberPageNodeIds(db, databaseId, memberPageQuery);
     const { hits, rowsWindow: searchWindow } = runTableSearchWindow(
       resolveTableSearcher(db),
@@ -763,39 +761,8 @@ export function buildComposedDatabaseView(
   const sectionLabel = perspectiveDisplayLabel(associations, setSideProjection, associationId);
   const databaseTitle = titleFromProperties(database.properties);
 
-  if (shouldUseSqlComposedSearchWindow(db, rowsQuery)) {
-    return buildComposedDatabaseViewSql(
-      db,
-      composition,
-      requestedTabId,
-      dir,
-      rowsQuery,
-      databaseId,
-      databaseTitle,
-      associationId,
-      memberSidePerspective,
-      sectionLabel,
-      true,
-    );
-  }
-
-  const excludeKeysForGate = excludedKeys(composition);
-  const { dynamicColumnDefs: gateDynDefs, hiddenColumnKeys: gateHidden } =
-    listDynamicColumnDefs(db, databaseId, "default", undefined, { contentDir: dir });
-  const gateDefs = buildDatabaseColumnDefs(
-    db,
-    databaseId,
-    gateDynDefs,
-    new Set([...gateHidden, ...excludeKeysForGate]),
-    { excludeKeys: excludeKeysForGate, contentDir: dir },
-  );
-
-  if (
-    shouldUseSqlComposedWindow(db, rowsQuery, gateDefs, {
-      ownerId: databaseId,
-      contentDir: dir,
-    })
-  ) {
+  const plan = explodeTableWindowRequest(db, rowsQuery);
+  if (plan.backend === "sql") {
     return buildComposedDatabaseViewSql(
       db,
       composition,

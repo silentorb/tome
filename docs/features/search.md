@@ -51,6 +51,17 @@ dataStores.fts (tome-search-sqlite)
   ← sync.graph marloth.observeOut → fts.observeIn
 ```
 
+### Table `q` vs Imp `search` vs Recent
+
+| Concern | Treatment |
+| --- | --- |
+| Imp `type: "search"` | Collection **operator** (peer to filter/sort); host-delegated; generic Imp SQL does not lower it |
+| Editor table `q` | Same searcher via `searchWindow`, but as a **prior query operator** in the [uniform window pipeline](./views.md) — not a peer “window mode” to SQL/`js` backends |
+| Sidebar Recent | Separate Imp graph `recentNodesGraph` (`sort(modified_at)` → limit) via `GET /api/nodes/recent` — Imp→SQL, **not** membership/table windows |
+| Empty global `q` | Title-ordered **browse** (`listRecentNodes`) — not the Recent sidebar |
+
+**Paradigm flip:** LIKE search is primarily a **filter** (order secondary). Advanced text search (FTS / future) is primarily a **weighted sort**; non-matches or low scores are an optional **shelf** cutoff. Today’s searcher call still owns rank + page; membership SQL only hydrates by hit ids.
+
 ## Verification
 
 - `bun run --filter tome-search-like test`

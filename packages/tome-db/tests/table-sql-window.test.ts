@@ -6,11 +6,9 @@ import { GraphDatabase } from "tome-sqlite";
 import {
   TEST_MEMBER_OF_ASSOCIATION_ID,
 } from "../src/content/test-helpers";
-import { typeTableMarkerProperties } from "../src/node-capabilities";
 import {
+  explodeTableWindowRequest,
   resolveSqlWindowSorts,
-  shouldUseSqlDatabaseWindow,
-  shouldUseSqlComposedWindow,
 } from "../src/table-sql-window";
 import type { DatabaseColumnDef } from "../src/database-view";
 import { invalidateDynamicPropertiesCache } from "../src/content/sync";
@@ -26,6 +24,51 @@ import {
   invalidateAssociationsCache,
   invalidateSchemaCache,
 } from "tome-flatfile";
+
+describe("explodeTableWindowRequest", () => {
+  const dir = mkdtempSync(join(tmpdir(), "tome-sql-window-explode-"));
+  const dbPath = join(dir, "test.sqlite");
+  const db = new GraphDatabase(dbPath);
+
+  afterAll(() => {
+    db.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  test("sql backend with query cache; searchQuery absent when q empty", () => {
+    const plan = explodeTableWindowRequest(db, { limit: 50, offset: 10 });
+    expect(plan.backend).toBe("sql");
+    expect(plan.searchQuery).toBeUndefined();
+    expect(plan.limit).toBe(50);
+    expect(plan.offset).toBe(10);
+    expect(plan.reasons).toContain("query_cache");
+    expect(plan.reasons).not.toContain("table_q");
+  });
+
+  test("searchQuery is an operator when q is set (not a backend mode)", () => {
+    const plan = explodeTableWindowRequest(db, { q: "  hello  ", limit: 20 });
+    expect(plan.backend).toBe("sql");
+    expect(plan.searchQuery).toBe("hello");
+    expect(plan.reasons).toContain("query_cache");
+    expect(plan.reasons).toContain("table_q");
+  });
+
+  test("js backend without query cache", () => {
+    const flat = {
+      listRelationshipProjections() {
+        return [];
+      },
+      getNode() {
+        return null;
+      },
+    } as never;
+    const plan = explodeTableWindowRequest(flat, { q: "x" });
+    expect(plan.backend).toBe("js");
+    expect(plan.searchQuery).toBe("x");
+    expect(plan.reasons).toContain("no_query_cache");
+    expect(plan.reasons).toContain("table_q");
+  });
+});
 
 describe("resolveSqlWindowSorts / SQL window fail-closed", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-sql-window-failclosed-"));
@@ -70,27 +113,15 @@ describe("resolveSqlWindowSorts / SQL window fail-closed", () => {
     { key: "mystery", name: "Mystery", type: "number", source: "dynamic" },
   ];
 
-  test("shouldUseSqlDatabaseWindow is true with cache even for non-expressible sorts", () => {
-    expect(
-      shouldUseSqlDatabaseWindow(
-        db,
-        { sorts: [{ column: "bad-key!", direction: "asc" }] },
-        [{ column: "bad-key!", direction: "asc" }],
-        columnDefs,
-        { ownerId, contentDir },
-      ),
-    ).toBe(true);
-    expect(
-      shouldUseSqlComposedWindow(
-        db,
-        { sorts: [{ column: "mystery", direction: "desc" }] },
-        columnDefs,
-        { ownerId, contentDir },
-      ),
-    ).toBe(true);
+  test("explode keeps sql backend even for non-expressible sorts", () => {
+    const plan = explodeTableWindowRequest(db, {
+      sorts: [{ column: "bad-key!", direction: "asc" }],
+    });
+    expect(plan.backend).toBe("sql");
+    expect(plan.searchQuery).toBeUndefined();
   });
 
-  test("shouldUseSqlDatabaseWindow is false without query cache", () => {
+  test("explode is js without query cache", () => {
     const flat = {
       listRelationshipProjections() {
         return [];
@@ -99,8 +130,7 @@ describe("resolveSqlWindowSorts / SQL window fail-closed", () => {
         return null;
       },
     } as never;
-    expect(shouldUseSqlDatabaseWindow(flat, undefined, [], columnDefs)).toBe(false);
-    expect(shouldUseSqlComposedWindow(flat, undefined, columnDefs)).toBe(false);
+    expect(explodeTableWindowRequest(flat, undefined).backend).toBe("js");
   });
 
   test("resolveSqlWindowSorts drops unsafe keys and empty relationType", () => {

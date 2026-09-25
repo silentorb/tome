@@ -74,21 +74,20 @@ export {
 } from "./table-rows-window";
 export type { TableRowsQuery, TableRowsWindow } from "./table-rows-window";
 export {
+  explodeTableWindowRequest,
   relationWindowSortsFromQuery,
   resolveSqlWindowSorts,
-  shouldUseSqlRelationWindow,
-  shouldUseSqlRelationSearchWindow,
-  shouldUseSqlDatabaseWindow,
-  shouldUseSqlDatabaseSearchWindow,
-  shouldUseSqlComposedWindow,
-  shouldUseSqlComposedSearchWindow,
   tableRowsQueryUsesDynSort,
   tableRowsQueryUsesUnresolvedDynSort,
   tableRowsQueryUsesNonExpressibleSort,
   tableRowsQueryUsesDeferredSearch,
   tableRowsQueryUsesTableSearch,
 } from "./table-sql-window";
-export type { ResolvedSqlWindowSorts } from "./table-sql-window";
+export type {
+  ResolvedSqlWindowSorts,
+  TableWindowBackend,
+  TableWindowRequestPlan,
+} from "./table-sql-window";
 export {
   getStoreSearch,
   runTableSearchWindow,

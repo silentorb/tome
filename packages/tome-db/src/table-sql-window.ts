@@ -14,10 +14,11 @@ import {
 } from "./dynamic-properties/expression-index";
 import { loadDynamicColumnSets } from "./dynamic-properties/overlay";
 import { parseDimensionIdFromColumnKey } from "./dynamic-properties/registry";
+import { resolveWindowBounds } from "./table-rows-window";
 
 /**
- * True when table `q` is set — routes to scoped TomeSearch windows on the SQL path
- * (or empty results when no searcher). Flatfile keeps the legacy name-filter path.
+ * True when table `q` is set — an optional search operator, not a window backend.
+ * Prefer {@link explodeTableWindowRequest} at table-window call sites.
  */
 export function tableRowsQueryUsesTableSearch(query?: TableRowsQuery): boolean {
   return Boolean(query?.q?.trim());
@@ -26,6 +27,54 @@ export function tableRowsQueryUsesTableSearch(query?: TableRowsQuery): boolean {
 /** @deprecated Use {@link tableRowsQueryUsesTableSearch}. */
 export function tableRowsQueryUsesDeferredSearch(query?: TableRowsQuery): boolean {
   return tableRowsQueryUsesTableSearch(query);
+}
+
+/** How limit/offset/sorts run after optional search: SQL cache vs in-memory JS. */
+export type TableWindowBackend = "sql" | "js";
+
+/**
+ * Exploded table-window request: backend capability + optional search operator.
+ * Search is not a window mode — when `searchQuery` is set, run a prior searcher
+ * query, then the uniform window step (hydrate by hit ids on the SQL path).
+ */
+export type TableWindowRequestPlan = {
+  backend: TableWindowBackend;
+  /** Trimmed table `q`, or absent when no search operator. */
+  searchQuery?: string;
+  sorts: ViewSortSpec[];
+  offset: number;
+  limit: number | null;
+  /** Stable reasons for tests / later profiling (e.g. `query_cache`, `table_q`). */
+  reasons: string[];
+};
+
+/**
+ * Explode a table rows query into backend + operators once.
+ * Surfaces then run: optional searcher query → uniform window → hydrate.
+ */
+export function explodeTableWindowRequest(
+  store: RelationshipReadStore,
+  query?: TableRowsQuery,
+): TableWindowRequestPlan {
+  const reasons: string[] = [];
+  const cachePresent = getQueryCache(store) !== null;
+  const backend: TableWindowBackend = cachePresent ? "sql" : "js";
+  reasons.push(cachePresent ? "query_cache" : "no_query_cache");
+
+  const trimmedQ = query?.q?.trim() ?? "";
+  const searchQuery = trimmedQ.length > 0 ? trimmedQ : undefined;
+  if (searchQuery) reasons.push("table_q");
+
+  const { offset, limit } = resolveWindowBounds(query);
+
+  return {
+    backend,
+    searchQuery,
+    sorts: query?.sorts ? [...query.sorts] : [],
+    offset,
+    limit,
+    reasons,
+  };
 }
 
 /** True when any sort column is a dynamic property / column-set key. */
@@ -187,77 +236,6 @@ export function resolveSqlWindowSorts(
   }
 
   return { sorts: kept, refusedReasons };
-}
-
-/**
- * Relation sections: SQL window when cache present.
- * Table `q` uses scoped searcher windows (still SQL path); see {@link shouldUseSqlRelationSearchWindow}.
- * Unknown sort keys are ignored in bind (fail-closed at ORDER BY), not a full-materialize escape.
- */
-export function shouldUseSqlRelationWindow(
-  store: RelationshipReadStore,
-  query?: TableRowsQuery,
-): boolean {
-  if (tableRowsQueryUsesTableSearch(query)) {
-    // Search path handled separately; do not use sort/limit SQL window.
-    return false;
-  }
-  return getQueryCache(store) !== null;
-}
-
-/** Relation `q`: cache present (searcher may be null → empty window). */
-export function shouldUseSqlRelationSearchWindow(
-  store: RelationshipReadStore,
-  query?: TableRowsQuery,
-): boolean {
-  return tableRowsQueryUsesTableSearch(query) && getQueryCache(store) !== null;
-}
-
-/**
- * Items / database custom views: SQL window when cache present.
- * Non-expressible / unresolved dyn sorts are refused via {@link resolveSqlWindowSorts}
- * (default membership order) — they do not fall back to full materialize.
- * Table `q` uses the searcher path ({@link shouldUseSqlDatabaseSearchWindow}).
- */
-export function shouldUseSqlDatabaseWindow(
-  store: RelationshipReadStore,
-  query: TableRowsQuery | undefined,
-  _sorts?: readonly ViewSortSpec[] | undefined,
-  _columnDefs?: readonly DatabaseColumnDef[],
-  _options?: { ownerId?: string; contentDir?: string },
-): boolean {
-  if (tableRowsQueryUsesTableSearch(query)) return false;
-  return getQueryCache(store) !== null;
-}
-
-/** Items `q`: cache present (searcher may be null → empty window). */
-export function shouldUseSqlDatabaseSearchWindow(
-  store: RelationshipReadStore,
-  query?: TableRowsQuery,
-): boolean {
-  return tableRowsQueryUsesTableSearch(query) && getQueryCache(store) !== null;
-}
-
-/**
- * Composed / generated presentations: SQL window when cache present and not searching.
- * Sort expressibility uses {@link resolveSqlWindowSorts} on the SQL path (fail-closed).
- */
-export function shouldUseSqlComposedWindow(
-  store: RelationshipReadStore,
-  query?: TableRowsQuery,
-  _columnDefs?: readonly DatabaseColumnDef[],
-  _options?: { ownerId?: string; contentDir?: string },
-): boolean {
-  if (tableRowsQueryUsesTableSearch(query)) return false;
-  return getQueryCache(store) !== null;
-}
-
-/** Composed `q`: cache present (searcher may be null → empty window). */
-export function shouldUseSqlComposedSearchWindow(
-  store: RelationshipReadStore,
-  query?: TableRowsQuery,
-): boolean {
-  return tableRowsQueryUsesTableSearch(query) && getQueryCache(store) !== null;
 }
 
 /** Whether the store has an injectable searcher (may still be null). */

@@ -107,7 +107,7 @@ getDatabaseViewDetail(db, databaseId, view)
   → (flatfile / no-cache only) full membership → applyDynamicProperties → JS sort → window
 ```
 
-On SQLite, leftovers are **fail-closed**: a bad sort never silently full-materializes the set. See [views.md](./views.md) § Lazy-loaded rows binary routing table.
+On SQLite, leftovers are **fail-closed**: a bad sort never silently full-materializes the set. See [views.md](./views.md) § Lazy-loaded rows uniform window pipeline table.
 
 ## Inputs / outputs / artifacts
 

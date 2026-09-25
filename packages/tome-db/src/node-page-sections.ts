@@ -39,12 +39,12 @@ import type {
   TableRowsQuery,
   ViewSortSpec,
 } from "tome-graph-interfaces";
+import type { TomeSearchHit } from "tome-interfaces/search";
 import { withProfilingSpan } from "tome-service-interfaces";
 import { applyNameFilterAndWindow, buildTableRowsWindow, resolveWindowBounds } from "./table-rows-window";
 import {
+  explodeTableWindowRequest,
   relationWindowSortsFromQuery,
-  shouldUseSqlRelationWindow,
-  shouldUseSqlRelationSearchWindow,
 } from "./table-sql-window";
 import {
   relationEdgesForHits,
@@ -371,6 +371,10 @@ function buildRelationSectionForPerspective(
   };
 }
 
+/**
+ * Uniform relation window: optional prior searcher query → window → connections.
+ * Search is an operator (feeds hit ids), not a peer window backend.
+ */
 function loadRelationSectionConnections(
   db: RelationshipReadStore,
   nodeId: string,
@@ -380,43 +384,53 @@ function loadRelationSectionConnections(
   connections: Relationship[];
   sqlWindow?: { total: number; columnKeys: string[] };
 } {
-  if (shouldUseSqlRelationSearchWindow(db, rowsQuery)) {
+  const plan = explodeTableWindowRequest(db, rowsQuery);
+
+  if (plan.backend === "js") {
+    return {
+      connections: listRelationshipsFromSource(db, nodeId, perspective),
+    };
+  }
+
+  let searchHits:
+    | { hits: TomeSearchHit[]; total: number }
+    | undefined;
+  if (plan.searchQuery) {
     const scopeIds = listRelatedTargetNodeIds(db, nodeId, perspective);
     const { hits, rowsWindow } = runTableSearchWindow(
       resolveTableSearcher(db),
       rowsQuery,
       new Set(scopeIds),
     );
-    const hitIds = hits.map((h) => h.id);
+    searchHits = { hits, total: rowsWindow.total };
+  }
+
+  if (searchHits) {
+    const hitIds = searchHits.hits.map((h) => h.id);
     const relationships = relationEdgesForHits(
       listRelationshipsFromSourceForTargetIds(db, nodeId, perspective, hitIds),
-      hits,
+      searchHits.hits,
     );
     return {
       connections: relationships,
       sqlWindow: {
-        total: rowsWindow.total,
+        total: searchHits.total,
         columnKeys: [],
       },
     };
   }
-  if (shouldUseSqlRelationWindow(db, rowsQuery)) {
-    const { offset, limit } = resolveWindowBounds(rowsQuery);
-    const { relationships, total } = listRelationshipsFromSourceWindow(db, nodeId, perspective, {
-      sorts: relationWindowSortsFromQuery(rowsQuery),
-      limit,
-      offset,
-    });
-    return {
-      connections: relationships,
-      sqlWindow: {
-        total,
-        columnKeys: [],
-      },
-    };
-  }
+
+  const { relationships, total } = listRelationshipsFromSourceWindow(db, nodeId, perspective, {
+    sorts: relationWindowSortsFromQuery(rowsQuery),
+    limit: plan.limit,
+    offset: plan.offset,
+  });
   return {
-    connections: listRelationshipsFromSource(db, nodeId, perspective),
+    connections: relationships,
+    sqlWindow: {
+      total,
+      columnKeys: [],
+    },
   };
 }
 

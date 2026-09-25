@@ -36,12 +36,10 @@ import { perspectiveDisplayLabel } from "./association-label";
 import {
   applyNameFilterAndWindow,
   buildTableRowsWindow,
-  resolveWindowBounds,
 } from "./table-rows-window";
 import {
+  explodeTableWindowRequest,
   resolveSqlWindowSorts,
-  shouldUseSqlDatabaseWindow,
-  shouldUseSqlDatabaseSearchWindow,
 } from "./table-sql-window";
 import {
   membershipEdgesForHits,
@@ -57,11 +55,13 @@ import type {
   DatabaseRow,
   DatabaseViewDetail,
   TableRowsQuery,
+  TableRowsWindow,
   ViewSortSpec,
 } from "tome-graph-interfaces";
 import type {
   MemberPageRelationFieldLink,
 } from "tome-service-interfaces";
+import type { TomeSearchHit } from "tome-interfaces/search";
 import { getCompositionForDatabase } from "./table-presentation/load";
 import { buildComposedDatabaseView } from "./table-presentation/compose";
 import { relationCountSortsFromColumnDefs } from "./member-page-query";
@@ -284,96 +284,68 @@ function buildCustomViewDetail(
     { contentDir },
   );
 
-  if (shouldUseSqlDatabaseSearchWindow(store, rowsQuery)) {
+  const plan = explodeTableWindowRequest(store, rowsQuery);
+
+  if (plan.backend === "sql") {
     const projections = listSetMemberProjectionPairs(contentDir);
-    const scopeIds = listMemberPageNodeIds(store, databaseId, { projections });
-    const { hits, rowsWindow } = runTableSearchWindow(
-      resolveTableSearcher(store),
-      rowsQuery,
-      new Set(scopeIds),
-    );
-    const hitIds = hits.map((h) => h.id);
     const relationFields = relationFieldSelectsFromColumnDefs(gateColumnDefs, contentDir);
-    const memberResult = listMemberPage(store, databaseId, {
-      projections,
-      memberIds: hitIds,
-      relationFields: relationFields.length > 0 ? relationFields : undefined,
-    });
-    const fieldsByMember = new Map<string, Record<string, MemberPageRelationFieldLink[]>>();
-    if (memberResult.relationFieldsByRow) {
-      for (let i = 0; i < memberResult.relationships.length; i++) {
-        const edge = memberResult.relationships[i]!;
-        fieldsByMember.set(edge.sourceNodeId, memberResult.relationFieldsByRow[i] ?? {});
-      }
-    }
-    const relationships = membershipEdgesForHits(memberResult.relationships, hits);
-    const evalRows = evalRowsFromMembershipConnections(store, relationships, ordered);
-    if (relationFields.length > 0) {
-      applyRelationFieldsToEvalRows(
-        evalRows,
-        relationships.map((edge) => fieldsByMember.get(edge.sourceNodeId) ?? {}),
+
+    let searchHits:
+      | { hits: TomeSearchHit[]; rowsWindow: TableRowsWindow }
+      | undefined;
+    if (plan.searchQuery) {
+      const scopeIds = listMemberPageNodeIds(store, databaseId, { projections });
+      const { hits, rowsWindow } = runTableSearchWindow(
+        resolveTableSearcher(store),
+        rowsQuery,
+        new Set(scopeIds),
       );
-    }
-    const {
-      rows: enrichedRows,
-      dynamicColumnDefs: enrichDynDefs,
-      hiddenColumnKeys: enrichHidden,
-    } = applyDynamicProperties(store, databaseId, tabName, evalRows, undefined, { contentDir });
-    const mergedColumnDefs = buildDatabaseColumnDefs(
-      store,
-      databaseId,
-      enrichDynDefs,
-      enrichHidden,
-      { contentDir },
-    );
-    if (relationFields.length === 0) {
-      hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+      searchHits = { hits, rowsWindow };
     }
 
-    return finishCustomViewDetail({
-      databaseId,
-      databaseTitle,
-      contentDir,
-      viewAssociation,
-      memberSidePerspective,
-      setSideProjection,
-      resolved,
-      tabName,
-      mergedColumnDefs,
-      windowedEvalRows: enrichedRows,
-      rowsWindow,
-    });
-  }
+    let relationships: Relationship[];
+    let relationFieldsByRow: Record<string, MemberPageRelationFieldLink[]>[] | undefined;
+    let rowsWindow: TableRowsWindow;
+    let fieldsByMember: Map<string, Record<string, MemberPageRelationFieldLink[]>> | undefined;
 
-  if (shouldUseSqlDatabaseWindow(store, rowsQuery, sorts, gateColumnDefs, {
-    ownerId: databaseId,
-    contentDir,
-  })) {
-    const { offset, limit } = resolveWindowBounds(rowsQuery);
-    const { sorts: windowSorts } = resolveSqlWindowSorts(
-      store,
-      databaseId,
-      sorts,
-      gateColumnDefs,
-      contentDir,
-    );
-    const dynKeys = new Set(
-      gateColumnDefs.filter((def) => def.source === "dynamic").map((def) => def.key),
-    );
-    const dynPlans =
-      windowSorts.length > 0
-        ? planDynSortIndexes(store, databaseId, windowSorts, dynKeys, contentDir) ?? []
-        : [];
-    const expressionIndexSorts =
-      dynPlans.length > 0
-        ? ensureDynSortIndexes(store, databaseId, dynPlans, contentDir)
-        : undefined;
-    const relationFields = relationFieldSelectsFromColumnDefs(gateColumnDefs, contentDir);
-    const { relationships, total, relationFieldsByRow } = listMemberPage(
-      store,
-      databaseId,
-      {
-        projections: listSetMemberProjectionPairs(contentDir),
+    if (searchHits) {
+      const hitIds = searchHits.hits.map((h) => h.id);
+      const memberResult = listMemberPage(store, databaseId, {
+        projections,
+        memberIds: hitIds,
+        relationFields: relationFields.length > 0 ? relationFields : undefined,
+      });
+      fieldsByMember = new Map();
+      if (memberResult.relationFieldsByRow) {
+        for (let i = 0; i < memberResult.relationships.length; i++) {
+          const edge = memberResult.relationships[i]!;
+          fieldsByMember.set(edge.sourceNodeId, memberResult.relationFieldsByRow[i] ?? {});
+        }
+      }
+      relationships = membershipEdgesForHits(memberResult.relationships, searchHits.hits);
+      relationFieldsByRow = undefined;
+      rowsWindow = searchHits.rowsWindow;
+    } else {
+      const { sorts: windowSorts } = resolveSqlWindowSorts(
+        store,
+        databaseId,
+        sorts,
+        gateColumnDefs,
+        contentDir,
+      );
+      const dynKeys = new Set(
+        gateColumnDefs.filter((def) => def.source === "dynamic").map((def) => def.key),
+      );
+      const dynPlans =
+        windowSorts.length > 0
+          ? planDynSortIndexes(store, databaseId, windowSorts, dynKeys, contentDir) ?? []
+          : [];
+      const expressionIndexSorts =
+        dynPlans.length > 0
+          ? ensureDynSortIndexes(store, databaseId, dynPlans, contentDir)
+          : undefined;
+      const memberResult = listMemberPage(store, databaseId, {
+        projections,
         sorts: windowSorts.length > 0 ? windowSorts : undefined,
         relationCounts:
           windowSorts.length > 0
@@ -382,13 +354,23 @@ function buildCustomViewDetail(
         expressionIndexSorts,
         relationFields: relationFields.length > 0 ? relationFields : undefined,
         intrinsicSequence: ordered,
-        limit,
-        offset,
-      },
-    );
+        limit: plan.limit,
+        offset: plan.offset,
+      });
+      relationships = memberResult.relationships;
+      relationFieldsByRow = memberResult.relationFieldsByRow;
+      rowsWindow = buildTableRowsWindow(plan.offset, plan.limit, memberResult.total);
+    }
 
     const evalRows = evalRowsFromMembershipConnections(store, relationships, ordered);
-    applyRelationFieldsToEvalRows(evalRows, relationFieldsByRow);
+    if (fieldsByMember) {
+      applyRelationFieldsToEvalRows(
+        evalRows,
+        relationships.map((edge) => fieldsByMember!.get(edge.sourceNodeId) ?? {}),
+      );
+    } else {
+      applyRelationFieldsToEvalRows(evalRows, relationFieldsByRow);
+    }
     const {
       rows: enrichedRows,
       dynamicColumnDefs: enrichDynDefs,
@@ -404,7 +386,6 @@ function buildCustomViewDetail(
     if (relationFields.length === 0) {
       hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
     }
-    const rowsWindow = buildTableRowsWindow(offset, limit, total);
 
     return finishCustomViewDetail({
       databaseId,
