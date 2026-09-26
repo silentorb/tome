@@ -457,6 +457,15 @@ describe("GraphDatabase", () => {
       `SELECT name FROM spans WHERE kind = 'INTERNAL'`,
     );
     expect(internal.some((r) => r.name === "relationWindow.page")).toBe(true);
+    const windowSpans = getProfilingStore()!.queryAll<{ name: string; attributes: string }>(
+      `SELECT name, attributes FROM spans WHERE name = 'listRelationshipsFromSourceWindow'`,
+    );
+    expect(windowSpans).toHaveLength(1);
+    const attrs = JSON.parse(windowSpans[0]!.attributes) as Record<string, unknown>;
+    expect(attrs["relation.has_limit"]).toBe(true);
+    expect(attrs["relation.limit"]).toBe(2);
+    expect(attrs["relation.offset"]).toBe(0);
+    expect(typeof attrs["relation.needs_target_join"]).toBe("boolean");
 
     db.close();
     resetProfilingForTests();
@@ -514,6 +523,7 @@ describe("GraphDatabase", () => {
     expect(byName("memberPage.emit")).toHaveLength(1);
     expect(byName("memberPage.count")).toHaveLength(1);
     expect(byName("memberPage.page")).toHaveLength(1);
+    expect(byName("memberPage.mapRows")).toHaveLength(1);
 
     const parent = byName("listMemberPage")[0]!;
     const traceIds = new Set(internals.map((r) => r.trace_id));
@@ -527,6 +537,7 @@ describe("GraphDatabase", () => {
       "memberPage.emit",
       "memberPage.count",
       "memberPage.page",
+      "memberPage.mapRows",
     ]) {
       const child = byName(childName)[0]!;
       expect(child.parent_span_id).toBe(parent.span_id);

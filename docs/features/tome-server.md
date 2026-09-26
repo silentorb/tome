@@ -134,18 +134,24 @@ Spans are appended to a dedicated SQLite file, table **`spans`**:
 | `duration_ms` | Imp-friendly duration (OTel uses start/end nanos) |
 | `attributes` | JSON object of flat string/number/bool attrs |
 
-Common attribute keys (semantic-convention inspired): `http.method`, `http.route`, `http.status_code`, `url.query`, `db.system`, `db.operation`, `db.statement`, `db.rows`, `db.params_count`.
+Common attribute keys (semantic-convention inspired): `http.method`, `http.route`, `http.status_code`, `url.query`, `db.system`, `db.operation`, `db.statement`, `db.rows`, `db.params_count`, plus domain keys below. Recorded parents may include `residual_ms` (parent duration minus sum of direct child durations).
 
-All `GraphDatabase` statement executes (`.all` / `.get` / `.run`) emit CLIENT spans when profiling is on — not only `queryAll`. Nested work shares one `trace_id` via `AsyncLocalStorage`.
+All `GraphDatabase` statement executes (`.all` / `.get` / `.run`) emit CLIENT spans when profiling is on — not only `queryAll`. The FTS search SQLite (`tome-search-sqlite`) is instrumented the same way. Nested work shares one `trace_id` via `AsyncLocalStorage`.
+
+Under non-verbose mode (`TOME_PROFILING=1`), spans below `slowMs` are normally dropped; **direct children of a recorded (slow) parent are still flushed** so a slow tree stays attributable without requiring `verbose`.
 
 **INTERNAL phases (query pipelines):**
 
 | Area | Span names | Branch signal (attributes) |
 | --- | --- | --- |
-| Relation tables | `getRelationTableSection`, `relation.loadConnections`, `relation.buildSection`, `listRelationshipsFromSourceWindow`, `relationWindow.count` / `.page` / `.mapRows` | (phase names; attrs mostly empty today) |
+| Table window routing | (attrs on load/search parents) | `table.backend` (`sql` \| `js`), `table.has_search`, `table.reasons` (`query_cache`, `table_q`, …) |
+| Table search | `table.search.scopeIds`, `table.search.window` | Same `table.*` plus `search.has_searcher`, `search.scope_size` |
+| Table enrich / hydrate | `table.enrich`, `table.hydrateRelationCells` | `table.row_count`, `table.relation_column_count` |
+| Relation tables | `getRelationTableSection`, `relation.loadConnections`, `relation.buildSection`, `relation.hydrateRows`, `listRelationshipsFromSourceWindow`, `relationWindow.count` / `.page` / `.mapRows` | `table.*` on load; `relation.row_count`; `relation.needs_target_join`, `relation.offset` / `.limit` / `.has_limit`, `relation.sort_count` |
 | Membership SQL compiler | `memberPage.analyze` / `.bind` / `.plan` / `.emit` | `member.mode`, `member.layers`, `member.order_kinds`, `member.has_member_ids`, `member.has_scope`, `member.has_groups`, `member.has_relation_fields`, `member.empty`, `member.apply_limit_offset` |
-| Membership execute | `listMemberPage` / `listMemberPageNodeIds`, `memberPage.count` / `.page` | Same `member.*` keys on the parent (self-describing without joining compile children) |
+| Membership execute | `listMemberPage` / `listMemberPageNodeIds`, `memberPage.count` / `.page` / `.mapRows` | Same `member.*` keys on the parent (self-describing without joining compile children) |
 | Dyn expression indexes | `exprIndex.ensureAll`, `exprIndex.ensure` | `exprIndex.path` (`skip` \| `patch` \| `rebuild`), `exprIndex.status`, `exprIndex.digest`, optional `exprIndex.in_flight` |
+| Imp execute | `imp.compile`, `imp.execute`, `imp.search` | `imp.backend` (`sql` \| `flatfile`) |
 
 Items and composed table windows share the membership compiler/execute spans (one instrumentation site). Relation-edge SQL remains a separate path with its own INTERNAL names above.
 

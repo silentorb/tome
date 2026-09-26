@@ -1065,8 +1065,29 @@ export class GraphDatabase implements TomeQueryCache {
     type: string,
     query?: RelationshipProjectionWindowQuery,
   ): RelationshipProjectionWindowResult {
+    const { orderBy, needsTargetJoin } = buildOutgoingProjectionOrderBy(query?.sorts);
+    const offsetRaw = query?.offset;
+    const offset =
+      typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
+        ? Math.floor(offsetRaw)
+        : 0;
+    const limitRaw = query?.limit;
+    const limit =
+      limitRaw === undefined || limitRaw === null
+        ? null
+        : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
+          ? Math.floor(limitRaw)
+          : null;
+    const windowAttrs: Record<string, string | number | boolean> = {
+      "relation.needs_target_join": needsTargetJoin,
+      "relation.offset": offset,
+      "relation.has_limit": limit !== null,
+      "relation.sort_count": query?.sorts?.length ?? 0,
+    };
+    if (limit !== null) windowAttrs["relation.limit"] = limit;
+
     const run = (): RelationshipProjectionWindowResult => {
-      const total = withProfilingSpan("relationWindow.count", "INTERNAL", {}, () => {
+      const total = withProfilingSpan("relationWindow.count", "INTERNAL", windowAttrs, () => {
         const totalRow = this.db
           .prepare(
             `SELECT COUNT(*) AS c FROM relationship_projections
@@ -1075,20 +1096,6 @@ export class GraphDatabase implements TomeQueryCache {
           .get(sourceNodeId, type) as { c: number };
         return totalRow.c;
       });
-
-      const { orderBy, needsTargetJoin } = buildOutgoingProjectionOrderBy(query?.sorts);
-      const offsetRaw = query?.offset;
-      const offset =
-        typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
-          ? Math.floor(offsetRaw)
-          : 0;
-      const limitRaw = query?.limit;
-      const limit =
-        limitRaw === undefined || limitRaw === null
-          ? null
-          : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
-            ? Math.floor(limitRaw)
-            : null;
 
       const joinSql = needsTargetJoin
         ? "LEFT JOIN nodes n ON n.id = rp.target_node_id"
@@ -1100,7 +1107,7 @@ export class GraphDatabase implements TomeQueryCache {
        WHERE rp.source_node_id = ? AND rp.type = ?
        ${orderBy}`;
 
-      const rows = withProfilingSpan("relationWindow.page", "INTERNAL", {}, () => {
+      const rows = withProfilingSpan("relationWindow.page", "INTERNAL", windowAttrs, () => {
         if (limit === null) {
           return this.db.prepare(selectSql).all(sourceNodeId, type) as ProjectionRow[];
         }
@@ -1109,7 +1116,7 @@ export class GraphDatabase implements TomeQueryCache {
           .all(sourceNodeId, type, limit, offset) as ProjectionRow[];
       });
 
-      const relationships = withProfilingSpan("relationWindow.mapRows", "INTERNAL", {}, () =>
+      const relationships = withProfilingSpan("relationWindow.mapRows", "INTERNAL", windowAttrs, () =>
         this.mapProjectionRows(rows),
       );
 
@@ -1117,7 +1124,7 @@ export class GraphDatabase implements TomeQueryCache {
     };
 
     if (!isProfilingEnabled()) return run();
-    return withProfilingSpan("listRelationshipsFromSourceWindow", "INTERNAL", {}, run);
+    return withProfilingSpan("listRelationshipsFromSourceWindow", "INTERNAL", windowAttrs, run);
   }
 
 
@@ -1184,7 +1191,9 @@ export class GraphDatabase implements TomeQueryCache {
         total = rows.length;
       }
 
-      const relationships = this.mapProjectionRows(rows);
+      const relationships = withProfilingSpan("memberPage.mapRows", "INTERNAL", {}, () =>
+        this.mapProjectionRows(rows),
+      );
       const result: MemberPageResult = { relationships, total };
 
       if (emitted.includeGroupId || query.groups) {

@@ -40,6 +40,7 @@ import {
 import {
   explodeTableWindowRequest,
   resolveSqlWindowSorts,
+  tableWindowProfilingAttrs,
 } from "./table-sql-window";
 import {
   membershipEdgesForHits,
@@ -58,8 +59,9 @@ import type {
   TableRowsWindow,
   ViewSortSpec,
 } from "tome-graph-interfaces";
-import type {
-  MemberPageRelationFieldLink,
+import {
+  withProfilingSpan,
+  type MemberPageRelationFieldLink,
 } from "tome-service-interfaces";
 import type { TomeSearchHit } from "tome-interfaces/search";
 import { getCompositionForDatabase } from "./table-presentation/load";
@@ -285,6 +287,7 @@ function buildCustomViewDetail(
   );
 
   const plan = explodeTableWindowRequest(store, rowsQuery);
+  const windowAttrs = tableWindowProfilingAttrs(plan);
 
   if (plan.backend === "sql") {
     const projections = listSetMemberProjectionPairs(contentDir);
@@ -294,11 +297,17 @@ function buildCustomViewDetail(
       | { hits: TomeSearchHit[]; rowsWindow: TableRowsWindow }
       | undefined;
     if (plan.searchQuery) {
-      const scopeIds = listMemberPageNodeIds(store, databaseId, { projections });
+      const scopeIds = withProfilingSpan(
+        "table.search.scopeIds",
+        "INTERNAL",
+        windowAttrs,
+        () => listMemberPageNodeIds(store, databaseId, { projections }),
+      );
       const { hits, rowsWindow } = runTableSearchWindow(
         resolveTableSearcher(store),
         rowsQuery,
         new Set(scopeIds),
+        windowAttrs,
       );
       searchHits = { hits, rowsWindow };
     }

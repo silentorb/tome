@@ -209,6 +209,72 @@ describe("profiling", () => {
     expect(JSON.parse(child.attributes)).toEqual({ step: 1 });
   });
 
+  test("slow parent flushes below-threshold children and sets residual_ms", () => {
+    const dir = tempDir();
+    configureProfiling({
+      enabled: true,
+      verbose: false,
+      slowMs: 50,
+      logToStderr: false,
+      maxMb: 32,
+      batchDeleteMb: 4,
+      maxRows: 10_000,
+      batchDeleteRows: 100,
+    });
+    openProfilingStore(join(dir, "tome-profiling.sqlite"));
+
+    runInProfilingTrace(() => {
+      withProfilingSpan("slow-parent", "INTERNAL", {}, () => {
+        withProfilingSpan("fast-child", "INTERNAL", { step: 1 }, () => {
+          const end = performance.now() + 5;
+          while (performance.now() < end) {
+            /* spin briefly */
+          }
+        });
+        const end = performance.now() + 60;
+        while (performance.now() < end) {
+          /* ensure parent exceeds slowMs */
+        }
+      });
+    });
+
+    const rows = getProfilingStore()!.queryAll<{
+      name: string;
+      parent_span_id: string | null;
+      attributes: string;
+    }>("SELECT name, parent_span_id, attributes FROM spans ORDER BY id ASC");
+    const parent = rows.find((r) => r.name === "slow-parent");
+    const child = rows.find((r) => r.name === "fast-child");
+    expect(parent).toBeDefined();
+    expect(child).toBeDefined();
+    expect(child!.parent_span_id).not.toBeNull();
+    const parentAttrs = JSON.parse(parent!.attributes) as { residual_ms?: number };
+    expect(typeof parentAttrs.residual_ms).toBe("number");
+  });
+
+  test("fast parent does not flush below-threshold children", () => {
+    const dir = tempDir();
+    configureProfiling({
+      enabled: true,
+      verbose: false,
+      slowMs: 1000,
+      logToStderr: false,
+      maxMb: 32,
+      batchDeleteMb: 4,
+      maxRows: 10_000,
+      batchDeleteRows: 100,
+    });
+    openProfilingStore(join(dir, "tome-profiling.sqlite"));
+
+    runInProfilingTrace(() => {
+      withProfilingSpan("fast-parent", "INTERNAL", {}, () => {
+        withProfilingSpan("fast-child", "INTERNAL", {}, () => "ok");
+      });
+    });
+
+    expect(getProfilingStore()?.count()).toBe(0);
+  });
+
   test("opens spans table and drops legacy samples", () => {
     const dir = tempDir();
     const dbPath = join(dir, "tome-profiling.sqlite");

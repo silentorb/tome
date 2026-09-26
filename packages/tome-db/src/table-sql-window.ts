@@ -3,7 +3,7 @@ import type {
   TableRowsQuery,
   ViewSortSpec,
 } from "tome-graph-interfaces";
-import type { TomeQueryCache } from "tome-service-interfaces";
+import type { TomeQueryCache, ProfilingAttributes } from "tome-service-interfaces";
 import { isSafeSqlPropertyKey } from "tome-sqlite";
 import {
   getQueryCache,
@@ -44,9 +44,18 @@ export type TableWindowRequestPlan = {
   sorts: ViewSortSpec[];
   offset: number;
   limit: number | null;
-  /** Stable reasons for tests / later profiling (e.g. `query_cache`, `table_q`). */
+  /** Stable reasons for tests and profiling attrs (e.g. `query_cache`, `table_q`). */
   reasons: string[];
 };
+
+/** Flat profiling attributes from an exploded table-window plan. */
+export function tableWindowProfilingAttrs(plan: TableWindowRequestPlan): ProfilingAttributes {
+  return {
+    "table.backend": plan.backend,
+    "table.has_search": Boolean(plan.searchQuery),
+    "table.reasons": plan.reasons.join(","),
+  };
+}
 
 /**
  * Explode a table rows query into backend + operators once.

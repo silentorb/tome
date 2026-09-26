@@ -18,6 +18,7 @@ import type {
 import type { GraphDatabase } from "tome-sqlite";
 import type { SQLQueryBindings } from "bun:sqlite";
 import { loadSchemaFromContent } from "tome-flatfile";
+import { withProfilingSpan, withProfilingSpanAsync } from "tome-service-interfaces";
 import { graphHasSearchNode, runSearchImpGraphSql } from "./search-graph";
 
 export interface RunExecuteImpOptions {
@@ -81,21 +82,28 @@ export async function runExecuteImp(options: RunExecuteImpOptions): Promise<ImpC
     corpus,
   });
   graph = spliceCorpusNodes(graph);
+  const backendAttr = { "imp.backend": options.backend };
 
   if (graphHasSearchNode(graph)) {
     if (options.backend === "sql") {
       if (!options.cache) {
         throw new Error("SQL executeImp backend requires a query cache");
       }
-      return filterRowsByCorpus(
-        runSearchImpGraphSql(
-          options.store,
-          options.cache,
-          graph,
-          options.context,
-          options.search,
-        ),
-        constraint.nodeIds,
+      return withProfilingSpan(
+        "imp.search",
+        "INTERNAL",
+        backendAttr,
+        () =>
+          filterRowsByCorpus(
+            runSearchImpGraphSql(
+              options.store,
+              options.cache!,
+              graph,
+              options.context,
+              options.search,
+            ),
+            constraint.nodeIds,
+          ),
       );
     }
   }
@@ -105,23 +113,32 @@ export async function runExecuteImp(options: RunExecuteImpOptions): Promise<ImpC
       throw new Error("SQL executeImp backend requires a query cache");
     }
     const contentDir = options.store.contentDir;
-    const compiled = compileImpGraphToTomeSql(graph, {
-      schema: loadSchemaFromContent(contentDir),
-      pageNodeId: options.context?.pageNodeId,
-      corpus,
-    });
-    const rows = options.cache.queryAll(compiled.sql, ...(compiled.parameters as SQLQueryBindings[]));
-    return filterRowsByCorpus({ columns: rows[0] ? Object.keys(rows[0]) : ["id"], rows }, constraint.nodeIds);
+    const compiled = withProfilingSpan("imp.compile", "INTERNAL", backendAttr, () =>
+      compileImpGraphToTomeSql(graph, {
+        schema: loadSchemaFromContent(contentDir),
+        pageNodeId: options.context?.pageNodeId,
+        corpus,
+      }),
+    );
+    const rows = withProfilingSpan("imp.execute", "INTERNAL", backendAttr, () =>
+      options.cache!.queryAll(compiled.sql, ...(compiled.parameters as SQLQueryBindings[])),
+    );
+    return filterRowsByCorpus(
+      { columns: rows[0] ? Object.keys(rows[0]) : ["id"], rows },
+      constraint.nodeIds,
+    );
   }
 
   const host = createFlatfileExecutionHost(options.store, {
     liveOnly: true,
     corpusNodeIds: constraint.nodeIds,
   });
-  const executed = await executeGraph(graph, {
-    registry: createTomeImpRegistry(),
-    host,
-  });
+  const executed = await withProfilingSpanAsync("imp.execute", "INTERNAL", backendAttr, () =>
+    executeGraph(graph, {
+      registry: createTomeImpRegistry(),
+      host,
+    }),
+  );
   return filterRowsByCorpus(executed, constraint.nodeIds);
 }
 
@@ -137,14 +154,21 @@ export function runExecuteImpSql(
   let impGraph = applyParameters(impGraphToGraph(graph), context?.parameters);
   resolveCorpusConstraint(impGraph, { pageNodeId: context?.pageNodeId, corpus });
   impGraph = spliceCorpusNodes(impGraph);
+  const backendAttr = { "imp.backend": "sql" as const };
   if (graphHasSearchNode(impGraph)) {
-    return runSearchImpGraphSql(store, cache, impGraph as ImpGraph, context, search);
+    return withProfilingSpan("imp.search", "INTERNAL", backendAttr, () =>
+      runSearchImpGraphSql(store, cache, impGraph as ImpGraph, context, search),
+    );
   }
-  const compiled = compileImpGraphToTomeSql(impGraph, {
-    schema: loadSchemaFromContent(store.contentDir),
-    pageNodeId: context?.pageNodeId,
-    corpus,
-  });
-  const rows = cache.queryAll(compiled.sql, ...(compiled.parameters as SQLQueryBindings[]));
+  const compiled = withProfilingSpan("imp.compile", "INTERNAL", backendAttr, () =>
+    compileImpGraphToTomeSql(impGraph, {
+      schema: loadSchemaFromContent(store.contentDir),
+      pageNodeId: context?.pageNodeId,
+      corpus,
+    }),
+  );
+  const rows = withProfilingSpan("imp.execute", "INTERNAL", backendAttr, () =>
+    cache.queryAll(compiled.sql, ...(compiled.parameters as SQLQueryBindings[])),
+  );
   return { columns: rows[0] ? Object.keys(rows[0]) : ["id"], rows };
 }

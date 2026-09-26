@@ -45,6 +45,7 @@ import { applyNameFilterAndWindow, buildTableRowsWindow, resolveWindowBounds } f
 import {
   explodeTableWindowRequest,
   relationWindowSortsFromQuery,
+  tableWindowProfilingAttrs,
 } from "./table-sql-window";
 import {
   relationEdgesForHits,
@@ -242,19 +243,26 @@ function buildRelationSectionForPerspective(
   if (isSetSideProjectionType(associations, perspective)) return null;
 
   const columnSet = new Set<string>(sqlWindow?.columnKeys ?? []);
-  const rows: RelationRow[] = [];
+  const rows: RelationRow[] = withProfilingSpan(
+    "relation.hydrateRows",
+    "INTERNAL",
+    { "relation.row_count": connections.length },
+    () => {
+      const built: RelationRow[] = [];
+      for (const connection of connections) {
+        const target = readStoreGetNode(db, connection.targetNodeId);
+        const cells = cellsFromConnectionProperties(connection.properties);
+        for (const key of Object.keys(cells)) columnSet.add(key);
 
-  for (const connection of connections) {
-    const target = readStoreGetNode(db, connection.targetNodeId);
-    const cells = cellsFromConnectionProperties(connection.properties);
-    for (const key of Object.keys(cells)) columnSet.add(key);
-
-    rows.push({
-      targetId: connection.targetNodeId,
-      name: target ? titleFromProperties(target.properties) : "Untitled",
-      cells,
-    });
-  }
+        built.push({
+          targetId: connection.targetNodeId,
+          name: target ? titleFromProperties(target.properties) : "Untitled",
+          cells,
+        });
+      }
+      return built;
+    },
+  );
 
   if (!sqlWindow) {
     const q = rowsQuery?.q?.trim() ?? "";
@@ -383,12 +391,15 @@ function loadRelationSectionConnections(
 ): {
   connections: Relationship[];
   sqlWindow?: { total: number; columnKeys: string[] };
+  plan: ReturnType<typeof explodeTableWindowRequest>;
 } {
   const plan = explodeTableWindowRequest(db, rowsQuery);
+  const windowAttrs = tableWindowProfilingAttrs(plan);
 
   if (plan.backend === "js") {
     return {
       connections: listRelationshipsFromSource(db, nodeId, perspective),
+      plan,
     };
   }
 
@@ -396,11 +407,17 @@ function loadRelationSectionConnections(
     | { hits: TomeSearchHit[]; total: number }
     | undefined;
   if (plan.searchQuery) {
-    const scopeIds = listRelatedTargetNodeIds(db, nodeId, perspective);
+    const scopeIds = withProfilingSpan(
+      "table.search.scopeIds",
+      "INTERNAL",
+      windowAttrs,
+      () => listRelatedTargetNodeIds(db, nodeId, perspective),
+    );
     const { hits, rowsWindow } = runTableSearchWindow(
       resolveTableSearcher(db),
       rowsQuery,
       new Set(scopeIds),
+      windowAttrs,
     );
     searchHits = { hits, total: rowsWindow.total };
   }
@@ -417,6 +434,7 @@ function loadRelationSectionConnections(
         total: searchHits.total,
         columnKeys: [],
       },
+      plan,
     };
   }
 
@@ -431,6 +449,7 @@ function loadRelationSectionConnections(
       total,
       columnKeys: [],
     },
+    plan,
   };
 }
 
@@ -504,10 +523,11 @@ export function getRelationTableSection(
 
     const associations = loadAssociationsFromContent(contentDir);
     const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
+    const plan = explodeTableWindowRequest(db, options?.rowsQuery);
     const { connections, sqlWindow } = withProfilingSpan(
       "relation.loadConnections",
       "INTERNAL",
-      {},
+      tableWindowProfilingAttrs(plan),
       () => loadRelationSectionConnections(db, nodeId, perspective, options?.rowsQuery),
     );
 
@@ -518,15 +538,19 @@ export function getRelationTableSection(
       return null;
     }
 
-    return withProfilingSpan("relation.buildSection", "INTERNAL", {}, () =>
-      buildRelationSectionForPerspective(db, nodeId, perspective, connections, {
-        contentDir,
-        typeTableIds: typeTableIdsFromContent(contentDir),
-        associations,
-        tableRelationByGroupKey,
-        rowsQuery: options?.rowsQuery,
-        sqlWindow,
-      }),
+    return withProfilingSpan(
+      "relation.buildSection",
+      "INTERNAL",
+      { "relation.row_count": connections.length },
+      () =>
+        buildRelationSectionForPerspective(db, nodeId, perspective, connections, {
+          contentDir,
+          typeTableIds: typeTableIdsFromContent(contentDir),
+          associations,
+          tableRelationByGroupKey,
+          rowsQuery: options?.rowsQuery,
+          sqlWindow,
+        }),
     );
   };
 

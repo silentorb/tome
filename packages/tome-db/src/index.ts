@@ -82,6 +82,7 @@ export {
   tableRowsQueryUsesNonExpressibleSort,
   tableRowsQueryUsesDeferredSearch,
   tableRowsQueryUsesTableSearch,
+  tableWindowProfilingAttrs,
 } from "./table-sql-window";
 export type {
   ResolvedSqlWindowSorts,

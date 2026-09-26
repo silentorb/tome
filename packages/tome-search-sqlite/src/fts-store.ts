@@ -3,6 +3,7 @@ import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import type { ImpCollectionResult } from "tome-graph-interfaces";
 import type { SyncEndpoint, SyncSignal, SyncSourceRead } from "tome-db/sync";
+import { instrumentSqliteDatabaseForProfiling } from "tome-service-interfaces";
 import { allNodesForSearchGraph, nodeByIdForSearchGraph } from "./search-graphs";
 import { createFtsSearch } from "./fts-search";
 import type { TomeSearch } from "tome-interfaces/search";
@@ -84,7 +85,7 @@ export class FtsStore {
     }
 
     mkdirSync(dirname(dbPath), { recursive: true });
-    this.db = new Database(dbPath);
+    this.db = instrumentSqliteDatabaseForProfiling(new Database(dbPath));
     this.db.exec("PRAGMA journal_mode = WAL;");
     this.db.exec(`
       CREATE VIRTUAL TABLE IF NOT EXISTS nodes_fts USING fts5(

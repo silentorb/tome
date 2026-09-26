@@ -246,4 +246,56 @@ describe("tome-search-sqlite", () => {
     expect(result).toEqual({ hits: [], total: 0 });
     handle.close();
   });
+
+  test("FTS prepare executes emit CLIENT spans when profiling is on", async () => {
+    const {
+      configureProfiling,
+      openProfilingStore,
+      getProfilingStore,
+      resetProfilingForTests,
+      runInProfilingTrace,
+    } = await import("tome-service-interfaces");
+    const profilingDir = mkdtempSync(join(tmpdir(), "tome-fts-profiling-"));
+    try {
+      configureProfiling({
+        enabled: true,
+        verbose: true,
+        slowMs: 0,
+        logToStderr: false,
+        maxMb: 32,
+        batchDeleteMb: 4,
+        maxRows: 1000,
+        batchDeleteRows: 100,
+      });
+      openProfilingStore(join(profilingDir, "tome-profiling.sqlite"));
+
+      const handle = openWithDocs([
+        { id: "p1", title: "Dragon Knight", body: "fire breath" },
+      ]);
+      await handle.endpoint.apply({ source: emptySource, scope: { mode: "full" } });
+      getProfilingStore()?.clear();
+
+      runInProfilingTrace(() => {
+        handle.search.searchWindow({
+          query: "Dragon",
+          limit: 10,
+          allowedNodeIds: new Set(["p1"]),
+        });
+      });
+
+      const clients = getProfilingStore()!.queryAll<{ kind: string; name: string }>(
+        `SELECT kind, name FROM spans WHERE kind = 'CLIENT'`,
+      );
+      expect(clients.length).toBeGreaterThan(0);
+      expect(clients.every((c) => c.name === "db.query")).toBe(true);
+      handle.close();
+    } finally {
+      resetProfilingForTests();
+      try {
+        rmSync(profilingDir, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
+    }
+  });
 });

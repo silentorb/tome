@@ -1,6 +1,7 @@
 import type { DatabaseColumnDef } from "../database-view";
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import type { EvalRow } from "../row-sort";
+import { withProfilingSpan } from "tome-service-interfaces";
 import { loadDynamicColumnSets, loadDynamicProperties } from "./overlay";
 import {
   materializeColumnKey,
@@ -105,102 +106,109 @@ export function applyDynamicProperties(
   registry: ResolverRegistry,
   options?: ApplyDynamicPropertiesOptions,
 ): DynamicEnrichmentResult {
-  const properties = loadDynamicProperties(db, owner, options?.contentDir);
-  const columnSets = loadDynamicColumnSets(db, owner, options?.contentDir);
+  return withProfilingSpan(
+    "table.enrich",
+    "INTERNAL",
+    { "table.row_count": evalRows.length },
+    () => {
+      const properties = loadDynamicProperties(db, owner, options?.contentDir);
+      const columnSets = loadDynamicColumnSets(db, owner, options?.contentDir);
 
-  const dynamicColumnDefs: DatabaseColumnDef[] = [];
-  const hiddenColumnKeys = new Set<string>();
-  const materializedSetColumns: MaterializedColumnSetColumn[] = [];
+      const dynamicColumnDefs: DatabaseColumnDef[] = [];
+      const hiddenColumnKeys = new Set<string>();
+      const materializedSetColumns: MaterializedColumnSetColumn[] = [];
 
-  const rowNodeIds = evalRows.map((r) => r.nodeId);
-  const ctx: DynCtx = { db, owner, viewName, rowNodeIds };
+      const rowNodeIds = evalRows.map((r) => r.nodeId);
+      const ctx: DynCtx = { db, owner, viewName, rowNodeIds };
 
-  const setPrefetches = new Map<string, unknown>();
-  const fixedPrefetches = new Map<string, unknown>();
+      const setPrefetches = new Map<string, unknown>();
+      const fixedPrefetches = new Map<string, unknown>();
 
-  for (const set of columnSets) {
-    for (const key of set.hideLegacyKeys) hiddenColumnKeys.add(key);
+      for (const set of columnSets) {
+        for (const key of set.hideLegacyKeys) hiddenColumnKeys.add(key);
 
-    const resolver = registry.columnSets.get(set.resolverId);
-    if (!resolver) continue;
+        const resolver = registry.columnSets.get(set.resolverId);
+        if (!resolver) continue;
 
-    let prefetch = setPrefetches.get(set.id);
-    if (!prefetch) {
-      prefetch = resolver.buildPrefetch(ctx, set.params);
-      setPrefetches.set(set.id, prefetch);
-    }
+        let prefetch = setPrefetches.get(set.id);
+        if (!prefetch) {
+          prefetch = resolver.buildPrefetch(ctx, set.params);
+          setPrefetches.set(set.id, prefetch);
+        }
 
-    const dimensions = resolver.discoverDimensions(ctx, set.params);
-    for (const dimension of dimensions) {
-      materializedSetColumns.push({
-        setId: set.id,
-        dimensionId: dimension.id,
-        key: materializeColumnKey(set.columnKeyPattern, dimension.id),
-        name: materializeColumnName(set.columnNamePattern, dimension.title),
-        type: set.columnType,
-        resolverId: set.resolverId,
-        params: set.params,
+        const dimensions = resolver.discoverDimensions(ctx, set.params);
+        for (const dimension of dimensions) {
+          materializedSetColumns.push({
+            setId: set.id,
+            dimensionId: dimension.id,
+            key: materializeColumnKey(set.columnKeyPattern, dimension.id),
+            name: materializeColumnName(set.columnNamePattern, dimension.title),
+            type: set.columnType,
+            resolverId: set.resolverId,
+            params: set.params,
+          });
+        }
+      }
+
+      for (const property of properties) {
+        if (!fixedPrefetches.has(property.resolverId)) {
+          fixedPrefetches.set(
+            property.resolverId,
+            buildFixedPrefetch(property.resolverId, ctx, property.params),
+          );
+        }
+        dynamicColumnDefs.push({
+          key: property.columnKey,
+          name: property.columnName,
+          type: property.columnType,
+          source: "dynamic",
+        });
+      }
+
+      for (const col of materializedSetColumns) {
+        dynamicColumnDefs.push({
+          key: col.key,
+          name: col.name,
+          type: col.type,
+          source: "dynamic",
+        });
+      }
+
+      if (properties.length === 0 && materializedSetColumns.length === 0) {
+        return { rows: evalRows, dynamicColumnDefs: [], hiddenColumnKeys };
+      }
+
+      const finalRows = evalRows.map((row) => {
+        const cells = { ...row.cells };
+
+        for (const property of properties) {
+          const resolver = registry.fixed.get(property.resolverId);
+          if (!resolver) continue;
+          const prefetch = fixedPrefetches.get(property.resolverId);
+          cells[property.columnKey] = resolver(ctx, property.params, row.nodeId, prefetch);
+        }
+
+        for (const col of materializedSetColumns) {
+          const resolver = registry.columnSets.get(col.resolverId);
+          if (!resolver) continue;
+          const prefetch = setPrefetches.get(col.setId);
+          cells[col.key] = resolver.resolveCell(
+            ctx,
+            col.params,
+            row.nodeId,
+            col.dimensionId,
+            prefetch,
+          );
+        }
+
+        return { ...row, cells };
       });
-    }
-  }
 
-  for (const property of properties) {
-    if (!fixedPrefetches.has(property.resolverId)) {
-      fixedPrefetches.set(
-        property.resolverId,
-        buildFixedPrefetch(property.resolverId, ctx, property.params),
-      );
-    }
-    dynamicColumnDefs.push({
-      key: property.columnKey,
-      name: property.columnName,
-      type: property.columnType,
-      source: "dynamic",
-    });
-  }
-
-  for (const col of materializedSetColumns) {
-    dynamicColumnDefs.push({
-      key: col.key,
-      name: col.name,
-      type: col.type,
-      source: "dynamic",
-    });
-  }
-
-  if (properties.length === 0 && materializedSetColumns.length === 0) {
-    return { rows: evalRows, dynamicColumnDefs: [], hiddenColumnKeys };
-  }
-
-  const finalRows = evalRows.map((row) => {
-    const cells = { ...row.cells };
-
-    for (const property of properties) {
-      const resolver = registry.fixed.get(property.resolverId);
-      if (!resolver) continue;
-      const prefetch = fixedPrefetches.get(property.resolverId);
-      cells[property.columnKey] = resolver(ctx, property.params, row.nodeId, prefetch);
-    }
-
-    for (const col of materializedSetColumns) {
-      const resolver = registry.columnSets.get(col.resolverId);
-      if (!resolver) continue;
-      const prefetch = setPrefetches.get(col.setId);
-      cells[col.key] = resolver.resolveCell(
-        ctx,
-        col.params,
-        row.nodeId,
-        col.dimensionId,
-        prefetch,
-      );
-    }
-
-    return { ...row, cells };
-  });
-
-  return {
-    rows: finalRows,
-    dynamicColumnDefs,
-    hiddenColumnKeys,
-  };
+      return {
+        rows: finalRows,
+        dynamicColumnDefs,
+        hiddenColumnKeys,
+      };
+    },
+  );
 }

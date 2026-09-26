@@ -21,6 +21,7 @@ import type {
   MemberPageRelationFieldLink,
   MemberPageRelationFieldSelect,
 } from "tome-service-interfaces";
+import { withProfilingSpan } from "tome-service-interfaces";
 import {
   listRelationshipsFromSource,
   type RelationshipReadStore,
@@ -225,26 +226,36 @@ export function hydrateRelationCellsForRows(
   rows: EvalRow[],
   contentDir?: string,
 ): void {
-  const relationColumns = columnDefs.filter((col) => col.type === "relation");
-  if (relationColumns.length === 0) return;
+  withProfilingSpan(
+    "table.hydrateRelationCells",
+    "INTERNAL",
+    {
+      "table.row_count": rows.length,
+      "table.relation_column_count": columnDefs.filter((col) => col.type === "relation").length,
+    },
+    () => {
+      const relationColumns = columnDefs.filter((col) => col.type === "relation");
+      if (relationColumns.length === 0) return;
 
-  for (const row of rows) {
-    if (!row.relationCells) row.relationCells = {};
-    for (const col of relationColumns) {
-      const type = col.relationType ?? relationType(col.name);
-      const relationships = listRelationConnectionsForRow(
-        db,
-        row.nodeId,
-        type,
-        databaseId,
-        col.relationshipCompositeType,
-        contentDir,
-      );
-      const links = linksFromRelationships(db, row.nodeId, relationships);
-      row.relationCells[col.key] = links;
-      if (links.length > 0) {
-        row.cells[col.key] = formatRelationCell(links);
+      for (const row of rows) {
+        if (!row.relationCells) row.relationCells = {};
+        for (const col of relationColumns) {
+          const type = col.relationType ?? relationType(col.name);
+          const relationships = listRelationConnectionsForRow(
+            db,
+            row.nodeId,
+            type,
+            databaseId,
+            col.relationshipCompositeType,
+            contentDir,
+          );
+          const links = linksFromRelationships(db, row.nodeId, relationships);
+          row.relationCells[col.key] = links;
+          if (links.length > 0) {
+            row.cells[col.key] = formatRelationCell(links);
+          }
+        }
       }
-    }
-  }
+    },
+  );
 }

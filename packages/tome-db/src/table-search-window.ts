@@ -2,6 +2,10 @@ import type { TableRowsQuery, TableRowsWindow } from "tome-graph-interfaces";
 import type { TomeSearch, TomeSearchHit } from "tome-interfaces/search";
 import type { Relationship } from "tome-graph-interfaces";
 import {
+  withProfilingSpan,
+  type ProfilingAttributes,
+} from "tome-service-interfaces";
+import {
   buildTableRowsWindow,
   resolveWindowBounds,
 } from "./table-rows-window";
@@ -55,50 +59,63 @@ export type TableSearchWindowResult = {
 /**
  * Run scoped searcher window for table `q`.
  * When searcher is missing, returns an empty window (no legacy JS relevance).
+ * Emits INTERNAL `table.search.window` when profiling is on.
  */
 export function runTableSearchWindow(
   search: TomeSearch | null,
   query: TableRowsQuery | undefined,
   allowedNodeIds: ReadonlySet<string>,
+  profilingAttrs: ProfilingAttributes = {},
 ): TableSearchWindowResult {
-  const q = query?.q?.trim() ?? "";
-  const { offset, limit } = resolveWindowBounds(query);
+  return withProfilingSpan(
+    "table.search.window",
+    "INTERNAL",
+    {
+      ...profilingAttrs,
+      "search.has_searcher": Boolean(search),
+      "search.scope_size": allowedNodeIds.size,
+    },
+    () => {
+      const q = query?.q?.trim() ?? "";
+      const { offset, limit } = resolveWindowBounds(query);
 
-  if (!q) {
-    return {
-      hits: [],
-      rowsWindow: buildTableRowsWindow(offset, limit, 0),
-    };
-  }
+      if (!q) {
+        return {
+          hits: [],
+          rowsWindow: buildTableRowsWindow(offset, limit, 0),
+        };
+      }
 
-  if (!search) {
-    return {
-      hits: [],
-      rowsWindow: buildTableRowsWindow(offset, limit, 0),
-    };
-  }
+      if (!search) {
+        return {
+          hits: [],
+          rowsWindow: buildTableRowsWindow(offset, limit, 0),
+        };
+      }
 
-  if (allowedNodeIds.size === 0) {
-    return {
-      hits: [],
-      rowsWindow: buildTableRowsWindow(offset, limit, 0),
-    };
-  }
+      if (allowedNodeIds.size === 0) {
+        return {
+          hits: [],
+          rowsWindow: buildTableRowsWindow(offset, limit, 0),
+        };
+      }
 
-  const resultOrPromise = search.searchWindow({
-    query: q,
-    offset,
-    limit,
-    allowedNodeIds,
-  });
-  if (resultOrPromise instanceof Promise) {
-    throw new Error("Async TomeSearch.searchWindow is not supported on the sync table path");
-  }
+      const resultOrPromise = search.searchWindow({
+        query: q,
+        offset,
+        limit,
+        allowedNodeIds,
+      });
+      if (resultOrPromise instanceof Promise) {
+        throw new Error("Async TomeSearch.searchWindow is not supported on the sync table path");
+      }
 
-  return {
-    hits: resultOrPromise.hits,
-    rowsWindow: buildTableRowsWindow(offset, limit, resultOrPromise.total),
-  };
+      return {
+        hits: resultOrPromise.hits,
+        rowsWindow: buildTableRowsWindow(offset, limit, resultOrPromise.total),
+      };
+    },
+  );
 }
 
 /** Map search hits to membership edges ordered by search rank (member = sourceNodeId). */

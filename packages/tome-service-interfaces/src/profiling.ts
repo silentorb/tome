@@ -58,9 +58,17 @@ export const PROFILING_SPANS_TABLE = "spans";
 type ProfilingContext = {
   traceId: string;
   spanId: string | null;
+  /** Sum of direct child durations (recorded or deferred) for residual_ms. */
+  childDurationMs: number;
+  /** Children below slowMs, flushed if this span is recorded. */
+  deferredChildren: ProfilingSpan[];
 };
 
 const profilingAls = new AsyncLocalStorage<ProfilingContext>();
+
+function newProfilingContext(traceId: string, spanId: string | null): ProfilingContext {
+  return { traceId, spanId, childDurationMs: 0, deferredChildren: [] };
+}
 
 function defaultConfig(): ProfilingConfig {
   const caps = deriveRowCaps(DEFAULT_MAX_MB, DEFAULT_BATCH_DELETE_MB);
@@ -257,7 +265,7 @@ export function getProfilingContext(): ProfilingContext | undefined {
  */
 export function runInProfilingTrace<T>(fn: () => T, traceId?: string): T {
   const id = traceId ?? newProfilingTraceId();
-  return profilingAls.run({ traceId: id, spanId: null }, fn);
+  return profilingAls.run(newProfilingContext(id, null), fn);
 }
 
 /**
@@ -265,7 +273,7 @@ export function runInProfilingTrace<T>(fn: () => T, traceId?: string): T {
  */
 export function runInProfilingTraceAsync<T>(fn: () => Promise<T>, traceId?: string): Promise<T> {
   const id = traceId ?? newProfilingTraceId();
-  return profilingAls.run({ traceId: id, spanId: null }, fn);
+  return profilingAls.run(newProfilingContext(id, null), fn);
 }
 
 function shouldRecord(durationMs: number): boolean {
@@ -292,12 +300,70 @@ function logSpanToStderr(span: ProfilingSpan): void {
   );
 }
 
+function appendProfilingSpan(full: ProfilingSpan): void {
+  store?.append(full);
+  if (config.logToStderr) {
+    logSpanToStderr(full);
+  }
+}
+
+function finalizeCompletedSpan(
+  span: Omit<ProfilingSpan, "startTime"> & { startTime?: string },
+  selfCtx: ProfilingContext | undefined,
+  parent: ProfilingContext | undefined,
+): void {
+  if (!config.enabled) return;
+
+  const rounded = Math.round(span.durationMs * 100) / 100;
+  const attrs: ProfilingAttributes = { ...(span.attributes ?? {}) };
+
+  if (parent?.spanId) {
+    parent.childDurationMs += rounded;
+  }
+
+  const meets = shouldRecord(rounded);
+  if (meets && selfCtx) {
+    const residual = Math.max(0, Math.round((rounded - selfCtx.childDurationMs) * 100) / 100);
+    if (selfCtx.deferredChildren.length > 0 || selfCtx.childDurationMs > 0) {
+      attrs.residual_ms = residual;
+    }
+  }
+
+  const full: ProfilingSpan = {
+    traceId: span.traceId,
+    spanId: span.spanId,
+    parentSpanId: span.parentSpanId,
+    name: span.name,
+    kind: span.kind,
+    startTime: span.startTime ?? new Date().toISOString(),
+    durationMs: rounded,
+    attributes: attrs,
+  };
+
+  if (meets) {
+    appendProfilingSpan(full);
+    if (selfCtx) {
+      for (const child of selfCtx.deferredChildren) {
+        appendProfilingSpan(child);
+      }
+      selfCtx.deferredChildren.length = 0;
+    }
+  } else if (parent?.spanId) {
+    parent.deferredChildren.push(full);
+  }
+}
+
 /**
  * Record a completed span when profiling is enabled and the span is slow
- * (or verbose). Appends to the SQLite store when open; optionally logs to stderr.
+ * (or verbose). Pass `{ force: true }` to bypass the slow threshold (used when
+ * flushing deferred children of a recorded parent).
  */
-export function recordProfilingSpan(span: Omit<ProfilingSpan, "startTime"> & { startTime?: string }): void {
-  if (!shouldRecord(span.durationMs)) return;
+export function recordProfilingSpan(
+  span: Omit<ProfilingSpan, "startTime"> & { startTime?: string },
+  options?: { force?: boolean },
+): void {
+  if (!config.enabled) return;
+  if (!options?.force && !shouldRecord(span.durationMs)) return;
 
   const rounded = Math.round(span.durationMs * 100) / 100;
   const full: ProfilingSpan = {
@@ -310,16 +376,15 @@ export function recordProfilingSpan(span: Omit<ProfilingSpan, "startTime"> & { s
     durationMs: rounded,
     attributes: span.attributes ?? {},
   };
-  store?.append(full);
-
-  if (config.logToStderr) {
-    logSpanToStderr(full);
-  }
+  appendProfilingSpan(full);
 }
 
 /**
  * Time `fn` as a nested span. Allocates span_id, sets ALS parent for children,
  * records on completion. When profiling is off, runs `fn` with no timers.
+ *
+ * Under non-verbose mode, children below `slowMs` are deferred and flushed if
+ * this parent is recorded (keeps slow trees attributable).
  */
 export function withProfilingSpan<T>(
   name: string,
@@ -335,25 +400,30 @@ export function withProfilingSpan<T>(
   const parentSpanId = parent?.spanId ?? null;
   const startTime = new Date().toISOString();
   const started = performance.now();
+  const selfCtx = newProfilingContext(traceId, spanId);
 
   const run = (): T => {
     try {
       return fn();
     } finally {
-      recordProfilingSpan({
-        traceId,
-        spanId,
-        parentSpanId,
-        name,
-        kind,
-        startTime,
-        durationMs: performance.now() - started,
-        attributes,
-      });
+      finalizeCompletedSpan(
+        {
+          traceId,
+          spanId,
+          parentSpanId,
+          name,
+          kind,
+          startTime,
+          durationMs: performance.now() - started,
+          attributes,
+        },
+        selfCtx,
+        parent,
+      );
     }
   };
 
-  return profilingAls.run({ traceId, spanId }, run);
+  return profilingAls.run(selfCtx, run);
 }
 
 /**
@@ -373,45 +443,55 @@ export async function withProfilingSpanAsync<T>(
   const parentSpanId = parent?.spanId ?? null;
   const startTime = new Date().toISOString();
   const started = performance.now();
+  const selfCtx = newProfilingContext(traceId, spanId);
 
-  return profilingAls.run({ traceId, spanId }, async () => {
+  return profilingAls.run(selfCtx, async () => {
     try {
       return await fn();
     } finally {
-      recordProfilingSpan({
-        traceId,
-        spanId,
-        parentSpanId,
-        name,
-        kind,
-        startTime,
-        durationMs: performance.now() - started,
-        attributes,
-      });
+      finalizeCompletedSpan(
+        {
+          traceId,
+          spanId,
+          parentSpanId,
+          name,
+          kind,
+          startTime,
+          durationMs: performance.now() - started,
+          attributes,
+        },
+        selfCtx,
+        parent,
+      );
     }
   });
 }
 
 /**
  * Record a CLIENT (SQL) span from statement timing. Uses ALS for trace/parent
- * when present; synthesizes a root span otherwise.
+ * when present; synthesizes a root span otherwise. Below-threshold SQL under a
+ * parent is deferred until that parent is recorded.
  */
 export function recordSqlProfilingSpan(
   durationMs: number,
   attributes: ProfilingAttributes,
   name = "db.query",
 ): void {
-  if (!shouldRecord(durationMs)) return;
+  if (!config.enabled) return;
   const parent = profilingAls.getStore();
-  recordProfilingSpan({
-    traceId: parent?.traceId ?? newProfilingTraceId(),
-    spanId: newProfilingSpanId(),
-    parentSpanId: parent?.spanId ?? null,
-    name,
-    kind: "CLIENT",
-    durationMs,
-    attributes: { "db.system": "sqlite", ...attributes },
-  });
+  finalizeCompletedSpan(
+    {
+      traceId: parent?.traceId ?? newProfilingTraceId(),
+      spanId: newProfilingSpanId(),
+      parentSpanId: parent?.spanId ?? null,
+      name,
+      kind: "CLIENT",
+      durationMs,
+      attributes: { "db.system": "sqlite", ...attributes },
+    },
+    undefined,
+    parent,
+  );
 }
 
 export class ProfilingStore {

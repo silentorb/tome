@@ -41,12 +41,14 @@ import {
 import {
   explodeTableWindowRequest,
   resolveSqlWindowSorts,
+  tableWindowProfilingAttrs,
 } from "../table-sql-window";
 import {
   membershipEdgesForHits,
   resolveTableSearcher,
   runTableSearchWindow,
 } from "../table-search-window";
+import { withProfilingSpan } from "tome-service-interfaces";
 import type {
   DatabaseRow,
   DatabaseViewDetail,
@@ -286,6 +288,7 @@ function buildComposedDatabaseViewSql(
   sectionLabel: string,
 ): DatabaseViewDetail {
   const plan = explodeTableWindowRequest(db, rowsQuery);
+  const windowAttrs = tableWindowProfilingAttrs(plan);
   const projections = listSetMemberProjectionPairs(dir);
   const { offset, limit } = plan;
 
@@ -415,11 +418,17 @@ function buildComposedDatabaseViewSql(
   let relationFieldsByRow: Record<string, MemberPageRelationFieldLink[]>[] | undefined;
 
   if (plan.searchQuery) {
-    const scopeIds = listMemberPageNodeIds(db, databaseId, memberPageQuery);
+    const scopeIds = withProfilingSpan(
+      "table.search.scopeIds",
+      "INTERNAL",
+      windowAttrs,
+      () => listMemberPageNodeIds(db, databaseId, memberPageQuery),
+    );
     const { hits, rowsWindow: searchWindow } = runTableSearchWindow(
       resolveTableSearcher(db),
       rowsQuery,
       new Set(scopeIds),
+      windowAttrs,
     );
     const hitIds = hits.map((h) => h.id);
     const hydrated = listMemberPage(db, databaseId, {
