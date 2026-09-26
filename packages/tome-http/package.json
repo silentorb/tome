@@ -1,6 +1,6 @@
 {
   "name": "tome-http",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -17,8 +17,8 @@
     "imp-core-types": "workspace:^0.5.0",
     "imp-registry": "workspace:^0.5.0",
     "imp-sql": "workspace:^0.7.0",
-    "tome-graph-interfaces": "workspace:^0.4.0",
-    "tome-service-interfaces": "workspace:^0.5.0"
+    "tome-graph-interfaces": "workspace:^0.5.0",
+    "tome-service-interfaces": "workspace:^0.6.0"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",
