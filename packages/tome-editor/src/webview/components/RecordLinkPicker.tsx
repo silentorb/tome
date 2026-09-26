@@ -97,6 +97,7 @@ export function RecordLinkPicker({
       setError(null);
       void api
         .search(query, effectiveSearchLimit, allowedTypeIds, {
+          role: "title",
           participatesInProjectionType,
           onlyActivePickingRole,
         })

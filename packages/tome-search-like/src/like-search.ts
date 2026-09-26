@@ -6,33 +6,19 @@ import type {
   TomeSearchWindowResult,
 } from "tome-interfaces/search";
 import type { TomeQueryCache } from "tome-service-interfaces";
-import { buildSearchMatchPreview } from "tome-db";
+import { sortBySearchRelevance } from "tome-db/search-relevance";
 
 function escapeLikePattern(query: string): string {
   return `%${query.replace(/[%_\\]/g, "\\$&")}%`;
 }
 
-function bodyFromProperties(properties: Record<string, unknown>): string {
-  const body = properties.body;
-  return typeof body === "string" ? body : "";
-}
-
-function attachMatchPreviews(
-  cache: TomeQueryCache,
-  hits: TomeSearchHit[],
-  query: string,
-): void {
-  for (const hit of hits) {
-    const node = cache.getNode(hit.id);
-    const body = bodyFromProperties(node?.properties ?? {});
-    const preview = buildSearchMatchPreview(body, query);
-    if (preview) hit.matchPreview = preview;
-  }
-}
+/** Generous candidate pool so relevance top-N is not truncated by SQL order. */
+const TITLE_CANDIDATE_CAP = 10_000;
 
 /**
- * SQL LIKE searcher: title hits before body-only hits; order is SQL `title COLLATE NOCASE`.
- * No TypeScript relevance reordering.
+ * Title-only LIKE searcher: filter via SQL title LIKE, then rank with
+ * exact → prefix → word-boundary → substring (shorter title, localeCompare).
+ * No body matches.
  */
 export function createLikeSearch(cache: TomeQueryCache): TomeSearch {
   return {
@@ -50,35 +36,14 @@ export function createLikeSearch(cache: TomeQueryCache): TomeSearch {
       }
 
       const pattern = escapeLikePattern(trimmed);
-      const titleRows = cache.searchNodesByTitle(
+      const candidates = cache.searchNodesByTitle(
         pattern,
-        cap,
+        TITLE_CANDIDATE_CAP,
         allowedTypeIds,
         allowedNodeIds,
       );
-      const hits: TomeSearchHit[] = titleRows.map((row) => ({
-        id: row.id,
-        title: row.title,
-      }));
-      const seen = new Set(hits.map((h) => h.id));
-
-      if (hits.length < cap) {
-        const bodyRows = cache.searchNodesByBody(
-          pattern,
-          cap,
-          allowedTypeIds,
-          allowedNodeIds,
-        );
-        for (const row of bodyRows) {
-          if (seen.has(row.id)) continue;
-          hits.push({ id: row.id, title: row.title });
-          seen.add(row.id);
-          if (hits.length >= cap) break;
-        }
-      }
-
-      attachMatchPreviews(cache, hits, trimmed);
-      return hits;
+      const ranked = sortBySearchRelevance(candidates, trimmed, (row) => row.title);
+      return ranked.slice(0, cap).map((row) => ({ id: row.id, title: row.title }));
     },
 
     searchWindow(request: TomeSearchWindowRequest): TomeSearchWindowResult {
@@ -92,20 +57,34 @@ export function createLikeSearch(cache: TomeQueryCache): TomeSearch {
         return { hits: [], total: 0 };
       }
 
+      const offsetRaw = request.offset;
+      const offset =
+        typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
+          ? Math.floor(offsetRaw)
+          : 0;
+      const limitRaw = request.limit;
+      const limit =
+        limitRaw === undefined || limitRaw === null
+          ? null
+          : typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
+            ? Math.floor(limitRaw)
+            : null;
+
       const pattern = escapeLikePattern(trimmed);
-      const { rows, total } = cache.searchNodesLikeWindow(pattern, {
-        offset: request.offset,
-        limit: request.limit,
+      const candidates = cache.searchNodesByTitle(
+        pattern,
+        TITLE_CANDIDATE_CAP,
         allowedTypeIds,
         allowedNodeIds,
-      });
-
-      const hits: TomeSearchHit[] = rows.map((row) => ({
-        id: row.id,
-        title: row.title,
-      }));
-      attachMatchPreviews(cache, hits, trimmed);
-      return { hits, total };
+      );
+      const ranked = sortBySearchRelevance(candidates, trimmed, (row) => row.title);
+      const total = ranked.length;
+      const page =
+        limit === null ? ranked.slice(offset) : ranked.slice(offset, offset + limit);
+      return {
+        hits: page.map((row) => ({ id: row.id, title: row.title })),
+        total,
+      };
     },
   };
 }

@@ -134,9 +134,20 @@ function buildGraphServices(
 
   const syncSearchIntoGraphStore = () => {
     const composed = writeCtx.graphStore as {
+      setSearchRoles?: (roles: {
+        title?: import("tome-interfaces/search").TomeSearch | null;
+        content?: import("tome-interfaces/search").TomeSearch | null;
+      }) => void;
       setSearch?: (search: import("tome-interfaces/search").TomeSearch | null) => void;
     };
-    composed.setSearch?.(extensions.activeSearch);
+    if (composed.setSearchRoles) {
+      composed.setSearchRoles({
+        title: extensions.getSearch("title"),
+        content: extensions.getSearch("content"),
+      });
+    } else {
+      composed.setSearch?.(extensions.getSearch("content"));
+    }
   };
 
   const extensionsReady = extensions
@@ -383,9 +394,11 @@ function buildGraphServices(
       options?: SearchNodesOptions,
     ): NodeSummary[] {
       const cap = Math.max(1, Math.min(limit ?? 20, 100));
+      const searchRole = options?.role === "title" ? "title" : "content";
       const executed = writeCtx.graphStore.executeImp(searchNodesGraph(cap), {
         parameters: { query },
         allowedTypeIds,
+        searchRole,
         participatesInProjectionType: options?.participatesInProjectionType,
         onlyActivePickingRole: options?.onlyActivePickingRole,
       });
@@ -404,8 +417,8 @@ function buildGraphServices(
         };
       });
     },
-    isSearchAvailable(): boolean {
-      return extensions.isSearchAvailable();
+    isSearchAvailable(role?: "title" | "content"): boolean {
+      return extensions.isSearchAvailable(role ?? "content");
     },
     listRecent(limit?: number): NodeSummary[] {
       const cap = Math.max(1, Math.min(limit ?? 20, 100));

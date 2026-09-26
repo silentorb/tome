@@ -30,7 +30,7 @@ describe("tome-search-like", () => {
     destroyTestContentFixture(fixture);
   });
 
-  test("title matches appear before body-only matches", async () => {
+  test("is title-only — body matches do not appear", async () => {
     const titleId = "000000000000000000000000C1";
     const bodyId = "000000000000000000000000C2";
     seedTestNode(fixture, {
@@ -42,16 +42,14 @@ describe("tome-search-like", () => {
       properties: { title: "Alpha Unrelated", body: "contains like-body-marker here" },
     });
 
-    const hits = await runSearch(search, { query: "like", limit: 10 });
-    const ids = hits.map((h) => h.id);
-    expect(ids.indexOf(titleId)).toBeLessThan(ids.indexOf(bodyId));
+    const hits = await runSearch(search, { query: "like-body-marker", limit: 10 });
+    expect(hits.map((h) => h.id)).not.toContain(bodyId);
+    expect(hits.map((h) => h.id)).not.toContain(titleId);
   });
 
-  test("orders title hits by SQL COLLATE NOCASE, not relevance ranking", async () => {
+  test("ranks exact title before longer substring title", async () => {
     const exactId = "000000000000000000000000C3";
     const longerId = "000000000000000000000000C4";
-    // Exact title "Surreal" would rank first under TS relevance; SQL COLLATE orders
-    // "Applied Surrealism" before "Surreal".
     seedTestNode(fixture, {
       id: exactId,
       properties: { title: "Surreal" },
@@ -63,21 +61,49 @@ describe("tome-search-like", () => {
 
     const hits = await runSearch(search, { query: "Surreal", limit: 10 });
     const ids = hits.map((h) => h.id).filter((id) => id === exactId || id === longerId);
-    expect(ids).toEqual([longerId, exactId]);
+    expect(ids).toEqual([exactId, longerId]);
   });
 
-  test("attaches matchPreview for body-only matches", async () => {
+  test("ranks prefix before word-boundary and substring", async () => {
+    const prefixId = "000000000000000000000000E1";
+    const boundaryId = "000000000000000000000000E2";
+    const substrId = "000000000000000000000000E3";
+    seedTestNode(fixture, {
+      id: substrId,
+      properties: { title: "xxcozyyy" },
+    });
+    seedTestNode(fixture, {
+      id: boundaryId,
+      properties: { title: "The Cozy Place" },
+    });
+    seedTestNode(fixture, {
+      id: prefixId,
+      properties: { title: "Cozy Nest" },
+    });
+
+    const hits = await runSearch(search, { query: "cozy", limit: 10 });
+    const ids = hits
+      .map((h) => h.id)
+      .filter((id) => id === prefixId || id === boundaryId || id === substrId);
+    expect(ids).toEqual([prefixId, boundaryId, substrId]);
+  });
+
+  test("does not attach matchPreview (title-only)", async () => {
     const bodyId = "000000000000000000000000C5";
     seedTestNode(fixture, {
       id: bodyId,
       properties: {
-        title: "Preview Host",
+        title: "unique-like-preview-marker in title",
         body: "prefix unique-like-preview-marker suffix",
       },
     });
-    const hits = await runSearch(search, { query: "unique-like-preview-marker", limit: 10 });
+    const hits = await runSearch(search, {
+      query: "unique-like-preview-marker",
+      limit: 10,
+    });
     const hit = hits.find((h) => h.id === bodyId);
-    expect(hit?.matchPreview?.parts.some((p) => p.highlight)).toBe(true);
+    expect(hit).toBeDefined();
+    expect(hit?.matchPreview).toBeUndefined();
   });
 
   test("allowedNodeIds filters in SQL", async () => {
@@ -148,7 +174,7 @@ describe("tome-search-like", () => {
     expect(hits.some((h) => h.id === "000000000000000000000000C6")).toBe(true);
   });
 
-  test("searchWindow returns total, offset, and uncapped pages", async () => {
+  test("searchWindow returns total, offset, and uncapped pages in relevance order", async () => {
     const ids = [
       "000000000000000000000000D1",
       "000000000000000000000000D2",

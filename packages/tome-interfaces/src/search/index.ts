@@ -1,5 +1,10 @@
 import type { SearchMatchPreview } from "tome-graph-interfaces";
 
+/** Use-case slot for mix-and-match searcher binding. */
+export type SearchRole = "title" | "content";
+
+export const SEARCH_ROLES = ["title", "content"] as const satisfies readonly SearchRole[];
+
 export type TomeSearchRequest = {
   query: string;
   limit: number;

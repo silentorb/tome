@@ -29,8 +29,16 @@ export interface ExtensionComponentEntry {
   params?: Record<string, unknown>;
 }
 
+/** Maps search use-case roles to enabled searcher component ids. */
+export interface ExtensionsSearchRoleMap {
+  title: string;
+  content: string;
+}
+
 export interface ExtensionsFile {
   version: number;
+  /** When set, both roles must reference enabled `kind: "searcher"` components. */
+  search?: ExtensionsSearchRoleMap;
   extensions: ExtensionEntry[];
   components: ExtensionComponentEntry[];
 }
@@ -141,6 +149,21 @@ export function emptyExtensionsFile(): ExtensionsFile {
   return { version: EXTENSIONS_FILE_VERSION, extensions: [], components: [] };
 }
 
+function parseSearchRoleMap(
+  raw: unknown,
+  path: string,
+): ExtensionsSearchRoleMap | undefined {
+  if (raw === undefined) return undefined;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${path}: must be an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  return {
+    title: parseRequiredString(obj.title, `${path}.title`),
+    content: parseRequiredString(obj.content, `${path}.content`),
+  };
+}
+
 export function parseExtensionsFile(raw: string): ExtensionsFile {
   const parsed = JSON.parse(raw) as unknown;
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -158,7 +181,8 @@ export function parseExtensionsFile(raw: string): ExtensionsFile {
   if (!Array.isArray(obj.components)) {
     throw new Error("extensions.json: components must be an array");
   }
-  return {
+  const search = parseSearchRoleMap(obj.search, "extensions.json.search");
+  const file: ExtensionsFile = {
     version,
     extensions: obj.extensions.map((entry, index) =>
       parseExtensionEntry(entry, `extensions[${index}]`),
@@ -167,6 +191,8 @@ export function parseExtensionsFile(raw: string): ExtensionsFile {
       parseComponentEntry(entry, `components[${index}]`),
     ),
   };
+  if (search) file.search = search;
+  return file;
 }
 
 export function serializeExtensionsFile(file: ExtensionsFile): string {

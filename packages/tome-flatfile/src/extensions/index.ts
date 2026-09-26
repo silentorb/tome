@@ -10,12 +10,14 @@ export type {
   ExtensionEntry,
   ExtensionSlashMenuConfig,
   ExtensionsFile,
+  ExtensionsSearchRoleMap,
 } from "./extensions-file";
 export { invalidateExtensionsCache, loadExtensionsFromContent } from "./load";
 export {
   findComponentById,
   findSearcherById,
   resolveExtensionsManifest,
+  resolveSearchRoleMap,
 } from "./manifest";
 export type {
   ExtensionsManifest,

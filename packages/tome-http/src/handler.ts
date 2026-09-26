@@ -313,13 +313,16 @@ async function dispatchApiRequest(
           pickingRoleRaw === "source" || pickingRoleRaw === "target"
             ? pickingRoleRaw
             : undefined;
+        const roleRaw = url.searchParams.get("role");
+        const role = roleRaw === "title" ? "title" : "content";
         return json({
           results: db.search(q, limit, allowedTypeIds, {
             activeCorpus,
             participatesInProjectionType,
             onlyActivePickingRole,
+            role,
           }),
-          searchAvailable: db.isSearchAvailable(),
+          searchAvailable: db.isSearchAvailable(role),
         });
       }
 

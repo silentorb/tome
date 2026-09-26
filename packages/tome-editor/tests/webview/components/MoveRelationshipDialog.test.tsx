@@ -16,6 +16,7 @@ describe("MoveRelationshipDialog", () => {
         _limit?: number,
         _allowedTypeIds?: string[],
         _options?: {
+          role?: "title" | "content";
           participatesInProjectionType?: string;
           onlyActivePickingRole?: "source" | "target";
         },
@@ -60,6 +61,7 @@ describe("MoveRelationshipDialog", () => {
       expect(search).toHaveBeenCalled();
     });
     expect(search.mock.calls.at(-1)?.[3]).toEqual({
+      role: "title",
       participatesInProjectionType: FEATURES_TYPE,
       onlyActivePickingRole: "target",
     });

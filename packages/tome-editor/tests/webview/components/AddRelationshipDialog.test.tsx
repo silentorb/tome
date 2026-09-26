@@ -21,6 +21,7 @@ describe("AddRelationshipDialog", () => {
         _limit?: number,
         _allowedTypeIds?: string[],
         _options?: {
+          role?: "title" | "content";
           participatesInProjectionType?: string;
           onlyActivePickingRole?: "source" | "target";
         },
@@ -73,6 +74,7 @@ describe("AddRelationshipDialog", () => {
     });
     const lastSearch = search.mock.calls.at(-1);
     expect(lastSearch?.[3]).toEqual({
+      role: "title",
       participatesInProjectionType: FEATURES_TYPE,
       onlyActivePickingRole: "target",
     });
@@ -106,6 +108,7 @@ describe("AddRelationshipDialog", () => {
         _limit?: number,
         _allowedTypeIds?: string[],
         _options?: {
+          role?: "title" | "content";
           participatesInProjectionType?: string;
           onlyActivePickingRole?: "source" | "target";
         },
@@ -141,6 +144,7 @@ describe("AddRelationshipDialog", () => {
     });
     const lastSearch = search.mock.calls.at(-1);
     expect(lastSearch?.[3]).toEqual({
+      role: "title",
       participatesInProjectionType: undefined,
       onlyActivePickingRole: "target",
     });

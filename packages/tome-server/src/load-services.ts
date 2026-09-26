@@ -125,8 +125,8 @@ function ensureFtsDataStore(
 /**
  * Migrate legacy store+cache(+corpora) into dataStores + sync.
  * Prefer explicit dataStores when present.
- * Always ensures an FTS sink so typed node search (including editor @ mentions) works
- * without requiring every host config to list tome-search-sqlite by hand.
+ * Always ensures an FTS sink so content-role search (global / table `q`) can open via
+ * getSearcherBackend("fts") without requiring every host config to list tome-search-sqlite by hand.
  */
 export function normalizeServerConfig(config: TomeServerConfig): NormalizedTomeServerConfig {
   let dataStores = config.dataStores ? { ...config.dataStores } : {};

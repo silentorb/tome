@@ -186,6 +186,7 @@ export interface TomeHttpClient {
     limit?: number,
     allowedTypeIds?: string[],
     options?: {
+      role?: "title" | "content";
       activeCorpus?: string;
       participatesInProjectionType?: string;
       onlyActivePickingRole?: "source" | "target";

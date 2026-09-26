@@ -8,7 +8,8 @@ import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-serv
 import type { EditorPageBlockModule } from "tome-interfaces/page-block/editor";
 import type { HtmlPageBlockModule } from "tome-interfaces/page-block/html";
 import type { ServerPageBlockModule } from "tome-interfaces/page-block/server";
-import type { SearcherModule, TomeSearch } from "tome-interfaces/search";
+import type { SearcherModule, SearchRole, TomeSearch } from "tome-interfaces/search";
+import { SEARCH_ROLES } from "tome-interfaces/search";
 import {
   findComponentById,
   loadExtensionsFromContent,
@@ -121,10 +122,20 @@ export class ExtensionServerRuntime {
   readonly #searcherHost = new SearcherHostImpl();
   readonly #editorBundleCache = new Map<string, CachedEditorBundle>();
   readonly #editorBundleInflight = new Map<string, Promise<string | null>>();
-  #manifest: ExtensionsManifest = { extensions: [], components: [], searchers: [] };
+  #manifest: ExtensionsManifest = {
+    extensions: [],
+    components: [],
+    searchers: [],
+    search: null,
+  };
   #loadedModules: LoadedExtensionModules[] = [];
   #lastConfigMtime = -1;
-  #activeSearch: TomeSearch | null = null;
+  /** Opened searchers by component id (shared when one id fills both roles). */
+  #searchByComponentId = new Map<string, TomeSearch>();
+  #searchByRole: Record<SearchRole, TomeSearch | null> = {
+    title: null,
+    content: null,
+  };
 
   constructor(
     contentPath: string,
@@ -156,12 +167,18 @@ export class ExtensionServerRuntime {
     return this.#manifest;
   }
 
-  get activeSearch(): TomeSearch | null {
-    return this.#activeSearch;
+  /** Searcher bound to a role (`title` or `content`). */
+  getSearch(role: SearchRole): TomeSearch | null {
+    return this.#searchByRole[role];
   }
 
-  isSearchAvailable(): boolean {
-    return this.#activeSearch !== null;
+  /** @deprecated Prefer getSearch(role). Content role for callers that expect a single searcher. */
+  get activeSearch(): TomeSearch | null {
+    return this.#searchByRole.content;
+  }
+
+  isSearchAvailable(role: SearchRole = "content"): boolean {
+    return this.#searchByRole[role] !== null;
   }
 
   configMtime(): number {
@@ -179,14 +196,15 @@ export class ExtensionServerRuntime {
   }
 
   async reload(): Promise<void> {
-    const previousSearch = this.#activeSearch;
+    const previousByComponent = this.#searchByComponentId;
     const file = loadExtensionsFromContent(this.#contentPath);
     this.#manifest = resolveExtensionsManifest(file);
     this.#editorHost.clear();
     this.#htmlHost.clear();
     this.#serverHost.clear();
     this.#searcherHost.clear();
-    this.#activeSearch = null;
+    this.#searchByComponentId = new Map();
+    this.#searchByRole = { title: null, content: null };
     this.#editorBundleCache.clear();
     this.#editorBundleInflight.clear();
     this.#loadedModules = [];
@@ -224,9 +242,11 @@ export class ExtensionServerRuntime {
       }
     }
 
-    this.#activeSearch = await this.#openActiveSearcher();
-    if (previousSearch && previousSearch !== this.#activeSearch) {
-      await previousSearch.close?.();
+    await this.#openSearchersByRole();
+    for (const [componentId, previous] of previousByComponent) {
+      if (previous !== this.#searchByComponentId.get(componentId)) {
+        await previous.close?.();
+      }
     }
 
     if (loadErrors.length > 0 && this.#manifest.extensions.length > 0) {
@@ -236,23 +256,16 @@ export class ExtensionServerRuntime {
             this.#editorHost.get(c.implementationId) ||
             this.#htmlHost.get(c.implementationId) ||
             this.#serverHost.get(c.implementationId),
-        ) || this.#activeSearch !== null;
+        ) || SEARCH_ROLES.some((role) => this.#searchByRole[role] !== null);
       if (!loadedAny) {
         throw new Error(`All extensions failed to load:\n${loadErrors.join("\n")}`);
       }
     }
   }
 
-  async #openActiveSearcher(): Promise<TomeSearch | null> {
-    const searchers = this.#manifest.searchers;
-    if (searchers.length === 0) return null;
-    if (searchers.length > 1) {
-      const ids = searchers.map((s) => s.id).join(", ");
-      throw new Error(
-        `Exactly one enabled searcher is allowed; found ${searchers.length}: ${ids}`,
-      );
-    }
-    const component = searchers[0]!;
+  async #openSearcherComponent(
+    component: ResolvedSearcherComponent,
+  ): Promise<TomeSearch | null> {
     const registration = this.#searcherHost.get(component.implementationId);
     if (!registration) {
       console.error(
@@ -281,6 +294,31 @@ export class ExtensionServerRuntime {
       );
       return null;
     }
+  }
+
+  async #openSearchersByRole(): Promise<void> {
+    const roleMap = this.#manifest.search;
+    if (!roleMap) {
+      this.#searchByRole = { title: null, content: null };
+      return;
+    }
+
+    const byId = new Map(
+      this.#manifest.searchers.map((s) => [s.id, s] as const),
+    );
+    const uniqueIds = [...new Set(SEARCH_ROLES.map((role) => roleMap[role]))];
+
+    for (const componentId of uniqueIds) {
+      const component = byId.get(componentId);
+      if (!component) continue;
+      const opened = await this.#openSearcherComponent(component);
+      if (opened) this.#searchByComponentId.set(componentId, opened);
+    }
+
+    this.#searchByRole = {
+      title: this.#searchByComponentId.get(roleMap.title) ?? null,
+      content: this.#searchByComponentId.get(roleMap.content) ?? null,
+    };
   }
 
   getPublicManifest(apiBase = "/api"): PublicExtensionsManifest {

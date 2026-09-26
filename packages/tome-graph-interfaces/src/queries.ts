@@ -22,6 +22,11 @@ export interface NodeDetail extends NodeSummary {
 }
 
 export interface SearchNodesOptions {
+  /**
+   * Which searcher role to use (`title` for pickers/@ mentions, `content` for
+   * global/table search). Default `content`.
+   */
+  role?: "title" | "content";
   /** Editor active corpus; used to decide which hits get corpusLabel. */
   activeCorpus?: string;
   /**

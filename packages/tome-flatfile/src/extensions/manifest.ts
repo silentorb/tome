@@ -3,6 +3,7 @@ import type {
   ExtensionComponentEntry,
   ExtensionEntry,
   ExtensionsFile,
+  ExtensionsSearchRoleMap,
 } from "./extensions-file";
 
 export interface ResolvedExtensionComponent extends PageBlockComponentRef {
@@ -31,6 +32,11 @@ export interface ExtensionsManifest {
   extensions: ExtensionEntry[];
   components: ResolvedExtensionComponent[];
   searchers: ResolvedSearcherComponent[];
+  /**
+   * Role → enabled searcher component id.
+   * Null when no searchers / no binding.
+   */
+  search: ExtensionsSearchRoleMap | null;
 }
 
 function mergeParams(
@@ -38,6 +44,44 @@ function mergeParams(
   componentParams: Record<string, unknown> | undefined,
 ): Record<string, unknown> {
   return { ...extensionParams, ...componentParams };
+}
+
+/**
+ * Resolve role → component id bindings.
+ * - Explicit `file.search`: both roles required; ids must be enabled searchers.
+ * - Omitted `search` + exactly one enabled searcher: bind both roles to it.
+ * - Omitted `search` + zero searchers: null.
+ * - Omitted `search` + multiple searchers: error (ambiguous).
+ */
+export function resolveSearchRoleMap(
+  fileSearch: ExtensionsSearchRoleMap | undefined,
+  searchers: readonly ResolvedSearcherComponent[],
+): ExtensionsSearchRoleMap | null {
+  const byId = new Map(searchers.map((s) => [s.id, s]));
+
+  if (fileSearch) {
+    for (const [role, componentId] of Object.entries(fileSearch) as [
+      keyof ExtensionsSearchRoleMap,
+      string,
+    ][]) {
+      if (!byId.has(componentId)) {
+        throw new Error(
+          `extensions.json.search.${role}: "${componentId}" is not an enabled searcher`,
+        );
+      }
+    }
+    return { title: fileSearch.title, content: fileSearch.content };
+  }
+
+  if (searchers.length === 0) return null;
+  if (searchers.length === 1) {
+    const id = searchers[0]!.id;
+    return { title: id, content: id };
+  }
+  const ids = searchers.map((s) => s.id).join(", ");
+  throw new Error(
+    `extensions.json.search is required when multiple searchers are enabled (${ids})`,
+  );
 }
 
 export function resolveExtensionsManifest(file: ExtensionsFile): ExtensionsManifest {
@@ -61,10 +105,13 @@ export function resolveExtensionsManifest(file: ExtensionsFile): ExtensionsManif
     }
   }
 
+  const search = resolveSearchRoleMap(file.search, searchers);
+
   return {
     extensions: [...enabledExtensions.values()],
     components,
     searchers,
+    search,
   };
 }
 

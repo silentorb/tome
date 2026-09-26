@@ -7,20 +7,27 @@ import {
 } from "./table-rows-window";
 
 /** Resolve active searcher from a composed / injectable store. */
-export function getStoreSearch(store: unknown): TomeSearch | null {
+export function getStoreSearch(
+  store: unknown,
+  role: "title" | "content" = "content",
+): TomeSearch | null {
   if (
     store &&
     typeof store === "object" &&
     typeof (store as { getSearch?: unknown }).getSearch === "function"
   ) {
-    return (store as { getSearch: () => TomeSearch | null }).getSearch() ?? null;
+    return (
+      (store as { getSearch: (r?: "title" | "content") => TomeSearch | null }).getSearch(
+        role,
+      ) ?? null
+    );
   }
   return null;
 }
 
-/** Alias used by table builders. */
+/** Alias used by table builders (always content role). */
 export function resolveTableSearcher(store: unknown): TomeSearch | null {
-  return getStoreSearch(store);
+  return getStoreSearch(store, "content");
 }
 
 export function reorderByHitIds<T>(

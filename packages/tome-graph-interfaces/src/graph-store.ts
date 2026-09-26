@@ -47,6 +47,11 @@ export interface ExecuteImpContext {
   parameters?: Record<string, unknown>;
   allowedTypeIds?: readonly string[];
   /**
+   * Searcher role for Imp `type: "search"` graphs (`title` | `content`).
+   * Default `content`.
+   */
+  searchRole?: "title" | "content";
+  /**
    * Selected projection for Only-active filtering (see SearchNodesOptions).
    * Resolved to opposite-host sources when picking a target.
    */

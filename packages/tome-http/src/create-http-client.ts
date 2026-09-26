@@ -382,6 +382,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       limit = 20,
       allowedTypeIds?: string[],
       options?: {
+        role?: "title" | "content";
         activeCorpus?: string;
         participatesInProjectionType?: string;
         onlyActivePickingRole?: "source" | "target";
@@ -390,6 +391,9 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       const params = new URLSearchParams({ q: query, limit: String(limit) });
       if (allowedTypeIds?.length) {
         params.set("allowedTypeIds", allowedTypeIds.join(","));
+      }
+      if (options?.role === "title" || options?.role === "content") {
+        params.set("role", options.role);
       }
       if (options?.activeCorpus) {
         params.set("activeCorpus", options.activeCorpus);

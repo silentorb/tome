@@ -135,7 +135,7 @@ export function TomeEditor({
     if (!mention) return;
     const handle = window.setTimeout(() => {
       void api
-        .search(mention.query, 12)
+        .search(mention.query, 12, undefined, { role: "title" })
         .then((response) => setResults(response.results))
         .catch(() => setResults([]));
     }, 120);

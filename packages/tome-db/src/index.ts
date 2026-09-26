@@ -418,6 +418,7 @@ export {
   invalidateExtensionsCache,
   loadExtensionsFromContent,
   resolveExtensionsManifest,
+  resolveSearchRoleMap,
   findComponentById,
   findSearcherById,
 } from "tome-flatfile";
@@ -458,6 +459,7 @@ export type {
   ExtensionEntry,
   ExtensionsFile,
   ExtensionsManifest,
+  ExtensionsSearchRoleMap,
   ResolvedExtensionComponent,
   ResolvedSearcherComponent,
 } from "tome-flatfile";

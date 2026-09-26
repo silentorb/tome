@@ -135,6 +135,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
         limit?: number,
         allowedTypeIds?: string[],
         options?: {
+          role?: "title" | "content";
           activeCorpus?: string;
           participatesInProjectionType?: string;
           onlyActivePickingRole?: "source" | "target";

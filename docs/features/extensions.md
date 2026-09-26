@@ -28,7 +28,7 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 ### Searchers
 
 - Components with `kind: "searcher"` register a `TomeSearch` via `searcherModule` (see [searchers.md](../extensions/searchers.md)).
-- Exactly one enabled searcher is allowed; zero means search is unavailable (`searchAvailable: false`).
+- Searcher components bind to `title` / `content` roles via `extensions.json.search` (see [search.md](./search.md)); zero searchers means search is unavailable (`searchAvailable: false`).
 - `slashMenu` is forbidden on searcher components.
 
 ### Page blocks

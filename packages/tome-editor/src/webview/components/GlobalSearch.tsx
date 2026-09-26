@@ -52,7 +52,7 @@ export function GlobalSearch({ api, open, onOpenChange }: GlobalSearchProps) {
       setLoading(true);
       setError(null);
       void api
-        .search(query, 25)
+        .search(query, 25, undefined, { role: "content" })
         .then((response) => {
           setResults(response.results);
           setSearchAvailable(response.searchAvailable);

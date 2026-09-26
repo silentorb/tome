@@ -4,7 +4,7 @@ Integration contracts for **searcher** extension components live in `tome-interf
 
 | Subpath | Role |
 | --- | --- |
-| `tome-interfaces/search` | `TomeSearch`, `SearcherHost.registerSearcher`, request/hit types |
+| `tome-interfaces/search` | `TomeSearch`, `SearchRole`, `SearcherHost.registerSearcher`, request/hit types |
 
 ## Register
 
@@ -31,26 +31,51 @@ export function register(host: SearcherHost): void {
 
 ## Config
 
-```json
-{
-  "id": "my-search",
-  "enabled": true,
-  "searcherModule": "my-package/search"
-}
-```
+Enable one or more searcher components, then bind **roles** (`title` / `content`) to component ids. The same id may fill both roles.
 
 ```json
 {
-  "id": "my-search.searcher",
-  "extensionId": "my-search",
-  "kind": "searcher",
-  "implementationId": "my-searcher",
-  "label": "My search",
-  "enabled": true,
-  "params": { "dataStoreId": "fts" }
+  "version": 1,
+  "search": {
+    "title": "tome-search-like.searcher",
+    "content": "tome-search-sqlite.searcher"
+  },
+  "extensions": [
+    {
+      "id": "tome-search-like",
+      "enabled": true,
+      "searcherModule": "tome-search-like/search"
+    },
+    {
+      "id": "tome-search-sqlite",
+      "enabled": true,
+      "searcherModule": "tome-search-sqlite/search"
+    }
+  ],
+  "components": [
+    {
+      "id": "tome-search-like.searcher",
+      "extensionId": "tome-search-like",
+      "kind": "searcher",
+      "implementationId": "tome-search-like",
+      "label": "SQL LIKE title search",
+      "enabled": true
+    },
+    {
+      "id": "tome-search-sqlite.searcher",
+      "extensionId": "tome-search-sqlite",
+      "kind": "searcher",
+      "implementationId": "tome-search-sqlite",
+      "label": "SQLite FTS5 search",
+      "enabled": true,
+      "params": { "dataStoreId": "fts" }
+    }
+  ]
 }
 ```
 
-`slashMenu` is not allowed on searcher components. Exactly one enabled searcher may be active.
+When `search` is omitted and exactly one searcher is enabled, both roles bind to it. Multiple enabled searchers without `search` fail at load.
+
+`slashMenu` is not allowed on searcher components.
 
 See [search.md](../features/search.md).

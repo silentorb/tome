@@ -61,7 +61,10 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     impExecution: "sql",
   };
 
-  #search: import("tome-interfaces/search").TomeSearch | null = null;
+  #searchByRole: {
+    title: import("tome-interfaces/search").TomeSearch | null;
+    content: import("tome-interfaces/search").TomeSearch | null;
+  } = { title: null, content: null };
 
   constructor(
     readonly flatfile: FlatfileGraphStore,
@@ -306,16 +309,47 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
   }
 
   executeImp(graph: ImpGraph, context?: ExecuteImpContext): ImpCollectionResult {
-    return runExecuteImpSql(this.flatfile, this.cache, graph, context, this.#search);
+    const role = context?.searchRole === "title" ? "title" : "content";
+    return runExecuteImpSql(
+      this.flatfile,
+      this.cache,
+      graph,
+      context,
+      this.#searchByRole[role],
+    );
   }
 
-  /** Injected searcher for Imp `type: "search"` graphs (null = unavailable). */
+  /** Bind a searcher to a use-case role (`title` or `content`). */
+  setSearchForRole(
+    role: "title" | "content",
+    search: import("tome-interfaces/search").TomeSearch | null,
+  ): void {
+    this.#searchByRole[role] = search;
+  }
+
+  /** Bind both roles (same instance may fill both). */
+  setSearchRoles(roles: {
+    title?: import("tome-interfaces/search").TomeSearch | null;
+    content?: import("tome-interfaces/search").TomeSearch | null;
+  }): void {
+    if (roles.title !== undefined) this.#searchByRole.title = roles.title;
+    if (roles.content !== undefined) this.#searchByRole.content = roles.content;
+  }
+
+  /**
+   * Resolve searcher for a role. Default `content` (table `q` / Imp search).
+   * Passing a single searcher via {@link setSearch} dual-binds both roles.
+   */
+  getSearch(
+    role: "title" | "content" = "content",
+  ): import("tome-interfaces/search").TomeSearch | null {
+    return this.#searchByRole[role];
+  }
+
+  /** Dual-bind both roles to one searcher (tests / single-searcher hosts). */
   setSearch(search: import("tome-interfaces/search").TomeSearch | null): void {
-    this.#search = search;
-  }
-
-  getSearch(): import("tome-interfaces/search").TomeSearch | null {
-    return this.#search;
+    this.#searchByRole.title = search;
+    this.#searchByRole.content = search;
   }
 
   queryAll(sql: string, ...params: unknown[]): Record<string, unknown>[] {

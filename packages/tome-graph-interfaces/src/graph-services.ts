@@ -136,8 +136,11 @@ export interface TomeGraphServices {
     allowedTypeIds?: string[],
     options?: SearchNodesOptions,
   ): NodeSummary[];
-  /** Whether a searcher extension is active (non-empty queries are supported). */
-  isSearchAvailable(): boolean;
+  /**
+   * Whether a searcher is bound for the given role (default `content`).
+   * Non-empty queries for that role are supported when true.
+   */
+  isSearchAvailable(role?: "title" | "content"): boolean;
   listRecent(limit?: number): NodeSummary[];
   saveDocument(id: string, document: NodeBodyDocument): boolean;
   saveTitle(id: string, title: string): boolean;

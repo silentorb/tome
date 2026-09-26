@@ -271,6 +271,7 @@ export {
   invalidateExtensionsCache,
   loadExtensionsFromContent,
   resolveExtensionsManifest,
+  resolveSearchRoleMap,
   findComponentById,
   findSearcherById,
 } from "./extensions";
@@ -280,6 +281,7 @@ export type {
   ExtensionEntry,
   ExtensionsFile,
   ExtensionsManifest,
+  ExtensionsSearchRoleMap,
   ResolvedExtensionComponent,
   ResolvedSearcherComponent,
 } from "./extensions";

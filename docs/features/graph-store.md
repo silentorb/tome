@@ -144,7 +144,7 @@ Domain modules use helpers in `tome-db/src/graph-store/relationship-read.ts` (`l
 
 `listRelationshipsForComposite` prefers `queryAll` whenever the store exposes it, and only falls back to Base `forEachRelationshipRecord` when there is no query cache.
 
-Phase 2 removes direct `searchNodes(cache)` and extension raw SQL for Imp graphs. Search heuristics (title+body, title-first ranking, `matchPreview` on body-only hits) live in Tome adapters (`performTomeTextSearch`, flatfile `textSearch`).
+Phase 2 removes direct `searchNodes(cache)` and extension raw SQL for Imp graphs. Host-delegated search uses injected `TomeSearch` by role (`title` / `content`); see [search.md](./search.md).
 
 ## See also
 

@@ -161,6 +161,7 @@ describe("RecordLinkPicker", () => {
 
     await waitFor(() => expect(search).toHaveBeenCalled());
     expect(search).toHaveBeenCalledWith("", 5000, [featuresDbId], {
+      role: "title",
       participatesInProjectionType: undefined,
       onlyActivePickingRole: undefined,
     });

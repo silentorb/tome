@@ -118,7 +118,7 @@ describe("GlobalSearch", () => {
     expect(preview?.querySelector("strong")?.textContent).toBe("needle");
   });
 
-  test("calls search without includeBody option", async () => {
+  test("calls search with content role", async () => {
     const search = mock(async () => ({
       results: sampleResults,
       searchAvailable: true,
@@ -132,7 +132,7 @@ describe("GlobalSearch", () => {
     });
 
     await waitFor(() => {
-      expect(search).toHaveBeenCalledWith("", 25);
+      expect(search).toHaveBeenCalledWith("", 25, undefined, { role: "content" });
     });
   });
 
