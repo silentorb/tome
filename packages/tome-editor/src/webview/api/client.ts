@@ -59,7 +59,7 @@ export function createEditorApi(): EditorApi {
     reorderQuickLinks: rest.reorderQuickLinks.bind(rest),
     getGraphFull: rest.getGraphFull.bind(rest),
     getGraphExplorerLod: rest.getGraphExplorerLod.bind(rest),
-    executeImp: rest.executeImp.bind(rest),
+    queryNodes: rest.queryNodes.bind(rest),
     getSchema: rest.getSchema.bind(rest),
     listRelationshipTypes: rest.listRelationshipTypes.bind(rest),
     getRelationshipLinkOptions: rest.getRelationshipLinkOptions.bind(rest),

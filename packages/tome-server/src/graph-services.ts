@@ -150,30 +150,30 @@ function buildGraphServices(
 
   const schema = () => loadSchemaFromContent(contentPath);
 
-  const corpusMeta = (nodeId: string, activeCorpusId?: string) => {
+  const corpusMeta = (nodeId: string, activeCorpus?: string) => {
     const corpora = writeCtx.graphStore.listCorpora();
-    const corpusId = writeCtx.graphStore.locateNode(nodeId) ?? undefined;
-    const info = corpusId
-      ? corpora.find((c) => c.id === corpusId)
+    const corpus = writeCtx.graphStore.locateNode(nodeId) ?? undefined;
+    const info = corpus
+      ? corpora.find((c) => c.id === corpus)
       : undefined;
     const corpusLabel =
       corpora.length > 1 &&
-      activeCorpusId &&
-      corpusId &&
-      corpusId !== activeCorpusId
-        ? info?.workspace.branding?.appTitle?.trim() || corpusId
+      activeCorpus &&
+      corpus &&
+      corpus !== activeCorpus
+        ? info?.workspace.branding?.appTitle?.trim() || corpus
         : undefined;
     return {
-      corpusId,
+      corpus,
       corpusReadonly: info ? info.access === "readonly" : undefined,
       ...(corpusLabel ? { corpusLabel } : {}),
     };
   };
 
-  const workspaceForCorpus = (corpusId?: string): WorkspacePublic => {
+  const workspaceForCorpus = (corpus?: string): WorkspacePublic => {
     const corpora = writeCtx.graphStore.listCorpora();
-    const match = corpusId
-      ? corpora.find((c) => c.id === corpusId)
+    const match = corpus
+      ? corpora.find((c) => c.id === corpus)
       : corpora[0];
     const contentDir = match?.contentDir ?? contentPath;
     const ws = match?.workspace ?? loadWorkspaceFromContent(contentDir);
@@ -190,13 +190,13 @@ function buildGraphServices(
   };
 
   const services: TomeGraphServices = {
-    getWorkspace(corpusId?: string): WorkspacePublic {
-      return workspaceForCorpus(corpusId);
+    getWorkspace(corpus?: string): WorkspacePublic {
+      return workspaceForCorpus(corpus);
     },
-    getDocumentIcon(corpusId?: string) {
+    getDocumentIcon(corpus?: string) {
       const corpora = writeCtx.graphStore.listCorpora();
-      const match = corpusId
-        ? corpora.find((c) => c.id === corpusId)
+      const match = corpus
+        ? corpora.find((c) => c.id === corpus)
         : corpora[0];
       const contentDir = match?.contentDir ?? contentPath;
       const ws = loadWorkspaceFromContent(contentDir);
@@ -215,8 +215,8 @@ function buildGraphServices(
         };
       });
     },
-    getHomeId(corpusId?: string): string {
-      const ws = workspaceForCorpus(corpusId);
+    getHomeId(corpus?: string): string {
+      const ws = workspaceForCorpus(corpus);
       if (graphStore.getNode(ws.homeNodeId)) return ws.homeNodeId;
       const recent = writeCtx.graphStore.executeImp(recentNodesGraph(1));
       const rows = recent instanceof Promise ? [] : recent.rows;
@@ -270,7 +270,7 @@ function buildGraphServices(
         primaryTypeTitle: detail.primaryTypeTitle,
         isTypeTable: detail.isTypeTable,
         archived: detail.archived,
-        corpusId: meta.corpusId,
+        corpus: meta.corpus,
         corpusReadonly: meta.corpusReadonly,
         document,
         metadata: detail.metadata,
@@ -400,7 +400,7 @@ function buildGraphServices(
           title,
           primaryTypeTitle: primaryTypeTitleForInstance(graphStore, id),
           ...(matchPreview ? { matchPreview } : {}),
-          ...corpusMeta(id, options?.activeCorpusId),
+          ...corpusMeta(id, options?.activeCorpus),
         };
       });
     },

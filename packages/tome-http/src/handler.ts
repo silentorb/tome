@@ -207,8 +207,8 @@ async function dispatchApiRequest(
       }
 
       if (path === "/api/home") {
-        const corpusId = url.searchParams.get("corpusId") ?? undefined;
-        return json({ id: db.getHomeId(corpusId || undefined) });
+        const corpus = url.searchParams.get("corpus") ?? undefined;
+        return json({ id: db.getHomeId(corpus || undefined) });
       }
 
       if (path === "/api/corpora" && req.method === "GET") {
@@ -216,13 +216,13 @@ async function dispatchApiRequest(
       }
 
       if (path === "/api/workspace") {
-        const corpusId = url.searchParams.get("corpusId") ?? undefined;
-        return json(db.getWorkspace(corpusId || undefined));
+        const corpus = url.searchParams.get("corpus") ?? undefined;
+        return json(db.getWorkspace(corpus || undefined));
       }
 
       if (path === "/api/workspace/document-icon" && req.method === "GET") {
-        const corpusId = url.searchParams.get("corpusId") ?? undefined;
-        const result = db.getDocumentIcon(corpusId || undefined);
+        const corpus = url.searchParams.get("corpus") ?? undefined;
+        const result = db.getDocumentIcon(corpus || undefined);
         if (!result.ok) {
           if (result.error === "not_found") return json({ error: "not found" }, 404);
           if (result.error === "bad_type") return json({ error: "unsupported icon type" }, 400);
@@ -267,7 +267,7 @@ async function dispatchApiRequest(
         });
       }
 
-      if (path === "/api/graph/execute-imp" && req.method === "POST") {
+      if (path === "/api/nodes/query" && req.method === "POST") {
         const payload = (await req.json()) as {
           graph?: unknown;
           context?: unknown;
@@ -304,8 +304,8 @@ async function dispatchApiRequest(
         const allowedTypeIds = allowedRaw
           ? allowedRaw.split(",").map((id) => id.trim()).filter(Boolean)
           : undefined;
-        const activeCorpusId =
-          url.searchParams.get("activeCorpusId") ?? undefined;
+        const activeCorpus =
+          url.searchParams.get("activeCorpus") ?? undefined;
         const participatesInProjectionType =
           url.searchParams.get("participatesInProjectionType") ?? undefined;
         const pickingRoleRaw = url.searchParams.get("onlyActivePickingRole");
@@ -315,7 +315,7 @@ async function dispatchApiRequest(
             : undefined;
         return json({
           results: db.search(q, limit, allowedTypeIds, {
-            activeCorpusId,
+            activeCorpus,
             participatesInProjectionType,
             onlyActivePickingRole,
           }),
@@ -332,7 +332,7 @@ async function dispatchApiRequest(
         const payload = (await req.json()) as {
           title?: string;
           body?: string;
-          corpusId?: string;
+          corpus?: string;
         };
         if (typeof payload.title !== "string") {
           return json({ error: "title required" }, 400);
@@ -340,7 +340,7 @@ async function dispatchApiRequest(
         const result = db.createNode({
           title: payload.title,
           body: typeof payload.body === "string" ? payload.body : undefined,
-          corpusId: typeof payload.corpusId === "string" ? payload.corpusId : undefined,
+          corpus: typeof payload.corpus === "string" ? payload.corpus : undefined,
         });
         if (result === "invalid_title") return json({ error: "invalid title" }, 400);
         if (result === "corpus_not_found") return json({ error: "corpus not found" }, 404);

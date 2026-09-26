@@ -11,12 +11,12 @@ import {
 import { recentNodesGraph } from "tome-db";
 import { createTestApi } from "./test-api-setup";
 
-describe("executeImp API", () => {
-  test("POST /api/graph/execute-imp runs recentNodesGraph", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "tome-execute-imp-api-"));
+describe("queryNodes API", () => {
+  test("POST /api/nodes/query runs recentNodesGraph", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tome-nodes-query-api-"));
     const dbPath = join(dir, "api.sqlite");
 
-    const fixture = createTestContentFixture("tome-execute-imp-content-");
+    const fixture = createTestContentFixture("tome-nodes-query-content-");
     seedTestNode(fixture, {
       id: TEST_HOME_NODE_ID,
       properties: {
@@ -32,7 +32,7 @@ describe("executeImp API", () => {
     });
 
     const response = await apiHandler(
-      new Request("http://127.0.0.1/api/graph/execute-imp", {
+      new Request("http://127.0.0.1/api/nodes/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ graph: recentNodesGraph(5) }),

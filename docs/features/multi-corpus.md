@@ -8,7 +8,7 @@ A Tome process may open **one or more corpora** (content roots) behind a single 
 
 - Configuring more than one content root in `tome-server` / the editor
 - Implementing or changing composite store, cross-corpus relationships, or active-corpus UI
-- Understanding how `corpusId` relates to “project” / workspace product language
+- Understanding how public wire `corpus` relates to “project” / workspace product language
 
 ## Terminology
 
@@ -20,7 +20,7 @@ A Tome process may open **one or more corpora** (content roots) behind a single 
 | **Project** | Workspace / product use case. Often 1:1 with a corpus today; do not equate in APIs. |
 | **Active corpus** | The corpus whose Home, quick links, and branding the editor sidebar shows. |
 
-API field: `corpusId`. Config key: `corpora`.
+Public wire field: `corpus` (URL/JSON; use `Id` suffix only when both a corpus object and id appear, e.g. editor `activeCorpusId` beside `activeCorpus`). Config key: `corpora` / dataStores map keys / `id`.
 
 ## Requirements
 
@@ -53,8 +53,8 @@ API field: `corpusId`. Config key: `corpora`.
 | Node | Owning corpus (must be read/write) |
 | Same-corpus relationship | That corpus (must be read/write) |
 | Cross-corpus relationship | **Dual-write** identical `{ a, b, type, properties }` into **both** endpoint corpora; both must be read/write or refuse |
-| New node (UI) | Active corpus (`corpusId` on create) |
-| New node (API, no `corpusId`) | Host primary / first-listed corpus |
+| New node (UI) | Active corpus (`corpus` on create body) |
+| New node (API, no `corpus`) | Host primary / first-listed corpus |
 | Model JSON | Corpus that owns the key / type node |
 
 - Relationship on-disk format is unchanged.
@@ -81,22 +81,22 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 
 - **Not** a mixed sidebar. One **active corpus** at a time.
 - Sidebar: corpus dropdown at the top; Home / quick links / branding from the active corpus only.
-- Navigating to a node sets active corpus to that node’s `corpusId`.
+- Navigating to a node sets active corpus to that node’s `corpus` (wire field on the page DTO).
 - Changing the dropdown **always** navigates to the selected corpus’s `homeNodeId`.
-- New nodes are created in the active corpus. The New page URL carries `corpus={corpusId}` (`?view=create&corpus=…`) because it has no node to infer the corpus from; opening it in a new tab must not fall back to the first configured corpus.
+- New nodes are created in the active corpus. The New page URL carries `?view=create&corpus=…` because it has no node to infer the corpus from; opening it in a new tab must not fall back to the first configured corpus.
 - Readonly corpus / page → view-only chrome.
 - Search / graph may query the union so cross-links resolve; create and chrome stay corpus-scoped.
-- Node search (`GET /api/nodes/search`) accepts optional `activeCorpusId`. Hits whose owning corpus differs from that id include `corpusLabel` (workspace `branding.appTitle`, else the corpus id). The editor injects the active corpus into search and shows `corpusLabel` as a muted title suffix in global search, record link pickers, and `@` mentions.
+- Node search (`GET /api/nodes/search`) accepts optional `activeCorpus`. Hits whose owning corpus differs from that id include `corpusLabel` (workspace `branding.appTitle`, else the corpus id). The editor injects the active corpus into search and shows `corpusLabel` as a muted title suffix in global search, record link pickers, and `@` mentions.
 
 **New corpus branding:** In that corpus’s `content/model/workspace.json` → `branding`, set `defaultDocumentIcon` to the **first letter** of the corpus display name (e.g. Marloth → `"M"`, Translucence → `"T"`). Optionally set `documentIconImage` to a content-relative `.svg` or `.png` under `model/` (served by `GET /api/workspace/document-icon`). If `defaultDocumentIcon` is omitted, the editor falls back to the package letter **`T`** (generic Tome), which is easy to confuse with a corpus named like Translucence — prefer an explicit letter for every corpus.
 
 ### HTTP
 
 - `GET /api/corpora` — id, label, home, archive, `access`.
-- `GET /api/workspace/document-icon?corpusId=…` — optional branding favicon image for that corpus (`branding.documentIconImage`).
-- Node page and search hits include `corpusId` (and whether the corpus is readonly).
-- Search hits may also include `corpusLabel` when `activeCorpusId` is passed and the hit is foreign.
-- `GET /api/nodes/:id` stays id-only; create may take optional `corpusId`.
+- `GET /api/workspace/document-icon?corpus=…` — optional branding favicon image for that corpus (`branding.documentIconImage`).
+- Node page and search hits include `corpus` (and whether the corpus is readonly).
+- Search hits may also include `corpusLabel` when `activeCorpus` is passed and the hit is foreign.
+- `GET /api/nodes/:id` stays id-only; create may take optional `corpus`.
 
 ## Design rationale
 

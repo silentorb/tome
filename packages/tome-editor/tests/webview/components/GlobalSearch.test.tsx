@@ -153,14 +153,14 @@ describe("GlobalSearch", () => {
         id: "AAAAAAAAAAAAAAAAAAAAAAAAAA",
         title: "Alpha Scene",
         primaryTypeTitle: null,
-        corpusId: "other",
+        corpus: "other",
         corpusLabel: "Translucence",
       },
       {
         id: "BBBBBBBBBBBBBBBBBBBBBBBBBB",
         title: "Beta Feature",
         primaryTypeTitle: null,
-        corpusId: "active",
+        corpus: "active",
       },
     ];
     const { container } = renderGlobalSearch({

@@ -37,7 +37,7 @@ Preferred (`dataStores` + optional `sync`):
 {
   "version": 2,
   "dataStores": {
-    "flatfile": {
+    "default": {
       "module": "tome-flatfile",
       "export": "createFlatfileModule",
       "options": {}
@@ -66,7 +66,7 @@ Legacy singular `store` + `cache` (still accepted; normalized at load):
 {
   "version": 1,
   "store": {
-    "id": "flatfile",
+    "id": "default",
     "module": "tome-flatfile",
     "export": "createFlatfileModule",
     "options": {}

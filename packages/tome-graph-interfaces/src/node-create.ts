@@ -39,7 +39,7 @@ export interface CreateNodeInput {
   body?: string;
   link?: CreateNodeLink;
   /** Target corpus for the new node (defaults to primary / link-endpoint corpus). */
-  corpusId?: string;
+  corpus?: string;
 }
 
 export interface CreateNodeResult {

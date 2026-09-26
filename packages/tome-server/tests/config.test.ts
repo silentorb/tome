@@ -7,7 +7,7 @@ import type { TomeGraphServices } from "tome-graph-interfaces";
 import type { TomeServerModuleConfigEntry } from "tome-service-interfaces";
 
 const STORE_ENTRY: TomeServerModuleConfigEntry = {
-  id: "flatfile",
+  id: "default",
   module: "tome-flatfile",
   export: "createFlatfileModule",
   options: {},
@@ -50,7 +50,7 @@ describe("tome-server config", () => {
       cache: CACHE_ENTRY,
       services: [],
     });
-    expect(normalized.dataStores.flatfile?.module).toBe("tome-flatfile");
+    expect(normalized.dataStores.default?.module).toBe("tome-flatfile");
     expect(normalized.dataStores.sqlite?.module).toBe("tome-sqlite");
     expect(normalized.dataStores.fts?.module).toBe("tome-search-sqlite");
     expect(normalized.sync.queryStoreId).toBe("sqlite");
@@ -179,7 +179,7 @@ describe("tome-server config", () => {
     const raw = JSON.parse(readFileSync(path, "utf8")) as unknown;
     const config = parseServerConfig(raw);
     expect(config.services[0]?.module).toBe("tome-http");
-    expect(config.store?.id).toBe("flatfile");
+    expect(config.store?.id).toBe("default");
     expect(config.cache?.id).toBe("sqlite");
     rmSync(dir, { recursive: true, force: true });
   });

@@ -74,13 +74,13 @@ export interface CreateNodeResponse {
 
 export interface TomeHttpClient {
   getHealth(): Promise<ApiHealth>;
-  getWorkspace(corpusId?: string): Promise<WorkspacePublic>;
+  getWorkspace(corpus?: string): Promise<WorkspacePublic>;
   listCorpora(): Promise<TomeCorpusPublic[]>;
-  getHomeId(corpusId?: string): Promise<string>;
+  getHomeId(corpus?: string): Promise<string>;
   createNode(input: {
     title: string;
     body?: string;
-    corpusId?: string;
+    corpus?: string;
   }): Promise<CreateNodeResponse>;
   createRelationRow(
     sourceId: string,
@@ -186,7 +186,7 @@ export interface TomeHttpClient {
     limit?: number,
     allowedTypeIds?: string[],
     options?: {
-      activeCorpusId?: string;
+      activeCorpus?: string;
       participatesInProjectionType?: string;
       onlyActivePickingRole?: "source" | "target";
     },
@@ -236,7 +236,7 @@ export interface TomeHttpClient {
   reorderQuickLinks(nodeIds: readonly string[]): Promise<void>;
   getGraphFull(): Promise<GraphSnapshot>;
   getGraphExplorerLod(options?: GraphExplorerLodOptions): Promise<GraphLodSnapshot>;
-  executeImp(graph: ImpGraph, context?: ExecuteImpContext): Promise<ImpCollectionResult>;
+  queryNodes(graph: ImpGraph, context?: ExecuteImpContext): Promise<ImpCollectionResult>;
   getSchema(): Promise<SchemaFile>;
   listRelationshipTypes(): Promise<RelationshipTypeOption[]>;
   getRelationshipLinkOptions(

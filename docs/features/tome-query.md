@@ -53,7 +53,7 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 
 ### Host services
 
-- Extensions receive `services.sqlQuery.queryAll(sql, params)` (parameterized SQL from Imp compile only)
+- Extensions receive `services.executeImp` (`executeImp(graph, context?)` → `{ columns, rows }`) for Imp collection queries
 - Extensions receive `services.corpusQuery` (`corpusIdForNode`, `nodeIdsInCorpus`) so query compile can pin a corpus without a SQLite `corpus_id` column
 - Editor page-block context may expose `openToolPanel` / `closeToolPanel` for the host right panel
 
@@ -69,8 +69,8 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 1. Author inserts **Query table** from the slash menu
 2. Document shows the result table (auto-run on mount)
 3. **Edit query** opens the right panel; author edits Imp operators in React Flow; changes update fence `data`
-4. Panel close (or Refresh) re-runs: server converts RF → Imp → SQL, wraps `FROM nodes` with live-only subquery, runs `queryAll`, returns `{ columns, rows }`
-5. Static / prepare-editor HTML renders the same snapshot when `sqlQuery` is available
+4. Panel close (or Refresh) re-runs: server converts RF → Imp → `executeImp`, returns `{ columns, rows }`
+5. Static / prepare-editor HTML renders the same snapshot when `executeImp` is available
 
 ## Out of scope (v1)
 

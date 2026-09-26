@@ -1,7 +1,7 @@
 {
   "version": 1,
   "store": {
-    "id": "flatfile",
+    "id": "default",
     "module": "tome-flatfile",
     "export": "createFlatfileModule",
     "options": {}

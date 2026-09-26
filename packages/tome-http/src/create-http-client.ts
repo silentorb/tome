@@ -128,23 +128,23 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     async getHealth(): Promise<ApiHealth> {
       return fetchJson<ApiHealth>("/api/health");
     },
-    async getWorkspace(corpusId?: string): Promise<WorkspacePublic> {
-      const qs = corpusId ? `?corpusId=${encodeURIComponent(corpusId)}` : "";
+    async getWorkspace(corpus?: string): Promise<WorkspacePublic> {
+      const qs = corpus ? `?corpus=${encodeURIComponent(corpus)}` : "";
       return fetchJson<WorkspacePublic>(`/api/workspace${qs}`);
     },
     async listCorpora(): Promise<TomeCorpusPublic[]> {
       const data = await fetchJson<{ corpora: TomeCorpusPublic[] }>("/api/corpora");
       return data.corpora;
     },
-    async getHomeId(corpusId?: string): Promise<string> {
-      const qs = corpusId ? `?corpusId=${encodeURIComponent(corpusId)}` : "";
+    async getHomeId(corpus?: string): Promise<string> {
+      const qs = corpus ? `?corpus=${encodeURIComponent(corpus)}` : "";
       const data = await fetchJson<{ id: string }>(`/api/home${qs}`);
       return data.id;
     },
     async createNode(input: {
       title: string;
       body?: string;
-      corpusId?: string;
+      corpus?: string;
     }): Promise<CreateNodeResponse> {
       const data = await fetchJson<{ node: CreateNodeResponse }>("/api/nodes", {
         method: "POST",
@@ -382,7 +382,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       limit = 20,
       allowedTypeIds?: string[],
       options?: {
-        activeCorpusId?: string;
+        activeCorpus?: string;
         participatesInProjectionType?: string;
         onlyActivePickingRole?: "source" | "target";
       },
@@ -391,8 +391,8 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       if (allowedTypeIds?.length) {
         params.set("allowedTypeIds", allowedTypeIds.join(","));
       }
-      if (options?.activeCorpusId) {
-        params.set("activeCorpusId", options.activeCorpusId);
+      if (options?.activeCorpus) {
+        params.set("activeCorpus", options.activeCorpus);
       }
       if (options?.participatesInProjectionType) {
         params.set(
@@ -530,11 +530,11 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       );
       return data.graph;
     },
-    async executeImp(
+    async queryNodes(
       graph: import("tome-graph-interfaces").ImpGraph,
       context?: import("tome-graph-interfaces").ExecuteImpContext,
     ): Promise<import("tome-graph-interfaces").ImpCollectionResult> {
-      return fetchJson("/api/graph/execute-imp", {
+      return fetchJson("/api/nodes/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ graph, context }),

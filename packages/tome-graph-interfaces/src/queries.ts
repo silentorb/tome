@@ -7,11 +7,11 @@ export interface NodeSummary {
   title: string;
   primaryTypeTitle: string | null;
   matchPreview?: SearchMatchPreview;
-  /** Owning corpus id when the session has multiple corpora. */
-  corpusId?: string;
+  /** Owning corpus when the session has multiple corpora. */
+  corpus?: string;
   /** True when the owning corpus is readonly. */
   corpusReadonly?: boolean;
-  /** Display title of the owning corpus when it differs from the caller's activeCorpusId. */
+  /** Display title of the owning corpus when it differs from the caller's activeCorpus. */
   corpusLabel?: string;
 }
 
@@ -23,7 +23,7 @@ export interface NodeDetail extends NodeSummary {
 
 export interface SearchNodesOptions {
   /** Editor active corpus; used to decide which hits get corpusLabel. */
-  activeCorpusId?: string;
+  activeCorpus?: string;
   /**
    * Selected / locked directed projection type for Only-active filtering.
    * Combined with {@link onlyActivePickingRole} to resolve host nodes of the

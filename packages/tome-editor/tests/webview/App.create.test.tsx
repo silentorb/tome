@@ -18,8 +18,8 @@ const createdNode = makeNodePageDetail({
   body: "",
 });
 
-let createNodeCalls: { title: string; body?: string; corpusId?: string }[] = [];
-const createNode = async (input: { title: string; body?: string; corpusId?: string }) => {
+let createNodeCalls: { title: string; body?: string; corpus?: string }[] = [];
+const createNode = async (input: { title: string; body?: string; corpus?: string }) => {
   createNodeCalls.push(input);
   return { id: createdId, title: input.title };
 };
@@ -91,7 +91,7 @@ describe("App new page draft", () => {
     await waitFor(
       () => {
         expect(createNodeCalls).toEqual([
-          { title: "Fresh idea", body: undefined, corpusId: "marloth" },
+          { title: "Fresh idea", body: undefined, corpus: "marloth" },
         ]);
         expect(window.location.search).toContain(`node=${createdId}`);
         expect(window.location.search).not.toContain("view=create");
@@ -118,7 +118,7 @@ describe("App new page draft", () => {
     await waitFor(
       () => {
         expect(createNodeCalls).toEqual([
-          { title: "Fresh idea", body: undefined, corpusId: "translucence" },
+          { title: "Fresh idea", body: undefined, corpus: "translucence" },
         ]);
       },
       { timeout: 3500 },

@@ -89,7 +89,7 @@ function seedCorpus(
 describe("search corpusLabel enrichment", () => {
   // Full weighted suite can make SQLite sync + search exceed the default 5s.
   test(
-    "labels foreign hits when activeCorpusId is set in a multi-corpus session",
+    "labels foreign hits when activeCorpus is set in a multi-corpus session",
     async () => {
     const temp = mkdtempSync(join(tmpdir(), "tome-search-corpus-label-"));
     try {
@@ -106,12 +106,12 @@ describe("search corpusLabel enrichment", () => {
       const services = openTomeGraphServices({ store, cache });
       await services.getExtensionsManifest();
 
-      const foreign = services.search("Shared", 10, undefined, { activeCorpusId: "a" });
+      const foreign = services.search("Shared", 10, undefined, { activeCorpus: "a" });
       const beta = foreign.find((row) => row.id === NODE_B);
       const alpha = foreign.find((row) => row.id === NODE_A);
-      expect(beta?.corpusId).toBe("b");
+      expect(beta?.corpus).toBe("b");
       expect(beta?.corpusLabel).toBe("Corpus B");
-      expect(alpha?.corpusId).toBe("a");
+      expect(alpha?.corpus).toBe("a");
       expect(alpha?.corpusLabel).toBeUndefined();
 
       const withoutActive = services.search("Shared", 10);
@@ -138,7 +138,7 @@ describe("search corpusLabel enrichment", () => {
       const services = openTomeGraphServices({ store, cache });
       await services.getExtensionsManifest();
 
-      const hits = services.search("Solo", 10, undefined, { activeCorpusId: "other" });
+      const hits = services.search("Solo", 10, undefined, { activeCorpus: "other" });
       expect(hits).toHaveLength(1);
       expect(hits[0]?.corpusLabel).toBeUndefined();
 

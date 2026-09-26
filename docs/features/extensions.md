@@ -90,7 +90,7 @@ extensions.json
 | `packages/tome-spatial-graph/` | Spatial graph page block (cytoscape SVG) |
 | `packages/tome-query/` | Imp-backed custom table page block |
 
-Hosts expose **`ExtensionGraphQueryServices`**, **`ExtensionGraphMutateServices`**, **`ExtensionSchemaQueryServices`**, **`ExtensionSqlQueryServices`**, and **`ExtensionCorpusQueryServices`** (`tome-interfaces/extension-services/*`) to server block handlers via factories in `tome-db`. HTML renderers may return async `renderHtml()` results.
+Hosts expose **`ExtensionGraphQueryServices`**, **`ExtensionGraphMutateServices`**, **`ExtensionSchemaQueryServices`**, **`ExtensionExecuteImpServices`**, and **`ExtensionCorpusQueryServices`** (`tome-interfaces/extension-services/*`) to server block handlers via factories in `tome-db`. HTML renderers may return async `renderHtml()` results.
 
 ## Configuration
 

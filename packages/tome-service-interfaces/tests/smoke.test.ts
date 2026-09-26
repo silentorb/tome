@@ -12,12 +12,12 @@ describe("tome-service-interfaces", () => {
   test("config shape requires store and cache", () => {
     const config: TomeServerConfig = {
       version: 1,
-      store: { id: "flatfile", module: "tome-flatfile", export: "createFlatfileModule" },
+      store: { id: "default", module: "tome-flatfile", export: "createFlatfileModule" },
       cache: { id: "sqlite", module: "tome-sqlite", export: "createSqliteModule" },
       services: [],
     };
     expect(config.services).toEqual([]);
-    expect(config.store!.id).toBe("flatfile");
+    expect(config.store!.id).toBe("default");
     expect(config.cache!.id).toBe("sqlite");
   });
 
@@ -31,7 +31,7 @@ describe("tome-service-interfaces", () => {
 
   test("store and cache module contracts are structural", () => {
     const storeMod: TomeStoreModule = {
-      id: "flatfile",
+      id: "default",
       open() {
         return {
           contentDir: "/tmp",
@@ -44,7 +44,7 @@ describe("tome-service-interfaces", () => {
         return { path: "/tmp/x.sqlite", close() {} } as ReturnType<TomeCacheModule["open"]>;
       },
     };
-    expect(storeMod.id).toBe("flatfile");
+    expect(storeMod.id).toBe("default");
     expect(cacheMod.id).toBe("sqlite");
     const event: StoreChangeEvent = { path: "01ABC.md", kind: "node" };
     expect(event.kind).toBe("node");

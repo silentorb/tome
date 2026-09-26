@@ -66,14 +66,14 @@ describe("resolveFaviconHref", () => {
 });
 
 describe("documentIconImageApiUrl", () => {
-  test("omits corpusId in solo mode", () => {
+  test("omits corpus in solo mode", () => {
     expect(documentIconImageApiUrl()).toBe("/api/workspace/document-icon");
     expect(documentIconImageApiUrl(null)).toBe("/api/workspace/document-icon");
   });
 
-  test("includes corpusId query when set", () => {
+  test("includes corpus query when set", () => {
     expect(documentIconImageApiUrl("translucence")).toBe(
-      "/api/workspace/document-icon?corpusId=translucence",
+      "/api/workspace/document-icon?corpus=translucence",
     );
   });
 });

@@ -37,7 +37,7 @@ export function extractPageIconFromDocument(document: NodeBodyDocument): string 
 
 export function documentIconImageApiUrl(corpusId?: string | null): string {
   if (corpusId?.trim()) {
-    return `/api/workspace/document-icon?corpusId=${encodeURIComponent(corpusId.trim())}`;
+    return `/api/workspace/document-icon?corpus=${encodeURIComponent(corpusId.trim())}`;
   }
   return "/api/workspace/document-icon";
 }

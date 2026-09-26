@@ -59,8 +59,8 @@ function allocateNodeId(ctx: TomeWriteContext): string {
 
 function resolveCreateCorpusId(ctx: TomeWriteContext, input: CreateNodeInput): string | "corpus_not_found" {
   const store = ctx.graphStore;
-  if (input.corpusId?.trim()) {
-    const id = input.corpusId.trim();
+  if (input.corpus?.trim()) {
+    const id = input.corpus.trim();
     if (!writeStoreListCorpora(store).some((c) => c.id === id)) return "corpus_not_found";
     return id;
   }

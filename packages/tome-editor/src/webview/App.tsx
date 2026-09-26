@@ -135,14 +135,14 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
         limit?: number,
         allowedTypeIds?: string[],
         options?: {
-          activeCorpusId?: string;
+          activeCorpus?: string;
           participatesInProjectionType?: string;
           onlyActivePickingRole?: "source" | "target";
         },
       ) =>
         baseApi.search(query, limit, allowedTypeIds, {
           ...options,
-          activeCorpusId: activeCorpusId ?? undefined,
+          activeCorpus: activeCorpusId ?? undefined,
         }),
     }),
     [activeCorpusId, baseApi],
@@ -336,10 +336,10 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
       savedDocument.current = detail.document;
       savedTitle.current = title;
       setSaveState("idle");
-      if (detail.corpusId) {
-        setActiveCorpus(detail.corpusId);
+      if (detail.corpus) {
+        setActiveCorpus(detail.corpus);
         setHomeId(
-          corpora.find((c) => c.id === detail.corpusId)?.homeNodeId ?? homeId,
+          corpora.find((c) => c.id === detail.corpus)?.homeNodeId ?? homeId,
         );
       }
       syncStandaloneUrl("node-page", detail.id, options);
@@ -363,7 +363,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
           .createNode({
             title,
             body: storageBody || undefined,
-            corpusId: activeCorpusId ?? undefined,
+            corpus: activeCorpusId ?? undefined,
           })
           .then((created) => {
             nodeIdRef.current = created.id;
@@ -382,7 +382,7 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
         const created = await api.createNode({
           title,
           body: storageBody || undefined,
-          corpusId: activeCorpusId ?? undefined,
+          corpus: activeCorpusId ?? undefined,
         });
         bumpRecentNodes();
         const detail = await api.getNode(created.id);

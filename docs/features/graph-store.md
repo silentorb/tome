@@ -111,10 +111,10 @@ type GraphStoreCapabilities =
 | --- | --- | --- |
 | **1 — Infrastructure** | Done | `TomeGraphStoreBase` / `Queryable`, `ComposedGraphStore`, `tome-imp-flatfile`, `recentNodesGraph`, `typeMembersGraph` |
 | **2 — Read-path migration** | Done | Imp `contains` + `search`; editor search + extensions on `executeImp`; drop `includeBody` toggle; `searchNodesGraph` |
-| **3 — Read-path completion** | Done | Explorer, table views, node page detail on graph store; `listRelationshipProjections`; standard graphs `outgoingRelationships` / `incomingRelationships`; public REST `POST /api/graph/execute-imp` |
+| **3 — Read-path completion** | Done | Explorer, table views, node page detail on graph store; `listRelationshipProjections`; standard graphs `outgoingRelationships` / `incomingRelationships`; public POST-body Imp query `POST /api/nodes/query` |
 | **4 — Write-path migration** | Done | Domain mutations via imperative `TomeGraphStoreBase` (`graphStore`); `relationship-write.ts` helpers; no Imp write graphs |
 
-Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read paths. Phase 4 routes domain mutations through **`ctx.graphStore`** (Base tier) instead of parallel `ctx.store` persistence and `ctx.cache` read-assist during validation. **`executeImp` remains read-only** — Imp mutation operators are not part of the Tome host v1 design. Editor HTTP use cases stay application-specific ([web-api-design.md](./web-api-design.md)); integrators may call **`POST /api/graph/execute-imp`** with the same `executeImp` surface extensions use.
+Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read paths. Phase 4 routes domain mutations through **`ctx.graphStore`** (Base tier) instead of parallel `ctx.store` persistence and `ctx.cache` read-assist during validation. **`executeImp` remains read-only** — Imp mutation operators are not part of the Tome host v1 design. Editor HTTP use cases stay application-specific ([web-api-design.md](./web-api-design.md)); integrators may call **`POST /api/nodes/query`** (`{ graph, context? }` → `{ columns, rows }`) with the same `executeImp` surface extensions use.
 
 ### Standard Imp graphs (`tome-db`)
 

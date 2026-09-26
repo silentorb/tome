@@ -64,11 +64,11 @@ export type DocumentIconResult =
   | { ok: false; error: "not_found" | "bad_path" | "bad_type" };
 
 export interface TomeGraphServices {
-  getWorkspace(corpusId?: string): WorkspacePublic;
+  getWorkspace(corpus?: string): WorkspacePublic;
   listCorpora(): TomeCorpusPublic[];
   /** Bytes for `branding.documentIconImage` of the given (or default) corpus. */
-  getDocumentIcon(corpusId?: string): DocumentIconResult;
-  getHomeId(corpusId?: string): string;
+  getDocumentIcon(corpus?: string): DocumentIconResult;
+  getHomeId(corpus?: string): string;
   getNode(
     id: string,
     options?: {
