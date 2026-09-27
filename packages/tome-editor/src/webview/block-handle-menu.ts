@@ -2,11 +2,13 @@ import { NodeSelection, TextSelection } from "@milkdown/prose/state";
 import type { EditorView } from "@milkdown/prose/view";
 
 const DRAG_HANDLE_SELECTOR = ".milkdown-block-handle .operation-item:last-child";
+const BLOCK_HANDLE_SELECTOR = ".milkdown-block-handle";
 const CLICK_MOVE_THRESHOLD_PX = 4;
 
-interface PointerOrigin {
+interface ArmedClick {
   x: number;
   y: number;
+  dragStarted: boolean;
 }
 
 /** Delete the block selected by the block handle (NodeSelection) or the top-level block at the caret. */
@@ -34,20 +36,26 @@ export function deleteActiveEditorBlock(view: EditorView): boolean {
   return true;
 }
 
-function isDragHandleTarget(target: EventTarget | null): target is HTMLElement {
-  return target instanceof HTMLElement && Boolean(target.closest(DRAG_HANDLE_SELECTOR));
+/** Grip clicks often target the SVG icon, which is Element but not HTMLElement. */
+function isDragHandleTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest(DRAG_HANDLE_SELECTOR));
 }
 
-function dragHandleFromTarget(target: EventTarget | null): HTMLElement | null {
-  if (!(target instanceof HTMLElement)) return null;
-  return target.closest(DRAG_HANDLE_SELECTOR);
+function isBlockHandleTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest(BLOCK_HANDLE_SELECTOR));
 }
 
+/**
+ * Open a Delete menu on a stationary left-click of Crepe's block grip.
+ * Milkdown sets `draggable` on the whole handle, so native drag often cancels or
+ * retargets `pointerup` — arm on pointerdown, resolve on window pointerup/cancel,
+ * and suppress when dragstart fires.
+ */
 export function installBlockHandleMenu(
   view: EditorView,
   host: HTMLElement,
 ): () => void {
-  const pointerOrigins = new WeakMap<HTMLElement, PointerOrigin>();
+  let armed: ArmedClick | null = null;
   let menu: HTMLDivElement | null = null;
   let removeMenuListeners: (() => void) | null = null;
 
@@ -95,7 +103,7 @@ export function installBlockHandleMenu(
 
     menu = panel;
 
-    const onPointerDown = (event: MouseEvent) => {
+    const onOutsideMouseDown = (event: MouseEvent) => {
       const target = event.target as Node;
       if (panel.contains(target)) return;
       closeMenu();
@@ -108,32 +116,31 @@ export function installBlockHandleMenu(
       }
     };
 
-    window.addEventListener("mousedown", onPointerDown);
+    window.addEventListener("mousedown", onOutsideMouseDown);
     window.addEventListener("keydown", onKeyDown, true);
     removeMenuListeners = () => {
-      window.removeEventListener("mousedown", onPointerDown);
+      window.removeEventListener("mousedown", onOutsideMouseDown);
       window.removeEventListener("keydown", onKeyDown, true);
     };
   };
 
   const onPointerDown = (event: PointerEvent) => {
     if (!isDragHandleTarget(event.target)) return;
-    const handle = dragHandleFromTarget(event.target);
-    if (!handle) return;
-    pointerOrigins.set(handle, { x: event.clientX, y: event.clientY });
+    armed = { x: event.clientX, y: event.clientY, dragStarted: false };
   };
 
-  const onPointerUp = (event: PointerEvent) => {
-    if (!isDragHandleTarget(event.target)) return;
-    const handle = dragHandleFromTarget(event.target);
-    if (!handle) return;
+  const onDragStart = (event: DragEvent) => {
+    if (!armed || !isBlockHandleTarget(event.target)) return;
+    armed.dragStarted = true;
+  };
 
-    const origin = pointerOrigins.get(handle);
-    pointerOrigins.delete(handle);
-    if (!origin) return;
+  const finishPointer = (event: PointerEvent) => {
+    const pending = armed;
+    armed = null;
+    if (!pending || pending.dragStarted) return;
 
-    const dx = Math.abs(event.clientX - origin.x);
-    const dy = Math.abs(event.clientY - origin.y);
+    const dx = Math.abs(event.clientX - pending.x);
+    const dy = Math.abs(event.clientY - pending.y);
     if (dx > CLICK_MOVE_THRESHOLD_PX || dy > CLICK_MOVE_THRESHOLD_PX) return;
     if (view.dom.dataset.dragging === "true") return;
 
@@ -143,11 +150,16 @@ export function installBlockHandleMenu(
   };
 
   host.addEventListener("pointerdown", onPointerDown, true);
-  host.addEventListener("pointerup", onPointerUp, true);
+  host.addEventListener("dragstart", onDragStart, true);
+  window.addEventListener("pointerup", finishPointer, true);
+  window.addEventListener("pointercancel", finishPointer, true);
 
   return () => {
     host.removeEventListener("pointerdown", onPointerDown, true);
-    host.removeEventListener("pointerup", onPointerUp, true);
+    host.removeEventListener("dragstart", onDragStart, true);
+    window.removeEventListener("pointerup", finishPointer, true);
+    window.removeEventListener("pointercancel", finishPointer, true);
+    armed = null;
     closeMenu();
   };
 }
