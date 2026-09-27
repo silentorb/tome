@@ -1,11 +1,11 @@
 import type { Relationship } from "tome-graph-interfaces";
+import { SET_TRAIT, typesWithTrait } from "tome-ontology";
 import {
   resolveContentPath,
+  loadRelationshipRuntimeFromContent,
   loadRelationshipTypesFromContent,
   archiveNodeId,
   hasTableSchemaEntry,
-  typesWithTrait,
-  SET_TRAIT,
   collectSetNodeIds,
   setSideProjectionType,
   memberSideProjectionType,
@@ -33,9 +33,10 @@ export function memberSetIds(
   contentDir?: string,
 ): string[] {
   const dir = contentDirForReadStore(store, contentDir);
+  const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
   const ids = new Set<string>();
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+  for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
     const memberProjection = memberSideProjectionType(registry, composite);
     for (const rel of listRelationshipsFromSource(store, memberId, memberProjection)) {
       ids.add(rel.targetNodeId);
@@ -50,9 +51,10 @@ export function setMemberIds(
   contentDir?: string,
 ): string[] {
   const dir = contentDirForReadStore(store, contentDir);
+  const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
   const ids = new Set<string>();
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+  for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
     const setProjection = setSideProjectionType(registry, composite);
     const memberProjection = memberSideProjectionType(registry, composite);
     for (const rel of listRelationshipsFromSource(store, setId, setProjection)) {
@@ -91,8 +93,9 @@ export function findSetEdge(
   contentDir?: string,
 ): Relationship | null {
   const dir = contentDirForReadStore(store, contentDir);
+  const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+  for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
     const memberProjection = memberSideProjectionType(registry, composite);
     const memberSide = listRelationshipsFromSource(store, memberId, memberProjection).find(
       (r) => r.targetNodeId === setId,
@@ -121,9 +124,10 @@ export function listSetMemberRowConnections(
   contentDir?: string,
 ): Relationship[] {
   const dir = contentDirForReadStore(store, contentDir);
+  const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
   const byMember = new Map<string, Relationship>();
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+  for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
     const setProjection = setSideProjectionType(registry, composite);
     const memberProjection = memberSideProjectionType(registry, composite);
     for (const r of listRelationshipsFromSource(store, setId, setProjection)) {
@@ -145,8 +149,9 @@ export function listSetMemberProjectionPairs(
   contentDir?: string,
 ): { setProjection: string; memberProjection: string }[] {
   const dir = contentDir ?? resolveContentPath();
+  const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
-  return typesWithTrait(registry, SET_TRAIT).map((composite) => ({
+  return typesWithTrait(runtime, SET_TRAIT).map((composite) => ({
     setProjection: setSideProjectionType(registry, composite),
     memberProjection: memberSideProjectionType(registry, composite),
   }));

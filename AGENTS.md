@@ -10,6 +10,7 @@
 | `packages/tome-sqlite/` | SQLite graph database (query cache today) |
 | `packages/tome-db/` | Domain queries/mutations + content↔cache sync |
 | `packages/tome-graph-interfaces/` | Domain DTOs + `TomeGraphServices` |
+| `packages/tome-ontology/` | Store-independent ontology runtime (predicates + patterns) |
 | `packages/tome-service-interfaces/` | Store/cache/service module contracts |
 | `packages/tome-http/` | HTTP service module + client SDK |
 | `packages/tome-server/` | Config-driven host (store, cache, services) |

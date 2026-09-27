@@ -2,7 +2,7 @@
 
 ## Summary
 
-A **set** is a node that contains other nodes via a relationship type that carries the **`set` trait** in `associations.json`. Set semantics are orthogonal to any particular storage slug: Tome resolves set/member roles from traits and from **caller context** (usually `views.json`), not from a hard-coded membership composite on each type table.
+A **set** is a node that contains other nodes via a relationship whose ontology runtime carries the **`set` trait**. Authored today on `associations.json` entries, that trait is compiled onto a **pattern** (not the predicate) — see [ontology.md](./ontology.md). Set semantics are orthogonal to any particular storage slug: Tome resolves set/member roles from pattern traits and from **caller context** (usually `views.json`), not from a hard-coded membership composite on each type table.
 
 | Concept | Role |
 | --- | --- |
@@ -39,7 +39,7 @@ For design-domain meaning of types and sets, read [`/workspaces/marloth-story/do
 
 ### Set trait and endpoint labels
 
-Every relationship type in `associations.json` defines a `perspectives` **tuple of exactly two** display labels. Entries with `traits` including `set` (or `{ "key": "set", ... }`) are set relationship types. Directed cache identity is `relationshipTypeId:endpointIndex` (not the label text). Symmetric relationship types use the `symmetric` trait — do not infer symmetry from equal perspective titles.
+Every relationship type in `associations.json` defines a `perspectives` **tuple of exactly two** display labels (predicate metadata after compile). Entries with `traits` including `set` (or `{ "key": "set", ... }`) become set patterns on that predicate. Directed cache identity is `relationshipTypeId:endpointIndex` (not the label text). Symmetric relationship types use the `symmetric` trait on the pattern — do not infer symmetry from equal perspective titles.
 
 **Example content record (Marloth set relationship type):**
 

@@ -8,6 +8,7 @@ Each subdirectory is a **workspace package** in the Tome monorepo. Packages are 
 | [`tome-sqlite`](./tome-sqlite/) | SQLite graph database (query cache today) |
 | [`tome-db`](./tome-db/) | Domain queries/mutations + content↔cache sync |
 | [`tome-graph-interfaces`](./tome-graph-interfaces/) | Domain DTOs and `TomeGraphServices` contract |
+| [`tome-ontology`](./tome-ontology/) | Store-independent ontology runtime (predicates + patterns) |
 | [`tome-service-interfaces`](./tome-service-interfaces/) | Store/cache/service module contracts |
 | [`tome-http`](./tome-http/) | HTTP service module + typed HTTP client |
 | [`tome-server`](./tome-server/) | Config-driven host (store, cache, service modules) |
@@ -36,6 +37,9 @@ flowchart TB
     SI --> GI
   end
 
+  ON[tome-ontology]
+  ON --> GI
+
   subgraph storage [Storage]
     SF[tome-flatfile]
     CS[tome-sqlite]
@@ -43,6 +47,7 @@ flowchart TB
 
   SF --> SI
   SF --> GI
+  SF --> ON
   CS --> SI
   CS --> GI
 
@@ -52,6 +57,7 @@ flowchart TB
   DB --> GI
   DB --> SI
   DB --> EI
+  DB --> ON
 
   subgraph host [Host]
     SRV[tome-server]

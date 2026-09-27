@@ -1,13 +1,13 @@
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import { listRelationshipsFromSource } from "../graph-store/relationship-read";
+import { SET_TRAIT, typesWithTrait } from "tome-ontology";
 import {
   isOrderedTraitComposite,
+  loadRelationshipRuntimeFromContent,
   loadRelationshipTypesFromContent,
   memberSideProjectionType,
   orderedPropertyName,
   resolveContentPath,
-  SET_TRAIT,
-  typesWithTrait,
 } from "tome-flatfile";
 import {
   firstRelatedNodeId,
@@ -23,8 +23,9 @@ function scopeMembershipSortKey(
   scopeNodeId: string,
   contentDir: string,
 ): number {
+  const runtime = loadRelationshipRuntimeFromContent(contentDir);
   const registry = loadRelationshipTypesFromContent(contentDir);
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+  for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
     if (!isOrderedTraitComposite(registry, composite)) continue;
     const def = registry.relationshipTypes[composite];
     if (!def) continue;

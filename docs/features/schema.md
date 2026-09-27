@@ -94,9 +94,14 @@ For `priority`, `values` are interpreted as numeric **weights** by `priorityWeig
 
 The long-term goal is a **user-configured model**: enums, types, relationship rules, and property shapes editable in content (and eventually via editor UI), while the editor keeps only generic graph and table primitives.
 
+## Schema vs ontology
+
+This file documents the workspace **`schema.json`** enums config (structural emphasis). Tome’s broader corpus model is **ontology-first** — prefer “ontology” in new modeling prose. Runtime predicates/patterns: [ontology.md](./ontology.md) (terminology note). Design-domain meaning of nodes: [ontology.md](../ontology.md).
+
 ## See also
 
 - [tome-db.md](./tome-db.md)
-- [ontology.md](../ontology.md)
+- [ontology.md](./ontology.md) (project feature — relationship runtime)
+- [ontology.md](../ontology.md) (design-domain)
 - [table-presentation.md](./table-presentation.md)
 - [inspirations.weighted-use.md](../dynamic-properties/inspirations.weighted-use.md)

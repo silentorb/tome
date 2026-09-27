@@ -4,13 +4,13 @@ import type {
   GraphQueryNode,
 } from "tome-interfaces/extension-services/graph-query";
 import type { RelationshipRecordRef, TomeGraphStoreQueryable } from "tome-graph-interfaces";
+import { SET_TRAIT, typesWithTrait } from "tome-ontology";
 import {
   expandAllRelationships,
+  loadRelationshipRuntimeFromContent,
   loadRelationshipTypesFromContent,
   normalizeRelationshipTypeId,
   setRoleIndices,
-  typesWithTrait,
-  SET_TRAIT,
 } from "tome-flatfile";
 import { typeMembersGraph } from "./graph-store/standard-graphs";
 
@@ -32,10 +32,11 @@ function listTypeMembersFromStore(
   contentDir?: string,
 ): GraphQueryNode[] {
   const dir = contentDir ?? store.contentDir;
+  const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
   const memberIds = new Set<string>();
 
-  for (const composite of typesWithTrait(registry, SET_TRAIT)) {
+  for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
     const relationshipTypeId = normalizeRelationshipTypeId(composite);
     const def = registry.relationshipTypes[relationshipTypeId];
     const { parentIndex } = setRoleIndices(def);

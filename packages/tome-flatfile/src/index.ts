@@ -385,6 +385,7 @@ export {
 
 export {
   loadRelationshipTypesFromContent,
+  loadRelationshipRuntimeFromContent,
   invalidateRelationshipTypesCache,
 } from "./relationship-types/load";
 export {

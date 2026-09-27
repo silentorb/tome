@@ -1,3 +1,16 @@
+import {
+  allowedTargetTypeIdsForEndpoint as runtimeAllowedTargets,
+  compileAssociationConfig,
+  hostEndpointIndex as runtimeHostEndpointIndex,
+  linkExistingFor,
+  projectionTypeForHostTable as runtimeProjectionTypeForHostTable,
+  relationshipTypeRulesFromRuntime,
+  resolveEndpointTypeIds as runtimeResolveEndpointTypeIds,
+  targetTypeIdForHostTable as runtimeTargetTypeIdForHostTable,
+  uniqueHostEndpointIndex as runtimeUniqueHostEndpointIndex,
+  type RelationshipRuntime,
+  type RelationshipTypeRuleEntry,
+} from "tome-ontology";
 import type {
   PerspectiveLabelConfig,
   RelationshipTypeDefinition,
@@ -6,19 +19,11 @@ import type {
 import {
   normalizeRelationshipTypeId,
   parseProjectionType,
-  perspectiveConfigAt,
-  perspectiveLinkExisting,
-  projectionTypeForEndpoint,
   requireRelationshipTypeId,
 } from "./content/relationship-types-file";
 
-function linkExistingForEndpoint(
-  def: RelationshipTypeDefinition,
-  endpointIndex: 0 | 1,
-): boolean | undefined {
-  const fromLabel = perspectiveLinkExisting(perspectiveConfigAt(def, endpointIndex));
-  if (fromLabel !== undefined) return fromLabel;
-  return def.linkExisting;
+function runtimeFromRegistry(registry: RelationshipTypesFile): RelationshipRuntime {
+  return compileAssociationConfig(registry);
 }
 
 export function resolveEndpointTypeIds(
@@ -32,10 +37,11 @@ export function hostEndpointIndex(
   def: RelationshipTypeDefinition,
   hostTypeId: string,
 ): 0 | 1 | null {
-  if (!def.endpoints) return null;
-  if (def.endpoints[0].typeId === hostTypeId) return 0;
-  if (def.endpoints[1].typeId === hostTypeId) return 1;
-  return null;
+  const runtime = compileAssociationConfig({
+    version: 1,
+    relationshipTypes: { _: def },
+  });
+  return runtimeHostEndpointIndex(runtime, "_", hostTypeId);
 }
 
 /** Endpoint index when host uniquely matches one side (null if both/neither). */
@@ -43,11 +49,11 @@ export function uniqueHostEndpointIndex(
   def: RelationshipTypeDefinition,
   hostTypeId: string,
 ): 0 | 1 | null {
-  if (!def.endpoints) return null;
-  const matches: Array<0 | 1> = [];
-  if (def.endpoints[0].typeId === hostTypeId) matches.push(0);
-  if (def.endpoints[1].typeId === hostTypeId) matches.push(1);
-  return matches.length === 1 ? matches[0]! : null;
+  const runtime = compileAssociationConfig({
+    version: 1,
+    relationshipTypes: { _: def },
+  });
+  return runtimeUniqueHostEndpointIndex(runtime, "_", hostTypeId);
 }
 
 /** Directed projection type when linking from a row in `hostTypeId`. */
@@ -56,9 +62,11 @@ export function projectionTypeForHostTable(
   relationshipTypeId: string,
   hostTypeId: string,
 ): string | null {
-  const index = hostEndpointIndex(def, hostTypeId);
-  if (index === null) return null;
-  return projectionTypeForEndpoint(relationshipTypeId, index);
+  const runtime = compileAssociationConfig({
+    version: 1,
+    relationshipTypes: { [relationshipTypeId]: def },
+  });
+  return runtimeProjectionTypeForHostTable(runtime, relationshipTypeId, hostTypeId);
 }
 
 /** Target type-table id for a relation column on `hostTypeId`. */
@@ -66,10 +74,11 @@ export function targetTypeIdForHostTable(
   def: RelationshipTypeDefinition,
   hostTypeId: string,
 ): string | null {
-  const index = hostEndpointIndex(def, hostTypeId);
-  if (index === null || !def.endpoints) return null;
-  const other: 0 | 1 = index === 0 ? 1 : 0;
-  return def.endpoints[other].typeId;
+  const runtime = compileAssociationConfig({
+    version: 1,
+    relationshipTypes: { _: def },
+  });
+  return runtimeTargetTypeIdForHostTable(runtime, "_", hostTypeId);
 }
 
 export function allowedTargetTypeIdsForEndpoint(
@@ -77,38 +86,20 @@ export function allowedTargetTypeIdsForEndpoint(
   compositeType: string,
   endpointIndex: 0 | 1,
 ): string[] {
-  const def = registry.relationshipTypes[normalizeRelationshipTypeId(compositeType)];
-  if (!def?.endpoints) return [];
-  const other: 0 | 1 = endpointIndex === 0 ? 1 : 0;
-  return [def.endpoints[other].typeId];
+  return runtimeAllowedTargets(
+    runtimeFromRegistry(registry),
+    normalizeRelationshipTypeId(compositeType),
+    endpointIndex,
+  );
 }
 
-export interface RelationshipTypeRuleEntry {
-  id: string;
-  sourceTypeId: string;
-  type: string;
-  allowedTargetTypeIds: string[];
-}
+export type { RelationshipTypeRuleEntry };
 
 /** All relationship rules implied by registry endpoint definitions. */
 export function relationshipTypeRulesFromRegistry(
   registry: RelationshipTypesFile,
 ): RelationshipTypeRuleEntry[] {
-  const rules: RelationshipTypeRuleEntry[] = [];
-  for (const [composite, def] of Object.entries(registry.relationshipTypes)) {
-    if (!def.endpoints) continue;
-    for (const hostIndex of [0, 1] as const) {
-      const sourceTypeId = def.endpoints[hostIndex].typeId;
-      const type = projectionTypeForEndpoint(composite, hostIndex);
-      rules.push({
-        id: composite,
-        sourceTypeId,
-        type,
-        allowedTargetTypeIds: allowedTargetTypeIdsForEndpoint(registry, composite, hostIndex),
-      });
-    }
-  }
-  return rules;
+  return relationshipTypeRulesFromRuntime(runtimeFromRegistry(registry));
 }
 
 /** Whether a relation section should show the inline link-existing control. */
@@ -134,11 +125,20 @@ export function relationSectionSupportsLinkExisting(
   } catch {
     return false;
   }
-  const def = registry.relationshipTypes[composite];
-  if (!def) return false;
-  const linkExisting = linkExistingForEndpoint(def, endpointIndex);
-  return linkExisting !== undefined ? linkExisting : true;
+  const runtime = runtimeFromRegistry(registry);
+  return linkExistingFor(runtime, { predicateId: composite, endpointIndex });
 }
 
 /** @internal re-export for callers that still import PerspectiveLabelConfig here */
 export type { PerspectiveLabelConfig };
+
+/** Resolve endpoints via BR when a full registry is available. */
+export function resolveEndpointTypeIdsFromRegistry(
+  registry: RelationshipTypesFile,
+  predicateId: string,
+): [string, string] | null {
+  return runtimeResolveEndpointTypeIds(
+    runtimeFromRegistry(registry),
+    normalizeRelationshipTypeId(predicateId),
+  );
+}

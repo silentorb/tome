@@ -6,8 +6,10 @@ import {
   listDistinctSetMemberScopeIds,
   readStoreGetNode,
 } from "../graph-store/relationship-read";
+import { SET_TRAIT, typesWithTrait } from "tome-ontology";
 import {
   isOrderedTraitComposite,
+  loadRelationshipRuntimeFromContent,
   loadRelationshipTypesFromContent,
   loadViewsFromContent,
   memberSideProjectionType,
@@ -15,8 +17,6 @@ import {
   resolveContentPath,
   setRoleRelationshipTypeForNode,
   setRoleProjectionTypesForComposite,
-  SET_TRAIT,
-  typesWithTrait,
 } from "tome-flatfile";
 import { applyDynamicProperties, listDynamicColumnDefs } from "../dynamic-properties";
 import {
@@ -95,8 +95,9 @@ function excludedKeys(composition: TablePresentationComposition): Set<string> {
 }
 
 function orderedSetMemberProjectionTypes(contentDir: string): string[] {
+  const runtime = loadRelationshipRuntimeFromContent(contentDir);
   const registry = loadRelationshipTypesFromContent(contentDir);
-  return typesWithTrait(registry, SET_TRAIT)
+  return typesWithTrait(runtime, SET_TRAIT)
     .filter((composite) => isOrderedTraitComposite(registry, composite))
     .map((composite) => memberSideProjectionType(registry, composite));
 }

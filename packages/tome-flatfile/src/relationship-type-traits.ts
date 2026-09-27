@@ -1,3 +1,25 @@
+import {
+  ORDERED_PROPERTY_DEFAULT,
+  ORDERED_TRAIT,
+  SET_TRAIT,
+  SYMMETRIC_TRAIT,
+  compileAssociationConfig,
+  hasTrait as runtimeHasTrait,
+  hasTraitInEntries,
+  isOrderedTraitPredicate,
+  isSetTraitPredicate,
+  isSymmetricPredicate,
+  orderedPropertyNameFor,
+  setRoleIndicesFor,
+  traitConfig as runtimeTraitConfig,
+  traitConfigFromEntries,
+  traitEntryKey,
+  traitMapFromEntries,
+  typesWithTrait as runtimeTypesWithTrait,
+  type RelationshipRuntime,
+  type SetRoleIndices,
+  type TraitMapValue,
+} from "tome-ontology";
 import { normalizeRelationshipType } from "./relation-type";
 import type { RelationshipEntry } from "./content/relationships-file";
 import {
@@ -6,60 +28,45 @@ import {
   projectionTypeForEndpoint,
   type RelationshipTypeDefinition,
   type RelationshipTypesFile,
-  type TraitEntry,
 } from "./content/relationship-types-file";
 import { resolveContentPath } from "./content/paths";
-import { loadRelationshipTypesFromContent } from "./relationship-types/load";
+import {
+  loadRelationshipRuntimeFromContent,
+  loadRelationshipTypesFromContent,
+} from "./relationship-types/load";
 import { loadViewsFromContent } from "./views/load";
 
-export const SET_TRAIT = "set";
-export const ORDERED_TRAIT = "ordered";
-export const SYMMETRIC_TRAIT = "symmetric";
-export const ORDERED_PROPERTY_DEFAULT = "order";
+export {
+  SET_TRAIT,
+  ORDERED_TRAIT,
+  SYMMETRIC_TRAIT,
+  ORDERED_PROPERTY_DEFAULT,
+  traitEntryKey,
+};
+export type { TraitMapValue, SetRoleIndices };
 
-const DEFAULT_PARENT_INDEX = 0;
-const DEFAULT_CHILD_INDEX = 1;
-
-export type TraitMapValue = true | Record<string, unknown>;
-
-export function traitEntryKey(entry: TraitEntry): string {
-  return typeof entry === "string" ? entry : entry.key;
+function runtimeFromRegistry(registry: RelationshipTypesFile): RelationshipRuntime {
+  return compileAssociationConfig(registry);
 }
 
 /** Normalize traits array to a lookup map (internal; not persisted). */
 export function traitMap(def: RelationshipTypeDefinition | undefined): Map<string, TraitMapValue> {
-  const map = new Map<string, TraitMapValue>();
-  if (!def?.traits) return map;
-  for (const entry of def.traits) {
-    if (typeof entry === "string") {
-      map.set(entry, true);
-      continue;
-    }
-    const { key, ...config } = entry;
-    map.set(key, Object.keys(config).length > 0 ? config : true);
-  }
-  return map;
+  return traitMapFromEntries(def?.traits);
 }
 
 export function hasTrait(def: RelationshipTypeDefinition | undefined, key: string): boolean {
-  const normalized = normalizeRelationshipType(key);
-  return traitMap(def).has(normalized);
+  return hasTraitInEntries(def?.traits, key);
 }
 
 export function traitConfig(
   def: RelationshipTypeDefinition | undefined,
   key: string,
 ): Record<string, unknown> | undefined {
-  const value = traitMap(def).get(normalizeRelationshipType(key));
-  if (value === undefined || value === true) return undefined;
-  return value;
+  return traitConfigFromEntries(def?.traits, key);
 }
 
 export function typesWithTrait(registry: RelationshipTypesFile, key: string): string[] {
-  const normalized = normalizeRelationshipType(key);
-  return Object.entries(registry.relationshipTypes)
-    .filter(([, def]) => traitMap(def).has(normalized))
-    .map(([composite]) => composite);
+  return runtimeTypesWithTrait(runtimeFromRegistry(registry), key);
 }
 
 export function isSetTraitType(def: RelationshipTypeDefinition | undefined): boolean {
@@ -78,21 +85,24 @@ export function isSymmetricComposite(
   registry: RelationshipTypesFile,
   compositeType: string,
 ): boolean {
-  return isSymmetricRelationshipType(registry.relationshipTypes[normalizeRelationshipTypeId(compositeType)]);
+  return isSymmetricPredicate(runtimeFromRegistry(registry), normalizeRelationshipTypeId(compositeType));
 }
 
 export function isSetTraitComposite(
   registry: RelationshipTypesFile,
   compositeType: string,
 ): boolean {
-  return isSetTraitType(registry.relationshipTypes[normalizeRelationshipTypeId(compositeType)]);
+  return isSetTraitPredicate(runtimeFromRegistry(registry), normalizeRelationshipTypeId(compositeType));
 }
 
 export function isOrderedTraitComposite(
   registry: RelationshipTypesFile,
   compositeType: string,
 ): boolean {
-  return isOrderedTraitType(registry.relationshipTypes[normalizeRelationshipTypeId(compositeType)]);
+  return isOrderedTraitPredicate(
+    runtimeFromRegistry(registry),
+    normalizeRelationshipTypeId(compositeType),
+  );
 }
 
 export function orderedPropertyName(def: RelationshipTypeDefinition | undefined): string {
@@ -104,24 +114,13 @@ export function orderedPropertyName(def: RelationshipTypeDefinition | undefined)
   return ORDERED_PROPERTY_DEFAULT;
 }
 
-export interface SetRoleIndices {
-  parentIndex: 0 | 1;
-  childIndex: 0 | 1;
-}
-
-function parseIndex(value: unknown, fallback: 0 | 1): 0 | 1 {
-  if (value === 0 || value === 1) return value;
-  return fallback;
-}
-
 export function setRoleIndices(def: RelationshipTypeDefinition | undefined): SetRoleIndices {
-  const config = traitConfig(def, SET_TRAIT);
-  const parentIndex = parseIndex(config?.parentIndex, DEFAULT_PARENT_INDEX);
-  const childIndex = parseIndex(config?.childIndex, DEFAULT_CHILD_INDEX);
-  if (parentIndex === childIndex) {
-    return { parentIndex: DEFAULT_PARENT_INDEX, childIndex: DEFAULT_CHILD_INDEX };
-  }
-  return { parentIndex, childIndex };
+  // Compile a one-off runtime so set-role indices come from pattern traits.
+  const runtime = compileAssociationConfig({
+    version: 1,
+    relationshipTypes: { _: def ?? { perspectives: ["", ""] } },
+  });
+  return setRoleIndicesFor(runtime, "_");
 }
 
 export function nodeIdAtIndex(entry: RelationshipEntry, index: 0 | 1): string {
@@ -160,11 +159,12 @@ export function setSideProjectionType(
   registry: RelationshipTypesFile,
   relationshipTypeId: string,
 ): string {
-  const def = registry.relationshipTypes[normalizeRelationshipTypeId(relationshipTypeId)];
-  if (!def || !isSetTraitType(def)) {
+  const id = normalizeRelationshipTypeId(relationshipTypeId);
+  const runtime = runtimeFromRegistry(registry);
+  if (!isSetTraitPredicate(runtime, id)) {
     throw new Error(`Unknown set-trait composite "${relationshipTypeId}"`);
   }
-  const { parentIndex } = setRoleIndices(def);
+  const { parentIndex } = setRoleIndicesFor(runtime, id);
   return projectionTypeForEndpoint(relationshipTypeId, parentIndex);
 }
 
@@ -172,11 +172,12 @@ export function memberSideProjectionType(
   registry: RelationshipTypesFile,
   relationshipTypeId: string,
 ): string {
-  const def = registry.relationshipTypes[normalizeRelationshipTypeId(relationshipTypeId)];
-  if (!def || !isSetTraitType(def)) {
+  const id = normalizeRelationshipTypeId(relationshipTypeId);
+  const runtime = runtimeFromRegistry(registry);
+  if (!isSetTraitPredicate(runtime, id)) {
     throw new Error(`Unknown set-trait composite "${relationshipTypeId}"`);
   }
-  const { childIndex } = setRoleIndices(def);
+  const { childIndex } = setRoleIndicesFor(runtime, id);
   return projectionTypeForEndpoint(relationshipTypeId, childIndex);
 }
 
@@ -247,12 +248,11 @@ export function setRoleProjectionTypesForComposite(
  * When a node has no views declaring a set relationship type, use the sole
  * plain (non-ordered) set-trait composite, else the sole set-trait composite.
  */
-function soleSetCompositeFallback(registry: RelationshipTypesFile): string {
-  const setComposites = typesWithTrait(registry, SET_TRAIT);
-  const plain = setComposites.filter((composite) => {
-    const def = registry.relationshipTypes[composite];
-    return def && !isOrderedTraitType(def);
-  });
+function soleSetCompositeFallback(runtime: RelationshipRuntime): string {
+  const setComposites = runtimeTypesWithTrait(runtime, SET_TRAIT);
+  const plain = setComposites.filter(
+    (composite) => !runtimeHasTrait(runtime, { predicateId: composite }, ORDERED_TRAIT),
+  );
   if (plain.length === 1) return plain[0]!;
   if (setComposites.length === 1) return setComposites[0]!;
   throw new Error(
@@ -266,8 +266,8 @@ export function setRoleRelationshipTypeForNode(
   contentDir?: string,
 ): string {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadRelationshipTypesFromContent(dir);
-  const setIds = new Set(setTraitRelationshipTypeIds(registry));
+  const runtime = loadRelationshipRuntimeFromContent(dir);
+  const setIds = new Set(runtimeTypesWithTrait(runtime, SET_TRAIT));
   const fromViews = new Set<string>();
   for (const view of loadViewsFromContent(dir).views) {
     const relationshipTypeId = normalizeRelationshipTypeId(view.association);
@@ -278,7 +278,7 @@ export function setRoleRelationshipTypeForNode(
   if (fromViews.size > 0) {
     return [...fromViews][0]!;
   }
-  return soleSetCompositeFallback(registry);
+  return soleSetCompositeFallback(runtime);
 }
 
 /** Parent/set and child/member projection types for a set node. */
@@ -308,3 +308,15 @@ export function isOrderedSetProjectionType(
   const relationshipTypeId = relationshipTypeIdFromTypeOrProjection(registry, type);
   return relationshipTypeId !== null && isOrderedSetRelationshipType(registry, relationshipTypeId);
 }
+
+/** @internal helpers used when a runtime is already in hand */
+export {
+  runtimeHasTrait,
+  runtimeTraitConfig,
+  runtimeTypesWithTrait,
+  orderedPropertyNameFor,
+  setRoleIndicesFor,
+  isSetTraitPredicate,
+  isOrderedTraitPredicate,
+  isSymmetricPredicate,
+};

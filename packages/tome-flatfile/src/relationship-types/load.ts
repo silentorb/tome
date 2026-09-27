@@ -1,4 +1,9 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
+import {
+  compileAssociationConfig,
+  emptyRelationshipRuntime,
+  type RelationshipRuntime,
+} from "tome-ontology";
 import { relationshipTypesFilePath } from "../content/paths";
 import {
   emptyRelationshipTypesFile,
@@ -6,13 +11,21 @@ import {
   type RelationshipTypesFile,
 } from "../content/relationship-types-file";
 
-let cachedTypes: { contentDir: string; mtimeMs: number; file: RelationshipTypesFile } | null = null;
+let cachedTypes: {
+  contentDir: string;
+  mtimeMs: number;
+  file: RelationshipTypesFile;
+  runtime: RelationshipRuntime;
+} | null = null;
 
 export function invalidateRelationshipTypesCache(): void {
   cachedTypes = null;
 }
 
-export function loadRelationshipTypesFromContent(contentDir: string): RelationshipTypesFile {
+function loadCached(contentDir: string): {
+  file: RelationshipTypesFile;
+  runtime: RelationshipRuntime;
+} {
   const path = relationshipTypesFilePath(contentDir);
   let mtimeMs = 0;
   if (existsSync(path)) {
@@ -20,7 +33,7 @@ export function loadRelationshipTypesFromContent(contentDir: string): Relationsh
   }
 
   if (cachedTypes && cachedTypes.contentDir === contentDir && cachedTypes.mtimeMs === mtimeMs) {
-    return cachedTypes.file;
+    return { file: cachedTypes.file, runtime: cachedTypes.runtime };
   }
 
   let file: RelationshipTypesFile;
@@ -34,6 +47,20 @@ export function loadRelationshipTypesFromContent(contentDir: string): Relationsh
     }
   }
 
-  cachedTypes = { contentDir, mtimeMs, file };
-  return file;
+  const runtime =
+    Object.keys(file.relationshipTypes).length === 0
+      ? emptyRelationshipRuntime()
+      : compileAssociationConfig(file);
+
+  cachedTypes = { contentDir, mtimeMs, file, runtime };
+  return { file, runtime };
+}
+
+export function loadRelationshipTypesFromContent(contentDir: string): RelationshipTypesFile {
+  return loadCached(contentDir).file;
+}
+
+/** AC → BR: associations.json compiled to the predicate/pattern runtime. */
+export function loadRelationshipRuntimeFromContent(contentDir: string): RelationshipRuntime {
+  return loadCached(contentDir).runtime;
 }

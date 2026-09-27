@@ -28,7 +28,8 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Static website generation (Astro) | [static-website.md](./static-website.md) |
 | Static website deploy (GitHub Actions → S3/CloudFront) | [static-website-deploy.md](./static-website-deploy.md) |
 | Sets (`set` trait, type tables, archive hub) | [sets.md](./sets.md) |
-| Relationship schema rules | [schema.md](./schema.md) |
+| Ontology runtime (predicates + patterns) | [ontology.md](./ontology.md) |
+| Relationship schema rules (`schema.json` enums) | [schema.md](./schema.md) |
 | Extension system (runtime-loaded packages) | [extensions.md](./extensions.md) |
 | Spatial graph (Cytoscape location diagrams) | [spatial-graph.md](./spatial-graph.md) |
 | Schema diagram (Mermaid ER meta-model) | [schema-diagram.md](./schema-diagram.md) |
