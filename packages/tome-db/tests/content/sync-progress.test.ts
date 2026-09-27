@@ -1,6 +1,6 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import { unlinkSync } from "node:fs";
-import { loadAssociationsFromContent, loadSchemaFromContent, setTraitProjectionTypes } from "tome-flatfile";
+import { loadRelationshipTypesFromContent, loadSchemaFromContent, setTraitProjectionTypes } from "tome-flatfile";
 import { GraphDatabase } from "tome-sqlite";
 import { decodeEnumProperties, encodeEnumProperties } from "../../src/enum-codec";
 import {
@@ -41,7 +41,7 @@ describe("CacheSync startup progress", () => {
         decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
       },
       memberPerspectives: () =>
-        setTraitProjectionTypes(loadAssociationsFromContent(contentDir)),
+        setTraitProjectionTypes(loadRelationshipTypesFromContent(contentDir)),
     });
     const sync = new CacheSync(fixture.ctx.store, cache, reporter);
     sync.ensureReady();
@@ -77,7 +77,7 @@ describe("CacheSync startup progress", () => {
         decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
       },
       memberPerspectives: () =>
-        setTraitProjectionTypes(loadAssociationsFromContent(contentDir)),
+        setTraitProjectionTypes(loadRelationshipTypesFromContent(contentDir)),
     });
     const sync = new CacheSync(fixture.ctx.store, cache, tracker.report);
     expect(tracker.getStatus().ready).toBe(false);

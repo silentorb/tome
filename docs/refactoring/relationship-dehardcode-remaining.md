@@ -23,8 +23,8 @@ Tracks residual relationship-type hardcoding after the critical-path dehardcode 
 | Presentation | Trait-based hide/sort; structural `linkExisting` for addMode |
 | Deprecated rule shims | `schema-rules/resolve.ts` removed |
 | View section keys | View / `setRolePerspectivesForNode` (no `MEMBERS_*` constants) |
-| Editor unlink/move/view CRUD | Uses `viewAssociation` + `memberSidePerspective` on view payloads |
-| Empty-workspace membership seeds | **Disallowed** — no `registerSetMembershipType` / conventional `member_of` seed into empty registries; tests use explicit `registerSetAssociation` |
+| Editor unlink/move/view CRUD | Uses `viewRelationshipType` + `memberSidePerspective` on view payloads |
+| Empty-workspace membership seeds | **Disallowed** — no `registerSetMembershipType` / conventional `member_of` seed into empty registries; tests use explicit `registerSetRelationshipType` |
 | `membershipComposite` on table schemas | **Removed** — perspectives come from views/caller context via `setRolePerspectivesForNode` |
 | `labels.ts` membership constants | Deleted |
 | Association registry keys | **ULID** — opaque association ids; perspectives remain snake_case slugs |

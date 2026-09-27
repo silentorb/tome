@@ -1,23 +1,23 @@
 import { generateNodeId, isNodeId } from "../node-id";
 import { normalizeRelationshipType } from "../relation-type";
 
-export const ASSOCIATIONS_FILE_VERSION = 1;
+export const RELATIONSHIP_TYPES_FILE_VERSION = 1;
 
-/** Association ids use the same uppercase ULID alphabet as node ids. */
-export function isAssociationId(id: string): boolean {
+/** Relationship type ids use the same uppercase ULID alphabet as node ids. */
+export function isRelationshipTypeId(id: string): boolean {
   return isNodeId(id);
 }
 
-/** Mint a new association id (ULID). */
-export function generateAssociationId(): string {
+/** Mint a new relationship type id (ULID). */
+export function generateRelationshipTypeId(): string {
   return generateNodeId();
 }
 
 /**
- * Normalize an association registry key / relationship storage type.
+ * Normalize a relationship type registry key / relationship storage type.
  * Trims only — never lowercases (ULIDs are case-sensitive).
  */
-export function normalizeAssociationId(raw: string): string {
+export function normalizeRelationshipTypeId(raw: string): string {
   return raw.trim();
 }
 
@@ -28,7 +28,7 @@ export type PerspectiveLabelConfig =
 
 /**
  * Exactly two perspectives: one display config per endpoint (a→b, b→a).
- * These are not machine ids. Symmetric associations use the `symmetric` trait
+ * These are not machine ids. Symmetric relationship types use the `symmetric` trait
  * (labels may still repeat for display).
  */
 export type PerspectivePair = [PerspectiveLabelConfig, PerspectiveLabelConfig];
@@ -42,17 +42,17 @@ export interface TraitObjectEntry {
 /** Flag trait (string) or configured trait (object with `key`). */
 export type TraitEntry = string | TraitObjectEntry;
 
-export interface AssociationEndpointConstraint {
+export interface RelationshipTypeEndpointConstraint {
   typeId: string;
 }
 
 /** Tuple index 0/1 → allowed `is_a` type node id at that endpoint. */
-export interface AssociationEndpoints {
-  0: AssociationEndpointConstraint;
-  1: AssociationEndpointConstraint;
+export interface RelationshipTypeEndpoints {
+  0: RelationshipTypeEndpointConstraint;
+  1: RelationshipTypeEndpointConstraint;
 }
 
-export interface AssociationDefinition {
+export interface RelationshipTypeDefinition {
   /** User-facing labels for each endpoint. Always a pair — every relationship is bidirectional. */
   perspectives: PerspectivePair;
   /** When false, relation sections default to omitting the inline link-existing control. */
@@ -60,16 +60,16 @@ export interface AssociationDefinition {
   /** Cross-cutting capabilities (array interpreted as a set). */
   traits?: TraitEntry[];
   /** Optional endpoint type constraints (replaces schema.json relationship rules). */
-  endpoints?: AssociationEndpoints;
+  endpoints?: RelationshipTypeEndpoints;
 }
 
-export interface AssociationsFile {
+export interface RelationshipTypesFile {
   version: number;
-  associations: Record<string, AssociationDefinition>;
+  relationshipTypes: Record<string, RelationshipTypeDefinition>;
 }
 
-export function emptyAssociationsFile(): AssociationsFile {
-  return { version: ASSOCIATIONS_FILE_VERSION, associations: {} };
+export function emptyRelationshipTypesFile(): RelationshipTypesFile {
+  return { version: RELATIONSHIP_TYPES_FILE_VERSION, relationshipTypes: {} };
 }
 
 export function perspectiveTitle(config: PerspectiveLabelConfig): string {
@@ -87,42 +87,42 @@ export function perspectiveLinkExisting(
 }
 
 export function perspectiveConfigAt(
-  def: AssociationDefinition,
+  def: RelationshipTypeDefinition,
   index: 0 | 1,
 ): PerspectiveLabelConfig {
   return def.perspectives[index]!;
 }
 
 /**
- * Cache / query identity for a directed projection: association ULID + endpoint index.
+ * Cache / query identity for a directed projection: relationship type ULID + endpoint index.
  * Not a user-facing slug.
  */
 export function projectionTypeForEndpoint(
-  associationId: string,
+  relationshipTypeId: string,
   endpointIndex: 0 | 1,
 ): string {
-  return `${normalizeAssociationId(associationId)}:${endpointIndex}`;
+  return `${normalizeRelationshipTypeId(relationshipTypeId)}:${endpointIndex}`;
 }
 
 const PROJECTION_TYPE_RE = /^([0-9A-HJKMNP-TV-Z]{26}):([01])$/;
 
 export function parseProjectionType(
   type: string,
-): { associationId: string; endpointIndex: 0 | 1 } | null {
+): { relationshipTypeId: string; endpointIndex: 0 | 1 } | null {
   const match = PROJECTION_TYPE_RE.exec(type.trim());
   if (!match) return null;
   return {
-    associationId: match[1]!,
+    relationshipTypeId: match[1]!,
     endpointIndex: match[2] === "1" ? 1 : 0,
   };
 }
 
-/** Other directed projection of the same association (`:0` ↔ `:1`). */
+/** Other directed projection of the same relationship type (`:0` ↔ `:1`). */
 export function oppositeProjectionType(type: string): string | null {
   const parsed = parseProjectionType(type);
   if (!parsed) return null;
   return projectionTypeForEndpoint(
-    parsed.associationId,
+    parsed.relationshipTypeId,
     parsed.endpointIndex === 0 ? 1 : 0,
   );
 }
@@ -141,8 +141,8 @@ export function onlyActiveHostProjectionType(
   return oppositeProjectionType(trimmed);
 }
 
-export function associationIdFromProjectionType(type: string): string | null {
-  return parseProjectionType(type)?.associationId ?? null;
+export function relationshipTypeIdFromProjectionType(type: string): string | null {
+  return parseProjectionType(type)?.relationshipTypeId ?? null;
 }
 
 export function endpointIndexFromProjectionType(type: string): 0 | 1 | null {
@@ -246,7 +246,7 @@ function serializeTraitEntry(entry: TraitEntry): TraitEntry {
 function parseEndpointConstraint(
   raw: unknown,
   context: string,
-): AssociationEndpointConstraint {
+): RelationshipTypeEndpointConstraint {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`associations.json: ${context} must be an object`);
   }
@@ -257,7 +257,7 @@ function parseEndpointConstraint(
   return { typeId: obj.typeId };
 }
 
-function parseEndpoints(raw: unknown, typeKey: string): AssociationEndpoints | undefined {
+function parseEndpoints(raw: unknown, typeKey: string): RelationshipTypeEndpoints | undefined {
   if (raw === undefined) return undefined;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`associations.json: type ${typeKey} endpoints must be an object`);
@@ -269,8 +269,8 @@ function parseEndpoints(raw: unknown, typeKey: string): AssociationEndpoints | u
 }
 
 function serializeEndpoints(
-  endpoints: AssociationEndpoints | undefined,
-): AssociationEndpoints | undefined {
+  endpoints: RelationshipTypeEndpoints | undefined,
+): RelationshipTypeEndpoints | undefined {
   if (!endpoints) return undefined;
   return {
     0: { typeId: endpoints[0].typeId },
@@ -299,7 +299,7 @@ function serializePerspectiveConfig(config: PerspectiveLabelConfig): Perspective
   return out;
 }
 
-export function parseAssociationsFile(raw: string): AssociationsFile {
+export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
   const data = JSON.parse(raw) as unknown;
   if (!data || typeof data !== "object" || Array.isArray(data)) {
     throw new Error("associations.json: root must be an object");
@@ -316,12 +316,12 @@ export function parseAssociationsFile(raw: string): AssociationsFile {
     throw new Error("associations.json: associations must be an object");
   }
 
-  const associations: Record<string, AssociationDefinition> = {};
+  const relationshipTypes: Record<string, RelationshipTypeDefinition> = {};
   for (const [rawKey, value] of Object.entries(obj.associations as Record<string, unknown>)) {
-    const key = normalizeAssociationId(rawKey);
-    if (!isAssociationId(key)) {
+    const key = normalizeRelationshipTypeId(rawKey);
+    if (!isRelationshipTypeId(key)) {
       throw new Error(
-        `associations.json: association key "${rawKey}" must be a ULID`,
+        `associations.json: relationship type key "${rawKey}" must be a ULID`,
       );
     }
     if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -345,7 +345,7 @@ export function parseAssociationsFile(raw: string): AssociationsFile {
     const linkExisting = parseLinkExisting(row.linkExisting, `type ${key}.linkExisting`);
     const traits = parseTraits(row.traits, key);
     const endpoints = parseEndpoints(row.endpoints, key);
-    associations[key] = {
+    relationshipTypes[key] = {
       perspectives,
       ...(linkExisting !== undefined ? { linkExisting } : {}),
       ...(traits ? { traits } : {}),
@@ -353,14 +353,14 @@ export function parseAssociationsFile(raw: string): AssociationsFile {
     };
   }
 
-  return { version: obj.version, associations };
+  return { version: obj.version, relationshipTypes };
 }
 
-export function serializeAssociationsFile(file: AssociationsFile): string {
-  const sortedAssociations: Record<string, AssociationDefinition> = {};
-  for (const key of Object.keys(file.associations).sort()) {
-    const def = file.associations[key]!;
-    sortedAssociations[key] = {
+export function serializeRelationshipTypesFile(file: RelationshipTypesFile): string {
+  const sortedRelationshipTypes: Record<string, RelationshipTypeDefinition> = {};
+  for (const key of Object.keys(file.relationshipTypes).sort()) {
+    const def = file.relationshipTypes[key]!;
+    sortedRelationshipTypes[key] = {
       perspectives: [
         serializePerspectiveConfig(def.perspectives[0]!),
         serializePerspectiveConfig(def.perspectives[1]!),
@@ -370,65 +370,65 @@ export function serializeAssociationsFile(file: AssociationsFile): string {
       ...(def.endpoints ? { endpoints: serializeEndpoints(def.endpoints) } : {}),
     };
   }
-  return `${JSON.stringify({ version: file.version, associations: sortedAssociations }, null, 2)}\n`;
+  return `${JSON.stringify({ version: file.version, associations: sortedRelationshipTypes }, null, 2)}\n`;
 }
 
-/** Directed projection types for both endpoints of an association. */
+/** Directed projection types for both endpoints of a relationship type. */
 export function projectionTypesForComposite(
-  associationId: string,
+  relationshipTypeId: string,
 ): [string, string] {
-  const id = normalizeAssociationId(associationId);
+  const id = normalizeRelationshipTypeId(relationshipTypeId);
   return [projectionTypeForEndpoint(id, 0), projectionTypeForEndpoint(id, 1)];
 }
 
 export function perspectiveCountForExpansion(
-  typeDef: AssociationDefinition | undefined,
-  _associationId: string,
+  typeDef: RelationshipTypeDefinition | undefined,
+  _relationshipTypeId: string,
 ): number {
   return typeDef ? 2 : 1;
 }
 
-export function isDualPerspectiveType(typeDef: AssociationDefinition | undefined): boolean {
+export function isDualPerspectiveType(typeDef: RelationshipTypeDefinition | undefined): boolean {
   return typeDef !== undefined;
 }
 
 export function isBidirectionalComposite(
-  registry: AssociationsFile,
-  associationId: string,
+  registry: RelationshipTypesFile,
+  relationshipTypeId: string,
 ): boolean {
-  const def = registry.associations[normalizeAssociationId(associationId)];
+  const def = registry.relationshipTypes[normalizeRelationshipTypeId(relationshipTypeId)];
   return isDualPerspectiveType(def);
 }
 
-export class UnknownAssociationError extends Error {
-  constructor(public readonly associationId: string) {
-    super(`No association registered for id "${associationId}".`);
-    this.name = "UnknownAssociationError";
+export class UnknownRelationshipTypeError extends Error {
+  constructor(public readonly relationshipTypeId: string) {
+    super(`No relationship type registered for id "${relationshipTypeId}".`);
+    this.name = "UnknownRelationshipTypeError";
   }
 }
 
-/** Require a registered association id (callers must not pass display labels). */
-export function requireAssociationId(
-  registry: AssociationsFile,
-  associationId: string,
+/** Require a registered relationship type id (callers must not pass display labels). */
+export function requireRelationshipTypeId(
+  registry: RelationshipTypesFile,
+  relationshipTypeId: string,
 ): string {
-  const id = normalizeAssociationId(associationId);
-  if (!registry.associations[id]) {
-    throw new UnknownAssociationError(id);
+  const id = normalizeRelationshipTypeId(relationshipTypeId);
+  if (!registry.relationshipTypes[id]) {
+    throw new UnknownRelationshipTypeError(id);
   }
   return id;
 }
 
 export function registerTypeDefinition(
-  file: AssociationsFile,
-  associationId: string,
-  def: AssociationDefinition,
+  file: RelationshipTypesFile,
+  relationshipTypeId: string,
+  def: RelationshipTypeDefinition,
 ): void {
-  const id = normalizeAssociationId(associationId);
-  if (!isAssociationId(id)) {
-    throw new Error(`Association id must be a ULID, got "${associationId}"`);
+  const id = normalizeRelationshipTypeId(relationshipTypeId);
+  if (!isRelationshipTypeId(id)) {
+    throw new Error(`Relationship type id must be a ULID, got "${relationshipTypeId}"`);
   }
-  file.associations[id] = {
+  file.relationshipTypes[id] = {
     perspectives: [
       typeof def.perspectives[0] === "string"
         ? def.perspectives[0].trim()
@@ -444,27 +444,27 @@ export function registerTypeDefinition(
 }
 
 /**
- * Register a dual-perspective association with display labels.
+ * Register a dual-perspective relationship type with display labels.
  * Pass `id` or mint a ULID. Never derives identity from labels.
  */
 export function registerBidirectionalType(
-  file: AssociationsFile,
+  file: RelationshipTypesFile,
   labelFromA: PerspectiveLabelConfig,
   labelFromB: PerspectiveLabelConfig,
   id?: string,
   options?: { traits?: TraitEntry[] },
 ): string {
-  const associationId = id !== undefined ? normalizeAssociationId(id) : generateAssociationId();
-  registerTypeDefinition(file, associationId, {
+  const relationshipTypeId = id !== undefined ? normalizeRelationshipTypeId(id) : generateRelationshipTypeId();
+  registerTypeDefinition(file, relationshipTypeId, {
     perspectives: [labelFromA, labelFromB],
     ...(options?.traits ? { traits: options.traits } : {}),
   });
-  return associationId;
+  return relationshipTypeId;
 }
 
-/** Register a set-trait association with explicit ULID id and perspective labels. */
-export function registerSetAssociation(
-  file: AssociationsFile,
+/** Register a set-trait relationship type with explicit ULID id and perspective labels. */
+export function registerSetRelationshipType(
+  file: RelationshipTypesFile,
   options: {
     id: string;
     perspectives: PerspectivePair;

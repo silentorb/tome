@@ -518,10 +518,10 @@ async function dispatchApiRequest(
       }
 
       const viewsRelationshipMatch =
-        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/associations\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationship-types\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (viewsRelationshipMatch && req.method === "PATCH") {
         const nodeId = viewsRelationshipMatch[1]!;
-        const association = viewsRelationshipMatch[2]!;
+        const relationshipTypeId = viewsRelationshipMatch[2]!;
         const payload = (await req.json()) as {
           viewOrder?: string[];
           properties?: string[];
@@ -532,7 +532,7 @@ async function dispatchApiRequest(
           return json({ error: "viewOrder or properties required" }, 400);
         }
         try {
-          const response = db.patchRelationshipViews(nodeId, association, {
+          const response = db.patchRelationshipViews(nodeId, relationshipTypeId, {
             ...(hasViewOrder ? { viewOrder: payload.viewOrder } : {}),
             ...(hasProperties ? { properties: payload.properties } : {}),
           });
@@ -543,10 +543,10 @@ async function dispatchApiRequest(
       }
 
       const viewsCollectionMatch =
-        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/associations\/([0-9A-HJKMNP-TV-Z]{26})\/views$/i.exec(path);
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationship-types\/([0-9A-HJKMNP-TV-Z]{26})\/views$/i.exec(path);
       if (viewsCollectionMatch && req.method === "POST") {
         const nodeId = viewsCollectionMatch[1]!;
-        const association = viewsCollectionMatch[2]!;
+        const relationshipTypeId = viewsCollectionMatch[2]!;
         const payload = (await req.json()) as {
           name?: string;
           sorts?: ViewSortSpec[];
@@ -556,7 +556,7 @@ async function dispatchApiRequest(
           return json({ error: "name required" }, 400);
         }
         try {
-          const view = db.createRelationshipView(nodeId, association, {
+          const view = db.createRelationshipView(nodeId, relationshipTypeId, {
             name: payload.name,
             sorts: payload.sorts,
             properties: payload.properties,
@@ -568,12 +568,12 @@ async function dispatchApiRequest(
       }
 
       const viewsItemMatch =
-        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/associations\/([0-9A-HJKMNP-TV-Z]{26})\/views\/([a-z0-9-]+)$/i.exec(
+        /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationship-types\/([0-9A-HJKMNP-TV-Z]{26})\/views\/([a-z0-9-]+)$/i.exec(
           path,
         );
       if (viewsItemMatch) {
         const nodeId = viewsItemMatch[1]!;
-        const association = viewsItemMatch[2]!;
+        const relationshipTypeId = viewsItemMatch[2]!;
         const viewId = viewsItemMatch[3]!;
         if (req.method === "PATCH") {
           const payload = (await req.json()) as {
@@ -582,7 +582,7 @@ async function dispatchApiRequest(
             properties?: string[];
           };
           try {
-            const view = db.updateRelationshipView(nodeId, association, viewId, payload);
+            const view = db.updateRelationshipView(nodeId, relationshipTypeId, viewId, payload);
             return json({ view });
           } catch (err) {
             return json({ error: String(err) }, 400);
@@ -590,7 +590,7 @@ async function dispatchApiRequest(
         }
         if (req.method === "DELETE") {
           try {
-            db.deleteRelationshipView(nodeId, association, viewId);
+            db.deleteRelationshipView(nodeId, relationshipTypeId, viewId);
             return json({ ok: true });
           } catch (err) {
             return json({ error: String(err) }, 400);

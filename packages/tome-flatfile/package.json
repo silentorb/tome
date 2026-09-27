@@ -15,7 +15,7 @@
     "./enum-property-codec": "./src/enum-property-codec.ts",
     "./schema-load": "./src/schema-rules/load.ts",
     "./content": "./src/content/index.ts",
-    "./associations-file": "./src/content/associations-file.ts",
+    "./relationship-types-file": "./src/content/relationship-types-file.ts",
     "./migrations/relationships-to-shards": "./src/migrations/relationships-to-shards.ts",
     "./migrations/content-data-archive-layout": "./src/migrations/content-data-archive-layout.ts",
     "./migrations/relationship-order": "./src/migrations/relationship-order.ts"

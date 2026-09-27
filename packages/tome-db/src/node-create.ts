@@ -1,9 +1,9 @@
 import { generateNodeId } from "tome-flatfile/node-id";
 import type { Properties } from "tome-sqlite";
 import {
-  associationIdFromTypeOrProjection,
+  relationshipTypeIdFromTypeOrProjection,
   isMemberSideProjectionType,
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   parseProjectionType,
   setRoleProjectionTypesForComposite,
   setRoleProjectionTypesForNode,
@@ -85,12 +85,12 @@ function ordinalFromProperties(properties: Record<string, unknown>): number | nu
 function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: string): number | undefined {
   const store = ctx.graphStore;
   const dir = contentDirForGraphStore(store, sourceId);
-  const registry = loadAssociationsFromContent(dir);
-  const composite = associationIdFromTypeOrProjection(registry, type);
+  const registry = loadRelationshipTypesFromContent(dir);
+  const composite = relationshipTypeIdFromTypeOrProjection(registry, type);
   const parsed = parseProjectionType(type);
   const outgoing = listRelationshipsFromSource(store, sourceId).filter((c) => {
     if (c.type === type) return true;
-    if (composite && associationIdFromTypeOrProjection(registry, c.type) === composite) {
+    if (composite && relationshipTypeIdFromTypeOrProjection(registry, c.type) === composite) {
       if (!parsed) return true;
       const edgeParsed = parseProjectionType(c.type);
       return edgeParsed?.endpointIndex === parsed.endpointIndex;
@@ -112,10 +112,10 @@ function memberProjectionForSetLink(
 ): string {
   const store = ctx.graphStore;
   const dir = contentDirForGraphStore(store, setId);
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   if (typeOrProjection) {
     if (isMemberSideProjectionType(registry, typeOrProjection)) return typeOrProjection;
-    const composite = associationIdFromTypeOrProjection(registry, typeOrProjection);
+    const composite = relationshipTypeIdFromTypeOrProjection(registry, typeOrProjection);
     if (composite) return setRoleProjectionTypesForComposite(registry, composite)[1];
   }
   return setRoleProjectionTypesForNode(setId, dir)[1];

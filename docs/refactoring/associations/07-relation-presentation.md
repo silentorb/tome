@@ -1,5 +1,8 @@
 # B7 — Relation-section presentation (node page)
 
+> **Terminology (historical):** This inventory uses older “association” / composite naming. The preferred term is **relationship type** (registry definition: ULID + perspectives + traits + endpoints). On-disk files may still use `associations.json` / key `associations`.
+
+
 ## What it does
 
 On an **instance node page**, outgoing relationships are rendered as **relation table sections**—one section per perspective/group, with columns from edge properties, add-mode controls, and titles.
@@ -14,7 +17,7 @@ Presentation logic branches on relationship type names and includes-classificati
 
 | Field | Behavior |
 | --- | --- |
-| `title` / `label` | From type node title, `perspectiveLabels`, or `formatAssociationLabel` |
+| `title` / `label` | From type node title, `perspectiveLabels`, or `formatRelationshipTypeLabel` |
 | `addMode` | `"link-existing"` or `"none"` — see below |
 | `linkAddLabel` | From `perspectiveLabels.linkAdd` or default `"Link {singular}"` |
 | `allowedTargetTypeIds` | From `schema.json` rules or table-schema column target |
@@ -98,7 +101,7 @@ Membership sections always use link-existing (link to type table).
 
 - `perspectiveDisplayLabel` — prefers `perspectiveLabels` from registry; optional `compositeType` disambiguates shared slugs
 - `perspectiveLinkAddLabel` — `linkAdd` from registry or default
-- `formatAssociationLabel` — title-case slug fallback
+- `formatRelationshipTypeLabel` — title-case slug fallback
 
 Only `member_of` has rich `perspectiveLabels` in Marloth registry today.
 

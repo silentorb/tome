@@ -24,15 +24,15 @@ import { loadViewsFromContent } from "tome-flatfile";
 import { sortEvalRowsFromViewSorts } from "./views/sort-spec";
 import { applySectionColumnOrder, reorderColumnDefs } from "./views/column-order";
 import type { TableTabsDetail } from "./views/tabs";
-import { ORDER_META_KEYS, setUsesOrderedAssociation } from "./ordered-relationships";
+import { ORDER_META_KEYS, setUsesOrderedRelationshipType } from "./ordered-relationships";
 import {
   ORDERED_PROPERTY_DEFAULT,
-  setRoleAssociationForNode,
+  setRoleRelationshipTypeForNode,
   setRoleProjectionTypesForComposite,
-  loadAssociationsFromContent,
-  associationIdFromTypeOrProjection,
+  loadRelationshipTypesFromContent,
+  relationshipTypeIdFromTypeOrProjection,
 } from "tome-flatfile";
-import { perspectiveDisplayLabel } from "./association-label";
+import { perspectiveDisplayLabel } from "./relationship-type-label";
 import {
   applyNameFilterAndWindow,
   buildTableRowsWindow,
@@ -79,10 +79,10 @@ export type {
 } from "tome-graph-interfaces";
 
 function setSectionTitle(contentDir: string, setSidePerspective: string): string {
-  const associations = loadAssociationsFromContent(contentDir);
+  const relationshipTypes = loadRelationshipTypesFromContent(contentDir);
   const composite =
-    associationIdFromTypeOrProjection(associations, setSidePerspective) ?? setSidePerspective;
-  const label = perspectiveDisplayLabel(associations, setSidePerspective, composite);
+    relationshipTypeIdFromTypeOrProjection(relationshipTypes, setSidePerspective) ?? setSidePerspective;
+  const label = perspectiveDisplayLabel(relationshipTypes, setSidePerspective, composite);
   return label.trim() ? label : DEFAULT_SET_SECTION_TITLE;
 }
 
@@ -122,14 +122,14 @@ function numericOrderValue(raw: unknown, fallback: number): number {
 function setPerspectives(
   databaseId: string,
   contentDir: string,
-): { viewAssociation: string; memberSidePerspective: string; setSideProjection: string } {
-  const associationId = setRoleAssociationForNode(databaseId, contentDir);
-  const registry = loadAssociationsFromContent(contentDir);
+): { viewRelationshipType: string; memberSidePerspective: string; setSideProjection: string } {
+  const relationshipTypeId = setRoleRelationshipTypeForNode(databaseId, contentDir);
+  const registry = loadRelationshipTypesFromContent(contentDir);
   const [setSideProjection, memberSidePerspective] = setRoleProjectionTypesForComposite(
     registry,
-    associationId,
+    relationshipTypeId,
   );
-  return { viewAssociation: associationId, memberSidePerspective, setSideProjection };
+  return { viewRelationshipType: relationshipTypeId, memberSidePerspective, setSideProjection };
 }
 
 function sortsNeedRelationHydration(
@@ -171,7 +171,7 @@ function finishCustomViewDetail(args: {
   databaseId: string;
   databaseTitle: string;
   contentDir: string;
-  viewAssociation: string;
+  viewRelationshipType: string;
   memberSidePerspective: string;
   setSideProjection: string;
   resolved: ReturnType<typeof resolveCustomTabsForNode>;
@@ -184,7 +184,7 @@ function finishCustomViewDetail(args: {
     databaseId,
     databaseTitle,
     contentDir,
-    viewAssociation,
+    viewRelationshipType,
     memberSidePerspective,
     setSideProjection,
     resolved,
@@ -207,7 +207,7 @@ function finishCustomViewDetail(args: {
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     databaseId,
-    viewAssociation,
+    viewRelationshipType,
     resolved.activeDefinition.properties,
   );
 
@@ -237,7 +237,7 @@ function finishCustomViewDetail(args: {
     views: resolved.items.map((tab) => tab.label),
     view: tabName,
     tabs,
-    viewAssociation,
+    viewRelationshipType,
     memberSidePerspective,
     sectionTitle: setSectionTitle(contentDir, setSideProjection),
     allColumns: defaultColumns,
@@ -257,7 +257,7 @@ function buildCustomViewDetail(
   requestedTabId?: string,
   rowsQuery?: TableRowsQuery,
 ): DatabaseViewDetail {
-  const { viewAssociation, memberSidePerspective, setSideProjection } = setPerspectives(
+  const { viewRelationshipType, memberSidePerspective, setSideProjection } = setPerspectives(
     databaseId,
     contentDir,
   );
@@ -265,10 +265,10 @@ function buildCustomViewDetail(
     contentDir,
     databaseId,
     requestedTabId,
-    viewAssociation,
+    viewRelationshipType,
   );
   const tabName = activeTabName(resolved);
-  const ordered = setUsesOrderedAssociation(databaseId, contentDir);
+  const ordered = setUsesOrderedRelationshipType(databaseId, contentDir);
   const sorts = rowsQuery?.sorts ?? resolved.activeDefinition.sorts;
 
   const { dynamicColumnDefs, hiddenColumnKeys } = listDynamicColumnDefs(
@@ -400,7 +400,7 @@ function buildCustomViewDetail(
       databaseId,
       databaseTitle,
       contentDir,
-      viewAssociation,
+      viewRelationshipType,
       memberSidePerspective,
       setSideProjection,
       resolved,
@@ -446,7 +446,7 @@ function buildCustomViewDetail(
     databaseId,
     databaseTitle,
     contentDir,
-    viewAssociation,
+    viewRelationshipType,
     memberSidePerspective,
     setSideProjection,
     resolved,
@@ -471,7 +471,7 @@ export function getDatabaseViewDetail(
 
   const title = titleFromProperties(database.properties);
   const views = loadViewsFromContent(dir);
-  const sectionKey = setRoleAssociationForNode(databaseId, dir);
+  const sectionKey = setRoleRelationshipTypeForNode(databaseId, dir);
   const sectionConfig = getSectionTabsConfig(views, databaseId, sectionKey);
 
   if (sectionConfig?.kind === "generated") {

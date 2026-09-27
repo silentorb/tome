@@ -4,7 +4,7 @@ import type { RelationshipTypeOption } from "tome-graph-interfaces";
 import type { EditorApi } from "../api/client";
 import "./record-link-picker.css";
 
-interface AssociationPickerProps {
+interface RelationshipTypePickerProps {
   api: EditorApi;
   selectedType: string | null;
   ariaLabel: string;
@@ -13,7 +13,7 @@ interface AssociationPickerProps {
   recentTypes?: readonly string[];
 }
 
-export function filterAndSortAssociations(
+export function filterAndSortRelationshipTypes(
   types: readonly RelationshipTypeOption[],
   query: string,
   recentTypes: readonly string[] = [],
@@ -39,13 +39,13 @@ export function filterAndSortAssociations(
   return [...recent, ...rest];
 }
 
-export function AssociationPicker({
+export function RelationshipTypePicker({
   api,
   selectedType,
   ariaLabel,
   onSelect,
   recentTypes = [],
-}: AssociationPickerProps) {
+}: RelationshipTypePickerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const [query, setQuery] = useState("");
   const [types, setTypes] = useState<RelationshipTypeOption[]>([]);
@@ -67,7 +67,7 @@ export function AssociationPicker({
   }, [api]);
 
   const filtered = useMemo(
-    () => filterAndSortAssociations(types, query, recentTypes),
+    () => filterAndSortRelationshipTypes(types, query, recentTypes),
     [query, recentTypes, types],
   );
 

@@ -7,12 +7,12 @@ import {
   seedTestNode,
   seedTestRelationships,
   seedTestTableSchema,
-  TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+  TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
 } from "../src/content/test-helpers";
 import {
   firstRelatedNodeId,
   loadSemanticRelatedPathContext,
-  relationTokenForAssociation,
+  relationTokenForRelationshipType,
 } from "../src/semantic-related-ids";
 
 const SCENES_DB = "0000000000000000000000000D";
@@ -38,36 +38,36 @@ describe("semantic-related-ids", () => {
       b: book,
       typeFromA: "Scenes",
       typeFromB: "Product",
-      associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+      relationshipTypeId: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
       properties: { ordinal: 0 },
     },
   ]);
 
-  const registry = fixture.ctx.store.readAssociationsFile();
-  registry.associations[TEST_SCENES_PRODUCT_ASSOCIATION_ID] = {
+  const registry = fixture.ctx.store.readRelationshipTypesFile();
+  registry.relationshipTypes[TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID] = {
     perspectives: ["Scenes", "Product"],
     endpoints: {
       0: { typeId: SCENES_DB },
       1: { typeId: PRODUCTS_DB },
     },
   };
-  fixture.ctx.store.writeAssociationsFile(registry);
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
   fixture.ctx.sync.syncRelationships();
 
   test("resolves related id through Imp semantic bind", () => {
     const pathContext = loadSemanticRelatedPathContext(contentDir);
     expect(
-      relationTokenForAssociation(
+      relationTokenForRelationshipType(
         pathContext.tableSchemas,
         SCENES_DB,
-        TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
       ),
     ).toBe("product");
     expect(
       firstRelatedNodeId(
         fixture.ctx.graphStore,
         scene,
-        TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
         SCENES_DB,
         pathContext,
       ),
@@ -81,7 +81,7 @@ describe("semantic-related-ids", () => {
       firstRelatedNodeId(
         fixture.ctx.graphStore,
         scene,
-        TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
         SCENES_DB,
         pathContext,
       ),
@@ -95,7 +95,7 @@ describe("semantic-related-ids", () => {
         key: "product",
         name: "Product",
         type: "relation",
-        association: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        association: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
         endpoint: 0,
       },
     ]);
@@ -104,7 +104,7 @@ describe("semantic-related-ids", () => {
       firstRelatedNodeId(
         fixture.ctx.cache,
         scene,
-        TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
         SCENES_DB,
         pathContext,
       ),

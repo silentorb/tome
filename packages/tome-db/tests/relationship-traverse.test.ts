@@ -4,8 +4,8 @@ import {
   destroyTestContentFixture,
   seedTestNode,
   seedTestTableSchema,
-  TEST_SCENES_PART_ASSOCIATION_ID,
-  TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+  TEST_SCENES_PART_RELATIONSHIP_TYPE_ID,
+  TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
 } from "../src/content/test-helpers";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import {
@@ -18,11 +18,11 @@ import {
   firstRelatedNodeId,
   loadSemanticRelatedPathContext,
   relatedNodeIds,
-  relationTokenForAssociation,
+  relationTokenForRelationshipType,
 } from "../src/semantic-related-ids";
 import type { RelationshipEntry } from "tome-flatfile";
 import { RELATIONSHIPS_FILE_VERSION } from "tome-flatfile";
-import { invalidateAssociationsCache } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 
 describe("relationship-traverse", () => {
   const fixture = createTestContentFixture("tome-rel-traverse-");
@@ -49,14 +49,14 @@ describe("relationship-traverse", () => {
       key: "product",
       name: "Product",
       type: "relation",
-      association: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+      association: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
       endpoint: 0,
     },
     {
       key: "part",
       name: "Part",
       type: "relation",
-      association: TEST_SCENES_PART_ASSOCIATION_ID,
+      association: TEST_SCENES_PART_RELATIONSHIP_TYPE_ID,
       endpoint: 0,
     },
   ]);
@@ -67,15 +67,15 @@ describe("relationship-traverse", () => {
   seedTestTableSchema(fixture, "0000000000000000000000000S", []);
   const typesFile = {
     version: 1 as const,
-    associations: {
-      [TEST_SCENES_PRODUCT_ASSOCIATION_ID]: {
+    relationshipTypes: {
+      [TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID]: {
         perspectives: ["scenes", "product"] as [string, string],
         endpoints: {
           0: { typeId: scenesDb },
           1: { typeId: productsDb },
         },
       },
-      [TEST_SCENES_PART_ASSOCIATION_ID]: {
+      [TEST_SCENES_PART_RELATIONSHIP_TYPE_ID]: {
         perspectives: ["scenes", "part"] as [string, string],
         endpoints: {
           0: { typeId: scenesDb },
@@ -89,15 +89,15 @@ describe("relationship-traverse", () => {
       },
     },
   };
-  fixture.ctx.store.writeAssociationsFile(typesFile);
-  invalidateAssociationsCache();
+  fixture.ctx.store.writeRelationshipTypesFile(typesFile);
+  invalidateRelationshipTypesCache();
 
   // Authored tuple order carries the semantics: for "member_of" the set is at
   // index 0 and the member at index 1; asymmetric composites place
   // each endpoint at the index whose perspective matches its role.
   const relationships: RelationshipEntry[] = [
-    { a: scene, b: product, type: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: { ordinal: 0 } },
-    { a: scene, b: part, type: TEST_SCENES_PART_ASSOCIATION_ID, properties: { ordinal: 0 } },
+    { a: scene, b: product, type: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID, properties: { ordinal: 0 } },
+    { a: scene, b: part, type: TEST_SCENES_PART_RELATIONSHIP_TYPE_ID, properties: { ordinal: 0 } },
     {
       a: scene,
       b: location,
@@ -121,7 +121,7 @@ describe("relationship-traverse", () => {
       firstRelatedNodeId(
         store(),
         scene,
-        TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
         scenesDb,
         pathContext,
       ),
@@ -130,7 +130,7 @@ describe("relationship-traverse", () => {
       relatedNodeIds(
         store(),
         scene,
-        TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
         scenesDb,
         pathContext,
       ),
@@ -142,16 +142,16 @@ describe("relationship-traverse", () => {
       firstRelatedNodeId(
         store(),
         scene,
-        TEST_SCENES_PART_ASSOCIATION_ID,
+        TEST_SCENES_PART_RELATIONSHIP_TYPE_ID,
         scenesDb,
         pathContext,
       ),
     ).toBe(part);
   });
 
-  test("relationTokenForAssociation fails when column is missing", () => {
+  test("relationTokenForRelationshipType fails when column is missing", () => {
     expect(() =>
-      relationTokenForAssociation(pathContext.tableSchemas, locationsDb, TEST_SCENES_PRODUCT_ASSOCIATION_ID),
+      relationTokenForRelationshipType(pathContext.tableSchemas, locationsDb, TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID),
     ).toThrow(/No relation column/);
   });
 

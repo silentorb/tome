@@ -232,7 +232,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     },
     async createRelationshipView(
       nodeId: string,
-      association: string,
+      relationshipTypeId: string,
       input: {
         name: string;
         sorts?: import("tome-graph-interfaces").ViewSortSpec[];
@@ -240,7 +240,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       },
     ) {
       const data = await fetchJson<{ view: import("tome-graph-interfaces").ViewDefinition }>(
-        `/api/views/nodes/${nodeId}/associations/${encodeURIComponent(association)}/views`,
+        `/api/views/nodes/${nodeId}/relationship-types/${encodeURIComponent(relationshipTypeId)}/views`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -251,7 +251,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     },
     async updateRelationshipView(
       nodeId: string,
-      association: string,
+      relationshipTypeId: string,
       viewId: string,
       input: {
         name?: string;
@@ -260,7 +260,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
       },
     ) {
       const data = await fetchJson<{ view: import("tome-graph-interfaces").ViewDefinition }>(
-        `/api/views/nodes/${nodeId}/associations/${encodeURIComponent(association)}/views/${encodeURIComponent(viewId)}`,
+        `/api/views/nodes/${nodeId}/relationship-types/${encodeURIComponent(relationshipTypeId)}/views/${encodeURIComponent(viewId)}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -271,17 +271,17 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
     },
     async deleteRelationshipView(
       nodeId: string,
-      association: string,
+      relationshipTypeId: string,
       viewId: string,
     ): Promise<void> {
       await fetchJson(
-        `/api/views/nodes/${nodeId}/associations/${encodeURIComponent(association)}/views/${encodeURIComponent(viewId)}`,
+        `/api/views/nodes/${nodeId}/relationship-types/${encodeURIComponent(relationshipTypeId)}/views/${encodeURIComponent(viewId)}`,
         { method: "DELETE" },
       );
     },
     async patchRelationshipViews(
       nodeId: string,
-      association: string,
+      relationshipTypeId: string,
       input: {
         viewOrder?: string[];
         properties?: string[];
@@ -291,7 +291,7 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         views?: import("tome-graph-interfaces").ViewDefinition[];
         properties?: string[];
       }>(
-        `/api/views/nodes/${nodeId}/associations/${encodeURIComponent(association)}`,
+        `/api/views/nodes/${nodeId}/relationship-types/${encodeURIComponent(relationshipTypeId)}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },

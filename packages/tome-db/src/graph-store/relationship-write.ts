@@ -11,7 +11,7 @@ import {
   connectsEndpoints,
   isSetTraitComposite,
   isSetTraitProjectionType,
-  type AssociationsFile,
+  type RelationshipTypesFile,
 } from "tome-flatfile";
 
 /** Write store: graph store Base tier for domain mutations. */
@@ -84,7 +84,7 @@ export function writeStoreReplaceRelationshipProperties(
 /** Scan canonical records for a set-trait edge connecting the same pair. */
 export function writeStoreFindSetTraitRelationship(
   store: GraphWriteStore,
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   sourceId: string,
   targetId: string,
   projectionType: string,

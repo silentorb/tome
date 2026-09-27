@@ -9,7 +9,7 @@ This is separate from:
 - SQLite DDL (`SCHEMA_VERSION` in `packages/tome-sqlite/src/schema.ts`)
 - Per-type-table column definitions in [`table-schemas.json`](./table-schemas.md)
 - UI tab configuration in [`views.json`](./views.md)
-- Composite storage types in [`content/model/associations.json`](../../content/model/associations.json)
+- Relationship type registry in [`content/model/associations.json`](../../content/model/associations.json) (legacy filename; entries are relationship types)
 
 ## File format
 
@@ -45,7 +45,7 @@ This is separate from:
 | Field | Meaning |
 | --- | --- |
 | `sourceTypeId` | Type node id; rule applies when the source instance has `is_a` to this id |
-| `type` | Outgoing relationship type (lower snake_case). Use `includes` for cross-entity association rules; legacy column slugs (`features`, `inspirations`, `characters`, …) still resolve to `includes` storage when creating links. |
+| `type` | Outgoing relationship type (lower snake_case). Use `includes` for cross-entity relationship-type rules; legacy column slugs (`features`, `inspirations`, `characters`, …) still resolve to `includes` storage when creating links. |
 | `allowedTargetTypeIds` | Target instances must have `is_a` to one of these type ids; also scopes the includes / link-existing relation table **Link** picker in the editor |
 
 Types are identified by **stable node id**, not display names.

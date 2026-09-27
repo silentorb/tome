@@ -246,7 +246,7 @@ describe("queries", () => {
         b: targetId,
         typeFromA: "Related",
         typeFromB: "Related",
-        associationId: TEST_RELATED_ASSOCIATION_ID,
+        relationshipTypeId: TEST_RELATED_ASSOCIATION_ID,
         properties: { priority: "Low" },
       },
     ]);

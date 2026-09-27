@@ -5,7 +5,7 @@ import {
   seedTestNode,
   type TestContentFixture,
 } from "tome-db/content/test-helpers";
-import { registerBidirectionalType, invalidateAssociationsCache } from "tome-flatfile";
+import { registerBidirectionalType, invalidateRelationshipTypesCache } from "tome-flatfile";
 import { createExtensionGraphMutateServices } from "../src/extension-graph-mutate";
 
 describe("createExtensionGraphMutateServices", () => {
@@ -15,10 +15,10 @@ describe("createExtensionGraphMutateServices", () => {
   let assoc = "";
 
   beforeAll(() => {
-    const registry = fixture.ctx.store.readAssociationsFile();
+    const registry = fixture.ctx.store.readRelationshipTypesFile();
     assoc = registerBidirectionalType(registry, "Dependents", "Dependencies");
-    fixture.ctx.store.writeAssociationsFile(registry);
-    invalidateAssociationsCache();
+    fixture.ctx.store.writeRelationshipTypesFile(registry);
+    invalidateRelationshipTypesCache();
     seedTestNode(fixture, { id: sourceId, properties: { title: "A" } });
     seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
   });

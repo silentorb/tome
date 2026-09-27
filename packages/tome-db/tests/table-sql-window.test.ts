@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { GraphDatabase } from "tome-sqlite";
 import {
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
 } from "../src/content/test-helpers";
 import {
   explodeTableWindowRequest,
@@ -15,13 +15,13 @@ import { invalidateDynamicPropertiesCache } from "../src/content/sync";
 import {
   contentModelDir,
   dynamicPropertiesFilePath,
-  associationsFilePath,
+  relationshipTypesFilePath,
   schemaFilePath,
   emptyDynamicPropertiesFile,
   serializeDynamicPropertiesFile,
   serializeSchemaFile,
-  serializeAssociationsFile,
-  invalidateAssociationsCache,
+  serializeRelationshipTypesFile,
+  invalidateRelationshipTypesCache,
   invalidateSchemaCache,
 } from "tome-flatfile";
 
@@ -79,18 +79,18 @@ describe("resolveSqlWindowSorts / SQL window fail-closed", () => {
     serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
   );
   writeFileSync(
-    associationsFilePath(contentDir),
-    serializeAssociationsFile({
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
       version: 1,
-      associations: {
-        [TEST_MEMBER_OF_ASSOCIATION_ID]: {
+      relationshipTypes: {
+        [TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID]: {
           perspectives: ["Members", "Membership"],
           traits: ["set"],
         },
       },
     }),
   );
-  invalidateAssociationsCache();
+  invalidateRelationshipTypesCache();
   writeFileSync(
     schemaFilePath(contentDir),
     serializeSchemaFile({ version: 1, relationshipRules: [], enums: {} }),

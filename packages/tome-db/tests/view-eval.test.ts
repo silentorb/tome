@@ -12,13 +12,13 @@ import {
   contentModelDir,
   viewsFilePath,
   dynamicPropertiesFilePath,
-  associationsFilePath,
+  relationshipTypesFilePath,
   tableSchemasFilePath,
 } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
-import { serializeAssociationsFile } from "tome-flatfile";
-import { invalidateAssociationsCache } from "tome-flatfile";
-import { writeTestSetAssociations, TEST_MEMBER_OF_ASSOCIATION_ID, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID } from "../src/content/test-helpers";
+import { serializeRelationshipTypesFile } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
+import { writeTestSetRelationshipTypes, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID } from "../src/content/test-helpers";
 
 describe("row-sort", () => {
   const rows: EvalRow[] = [
@@ -101,7 +101,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-tabs-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
-    writeTestSetAssociations(contentDir);
+    writeTestSetRelationshipTypes(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
@@ -114,7 +114,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "done-only",
             nodeId: databaseId,
-            association: TEST_MEMBER_OF_ASSOCIATION_ID,
+            association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
             name: "Done only",
             sorts: [{ column: "name", direction: "asc" }],
           },
@@ -140,8 +140,8 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Zebra" });
     db.upsertNode("page2", { title: "Alpha" });
-    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { status: "Done", row_index: 0 });
-    db.upsertRelationship("page2", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { status: "Todo", row_index: 1 });
+    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { status: "Done", row_index: 0 });
+    db.upsertRelationship("page2", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { status: "Todo", row_index: 1 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.tabs.items.map((tab) => tab.label)).toEqual(["Done only"]);
@@ -157,7 +157,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-cols-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
-    writeTestSetAssociations(contentDir);
+    writeTestSetRelationshipTypes(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
@@ -170,7 +170,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "all",
             nodeId: databaseId,
-            association: TEST_MEMBER_OF_ASSOCIATION_ID,
+            association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
             properties: ["status"],
@@ -199,7 +199,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     );
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Row" });
-    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.columns).toEqual(["status"]);
@@ -212,7 +212,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-hidden-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
-    writeTestSetAssociations(contentDir);
+    writeTestSetRelationshipTypes(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
@@ -225,7 +225,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "all",
             nodeId: databaseId,
-            association: TEST_MEMBER_OF_ASSOCIATION_ID,
+            association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
             properties: ["status"],
@@ -254,7 +254,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     );
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
     db.upsertNode("page1", { title: "Row" });
-    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
 
     const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(view?.allColumns).toEqual(["status", "priority"]);
@@ -269,17 +269,17 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-rel-sort-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
-    writeTestSetAssociations(contentDir);
+    writeTestSetRelationshipTypes(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
     const featuresDb = "0000000000000000000000002P";
     const inspirationsDb = "0000000000000000000000000K";
 
     writeFileSync(
-      associationsFilePath(contentDir),
-      serializeAssociationsFile({
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile({
         version: 1,
-        associations: {
+        relationshipTypes: {
           "000000000000000000000000A1": {
             perspectives: ["Members", "Membership"],
             traits: ["set"],
@@ -294,7 +294,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
         },
       }),
     );
-    invalidateAssociationsCache();
+    invalidateRelationshipTypesCache();
     writeFileSync(
       viewsFilePath(contentDir),
       serializeViewsFile({
@@ -303,7 +303,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
           {
             id: "by-inspirations",
             nodeId: featuresDb,
-            association: TEST_MEMBER_OF_ASSOCIATION_ID,
+            association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
             name: "By inspirations",
             sorts: [{ column: "inspirations", direction: "desc" }],
           },
@@ -343,17 +343,17 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertNode("insp-b", { title: "Insp B" });
     db.upsertNode("insp-c", { title: "Insp C" });
 
-    db.upsertRelationship("feature-few", featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
-    db.upsertRelationship("feature-many", featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 1 });
-    db.upsertRelationship("feature-none", featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 2 });
-    db.upsertRelationship("insp-a", inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
-    db.upsertRelationship("insp-b", inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 1 });
-    db.upsertRelationship("insp-c", inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 2 });
-    db.upsertRelationship("feature-few", "insp-a", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
-    db.upsertRelationship("feature-few", "insp-b", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
-    db.upsertRelationship("feature-many", "insp-a", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
-    db.upsertRelationship("feature-many", "insp-b", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
-    db.upsertRelationship("feature-many", "insp-c", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0));
+    db.upsertRelationship("feature-few", featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
+    db.upsertRelationship("feature-many", featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 1 });
+    db.upsertRelationship("feature-none", featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 2 });
+    db.upsertRelationship("insp-a", inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
+    db.upsertRelationship("insp-b", inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 1 });
+    db.upsertRelationship("insp-c", inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 2 });
+    db.upsertRelationship("feature-few", "insp-a", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0));
+    db.upsertRelationship("feature-few", "insp-b", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0));
+    db.upsertRelationship("feature-many", "insp-a", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0));
+    db.upsertRelationship("feature-many", "insp-b", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0));
+    db.upsertRelationship("feature-many", "insp-c", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0));
 
     const view = getDatabaseViewDetail(db, featuresDb, "by-inspirations", contentDir);
     expect(view?.rows.map((row) => row.name)).toEqual([

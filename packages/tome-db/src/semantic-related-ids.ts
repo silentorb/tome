@@ -5,13 +5,13 @@
 
 import type { PathOntology } from "imp-pathing";
 import { mapPathOntology } from "imp-pathing";
-import type { AssociationsFile, TableSchemasFile } from "tome-flatfile";
+import type { RelationshipTypesFile, TableSchemasFile } from "tome-flatfile";
 import type { TableRelationColumn } from "tome-graph-interfaces";
 import {
   getTableSchema,
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   loadTableSchemasFromContent,
-  normalizeAssociationId,
+  normalizeRelationshipTypeId,
   relationColumns,
   resolveContentPath,
   targetTypeIdForRelationColumn,
@@ -24,61 +24,61 @@ import {
 import { semanticPathFromAnchorGraph } from "./graph-store/standard-graphs";
 
 export type SemanticRelatedPathContext = {
-  associations: AssociationsFile;
+  relationshipTypes: RelationshipTypesFile;
   tableSchemas: TableSchemasFile;
   contentDir: string;
 };
 
-/** Load associations + table-schemas for composite→token resolution (no full PathOntology). */
+/** Load relationship types + table-schemas for composite→token resolution (no full PathOntology). */
 export function loadSemanticRelatedPathContext(
   contentDir?: string,
 ): SemanticRelatedPathContext {
   const dir = contentDir ?? resolveContentPath();
   return {
-    associations: loadAssociationsFromContent(dir),
+    relationshipTypes: loadRelationshipTypesFromContent(dir),
     tableSchemas: loadTableSchemasFromContent(dir),
     contentDir: dir,
   };
 }
 
 /**
- * Resolve the table-schema relation column key for `associationId` on `startType`.
- * Fails if missing or ambiguous (multiple columns for the same association).
+ * Resolve the table-schema relation column key for `relationshipTypeId` on `startType`.
+ * Fails if missing or ambiguous (multiple columns for the same relationship type).
  */
-export function relationTokenForAssociation(
+export function relationTokenForRelationshipType(
   tableSchemas: TableSchemasFile,
   startType: string,
-  associationId: string,
+  relationshipTypeId: string,
 ): string {
-  return relationColumnForAssociation(tableSchemas, startType, associationId).key;
+  return relationColumnForRelationshipType(tableSchemas, startType, relationshipTypeId).key;
 }
 
-function relationColumnForAssociation(
+function relationColumnForRelationshipType(
   tableSchemas: TableSchemasFile,
   startType: string,
-  associationId: string,
+  relationshipTypeId: string,
 ): TableRelationColumn {
-  const normalized = normalizeAssociationId(associationId);
+  const normalized = normalizeRelationshipTypeId(relationshipTypeId);
   const schema = getTableSchema(tableSchemas, startType);
   if (!schema) {
     throw new Error(
-      `No table-schema for type "${startType}" while resolving association "${normalized}"`,
+      `No table-schema for type "${startType}" while resolving relationship type "${normalized}"`,
     );
   }
   const matches = relationColumns(schema).filter(
     (col): col is TableRelationColumn =>
       col.type === "relation" &&
-      normalizeAssociationId(col.association) === normalized,
+      normalizeRelationshipTypeId(col.association) === normalized,
   );
   if (matches.length === 0) {
     throw new Error(
-      `No relation column on type "${startType}" for association "${normalized}"`,
+      `No relation column on type "${startType}" for relationship type "${normalized}"`,
     );
   }
   if (matches.length > 1) {
     const keys = matches.map((col) => col.key).join(", ");
     throw new Error(
-      `Ambiguous relation columns on type "${startType}" for association "${normalized}": ${keys}`,
+      `Ambiguous relation columns on type "${startType}" for relationship type "${normalized}": ${keys}`,
     );
   }
   return matches[0]!;
@@ -89,12 +89,12 @@ function relationColumnForAssociation(
  * whole corpus (unrelated columns without endpoint typeIds would fail the host).
  */
 function ontologyForRelationColumn(
-  associations: AssociationsFile,
+  relationshipTypes: RelationshipTypesFile,
   startType: string,
   col: TableRelationColumn,
 ): PathOntology {
-  const association = normalizeAssociationId(col.association);
-  const nextType = targetTypeIdForRelationColumn(associations, startType, col);
+  const association = normalizeRelationshipTypeId(col.association);
+  const nextType = targetTypeIdForRelationColumn(relationshipTypes, startType, col);
   if (!nextType) {
     throw new Error(
       `Relation column "${col.key}" on type "${startType}" has no opposite endpoint typeId`,
@@ -166,23 +166,23 @@ export function relatedNodeIdsFromSemanticPath(
 }
 
 /**
- * Opposite node ids for a presentation composite: resolve association → column key,
+ * Opposite node ids for a presentation composite: resolve relationship type → column key,
  * then Imp semantic bind + executeImp. No composite-SQL fallback.
  */
 export function relatedNodeIds(
   store: RelationshipReadStore,
   anchorNodeId: string,
-  associationId: string,
+  relationshipTypeId: string,
   startType: string,
   pathContext: SemanticRelatedPathContext,
 ): string[] {
-  const col = relationColumnForAssociation(
+  const col = relationColumnForRelationshipType(
     pathContext.tableSchemas,
     startType,
-    associationId,
+    relationshipTypeId,
   );
   const ontology = ontologyForRelationColumn(
-    pathContext.associations,
+    pathContext.relationshipTypes,
     startType,
     col,
   );
@@ -195,9 +195,9 @@ export function relatedNodeIds(
 export function firstRelatedNodeId(
   store: RelationshipReadStore,
   anchorNodeId: string,
-  associationId: string,
+  relationshipTypeId: string,
   startType: string,
   pathContext: SemanticRelatedPathContext,
 ): string | null {
-  return relatedNodeIds(store, anchorNodeId, associationId, startType, pathContext)[0] ?? null;
+  return relatedNodeIds(store, anchorNodeId, relationshipTypeId, startType, pathContext)[0] ?? null;
 }

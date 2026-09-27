@@ -16,7 +16,7 @@ import {
   seedTestRelationships,
   seedTestTableSchema,
   seedTestViews,
-  TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+  TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   defaultTestPresentationLayers,
 } from "../../src/content/test-helpers";
 import {
@@ -127,7 +127,7 @@ describe("ComposedGraphStore SQLite read path", () => {
       b: bookA,
       typeFromA: "Scenes",
       typeFromB: "Product",
-      associationId: "000000000000000000000000A3",
+      relationshipTypeId: "000000000000000000000000A3",
       properties: { ordinal: 0 },
     },
     {
@@ -135,7 +135,7 @@ describe("ComposedGraphStore SQLite read path", () => {
       b: bookA,
       typeFromA: "Scenes",
       typeFromB: "Product",
-      associationId: "000000000000000000000000A3",
+      relationshipTypeId: "000000000000000000000000A3",
       properties: { ordinal: 0 },
     },
     {
@@ -143,7 +143,7 @@ describe("ComposedGraphStore SQLite read path", () => {
       b: bookA,
       typeFromA: "Scenes",
       typeFromB: "Product",
-      associationId: "000000000000000000000000A3",
+      relationshipTypeId: "000000000000000000000000A3",
       properties: { ordinal: 0 },
     },
     {
@@ -151,7 +151,7 @@ describe("ComposedGraphStore SQLite read path", () => {
       b: part1,
       typeFromA: "Scenes",
       typeFromB: "Part",
-      associationId: "000000000000000000000000A4",
+      relationshipTypeId: "000000000000000000000000A4",
       properties: { ordinal: 0 },
     },
     {
@@ -159,21 +159,21 @@ describe("ComposedGraphStore SQLite read path", () => {
       b: part1,
       typeFromA: "Scenes",
       typeFromB: "Part",
-      associationId: "000000000000000000000000A4",
+      relationshipTypeId: "000000000000000000000000A4",
       properties: { ordinal: 1 },
     },
   ]);
 
-  const registry = fixture.ctx.store.readAssociationsFile();
-  registry.associations["000000000000000000000000A3"] = {
+  const registry = fixture.ctx.store.readRelationshipTypesFile();
+  registry.relationshipTypes["000000000000000000000000A3"] = {
     perspectives: ["Scenes", "Product"],
     endpoints: { 0: { typeId: SCENES_DB }, 1: { typeId: PRODUCTS_DB } },
   };
-  registry.associations["000000000000000000000000A4"] = {
+  registry.relationshipTypes["000000000000000000000000A4"] = {
     perspectives: ["Scenes", "Part"],
     endpoints: { 0: { typeId: SCENES_DB }, 1: { typeId: PARTS_DB } },
   };
-  fixture.ctx.store.writeAssociationsFile(registry);
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
   fixture.ctx.sync.syncRelationships();
 
   seedTestViews(fixture, {
@@ -181,7 +181,7 @@ describe("ComposedGraphStore SQLite read path", () => {
     views: [
       {
         nodeId: SCENES_DB,
-        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+        association: TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
         presentation: defaultTestPresentationLayers(),
       },
     ],
@@ -193,7 +193,7 @@ describe("ComposedGraphStore SQLite read path", () => {
 
   test("listRelationshipsFromSource matches cache without scanning flatfile shards", () => {
     const orderedMember = projectionTypeForEndpoint(
-      TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+      TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
       1,
     );
 

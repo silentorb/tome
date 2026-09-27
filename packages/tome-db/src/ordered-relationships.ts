@@ -1,13 +1,13 @@
 import type { RelationshipReadStore } from "./graph-store/relationship-read";
 import type { Properties, Relationship } from "tome-graph-interfaces";
 import type { TomeWriteContext } from "./content/write-context";
-import { loadAssociationsFromContent } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import {
   writeStoreContentDir,
   writeStoreMergeRelationshipProperties,
 } from "./graph-store/relationship-write";
 import {
-  associationIdFromTypeOrProjection,
+  relationshipTypeIdFromTypeOrProjection,
   isOrderedTraitComposite,
   isOrderedSetProjectionType,
   orderedPropertyName,
@@ -34,10 +34,10 @@ function orderPropertyForProjection(
   contentDir: string,
   typeOrProjection: string,
 ): string | null {
-  const registry = loadAssociationsFromContent(contentDir);
-  const composite = associationIdFromTypeOrProjection(registry, typeOrProjection);
+  const registry = loadRelationshipTypesFromContent(contentDir);
+  const composite = relationshipTypeIdFromTypeOrProjection(registry, typeOrProjection);
   if (!composite || !isOrderedTraitComposite(registry, composite)) return null;
-  return orderedPropertyName(registry.associations[composite]);
+  return orderedPropertyName(registry.relationshipTypes[composite]);
 }
 
 export function listOrderedMemberConnections(
@@ -46,10 +46,10 @@ export function listOrderedMemberConnections(
   contentDir?: string,
 ): Relationship[] {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   return listSetMemberRowConnections(db, setId, dir).filter((edge) => {
     const composite =
-      associationIdFromTypeOrProjection(registry, edge.type) ??
+      relationshipTypeIdFromTypeOrProjection(registry, edge.type) ??
       (isOrderedTraitComposite(registry, edge.type) ? edge.type : null);
     return composite !== null && isOrderedTraitComposite(registry, composite);
   });
@@ -77,10 +77,10 @@ export function maxOrderAmongMembers(
   let max = -1;
   for (const connection of listOrderedMemberConnections(db, setId, dir)) {
     if (memberFilter && !memberFilter.has(connection.sourceNodeId)) continue;
-    const registry = loadAssociationsFromContent(dir);
+    const registry = loadRelationshipTypesFromContent(dir);
     const composite =
-      associationIdFromTypeOrProjection(registry, connection.type) ?? connection.type;
-    const property = orderedPropertyName(registry.associations[composite]);
+      relationshipTypeIdFromTypeOrProjection(registry, connection.type) ?? connection.type;
+    const property = orderedPropertyName(registry.relationshipTypes[composite]);
     const value = numericOrderValue(connection.properties[property], Number.NaN);
     if (Number.isFinite(value) && value > max) max = value;
   }
@@ -96,12 +96,12 @@ export function stampOrderIfMissing(
   memberFilter?: ReadonlySet<string> | null,
 ): Properties {
   const dir = writeStoreContentDir(ctx.graphStore);
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   const resolvedProjection =
     projectionType ?? setRoleProjectionTypesForNode(setId, dir)[1];
-  const composite = associationIdFromTypeOrProjection(registry, resolvedProjection);
+  const composite = relationshipTypeIdFromTypeOrProjection(registry, resolvedProjection);
   if (!composite || !isOrderedTraitComposite(registry, composite)) return props;
-  const property = orderedPropertyName(registry.associations[composite]);
+  const property = orderedPropertyName(registry.relationshipTypes[composite]);
   if (property in props) return props;
   const max = maxOrderAmongMembers(ctx.graphStore, setId, memberFilter ?? null, dir);
   return { ...props, [property]: max + 1 };
@@ -137,10 +137,10 @@ export function applySparseSequenceRewrite(
   }
 }
 
-/** Whether any ordered set-trait association has edges for this set (or views declare ordered). */
-export function setUsesOrderedAssociation(setId: string, contentDir?: string): boolean {
+/** Whether any ordered set-trait relationship type has edges for this set (or views declare ordered). */
+export function setUsesOrderedRelationshipType(setId: string, contentDir?: string): boolean {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   const [setProjection] = setRoleProjectionTypesForNode(setId, dir);
   return isOrderedSetProjectionType(registry, setProjection);
 }

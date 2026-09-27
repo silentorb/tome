@@ -58,15 +58,15 @@ export function reorderColumnDefs<T extends { key: string }>(
   return ordered;
 }
 
-/** Resolve properties allowlist for a node+association (generated shared, or first custom). */
+/** Resolve properties allowlist for a node+relationshipTypeId (generated shared, or first custom). */
 export function getRelationshipProperties(
   views: ViewsFile,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
 ): string[] | undefined {
-  const generated = generatedViewForRelationship(views, nodeId, association);
+  const generated = generatedViewForRelationship(views, nodeId, relationshipTypeId);
   if (generated?.properties?.length) return generated.properties;
-  const custom = viewsForRelationship(views, nodeId, association);
+  const custom = viewsForRelationship(views, nodeId, relationshipTypeId);
   for (const view of custom) {
     if (view.properties?.length) return view.properties;
   }
@@ -77,9 +77,9 @@ export function getRelationshipProperties(
 export function getSectionColumnOrder(
   views: ViewsFile,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
 ): string[] | undefined {
-  return getRelationshipProperties(views, nodeId, association);
+  return getRelationshipProperties(views, nodeId, relationshipTypeId);
 }
 
 export function applySectionColumnOrder(
@@ -87,13 +87,13 @@ export function applySectionColumnOrder(
   columnDefs: DatabaseColumnDef[] | undefined,
   views: ViewsFile,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   activeProperties?: string[],
 ): { columns: string[]; columnDefs: DatabaseColumnDef[] | undefined } {
   const properties =
     activeProperties !== undefined
       ? activeProperties
-      : getRelationshipProperties(views, nodeId, association);
+      : getRelationshipProperties(views, nodeId, relationshipTypeId);
   const columns = applyViewProperties(defaultOrder, properties);
   if (!columnDefs?.length) {
     return { columns, columnDefs };

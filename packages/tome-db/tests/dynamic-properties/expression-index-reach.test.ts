@@ -3,14 +3,14 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import {
-  associationsFilePath,
+  relationshipTypesFilePath,
   contentModelDir,
-  invalidateAssociationsCache,
+  invalidateRelationshipTypesCache,
   projectionTypeForEndpoint,
-  serializeAssociationsFile,
+  serializeRelationshipTypesFile,
 } from "tome-flatfile";
 import {
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
 } from "../../src/content/test-helpers";
 import { FIXED_AGGREGATE_BY_RESOLVER } from "../../src/dynamic-properties/aggregate";
@@ -21,11 +21,11 @@ describe("collectExpressionIndexReachTypes", () => {
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
   writeFileSync(
-    associationsFilePath(contentDir),
-    serializeAssociationsFile({
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
       version: 1,
-      associations: {
-        [TEST_MEMBER_OF_ASSOCIATION_ID]: {
+      relationshipTypes: {
+        [TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID]: {
           perspectives: ["Members", "Membership"],
           traits: ["set"],
         },
@@ -35,7 +35,7 @@ describe("collectExpressionIndexReachTypes", () => {
       },
     }),
   );
-  invalidateAssociationsCache();
+  invalidateRelationshipTypesCache();
 
   afterAll(() => {
     rmSync(dir, { recursive: true, force: true });
@@ -43,8 +43,8 @@ describe("collectExpressionIndexReachTypes", () => {
 
   test("includes composite projections, fallback, and owner set-trait types", () => {
     const sceneProj = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 0);
-    const setSide = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 0);
-    const memberSide = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const setSide = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 0);
+    const memberSide = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
     const composite = TEST_PARENTS_CHILDREN_ASSOCIATION_ID;
     const spec = FIXED_AGGREGATE_BY_RESOLVER["characters.allSceneCount"];
     const types = collectExpressionIndexReachTypes(

@@ -1,6 +1,6 @@
 import type { TomeGraphStoreBase } from "tome-graph-interfaces";
 import {
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   resolveContentPath,
   setTraitProjectionTypes,
 } from "tome-flatfile";
@@ -38,7 +38,7 @@ export function isArchivedNode(
   if (readStoreIsNodeArchived(store, nodeId)) return true;
   if (!archiveId) return false;
 
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   if (setTraitProjectionTypes(registry).length === 0) return false;
 
   return findSetEdge(store, nodeId, archiveId, dir) !== null;

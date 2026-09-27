@@ -21,7 +21,7 @@ function writeSequencingDir(): string {
       version: 1,
       tables: {
         [PAGE_ID]: {
-          dependsAssociation: ASSOC_ID,
+          dependsRelationshipType: ASSOC_ID,
           defaultDuration: 1,
         },
       },

@@ -6,11 +6,11 @@ import {
   seedTestNode,
   seedTestRelationships,
   seedTestTableSchema,
-  TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   projectionTypeForEndpoint,
 } from "tome-db/content/test-helpers";
-import { invalidateAssociationsCache, invalidateSchemaCache } from "tome-db";
+import { invalidateRelationshipTypesCache, invalidateSchemaCache } from "tome-db";
 import { schemaFilePath } from "tome-db/content";
 import { registerBidirectionalType } from "tome-flatfile";
 import { createTestApiFromContent } from "./test-api-setup";
@@ -22,9 +22,9 @@ describe("relationship types API", () => {
   const featureTypeId = "0000000000000000000000002P";
 
   const fixture = createTestContentFixture("tome-rel-types-api-");
-  const registry = fixture.ctx.store.readAssociationsFile();
+  const registry = fixture.ctx.store.readRelationshipTypesFile();
   registerBidirectionalType(registry, "Features", "Scenes", "000000000000000000000000B7");
-  registry.associations["000000000000000000000000B7"] = {
+  registry.relationshipTypes["000000000000000000000000B7"] = {
     perspectives: ["Features", "Scenes"],
     endpoints: {
       "0": { typeId: sceneTypeId },
@@ -35,10 +35,10 @@ describe("relationship types API", () => {
     registry,
     "Inspirations",
     "Features",
-    TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+    TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
   );
-  fixture.ctx.store.writeAssociationsFile(registry);
-  invalidateAssociationsCache();
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
+  invalidateRelationshipTypesCache();
 
   seedTestTableSchema(fixture, sceneTypeId, []);
   seedTestNode(fixture, { id: sourceId, properties: { title: "Scene page" } });
@@ -50,7 +50,7 @@ describe("relationship types API", () => {
   fixture.ctx.store.upsertRelationship(
     sourceId,
     targetId,
-    projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
+    projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0),
   );
   fixture.ctx.sync.syncRelationships();
 
@@ -62,8 +62,8 @@ describe("relationship types API", () => {
   invalidateSchemaCache();
 
   const api = createTestApiFromContent(fixture);
-  const featuresProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0);
-  const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+  const featuresProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0);
+  const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
   const b7Features = projectionTypeForEndpoint("000000000000000000000000B7", 0);
 
   test("GET /api/relationships/types lists distinct types in data", async () => {

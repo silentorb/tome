@@ -1,4 +1,4 @@
-import { TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID } from "../src/content/test-helpers";
+import { TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID } from "../src/content/test-helpers";
 import { describe, expect, test } from "bun:test";
 import { Database, type SQLQueryBindings } from "bun:sqlite";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
@@ -8,10 +8,10 @@ import { GraphDatabase, relationshipId } from "tome-sqlite";
 import { getRelationTableSection } from "../src/node-page-sections";
 import {
   contentModelDir,
-  associationsFilePath,
+  relationshipTypesFilePath,
   projectionTypeForEndpoint,
-  serializeAssociationsFile,
-  invalidateAssociationsCache,
+  serializeRelationshipTypesFile,
+  invalidateRelationshipTypesCache,
 } from "tome-flatfile";
 import {
   configureProfiling,
@@ -40,12 +40,12 @@ const PROFILE_BENCHMARK = (() => {
   return raw !== "" && raw !== "0" && raw !== "false" && raw !== "off" && raw !== "no";
 })();
 
-function writeInspirationsFeaturesAssociations(contentDir: string): void {
+function writeInspirationsFeaturesRelationshipTypes(contentDir: string): void {
   writeFileSync(
-    associationsFilePath(contentDir),
-    serializeAssociationsFile({
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
       version: 1,
-      associations: {
+      relationshipTypes: {
         "000000000000000000000000A1": {
           perspectives: ["Members", { title: "Membership", linkAdd: "Link type table" }],
           traits: ["set"],
@@ -56,7 +56,7 @@ function writeInspirationsFeaturesAssociations(contentDir: string): void {
       },
     }),
   );
-  invalidateAssociationsCache();
+  invalidateRelationshipTypesCache();
 }
 
 function insertBatched(
@@ -149,14 +149,14 @@ describe("relation-window benchmark", () => {
       const dir = mkdtempSync(join(tmpdir(), "tome-db-rel-window-bench-"));
       const contentDir = join(dir, "content");
       mkdirSync(contentModelDir(contentDir), { recursive: true });
-      writeInspirationsFeaturesAssociations(contentDir);
+      writeInspirationsFeaturesRelationshipTypes(contentDir);
       process.env.TOME_CONTENT_PATH = contentDir;
       const db = new GraphDatabase(join(dir, "test.sqlite"));
 
       let profilingConfigured = false;
       try {
         const hostId = "01BENCHHOST00000000000000";
-        const perspective = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0);
+        const perspective = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0);
 
         const seedMs = seedRelatedFanOut(db.path, hostId, perspective);
 

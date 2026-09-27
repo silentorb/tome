@@ -1,7 +1,7 @@
 import type { Relationship } from "tome-graph-interfaces";
 import {
   resolveContentPath,
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   archiveNodeId,
   hasTableSchemaEntry,
   typesWithTrait,
@@ -33,7 +33,7 @@ export function memberSetIds(
   contentDir?: string,
 ): string[] {
   const dir = contentDirForReadStore(store, contentDir);
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     const memberProjection = memberSideProjectionType(registry, composite);
@@ -50,7 +50,7 @@ export function setMemberIds(
   contentDir?: string,
 ): string[] {
   const dir = contentDirForReadStore(store, contentDir);
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     const setProjection = setSideProjectionType(registry, composite);
@@ -91,7 +91,7 @@ export function findSetEdge(
   contentDir?: string,
 ): Relationship | null {
   const dir = contentDirForReadStore(store, contentDir);
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     const memberProjection = memberSideProjectionType(registry, composite);
     const memberSide = listRelationshipsFromSource(store, memberId, memberProjection).find(
@@ -121,7 +121,7 @@ export function listSetMemberRowConnections(
   contentDir?: string,
 ): Relationship[] {
   const dir = contentDirForReadStore(store, contentDir);
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   const byMember = new Map<string, Relationship>();
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     const setProjection = setSideProjectionType(registry, composite);
@@ -145,7 +145,7 @@ export function listSetMemberProjectionPairs(
   contentDir?: string,
 ): { setProjection: string; memberProjection: string }[] {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   return typesWithTrait(registry, SET_TRAIT).map((composite) => ({
     setProjection: setSideProjectionType(registry, composite),
     memberProjection: memberSideProjectionType(registry, composite),

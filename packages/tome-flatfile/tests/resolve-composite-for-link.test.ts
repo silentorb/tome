@@ -3,16 +3,16 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { contentModelDir, tableSchemasFilePath } from "../src/content/paths";
-import { parseAssociationsFile, projectionTypeForEndpoint } from "../src/content/associations-file";
+import { parseRelationshipTypesFile, projectionTypeForEndpoint } from "../src/content/relationship-types-file";
 import { serializeTableSchemasFile } from "../src/content/table-schemas-file";
 import { invalidateTableSchemasCache } from "../src/table-schemas/load";
-import { LinkResolutionError, resolveAssociationIdForLink } from "../src/content/resolve-composite-for-link";
+import { LinkResolutionError, resolveRelationshipTypeIdForLink } from "../src/content/resolve-composite-for-link";
 
 const MEMBER_OF = "000000000000000000000000A1";
 const SCENES_PRODUCT = "000000000000000000000000A3";
 const CHILDREN_CHILDREN = "000000000000000000000000B4";
 
-describe("resolveAssociationIdForLink", () => {
+describe("resolveRelationshipTypeIdForLink", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-composite-link-"));
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
@@ -22,7 +22,7 @@ describe("resolveAssociationIdForLink", () => {
   const productId = "0000000000000000000000000R";
   const sceneId = "00000000000000000000000015";
 
-  const registry = parseAssociationsFile(
+  const registry = parseRelationshipTypesFile(
     JSON.stringify({
       version: 1,
       associations: {
@@ -81,7 +81,7 @@ describe("resolveAssociationIdForLink", () => {
       { a: scenesDb, b: sceneId, type: MEMBER_OF, properties: {} },
     ];
     expect(
-      resolveAssociationIdForLink(
+      resolveRelationshipTypeIdForLink(
         registry,
         relationships,
         contentDir,
@@ -98,7 +98,7 @@ describe("resolveAssociationIdForLink", () => {
       { a: scenesDb, b: sceneId, type: MEMBER_OF, properties: {} },
     ];
     expect(
-      resolveAssociationIdForLink(
+      resolveRelationshipTypeIdForLink(
         registry,
         relationships,
         contentDir,
@@ -109,12 +109,12 @@ describe("resolveAssociationIdForLink", () => {
     ).toBe(SCENES_PRODUCT);
   });
 
-  test("routes set association by ULID", () => {
+  test("routes set relationship type by ULID", () => {
     expect(
-      resolveAssociationIdForLink(registry, [], contentDir, productId, productsDb, MEMBER_OF),
+      resolveRelationshipTypeIdForLink(registry, [], contentDir, productId, productsDb, MEMBER_OF),
     ).toBe(MEMBER_OF);
     expect(
-      resolveAssociationIdForLink(
+      resolveRelationshipTypeIdForLink(
         registry,
         [],
         contentDir,
@@ -157,7 +157,7 @@ describe("resolveAssociationIdForLink", () => {
       { a: groupsDb, b: childGroupId, type: MEMBER_OF, properties: {} },
     ];
     expect(
-      resolveAssociationIdForLink(
+      resolveRelationshipTypeIdForLink(
         registry,
         relationships,
         groupsContentDir,
@@ -170,7 +170,7 @@ describe("resolveAssociationIdForLink", () => {
 
   test("throws LinkResolutionError for unknown label", () => {
     expect(() =>
-      resolveAssociationIdForLink(registry, [], contentDir, productId, productsDb, "member_of"),
+      resolveRelationshipTypeIdForLink(registry, [], contentDir, productId, productsDb, "member_of"),
     ).toThrow(LinkResolutionError);
   });
 });

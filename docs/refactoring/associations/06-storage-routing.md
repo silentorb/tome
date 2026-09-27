@@ -1,5 +1,8 @@
 # B6 — Storage-type routing (write path)
 
+> **Terminology (historical):** This inventory uses older “association” / composite naming. The preferred term is **relationship type** (registry definition: ULID + perspectives + traits + endpoints). On-disk files may still use `associations.json` / key `associations`.
+
+
 ## What it does
 
 When the editor or API creates or updates a relationship with a **local perspective** (e.g. user links "characters" from a scene), the system must decide:
@@ -39,7 +42,7 @@ Comment in source notes steps 3–4 run before includes fallback so specific com
 
 ```65:77:/workspaces/tome/packages/tome-db/src/content/store.ts
 function orderedEndpointsForLocalType(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   composite: string,
   source: string,
   target: string,
@@ -58,7 +61,7 @@ function orderedEndpointsForLocalType(
 
 ```45:57:/workspaces/tome/packages/tome-db/src/content/store.ts
 function entryMatchesLocalType(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   entry: RelationshipEntry,
   localType: string,
 ): boolean {
@@ -72,7 +75,7 @@ function entryMatchesLocalType(
 }
 ```
 
-`upsertRelationship` calls `resolveAssociationIdForLink` then `orderedEndpointsForLocalType` before appending to `relationships.json`.
+`upsertRelationship` calls `resolveRelationshipTypeIdForLink` then `orderedEndpointsForLocalType` before appending to `relationships.json`.
 
 ---
 

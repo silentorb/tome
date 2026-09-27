@@ -5,7 +5,7 @@ import { resolveContentPath } from "tome-flatfile";
 import type { TableColumnDef, TableSchema } from "tome-graph-interfaces";
 import { getTableSchema } from "tome-flatfile";
 import { loadTableSchemasFromContent } from "tome-flatfile";
-import { loadAssociationsFromContent } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import {
   projectionTypeForRelationColumn,
   relationColumnCompositeType,
@@ -34,7 +34,7 @@ function databaseColumnFromTableColumn(
     return null;
   }
   if (col.type === "relation") {
-    const registry = loadAssociationsFromContent(contentDir);
+    const registry = loadRelationshipTypesFromContent(contentDir);
     const relationType = projectionTypeForRelationColumn(registry, databaseId, col);
     if (!relationType?.trim()) {
       console.warn(

@@ -8,7 +8,7 @@ import {
   VIEWS_FILE_VERSION,
 } from "../../src/content/views-file";
 
-const TEST_MEMBER_OF_ASSOCIATION_ID = "000000000000000000000000A1";
+const TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID = "000000000000000000000000A1";
 
 describe("views-file", () => {
   test("round-trips custom and generated views", () => {
@@ -18,14 +18,14 @@ describe("views-file", () => {
         {
           id: "all",
           nodeId: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "All",
           sorts: [{ column: "name", direction: "asc" as const }],
           properties: ["status"],
         },
         {
           nodeId: "EEEEEEEEEEEEEEEEEEEEEEEEEE",
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           presentation: {
             sequence: { excludeColumnKeys: ["order"] },
           },
@@ -43,7 +43,7 @@ describe("views-file", () => {
         {
           id: "all",
           nodeId: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "All",
           sorts: [{ column: "name", direction: "asc" }],
           hiddenColumns: ["priority"],
@@ -58,7 +58,7 @@ describe("views-file", () => {
         {
           id: "all",
           nodeId: "DDDDDDDDDDDDDDDDDDDDDDDDDD",
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "All",
           sorts: [{ column: "name", direction: "asc" }],
           properties: { columnOrder: ["status"] },

@@ -3,14 +3,14 @@ import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
 import {
   LinkResolutionError,
-  UnknownAssociationError,
-  isAssociationId,
+  UnknownRelationshipTypeError,
+  isRelationshipTypeId,
   isMemberSideProjectionType,
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   parseProjectionType,
 } from "tome-flatfile";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
-import { associationRuleContext } from "./association-endpoints";
+import { relationshipTypeRuleContext } from "./relationship-type-endpoints";
 import { stampOrderIfMissing } from "./ordered-relationships";
 import { listRelationshipsFromSource } from "./graph-store/relationship-read";
 import {
@@ -40,7 +40,7 @@ export type {
 /** Preserve ULID / projection type case; only trim. */
 function normalizeLinkType(type: string): string {
   const trimmed = type.trim();
-  if (parseProjectionType(trimmed) || isAssociationId(trimmed)) return trimmed;
+  if (parseProjectionType(trimmed) || isRelationshipTypeId(trimmed)) return trimmed;
   return trimmed;
 }
 
@@ -81,8 +81,8 @@ export function linkOutgoingRelationship(
     return "duplicate";
   }
 
-  const registry = loadAssociationsFromContent(contentDir);
-  const ruleContext = associationRuleContext(
+  const registry = loadRelationshipTypesFromContent(contentDir);
+  const ruleContext = relationshipTypeRuleContext(
     registry,
     store,
     sourceId,
@@ -112,7 +112,7 @@ export function linkOutgoingRelationship(
   try {
     writeStoreUpsertRelationship(store, sourceId, targetId, normalizedType, relProps);
   } catch (err) {
-    if (err instanceof LinkResolutionError || err instanceof UnknownAssociationError) {
+    if (err instanceof LinkResolutionError || err instanceof UnknownRelationshipTypeError) {
       return "unresolvable_type";
     }
     throw err;
@@ -129,7 +129,7 @@ export function unlinkOutgoingRelationship(
 ): UnlinkOutgoingRelationshipError | null {
   const normalizedType = normalizeLinkType(type);
   const store = ctx.graphStore;
-  const registry = loadAssociationsFromContent(writeStoreContentDir(store));
+  const registry = loadRelationshipTypesFromContent(writeStoreContentDir(store));
   const existing = writeStoreFindSetTraitRelationship(
     store,
     registry,
@@ -150,7 +150,7 @@ export function moveRelationshipConnection(
   const { type, oldSourceId, oldTargetId, newSourceId, newTargetId } = input;
   const normalizedType = normalizeLinkType(type);
   const store = ctx.graphStore;
-  const registry = loadAssociationsFromContent(writeStoreContentDir(store));
+  const registry = loadRelationshipTypesFromContent(writeStoreContentDir(store));
 
   const existing = writeStoreFindSetTraitRelationship(
     store,

@@ -10,7 +10,7 @@ import {
   seedTestRelationships,
   TEST_ARCHIVE_NODE_ID,
   TEST_GRAPH_ANCHOR_NODE_ID,
-  TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+  TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
   TEST_RELATED_ASSOCIATION_ID,
 } from "../src/content/test-helpers";
 import { openFlatfileQueryableGraphStore } from "../src/graph-store/composed-graph-store";
@@ -50,7 +50,7 @@ describe("graph export", () => {
       {
         source: PAGE1,
         target: PAGE2,
-        type: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
+        type: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0),
       },
     ]);
     fixture.ctx.sync.fullRebuild();
@@ -76,7 +76,7 @@ describe("graph export", () => {
       {
         source: ACTIVE,
         target: ARCHIVED,
-        type: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1),
+        type: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 1),
       },
     ]);
     fixture.ctx.sync.fullRebuild();
@@ -100,12 +100,12 @@ describe("graph export", () => {
       {
         source: PAGE1,
         target: PAGE2,
-        type: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+        type: TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
       },
       {
         source: PAGE2,
         target: PAGE3,
-        type: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0),
+        type: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0),
       },
     ]);
     fixture.ctx.sync.fullRebuild();
@@ -153,7 +153,7 @@ describe("graph export", () => {
       {
         source: TEST_GRAPH_ANCHOR_NODE_ID,
         target: NEARBY,
-        type: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+        type: TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
       },
     ]);
     fixture.ctx.cache.close();

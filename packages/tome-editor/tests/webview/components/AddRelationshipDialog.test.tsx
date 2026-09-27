@@ -96,7 +96,7 @@ describe("AddRelationshipDialog", () => {
     expect(onClose).toHaveBeenCalled();
     await waitFor(() => {
       expect(patchUserSettings).toHaveBeenCalledWith({
-        relationships: { recentAssociationTypes: [FEATURES_TYPE] },
+        relationships: { recentRelationshipTypes: [FEATURES_TYPE] },
       });
     });
   });

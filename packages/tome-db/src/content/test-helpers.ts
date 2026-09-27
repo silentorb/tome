@@ -18,16 +18,16 @@ import type { TablePresentationLayers } from "tome-graph-interfaces";
 import { openContentGraph } from "./sync";
 import type { TomeWriteContext } from "./write-context";
 import {
-  emptyAssociationsFile,
-  isAssociationId,
-  normalizeAssociationId,
+  emptyRelationshipTypesFile,
+  isRelationshipTypeId,
+  normalizeRelationshipTypeId,
   perspectiveTitle,
   projectionTypeForEndpoint,
   registerBidirectionalType,
-  registerSetAssociation,
-  serializeAssociationsFile,
+  registerSetRelationshipType,
+  serializeRelationshipTypesFile,
 } from "tome-flatfile";
-import { invalidateAssociationsCache } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 import { normalizeRelationshipType } from "tome-flatfile";
 import {
   serializeWorkspaceFile,
@@ -37,7 +37,7 @@ import {
 import {
   contentModelDir,
   nodeFilePath,
-  associationsFilePath,
+  relationshipTypesFilePath,
   workspaceFilePath,
 } from "tome-flatfile";
 import {
@@ -54,15 +54,15 @@ export const TEST_ARCHIVE_NODE_ID = "00000000000000000000000002";
 export const TEST_GRAPH_ANCHOR_NODE_ID = "0000000000000000000000002V";
 export const TEST_STATIC_SITE_HOME_NODE_ID = "0000000000000000000000000Y";
 
-/** Stable ULID association ids for common test set associations. */
-export const TEST_MEMBER_OF_ASSOCIATION_ID = "000000000000000000000000A1";
-export const TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID = "000000000000000000000000A2";
-export const TEST_SCENES_PRODUCT_ASSOCIATION_ID = "000000000000000000000000A3";
-export const TEST_SCENES_PART_ASSOCIATION_ID = "000000000000000000000000A4";
-export const TEST_PRODUCTS_PARTS_ASSOCIATION_ID = "000000000000000000000000A5";
+/** Stable ULID association ids for common test set relationship types. */
+export const TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID = "000000000000000000000000A1";
+export const TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID = "000000000000000000000000A2";
+export const TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID = "000000000000000000000000A3";
+export const TEST_SCENES_PART_RELATIONSHIP_TYPE_ID = "000000000000000000000000A4";
+export const TEST_PRODUCTS_PARTS_RELATIONSHIP_TYPE_ID = "000000000000000000000000A5";
 /** Ad-hoc composites used across package tests. */
 export const TEST_PARENTS_CHILDREN_ASSOCIATION_ID = "000000000000000000000000B1";
-export const TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID = "000000000000000000000000B2";
+export const TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID = "000000000000000000000000B2";
 export const TEST_INCLUDES_ASSOCIATION_ID = "000000000000000000000000B3";
 export const TEST_CHILDREN_CHILDREN_ASSOCIATION_ID = "000000000000000000000000B4";
 export const TEST_FEATURES_BIBLE_PASSAGES_ASSOCIATION_ID = "000000000000000000000000B5";
@@ -114,13 +114,13 @@ export const TEST_SCENES_DATABASE_ID = "0000000000000000000000000D";
 export function defaultTestPresentationLayers(): TablePresentationLayers {
   return {
     scope: {
-      memberToScopeComposite: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+      memberToScopeComposite: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
       excludeColumnKeys: ["product"],
     },
     groups: {
-      memberToGroupComposite: TEST_SCENES_PART_ASSOCIATION_ID,
+      memberToGroupComposite: TEST_SCENES_PART_RELATIONSHIP_TYPE_ID,
       groupTypeDatabaseId: "0000000000000000000000000Z",
-      groupToScopeComposite: TEST_PRODUCTS_PARTS_ASSOCIATION_ID,
+      groupToScopeComposite: TEST_PRODUCTS_PARTS_RELATIONSHIP_TYPE_ID,
       unassignedGroupTitle: "Unassigned",
       excludeColumnKeys: ["part"],
     },
@@ -131,24 +131,24 @@ export function defaultTestPresentationLayers(): TablePresentationLayers {
   };
 }
 
-export function seedDefaultAssociations(fixture: TestContentFixture): void {
-  const registry = fixture.ctx.store.readAssociationsFile();
-  registerSetAssociation(registry, {
-    id: TEST_MEMBER_OF_ASSOCIATION_ID,
+export function seedDefaultRelationshipTypes(fixture: TestContentFixture): void {
+  const registry = fixture.ctx.store.readRelationshipTypesFile();
+  registerSetRelationshipType(registry, {
+    id: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
     perspectives: ["Members", "Membership"],
   });
-  registerSetAssociation(registry, {
-    id: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+  registerSetRelationshipType(registry, {
+    id: TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
     perspectives: ["Ordered members", "Ordered membership"],
     ordered: true,
   });
-  registerBidirectionalType(registry, "Scenes", "Product", TEST_SCENES_PRODUCT_ASSOCIATION_ID);
-  registerBidirectionalType(registry, "Scenes", "Part", TEST_SCENES_PART_ASSOCIATION_ID);
+  registerBidirectionalType(registry, "Scenes", "Product", TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID);
+  registerBidirectionalType(registry, "Scenes", "Part", TEST_SCENES_PART_RELATIONSHIP_TYPE_ID);
   registerBidirectionalType(
     registry,
     "Products",
     "Parts database",
-    TEST_PRODUCTS_PARTS_ASSOCIATION_ID,
+    TEST_PRODUCTS_PARTS_RELATIONSHIP_TYPE_ID,
   );
   registerBidirectionalType(
     registry,
@@ -159,50 +159,50 @@ export function seedDefaultAssociations(fixture: TestContentFixture): void {
   const scenesDb = "0000000000000000000000000D";
   const partsDb = "0000000000000000000000000Z";
   const productsDb = "0000000000000000000000000S";
-  registry.associations[TEST_SCENES_PRODUCT_ASSOCIATION_ID] = {
-    ...registry.associations[TEST_SCENES_PRODUCT_ASSOCIATION_ID]!,
+  registry.relationshipTypes[TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID] = {
+    ...registry.relationshipTypes[TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID]!,
     endpoints: {
       0: { typeId: scenesDb },
       1: { typeId: productsDb },
     },
   };
-  registry.associations[TEST_SCENES_PART_ASSOCIATION_ID] = {
-    ...registry.associations[TEST_SCENES_PART_ASSOCIATION_ID]!,
+  registry.relationshipTypes[TEST_SCENES_PART_RELATIONSHIP_TYPE_ID] = {
+    ...registry.relationshipTypes[TEST_SCENES_PART_RELATIONSHIP_TYPE_ID]!,
     endpoints: {
       0: { typeId: scenesDb },
       1: { typeId: partsDb },
     },
   };
   // Tuple seeds use a=part, b=product — endpoint 0 is the parts host side.
-  registry.associations[TEST_PRODUCTS_PARTS_ASSOCIATION_ID] = {
-    ...registry.associations[TEST_PRODUCTS_PARTS_ASSOCIATION_ID]!,
+  registry.relationshipTypes[TEST_PRODUCTS_PARTS_RELATIONSHIP_TYPE_ID] = {
+    ...registry.relationshipTypes[TEST_PRODUCTS_PARTS_RELATIONSHIP_TYPE_ID]!,
     endpoints: {
       0: { typeId: partsDb },
       1: { typeId: productsDb },
     },
   };
-  fixture.ctx.store.writeAssociationsFile(registry);
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
 }
 
-/** Write explicit set associations into an ad-hoc content dir (non-fixture tests). */
-export function writeTestSetAssociations(contentDir: string): void {
-  const registry = emptyAssociationsFile();
-  registerSetAssociation(registry, {
-    id: TEST_MEMBER_OF_ASSOCIATION_ID,
+/** Write explicit set relationship types into an ad-hoc content dir (non-fixture tests). */
+export function writeTestSetRelationshipTypes(contentDir: string): void {
+  const registry = emptyRelationshipTypesFile();
+  registerSetRelationshipType(registry, {
+    id: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
     perspectives: ["Members", "Membership"],
   });
-  registerSetAssociation(registry, {
-    id: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+  registerSetRelationshipType(registry, {
+    id: TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
     perspectives: ["Ordered members", "Ordered membership"],
     ordered: true,
   });
   mkdirSync(contentModelDir(contentDir), { recursive: true });
   writeFileSync(
-    associationsFilePath(contentDir),
-    serializeAssociationsFile(registry),
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile(registry),
     "utf-8",
   );
-  invalidateAssociationsCache();
+  invalidateRelationshipTypesCache();
 }
 
 export function seedDefaultTablePresentationTableSchemas(fixture: TestContentFixture): void {
@@ -216,14 +216,14 @@ export function seedDefaultTablePresentationTableSchemas(fixture: TestContentFix
         key: "product",
         name: "Product",
         type: "relation",
-        association: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        association: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
         endpoint: 0,
       },
       {
         key: "part",
         name: "Part",
         type: "relation",
-        association: TEST_SCENES_PART_ASSOCIATION_ID,
+        association: TEST_SCENES_PART_RELATIONSHIP_TYPE_ID,
         endpoint: 0,
       },
     ],
@@ -234,7 +234,7 @@ export function seedDefaultTablePresentationTableSchemas(fixture: TestContentFix
         key: "products",
         name: "Products",
         type: "relation",
-        association: TEST_PRODUCTS_PARTS_ASSOCIATION_ID,
+        association: TEST_PRODUCTS_PARTS_RELATIONSHIP_TYPE_ID,
         endpoint: 0,
       },
     ],
@@ -251,7 +251,7 @@ export function seedDefaultTablePresentationTableSchemas(fixture: TestContentFix
       ...otherViews,
       {
         nodeId: scenesDb,
-        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+        association: TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
         presentation: defaultTestPresentationLayers(),
       },
     ],
@@ -273,7 +273,7 @@ export function seedTestTablePresentation(
       ...otherViews,
       {
         nodeId: scenesDb,
-        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+        association: TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
         presentation,
       },
     ],
@@ -297,7 +297,7 @@ export function createTestContentFixture(prefix = "tome-content-test-"): TestCon
   const fixture: TestContentFixture = { tempDir, ctx };
   ctx.store.writeDynamicPropertiesFile(fileFromSeedInputs([], []));
   invalidateDynamicPropertiesCache();
-  seedDefaultAssociations(fixture);
+  seedDefaultRelationshipTypes(fixture);
   seedDefaultTablePresentationTableSchemas(fixture);
   seedTestTablePresentation(fixture);
   return fixture;
@@ -355,22 +355,22 @@ export function seedTestTableSchema(
   invalidateTableSchemasCache();
 }
 
-function resolveSeedAssociationId(typeOrId: string): string {
+function resolveSeedRelationshipTypeId(typeOrId: string): string {
   const trimmed = typeOrId.trim();
-  if (trimmed === "member_of" || trimmed === "members") return TEST_MEMBER_OF_ASSOCIATION_ID;
+  if (trimmed === "member_of" || trimmed === "members") return TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID;
   if (trimmed === "ordered_member_of" || trimmed === "ordered_members") {
-    return TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID;
+    return TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID;
   }
-  return normalizeAssociationId(trimmed);
+  return normalizeRelationshipTypeId(trimmed);
 }
 
 /** Find or mint a symmetric association for matching display labels (test convenience). */
-function associationIdForPerspectiveSlug(
-  registry: ReturnType<typeof emptyAssociationsFile>,
+function relationshipTypeIdForPerspectiveSlug(
+  registry: ReturnType<typeof emptyRelationshipTypesFile>,
   slug: string,
 ): string {
   const label = slug.trim();
-  for (const [id, def] of Object.entries(registry.associations)) {
+  for (const [id, def] of Object.entries(registry.relationshipTypes)) {
     if (
       perspectiveTitle(def.perspectives[0]!) === label &&
       perspectiveTitle(def.perspectives[1]!) === label
@@ -383,32 +383,32 @@ function associationIdForPerspectiveSlug(
   });
 }
 
-function ensureSeedAssociation(
-  registry: ReturnType<typeof emptyAssociationsFile>,
+function ensureSeedRelationshipType(
+  registry: ReturnType<typeof emptyRelationshipTypesFile>,
   typeOrId: string,
 ): string {
-  const resolved = resolveSeedAssociationId(typeOrId);
-  if (resolved === TEST_MEMBER_OF_ASSOCIATION_ID) {
-    registerSetAssociation(registry, {
-      id: TEST_MEMBER_OF_ASSOCIATION_ID,
+  const resolved = resolveSeedRelationshipTypeId(typeOrId);
+  if (resolved === TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID) {
+    registerSetRelationshipType(registry, {
+      id: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
       perspectives: ["Members", "Membership"],
     });
-    return TEST_MEMBER_OF_ASSOCIATION_ID;
+    return TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID;
   }
-  if (resolved === TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID) {
-    registerSetAssociation(registry, {
-      id: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+  if (resolved === TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID) {
+    registerSetRelationshipType(registry, {
+      id: TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
       perspectives: ["Ordered members", "Ordered membership"],
       ordered: true,
     });
-    return TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID;
+    return TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID;
   }
   const knownPairs: Record<string, [string, string]> = {
-    [TEST_SCENES_PRODUCT_ASSOCIATION_ID]: ["Scenes", "Product"],
-    [TEST_SCENES_PART_ASSOCIATION_ID]: ["Scenes", "Part"],
-    [TEST_PRODUCTS_PARTS_ASSOCIATION_ID]: ["Products", "Parts database"],
+    [TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID]: ["Scenes", "Product"],
+    [TEST_SCENES_PART_RELATIONSHIP_TYPE_ID]: ["Scenes", "Part"],
+    [TEST_PRODUCTS_PARTS_RELATIONSHIP_TYPE_ID]: ["Products", "Parts database"],
     [TEST_PARENTS_CHILDREN_ASSOCIATION_ID]: ["Children", "Parents"],
-    [TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID]: ["Inspirations", "Features"],
+    [TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID]: ["Inspirations", "Features"],
     [TEST_INCLUDES_ASSOCIATION_ID]: ["Includes", "Includes"],
     [TEST_CHILDREN_CHILDREN_ASSOCIATION_ID]: ["Children", "Children"],
     [TEST_FEATURES_BIBLE_PASSAGES_ASSOCIATION_ID]: ["Features", "Bible passages"],
@@ -428,8 +428,8 @@ function ensureSeedAssociation(
     TEST_CHILDREN_CHILDREN_ASSOCIATION_ID,
     TEST_RELATED_ASSOCIATION_ID,
   ]);
-  if (isAssociationId(resolved)) {
-    if (!registry.associations[resolved]) {
+  if (isRelationshipTypeId(resolved)) {
+    if (!registry.relationshipTypes[resolved]) {
       const pair = knownPairs[resolved] ?? ["A", "B"];
       registerBidirectionalType(
         registry,
@@ -441,7 +441,7 @@ function ensureSeedAssociation(
     }
     return resolved;
   }
-  return associationIdForPerspectiveSlug(registry, resolved);
+  return relationshipTypeIdForPerspectiveSlug(registry, resolved);
 }
 
 function entryFromSeedConnection(connection: {
@@ -451,23 +451,23 @@ function entryFromSeedConnection(connection: {
   properties?: Properties;
 }): RelationshipEntry {
   // Caller must pass a resolved ULID association id in `type`.
-  const associationId = normalizeAssociationId(connection.type);
+  const relationshipTypeId = normalizeRelationshipTypeId(connection.type);
   if (
-    associationId === TEST_MEMBER_OF_ASSOCIATION_ID ||
-    associationId === TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID
+    relationshipTypeId === TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID ||
+    relationshipTypeId === TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID
   ) {
     return {
       a: connection.target,
       b: connection.source,
-      type: associationId,
+      type: relationshipTypeId,
       properties: connection.properties ?? {},
     };
   }
   return entryFromRelationship({
-    id: relationshipId(connection.source, associationId, connection.target),
+    id: relationshipId(connection.source, relationshipTypeId, connection.target),
     sourceNodeId: connection.source,
     targetNodeId: connection.target,
-    type: associationId,
+    type: relationshipTypeId,
     properties: connection.properties ?? {},
   });
 }
@@ -483,14 +483,14 @@ export function seedTestIncludes(
   options?: { replace?: boolean },
 ): void {
   const registry = options?.replace
-    ? { version: 1 as const, associations: {} as Record<string, never> }
-    : fixture.ctx.store.readAssociationsFile();
+    ? { version: 1 as const, relationshipTypes: {} as Record<string, never> }
+    : fixture.ctx.store.readRelationshipTypesFile();
   const file = options?.replace
     ? { version: RELATIONSHIPS_FILE_VERSION, relationships: [] as RelationshipEntry[] }
     : fixture.ctx.store.readRelationshipsFile();
 
   for (const connection of connections) {
-    const compositeType = ensureSeedAssociation(registry, connection.compositeType);
+    const compositeType = ensureSeedRelationshipType(registry, connection.compositeType);
     const entry: RelationshipEntry = {
       a: connection.a,
       b: connection.b,
@@ -507,7 +507,7 @@ export function seedTestIncludes(
     }
   }
 
-  fixture.ctx.store.writeAssociationsFile(registry);
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
   fixture.ctx.store.writeRelationshipsFile(file);
   fixture.ctx.sync.syncRelationships();
 }
@@ -525,48 +525,48 @@ export function seedTestCompositeRelationships(
     b: string;
     typeFromA: string;
     typeFromB: string;
-    associationId?: string;
+    relationshipTypeId?: string;
     properties?: Properties;
   }>,
   options?: { replace?: boolean },
 ): string[] {
   const registry = options?.replace
-    ? { version: 1 as const, associations: {} as Record<string, never> }
-    : fixture.ctx.store.readAssociationsFile();
+    ? { version: 1 as const, relationshipTypes: {} as Record<string, never> }
+    : fixture.ctx.store.readRelationshipTypesFile();
   const file = options?.replace
     ? { version: RELATIONSHIPS_FILE_VERSION, relationships: [] as RelationshipEntry[] }
     : fixture.ctx.store.readRelationshipsFile();
 
-  const associationIds: string[] = [];
+  const relationshipTypeIds: string[] = [];
   for (const connection of connections) {
     const p0 = connection.typeFromA.trim();
     const p1 = connection.typeFromB.trim();
-    let associationId = connection.associationId
-      ? normalizeAssociationId(connection.associationId)
+    let relationshipTypeId = connection.relationshipTypeId
+      ? normalizeRelationshipTypeId(connection.relationshipTypeId)
       : undefined;
-    if (!associationId) {
-      for (const [id, def] of Object.entries(registry.associations)) {
+    if (!relationshipTypeId) {
+      for (const [id, def] of Object.entries(registry.relationshipTypes)) {
         const title0 = perspectiveTitle(def.perspectives[0]!);
         const title1 = perspectiveTitle(def.perspectives[1]!);
         if (
           title0.toLowerCase() === p0.toLowerCase() &&
           title1.toLowerCase() === p1.toLowerCase()
         ) {
-          associationId = id;
+          relationshipTypeId = id;
           break;
         }
       }
     }
-    if (!associationId) {
-      associationId = registerBidirectionalType(registry, p0, p1);
-    } else if (!registry.associations[associationId]) {
-      registerBidirectionalType(registry, p0, p1, associationId);
+    if (!relationshipTypeId) {
+      relationshipTypeId = registerBidirectionalType(registry, p0, p1);
+    } else if (!registry.relationshipTypes[relationshipTypeId]) {
+      registerBidirectionalType(registry, p0, p1, relationshipTypeId);
     }
-    associationIds.push(associationId);
+    relationshipTypeIds.push(relationshipTypeId);
     const entry: RelationshipEntry = {
       a: connection.a,
       b: connection.b,
-      type: associationId,
+      type: relationshipTypeId,
       properties: connection.properties ?? {},
     };
     const index = file.relationships.findIndex(
@@ -579,10 +579,10 @@ export function seedTestCompositeRelationships(
     }
   }
 
-  fixture.ctx.store.writeAssociationsFile(registry);
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
   fixture.ctx.store.writeRelationshipsFile(file);
   fixture.ctx.sync.syncRelationships();
-  return associationIds;
+  return relationshipTypeIds;
 }
 
 export function seedTestRelationships(
@@ -596,15 +596,15 @@ export function seedTestRelationships(
   options?: { replace?: boolean },
 ): void {
   const registry = options?.replace
-    ? { version: 1 as const, associations: {} as Record<string, never> }
-    : fixture.ctx.store.readAssociationsFile();
+    ? { version: 1 as const, relationshipTypes: {} as Record<string, never> }
+    : fixture.ctx.store.readRelationshipTypesFile();
   const file = options?.replace
     ? { version: RELATIONSHIPS_FILE_VERSION, relationships: [] as RelationshipEntry[] }
     : fixture.ctx.store.readRelationshipsFile();
 
   for (const connection of connections) {
-    const associationId = ensureSeedAssociation(registry, connection.type);
-    const entry = entryFromSeedConnection({ ...connection, type: associationId });
+    const relationshipTypeId = ensureSeedRelationshipType(registry, connection.type);
+    const entry = entryFromSeedConnection({ ...connection, type: relationshipTypeId });
     const index = file.relationships.findIndex(
       (existing) =>
         existing.a === entry.a &&
@@ -618,7 +618,7 @@ export function seedTestRelationships(
     }
   }
 
-  fixture.ctx.store.writeAssociationsFile(registry);
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
   fixture.ctx.store.writeRelationshipsFile(file);
   fixture.ctx.sync.syncRelationships();
 }

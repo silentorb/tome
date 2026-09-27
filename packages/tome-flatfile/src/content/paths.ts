@@ -119,7 +119,7 @@ export function relationshipsFilePath(contentRoot: string): string {
   return resolve(contentDataDir(contentRoot), RELATIONSHIPS_FILENAME);
 }
 
-export function associationsFilePath(contentRoot: string): string {
+export function relationshipTypesFilePath(contentRoot: string): string {
   return resolve(contentModelDir(contentRoot), ASSOCIATIONS_FILENAME);
 }
 

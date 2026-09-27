@@ -7,11 +7,11 @@ export interface ViewSortSpec {
   direction: ViewSortDirection;
 }
 
-/** A static view definition for a node + set association pair. */
+/** A static view definition for a node + set relationship type pair. */
 export interface ViewDefinition {
   id: string;
   nodeId: string;
-  /** Set-trait association ULID (not a display label). */
+  /** Set-trait relationship type ULID (not a display label). */
   association: string;
   name: string;
   sorts: ViewSortSpec[];
@@ -28,7 +28,7 @@ export interface ViewDefinition {
  */
 export interface GeneratedViewRecord {
   nodeId: string;
-  /** Set-trait association ULID (not a display label). */
+  /** Set-trait relationship type ULID (not a display label). */
   association: string;
   presentation: TablePresentationLayers;
   /**

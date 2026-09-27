@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
 import {
-  emptyAssociationsFile,
+  emptyRelationshipTypesFile,
   projectionTypeForEndpoint,
   registerTypeDefinition,
 } from "tome-flatfile";
-import { relationSectionSupportsLinkExisting } from "../src/association-endpoints";
+import { relationSectionSupportsLinkExisting } from "../src/relationship-type-endpoints";
 
 const FEATURES = "000000000000000000000000B2";
 const PARENTS_CHILDREN = "000000000000000000000000B1";
@@ -15,7 +15,7 @@ function registryWithTypes(
     ? Record<string, D>
     : never,
 ) {
-  const file = emptyAssociationsFile();
+  const file = emptyRelationshipTypesFile();
   for (const [composite, def] of Object.entries(types)) {
     registerTypeDefinition(file, composite, def);
   }
@@ -41,8 +41,8 @@ describe("relationSectionSupportsLinkExisting", () => {
     ).toBe(true);
   });
 
-  test("returns false for an unregistered association", () => {
-    const registry = emptyAssociationsFile();
+  test("returns false for an unregistered relationship type", () => {
+    const registry = emptyRelationshipTypesFile();
     expect(relationSectionSupportsLinkExisting(registry, "unknown")).toBe(false);
   });
 

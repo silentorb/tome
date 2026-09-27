@@ -3,8 +3,8 @@ import type { DatabaseColumnDef } from "../../shared/types";
 import type { EditorApi } from "../api/client";
 import { slugifyColumnKey } from "./column-editor-utils";
 import { ConfirmDialog } from "./ConfirmDialog";
-import { AssociationPicker } from "./AssociationPicker";
-import { parseProjectionType } from "tome-flatfile/associations-file";
+import { RelationshipTypePicker } from "./RelationshipTypePicker";
+import { parseProjectionType } from "tome-flatfile/relationship-types-file";
 import "./add-relationship-dialog.css";
 import "./column-editor-dialog.css";
 
@@ -396,7 +396,7 @@ export function ColumnEditorDialog({
               <>
                 <label className="tome-column-editor-field">
                   <span>Relationship type</span>
-                  <AssociationPicker
+                  <RelationshipTypePicker
                     api={api}
                     selectedType={
                       form.association
@@ -409,7 +409,7 @@ export function ColumnEditorDialog({
                       if (parsed) {
                         setForm((current) => ({
                           ...current,
-                          association: parsed.associationId,
+                          association: parsed.relationshipTypeId,
                           endpoint: parsed.endpointIndex,
                         }));
                         return;
@@ -447,7 +447,7 @@ export function ColumnEditorDialog({
                     <span>{endpointLabels[1]}</span>
                   </label>
                   <span className="tome-column-editor-hint">
-                    Which association endpoint this column hosts (perspective titles are labels only).
+                    Which relationship type endpoint this column hosts (perspective titles are labels only).
                   </span>
                 </fieldset>
               </>

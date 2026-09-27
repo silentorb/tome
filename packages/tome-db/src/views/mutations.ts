@@ -31,18 +31,18 @@ function normalizeProperties(properties: string[]): string[] {
 function ensureCustomViews(
   file: ViewsFile,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
 ): ViewDefinition[] {
-  if (generatedViewForRelationship(file, nodeId, association)) {
+  if (generatedViewForRelationship(file, nodeId, relationshipTypeId)) {
     throw new Error("not_custom_views");
   }
-  return viewsForRelationship(file, nodeId, association);
+  return viewsForRelationship(file, nodeId, relationshipTypeId);
 }
 
 function findViewIndex(
   file: ViewsFile,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   viewId: string,
 ): number {
   const normalized = nodeId;
@@ -50,7 +50,7 @@ function findViewIndex(
     (view) =>
       isViewDefinition(view) &&
       view.nodeId === normalized &&
-      view.association === association &&
+      view.association === relationshipTypeId &&
       view.id === viewId,
   );
 }
@@ -79,26 +79,26 @@ export function getNodeViews(store: TomeGraphStoreBase, nodeId: string): ViewDef
 export function createView(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
 ): ViewDefinition {
   const trimmed = input.name.trim();
   if (!trimmed) throw new Error("invalid_name");
 
   const file = store.readViews();
-  if (generatedViewForRelationship(file, nodeId, association)) {
+  if (generatedViewForRelationship(file, nodeId, relationshipTypeId)) {
     throw new Error("not_custom_views");
   }
 
-  const existing = viewsForRelationship(file, nodeId, association);
+  const existing = viewsForRelationship(file, nodeId, relationshipTypeId);
   const existingIds = new Set(existing.map((view) => view.id));
   const id = uniqueTabId(slugifyTabId(trimmed), existingIds);
   const siblingProperties =
-    input.properties ?? siblingViewProperties(file, nodeId, association);
+    input.properties ?? siblingViewProperties(file, nodeId, relationshipTypeId);
   const view: ViewDefinition = {
     id,
     nodeId,
-    association,
+    association: relationshipTypeId,
     name: trimmed,
     sorts: input.sorts ?? [{ column: "name", direction: "asc" }],
     ...(siblingProperties?.length ? { properties: [...siblingProperties] } : {}),
@@ -114,7 +114,7 @@ export const createTab = createView;
 export function updateView(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   viewId: string,
   input: {
     name?: string;
@@ -123,7 +123,7 @@ export function updateView(
   },
 ): ViewDefinition {
   const file = store.readViews();
-  const index = findViewIndex(file, nodeId, association, viewId);
+  const index = findViewIndex(file, nodeId, relationshipTypeId, viewId);
   if (index < 0) throw new Error("view_not_found");
 
   const view = file.views[index] as ViewDefinition;
@@ -149,14 +149,14 @@ export const updateTab = updateView;
 export function deleteView(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   viewId: string,
 ): void {
   const file = store.readViews();
-  const views = ensureCustomViews(file, nodeId, association);
+  const views = ensureCustomViews(file, nodeId, relationshipTypeId);
   if (views.length <= 1) throw new Error("last_view");
 
-  const index = findViewIndex(file, nodeId, association, viewId);
+  const index = findViewIndex(file, nodeId, relationshipTypeId, viewId);
   if (index < 0) throw new Error("view_not_found");
   file.views.splice(index, 1);
   writeViews(store, file);
@@ -168,7 +168,7 @@ export const deleteTab = deleteView;
 export function reorderViews(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   viewIds: string[],
 ): ViewDefinition[] {
   if (!Array.isArray(viewIds) || viewIds.length === 0) {
@@ -176,7 +176,7 @@ export function reorderViews(
   }
 
   const file = store.readViews();
-  const views = ensureCustomViews(file, nodeId, association);
+  const views = ensureCustomViews(file, nodeId, relationshipTypeId);
   if (viewIds.length !== views.length) {
     throw new Error("invalid_view_order");
   }
@@ -189,7 +189,7 @@ export function reorderViews(
     reordered.push(view);
   }
 
-  const indices = indicesForRelationship(file, nodeId, association);
+  const indices = indicesForRelationship(file, nodeId, relationshipTypeId);
   if (indices.length !== reordered.length) {
     throw new Error("invalid_view_order");
   }
@@ -207,32 +207,32 @@ export const reorderSectionTabs = reorderViews;
 
 /**
  * Update shared properties on a generated view record, or create/update a default
- * custom view when the association uses custom views and none exist yet.
+ * custom view when the relationshipTypeId uses custom views and none exist yet.
  * Used by composed / generated tabs (shared allowlist).
  */
 export function updateRelationshipViewProperties(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   properties: string[],
 ): string[] {
   const normalized = normalizeProperties(properties);
   if (normalized.length === 0) throw new Error("invalid_column_order");
 
   const file = store.readViews();
-  const generated = generatedViewForRelationship(file, nodeId, association);
+  const generated = generatedViewForRelationship(file, nodeId, relationshipTypeId);
   if (generated) {
     setPropertiesOnRecord(generated, normalized);
     writeViews(store, file);
     return normalized;
   }
 
-  let views = viewsForRelationship(file, nodeId, association);
+  let views = viewsForRelationship(file, nodeId, relationshipTypeId);
   if (views.length === 0) {
     const defaultView: ViewDefinition = {
       ...DEFAULT_VIEW,
       nodeId,
-      association,
+      association: relationshipTypeId,
       properties: [...normalized],
     };
     file.views.push(defaultView);
@@ -240,9 +240,9 @@ export function updateRelationshipViewProperties(
     return normalized;
   }
 
-  // Relationship-wide PATCH for custom associations is not used for sibling sync;
+  // Relationship-wide PATCH for custom relationship types is not used for sibling sync;
   // callers should updateView per tab. Keep writing the first view for API compatibility
-  // when patching generated-style shared config on a single-view custom association.
+  // when patching generated-style shared config on a single-view custom relationshipTypeId.
   setPropertiesOnRecord(views[0]!, normalized);
   writeViews(store, file);
   return normalized;
@@ -252,28 +252,28 @@ export function updateRelationshipViewProperties(
 export function updateSectionColumnOrder(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   columnOrder: string[],
 ): string[] {
-  return updateRelationshipViewProperties(store, nodeId, association, columnOrder);
+  return updateRelationshipViewProperties(store, nodeId, relationshipTypeId, columnOrder);
 }
 
 export function ensureCustomViewsForRelationship(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   definitions: Pick<ViewDefinition, "id" | "name" | "sorts">[],
 ): void {
   const file = store.readViews();
   const normalized = nodeId;
   file.views = file.views.filter(
-    (view) => !(view.nodeId === normalized && view.association === association),
+    (view) => !(view.nodeId === normalized && view.association === relationshipTypeId),
   );
   for (const definition of definitions) {
     file.views.push({
       id: definition.id,
       nodeId: normalized,
-      association,
+      association: relationshipTypeId,
       name: definition.name,
       sorts: definition.sorts,
     });
@@ -284,15 +284,15 @@ export function ensureCustomViewsForRelationship(
 export function ensureGeneratedView(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   presentation: TablePresentationLayers,
 ): void {
   const file = store.readViews();
   const normalized = nodeId;
   file.views = file.views.filter(
-    (view) => !(view.nodeId === normalized && view.association === association),
+    (view) => !(view.nodeId === normalized && view.association === relationshipTypeId),
   );
-  file.views.push({ nodeId: normalized, association, presentation });
+  file.views.push({ nodeId: normalized, association: relationshipTypeId, presentation });
   writeViews(store, file);
 }
 
@@ -312,11 +312,11 @@ export function readViewsFileOrEmpty(store: TomeGraphStoreBase): ViewsFile {
 export function purgeColumnFromViews(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   columnKey: string,
 ): void {
   const file = store.readViews();
-  const generated = generatedViewForRelationship(file, nodeId, association);
+  const generated = generatedViewForRelationship(file, nodeId, relationshipTypeId);
   let changed = false;
 
   if (generated?.properties?.includes(columnKey)) {
@@ -327,7 +327,7 @@ export function purgeColumnFromViews(
     changed = true;
   }
 
-  for (const view of viewsForRelationship(file, nodeId, association)) {
+  for (const view of viewsForRelationship(file, nodeId, relationshipTypeId)) {
     if (view.properties?.includes(columnKey)) {
       setPropertiesOnRecord(
         view,
@@ -348,12 +348,12 @@ export function purgeColumnFromViews(
 export function renameColumnInViews(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   oldKey: string,
   newKey: string,
 ): void {
   const file = store.readViews();
-  const generated = generatedViewForRelationship(file, nodeId, association);
+  const generated = generatedViewForRelationship(file, nodeId, relationshipTypeId);
   let changed = false;
 
   if (generated?.properties?.includes(oldKey)) {
@@ -364,7 +364,7 @@ export function renameColumnInViews(
     changed = true;
   }
 
-  for (const view of viewsForRelationship(file, nodeId, association)) {
+  for (const view of viewsForRelationship(file, nodeId, relationshipTypeId)) {
     if (view.properties?.includes(oldKey)) {
       setPropertiesOnRecord(
         view,
@@ -385,18 +385,18 @@ export function renameColumnInViews(
 
 /**
  * Append a column key to the active custom view's properties, or to the shared
- * generated record properties when the association is generated.
+ * generated record properties when the relationshipTypeId is generated.
  * Does not fan out to sibling custom views.
  */
 export function appendColumnToViewsOrder(
   store: TomeGraphStoreBase,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   columnKey: string,
   viewId?: string,
 ): void {
   const file = store.readViews();
-  const generated = generatedViewForRelationship(file, nodeId, association);
+  const generated = generatedViewForRelationship(file, nodeId, relationshipTypeId);
 
   if (generated) {
     if (!generated.properties?.length) return;
@@ -406,7 +406,7 @@ export function appendColumnToViewsOrder(
     return;
   }
 
-  const views = viewsForRelationship(file, nodeId, association);
+  const views = viewsForRelationship(file, nodeId, relationshipTypeId);
   if (views.length === 0) return;
 
   const target =

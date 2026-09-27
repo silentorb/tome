@@ -6,8 +6,8 @@ import type {
 import type { RelationshipRecordRef, TomeGraphStoreQueryable } from "tome-graph-interfaces";
 import {
   expandAllRelationships,
-  loadAssociationsFromContent,
-  normalizeAssociationId,
+  loadRelationshipTypesFromContent,
+  normalizeRelationshipTypeId,
   setRoleIndices,
   typesWithTrait,
   SET_TRAIT,
@@ -32,15 +32,15 @@ function listTypeMembersFromStore(
   contentDir?: string,
 ): GraphQueryNode[] {
   const dir = contentDir ?? store.contentDir;
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   const memberIds = new Set<string>();
 
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
-    const associationId = normalizeAssociationId(composite);
-    const def = registry.associations[associationId];
+    const relationshipTypeId = normalizeRelationshipTypeId(composite);
+    const def = registry.relationshipTypes[relationshipTypeId];
     const { parentIndex } = setRoleIndices(def);
     const executed = store.executeImp(
-      typeMembersGraph(typeId, associationId, parentIndex),
+      typeMembersGraph(typeId, relationshipTypeId, parentIndex),
     );
     if (executed instanceof Promise) {
       throw new Error("ExtensionGraphQueryServices requires synchronous executeImp");
@@ -65,10 +65,10 @@ function listEdgesFromStore(
 ): GraphQueryEdge[] {
   const nodeIdSet = new Set(options.nodeIds);
   const typeSet = options.types?.length ? new Set(options.types) : null;
-  const associations = store.readAssociations();
+  const relationshipTypes = store.readRelationshipTypes();
   const entries: RelationshipRecordRef[] = [];
   store.forEachRelationshipRecord((entry) => entries.push(entry));
-  const { projections } = expandAllRelationships(entries, associations);
+  const { projections } = expandAllRelationships(entries, relationshipTypes);
 
   const seen = new Set<string>();
   const edges: GraphQueryEdge[] = [];

@@ -7,7 +7,7 @@
 ## When to read this
 
 - Compiling Imp graphs against Tome `nodes` / `relationship_projections`
-- Authoring `traverse` hops (`association` + `direction`)
+- Authoring `traverse` hops (`association` [relationship type ULID] + `direction`)
 - Wiring hosts such as `tome-query` to Imp → SQL
 
 ## Requirements
@@ -20,7 +20,7 @@
 | Property columns | `id` / `is_archived` / promoted fields (`title`, `alias`, `body`, `created_at`, `modified_at`) as columns; other names via `(SELECT json_extract(value, '$') FROM node_properties WHERE node_id = nodes.id AND key = '…')` |
 | Traverse node bag | `nodePropertiesJson` rebuilds promoted fields via `json_object(...)` for edge `json_patch` (nodes no longer have a `properties` column) |
 | Edges (`schema.edges`) | `relationship_projections` with `source_node_id`, `target_node_id`, `type`; promoted edge fields (`ordinal`, `order`, `priority`) as columns; other keys via `relationship_projection_properties` EAV (`schema.edges.property` / `propertiesJson`) |
-| Traverse hop | Imp `association` + `direction` (0\|1) → `schema.edgeType` → `{associationId}:{direction}` for `relationship_projections.type` |
+| Traverse hop | Imp `association` (relationship type ULID; Imp field name) + `direction` (0\|1) → `schema.edgeType` → `{relationshipTypeId}:{direction}` for `relationship_projections.type` |
 | Optional edge property filter | When `traverse.edge_property` + `edge_equals` are set: `schema.edges.property('path_edges', edge_property) = edge_equals` (promoted column or EAV subquery). When `compileImpGraphToTomeSql` is called with workspace `schema`, enum literals in `edge_equals` (and in `equals` / ordering comparisons against enum columns) are encoded to cache indices via `encodePropertyLiteral` — same mapping as cache sync ([schema.md](./schema.md)). |
 | Traverse edge bag | `propertiesJson` rebuilds promoted edge columns + EAV via `json_object` / `json_group_object` for node↔edge `json_patch` (projections no longer have a `properties` column) |
 
@@ -50,7 +50,7 @@ compileImpGraphToTomeSql(graph, { schema: loadSchemaFromContent(contentDir) })
 
 ### Projection type helper
 
-`projectionType(associationId, direction)` **must** return `{associationId}:{0|1}` matching Tome directed projection types used in `relationship_projections.type`. This encoding is a **storage/SQL boundary** concern — Imp graphs keep `association` and `direction` as separate values and **must not** store the colon-joined form. `edgeType` accepts bare association ids only (packed strings are rejected).
+`projectionType(relationshipTypeId, direction)` **must** return `{relationshipTypeId}:{0|1}` matching Tome directed projection types used in `relationship_projections.type`. This encoding is a **storage/SQL boundary** concern — Imp graphs keep `association` (relationship type ULID) and `direction` as separate values and **must not** store the colon-joined form. `edgeType` accepts bare relationship type ids only (packed strings are rejected).
 
 ### Semantic paths (host PathOntology)
 
@@ -58,7 +58,7 @@ Ordinary relation→field hops **must** prefer Imp semantic bind over hand-wired
 
 | Operation | Behavior |
 | --- | --- |
-| `createTomePathOntology(associations, tableSchemas)` | Type-scoped tokens from table-schema column keys + promoted node fields (`id`, `title`, …). Relation tokens bind to bare `association` + `endpoint` as direction and opposite endpoint `typeId` as `nextType`. Fails if a token maps to both property and relationship in one type. |
+| `createTomePathOntology(associations, tableSchemas)` | Type-scoped tokens from table-schema column keys + promoted node fields (`id`, `title`, …). Relation tokens bind to bare `association` (relationship type ULID) + `endpoint` as direction and opposite endpoint `typeId` as `nextType`. Fails if a token maps to both property and relationship in one type. |
 | `bindTomeSemanticPath(tokens, { ontology, startType, prefix, source, asScalar? })` | Resolve + desugar to `traverse` / `project` (wraps `imp-pathing` `bindSemanticPath`) |
 
 Perspective display labels are **not** semantic tokens.
@@ -84,11 +84,11 @@ Must not depend on `tome-db`. Hosts execute SQL via `queryAll` (or equivalent).
 
 - Keeps path/SQL binding out of core graph storage (`tome-db`).
 - Reuses Imp’s catalog/lowerer split; Tome only supplies schema knowledge.
-- Imp graphs stay explicit (`association` / `direction`); Tome’s packed projection type string is produced only when binding to SQL.
+- Imp graphs stay explicit (`association` [relationship type ULID] / `direction`); Tome’s packed projection type string is produced only when binding to SQL.
 
 ## Behavior / pipeline
 
-1. Host builds an Imp graph (`input` → transforms / `traverse` → `output`) with separate `association` and `direction` on each hop.
+1. Host builds an Imp graph (`input` → transforms / `traverse` → `output`) with separate `association` (relationship type ULID) and `direction` on each hop.
 2. `compileImpGraphToTomeSql` lowers with `createTomeLiveNodesSchema(schema)` (composing projection types via `edgeType` and encoding enum literals when `schema` is supplied).
 3. Host runs SQL via cache `queryAll`.
 
@@ -116,7 +116,7 @@ Editor table windows apply this rule with a **uniform window pipeline**: `explod
 ```ts
 import { compileImpGraphToTomeSql } from "tome-imp-sql"
 
-// traverse node inputs: { association: associationId, direction: 0 | 1 }
+// traverse node inputs: { association: relationshipTypeId /* Imp field name */, direction: 0 | 1 }
 const { sql, parameters } = compileImpGraphToTomeSql(graph, {
   schema: loadSchemaFromContent(contentDir),
 })
@@ -129,7 +129,7 @@ None.
 ## Verification
 
 - `bun run --filter tome-imp-sql test`
-- Tests cover column mapping, live rewrite, `projectionType`, bare-association `edgeType`, `traverse` SQL joining `relationship_projections`, and PathOntology bind/desugar.
+- Tests cover column mapping, live rewrite, `projectionType`, bare relationship-type `edgeType`, `traverse` SQL joining `relationship_projections`, and PathOntology bind/desugar.
 
 ## Implementation pointers
 

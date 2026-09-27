@@ -6,7 +6,7 @@ import {
   destroyTestContentFixture,
   seedTestNode,
   seedTestTableSchema,
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   type TestContentFixture,
 } from "../src/content/test-helpers";
 import { getDatabaseViewDetail } from "../src/database-view";
@@ -16,8 +16,8 @@ import { typeTableMarkerProperties } from "../src/node-capabilities";
 
 const TYPE_ID = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 const MEMBER_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
-const MEMBER_SIDE = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
-const SET_SIDE = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 0);
+const MEMBER_SIDE = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
+const SET_SIDE = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 0);
 
 describe("linkOutgoingRelationship member_of row metadata", () => {
   const fixture: TestContentFixture = createTestContentFixture("tome-link-member-of-row-");

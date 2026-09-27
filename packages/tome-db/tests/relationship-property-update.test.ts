@@ -8,7 +8,7 @@ import {
   seedTestCompositeRelationships,
   seedTestNode,
   projectionTypeForEndpoint,
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   TEST_RELATED_ASSOCIATION_ID,
 } from "../src/content/test-helpers";
 
@@ -36,7 +36,7 @@ describe("relationship-property-update", () => {
       updateDatabaseRowProperty(fixture.ctx, databaseId, pageId, "priority", "High"),
     ).toBeNull();
 
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1))[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))[0];
     expect(edge?.properties.priority).toBe("High");
   });
 
@@ -51,7 +51,7 @@ describe("relationship-property-update", () => {
         b: targetId,
         typeFromA: "Related",
         typeFromB: "Related",
-        associationId: TEST_RELATED_ASSOCIATION_ID,
+        relationshipTypeId: TEST_RELATED_ASSOCIATION_ID,
         properties: { priority: "High" },
       },
     ]);
@@ -74,7 +74,7 @@ describe("relationship-property-update", () => {
         b: targetId,
         typeFromA: "Related",
         typeFromB: "Related",
-        associationId: TEST_RELATED_ASSOCIATION_ID,
+        relationshipTypeId: TEST_RELATED_ASSOCIATION_ID,
         properties: {},
       },
     ]);

@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   createTomePathOntology,
 } from "tome-imp-sql";
-import type { AssociationsFile, TableSchemasFile } from "tome-flatfile";
+import type { RelationshipTypesFile, TableSchemasFile } from "tome-flatfile";
 import { semanticPathFromAnchorGraph } from "../../src/graph-store/standard-graphs";
 
 const FEATURE_TYPE = "01KWN86X6MFZQAJ1V36T9592A9";
@@ -11,9 +11,9 @@ const ANCHOR = "01KWN86X6MFZQAJ1V36T9592ZZ";
 
 describe("semanticPathFromAnchorGraph", () => {
   test("filters to anchor then binds semantic path", () => {
-    const associations: AssociationsFile = {
+    const relationshipTypes: RelationshipTypesFile = {
       version: 1,
-      associations: {
+      relationshipTypes: {
         [DEPENDS_ASSOC]: {
           perspectives: ["Dependents", "Dependencies"],
           endpoints: {
@@ -39,7 +39,7 @@ describe("semanticPathFromAnchorGraph", () => {
         },
       },
     };
-    const ontology = createTomePathOntology(associations, tableSchemas);
+    const ontology = createTomePathOntology(relationshipTypes, tableSchemas);
     const graph = semanticPathFromAnchorGraph(ANCHOR, ["dependencies", "title"], {
       ontology,
       startType: FEATURE_TYPE,

@@ -1,5 +1,8 @@
 # B2 — Ordered membership edge properties
 
+> **Terminology (historical):** This inventory uses older “association” / composite naming. The preferred term is **relationship type** (registry definition: ULID + perspectives + traits + endpoints). On-disk files may still use `associations.json` / key `associations`.
+
+
 ## What it does
 
 Set membership uses two composites (see [sets.md](../../features/sets.md)):

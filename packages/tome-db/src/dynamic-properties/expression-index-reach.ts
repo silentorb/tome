@@ -4,7 +4,7 @@
  */
 
 import {
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   projectionTypesForComposite,
   resolveContentPath,
   setTraitProjectionTypes,
@@ -45,7 +45,7 @@ export function collectExpressionIndexReachTypes(
   contentDir?: string,
 ): string[] {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   const out = new Set<string>(setTraitProjectionTypes(registry));
 
   switch (spec.kind) {

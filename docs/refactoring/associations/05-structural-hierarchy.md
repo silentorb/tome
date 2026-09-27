@@ -1,5 +1,8 @@
 # B5 — Structural hierarchy (`parents_children`)
 
+> **Terminology (historical):** This inventory uses older “association” / composite naming. The preferred term is **relationship type** (registry definition: ULID + perspectives + traits + endpoints). On-disk files may still use `associations.json` / key `associations`.
+
+
 ## What it does
 
 **Parent/child** relationships within a type (typically self-referential hierarchy on a type table) use composite storage type `parents_children` with perspectives `children` and `parents`.

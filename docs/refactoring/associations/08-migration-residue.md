@@ -1,5 +1,8 @@
 # C — Migration residue
 
+> **Terminology (historical):** This inventory uses older “association” / composite naming. The preferred term is **relationship type** (registry definition: ULID + perspectives + traits + endpoints). On-disk files may still use `associations.json` / key `associations`.
+
+
 ## What it does
 
 During earlier relationship model migrations, many **named composite storage types** (e.g. `scenes_characters`, `products_features`) were consolidated into the generic `includes` bucket. Some code paths still recognize the **legacy composite names** for read/query compatibility.

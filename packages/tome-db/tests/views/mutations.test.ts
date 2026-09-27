@@ -1,5 +1,5 @@
 import { describe, expect, test, afterAll } from "bun:test";
-import { createTestContentFixture, destroyTestContentFixture, seedTestViews, TEST_MEMBER_OF_ASSOCIATION_ID } from "../../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestViews, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID } from "../../src/content/test-helpers";
 import { VIEWS_FILE_VERSION } from "tome-flatfile";
 import {
   createView,
@@ -19,7 +19,7 @@ describe("views mutations", () => {
       {
         id: "all",
         nodeId,
-        association: TEST_MEMBER_OF_ASSOCIATION_ID,
+        association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
         name: "All",
         sorts: [{ column: "name", direction: "asc" }],
       },
@@ -27,13 +27,13 @@ describe("views mutations", () => {
   });
 
   test("creates and updates views", () => {
-    const created = createView(fixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, {
+    const created = createView(fixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, {
       name: "Sorted",
       sorts: [{ column: "priority", direction: "desc" }],
     });
     expect(created.name).toBe("Sorted");
 
-    const updated = updateView(fixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, created.id, {
+    const updated = updateView(fixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, created.id, {
       name: "Renamed",
     });
     expect(updated.name).toBe("Renamed");
@@ -43,13 +43,13 @@ describe("views mutations", () => {
     const properties = updateRelationshipViewProperties(
       fixture.ctx.graphStore,
       nodeId,
-      TEST_MEMBER_OF_ASSOCIATION_ID,
+      TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
       ["status", "priority"],
     );
     expect(properties).toEqual(["status", "priority"]);
     const file = fixture.ctx.graphStore.readViews();
     const relationshipViews = file.views.filter(
-      (view) => view.nodeId === nodeId && "id" in view && view.association === TEST_MEMBER_OF_ASSOCIATION_ID,
+      (view) => view.nodeId === nodeId && "id" in view && view.association === TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
     );
     expect(relationshipViews[0]?.properties).toEqual(["status", "priority"]);
   });
@@ -62,28 +62,28 @@ describe("views mutations", () => {
         {
           id: "first",
           nodeId,
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "First",
           sorts: [{ column: "name", direction: "asc" }],
         },
         {
           id: "second",
           nodeId,
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "Second",
           sorts: [{ column: "name", direction: "asc" }],
         },
         {
           id: "third",
           nodeId,
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "Third",
           sorts: [{ column: "name", direction: "asc" }],
         },
       ],
     });
     try {
-      const reordered = reorderViews(reorderFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, [
+      const reordered = reorderViews(reorderFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, [
         "third",
         "first",
         "second",
@@ -102,24 +102,24 @@ describe("views mutations", () => {
         {
           id: "all",
           nodeId,
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "All",
           sorts: [{ column: "name", direction: "asc" }],
         },
         {
           id: "extra",
           nodeId,
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "Extra",
           sorts: [{ column: "name", direction: "asc" }],
         },
       ],
     });
     try {
-      updateView(propertiesFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "all", {
+      updateView(propertiesFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, "all", {
         properties: ["status"],
       });
-      updateView(propertiesFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "extra", {
+      updateView(propertiesFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, "extra", {
         properties: ["priority"],
       });
       const file = propertiesFixture.ctx.graphStore.readViews();
@@ -144,14 +144,14 @@ describe("views mutations", () => {
         {
           id: "all",
           nodeId,
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "All",
           sorts: [{ column: "name", direction: "asc" }],
         },
       ],
     });
     try {
-      expect(() => deleteView(soloFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_ASSOCIATION_ID, "all")).toThrow(
+      expect(() => deleteView(soloFixture.ctx.graphStore, nodeId, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, "all")).toThrow(
         "last_view",
       );
     } finally {

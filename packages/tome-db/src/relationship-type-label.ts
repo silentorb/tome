@@ -1,17 +1,17 @@
 import type {
   PerspectiveLabelConfig,
-  AssociationsFile,
-} from "tome-flatfile/associations-file";
+  RelationshipTypesFile,
+} from "tome-flatfile/relationship-types-file";
 import {
-  normalizeAssociationId,
+  normalizeRelationshipTypeId,
   parseProjectionType,
   perspectiveConfigAt,
   perspectiveLinkAdd,
   perspectiveTitle,
-} from "tome-flatfile/associations-file";
+} from "tome-flatfile/relationship-types-file";
 
 /** Title-case an arbitrary underscore/slug-like string (legacy helpers / fallbacks). */
-export function formatAssociationLabel(type: string): string {
+export function formatRelationshipTypeLabel(type: string): string {
   return type
     .toLowerCase()
     .split("_")
@@ -21,38 +21,38 @@ export function formatAssociationLabel(type: string): string {
 }
 
 function configForEndpoint(
-  registry: AssociationsFile,
-  associationId: string,
+  registry: RelationshipTypesFile,
+  relationshipTypeId: string,
   endpointIndex: 0 | 1,
 ): PerspectiveLabelConfig | null {
-  const def = registry.associations[normalizeAssociationId(associationId)];
+  const def = registry.relationshipTypes[normalizeRelationshipTypeId(relationshipTypeId)];
   if (!def) return null;
   return perspectiveConfigAt(def, endpointIndex);
 }
 
 /**
- * Section heading for an association endpoint.
- * `typeOrProjection` may be an association ULID (defaults to endpoint 0) or
+ * Section heading for an relationship type endpoint.
+ * `typeOrProjection` may be a relationship type ULID (defaults to endpoint 0) or
  * a directed projection type (`ULID:0` / `ULID:1`).
  */
 export function perspectiveDisplayLabel(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   typeOrProjection: string,
-  associationId?: string,
+  relationshipTypeId?: string,
 ): string {
   const parsed = parseProjectionType(typeOrProjection);
-  const id = normalizeAssociationId(
-    associationId ?? parsed?.associationId ?? typeOrProjection,
+  const id = normalizeRelationshipTypeId(
+    relationshipTypeId ?? parsed?.relationshipTypeId ?? typeOrProjection,
   );
   const index = parsed?.endpointIndex ?? 0;
   const config = configForEndpoint(registry, id, index);
   if (config) return perspectiveTitle(config);
-  return formatAssociationLabel(typeOrProjection);
+  return formatRelationshipTypeLabel(typeOrProjection);
 }
 
 /** Map projection types to picker options with perspective labels. */
 export function labeledRelationshipTypes(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   types: readonly string[],
 ): { type: string; label: string }[] {
   return types.map((type) => ({
@@ -68,14 +68,14 @@ function defaultLinkAddLabel(sectionTitle: string): string {
 
 /** Inline link-existing control label for a relation section. */
 export function perspectiveLinkAddLabel(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   typeOrProjection: string,
   sectionTitle: string,
-  associationId?: string,
+  relationshipTypeId?: string,
 ): string {
   const parsed = parseProjectionType(typeOrProjection);
-  const id = normalizeAssociationId(
-    associationId ?? parsed?.associationId ?? typeOrProjection,
+  const id = normalizeRelationshipTypeId(
+    relationshipTypeId ?? parsed?.relationshipTypeId ?? typeOrProjection,
   );
   const index = parsed?.endpointIndex ?? 0;
   const config = configForEndpoint(registry, id, index);

@@ -11,14 +11,14 @@ import {
   destroyTestContentFixture,
   seedTestNode,
   seedTestTableSchema,
-  TEST_MEMBER_OF_ASSOCIATION_ID,
-  TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
+  TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
 } from "../src/content/test-helpers";
 import {
   projectionTypeForEndpoint,
   registerBidirectionalType,
 } from "tome-flatfile";
-import { invalidateAssociationsCache } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 
 describe("relationship-link-mutations", () => {
   const fixture = createTestContentFixture("tome-link-");
@@ -33,12 +33,12 @@ describe("relationship-link-mutations", () => {
   let pageRowsAssoc = "";
 
   beforeAll(() => {
-    const registry = fixture.ctx.store.readAssociationsFile();
+    const registry = fixture.ctx.store.readRelationshipTypesFile();
     parentsAssoc = registerBidirectionalType(registry, "Parents", "Children");
     featuresAssoc = registerBidirectionalType(registry, "Features", "Targets");
     pageRowsAssoc = registerBidirectionalType(registry, "Page rows", "Row pages");
-    fixture.ctx.store.writeAssociationsFile(registry);
-    invalidateAssociationsCache();
+    fixture.ctx.store.writeRelationshipTypesFile(registry);
+    invalidateRelationshipTypesCache();
   });
 
   test("links and unlinks without via_database property", () => {
@@ -132,7 +132,7 @@ describe("relationship-link-mutations", () => {
     expect(edge?.properties.ordinal).toBe(7);
   });
 
-  test("unlinks a Members row when the stored edge uses a different set association", () => {
+  test("unlinks a Members row when the stored edge uses a different set relationship type", () => {
     const setId = "0000000000000000000000003A";
     const memberId = "0000000000000000000000003B";
     seedTestNode(fixture, {
@@ -142,7 +142,7 @@ describe("relationship-link-mutations", () => {
     seedTestTableSchema(fixture, setId, []);
     seedTestNode(fixture, { id: memberId, properties: { title: "Adelle as a Barista" } });
 
-    const orderedMemberSide = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 1);
+    const orderedMemberSide = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
     expect(
       linkOutgoingRelationship(ctx, {
         sourceId: memberId,
@@ -154,14 +154,14 @@ describe("relationship-link-mutations", () => {
     const view = getDatabaseViewDetail(ctx.cache, setId, undefined, ctx.store.contentDir);
     expect(view?.rows.some((row) => row.nodeId === memberId)).toBe(true);
     expect(view?.memberSidePerspective).toBe(
-      projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
+      projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1),
     );
 
     expect(
       unlinkOutgoingRelationship(ctx, memberId, setId, view!.memberSidePerspective),
     ).toBeNull();
     expect(
-      ctx.store.findRelationship(memberId, setId, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID),
+      ctx.store.findRelationship(memberId, setId, TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID),
     ).toBeNull();
   });
 
@@ -175,7 +175,7 @@ describe("relationship-link-mutations", () => {
     });
     seedTestTableSchema(fixture, typeTableId, []);
 
-    const orderedSetSide = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, 0);
+    const orderedSetSide = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID, 0);
     expect(
       linkOutgoingRelationship(ctx, {
         sourceId: instanceId,
@@ -191,7 +191,7 @@ describe("relationship-link-mutations", () => {
       unlinkOutgoingRelationship(ctx, typeTableId, instanceId, view!.memberSidePerspective),
     ).toBeNull();
     expect(
-      ctx.store.findRelationship(instanceId, typeTableId, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID),
+      ctx.store.findRelationship(instanceId, typeTableId, TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID),
     ).toBeNull();
   });
 

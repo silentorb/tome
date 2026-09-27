@@ -1,15 +1,15 @@
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import { readStoreGetNode, readStoreListNodeIds } from "../graph-store/relationship-read";
 import {
-  loadAssociationsFromContent,
-  normalizeAssociationId,
+  loadRelationshipTypesFromContent,
+  normalizeRelationshipTypeId,
   getTableSchema,
   loadTableSchemasFromContent,
   relationColumns,
   projectionTypeForRelationColumn,
   relationColumnCompositeType,
 } from "tome-flatfile";
-import { projectionTypeForHostTable } from "../association-endpoints";
+import { projectionTypeForHostTable } from "../relationship-type-endpoints";
 
 export function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;
@@ -32,8 +32,8 @@ export function memberLinkPerspective(
   contentDir: string,
   label: string,
 ): string {
-  const registry = loadAssociationsFromContent(contentDir);
-  const composite = normalizeAssociationId(compositeType);
+  const registry = loadRelationshipTypesFromContent(contentDir);
+  const composite = normalizeRelationshipTypeId(compositeType);
   const schema = getTableSchema(loadTableSchemasFromContent(contentDir), typeDatabaseId);
   if (schema) {
     for (const col of relationColumns(schema)) {
@@ -42,7 +42,7 @@ export function memberLinkPerspective(
       return projectionTypeForRelationColumn(registry, typeDatabaseId, col);
     }
   }
-  const def = registry.associations[composite];
+  const def = registry.relationshipTypes[composite];
   if (!def) {
     throw new Error(`${label}: unknown composite "${compositeType}"`);
   }

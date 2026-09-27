@@ -1,7 +1,7 @@
 import { listRelationConnectionsForRow } from "./database-view-relations";
 import { unlinkOutgoingRelationship } from "./relationship-link-mutations";
 import { otherEndpoint } from "./relationship-traverse";
-import { loadAssociationsFromContent } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import { setTraitProjectionTypes } from "tome-flatfile";
 import { projectionTypeForRelationColumn, relationColumnCompositeType } from "tome-flatfile";
 import type { TomeWriteContext } from "./content/write-context";
@@ -20,7 +20,7 @@ export function stripScalarFromSetEdges(
   propertyKey: string,
 ): number {
   const store = ctx.graphStore;
-  const registry = loadAssociationsFromContent(writeStoreContentDir(store));
+  const registry = loadRelationshipTypesFromContent(writeStoreContentDir(store));
   let count = 0;
   for (const type of setTraitProjectionTypes(registry)) {
     for (const connection of listRelationshipsToTarget(store, databaseId, type)) {
@@ -47,7 +47,7 @@ export function renameScalarOnSetEdges(
   newKey: string,
 ): number {
   const store = ctx.graphStore;
-  const registry = loadAssociationsFromContent(writeStoreContentDir(store));
+  const registry = loadRelationshipTypesFromContent(writeStoreContentDir(store));
   let count = 0;
   for (const type of setTraitProjectionTypes(registry)) {
     for (const connection of listRelationshipsToTarget(store, databaseId, type)) {
@@ -75,7 +75,7 @@ export function unlinkRelationColumnFromAllRows(
 ): number {
   const store = ctx.graphStore;
   const contentDir = writeStoreContentDir(store);
-  const registry = loadAssociationsFromContent(contentDir);
+  const registry = loadRelationshipTypesFromContent(contentDir);
   const connectionType = projectionTypeForRelationColumn(registry, databaseId, column);
   const compositeType = relationColumnCompositeType(column);
 

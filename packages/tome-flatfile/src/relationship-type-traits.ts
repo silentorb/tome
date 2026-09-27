@@ -1,15 +1,15 @@
 import { normalizeRelationshipType } from "./relation-type";
 import type { RelationshipEntry } from "./content/relationships-file";
 import {
-  normalizeAssociationId,
+  normalizeRelationshipTypeId,
   parseProjectionType,
   projectionTypeForEndpoint,
-  type AssociationDefinition,
-  type AssociationsFile,
+  type RelationshipTypeDefinition,
+  type RelationshipTypesFile,
   type TraitEntry,
-} from "./content/associations-file";
+} from "./content/relationship-types-file";
 import { resolveContentPath } from "./content/paths";
-import { loadAssociationsFromContent } from "./associations/load";
+import { loadRelationshipTypesFromContent } from "./relationship-types/load";
 import { loadViewsFromContent } from "./views/load";
 
 export const SET_TRAIT = "set";
@@ -27,7 +27,7 @@ export function traitEntryKey(entry: TraitEntry): string {
 }
 
 /** Normalize traits array to a lookup map (internal; not persisted). */
-export function traitMap(def: AssociationDefinition | undefined): Map<string, TraitMapValue> {
+export function traitMap(def: RelationshipTypeDefinition | undefined): Map<string, TraitMapValue> {
   const map = new Map<string, TraitMapValue>();
   if (!def?.traits) return map;
   for (const entry of def.traits) {
@@ -41,13 +41,13 @@ export function traitMap(def: AssociationDefinition | undefined): Map<string, Tr
   return map;
 }
 
-export function hasTrait(def: AssociationDefinition | undefined, key: string): boolean {
+export function hasTrait(def: RelationshipTypeDefinition | undefined, key: string): boolean {
   const normalized = normalizeRelationshipType(key);
   return traitMap(def).has(normalized);
 }
 
 export function traitConfig(
-  def: AssociationDefinition | undefined,
+  def: RelationshipTypeDefinition | undefined,
   key: string,
 ): Record<string, unknown> | undefined {
   const value = traitMap(def).get(normalizeRelationshipType(key));
@@ -55,47 +55,47 @@ export function traitConfig(
   return value;
 }
 
-export function typesWithTrait(registry: AssociationsFile, key: string): string[] {
+export function typesWithTrait(registry: RelationshipTypesFile, key: string): string[] {
   const normalized = normalizeRelationshipType(key);
-  return Object.entries(registry.associations)
+  return Object.entries(registry.relationshipTypes)
     .filter(([, def]) => traitMap(def).has(normalized))
     .map(([composite]) => composite);
 }
 
-export function isSetTraitType(def: AssociationDefinition | undefined): boolean {
+export function isSetTraitType(def: RelationshipTypeDefinition | undefined): boolean {
   return hasTrait(def, SET_TRAIT);
 }
 
-export function isOrderedTraitType(def: AssociationDefinition | undefined): boolean {
+export function isOrderedTraitType(def: RelationshipTypeDefinition | undefined): boolean {
   return hasTrait(def, ORDERED_TRAIT);
 }
 
-export function isSymmetricAssociation(def: AssociationDefinition | undefined): boolean {
+export function isSymmetricRelationshipType(def: RelationshipTypeDefinition | undefined): boolean {
   return hasTrait(def, SYMMETRIC_TRAIT);
 }
 
 export function isSymmetricComposite(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   compositeType: string,
 ): boolean {
-  return isSymmetricAssociation(registry.associations[normalizeAssociationId(compositeType)]);
+  return isSymmetricRelationshipType(registry.relationshipTypes[normalizeRelationshipTypeId(compositeType)]);
 }
 
 export function isSetTraitComposite(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   compositeType: string,
 ): boolean {
-  return isSetTraitType(registry.associations[normalizeAssociationId(compositeType)]);
+  return isSetTraitType(registry.relationshipTypes[normalizeRelationshipTypeId(compositeType)]);
 }
 
 export function isOrderedTraitComposite(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   compositeType: string,
 ): boolean {
-  return isOrderedTraitType(registry.associations[normalizeAssociationId(compositeType)]);
+  return isOrderedTraitType(registry.relationshipTypes[normalizeRelationshipTypeId(compositeType)]);
 }
 
-export function orderedPropertyName(def: AssociationDefinition | undefined): string {
+export function orderedPropertyName(def: RelationshipTypeDefinition | undefined): string {
   const config = traitConfig(def, ORDERED_TRAIT);
   const property = config?.property;
   if (typeof property === "string" && property.trim()) {
@@ -114,7 +114,7 @@ function parseIndex(value: unknown, fallback: 0 | 1): 0 | 1 {
   return fallback;
 }
 
-export function setRoleIndices(def: AssociationDefinition | undefined): SetRoleIndices {
+export function setRoleIndices(def: RelationshipTypeDefinition | undefined): SetRoleIndices {
   const config = traitConfig(def, SET_TRAIT);
   const parentIndex = parseIndex(config?.parentIndex, DEFAULT_PARENT_INDEX);
   const childIndex = parseIndex(config?.childIndex, DEFAULT_CHILD_INDEX);
@@ -129,7 +129,7 @@ export function nodeIdAtIndex(entry: RelationshipEntry, index: 0 | 1): string {
 }
 
 export function parentNodeId(
-  def: AssociationDefinition | undefined,
+  def: RelationshipTypeDefinition | undefined,
   entry: RelationshipEntry,
 ): string {
   const { parentIndex } = setRoleIndices(def);
@@ -137,7 +137,7 @@ export function parentNodeId(
 }
 
 export function childNodeId(
-  def: AssociationDefinition | undefined,
+  def: RelationshipTypeDefinition | undefined,
   entry: RelationshipEntry,
 ): string {
   const { childIndex } = setRoleIndices(def);
@@ -145,88 +145,88 @@ export function childNodeId(
 }
 
 export function isSetTraitEntry(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   entry: RelationshipEntry,
 ): boolean {
   return isSetTraitComposite(registry, entry.type);
 }
 
-/** All set-trait association ids. */
-export function setTraitAssociationIds(registry: AssociationsFile): string[] {
+/** All set-trait relationship type ids. */
+export function setTraitRelationshipTypeIds(registry: RelationshipTypesFile): string[] {
   return typesWithTrait(registry, SET_TRAIT);
 }
 
 export function setSideProjectionType(
-  registry: AssociationsFile,
-  associationId: string,
+  registry: RelationshipTypesFile,
+  relationshipTypeId: string,
 ): string {
-  const def = registry.associations[normalizeAssociationId(associationId)];
+  const def = registry.relationshipTypes[normalizeRelationshipTypeId(relationshipTypeId)];
   if (!def || !isSetTraitType(def)) {
-    throw new Error(`Unknown set-trait composite "${associationId}"`);
+    throw new Error(`Unknown set-trait composite "${relationshipTypeId}"`);
   }
   const { parentIndex } = setRoleIndices(def);
-  return projectionTypeForEndpoint(associationId, parentIndex);
+  return projectionTypeForEndpoint(relationshipTypeId, parentIndex);
 }
 
 export function memberSideProjectionType(
-  registry: AssociationsFile,
-  associationId: string,
+  registry: RelationshipTypesFile,
+  relationshipTypeId: string,
 ): string {
-  const def = registry.associations[normalizeAssociationId(associationId)];
+  const def = registry.relationshipTypes[normalizeRelationshipTypeId(relationshipTypeId)];
   if (!def || !isSetTraitType(def)) {
-    throw new Error(`Unknown set-trait composite "${associationId}"`);
+    throw new Error(`Unknown set-trait composite "${relationshipTypeId}"`);
   }
   const { childIndex } = setRoleIndices(def);
-  return projectionTypeForEndpoint(associationId, childIndex);
+  return projectionTypeForEndpoint(relationshipTypeId, childIndex);
 }
 
-/** Directed projection types for every set-trait association (both endpoints). */
-export function setTraitProjectionTypes(registry: AssociationsFile): string[] {
+/** Directed projection types for every set-trait relationship type (both endpoints). */
+export function setTraitProjectionTypes(registry: RelationshipTypesFile): string[] {
   const types: string[] = [];
-  for (const associationId of setTraitAssociationIds(registry)) {
-    types.push(setSideProjectionType(registry, associationId));
-    types.push(memberSideProjectionType(registry, associationId));
+  for (const relationshipTypeId of setTraitRelationshipTypeIds(registry)) {
+    types.push(setSideProjectionType(registry, relationshipTypeId));
+    types.push(memberSideProjectionType(registry, relationshipTypeId));
   }
   return types;
 }
 
-export function setSideProjectionTypes(registry: AssociationsFile): string[] {
-  return setTraitAssociationIds(registry).map((id) => setSideProjectionType(registry, id));
+export function setSideProjectionTypes(registry: RelationshipTypesFile): string[] {
+  return setTraitRelationshipTypeIds(registry).map((id) => setSideProjectionType(registry, id));
 }
 
-export function memberSideProjectionTypes(registry: AssociationsFile): string[] {
-  return setTraitAssociationIds(registry).map((id) =>
+export function memberSideProjectionTypes(registry: RelationshipTypesFile): string[] {
+  return setTraitRelationshipTypeIds(registry).map((id) =>
     memberSideProjectionType(registry, id),
   );
 }
 
-export function associationIdFromTypeOrProjection(
-  registry: AssociationsFile,
+export function relationshipTypeIdFromTypeOrProjection(
+  registry: RelationshipTypesFile,
   typeOrProjection: string,
 ): string | null {
   const parsed = parseProjectionType(typeOrProjection);
-  if (parsed) return parsed.associationId;
-  const id = normalizeAssociationId(typeOrProjection);
-  return registry.associations[id] ? id : null;
+  if (parsed) return parsed.relationshipTypeId;
+  const id = normalizeRelationshipTypeId(typeOrProjection);
+  return registry.relationshipTypes[id] ? id : null;
 }
 
 export function isSetTraitProjectionType(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   type: string,
 ): boolean {
-  const associationId = associationIdFromTypeOrProjection(registry, type);
-  return associationId !== null && isSetTraitComposite(registry, associationId);
+  const relationshipTypeId = relationshipTypeIdFromTypeOrProjection(registry, type);
+  return relationshipTypeId !== null && isSetTraitComposite(registry, relationshipTypeId);
 }
 
 export function isSetSideProjectionType(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   type: string,
 ): boolean {
   return setSideProjectionTypes(registry).includes(type);
 }
 
 export function isMemberSideProjectionType(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   type: string,
 ): boolean {
   return memberSideProjectionTypes(registry).includes(type);
@@ -234,7 +234,7 @@ export function isMemberSideProjectionType(
 
 /** Parent/set and child/member directed projection types for a set-trait composite. */
 export function setRoleProjectionTypesForComposite(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   composite: string,
 ): [string, string] {
   return [
@@ -244,35 +244,35 @@ export function setRoleProjectionTypesForComposite(
 }
 
 /**
- * When a node has no views declaring a set association, use the sole
+ * When a node has no views declaring a set relationship type, use the sole
  * plain (non-ordered) set-trait composite, else the sole set-trait composite.
  */
-function soleSetCompositeFallback(registry: AssociationsFile): string {
+function soleSetCompositeFallback(registry: RelationshipTypesFile): string {
   const setComposites = typesWithTrait(registry, SET_TRAIT);
   const plain = setComposites.filter((composite) => {
-    const def = registry.associations[composite];
+    const def = registry.relationshipTypes[composite];
     return def && !isOrderedTraitType(def);
   });
   if (plain.length === 1) return plain[0]!;
   if (setComposites.length === 1) return setComposites[0]!;
   throw new Error(
-    "No set association context: add a set-side association in views.json for this node, or register a single set-trait association",
+    "No set relationship type context: add a set-side relationship type in views.json for this node, or register a single set-trait relationship type",
   );
 }
 
-/** Resolve the set-trait association id for a set node from views.json or sole fallback. */
-export function setRoleAssociationForNode(
+/** Resolve the set-trait relationship type id for a set node from views.json or sole fallback. */
+export function setRoleRelationshipTypeForNode(
   nodeId: string,
   contentDir?: string,
 ): string {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
-  const setIds = new Set(setTraitAssociationIds(registry));
+  const registry = loadRelationshipTypesFromContent(dir);
+  const setIds = new Set(setTraitRelationshipTypeIds(registry));
   const fromViews = new Set<string>();
   for (const view of loadViewsFromContent(dir).views) {
-    const associationId = normalizeAssociationId(view.association);
-    if (view.nodeId === nodeId && setIds.has(associationId)) {
-      fromViews.add(associationId);
+    const relationshipTypeId = normalizeRelationshipTypeId(view.association);
+    if (view.nodeId === nodeId && setIds.has(relationshipTypeId)) {
+      fromViews.add(relationshipTypeId);
     }
   }
   if (fromViews.size > 0) {
@@ -287,24 +287,24 @@ export function setRoleProjectionTypesForNode(
   contentDir?: string,
 ): [string, string] {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
-  return setRoleProjectionTypesForComposite(registry, setRoleAssociationForNode(nodeId, dir));
+  const registry = loadRelationshipTypesFromContent(dir);
+  return setRoleProjectionTypesForComposite(registry, setRoleRelationshipTypeForNode(nodeId, dir));
 }
 
-export function isOrderedSetAssociation(
-  registry: AssociationsFile,
-  associationId: string,
+export function isOrderedSetRelationshipType(
+  registry: RelationshipTypesFile,
+  relationshipTypeId: string,
 ): boolean {
   return (
-    isSetTraitComposite(registry, associationId) &&
-    isOrderedTraitComposite(registry, associationId)
+    isSetTraitComposite(registry, relationshipTypeId) &&
+    isOrderedTraitComposite(registry, relationshipTypeId)
   );
 }
 
 export function isOrderedSetProjectionType(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   type: string,
 ): boolean {
-  const associationId = associationIdFromTypeOrProjection(registry, type);
-  return associationId !== null && isOrderedSetAssociation(registry, associationId);
+  const relationshipTypeId = relationshipTypeIdFromTypeOrProjection(registry, type);
+  return relationshipTypeId !== null && isOrderedSetRelationshipType(registry, relationshipTypeId);
 }

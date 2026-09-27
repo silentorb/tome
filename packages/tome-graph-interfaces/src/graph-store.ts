@@ -1,6 +1,6 @@
 import type { Node, Properties, Relationship } from "./graph";
 import type {
-  AssociationsFile,
+  RelationshipTypesFile,
   DynamicPropertiesFile,
 } from "./model-config";
 import type { SchemaFile } from "./schema";
@@ -128,8 +128,8 @@ export interface TomeGraphStoreBase {
     properties: Properties,
   ): boolean;
 
-  readAssociations(): AssociationsFile;
-  writeAssociations(file: AssociationsFile): void;
+  readRelationshipTypes(): RelationshipTypesFile;
+  writeRelationshipTypes(file: RelationshipTypesFile): void;
   readSchema(): SchemaFile;
   writeSchema(file: SchemaFile): void;
   readViews(): ViewsFile;

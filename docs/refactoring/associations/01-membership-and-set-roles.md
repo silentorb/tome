@@ -1,5 +1,8 @@
 # B1 — Set membership and set node roles
 
+> **Terminology (historical):** This inventory uses older “association” / composite naming. The preferred term is **relationship type** (registry definition: ULID + perspectives + traits + endpoints). On-disk files may still use `associations.json` / key `associations`.
+
+
 ## What it does
 
 **Set membership** links a **member node** to a **set node** (type table, Archive hub, or future set-like containers). In storage, all membership edges use composite type `member_of` with asymmetric perspectives:
@@ -111,7 +114,7 @@ Set identity is **structural** (schema key or workspace archive id), not a prope
 | Behavior | Interaction |
 | --- | --- |
 | **B2** | Ordered sets stamp `order` on `ordered_member_of`; plain `member_of` holds table-schema scalars only (no view / row_index). |
-| **B6** | Membership is the first branch in `resolveAssociationIdForLink` (step 0). |
+| **B6** | Membership is the first branch in `resolveRelationshipTypeIdForLink` (step 0). |
 | **B7** | Membership sections sorted last; `members` perspective sections hidden on instance pages. |
 | **B3** | Distinct from `includes` — set containment is a separate relationship family per [sets.md](../../features/sets.md). |
 

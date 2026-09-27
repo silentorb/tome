@@ -40,7 +40,7 @@ See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./s
 | --- | --- |
 | **Identity** | Column identity is `key` (slug), not legacy property ids |
 | **Scalars** | `select`, `multi_select`, `checkbox`, `number`, `text`, `date`, `url`, `email`, `phone_number` |
-| **Relations** | `association` is a registered ULID in [`associations.json`](../../content/model/associations.json); **`endpoint` is `0` or `1`** (which association endpoint this column hosts). Perspective titles are display-only and must not be used as keys. Directed projection identity is `{association}:{endpoint}`. Authored relationship tuples must place the **endpoint-0 host at `a`** (and endpoint 1 at `b`); the Members table only hydrates outgoing `{association}:{endpoint}` from each row. Empty relation cells after pinning `endpoint` usually mean inverted `a`/`b` order, not missing links — re-run `bun packages/tome-db/scripts/migrate-relationship-order.ts <contentDir>`. |
+| **Relations** | `"association"` (legacy field name) is a registered **relationship type** ULID in [`associations.json`](../../content/model/associations.json); **`endpoint` is `0` or `1`** (which relationship type endpoint this column hosts). Perspective titles are display-only and must not be used as keys. Directed projection identity is `{relationshipTypeId}:{endpoint}`. Authored relationship tuples must place the **endpoint-0 host at `a`** (and endpoint 1 at `b`); the Members table only hydrates outgoing `{relationshipTypeId}:{endpoint}` from each row. Empty relation cells after pinning `endpoint` usually mean inverted `a`/`b` order, not missing links — re-run `bun packages/tome-db/scripts/migrate-relationship-order.ts <contentDir>`. |
 | **Enums** | `enumId` references [`schema.json`](../../content/model/schema.json) `enums` |
 | **Computed** | Formula/rollup columns are **not** stored here; use [`dynamic-properties.json`](./dynamic-properties.md) |
 
@@ -69,14 +69,14 @@ Row data for instances is stored on `is_a` relationship properties, not on the i
 ## Instance node pages (editor)
 
 - For each `type: relation` column on the instance's type table (`member_of` target), the editor shows a relation table section even when no outgoing edges exist yet (static site export still omits empty sections).
-- Section titles and link-existing pickers use the column's `association` (same grouping as populated `includes` edges).
-- Relation section `typeNodeId` comes from association/schema config only: schema relation columns use `targetTypeIdForRelationColumn`; otherwise `associations[].endpoints[endpointIndex].typeId`. Perspective titles are display-only — never resolve type identity by scanning nodes for a matching title.
+- Section titles and link-existing pickers use the column's `"association"` relationship type ULID (same grouping as populated `includes` edges).
+- Relation section `typeNodeId` comes from relationship-type / schema config only: schema relation columns use `targetTypeIdForRelationColumn`; otherwise `associations.json` entry `endpoints[endpointIndex].typeId`. Perspective titles are display-only — never resolve type identity by scanning nodes for a matching title.
 
 ## Editing
 
 - **Editor UI:** type-table Items sections support **add**, **edit**, **delete**, and **reorder** for stored columns (`table-schemas.json`). Use **+ Column** in the table utility bar or right-click anywhere in a column header cell → **Edit** / **Delete**. Dynamic/computed columns (`dynamic-properties.json`) remain read-only in the UI.
 - **Create / update API:** `POST /api/databases/:id/columns`, `PATCH /api/databases/:id/columns/:key` (see [tome-editor.md](./tome-editor.md)).
-- **Destructive schema edits** (key rename, type change, relation `association` / `endpoint` change) migrate or clear row data on `is_a` edges; the UI confirms before applying.
+- **Destructive schema edits** (key rename, type change, relation `"association"` / `endpoint` change) migrate or clear row data on `is_a` edges; the UI confirms before applying.
 - **`select` / `status`:** the editor can wire an **existing** `schema.json` enum via `enumId`. Creating new enum definitions remains a manual / script workflow (`bun scripts/seed-select-enums.ts`, edit `schema.json`).
 - **Manual:** edit `table-schemas.json` directly
 - **Sync:** `bun run content:sync` or editor API startup rebuilds the SQLite cache

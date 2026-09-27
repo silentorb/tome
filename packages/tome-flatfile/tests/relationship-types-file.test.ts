@@ -1,15 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import {
-  UnknownAssociationError,
-  emptyAssociationsFile,
-  parseAssociationsFile,
+  UnknownRelationshipTypeError,
+  emptyRelationshipTypesFile,
+  parseRelationshipTypesFile,
   parseProjectionType,
   projectionTypeForEndpoint,
   oppositeProjectionType,
   onlyActiveHostProjectionType,
-  requireAssociationId,
-  serializeAssociationsFile,
-} from "../src/content/associations-file";
+  requireRelationshipTypeId,
+  serializeRelationshipTypesFile,
+} from "../src/content/relationship-types-file";
 
 /** Stable ULID association ids for inline fixtures (match tome-db test helpers). */
 const MEMBER_OF = "000000000000000000000000A1";
@@ -19,9 +19,9 @@ const PARENTS_CHILDREN = "000000000000000000000000B1";
 const INSPIRATIONS_FEATURES = "000000000000000000000000B2";
 const INCLUDES = "000000000000000000000000B3";
 
-describe("associations-file traits", () => {
+describe("relationship-types-file traits", () => {
   test("parses flag trait string", () => {
-    const file = parseAssociationsFile(
+    const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         associations: {
@@ -32,11 +32,11 @@ describe("associations-file traits", () => {
         },
       }),
     );
-    expect(file.associations[MEMBER_OF]?.traits).toEqual(["set"]);
+    expect(file.relationshipTypes[MEMBER_OF]?.traits).toEqual(["set"]);
   });
 
   test("parses configured trait object with key", () => {
-    const file = parseAssociationsFile(
+    const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         associations: {
@@ -47,13 +47,13 @@ describe("associations-file traits", () => {
         },
       }),
     );
-    expect(file.associations[MEMBER_OF]?.traits).toEqual([
+    expect(file.relationshipTypes[MEMBER_OF]?.traits).toEqual([
       { key: "set", parentIndex: 0, childIndex: 1 },
     ]);
   });
 
   test("parses multiple traits", () => {
-    const file = parseAssociationsFile(
+    const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         associations: {
@@ -64,25 +64,29 @@ describe("associations-file traits", () => {
         },
       }),
     );
-    expect(file.associations[ORDERED_MEMBER_OF]?.traits).toEqual(["set", "ordered"]);
+    expect(file.relationshipTypes[ORDERED_MEMBER_OF]?.traits).toEqual(["set", "ordered"]);
   });
 
   test("round-trips traits and object perspective labels through serialize", () => {
-    const file = emptyAssociationsFile();
-    file.associations[MEMBER_OF] = {
+    const file = emptyRelationshipTypesFile();
+    file.relationshipTypes[MEMBER_OF] = {
       perspectives: [
         "Members",
         { title: "Membership", linkAdd: "Link type table" },
       ],
       traits: ["set"],
     };
-    const roundTrip = parseAssociationsFile(serializeAssociationsFile(file));
-    expect(roundTrip.associations[MEMBER_OF]).toEqual(file.associations[MEMBER_OF]);
+    const serialized = serializeRelationshipTypesFile(file);
+    const onDisk = JSON.parse(serialized) as Record<string, unknown>;
+    expect(onDisk.associations).toBeDefined();
+    expect(onDisk.relationshipTypes).toBeUndefined();
+    const roundTrip = parseRelationshipTypesFile(serialized);
+    expect(roundTrip.relationshipTypes[MEMBER_OF]).toEqual(file.relationshipTypes[MEMBER_OF]);
   });
 
   test("rejects duplicate trait names", () => {
     expect(() =>
-      parseAssociationsFile(
+      parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
           associations: {
@@ -98,7 +102,7 @@ describe("associations-file traits", () => {
 
   test("rejects object trait without key", () => {
     expect(() =>
-      parseAssociationsFile(
+      parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
           associations: {
@@ -114,7 +118,7 @@ describe("associations-file traits", () => {
 
   test("rejects traits object map (legacy shape)", () => {
     expect(() =>
-      parseAssociationsFile(
+      parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
           associations: {
@@ -130,7 +134,7 @@ describe("associations-file traits", () => {
 
   test("rejects slug association keys", () => {
     expect(() =>
-      parseAssociationsFile(
+      parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
           associations: {
@@ -143,7 +147,7 @@ describe("associations-file traits", () => {
 
   test("rejects legacy perspectiveLabels key", () => {
     expect(() =>
-      parseAssociationsFile(
+      parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
           associations: {
@@ -158,9 +162,9 @@ describe("associations-file traits", () => {
   });
 });
 
-describe("associations-file perspective label configs", () => {
+describe("relationship-types-file perspective label configs", () => {
   test("parses object perspective with title and linkAdd", () => {
-    const file = parseAssociationsFile(
+    const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         associations: {
@@ -173,14 +177,14 @@ describe("associations-file perspective label configs", () => {
         },
       }),
     );
-    expect(file.associations[MEMBER_OF]?.perspectives[1]).toEqual({
+    expect(file.relationshipTypes[MEMBER_OF]?.perspectives[1]).toEqual({
       title: "Membership",
       linkAdd: "Link type table",
     });
   });
 
   test("parses perspective linkExisting", () => {
-    const file = parseAssociationsFile(
+    const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         associations: {
@@ -190,7 +194,7 @@ describe("associations-file perspective label configs", () => {
         },
       }),
     );
-    expect(file.associations[SCENES_PART]?.perspectives[1]).toEqual({
+    expect(file.relationshipTypes[SCENES_PART]?.perspectives[1]).toEqual({
       title: "Part",
       linkExisting: false,
     });
@@ -198,7 +202,7 @@ describe("associations-file perspective label configs", () => {
 
   test("rejects non-boolean perspective linkExisting", () => {
     expect(() =>
-      parseAssociationsFile(
+      parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
           associations: {
@@ -212,9 +216,9 @@ describe("associations-file perspective label configs", () => {
   });
 });
 
-describe("associations-file linkExisting", () => {
+describe("relationship-types-file linkExisting", () => {
   test("parses composite-level linkExisting", () => {
-    const file = parseAssociationsFile(
+    const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         associations: {
@@ -225,22 +229,22 @@ describe("associations-file linkExisting", () => {
         },
       }),
     );
-    expect(file.associations[PARENTS_CHILDREN]?.linkExisting).toBe(false);
+    expect(file.relationshipTypes[PARENTS_CHILDREN]?.linkExisting).toBe(false);
   });
 
   test("round-trips composite and per-endpoint linkExisting through serialize", () => {
-    const file = emptyAssociationsFile();
-    file.associations[PARENTS_CHILDREN] = {
+    const file = emptyRelationshipTypesFile();
+    file.relationshipTypes[PARENTS_CHILDREN] = {
       perspectives: ["Children", { title: "Parents", linkExisting: true }],
       linkExisting: false,
     };
-    const roundTrip = parseAssociationsFile(serializeAssociationsFile(file));
-    expect(roundTrip.associations[PARENTS_CHILDREN]).toEqual(file.associations[PARENTS_CHILDREN]);
+    const roundTrip = parseRelationshipTypesFile(serializeRelationshipTypesFile(file));
+    expect(roundTrip.relationshipTypes[PARENTS_CHILDREN]).toEqual(file.relationshipTypes[PARENTS_CHILDREN]);
   });
 
   test("rejects non-boolean composite linkExisting", () => {
     expect(() =>
-      parseAssociationsFile(
+      parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
           associations: {
@@ -255,12 +259,12 @@ describe("associations-file linkExisting", () => {
   });
 });
 
-describe("associations-file endpoints", () => {
+describe("relationship-types-file endpoints", () => {
   const featuresTypeId = "0000000000000000000000002P";
   const inspirationsTypeId = "0000000000000000000000000K";
 
   test("parses endpoint type constraints", () => {
-    const file = parseAssociationsFile(
+    const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         associations: {
@@ -274,30 +278,30 @@ describe("associations-file endpoints", () => {
         },
       }),
     );
-    expect(file.associations[INSPIRATIONS_FEATURES]?.endpoints).toEqual({
+    expect(file.relationshipTypes[INSPIRATIONS_FEATURES]?.endpoints).toEqual({
       0: { typeId: featuresTypeId },
       1: { typeId: inspirationsTypeId },
     });
   });
 
   test("round-trips endpoints through serialize", () => {
-    const file = emptyAssociationsFile();
-    file.associations[INSPIRATIONS_FEATURES] = {
+    const file = emptyRelationshipTypesFile();
+    file.relationshipTypes[INSPIRATIONS_FEATURES] = {
       perspectives: ["Features", "Inspirations"],
       endpoints: {
         0: { typeId: featuresTypeId },
         1: { typeId: inspirationsTypeId },
       },
     };
-    const roundTrip = parseAssociationsFile(serializeAssociationsFile(file));
-    expect(roundTrip.associations[INSPIRATIONS_FEATURES]?.endpoints).toEqual(
-      file.associations[INSPIRATIONS_FEATURES].endpoints,
+    const roundTrip = parseRelationshipTypesFile(serializeRelationshipTypesFile(file));
+    expect(roundTrip.relationshipTypes[INSPIRATIONS_FEATURES]?.endpoints).toEqual(
+      file.relationshipTypes[INSPIRATIONS_FEATURES].endpoints,
     );
   });
 
   test("rejects endpoint with invalid typeId", () => {
     expect(() =>
-      parseAssociationsFile(
+      parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
           associations: {
@@ -312,16 +316,16 @@ describe("associations-file endpoints", () => {
   });
 });
 
-describe("associations-file bidirectional field removal", () => {
+describe("relationship-types-file bidirectional field removal", () => {
   test("serialization never emits a bidirectional field", () => {
-    const file = emptyAssociationsFile();
-    file.associations[INCLUDES] = { perspectives: ["Includes", "Includes"] };
-    const serialized = serializeAssociationsFile(file);
+    const file = emptyRelationshipTypesFile();
+    file.relationshipTypes[INCLUDES] = { perspectives: ["Includes", "Includes"] };
+    const serialized = serializeRelationshipTypesFile(file);
     expect(serialized).not.toContain("bidirectional");
   });
 
   test("a legacy bidirectional key on input is ignored", () => {
-    const file = parseAssociationsFile(
+    const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         associations: {
@@ -329,13 +333,13 @@ describe("associations-file bidirectional field removal", () => {
         },
       }),
     );
-    expect(file.associations[INCLUDES]).toEqual({ perspectives: ["Includes", "Includes"] });
-    expect("bidirectional" in (file.associations[INCLUDES] ?? {})).toBe(false);
+    expect(file.relationshipTypes[INCLUDES]).toEqual({ perspectives: ["Includes", "Includes"] });
+    expect("bidirectional" in (file.relationshipTypes[INCLUDES] ?? {})).toBe(false);
   });
 
   test("rejects a type with fewer than two perspectives", () => {
     expect(() =>
-      parseAssociationsFile(
+      parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
           associations: { [SCENES_PART]: { perspectives: ["Scenes"] } },
@@ -346,7 +350,7 @@ describe("associations-file bidirectional field removal", () => {
 
   test("rejects a type with more than two perspectives", () => {
     expect(() =>
-      parseAssociationsFile(
+      parseRelationshipTypesFile(
         JSON.stringify({
           version: 1,
           associations: { [PARENTS_CHILDREN]: { perspectives: ["A", "B", "C"] } },
@@ -356,12 +360,12 @@ describe("associations-file bidirectional field removal", () => {
   });
 });
 
-describe("projection types and requireAssociationId", () => {
-  test("projectionTypeForEndpoint encodes association ULID and endpoint index", () => {
+describe("projection types and requireRelationshipTypeId", () => {
+  test("projectionTypeForEndpoint encodes relationship type ULID and endpoint index", () => {
     expect(projectionTypeForEndpoint(MEMBER_OF, 0)).toBe(`${MEMBER_OF}:0`);
     expect(projectionTypeForEndpoint(MEMBER_OF, 1)).toBe(`${MEMBER_OF}:1`);
     expect(parseProjectionType(`${MEMBER_OF}:1`)).toEqual({
-      associationId: MEMBER_OF,
+      relationshipTypeId: MEMBER_OF,
       endpointIndex: 1,
     });
   });
@@ -375,8 +379,8 @@ describe("projection types and requireAssociationId", () => {
     expect(onlyActiveHostProjectionType(members, "source")).toBe(members);
   });
 
-  test("requireAssociationId returns registered ids", () => {
-    const file = parseAssociationsFile(
+  test("requireRelationshipTypeId returns registered ids", () => {
+    const file = parseRelationshipTypesFile(
       JSON.stringify({
         version: 1,
         associations: {
@@ -384,11 +388,11 @@ describe("projection types and requireAssociationId", () => {
         },
       }),
     );
-    expect(requireAssociationId(file, MEMBER_OF)).toBe(MEMBER_OF);
+    expect(requireRelationshipTypeId(file, MEMBER_OF)).toBe(MEMBER_OF);
   });
 
-  test("requireAssociationId throws UnknownAssociationError", () => {
-    const file = emptyAssociationsFile();
-    expect(() => requireAssociationId(file, MEMBER_OF)).toThrow(UnknownAssociationError);
+  test("requireRelationshipTypeId throws UnknownRelationshipTypeError", () => {
+    const file = emptyRelationshipTypesFile();
+    expect(() => requireRelationshipTypeId(file, MEMBER_OF)).toThrow(UnknownRelationshipTypeError);
   });
 });

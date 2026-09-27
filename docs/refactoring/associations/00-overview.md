@@ -1,9 +1,10 @@
 # Relationship type behaviors — inventory overview
 
 > **Superseded inventory.** These docs describe an older includes-collapse / slug-keyed association era.
+> **Terminology is historical** — preferred term is **relationship type** (registry definition). “Association” here means that concept; on-disk files may still use `associations.json`.
 > For current behavior, use [tome-db.md](../../features/tome-db.md), [sets.md](../../features/sets.md),
 > and [relationship-dehardcode-remaining.md](../relationship-dehardcode-remaining.md).
-> Association registry keys are now **opaque ULIDs**; perspectives remain snake_case slugs.
+> Relationship type registry keys are now **opaque ULIDs**; perspectives remain snake_case slugs.
 
 ## Purpose
 

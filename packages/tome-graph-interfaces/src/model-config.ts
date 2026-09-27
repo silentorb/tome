@@ -6,7 +6,7 @@ export type PerspectivePair = [PerspectiveLabelConfig, PerspectiveLabelConfig];
 
 export type TraitEntry = string | { key: string; [configKey: string]: unknown };
 
-export interface AssociationDefinition {
+export interface RelationshipTypeDefinition {
   perspectives: PerspectivePair;
   linkExisting?: boolean;
   traits?: TraitEntry[];
@@ -16,9 +16,9 @@ export interface AssociationDefinition {
   };
 }
 
-export interface AssociationsFile {
+export interface RelationshipTypesFile {
   version: number;
-  associations: Record<string, AssociationDefinition>;
+  relationshipTypes: Record<string, RelationshipTypeDefinition>;
 }
 
 export interface DynamicPropertyFileEntry {

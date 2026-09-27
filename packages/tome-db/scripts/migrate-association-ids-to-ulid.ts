@@ -11,19 +11,19 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { monotonicFactory } from "ulid";
 import {
-  associationsFilePath,
+  relationshipTypesFilePath,
   dynamicPropertiesFilePath,
   viewsFilePath,
   relationshipsFilePath,
   tableSchemasFilePath,
-  isAssociationId,
-  normalizeAssociationId,
-  parseAssociationsFile,
+  isRelationshipTypeId,
+  normalizeRelationshipTypeId,
+  parseRelationshipTypesFile,
   parseRelationshipsFile,
   serializeRelationshipsFile,
   parseTableSchemasFile,
   serializeTableSchemasFile,
-  serializeAssociationsFile,
+  serializeRelationshipTypesFile,
   parseViewsFile,
   serializeViewsFile,
   isGeneratedViewRecord,
@@ -32,17 +32,17 @@ import {
 
 const mint = monotonicFactory();
 
-function mintAssociationId(): string {
+function mintRelationshipTypeId(): string {
   return mint().toUpperCase();
 }
 
-function remapAssociationRef(
+function remapRelationshipTypeRef(
   value: string,
   slugToUlid: Map<string, string>,
   path: string,
 ): string {
-  const trimmed = normalizeAssociationId(value);
-  if (isAssociationId(trimmed)) return trimmed;
+  const trimmed = normalizeRelationshipTypeId(value);
+  if (isRelationshipTypeId(trimmed)) return trimmed;
   const mapped = slugToUlid.get(trimmed);
   if (!mapped) {
     throw new Error(`${path}: unknown association slug "${value}"`);
@@ -55,7 +55,7 @@ function remapRelationships(
   slugToUlid: Map<string, string>,
 ): RelationshipEntry[] {
   return entries.map((entry) => {
-    const mapped = slugToUlid.get(entry.type) ?? (isAssociationId(entry.type) ? entry.type : null);
+    const mapped = slugToUlid.get(entry.type) ?? (isRelationshipTypeId(entry.type) ? entry.type : null);
     if (!mapped) {
       throw new Error(`No ULID mapping for relationship type "${entry.type}"`);
     }
@@ -63,37 +63,37 @@ function remapRelationships(
   });
 }
 
-export function migrateAssociationIdsToUlid(contentDir: string): {
+export function migrateRelationshipTypeIdsToUlid(contentDir: string): {
   mapped: number;
   relationships: number;
 } {
-  const associationsPath = associationsFilePath(contentDir);
+  const associationsPath = relationshipTypesFilePath(contentDir);
   const data = JSON.parse(readFileSync(associationsPath, "utf-8")) as {
     version: number;
     associations: Record<string, unknown>;
   };
-  if (!data.associations || typeof data.associations !== "object") {
+  if (!data.relationshipTypes || typeof data.relationshipTypes !== "object") {
     throw new Error("associations.json: associations must be an object");
   }
 
   const slugToUlid = new Map<string, string>();
-  for (const key of Object.keys(data.associations)) {
-    if (isAssociationId(key)) slugToUlid.set(key, key);
-    else slugToUlid.set(key, mintAssociationId());
+  for (const key of Object.keys(data.relationshipTypes)) {
+    if (isRelationshipTypeId(key)) slugToUlid.set(key, key);
+    else slugToUlid.set(key, mintRelationshipTypeId());
   }
 
-  const remappedAssociations: Record<string, unknown> = {};
-  for (const [slug, def] of Object.entries(data.associations)) {
-    remappedAssociations[slugToUlid.get(slug)!] = def;
+  const remappedRelationshipTypes: Record<string, unknown> = {};
+  for (const [slug, def] of Object.entries(data.relationshipTypes)) {
+    remappedRelationshipTypes[slugToUlid.get(slug)!] = def;
   }
   // Write remapped associations, then validate + normalize via formal serialize.
   writeFileSync(
     associationsPath,
-    `${JSON.stringify({ version: data.version, associations: remappedAssociations }, null, 2)}\n`,
+    `${JSON.stringify({ version: data.version, associations: remappedRelationshipTypes }, null, 2)}\n`,
     "utf-8",
   );
-  const parsedAssociations = parseAssociationsFile(readFileSync(associationsPath, "utf-8"));
-  writeFileSync(associationsPath, serializeAssociationsFile(parsedAssociations), "utf-8");
+  const parsedRelationshipTypes = parseRelationshipTypesFile(readFileSync(associationsPath, "utf-8"));
+  writeFileSync(associationsPath, serializeRelationshipTypesFile(parsedRelationshipTypes), "utf-8");
 
   const relPath = relationshipsFilePath(contentDir);
   const relRaw = JSON.parse(readFileSync(relPath, "utf-8")) as {
@@ -114,7 +114,7 @@ export function migrateAssociationIdsToUlid(contentDir: string): {
     for (let i = 0; i < table.columns.length; i++) {
       const col = table.columns[i]!;
       if (col.type === "relation" && typeof col.association === "string") {
-        col.association = remapAssociationRef(
+        col.association = remapRelationshipTypeRef(
           col.association,
           slugToUlid,
           `table-schemas.${tableId}.columns[${i}]`,
@@ -131,7 +131,7 @@ export function migrateAssociationIdsToUlid(contentDir: string): {
 
   const viewsPath = viewsFilePath(contentDir);
   const viewsFile = parseViewsFile(readFileSync(viewsPath, "utf-8"));
-  const layerAssociationFields: Array<[layer: string, field: string]> = [
+  const layerRelationshipTypeFields: Array<[layer: string, field: string]> = [
     ["scope", "memberToScopeComposite"],
     ["groups", "memberToGroupComposite"],
     ["groups", "groupToScopeComposite"],
@@ -139,10 +139,10 @@ export function migrateAssociationIdsToUlid(contentDir: string): {
   for (const view of viewsFile.views) {
     if (!isGeneratedViewRecord(view)) continue;
     const presentation = view.presentation as Record<string, unknown>;
-    for (const [layerKey, field] of layerAssociationFields) {
+    for (const [layerKey, field] of layerRelationshipTypeFields) {
       const layer = presentation[layerKey] as Record<string, unknown> | undefined;
       if (!layer || typeof layer[field] !== "string") continue;
-      layer[field] = remapAssociationRef(
+      layer[field] = remapRelationshipTypeRef(
         layer[field] as string,
         slugToUlid,
         `views.${view.nodeId}.presentation.${layerKey}.${field}`,
@@ -167,13 +167,13 @@ export function migrateAssociationIdsToUlid(contentDir: string): {
     for (const key of compositeParamKeys) {
       const value = entry.params[key];
       if (typeof value === "string") {
-        entry.params[key] = remapAssociationRef(value, slugToUlid, `dynamic-properties.${key}`);
+        entry.params[key] = remapRelationshipTypeRef(value, slugToUlid, `dynamic-properties.${key}`);
       }
     }
   }
   writeFileSync(dynamicPath, `${JSON.stringify(dynamicRaw, null, 2)}\n`, "utf-8");
 
-  console.log("Association slug → ULID map:");
+  console.log("Relationship type slug → ULID map:");
   for (const [slug, ulid] of [...slugToUlid.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
     if (slug !== ulid) console.log(`  ${slug} → ${ulid}`);
   }
@@ -192,7 +192,7 @@ function main(): void {
     process.exit(1);
   }
   const contentDir = resolve(process.argv[2]);
-  const result = migrateAssociationIdsToUlid(contentDir);
+  const result = migrateRelationshipTypeIdsToUlid(contentDir);
   console.log(
     `Migrated ${result.mapped} associations; rewrote ${result.relationships} relationships.`,
   );

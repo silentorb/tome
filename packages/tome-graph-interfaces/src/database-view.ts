@@ -31,7 +31,7 @@ export interface DatabaseColumnDef {
   relationType?: string;
   /** Storage composite from associations.json when type is `relation`. */
   relationshipCompositeType?: string;
-  /** Association endpoint index this column hosts. */
+  /** Relationship type endpoint index this column hosts. */
   relationEndpoint?: 0 | 1;
   /** @deprecated Use relationshipCompositeType + registry endpoints. */
   targetDatabaseId?: string;
@@ -45,11 +45,11 @@ export interface DatabaseViewDetail {
   /** @deprecated Use tabs.items */
   views: string[];
   tabs: TableTabsDetail;
-  /** Set-trait association ULID from views.json. */
-  viewAssociation: string;
+  /** Set-trait relationship type ULID from views.json. */
+  viewRelationshipType: string;
   /** Member-side projection type (`ULID:1`) for unlink/move against this set. */
   memberSidePerspective: string;
-  /** Section heading from association perspective labels, else "Contents". */
+  /** Section heading from relationship type perspective labels, else "Contents". */
   sectionTitle: string;
   /** Ordered data column keys before per-view visibility filtering. */
   allColumns: string[];

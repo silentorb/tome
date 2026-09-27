@@ -6,8 +6,8 @@ import {
   rmSync,
 } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { isSetTraitComposite } from "../association-traits";
-import { loadAssociationsFromContent } from "../associations/load";
+import { isSetTraitComposite } from "../relationship-type-traits";
+import { loadRelationshipTypesFromContent } from "../relationship-types/load";
 import {
   CONTENT_NODES_SUBDIR,
   CONTENT_RELATIONSHIPS_SUBDIR,
@@ -94,7 +94,7 @@ function moveFlatDataNodesToLive(contentDir: string): number {
 }
 
 function listArchiveHubMemberIds(store: ContentStore, hubId: string): string[] {
-  const registry = loadAssociationsFromContent(store.contentDir);
+  const registry = loadRelationshipTypesFromContent(store.contentDir);
   const members = new Set<string>();
   for (const entry of store.readRelationshipsFile().relationships) {
     if (!isSetTraitComposite(registry, entry.type)) continue;

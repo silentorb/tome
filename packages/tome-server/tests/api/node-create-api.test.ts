@@ -6,7 +6,7 @@ import {
   seedTestNode,
   seedTestTableSchema,
   TEST_HOME_NODE_ID,
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   projectionTypeForEndpoint,
 } from "tome-db/content/test-helpers";
 import { registerBidirectionalType } from "tome-db/content";
@@ -17,14 +17,14 @@ const databaseId = "0000000000000000000000001X";
 
 describe("node create API", () => {
   const fixture = createTestContentFixture("tome-create-api-");
-  let featuresAssociationId = "";
+  let featuresRelationshipTypeId = "";
   let featuresType = "";
 
   beforeAll(() => {
-    const registry = fixture.ctx.store.readAssociationsFile();
-    featuresAssociationId = registerBidirectionalType(registry, "Features", "Targets");
-    featuresType = projectionTypeForEndpoint(featuresAssociationId, 0);
-    fixture.ctx.store.writeAssociationsFile(registry);
+    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    featuresRelationshipTypeId = registerBidirectionalType(registry, "Features", "Targets");
+    featuresType = projectionTypeForEndpoint(featuresRelationshipTypeId, 0);
+    fixture.ctx.store.writeRelationshipTypesFile(registry);
   });
 
   seedTestNode(fixture, {
@@ -95,7 +95,7 @@ describe("node create API", () => {
     const rel = fixture.ctx.store.findRelationship(
       payload.node.id,
       databaseId,
-      TEST_MEMBER_OF_ASSOCIATION_ID,
+      TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
     );
     expect(rel).not.toBeNull();
   });
@@ -113,10 +113,10 @@ describe("connections API", () => {
   let featuresType = "";
 
   beforeAll(() => {
-    const registry = fixture.ctx.store.readAssociationsFile();
-    const featuresAssociationId = registerBidirectionalType(registry, "Features", "Targets");
-    featuresType = projectionTypeForEndpoint(featuresAssociationId, 0);
-    fixture.ctx.store.writeAssociationsFile(registry);
+    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    const featuresRelationshipTypeId = registerBidirectionalType(registry, "Features", "Targets");
+    featuresType = projectionTypeForEndpoint(featuresRelationshipTypeId, 0);
+    fixture.ctx.store.writeRelationshipTypesFile(registry);
   });
 
   seedTestNode(fixture, { id: linkSourceId, properties: { title: "Link source" } });

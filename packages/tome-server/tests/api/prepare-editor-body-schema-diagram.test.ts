@@ -9,7 +9,7 @@ import {
   serializeSchemaFile,
 } from "tome-db";
 import {
-  serializeAssociationsFile,
+  serializeRelationshipTypesFile,
 } from "tome-db/content";
 import {
   createTestContentFixture,
@@ -18,7 +18,7 @@ import {
   seedTestWorkspace,
   TEST_HOME_NODE_ID,
 } from "tome-db/content/test-helpers";
-import { contentModelDir, associationsFilePath, schemaFilePath } from "tome-db/content";
+import { contentModelDir, relationshipTypesFilePath, schemaFilePath } from "tome-db/content";
 import { createTestApiFromContent } from "./test-api-setup";
 
 const nodeId = "0000000000000000000000002M";
@@ -108,10 +108,10 @@ describe("prepare-editor-body API — schema diagram", () => {
   invalidateTableSchemasCache();
 
   writeFileSync(
-    associationsFilePath(fixture.ctx.store.contentDir),
-    serializeAssociationsFile({
+    relationshipTypesFilePath(fixture.ctx.store.contentDir),
+    serializeRelationshipTypesFile({
       version: 1,
-      associations: {
+      relationshipTypes: {
         "000000000000000000000000A1": {
           perspectives: ["members", "member_of"],
           traits: ["set"],

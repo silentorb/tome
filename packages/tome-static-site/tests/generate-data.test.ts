@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
-import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, seedTestViews, seedTestWorkspace, TEST_STATIC_SITE_HOME_NODE_ID, type TestContentFixture, TEST_MEMBER_OF_ASSOCIATION_ID } from "tome-db/content";
+import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, seedTestViews, seedTestWorkspace, TEST_STATIC_SITE_HOME_NODE_ID, type TestContentFixture, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID } from "tome-db/content";
 import { invalidateRedirectsCache } from "tome-flatfile";
 import { writeSiteData, defaultSiteDataPath } from "../src/generate-data";
 import { tabPayloadKey } from "../src/lib/static-export";
@@ -50,14 +50,14 @@ describe("writeSiteData", () => {
         {
           id: "default",
           nodeId: typeId,
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "Default",
           sorts: [{ column: "name", direction: "asc" }],
         },
         {
           id: "all",
           nodeId: typeId,
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "All",
           sorts: [{ column: "name", direction: "desc" }],
         },

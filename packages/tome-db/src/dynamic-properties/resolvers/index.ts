@@ -1,6 +1,6 @@
 import type { Relationship } from "tome-graph-interfaces";
 import { resolveContentPath } from "tome-flatfile";
-import { loadAssociationsFromContent } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import { setTraitProjectionTypes } from "tome-flatfile";
 import { priorityWeight } from "../../property-enums";
 import type { DynamicResolverContext } from "../registry";
@@ -220,7 +220,7 @@ export function buildWeightedUsePrefetch(
 
   const priorityByFeature = new Map<string, number>();
   if (featuresTableId) {
-    const registry = loadAssociationsFromContent(resolveContentPath());
+    const registry = loadRelationshipTypesFromContent(resolveContentPath());
     for (const type of setTraitProjectionTypes(registry)) {
       for (const connection of listRelationshipsToTarget(ctx.db, featuresTableId, type)) {
         priorityByFeature.set(connection.sourceNodeId, priorityWeight(connection.properties.priority));

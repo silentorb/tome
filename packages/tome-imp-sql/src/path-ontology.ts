@@ -11,9 +11,9 @@ import type {
   PathOntology,
 } from "imp-pathing";
 import { bindSemanticPath, mapPathOntology } from "imp-pathing";
-import type { AssociationsFile, TableSchemasFile } from "tome-flatfile";
+import type { RelationshipTypesFile, TableSchemasFile } from "tome-flatfile";
 import {
-  normalizeAssociationId,
+  normalizeRelationshipTypeId,
   targetTypeIdForRelationColumn,
 } from "tome-flatfile";
 
@@ -81,7 +81,7 @@ function seedPromoted(table: Record<string, OntologyBinding>, typeId: string): v
  * opposite endpoint's typeId. Fails if a type context maps the same token to both kinds.
  */
 export function createTomePathOntology(
-  associations: AssociationsFile,
+  relationshipTypes: RelationshipTypesFile,
   tableSchemas: TableSchemasFile,
 ): PathOntology {
   const types: Record<string, Record<string, OntologyBinding>> = {};
@@ -100,7 +100,7 @@ export function createTomePathOntology(
     ensureType(typeId);
   }
 
-  for (const def of Object.values(associations.associations)) {
+  for (const def of Object.values(relationshipTypes.relationshipTypes)) {
     const ends = def.endpoints;
     if (!ends) continue;
     ensureType(ends[0].typeId);
@@ -111,8 +111,8 @@ export function createTomePathOntology(
     const table = ensureType(typeId);
     for (const col of schema.columns) {
       if (col.type === "relation") {
-        const association = normalizeAssociationId(col.association);
-        const nextType = targetTypeIdForRelationColumn(associations, typeId, col);
+        const association = normalizeRelationshipTypeId(col.association);
+        const nextType = targetTypeIdForRelationColumn(relationshipTypes, typeId, col);
         if (!nextType) {
           throw new Error(
             `PathOntology: relation column "${col.key}" on type "${typeId}" has no opposite endpoint typeId`,

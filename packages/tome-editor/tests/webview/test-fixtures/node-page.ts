@@ -44,7 +44,7 @@ export function makeDatabaseViewDetail(
     views,
     view,
     tabs,
-    viewAssociation: "members",
+    viewRelationshipType: "members",
     memberSidePerspective: "member_of",
     sectionTitle: "Contents",
     allColumns: ["priority"],

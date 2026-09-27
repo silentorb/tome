@@ -2,7 +2,7 @@ import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import { listRelationshipsFromSource } from "../graph-store/relationship-read";
 import {
   isOrderedTraitComposite,
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   memberSideProjectionType,
   orderedPropertyName,
   resolveContentPath,
@@ -23,10 +23,10 @@ function scopeMembershipSortKey(
   scopeNodeId: string,
   contentDir: string,
 ): number {
-  const registry = loadAssociationsFromContent(contentDir);
+  const registry = loadRelationshipTypesFromContent(contentDir);
   for (const composite of typesWithTrait(registry, SET_TRAIT)) {
     if (!isOrderedTraitComposite(registry, composite)) continue;
-    const def = registry.associations[composite];
+    const def = registry.relationshipTypes[composite];
     if (!def) continue;
     const memberProjection = memberSideProjectionType(registry, composite);
     const property = orderedPropertyName(def);

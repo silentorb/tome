@@ -3,8 +3,8 @@
  * Tokens are table-schema relation column keys (not perspective labels).
  */
 
-import type { AssociationsFile, TableSchemasFile } from "tome-flatfile";
-import { normalizeAssociationId } from "tome-flatfile";
+import type { RelationshipTypesFile, TableSchemasFile } from "tome-flatfile";
+import { normalizeRelationshipTypeId } from "tome-flatfile";
 
 export type PathHopTypeTable = {
   id: string;
@@ -24,7 +24,7 @@ export type PathHopOptions = {
 };
 
 export function buildPathHopOptions(
-  associations: AssociationsFile,
+  relationshipTypes: RelationshipTypesFile,
   tableSchemas: TableSchemasFile,
   typeTitles?: ReadonlyMap<string, string> | Readonly<Record<string, string>>,
 ): PathHopOptions {
@@ -43,8 +43,8 @@ export function buildPathHopOptions(
     const options: PathHopRelationOption[] = [];
     for (const col of table.columns) {
       if (col.type !== "relation") continue;
-      const association = normalizeAssociationId(col.association);
-      if (!associations.associations[association]) continue;
+      const association = normalizeRelationshipTypeId(col.association);
+      if (!relationshipTypes.relationshipTypes[association]) continue;
       options.push({
         token: col.key,
         label: col.name,

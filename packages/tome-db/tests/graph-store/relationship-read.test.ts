@@ -7,7 +7,7 @@ import {
   seedTestNode,
   seedTestRelationships,
   TEST_HOME_NODE_ID,
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
 } from "tome-db/content/test-helpers";
 import { openFlatfileQueryableGraphStore } from "../../src/graph-store/composed-graph-store";
 import {
@@ -51,8 +51,8 @@ describe("FlatfileQueryableGraphStore", () => {
       const store = openFlatfileQueryableGraphStore({
         contentPath: fixture.ctx.store.contentDir,
       });
-      const setProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 0);
-      const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+      const setProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 0);
+      const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
 
       const fromMember = listRelationshipsFromSource(store, memberId, memberProjection);
       expect(fromMember).toHaveLength(1);

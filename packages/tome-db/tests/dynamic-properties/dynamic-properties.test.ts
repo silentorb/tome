@@ -9,7 +9,7 @@ import { invalidateSchemaCache } from "tome-flatfile";
 import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { getDatabaseViewDetail } from "../../src/database-view";
-import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestDynamicProperties, seedTestIncludes, seedTestNode, seedTestRelationships, writeTestSetAssociations, TEST_MEMBER_OF_ASSOCIATION_ID, TEST_SCENES_PRODUCT_ASSOCIATION_ID, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID } from "../../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestDynamicProperties, seedTestIncludes, seedTestNode, seedTestRelationships, writeTestSetRelationshipTypes, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID, TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID } from "../../src/content/test-helpers";
 import {
   buildAllSceneCountPrefetch,
   buildSceneCountByProductPrefetch,
@@ -23,8 +23,8 @@ import {
 
 const THEME_ASSOCIATION_ID = "000000000000000000000000TH";
 const SCENES_EDGE = "SCENES";
-const PRODUCT_EDGE = projectionTypeForEndpoint(TEST_SCENES_PRODUCT_ASSOCIATION_ID, 0);
-const FEATURES_EDGE = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0);
+const PRODUCT_EDGE = projectionTypeForEndpoint(TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID, 0);
+const FEATURES_EDGE = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0);
 const THEME_EDGE = projectionTypeForEndpoint(THEME_ASSOCIATION_ID, 0);
 
 const LEGACY_CHARACTER_SCENE_PARAMS = {
@@ -72,7 +72,7 @@ describe("dynamic-properties resolvers", () => {
     const contentDir = join(dir, "content");
     mkdirSync(contentDir, { recursive: true });
     process.env.TOME_CONTENT_PATH = contentDir;
-    writeTestSetAssociations(contentDir);
+    writeTestSetRelationshipTypes(contentDir);
     const store = new ContentStore(contentDir);
     store.writeDynamicPropertiesFile(
       fileFromSeedInputs(
@@ -123,7 +123,7 @@ describe("dynamic-properties resolvers", () => {
     db.upsertNode(WONDERLAND, { title: "Wonderland" });
 
     db.upsertNode(character, { title: "James" });
-    db.upsertRelationship(character, CHAR_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship(character, CHAR_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
 
     db.upsertNode(scene1, { title: "Scene A" });
     db.upsertNode(scene2, { title: "Scene B" });
@@ -136,12 +136,12 @@ describe("dynamic-properties resolvers", () => {
     db.upsertRelationship(scene3, OTHER_PRODUCT, PRODUCT_EDGE, {});
 
     db.upsertNode(inspiration, { title: "Test Inspiration" });
-    db.upsertRelationship(inspiration, INSP_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship(inspiration, INSP_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
 
     db.upsertNode(featureWonder, { title: "Adventure" });
     db.upsertNode(featurePlain, { title: "Plain" });
-    db.upsertRelationship(featureWonder, FEAT_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { priority: "Medium" });
-    db.upsertRelationship(featurePlain, FEAT_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { priority: "High" });
+    db.upsertRelationship(featureWonder, FEAT_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { priority: "Medium" });
+    db.upsertRelationship(featurePlain, FEAT_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { priority: "High" });
     db.upsertRelationship(inspiration, featureWonder, FEATURES_EDGE, {});
     db.upsertRelationship(inspiration, featurePlain, FEATURES_EDGE, {});
     db.upsertRelationship(featureWonder, WONDERLAND, THEME_EDGE, {});
@@ -288,7 +288,7 @@ describe("dynamic-properties with composite relationships", () => {
         b: featureWonder,
         typeFromA: "Inspirations",
         typeFromB: "Features",
-        associationId: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+        relationshipTypeId: TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
         properties: {},
       },
       {
@@ -296,7 +296,7 @@ describe("dynamic-properties with composite relationships", () => {
         b: featurePlain,
         typeFromA: "Inspirations",
         typeFromB: "Features",
-        associationId: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+        relationshipTypeId: TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
         properties: {},
       },
     ]);
@@ -306,7 +306,7 @@ describe("dynamic-properties with composite relationships", () => {
         b: WONDERLAND,
         typeFromA: "Theme",
         typeFromB: "Theme",
-        associationId: THEME_ASSOCIATION_ID,
+        relationshipTypeId: THEME_ASSOCIATION_ID,
         properties: {},
       },
     ]);
@@ -414,12 +414,12 @@ describe("dynamic-properties character includes with product edges (Marloth regr
       { source: OTHER_PRODUCT, target: PRODUCTS_DB, type: "ordered_member_of" },
     ]);
     seedTestCompositeRelationships(fixture, [
-      { a: scene1, b: character, typeFromA: "Scenes", typeFromB: "Characters", associationId: "000000000000000000000000B9", properties: {} },
-      { a: scene2, b: character, typeFromA: "Scenes", typeFromB: "Characters", associationId: "000000000000000000000000B9", properties: {} },
+      { a: scene1, b: character, typeFromA: "Scenes", typeFromB: "Characters", relationshipTypeId: "000000000000000000000000B9", properties: {} },
+      { a: scene2, b: character, typeFromA: "Scenes", typeFromB: "Characters", relationshipTypeId: "000000000000000000000000B9", properties: {} },
       { a: TWOLD, b: character, typeFromA: "Products", typeFromB: "Characters", properties: {} },
-      { a: scene1, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
-      { a: scene2, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
-      { a: scene2, b: OTHER_PRODUCT, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
+      { a: scene1, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID, properties: {} },
+      { a: scene2, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID, properties: {} },
+      { a: scene2, b: OTHER_PRODUCT, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID, properties: {} },
     ]);
   });
 
@@ -526,12 +526,12 @@ describe("dynamic-properties character composite relationships", () => {
       { source: character, target: CHAR_DB, type: "member_of", properties: { row_index: 0 } },
     ]);
     seedTestCompositeRelationships(fixture, [
-      { a: scene1, b: character, typeFromA: "Scenes", typeFromB: "Characters", associationId: "000000000000000000000000B9", properties: {} },
-      { a: scene2, b: character, typeFromA: "Scenes", typeFromB: "Characters", associationId: "000000000000000000000000B9", properties: {} },
-      { a: scene3, b: character, typeFromA: "Scenes", typeFromB: "Characters", associationId: "000000000000000000000000B9", properties: {} },
-      { a: scene1, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
-      { a: scene2, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
-      { a: scene3, b: OTHER_PRODUCT, typeFromA: "Scenes", typeFromB: "Product", associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID, properties: {} },
+      { a: scene1, b: character, typeFromA: "Scenes", typeFromB: "Characters", relationshipTypeId: "000000000000000000000000B9", properties: {} },
+      { a: scene2, b: character, typeFromA: "Scenes", typeFromB: "Characters", relationshipTypeId: "000000000000000000000000B9", properties: {} },
+      { a: scene3, b: character, typeFromA: "Scenes", typeFromB: "Characters", relationshipTypeId: "000000000000000000000000B9", properties: {} },
+      { a: scene1, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID, properties: {} },
+      { a: scene2, b: TWOLD, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID, properties: {} },
+      { a: scene3, b: OTHER_PRODUCT, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID, properties: {} },
     ]);
   });
 

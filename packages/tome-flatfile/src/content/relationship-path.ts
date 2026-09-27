@@ -1,13 +1,13 @@
 import { createHash } from "node:crypto";
 import { relationshipKeyBytes } from "./ulid-bytes";
-import { normalizeAssociationId } from "./associations-file";
+import { normalizeRelationshipTypeId } from "./relationship-types-file";
 
 /**
  * SHA-256 of authored composite key bytes (`a‖b‖type`), as 64 uppercase hex chars.
  * Order-sensitive — matches {@link relationshipRecordId} authored tuple order.
  */
 export function relationshipDigest(a: string, b: string, type: string): string {
-  const normalizedType = normalizeAssociationId(type);
+  const normalizedType = normalizeRelationshipTypeId(type);
   const key = relationshipKeyBytes(a, b, normalizedType);
   return createHash("sha256").update(key).digest("hex").toUpperCase();
 }

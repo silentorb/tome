@@ -2,23 +2,23 @@ import type { RelationshipReadStore } from "./graph-store/relationship-read";
 import { readStoreGetNode, readStoreListNodeIds } from "./graph-store/relationship-read";
 import { typeIdsForInstance } from "./node-capabilities";
 import {
-  UnknownAssociationError,
+  UnknownRelationshipTypeError,
   parseProjectionType,
   projectionTypeForEndpoint,
-  requireAssociationId,
+  requireRelationshipTypeId,
   allowedTargetTypeIdsForEndpoint,
-  associationRulesFromRegistry,
+  relationshipTypeRulesFromRegistry,
   hostEndpointIndex,
   projectionTypeForHostTable,
   relationSectionSupportsLinkExisting,
   resolveEndpointTypeIds,
   targetTypeIdForHostTable,
 } from "tome-flatfile";
-import type { AssociationDefinition, AssociationsFile } from "tome-flatfile";
+import type { RelationshipTypeDefinition, RelationshipTypesFile } from "tome-flatfile";
 
 export {
   allowedTargetTypeIdsForEndpoint,
-  associationRulesFromRegistry,
+  relationshipTypeRulesFromRegistry,
   hostEndpointIndex,
   projectionTypeForHostTable,
   relationSectionSupportsLinkExisting,
@@ -26,14 +26,14 @@ export {
   targetTypeIdForHostTable,
 };
 
-export interface AssociationRuleEntry {
+export interface RelationshipTypeRuleEntry {
   id: string;
   sourceTypeId: string;
   type: string;
   allowedTargetTypeIds: string[];
 }
 
-export interface AssociationRuleContext {
+export interface RelationshipTypeRuleContext {
   compositeType: string;
   type: string;
   allowedTargetTypeIds: string[];
@@ -41,32 +41,32 @@ export interface AssociationRuleContext {
 
 /**
  * Resolve endpoint rules for an outgoing link from `sourceNodeId`.
- * `typeOrProjection` is an association ULID or directed projection (`ULID:0` / `ULID:1`).
+ * `typeOrProjection` is a relationship type ULID or directed projection (`ULID:0` / `ULID:1`).
  */
-export function associationRuleContext(
-  registry: AssociationsFile,
+export function relationshipTypeRuleContext(
+  registry: RelationshipTypesFile,
   db: RelationshipReadStore,
   sourceNodeId: string,
   typeOrProjection: string,
   contentDir?: string,
-): AssociationRuleContext | null {
+): RelationshipTypeRuleContext | null {
   const parsed = parseProjectionType(typeOrProjection);
   let composite: string;
   let endpointIndex: 0 | 1;
   try {
     if (parsed) {
-      composite = requireAssociationId(registry, parsed.associationId);
+      composite = requireRelationshipTypeId(registry, parsed.relationshipTypeId);
       endpointIndex = parsed.endpointIndex;
     } else {
-      composite = requireAssociationId(registry, typeOrProjection);
+      composite = requireRelationshipTypeId(registry, typeOrProjection);
       endpointIndex = 0;
     }
   } catch (err) {
-    if (err instanceof UnknownAssociationError) return null;
+    if (err instanceof UnknownRelationshipTypeError) return null;
     throw err;
   }
 
-  const def = registry.associations[composite];
+  const def = registry.relationshipTypes[composite];
   if (!def?.endpoints) return null;
 
   const sourceTypes = typeIdsForInstance(db, sourceNodeId, contentDir);
@@ -84,7 +84,7 @@ export function associationRuleContext(
 }
 
 export function endpointsMatchInstances(
-  def: AssociationDefinition,
+  def: RelationshipTypeDefinition,
   db: RelationshipReadStore,
   nodeA: string,
   nodeB: string,
@@ -102,13 +102,13 @@ export function endpointsMatchInstances(
 
 /** Resolve storage composite for an edge from endpoint instance types. */
 export function matchCompositeForInstances(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   db: RelationshipReadStore,
   nodeA: string,
   nodeB: string,
   contentDir?: string,
 ): string | null {
-  for (const [composite, def] of Object.entries(registry.associations)) {
+  for (const [composite, def] of Object.entries(registry.relationshipTypes)) {
     if (!def.endpoints) continue;
     if (endpointsMatchInstances(def, db, nodeA, nodeB, contentDir)) return composite;
   }

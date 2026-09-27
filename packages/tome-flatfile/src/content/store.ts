@@ -30,19 +30,19 @@ import {
   serializeRelationshipEntry,
 } from "./relationships-file";
 import {
-  type AssociationsFile,
-  emptyAssociationsFile,
-  normalizeAssociationId,
-  parseAssociationsFile,
+  type RelationshipTypesFile,
+  emptyRelationshipTypesFile,
+  normalizeRelationshipTypeId,
+  parseRelationshipTypesFile,
   parseProjectionType,
   projectionTypeForEndpoint,
-  serializeAssociationsFile,
-} from "./associations-file";
-import { LinkResolutionError, resolveAssociationIdForLink } from "./resolve-composite-for-link";
+  serializeRelationshipTypesFile,
+} from "./relationship-types-file";
+import { LinkResolutionError, resolveRelationshipTypeIdForLink } from "./resolve-composite-for-link";
 import {
   isSetTraitType,
   setRoleIndices,
-} from "../association-traits";
+} from "../relationship-type-traits";
 import { collectSetNodeIds } from "../set-nodes";
 import {
   type DynamicPropertiesFile,
@@ -87,7 +87,7 @@ import {
   contentNodesDir,
   contentRelationshipsArchiveDir,
   contentRelationshipsDir,
-  associationsFilePath,
+  relationshipTypesFilePath,
   dynamicPropertiesFilePath,
   viewsFilePath,
   tableSchemasFilePath,
@@ -102,26 +102,26 @@ export const DEFAULT_CORPUS_ID = "default";
 
 const DEBOUNCE_MS = 200;
 
-function associationIdFromTypeArg(
-  registry: AssociationsFile,
-  associationOrProjection: string,
+function relationshipTypeIdFromTypeArg(
+  registry: RelationshipTypesFile,
+  relationshipTypeOrProjection: string,
 ): string | null {
-  const trimmed = associationOrProjection.trim();
+  const trimmed = relationshipTypeOrProjection.trim();
   const parsed = parseProjectionType(trimmed);
-  if (parsed) return parsed.associationId;
-  const id = normalizeAssociationId(trimmed);
-  if (registry.associations[id]) return id;
+  if (parsed) return parsed.relationshipTypeId;
+  const id = normalizeRelationshipTypeId(trimmed);
+  if (registry.relationshipTypes[id]) return id;
   return null;
 }
 
-function entryMatchesAssociation(
-  registry: AssociationsFile,
+function entryMatchesRelationshipType(
+  registry: RelationshipTypesFile,
   entry: RelationshipEntry,
-  associationOrProjection: string,
+  relationshipTypeOrProjection: string,
 ): boolean {
-  const associationId = associationIdFromTypeArg(registry, associationOrProjection);
-  if (!associationId) return false;
-  return normalizeAssociationId(entry.type) === associationId;
+  const relationshipTypeId = relationshipTypeIdFromTypeArg(registry, relationshipTypeOrProjection);
+  if (!relationshipTypeId) return false;
+  return normalizeRelationshipTypeId(entry.type) === relationshipTypeId;
 }
 
 /**
@@ -129,21 +129,21 @@ function entryMatchesAssociation(
  * When omitted, set-trait heuristics place a set node at the parent index;
  * otherwise source stays at index 0.
  */
-function orderedEndpointsForAssociation(
-  registry: AssociationsFile,
+function orderedEndpointsForRelationshipType(
+  registry: RelationshipTypesFile,
   composite: string,
   source: string,
   target: string,
-  associationOrProjection: string,
+  relationshipTypeOrProjection: string,
   contentDir: string,
 ): { a: string; b: string } {
-  const parsed = parseProjectionType(associationOrProjection);
+  const parsed = parseProjectionType(relationshipTypeOrProjection);
   if (parsed) {
     if (parsed.endpointIndex === 1) return { a: target, b: source };
     return { a: source, b: target };
   }
 
-  const def = registry.associations[normalizeAssociationId(composite)];
+  const def = registry.relationshipTypes[normalizeRelationshipTypeId(composite)];
   if (def && isSetTraitType(def)) {
     const { parentIndex, childIndex } = setRoleIndices(def);
     const setNodeIds = collectSetNodeIds(contentDir);
@@ -163,25 +163,25 @@ function orderedEndpointsForAssociation(
 }
 
 function projectionTypeForFind(
-  registry: AssociationsFile,
-  associationOrProjection: string,
+  registry: RelationshipTypesFile,
+  relationshipTypeOrProjection: string,
   source: string,
   target: string,
   contentDir: string,
 ): string {
-  const parsed = parseProjectionType(associationOrProjection);
-  if (parsed) return associationOrProjection.trim();
-  const associationId = associationIdFromTypeArg(registry, associationOrProjection);
-  if (!associationId) return associationOrProjection.trim();
-  const { a } = orderedEndpointsForAssociation(
+  const parsed = parseProjectionType(relationshipTypeOrProjection);
+  if (parsed) return relationshipTypeOrProjection.trim();
+  const relationshipTypeId = relationshipTypeIdFromTypeArg(registry, relationshipTypeOrProjection);
+  if (!relationshipTypeId) return relationshipTypeOrProjection.trim();
+  const { a } = orderedEndpointsForRelationshipType(
     registry,
-    associationId,
+    relationshipTypeId,
     source,
     target,
-    associationOrProjection,
+    relationshipTypeOrProjection,
     contentDir,
   );
-  return projectionTypeForEndpoint(associationId, a === source ? 0 : 1);
+  return projectionTypeForEndpoint(relationshipTypeId, a === source ? 0 : 1);
 }
 
 function atomicWrite(filePath: string, content: string): void {
@@ -195,7 +195,7 @@ function storeChangeKindForFilename(filename: string): StoreChangeKind {
   const base = basename(filename);
   if (NODE_FILE_PATTERN.test(base)) return "node";
   if (RELATIONSHIP_FILE_PATTERN.test(base)) return "relationships";
-  if (base === ASSOCIATIONS_FILENAME) return "associations";
+  if (base === ASSOCIATIONS_FILENAME) return "relationship-types";
   if (base === SCHEMA_FILENAME) return "schema";
   if (base === DYNAMIC_PROPERTIES_FILENAME) return "dynamic-properties";
   if (base === VIEWS_FILENAME) return "views";
@@ -582,7 +582,7 @@ export class ContentStore implements TomeDataStore {
     type: string,
     archived: boolean,
   ): { path: string; a: string; b: string; type: string } | null {
-    const normalized = normalizeAssociationId(type);
+    const normalized = normalizeRelationshipTypeId(type);
     const candidates: Array<[string, string]> = [
       [a, b],
       [b, a],
@@ -617,51 +617,51 @@ export class ContentStore implements TomeDataStore {
     return deleted;
   }
 
-  readAssociationsFile(): AssociationsFile {
-    const path = associationsFilePath(this.contentDir);
+  readRelationshipTypesFile(): RelationshipTypesFile {
+    const path = relationshipTypesFilePath(this.contentDir);
     try {
-      return parseAssociationsFile(readFileSync(path, "utf-8"));
+      return parseRelationshipTypesFile(readFileSync(path, "utf-8"));
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-        return emptyAssociationsFile();
+        return emptyRelationshipTypesFile();
       }
       throw err;
     }
   }
 
-  writeAssociationsFile(file: AssociationsFile): void {
-    atomicWrite(associationsFilePath(this.contentDir), serializeAssociationsFile(file));
+  writeRelationshipTypesFile(file: RelationshipTypesFile): void {
+    atomicWrite(relationshipTypesFilePath(this.contentDir), serializeRelationshipTypesFile(file));
   }
 
   findContentEntry(
     source: string,
     target: string,
-    associationOrProjection: string,
+    relationshipTypeOrProjection: string,
   ): RelationshipEntry | null {
-    const registry = this.readAssociationsFile();
-    const associationId = associationIdFromTypeArg(registry, associationOrProjection);
+    const registry = this.readRelationshipTypesFile();
+    const relationshipTypeId = relationshipTypeIdFromTypeArg(registry, relationshipTypeOrProjection);
 
-    if (associationId) {
-      const live = this.readRelationshipAt(source, target, associationId, false);
+    if (relationshipTypeId) {
+      const live = this.readRelationshipAt(source, target, relationshipTypeId, false);
       if (live) return live;
     }
 
     for (const entry of this.readRelationshipsFile().relationships) {
       if (!connectsEndpoints(entry, source, target)) continue;
-      if (entryMatchesAssociation(registry, entry, associationOrProjection)) {
+      if (entryMatchesRelationshipType(registry, entry, relationshipTypeOrProjection)) {
         return entry;
       }
     }
     return null;
   }
 
-  findRelationship(source: string, target: string, associationOrProjection: string) {
-    const entry = this.findContentEntry(source, target, associationOrProjection);
+  findRelationship(source: string, target: string, relationshipTypeOrProjection: string) {
+    const entry = this.findContentEntry(source, target, relationshipTypeOrProjection);
     if (!entry) return null;
-    const registry = this.readAssociationsFile();
+    const registry = this.readRelationshipTypesFile();
     const type = projectionTypeForFind(
       registry,
-      associationOrProjection,
+      relationshipTypeOrProjection,
       source,
       target,
       this.contentDir,
@@ -678,30 +678,30 @@ export class ContentStore implements TomeDataStore {
   upsertRelationship(
     source: string,
     target: string,
-    associationOrProjection: string,
+    relationshipTypeOrProjection: string,
     properties: Properties = {},
   ): void {
-    const registry = this.readAssociationsFile();
+    const registry = this.readRelationshipTypesFile();
     const live = this.readRelationshipsFile().relationships;
 
-    let composite = resolveAssociationIdForLink(
+    let composite = resolveRelationshipTypeIdForLink(
       registry,
       live,
       this.contentDir,
       source,
       target,
-      associationOrProjection,
+      relationshipTypeOrProjection,
     );
 
-    if (!registry.associations[composite]) {
-      throw new LinkResolutionError(associationOrProjection);
+    if (!registry.relationshipTypes[composite]) {
+      throw new LinkResolutionError(relationshipTypeOrProjection);
     }
 
     let existing = this.readRelationshipAt(source, target, composite, false);
     if (!existing) {
       for (const entry of live) {
         if (!connectsEndpoints(entry, source, target)) continue;
-        if (entryMatchesAssociation(registry, entry, associationOrProjection)) {
+        if (entryMatchesRelationshipType(registry, entry, relationshipTypeOrProjection)) {
           composite = entry.type;
           existing = entry;
           break;
@@ -720,12 +720,12 @@ export class ContentStore implements TomeDataStore {
       return;
     }
 
-    const { a, b } = orderedEndpointsForAssociation(
+    const { a, b } = orderedEndpointsForRelationshipType(
       registry,
       composite,
       source,
       target,
-      associationOrProjection,
+      relationshipTypeOrProjection,
       this.contentDir,
     );
     writeRelationshipEntryFile(
@@ -738,12 +738,12 @@ export class ContentStore implements TomeDataStore {
   mergeRelationshipProperties(
     source: string,
     target: string,
-    associationOrProjection: string,
+    relationshipTypeOrProjection: string,
     patch: Properties,
   ): void {
-    const existing = this.findRelationship(source, target, associationOrProjection);
+    const existing = this.findRelationship(source, target, relationshipTypeOrProjection);
     if (!existing) {
-      this.upsertRelationship(source, target, associationOrProjection, patch);
+      this.upsertRelationship(source, target, relationshipTypeOrProjection, patch);
       return;
     }
     const merged = { ...existing.properties };
@@ -751,33 +751,33 @@ export class ContentStore implements TomeDataStore {
       if (v === undefined) continue;
       merged[k] = v;
     }
-    this.upsertRelationship(source, target, associationOrProjection, merged);
+    this.upsertRelationship(source, target, relationshipTypeOrProjection, merged);
   }
 
   /** Replace relationship properties exactly (supports removing keys). */
   replaceRelationshipProperties(
     source: string,
     target: string,
-    associationOrProjection: string,
+    relationshipTypeOrProjection: string,
     properties: Properties,
   ): boolean {
-    const registry = this.readAssociationsFile();
+    const registry = this.readRelationshipTypesFile();
     const live = this.readRelationshipsFile().relationships;
 
-    const composite = resolveAssociationIdForLink(
+    const composite = resolveRelationshipTypeIdForLink(
       registry,
       live,
       this.contentDir,
       source,
       target,
-      associationOrProjection,
+      relationshipTypeOrProjection,
     );
 
     let existing = this.readRelationshipAt(source, target, composite, false);
     if (!existing) {
       for (const entry of live) {
         if (!connectsEndpoints(entry, source, target)) continue;
-        if (entryMatchesAssociation(registry, entry, associationOrProjection)) {
+        if (entryMatchesRelationshipType(registry, entry, relationshipTypeOrProjection)) {
           existing = entry;
           break;
         }
@@ -793,11 +793,11 @@ export class ContentStore implements TomeDataStore {
     return true;
   }
 
-  deleteRelationship(source: string, target: string, associationOrProjection: string): boolean {
-    const registry = this.readAssociationsFile();
-    const associationId = associationIdFromTypeArg(registry, associationOrProjection);
+  deleteRelationship(source: string, target: string, relationshipTypeOrProjection: string): boolean {
+    const registry = this.readRelationshipTypesFile();
+    const relationshipTypeId = relationshipTypeIdFromTypeArg(registry, relationshipTypeOrProjection);
 
-    if (associationId && this.deleteRelationshipFile(source, target, associationId)) {
+    if (relationshipTypeId && this.deleteRelationshipFile(source, target, relationshipTypeId)) {
       return true;
     }
 
@@ -807,7 +807,7 @@ export class ContentStore implements TomeDataStore {
       ...this.readArchivedRelationships(),
     ]) {
       if (!connectsEndpoints(entry, source, target)) continue;
-      if (!entryMatchesAssociation(registry, entry, associationOrProjection)) continue;
+      if (!entryMatchesRelationshipType(registry, entry, relationshipTypeOrProjection)) continue;
       if (this.deleteRelationshipFile(entry.a, entry.b, entry.type)) deleted = true;
     }
     return deleted;

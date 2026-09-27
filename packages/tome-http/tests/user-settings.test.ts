@@ -4,8 +4,8 @@ import {
   parseUserSettings,
   sequencingShowDependencyEdges,
   relationshipsOnlyActiveTargets,
-  relationshipsRecentAssociationTypes,
-  pushRecentAssociationType,
+  relationshipsRecentRelationshipTypes,
+  pushRecentRelationshipType,
   MAX_RECENT_ASSOCIATION_TYPES,
 } from "../src/user-settings";
 
@@ -47,24 +47,24 @@ describe("user-settings relationships picker prefs", () => {
     expect(reenabled.relationships).toBeUndefined();
   });
 
-  test("recentAssociationTypes are MRU and merge with onlyActive", () => {
-    expect(pushRecentAssociationType(["a:0"], "b:1")).toEqual(["b:1", "a:0"]);
+  test("recentRelationshipTypes are MRU and merge with onlyActive", () => {
+    expect(pushRecentRelationshipType(["a:0"], "b:1")).toEqual(["b:1", "a:0"]);
     const many = Array.from({ length: MAX_RECENT_ASSOCIATION_TYPES + 2 }, (_, i) => `t${i}:0`);
-    expect(pushRecentAssociationType(many.slice(1), many[0]!)).toHaveLength(
+    expect(pushRecentRelationshipType(many.slice(1), many[0]!)).toHaveLength(
       MAX_RECENT_ASSOCIATION_TYPES,
     );
 
     const withRecent = applyUserSettingsPatch(
       { version: 1 },
-      { relationships: { recentAssociationTypes: ["x:0"] } },
+      { relationships: { recentRelationshipTypes: ["x:0"] } },
     );
-    expect(relationshipsRecentAssociationTypes(withRecent)).toEqual(["x:0"]);
+    expect(relationshipsRecentRelationshipTypes(withRecent)).toEqual(["x:0"]);
 
     const withBoth = applyUserSettingsPatch(withRecent, {
       relationships: { onlyActiveTargets: false },
     });
     expect(withBoth.relationships).toEqual({
-      recentAssociationTypes: ["x:0"],
+      recentRelationshipTypes: ["x:0"],
       onlyActiveTargets: false,
     });
   });

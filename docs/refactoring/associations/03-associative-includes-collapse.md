@@ -1,5 +1,8 @@
 # B3 — Associative storage collapse (`includes`)
 
+> **Terminology (historical):** This inventory uses older “association” / composite naming. The preferred term is **relationship type** (registry definition: ULID + perspectives + traits + endpoints). On-disk files may still use `associations.json` / key `associations`.
+
+
 ## What it does
 
 Many cross-entity associations are **symmetric many-to-many** links. Rather than a separate storage composite per column perspective, numerous perspective slugs collapse to a **single storage bucket**: `includes`.
@@ -43,7 +46,7 @@ scenes_2, themes, theme, motivation
 [`packages/tome-db/src/content/store.ts`](../../../packages/tome-db/src/content/store.ts)
 
 - `entryMatchesLocalType` — if stored type is `includes`, match any includes perspective slug
-- `upsertRelationship` / `findRelationship` use `resolveAssociationIdForLink`
+- `upsertRelationship` / `findRelationship` use `resolveRelationshipTypeIdForLink`
 
 ### Schema rule lookup
 

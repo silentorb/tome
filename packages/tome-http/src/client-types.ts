@@ -109,12 +109,12 @@ export interface TomeHttpClient {
   ): Promise<RelationTableSection>;
   createRelationshipView(
     nodeId: string,
-    association: string,
+    relationshipTypeId: string,
     input: { name: string; sorts?: import("tome-graph-interfaces").ViewSortSpec[]; properties?: string[] },
   ): Promise<import("tome-graph-interfaces").ViewDefinition>;
   updateRelationshipView(
     nodeId: string,
-    association: string,
+    relationshipTypeId: string,
     viewId: string,
     input: {
       name?: string;
@@ -124,12 +124,12 @@ export interface TomeHttpClient {
   ): Promise<import("tome-graph-interfaces").ViewDefinition>;
   deleteRelationshipView(
     nodeId: string,
-    association: string,
+    relationshipTypeId: string,
     viewId: string,
   ): Promise<void>;
   patchRelationshipViews(
     nodeId: string,
-    association: string,
+    relationshipTypeId: string,
     input: {
       viewOrder?: string[];
       properties?: string[];

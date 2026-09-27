@@ -15,10 +15,10 @@ import type {
 import type { WorkspaceFile } from "../workspace/workspace-file";
 import { RELATIONSHIPS_FILE_VERSION, relationshipRecordId } from "./relationships-file";
 import {
-  emptyAssociationsFile,
-  normalizeAssociationId,
-  type AssociationsFile,
-} from "./associations-file";
+  emptyRelationshipTypesFile,
+  normalizeRelationshipTypeId,
+  type RelationshipTypesFile,
+} from "./relationship-types-file";
 import { emptyDynamicPropertiesFile } from "./dynamic-properties-file";
 import { emptyViewsFile } from "./views-file";
 import { emptyTableSchemasFile } from "./table-schemas-file";
@@ -123,18 +123,18 @@ export class CompositeStore implements TomeDataStore {
   }
 
   private validateModelUnions(): void {
-    const seenAssociations = new Map<string, { corpusId: string; def: string }>();
+    const seenRelationshipTypes = new Map<string, { corpusId: string; def: string }>();
     for (const store of this.stores) {
-      const file = store.readAssociationsFile();
-      for (const [assocId, def] of Object.entries(file.associations)) {
+      const file = store.readRelationshipTypesFile();
+      for (const [relationshipTypeId, def] of Object.entries(file.relationshipTypes)) {
         const serialized = JSON.stringify(def);
-        const prior = seenAssociations.get(assocId);
+        const prior = seenRelationshipTypes.get(relationshipTypeId);
         if (prior && prior.def !== serialized) {
           throw new CorpusConflictError(
-            `Association "${assocId}" differs between corpora "${prior.corpusId}" and "${store.corpusId}"`,
+            `Relationship type "${relationshipTypeId}" differs between corpora "${prior.corpusId}" and "${store.corpusId}"`,
           );
         }
-        seenAssociations.set(assocId, { corpusId: store.corpusId, def: serialized });
+        seenRelationshipTypes.set(relationshipTypeId, { corpusId: store.corpusId, def: serialized });
       }
     }
   }
@@ -174,7 +174,7 @@ export class CompositeStore implements TomeDataStore {
           {
             a: entry.a,
             b: entry.b,
-            type: normalizeAssociationId(entry.type),
+            type: normalizeRelationshipTypeId(entry.type),
             properties: entry.properties ?? {},
           },
           false,
@@ -370,7 +370,7 @@ export class CompositeStore implements TomeDataStore {
     const normalized: RelationshipEntry = {
       a: entry.a,
       b: entry.b,
-      type: normalizeAssociationId(entry.type),
+      type: normalizeRelationshipTypeId(entry.type),
       properties: entry.properties ?? {},
     };
     storeA.writeRelationshipEntry(normalized, archived);
@@ -406,37 +406,37 @@ export class CompositeStore implements TomeDataStore {
     return moved;
   }
 
-  readAssociationsFile(): AssociationsFile {
-    const merged = emptyAssociationsFile();
+  readRelationshipTypesFile(): RelationshipTypesFile {
+    const merged = emptyRelationshipTypesFile();
     for (const store of this.stores) {
-      const file = store.readAssociationsFile();
-      for (const [id, def] of Object.entries(file.associations)) {
-        merged.associations[id] = def;
+      const file = store.readRelationshipTypesFile();
+      for (const [id, def] of Object.entries(file.relationshipTypes)) {
+        merged.relationshipTypes[id] = def;
       }
     }
     return merged;
   }
 
-  writeAssociationsFile(file: AssociationsFile): void {
+  writeRelationshipTypesFile(file: RelationshipTypesFile): void {
     // Write only keys that already live on a corpus; new keys go to primary.
     const owned = new Map<string, string>();
     for (const store of this.stores) {
-      for (const id of Object.keys(store.readAssociationsFile().associations)) {
+      for (const id of Object.keys(store.readRelationshipTypesFile().relationshipTypes)) {
         owned.set(id, store.corpusId);
       }
     }
-    const byCorpus = new Map<string, AssociationsFile>();
+    const byCorpus = new Map<string, RelationshipTypesFile>();
     for (const store of this.stores) {
-      byCorpus.set(store.corpusId, emptyAssociationsFile());
+      byCorpus.set(store.corpusId, emptyRelationshipTypesFile());
     }
-    for (const [id, def] of Object.entries(file.associations)) {
+    for (const [id, def] of Object.entries(file.relationshipTypes)) {
       const corpusId = owned.get(id) ?? this.stores[0]!.corpusId;
       const target = byCorpus.get(corpusId)!;
-      target.associations[id] = def;
+      target.relationshipTypes[id] = def;
     }
     for (const store of this.stores) {
-      this.assertWritable(store, "write associations");
-      store.writeAssociationsFile(byCorpus.get(store.corpusId)!);
+      this.assertWritable(store, "write relationship types");
+      store.writeRelationshipTypesFile(byCorpus.get(store.corpusId)!);
     }
   }
 
@@ -487,7 +487,7 @@ export class CompositeStore implements TomeDataStore {
       {
         a: entry.a,
         b: entry.b,
-        type: normalizeAssociationId(entry.type),
+        type: normalizeRelationshipTypeId(entry.type),
         properties: entry.properties ?? {},
       },
       false,
@@ -530,7 +530,7 @@ export class CompositeStore implements TomeDataStore {
     const next: RelationshipEntry = {
       a: entry.a,
       b: entry.b,
-      type: normalizeAssociationId(entry.type),
+      type: normalizeRelationshipTypeId(entry.type),
       properties,
     };
     if (aCorpus === bCorpus) {

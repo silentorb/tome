@@ -18,15 +18,15 @@ export {
 } from "./relationship-path";
 export { ulidToBytes, relationshipKeyBytes } from "./ulid-bytes";
 export {
-  ASSOCIATIONS_FILE_VERSION,
-  UnknownAssociationError,
-  emptyAssociationsFile,
-  generateAssociationId,
-  isAssociationId,
-  normalizeAssociationId,
-  parseAssociationsFile,
+  RELATIONSHIP_TYPES_FILE_VERSION,
+  UnknownRelationshipTypeError,
+  emptyRelationshipTypesFile,
+  generateRelationshipTypeId,
+  isRelationshipTypeId,
+  normalizeRelationshipTypeId,
+  parseRelationshipTypesFile,
   parseProjectionType,
-  associationIdFromProjectionType,
+  relationshipTypeIdFromProjectionType,
   endpointIndexFromProjectionType,
   projectionTypeForEndpoint,
   oppositeProjectionType,
@@ -37,24 +37,24 @@ export {
   perspectiveLinkExisting,
   perspectiveConfigAt,
   registerBidirectionalType,
-  registerSetAssociation,
+  registerSetRelationshipType,
   registerTypeDefinition,
-  requireAssociationId,
-  serializeAssociationsFile,
+  requireRelationshipTypeId,
+  serializeRelationshipTypesFile,
   isBidirectionalComposite,
   isDualPerspectiveType,
   perspectiveCountForExpansion,
-} from "./associations-file";
+} from "./relationship-types-file";
 export type {
-  AssociationDefinition,
-  AssociationsFile,
+  RelationshipTypeDefinition,
+  RelationshipTypesFile,
   PerspectiveLabelConfig,
   PerspectivePair,
   TraitEntry,
   TraitObjectEntry,
-  AssociationEndpoints,
-  AssociationEndpointConstraint,
-} from "./associations-file";
+  RelationshipTypeEndpoints,
+  RelationshipTypeEndpointConstraint,
+} from "./relationship-types-file";
 export {
   DYNAMIC_PROPERTIES_FILE_VERSION,
   columnSetRecordFromEntry,
@@ -111,7 +111,7 @@ export {
   contentRelationshipsArchiveDir,
   relationshipsFilePath,
   relationshipFilePath,
-  associationsFilePath,
+  relationshipTypesFilePath,
   defaultDbPathForContent,
   DEFAULT_DB_FILENAME,
   readEnv,
@@ -136,7 +136,7 @@ export {
   CorpusReadonlyError,
   CorpusConflictError,
 } from "./composite-store";
-export { LinkResolutionError, resolveAssociationIdForLink } from "./resolve-composite-for-link";
+export { LinkResolutionError, resolveRelationshipTypeIdForLink } from "./resolve-composite-for-link";
 export {
   emptyViewsFile,
   parseViewsFile,

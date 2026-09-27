@@ -2,7 +2,7 @@
 export type StoreChangeKind =
   | "node"
   | "relationships"
-  | "associations"
+  | "relationship-types"
   | "schema"
   | "dynamic-properties"
   | "views"

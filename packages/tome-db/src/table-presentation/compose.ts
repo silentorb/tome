@@ -8,12 +8,12 @@ import {
 } from "../graph-store/relationship-read";
 import {
   isOrderedTraitComposite,
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   loadViewsFromContent,
   memberSideProjectionType,
   ORDERED_PROPERTY_DEFAULT,
   resolveContentPath,
-  setRoleAssociationForNode,
+  setRoleRelationshipTypeForNode,
   setRoleProjectionTypesForComposite,
   SET_TRAIT,
   typesWithTrait,
@@ -29,7 +29,7 @@ import { buildDatabaseColumnDefs, normalizeRowCells } from "../database-column-d
 import type { EvalRow } from "../row-sort";
 import { applySectionColumnOrder } from "../views/column-order";
 import { resolveGeneratedTabsFromScopes } from "../views/resolve-tabs";
-import { perspectiveDisplayLabel } from "../association-label";
+import { perspectiveDisplayLabel } from "../relationship-type-label";
 import {
   listSetMemberProjectionPairs,
   listSetMemberRowConnections,
@@ -95,7 +95,7 @@ function excludedKeys(composition: TablePresentationComposition): Set<string> {
 }
 
 function orderedSetMemberProjectionTypes(contentDir: string): string[] {
-  const registry = loadAssociationsFromContent(contentDir);
+  const registry = loadRelationshipTypesFromContent(contentDir);
   return typesWithTrait(registry, SET_TRAIT)
     .filter((composite) => isOrderedTraitComposite(registry, composite))
     .map((composite) => memberSideProjectionType(registry, composite));
@@ -139,7 +139,7 @@ function finishComposedView(args: {
   databaseId: string;
   databaseTitle: string;
   dir: string;
-  associationId: string;
+  relationshipTypeId: string;
   memberSidePerspective: string;
   sectionLabel: string;
   tabs: DatabaseViewDetail["tabs"];
@@ -157,7 +157,7 @@ function finishComposedView(args: {
     databaseId,
     databaseTitle,
     dir,
-    associationId,
+    relationshipTypeId,
     memberSidePerspective,
     sectionLabel,
     tabs,
@@ -200,7 +200,7 @@ function finishComposedView(args: {
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     databaseId,
-    associationId,
+    relationshipTypeId,
   );
 
   if (!relationFieldsFromSql) {
@@ -261,7 +261,7 @@ function finishComposedView(args: {
     views: tabs.items.map((item) => item.label),
     view: activeLabel || "default",
     tabs,
-    viewAssociation: associationId,
+    viewRelationshipType: relationshipTypeId,
     memberSidePerspective,
     sectionTitle: sectionLabel.trim() ? sectionLabel : "Contents",
     allColumns: defaultColumns,
@@ -283,7 +283,7 @@ function buildComposedDatabaseViewSql(
   rowsQuery: TableRowsQuery | undefined,
   databaseId: string,
   databaseTitle: string,
-  associationId: string,
+  relationshipTypeId: string,
   memberSidePerspective: string,
   sectionLabel: string,
 ): DatabaseViewDetail {
@@ -501,7 +501,7 @@ function buildComposedDatabaseViewSql(
     databaseId,
     databaseTitle,
     dir,
-    associationId,
+    relationshipTypeId,
     memberSidePerspective,
     sectionLabel,
     tabs,
@@ -522,7 +522,7 @@ function buildComposedDatabaseViewLegacy(
   rowsQuery: TableRowsQuery | undefined,
   databaseId: string,
   databaseTitle: string,
-  associationId: string,
+  relationshipTypeId: string,
   memberSidePerspective: string,
   sectionLabel: string,
 ): DatabaseViewDetail {
@@ -607,7 +607,7 @@ function buildComposedDatabaseViewLegacy(
     mergedColumnDefs.length > 0 ? mergedColumnDefs : undefined,
     views,
     databaseId,
-    associationId,
+    relationshipTypeId,
   );
 
   const databaseRows: DatabaseRow[] = enrichedRows.map((row, index) => ({
@@ -731,7 +731,7 @@ function buildComposedDatabaseViewLegacy(
     views: tabs.items.map((item) => item.label),
     view: activeLabel || "default",
     tabs,
-    viewAssociation: associationId,
+    viewRelationshipType: relationshipTypeId,
     memberSidePerspective,
     sectionTitle: sectionLabel.trim() ? sectionLabel : "Contents",
     allColumns: defaultColumns,
@@ -761,13 +761,13 @@ export function buildComposedDatabaseView(
   if (!database) return null;
 
   const databaseId = composition.typeDatabaseId;
-  const associationId = setRoleAssociationForNode(databaseId, dir);
-  const associations = loadAssociationsFromContent(dir);
+  const relationshipTypeId = setRoleRelationshipTypeForNode(databaseId, dir);
+  const relationshipTypes = loadRelationshipTypesFromContent(dir);
   const [setSideProjection, memberSidePerspective] = setRoleProjectionTypesForComposite(
-    associations,
-    associationId,
+    relationshipTypes,
+    relationshipTypeId,
   );
-  const sectionLabel = perspectiveDisplayLabel(associations, setSideProjection, associationId);
+  const sectionLabel = perspectiveDisplayLabel(relationshipTypes, setSideProjection, relationshipTypeId);
   const databaseTitle = titleFromProperties(database.properties);
 
   const plan = explodeTableWindowRequest(db, rowsQuery);
@@ -780,7 +780,7 @@ export function buildComposedDatabaseView(
       rowsQuery,
       databaseId,
       databaseTitle,
-      associationId,
+      relationshipTypeId,
       memberSidePerspective,
       sectionLabel,
     );
@@ -794,7 +794,7 @@ export function buildComposedDatabaseView(
     rowsQuery,
     databaseId,
     databaseTitle,
-    associationId,
+    relationshipTypeId,
     memberSidePerspective,
     sectionLabel,
   );

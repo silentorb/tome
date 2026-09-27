@@ -12,7 +12,7 @@ import {
   destroyTestContentFixture,
   TEST_ARCHIVE_NODE_ID,
   TEST_INCLUDES_ASSOCIATION_ID,
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   type TestContentFixture,
 } from "../src/content/test-helpers";
 
@@ -20,7 +20,7 @@ const HUB = TEST_ARCHIVE_NODE_ID;
 const NODE_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 const NODE_B = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 const NODE_C = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
-const MEMBER_OF = TEST_MEMBER_OF_ASSOCIATION_ID;
+const MEMBER_OF = TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID;
 const INCLUDES = TEST_INCLUDES_ASSOCIATION_ID;
 
 function entry(
@@ -39,9 +39,9 @@ describe("relationship-archive helpers", () => {
   afterAll(() => destroyTestContentFixture(fixture));
 
   test("isArchiveSetEntry detects hub membership", () => {
-    fixture.ctx.store.writeAssociationsFile({
+    fixture.ctx.store.writeRelationshipTypesFile({
       version: 1,
-      associations: {
+      relationshipTypes: {
         [MEMBER_OF]: { perspectives: ["Members", "Membership"], traits: ["set"] },
       },
     });
@@ -51,9 +51,9 @@ describe("relationship-archive helpers", () => {
   });
 
   test("listArchiveMemberIds returns non-hub endpoints", () => {
-    fixture.ctx.store.writeAssociationsFile({
+    fixture.ctx.store.writeRelationshipTypesFile({
       version: 1,
-      associations: {
+      relationshipTypes: {
         [MEMBER_OF]: { perspectives: ["Members", "Membership"], traits: ["set"] },
       },
     });
@@ -74,9 +74,9 @@ describe("relationship-archive store mutations", () => {
   const fixture: TestContentFixture = createTestContentFixture("tome-rel-archive-");
   const { store } = fixture.ctx;
 
-  store.writeAssociationsFile({
+  store.writeRelationshipTypesFile({
     version: 1,
-    associations: {
+    relationshipTypes: {
       [MEMBER_OF]: { perspectives: ["Members", "Membership"], traits: ["set"] },
       [INCLUDES]: { perspectives: ["Includes", "Includes"] },
     },

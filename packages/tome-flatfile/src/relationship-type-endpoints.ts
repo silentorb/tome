@@ -1,19 +1,19 @@
 import type {
   PerspectiveLabelConfig,
-  AssociationDefinition,
-  AssociationsFile,
-} from "./content/associations-file";
+  RelationshipTypeDefinition,
+  RelationshipTypesFile,
+} from "./content/relationship-types-file";
 import {
-  normalizeAssociationId,
+  normalizeRelationshipTypeId,
   parseProjectionType,
   perspectiveConfigAt,
   perspectiveLinkExisting,
   projectionTypeForEndpoint,
-  requireAssociationId,
-} from "./content/associations-file";
+  requireRelationshipTypeId,
+} from "./content/relationship-types-file";
 
 function linkExistingForEndpoint(
-  def: AssociationDefinition,
+  def: RelationshipTypeDefinition,
   endpointIndex: 0 | 1,
 ): boolean | undefined {
   const fromLabel = perspectiveLinkExisting(perspectiveConfigAt(def, endpointIndex));
@@ -22,14 +22,14 @@ function linkExistingForEndpoint(
 }
 
 export function resolveEndpointTypeIds(
-  def: AssociationDefinition | undefined,
+  def: RelationshipTypeDefinition | undefined,
 ): [string, string] | null {
   if (!def?.endpoints) return null;
   return [def.endpoints[0].typeId, def.endpoints[1].typeId];
 }
 
 export function hostEndpointIndex(
-  def: AssociationDefinition,
+  def: RelationshipTypeDefinition,
   hostTypeId: string,
 ): 0 | 1 | null {
   if (!def.endpoints) return null;
@@ -40,7 +40,7 @@ export function hostEndpointIndex(
 
 /** Endpoint index when host uniquely matches one side (null if both/neither). */
 export function uniqueHostEndpointIndex(
-  def: AssociationDefinition,
+  def: RelationshipTypeDefinition,
   hostTypeId: string,
 ): 0 | 1 | null {
   if (!def.endpoints) return null;
@@ -52,18 +52,18 @@ export function uniqueHostEndpointIndex(
 
 /** Directed projection type when linking from a row in `hostTypeId`. */
 export function projectionTypeForHostTable(
-  def: AssociationDefinition,
-  associationId: string,
+  def: RelationshipTypeDefinition,
+  relationshipTypeId: string,
   hostTypeId: string,
 ): string | null {
   const index = hostEndpointIndex(def, hostTypeId);
   if (index === null) return null;
-  return projectionTypeForEndpoint(associationId, index);
+  return projectionTypeForEndpoint(relationshipTypeId, index);
 }
 
 /** Target type-table id for a relation column on `hostTypeId`. */
 export function targetTypeIdForHostTable(
-  def: AssociationDefinition,
+  def: RelationshipTypeDefinition,
   hostTypeId: string,
 ): string | null {
   const index = hostEndpointIndex(def, hostTypeId);
@@ -73,17 +73,17 @@ export function targetTypeIdForHostTable(
 }
 
 export function allowedTargetTypeIdsForEndpoint(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   compositeType: string,
   endpointIndex: 0 | 1,
 ): string[] {
-  const def = registry.associations[normalizeAssociationId(compositeType)];
+  const def = registry.relationshipTypes[normalizeRelationshipTypeId(compositeType)];
   if (!def?.endpoints) return [];
   const other: 0 | 1 = endpointIndex === 0 ? 1 : 0;
   return [def.endpoints[other].typeId];
 }
 
-export interface AssociationRuleEntry {
+export interface RelationshipTypeRuleEntry {
   id: string;
   sourceTypeId: string;
   type: string;
@@ -91,11 +91,11 @@ export interface AssociationRuleEntry {
 }
 
 /** All relationship rules implied by registry endpoint definitions. */
-export function associationRulesFromRegistry(
-  registry: AssociationsFile,
-): AssociationRuleEntry[] {
-  const rules: AssociationRuleEntry[] = [];
-  for (const [composite, def] of Object.entries(registry.associations)) {
+export function relationshipTypeRulesFromRegistry(
+  registry: RelationshipTypesFile,
+): RelationshipTypeRuleEntry[] {
+  const rules: RelationshipTypeRuleEntry[] = [];
+  for (const [composite, def] of Object.entries(registry.relationshipTypes)) {
     if (!def.endpoints) continue;
     for (const hostIndex of [0, 1] as const) {
       const sourceTypeId = def.endpoints[hostIndex].typeId;
@@ -113,7 +113,7 @@ export function associationRulesFromRegistry(
 
 /** Whether a relation section should show the inline link-existing control. */
 export function relationSectionSupportsLinkExisting(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   typeOrProjection: string,
   compositeType?: string,
 ): boolean {
@@ -122,19 +122,19 @@ export function relationSectionSupportsLinkExisting(
   let endpointIndex: 0 | 1;
   try {
     if (compositeType) {
-      composite = requireAssociationId(registry, compositeType);
+      composite = requireRelationshipTypeId(registry, compositeType);
       endpointIndex = parsed?.endpointIndex ?? 0;
     } else if (parsed) {
-      composite = requireAssociationId(registry, parsed.associationId);
+      composite = requireRelationshipTypeId(registry, parsed.relationshipTypeId);
       endpointIndex = parsed.endpointIndex;
     } else {
-      composite = requireAssociationId(registry, typeOrProjection);
+      composite = requireRelationshipTypeId(registry, typeOrProjection);
       endpointIndex = 0;
     }
   } catch {
     return false;
   }
-  const def = registry.associations[composite];
+  const def = registry.relationshipTypes[composite];
   if (!def) return false;
   const linkExisting = linkExistingForEndpoint(def, endpointIndex);
   return linkExisting !== undefined ? linkExisting : true;

@@ -11,7 +11,7 @@ import type { EvalRow } from "./row-sort";
 import { loadTableSchemaForDatabase } from "./database-column-defs";
 import { storedScalarColumns } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
-import { loadAssociationsFromContent } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import { memberSideProjectionTypes } from "tome-flatfile";
 import {
   coalescePriorityValue,
@@ -126,7 +126,7 @@ export function buildPropertiesSection(
   contentDir?: string,
 ): PropertiesSection | null {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   // v1: first type membership connection when a node belongs to multiple types.
   let setRowEdge = null as ReturnType<typeof listRelationshipsFromSource>[number] | null;
   for (const type of memberSideProjectionTypes(registry)) {

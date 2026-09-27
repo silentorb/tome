@@ -176,7 +176,7 @@ function FlatDatabaseTableView({
         );
       }
 
-      await api.updateRelationshipView(nodeId, databaseView.viewAssociation, activeTabId, {
+      await api.updateRelationshipView(nodeId, databaseView.viewRelationshipType, activeTabId, {
         properties: next,
       });
       onTabsUpdated?.();
@@ -185,7 +185,7 @@ function FlatDatabaseTableView({
       api,
       allColumns,
       databaseView.tabs.activeTabId,
-      databaseView.viewAssociation,
+      databaseView.viewRelationshipType,
       nodeId,
       onTabsUpdated,
       visibleProperties,
@@ -378,7 +378,7 @@ function FlatDatabaseTableView({
             onCreateTab={async (input) => {
               const view = await api.createRelationshipView(
                 nodeId,
-                databaseView.viewAssociation,
+                databaseView.viewRelationshipType,
                 input,
               );
               onTabSelect(view.id);
@@ -387,7 +387,7 @@ function FlatDatabaseTableView({
             onUpdateTab={async (tabId, input) => {
               await api.updateRelationshipView(
                 nodeId,
-                databaseView.viewAssociation,
+                databaseView.viewRelationshipType,
                 tabId,
                 input,
               );
@@ -396,13 +396,13 @@ function FlatDatabaseTableView({
             onDeleteTab={async (tabId) => {
               await api.deleteRelationshipView(
                 nodeId,
-                databaseView.viewAssociation,
+                databaseView.viewRelationshipType,
                 tabId,
               );
               onTabsUpdated?.();
             }}
             onTabsReorder={async (tabOrder) => {
-              await api.patchRelationshipViews(nodeId, databaseView.viewAssociation, {
+              await api.patchRelationshipViews(nodeId, databaseView.viewRelationshipType, {
                 viewOrder: tabOrder,
               });
               onTabsUpdated?.();
@@ -431,7 +431,7 @@ function FlatDatabaseTableView({
                 if (!activeTabId) return;
                 await api.updateRelationshipView(
                   nodeId,
-                  databaseView.viewAssociation,
+                  databaseView.viewRelationshipType,
                   activeTabId,
                   { properties: columnOrder },
                 );

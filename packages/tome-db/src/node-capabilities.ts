@@ -1,7 +1,7 @@
 import type { Node, Properties } from "tome-graph-interfaces";
 import { memberSetIds } from "./set-membership";
 import { resolveContentPath } from "tome-flatfile";
-import { loadAssociationsFromContent } from "tome-flatfile";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import { hasTableSchemaEntry } from "tome-flatfile";
 import { memberSideProjectionTypes, setSideProjectionTypes } from "tome-flatfile";
 import {
@@ -25,7 +25,7 @@ export function hasIncomingIsA(
   contentDir?: string,
 ): boolean {
   const dir = contentDir ?? resolveContentPath();
-  const registry = loadAssociationsFromContent(dir);
+  const registry = loadRelationshipTypesFromContent(dir);
   for (const projection of memberSideProjectionTypes(registry)) {
     if (listRelationshipsToTarget(store, nodeId, projection).length > 0) return true;
   }

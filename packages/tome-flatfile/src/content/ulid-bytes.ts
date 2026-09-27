@@ -10,7 +10,7 @@ for (let i = 0; i < CROCKFORD.length; i++) {
 
 /**
  * Decode a canonical uppercase ULID to 16 bytes (128 bits).
- * Throws if `id` is not a valid node/association ULID.
+ * Throws if `id` is not a valid node/relationship type ULID.
  */
 export function ulidToBytes(id: string): Uint8Array {
   if (!isNodeId(id)) {

@@ -11,11 +11,11 @@ import {
   loadSchemaFromContent,
   invalidateViewsCache,
   invalidateTableSchemasCache,
-  invalidateAssociationsCache,
+  invalidateRelationshipTypesCache,
   invalidateWorkspaceCache,
   loadWorkspaceFromContent,
   invalidateExtensionsCache,
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   RELATIONSHIPS_SYNC_MARKER,
   ASSOCIATIONS_FILENAME,
   DYNAMIC_PROPERTIES_FILENAME,
@@ -381,7 +381,7 @@ export class CacheSync {
   private expandRelationshipsToCache(): void {
     // Live tree only — archived edges live under relationships/archive/.
     const entries = this.store.readRelationshipsFile().relationships;
-    const registry = this.store.readAssociationsFile();
+    const registry = this.store.readRelationshipTypesFile();
     const expandStarted = performance.now();
     if (this.startupSync) {
       this.report({ phase: "expand_relationships", total: entries.length });
@@ -482,7 +482,7 @@ export class CacheSync {
 
   private async expandRelationshipsToCacheAsync(): Promise<void> {
     const entries = this.store.readRelationshipsFile().relationships;
-    const registry = this.store.readAssociationsFile();
+    const registry = this.store.readRelationshipTypesFile();
     const expandStarted = performance.now();
     if (this.startupSync) {
       this.report({ phase: "expand_relationships", total: entries.length });
@@ -640,7 +640,7 @@ export class CacheSync {
       relativeName === ASSOCIATIONS_FILENAME
     ) {
       if (relativeName === ASSOCIATIONS_FILENAME) {
-        invalidateAssociationsCache();
+        invalidateRelationshipTypesCache();
       }
       this.syncRelationships();
       this.updateCacheMarkers();

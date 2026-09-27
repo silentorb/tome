@@ -37,14 +37,14 @@ function resolveActiveTabId(
 export function getSectionTabsConfig(
   views: ViewsFile,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
 ): { kind: "generated"; provider: string } | { kind: "custom"; definitions: TabDefinitionSummary[] } | null {
-  const generated = generatedViewForRelationship(views, nodeId, association);
+  const generated = generatedViewForRelationship(views, nodeId, relationshipTypeId);
   if (generated) {
     // provider is the type-table nodeId (composition identity after views merge)
     return { kind: "generated", provider: generated.nodeId };
   }
-  const definitions = viewsForRelationship(views, nodeId, association);
+  const definitions = viewsForRelationship(views, nodeId, relationshipTypeId);
   if (definitions.length === 0) return null;
   return { kind: "custom", definitions: viewDefinitionsForTabs(definitions) };
 }
@@ -52,10 +52,10 @@ export function getSectionTabsConfig(
 export function resolveCustomTabs(
   views: ViewsFile,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
   requestedTabId?: string,
 ): ResolvedCustomTabs {
-  const viewRecords = viewsForRelationship(views, nodeId, association);
+  const viewRecords = viewsForRelationship(views, nodeId, relationshipTypeId);
   const definitions =
     viewRecords.length > 0 ? viewDefinitionsForTabs(viewRecords) : [DEFAULT_CUSTOM_TAB];
   const activeTabId = resolveActiveTabId(definitions, requestedTabId);
@@ -94,36 +94,36 @@ export function resolveGeneratedTabsFromScopes(
 export function isGeneratedSection(
   views: ViewsFile,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
 ): boolean {
-  return generatedViewForRelationship(views, nodeId, association) !== null;
+  return generatedViewForRelationship(views, nodeId, relationshipTypeId) !== null;
 }
 
 export function generatedProviderId(
   views: ViewsFile,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
 ): string | null {
-  return generatedViewForRelationship(views, nodeId, association)?.nodeId ?? null;
+  return generatedViewForRelationship(views, nodeId, relationshipTypeId)?.nodeId ?? null;
 }
 
 export function loadSectionTabsConfig(
   contentDir: string,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
 ): ReturnType<typeof getSectionTabsConfig> {
   const views = loadViewsFromContent(contentDir);
-  return getSectionTabsConfig(views, nodeId, association);
+  return getSectionTabsConfig(views, nodeId, relationshipTypeId);
 }
 
 export function resolveCustomTabsForNode(
   contentDir: string,
   nodeId: string,
   requestedTabId: string | undefined,
-  association: string,
+  relationshipTypeId: string,
 ): ResolvedCustomTabs {
   const views = loadViewsFromContent(contentDir);
-  return resolveCustomTabs(views, nodeId, association, requestedTabId);
+  return resolveCustomTabs(views, nodeId, relationshipTypeId, requestedTabId);
 }
 
 /** @deprecated Use resolveCustomTabs with views file. Kept for tests without content dir. */
@@ -155,10 +155,10 @@ export function sectionUsesGeneratedTabs(
   db: RelationshipReadStore,
   contentDir: string,
   nodeId: string,
-  association: string,
+  relationshipTypeId: string,
 ): { provider: string } | null {
   const views = loadViewsFromContent(contentDir);
-  const generated = generatedViewForRelationship(views, nodeId, association);
+  const generated = generatedViewForRelationship(views, nodeId, relationshipTypeId);
   if (generated) {
     return { provider: generated.nodeId };
   }

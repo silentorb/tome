@@ -8,7 +8,7 @@ import {
 import { getDatabaseViewDetail } from "../src/database-view";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { invalidateSchemaCache } from "tome-flatfile";
-import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, seedTestCompositeRelationships, seedTestTableSchema, seedTestViews, TEST_MEMBER_OF_ASSOCIATION_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, seedTestCompositeRelationships, seedTestTableSchema, seedTestViews, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
 
 function seedParentsChildrenTypes(
   fixture: ReturnType<typeof createTestContentFixture>,
@@ -16,15 +16,15 @@ function seedParentsChildrenTypes(
   parentTypeId: string,
   compositeKey = "000000000000000000000000B1",
 ): void {
-  const file = fixture.ctx.store.readAssociationsFile();
-  file.associations[compositeKey] = {
+  const file = fixture.ctx.store.readRelationshipTypesFile();
+  file.relationshipTypes[compositeKey] = {
     perspectives: ["Children", "Parents"],
     endpoints: {
       0: { typeId: childTypeId },
       1: { typeId: parentTypeId },
     },
   };
-  fixture.ctx.store.writeAssociationsFile(file);
+  fixture.ctx.store.writeRelationshipTypesFile(file);
 }
 
 function seedSchema(fixture: ReturnType<typeof createTestContentFixture>): void {
@@ -134,7 +134,7 @@ describe("database column mutations", () => {
         {
           id: "by-notes",
           nodeId: databaseId,
-          association: TEST_MEMBER_OF_ASSOCIATION_ID,
+          association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           name: "By notes",
           sorts: [{ column: "notes", direction: "asc" }],
           properties: ["notes"],
@@ -151,7 +151,7 @@ describe("database column mutations", () => {
       rowsMigrated: 1,
     });
 
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1))[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))[0];
     expect(edge?.properties.description).toBe("Alpha");
     expect(edge?.properties.notes).toBeUndefined();
 
@@ -184,7 +184,7 @@ describe("database column mutations", () => {
     });
     expect(result).toMatchObject({ valuesCleared: 1, relationsUnlinked: 0 });
 
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(rowId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1))[0];
+    const edge = fixture.ctx.cache.listRelationshipsFromSource(rowId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))[0];
     expect(edge?.properties.label).toBeUndefined();
   });
 
@@ -217,7 +217,7 @@ describe("database column mutations", () => {
         b: parentId,
         typeFromA: "Children",
         typeFromB: "Parents",
-        associationId: "000000000000000000000000B1",
+        relationshipTypeId: "000000000000000000000000B1",
         properties: {},
       },
     ]);
@@ -269,7 +269,7 @@ describe("database column mutations", () => {
         b: parentId,
         typeFromA: "Children",
         typeFromB: "Parents",
-        associationId: "000000000000000000000000B1",
+        relationshipTypeId: "000000000000000000000000B1",
         properties: {},
       },
     ]);

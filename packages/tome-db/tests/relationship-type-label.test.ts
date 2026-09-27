@@ -1,22 +1,22 @@
 import { describe, expect, test } from "bun:test";
-import { emptyAssociationsFile, projectionTypeForEndpoint } from "tome-flatfile";
+import { emptyRelationshipTypesFile, projectionTypeForEndpoint } from "tome-flatfile";
 import {
-  formatAssociationLabel,
+  formatRelationshipTypeLabel,
   labeledRelationshipTypes,
   perspectiveDisplayLabel,
   perspectiveLinkAddLabel,
-} from "../src/association-label";
+} from "../src/relationship-type-label";
 
 const MEMBER_OF = "000000000000000000000000A1";
 
-describe("association-label", () => {
-  test("formatAssociationLabel title-cases underscore slugs", () => {
-    expect(formatAssociationLabel("member_of")).toBe("Member Of");
+describe("relationship-type-label", () => {
+  test("formatRelationshipTypeLabel title-cases underscore slugs", () => {
+    expect(formatRelationshipTypeLabel("member_of")).toBe("Member Of");
   });
 
   test("perspectiveDisplayLabel uses configured title for projection type", () => {
-    const registry = emptyAssociationsFile();
-    registry.associations[MEMBER_OF] = {
+    const registry = emptyRelationshipTypesFile();
+    registry.relationshipTypes[MEMBER_OF] = {
       perspectives: [{ title: "Membership", linkAdd: "Link type table" }, "Members"],
     };
     expect(
@@ -25,8 +25,8 @@ describe("association-label", () => {
   });
 
   test("labeledRelationshipTypes maps projection types to perspective titles", () => {
-    const registry = emptyAssociationsFile();
-    registry.associations[MEMBER_OF] = {
+    const registry = emptyRelationshipTypesFile();
+    registry.relationshipTypes[MEMBER_OF] = {
       perspectives: [{ title: "Membership", linkAdd: "Link type table" }, "Members"],
     };
     expect(
@@ -41,12 +41,12 @@ describe("association-label", () => {
   });
 
   test("perspectiveDisplayLabel falls back when unconfigured", () => {
-    expect(perspectiveDisplayLabel(emptyAssociationsFile(), "features")).toBe("Features");
+    expect(perspectiveDisplayLabel(emptyRelationshipTypesFile(), "features")).toBe("Features");
   });
 
   test("perspectiveLinkAddLabel uses configured linkAdd", () => {
-    const registry = emptyAssociationsFile();
-    registry.associations[MEMBER_OF] = {
+    const registry = emptyRelationshipTypesFile();
+    registry.relationshipTypes[MEMBER_OF] = {
       perspectives: [{ title: "Membership", linkAdd: "Link type table" }, "Members"],
     };
     expect(
@@ -59,7 +59,7 @@ describe("association-label", () => {
   });
 
   test("perspectiveLinkAddLabel falls back to singularized section title", () => {
-    expect(perspectiveLinkAddLabel(emptyAssociationsFile(), "features", "Features")).toBe(
+    expect(perspectiveLinkAddLabel(emptyRelationshipTypesFile(), "features", "Features")).toBe(
       "Link Feature",
     );
   });

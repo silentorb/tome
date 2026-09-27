@@ -38,7 +38,7 @@ export interface SequencingSettings {
  */
 export interface RelationshipsSettings {
   /** MRU-first directed projection types (`ULID:0` / `ULID:1`), max 10. */
-  recentAssociationTypes?: string[];
+  recentRelationshipTypes?: string[];
   onlyActiveTargets?: boolean;
 }
 
@@ -94,13 +94,13 @@ export function relationshipsOnlyActiveTargets(settings: UserSettings): boolean 
   return settings.relationships?.onlyActiveTargets !== false;
 }
 
-export function relationshipsRecentAssociationTypes(settings: UserSettings): string[] {
-  const raw = settings.relationships?.recentAssociationTypes;
+export function relationshipsRecentRelationshipTypes(settings: UserSettings): string[] {
+  const raw = settings.relationships?.recentRelationshipTypes;
   return Array.isArray(raw) ? [...raw] : [];
 }
 
 /** Prepend `type` and clamp to {@link MAX_RECENT_ASSOCIATION_TYPES} unique entries. */
-export function pushRecentAssociationType(
+export function pushRecentRelationshipType(
   current: readonly string[],
   type: string,
 ): string[] {
@@ -136,7 +136,7 @@ function normalizeSequencing(
   return { showDependencyEdges: true };
 }
 
-function normalizeRecentAssociationTypes(value: unknown): string[] | undefined {
+function normalizeRecentRelationshipTypes(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) return undefined;
   const seen = new Set<string>();
   const result: string[] = [];
@@ -155,10 +155,10 @@ function normalizeRelationships(
   value: RelationshipsSettings | undefined,
 ): RelationshipsSettings | undefined {
   if (!value || typeof value !== "object") return undefined;
-  const recentAssociationTypes = normalizeRecentAssociationTypes(value.recentAssociationTypes);
+  const recentRelationshipTypes = normalizeRecentRelationshipTypes(value.recentRelationshipTypes);
   const onlyActiveTargets = value.onlyActiveTargets === false ? false : undefined;
   const result: RelationshipsSettings = {};
-  if (recentAssociationTypes) result.recentAssociationTypes = recentAssociationTypes;
+  if (recentRelationshipTypes) result.recentRelationshipTypes = recentRelationshipTypes;
   if (onlyActiveTargets === false) result.onlyActiveTargets = false;
   return Object.keys(result).length > 0 ? result : undefined;
 }
@@ -482,8 +482,8 @@ export function applyUserSettingsPatch(
       delete next.relationships;
     } else {
       const merged: RelationshipsSettings = { ...(next.relationships ?? {}) };
-      if ("recentAssociationTypes" in patch.relationships) {
-        merged.recentAssociationTypes = patch.relationships.recentAssociationTypes;
+      if ("recentRelationshipTypes" in patch.relationships) {
+        merged.recentRelationshipTypes = patch.relationships.recentRelationshipTypes;
       }
       if ("onlyActiveTargets" in patch.relationships) {
         merged.onlyActiveTargets = patch.relationships.onlyActiveTargets;

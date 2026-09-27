@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { EditorApi } from "../api/client";
 import { useUserSettings } from "../hooks/useUserSettings";
-import { AssociationPicker } from "./AssociationPicker";
+import { RelationshipTypePicker } from "./RelationshipTypePicker";
 import { RecordLinkPicker } from "./RecordLinkPicker";
 import "./add-relationship-dialog.css";
 
@@ -36,8 +36,8 @@ export function AddRelationshipDialog({
   const {
     relationshipsOnlyActiveTargets,
     setRelationshipsOnlyActiveTargets,
-    relationshipsRecentAssociationTypes,
-    rememberRecentAssociationType,
+    relationshipsRecentRelationshipTypes,
+    rememberRecentRelationshipType,
   } = useUserSettings();
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedLabel, setSelectedLabel] = useState<string | null>(null);
@@ -103,7 +103,7 @@ export function AddRelationshipDialog({
           type: selectedType,
           targetId,
         });
-        rememberRecentAssociationType(selectedType);
+        rememberRecentRelationshipType(selectedType);
         onLinked?.();
         onClose();
       } catch (err) {
@@ -118,7 +118,7 @@ export function AddRelationshipDialog({
       nodeId,
       onClose,
       onLinked,
-      rememberRecentAssociationType,
+      rememberRecentRelationshipType,
       selectedType,
     ],
   );
@@ -158,10 +158,10 @@ export function AddRelationshipDialog({
         <div className="tome-add-relationship-fields">
           <div className="tome-add-relationship-field">
             <span className="tome-add-relationship-label">Relationship type</span>
-            <AssociationPicker
+            <RelationshipTypePicker
               api={api}
               selectedType={selectedType}
-              recentTypes={relationshipsRecentAssociationTypes}
+              recentTypes={relationshipsRecentRelationshipTypes}
               ariaLabel="Relationship type"
               onSelect={handleTypeSelect}
             />

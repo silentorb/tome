@@ -53,9 +53,9 @@ async function findDirectedDependsRow(input: {
   graphQuery: ExtensionGraphQueryServices;
   prerequisiteId: string;
   dependentId: string;
-  association: string;
+  relationshipTypeId: string;
 }): Promise<{ properties: Record<string, unknown> } | null> {
-  const type0 = projectionType(input.association, 0);
+  const type0 = projectionType(input.relationshipTypeId, 0);
   const edges = await Promise.resolve(
     input.graphQuery.listEdges({
       nodeIds: [input.prerequisiteId, input.dependentId],
@@ -100,12 +100,12 @@ export async function mutateTimelineDepends(input: {
     return { ok: false, error: `No sequencing.json entry for table "${input.pageNodeId}"` };
   }
 
-  const type = config.dependsAssociation;
+  const type = config.dependsRelationshipType;
   const existing = await findDirectedDependsRow({
     graphQuery: input.graphQuery,
     prerequisiteId: input.prerequisiteId,
     dependentId: input.dependentId,
-    association: type,
+    relationshipTypeId: type,
   });
 
   if (input.action === "addDepends") {

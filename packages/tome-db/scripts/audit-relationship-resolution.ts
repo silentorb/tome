@@ -11,28 +11,28 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
-  isAssociationId,
-  normalizeAssociationId,
-  parseAssociationsFile,
+  isRelationshipTypeId,
+  normalizeRelationshipTypeId,
+  parseRelationshipTypesFile,
   isDualPerspectiveType,
-  type AssociationsFile,
+  type RelationshipTypesFile,
 } from "tome-flatfile";
 import {
   relationshipsFilePath,
-  associationsFilePath,
+  relationshipTypesFilePath,
   parseRelationshipsFile,
   type RelationshipEntry,
 } from "tome-flatfile";
 
 function resolveExpectedComposite(
   entry: RelationshipEntry,
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
 ): { target: string; rule: string } | null {
-  const type = normalizeAssociationId(entry.type);
-  const typeDef = registry.associations[type];
+  const type = normalizeRelationshipTypeId(entry.type);
+  const typeDef = registry.relationshipTypes[type];
 
   if (typeDef && isDualPerspectiveType(typeDef)) {
-    if (!isAssociationId(type)) {
+    if (!isRelationshipTypeId(type)) {
       return { target: "BLOCKER", rule: "non-ulid-association-key" };
     }
     return null;
@@ -42,7 +42,7 @@ function resolveExpectedComposite(
     return { target: "BLOCKER", rule: "legacy-includes-storage" };
   }
 
-  if (!isAssociationId(type)) {
+  if (!isRelationshipTypeId(type)) {
     return { target: "BLOCKER", rule: "non-ulid-association-key" };
   }
 
@@ -59,9 +59,9 @@ export function auditRelationships(contentDir: string): {
   blockers: { entry: RelationshipEntry; reason: string }[];
 } {
   const relPath = relationshipsFilePath(contentDir);
-  const typesPath = associationsFilePath(contentDir);
+  const typesPath = relationshipTypesFilePath(contentDir);
   const relFile = parseRelationshipsFile(readFileSync(relPath, "utf-8"));
-  const registry = parseAssociationsFile(readFileSync(typesPath, "utf-8"));
+  const registry = parseRelationshipTypesFile(readFileSync(typesPath, "utf-8"));
 
   const migrations = new Map<string, { target: string; rule: string; count: number }>();
   const blockers: { entry: RelationshipEntry; reason: string }[] = [];

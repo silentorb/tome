@@ -2,48 +2,54 @@
 
 ## Summary
 
-Tome is still in a **prototype** phase, but external projects are starting to consume it. Agents must treat external-facing contract changes as **compatibility-sensitive**: default to **dual-support** (new path + legacy path for a few versions), register every kept legacy path in this doc’s **Legacy registry**, and migrate workspace dependents to the new path in the same change.
+Tome is still in a **prototype** phase, but external projects consume its **configuration** and **canonical flat-file data storage**. Agents must treat changes to those surfaces as **compatibility-sensitive**: default to **dual-support** (new path + legacy path for a few versions), register every kept legacy path in this doc’s **Legacy registry**, and migrate workspace dependents to the new path in the same change.
 
-This is **not** a promise of full semver stability. Hard-breaks remain allowed when dual-support is costly or unclear — after asking the user — and for non-external surfaces.
+This is **not** a promise of full semver stability. Package public APIs, HTTP/editor API shapes, TypeScript export names, and similar runtime/client contracts are **not** dual-supported at this stage — hard-break them and migrate workspace dependents in the same change. HTTP/package compat may return later; do not register package/HTTP legacy rows yet.
+
+Hard-breaks on compat-sensitive surfaces remain allowed when dual-support is costly or unclear — after asking the user.
 
 ## When to read this
 
-- Changing a package public export/API, HTTP/editor API shape, content-model file, CLI flag, or container/env/config contract
-- Adding a dual-support shim or alternate method while keeping a legacy path
+- Changing content-model files, project/server config, documented container/env config contracts that shape how Tome loads config/data, or canonical flat-file layout under `content/`
+- Adding a dual-support shim or alternate method while keeping a legacy config/storage path
 - Removing a registered legacy path
-- Planning a change that would break an external consumer
+- Planning a change that would break an external consumer of config or flat-file data
 
 ## Requirements
 
 ### Decision tree
 
-1. **Is the change external-facing?** If no → hard-break is OK without asking; migrate workspace dependents in the same change.
+1. **Is the change compat-sensitive** (configuration or canonical flat-file storage)? If no → hard-break is OK without asking; migrate workspace dependents in the same change.
 2. **If yes, is dual-support cheap and clear?** If yes → implement dual-support, register the legacy entry below, migrate workspace dependents to the **new** path.
 3. **If dual-support is costly, ambiguous, or would create a long-lived fork** → ask the user before implementing. Present: dual-support / hard-break / redesign to avoid the break.
 
 ```
 Interface or format change
-  → external-facing?
+  → compat-sensitive (config / flat-file storage)?
        no  → hard-break + migrate workspace dependents
        yes → dual-support cheap and clear?
               yes → dual-support + register legacy + migrate dependents to new path
               no / unclear → ask user (dual-support | hard-break | redesign)
 ```
 
-### External-facing surfaces (compat applies)
+### Compat-sensitive surfaces (dual-support applies)
 
-- Package public exports and documented APIs
-- HTTP / editor API shapes
 - Content-model files (`schema.json`, `views.json`, `workspace.json`, `associations.json`, `table-schemas.json`, …)
-- CLI flags
-- Container / env / config contracts documented for consumers
+- Project / server configuration files that control how Tome loads config and data
+- Documented container / env config contracts that shape how Tome loads config/data
+- Canonical flat-file data storage under `content/` (nodes, relationships, archive layout)
+- CLI flags **only when** they change how config or data files are read or written
 
-### Not external (hard-break OK without asking)
+### Out of scope for now (hard-break OK without asking)
 
+- Package public exports and documented TypeScript/package APIs
+- HTTP / editor API shapes
+- CLI flags that do not affect config/storage format contracts
 - Private helpers, unexported implementation details
 - Tests and test-only fixtures
-- Internal package files not part of a public contract
 - Agent-only docs (except this registry and routing pointers)
+
+HTTP and package API compatibility may be added later; until then, do not add Legacy registry rows for those surfaces.
 
 ### Dual-support
 
@@ -63,29 +69,29 @@ When dual-support is chosen:
 
 ### Workspace lock-step
 
-Workspace repos must stay mutually compatible. Propagate interface changes to every dependent corpus and its CI in the same change. See workbench `AGENTS.md` § Propagate tome breaking changes.
+Workspace repos must stay mutually compatible. Propagate interface changes to every dependent corpus and its CI in the same change. See workbench `AGENTS.md` § Propagate tome breaking changes. Lock-step applies to hard-breaks as well as dual-supported migrations.
 
 ## Design rationale
 
-External consumers need a softer landing than free hard-deletes, but full backwards-compatibility scaffolding for every internal tweak would slow prototyping. Dual-support is **temporary** scaffolding with an explicit removal path (this registry). Agents default to dual-support so the common case does not interrupt the user; they ask only when the trade-off is expensive or unclear.
+External consumers of **config and flat-file corpora** need a softer landing than free hard-deletes, but scaffolding dual-support for every package or HTTP tweak would slow prototyping. Dual-support is **temporary** scaffolding with an explicit removal path (this registry), scoped to config and storage for now. Agents default to dual-support on those surfaces so the common case does not interrupt the user; they ask only when the trade-off is expensive or unclear.
 
 Version bumps still follow 0.x rules in root [`AGENTS.md`](../../AGENTS.md): `MINOR` for breaking changes or new functionality; `PATCH` for backwards-compatible fixes.
 
 ## Legacy registry
 
-Living table of dual-supported legacy paths. Empty until the first dual-support change lands.
+Living table of dual-supported legacy paths.
 
 | Id | Surface | Legacy path | Replacement | Introduced (version / commit) | Remove after | Notes |
 | -- | ------- | ----------- | ----------- | ----------------------------- | ------------ | ----- |
-| — | — | *(none yet)* | — | — | — | Add a row when dual-support is introduced. |
+| `sequencing-depends-association` | content-model | `sequencing.json` table fields `dependsAssociation`, `containmentAssociation` | `dependsRelationshipType`, `containmentRelationshipType` | unreleased (relationship-types rename) | TBD | Parse accepts either key (preferred wins if both present). Serialize writes preferred keys only. Workspace corpora migrated to preferred keys. |
 
 **Column guidance**
 
 | Column | Meaning |
 | ------ | ------- |
-| Id | Short stable slug (e.g. `search-role-query-param`) |
-| Surface | One of: package API, HTTP, content-model, CLI, container/config |
-| Legacy path | What still works (symbol, endpoint, file field, flag, env) |
+| Id | Short stable slug (e.g. `associations-json-filename`) |
+| Surface | One of: content-model, flat-file storage, project/server config, container/config, CLI (config/storage only) |
+| Legacy path | What still works (file field, filename, flag, env) |
 | Replacement | What callers should use instead |
 | Introduced | Root or package version and/or commit when dual-support landed |
 | Remove after | Target minor epoch or “TBD” until scheduled |
@@ -115,4 +121,4 @@ Living table of dual-supported legacy paths. Empty until the first dual-support 
 
 - Workbench propagate-breaking-changes / plan verification matrix
 - [container.md](./container.md) — release / env contracts
-- [web-api-design.md](./web-api-design.md) — HTTP API shape
+- [web-api-design.md](./web-api-design.md) — HTTP API shape (not dual-supported at this stage)

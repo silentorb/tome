@@ -6,22 +6,22 @@ import { getNodePageMetadata } from "./node-metadata";
 import { buildPropertiesSection } from "./node-type-properties";
 import {
   relationSectionSupportsLinkExisting,
-  associationRuleContext,
-} from "./association-endpoints";
+  relationshipTypeRuleContext,
+} from "./relationship-type-endpoints";
 import { typeIdsForInstance } from "./node-capabilities";
-import { normalizeAssociationId, parseProjectionType } from "tome-flatfile";
+import { normalizeRelationshipTypeId, parseProjectionType } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
 import {
   perspectiveDisplayLabel,
   perspectiveLinkAddLabel,
-} from "./association-label";
-import { loadAssociationsFromContent } from "tome-flatfile";
+} from "./relationship-type-label";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import {
   isMemberSideProjectionType,
   isSetSideProjectionType,
   isSetTraitProjectionType,
-  associationIdFromTypeOrProjection,
-  setRoleAssociationForNode,
+  relationshipTypeIdFromTypeOrProjection,
+  setRoleRelationshipTypeForNode,
 } from "tome-flatfile";
 import { loadTableSchemasFromContent } from "tome-flatfile";
 import type { TableRelationColumn } from "tome-graph-interfaces";
@@ -108,7 +108,7 @@ function cellsFromConnectionProperties(properties: Record<string, unknown>): Rec
 
 function relationTypeSortKey(
   type: string,
-  registry: ReturnType<typeof loadAssociationsFromContent>,
+  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
 ): string {
   if (isSetTraitProjectionType(registry, type)) return "z:set";
   return `a:${type}`;
@@ -122,7 +122,7 @@ function ordinalFromProperties(properties: Record<string, unknown>): number {
 }
 
 function relationGroupKeyFromColumn(
-  registry: ReturnType<typeof loadAssociationsFromContent>,
+  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
   hostTypeId: string,
   col: TableRelationColumn,
 ): string {
@@ -135,7 +135,7 @@ function tableRelationByGroupKeyForInstance(
   contentDir: string,
 ): Map<string, TableRelationColumn> {
   const tables = loadTableSchemasFromContent(contentDir);
-  const registry = loadAssociationsFromContent(contentDir);
+  const registry = loadRelationshipTypesFromContent(contentDir);
   const byGroupKey = new Map<string, TableRelationColumn>();
   for (const typeId of typeIdsForInstance(db, nodeId)) {
     const schema = getTableSchema(tables, typeId);
@@ -154,7 +154,7 @@ function tableRelationByGroupKeyForInstance(
 /** Section type-table id from association/schema config only (no title scan). */
 function resolveTypeNodeId(
   perspective: string,
-  registry: ReturnType<typeof loadAssociationsFromContent>,
+  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
   tableRelation: TableRelationColumn | undefined,
   hostTypeId: string | undefined,
 ): string | null {
@@ -163,7 +163,7 @@ function resolveTypeNodeId(
   }
   const parsed = parseProjectionType(perspective);
   if (!parsed) return null;
-  const def = registry.associations[normalizeAssociationId(parsed.associationId)];
+  const def = registry.relationshipTypes[normalizeRelationshipTypeId(parsed.relationshipTypeId)];
   const typeId = def?.endpoints?.[parsed.endpointIndex]?.typeId;
   return typeof typeId === "string" && typeId.trim() ? typeId : null;
 }
@@ -172,7 +172,7 @@ function sectionTitleForType(
   db: RelationshipReadStore,
   label: string,
   typeNodeId: string | null,
-  registry: ReturnType<typeof loadAssociationsFromContent>,
+  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
 ): string {
   if (typeNodeId) {
     const typeNode = readStoreGetNode(db, typeNodeId);
@@ -187,7 +187,7 @@ function typeTableIdsFromContent(contentDir: string): string[] {
 
 function compositeTypeForRelationSection(
   db: RelationshipReadStore,
-  registry: ReturnType<typeof loadAssociationsFromContent>,
+  registry: ReturnType<typeof loadRelationshipTypesFromContent>,
   projectionType: string,
   connections: Relationship[],
   tableRelation?: TableRelationColumn,
@@ -198,16 +198,16 @@ function compositeTypeForRelationSection(
   const first = connections[0];
   if (first) {
     const fromRecord = readStoreCompositeTypeForRelationship(db, first);
-    if (fromRecord && registry.associations[fromRecord]) {
+    if (fromRecord && registry.relationshipTypes[fromRecord]) {
       const parsed = parseProjectionType(projectionType);
-      if (!parsed || parsed.associationId === fromRecord) {
+      if (!parsed || parsed.relationshipTypeId === fromRecord) {
         return fromRecord;
       }
     }
   }
   return (
-    associationIdFromTypeOrProjection(registry, projectionType) ??
-    normalizeAssociationId(projectionType)
+    relationshipTypeIdFromTypeOrProjection(registry, projectionType) ??
+    normalizeRelationshipTypeId(projectionType)
   );
 }
 
@@ -231,16 +231,16 @@ function buildRelationSectionForPerspective(
   options: {
     contentDir: string;
     typeTableIds: string[];
-    associations: ReturnType<typeof loadAssociationsFromContent>;
+    relationshipTypes: ReturnType<typeof loadRelationshipTypesFromContent>;
     tableRelationByGroupKey: Map<string, TableRelationColumn>;
     rowsQuery?: TableRowsQuery;
     /** When set, `connections` are already ordered+windowed; skip JS sort/slice. */
     sqlWindow?: { total: number; columnKeys: string[] };
   },
 ): RelationTableSection | null {
-  const { contentDir, typeTableIds, associations, tableRelationByGroupKey, rowsQuery, sqlWindow } =
+  const { contentDir, typeTableIds, relationshipTypes, tableRelationByGroupKey, rowsQuery, sqlWindow } =
     options;
-  if (isSetSideProjectionType(associations, perspective)) return null;
+  if (isSetSideProjectionType(relationshipTypes, perspective)) return null;
 
   const columnSet = new Set<string>(sqlWindow?.columnKeys ?? []);
   const rows: RelationRow[] = withProfilingSpan(
@@ -282,15 +282,15 @@ function buildRelationSectionForPerspective(
     }
   }
 
-  const isSetMembership = isSetTraitProjectionType(associations, perspective);
+  const isSetMembership = isSetTraitProjectionType(relationshipTypes, perspective);
   const tableRelation = tableRelationByGroupKey.get(perspective);
   const hostTypeId = typeIdsForInstance(db, nodeId, contentDir)[0];
   const typeNodeId = isSetMembership
     ? null
-    : resolveTypeNodeId(perspective, associations, tableRelation, hostTypeId);
+    : resolveTypeNodeId(perspective, relationshipTypes, tableRelation, hostTypeId);
   const ruleContext =
     !isSetMembership && !tableRelation
-      ? associationRuleContext(associations, db, nodeId, perspective, contentDir)
+      ? relationshipTypeRuleContext(relationshipTypes, db, nodeId, perspective, contentDir)
       : null;
   let columns = [...columnSet].sort((a, b) => a.localeCompare(b));
   if (isSetMembership) {
@@ -320,14 +320,14 @@ function buildRelationSectionForPerspective(
       );
 
   const setTraitCompositeKey =
-    associationIdFromTypeOrProjection(associations, perspective) ?? perspective;
+    relationshipTypeIdFromTypeOrProjection(relationshipTypes, perspective) ?? perspective;
   const sectionTitle = isSetMembership
-    ? perspectiveDisplayLabel(associations, perspective, setTraitCompositeKey)
-    : sectionTitleForType(db, perspective, typeNodeId, associations);
+    ? perspectiveDisplayLabel(relationshipTypes, perspective, setTraitCompositeKey)
+    : sectionTitleForType(db, perspective, typeNodeId, relationshipTypes);
   const linkAddLabel =
-    isSetMembership && isMemberSideProjectionType(associations, perspective)
+    isSetMembership && isMemberSideProjectionType(relationshipTypes, perspective)
       ? perspectiveLinkAddLabel(
-          associations,
+          relationshipTypes,
           perspective,
           sectionTitle,
           setTraitCompositeKey,
@@ -336,7 +336,7 @@ function buildRelationSectionForPerspective(
 
   const compositeType = compositeTypeForRelationSection(
     db,
-    associations,
+    relationshipTypes,
     perspective,
     connections,
     tableRelation,
@@ -362,13 +362,13 @@ function buildRelationSectionForPerspective(
     allowedTargetTypeIds: isSetMembership
       ? typeTableIds
       : tableRelation && hostTypeId
-        ? (targetTypeIdForRelationColumn(associations, hostTypeId, tableRelation)
-            ? [targetTypeIdForRelationColumn(associations, hostTypeId, tableRelation)!]
+        ? (targetTypeIdForRelationColumn(relationshipTypes, hostTypeId, tableRelation)
+            ? [targetTypeIdForRelationColumn(relationshipTypes, hostTypeId, tableRelation)!]
             : undefined)
         : ruleContext?.allowedTargetTypeIds,
     addMode: isSetMembership
       ? "link-existing"
-      : relationSectionSupportsLinkExisting(associations, perspective, compositeType)
+      : relationSectionSupportsLinkExisting(relationshipTypes, perspective, compositeType)
         ? "link-existing"
         : "none",
     ...(linkAddLabel ? { linkAddLabel } : {}),
@@ -464,7 +464,7 @@ function buildRelationSections(
 ): RelationTableSection[] {
   const contentDir = options?.contentDir ?? resolveContentPath();
   const typeTableIds = typeTableIdsFromContent(contentDir);
-  const associations = loadAssociationsFromContent(contentDir);
+  const relationshipTypes = loadRelationshipTypesFromContent(contentDir);
   const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
   const rowsQuery = options?.rowsQuery;
 
@@ -478,7 +478,7 @@ function buildRelationSections(
   const sections: RelationTableSection[] = [];
 
   for (const label of [...typeKeys].sort((a, b) =>
-    relationTypeSortKey(a, associations).localeCompare(relationTypeSortKey(b, associations)),
+    relationTypeSortKey(a, relationshipTypes).localeCompare(relationTypeSortKey(b, relationshipTypes)),
   )) {
     const { connections, sqlWindow } = loadRelationSectionConnections(
       db,
@@ -495,7 +495,7 @@ function buildRelationSections(
     const section = buildRelationSectionForPerspective(db, nodeId, label, connections, {
       contentDir,
       typeTableIds,
-      associations,
+      relationshipTypes,
       tableRelationByGroupKey,
       rowsQuery,
       sqlWindow,
@@ -521,7 +521,7 @@ export function getRelationTableSection(
     const contentDir = options?.contentDir ?? resolveContentPath();
     if (!readStoreGetNode(db, nodeId)) return null;
 
-    const associations = loadAssociationsFromContent(contentDir);
+    const relationshipTypes = loadRelationshipTypesFromContent(contentDir);
     const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
     const plan = explodeTableWindowRequest(db, options?.rowsQuery);
     const { connections, sqlWindow } = withProfilingSpan(
@@ -546,7 +546,7 @@ export function getRelationTableSection(
         buildRelationSectionForPerspective(db, nodeId, perspective, connections, {
           contentDir,
           typeTableIds: typeTableIdsFromContent(contentDir),
-          associations,
+          relationshipTypes,
           tableRelationByGroupKey,
           rowsQuery: options?.rowsQuery,
           sqlWindow,

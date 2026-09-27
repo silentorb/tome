@@ -36,7 +36,7 @@ Table view configuration for type-table member relationships lives in [`content/
 }
 ```
 
-- **`association`**: set-trait association ULID from `associations.json` (not a display label).
+- **`association`** (legacy field name): set-trait **relationship type** ULID from `associations.json` (not a display label).
 - **Custom views**: require `id`, `name`, `sorts` (array, may be empty).
 - **Generated (composed) views**: require `presentation` with at least one of `scope` / `groups` / `sequence`; tabs are computed at runtime (e.g. one per scope node). See [table-presentation.md](./table-presentation.md).
 - **`properties`**: optional string array of visible column keys in display order (additive allowlist).
@@ -49,10 +49,10 @@ Table view configuration for type-table member relationships lives in [`content/
 ## Editor behavior
 
 - Active tab is selected via `?tab=` (standalone) or node GET `?tab=` when present; otherwise the editor restores the last tab from `.marloth/user-settings.json` (`tableTabs`).
-- Custom views support in-editor CRUD via `/api/views/nodes/:id/associations/:associationId/views`.
-- View order is updated via `PATCH /api/views/nodes/:id/associations/:associationId` with `{ viewOrder: string[] }`.
+- Custom views support in-editor CRUD via `/api/views/nodes/:id/relationship-types/:relationshipTypeId/views`.
+- View order is updated via `PATCH /api/views/nodes/:id/relationship-types/:relationshipTypeId` with `{ viewOrder: string[] }`.
 - Column order and visibility for a custom view are updated via `PATCH .../views/:viewId` with `{ properties: string[] }`.
-- Shared properties for a generated association are updated via `PATCH .../associations/:associationId` with `{ properties: string[] }`.
+- Shared properties for a generated relationship type are updated via `PATCH .../relationship-types/:relationshipTypeId` with `{ properties: string[] }`.
 - Adding a stored column via the UI passes `viewId` so the new key is appended only to the active custom view’s `properties` (when that allowlist already exists). Sibling custom views are unchanged.
 - Generated views (Scenes) switch scope only; no CRUD chrome. Grouped rows and drag-and-drop for a generated view come from its `presentation` layers — see [table-presentation.md](./table-presentation.md).
 
@@ -65,7 +65,7 @@ Multi-row Items tables **must not** block page load on the full member set. The 
 
 ### SQLite path: filter / sort / window in SQL
 
-When the editor is backed by the **SQLite query cache**, filter, sort, join, and group for table windows **must** run in SQL (typically via Imp → Imp SQL / tome-imp-sql, or equivalent parameterized SQL on the cache). Application TypeScript may only **hydrate** DTOs from already-ordered, already-windowed SQL rows — O(window), not O(graph). Section metadata such as `typeNodeId` must come from association/schema config (`endpoints` / relation columns), not from full-graph title scans. Relation-section **column keys** on the SQL path come from the windowed edges (and schema), not a full-fan-out `DISTINCT` over every projection for that perspective. Default relation-window order is **ordinal ascending (nulls last), then projection id** — backed by `idx_rel_proj_source (source_node_id, type, ordinal, id)`; explicit name sorts still join target titles. See [tome-imp-sql.md](./tome-imp-sql.md) § Collection ops (SQL path).
+When the editor is backed by the **SQLite query cache**, filter, sort, join, and group for table windows **must** run in SQL (typically via Imp → Imp SQL / tome-imp-sql, or equivalent parameterized SQL on the cache). Application TypeScript may only **hydrate** DTOs from already-ordered, already-windowed SQL rows — O(window), not O(graph). Section metadata such as `typeNodeId` must come from relationship-type / schema config (`endpoints` / relation columns), not from full-graph title scans. Relation-section **column keys** on the SQL path come from the windowed edges (and schema), not a full-fan-out `DISTINCT` over every projection for that perspective. Default relation-window order is **ordinal ascending (nulls last), then projection id** — backed by `idx_rel_proj_source (source_node_id, type, ordinal, id)`; explicit name sorts still join target titles. See [tome-imp-sql.md](./tome-imp-sql.md) § Collection ops (SQL path).
 
 **Flatfile** backends are exempt and may still use in-memory collection ops.
 

@@ -8,11 +8,11 @@ const NODE_ID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 const ASSOCIATION_ID_RE = /^[0-9A-HJKMNP-TV-Z]{26}$/;
 
 export interface SequencingTableConfig {
-  dependsAssociation: string;
+  dependsRelationshipType: string;
   dependentsPerspective?: string;
   dependenciesPerspective?: string;
   defaultDuration: number;
-  containmentAssociation?: string | null;
+  containmentRelationshipType?: string | null;
   durationQuery?: unknown | null;
   parallelQuery?: unknown | null;
 }
@@ -33,9 +33,9 @@ function parseNodeId(value: unknown, path: string): string {
   return value;
 }
 
-function parseAssociationId(value: unknown, path: string): string {
+function parseRelationshipTypeId(value: unknown, path: string): string {
   if (typeof value !== "string" || !ASSOCIATION_ID_RE.test(value.trim())) {
-    throw new Error(`${path}: must be an association id (ULID)`);
+    throw new Error(`${path}: must be a relationship type id (ULID)`);
   }
   return value.trim();
 }
@@ -48,6 +48,17 @@ function parseOptionalString(value: unknown, path: string): string | undefined {
   return value.trim();
 }
 
+/** Preferred key, or legacy `dependsAssociation` / `containmentAssociation`. */
+function pickRelationshipTypeField(
+  obj: Record<string, unknown>,
+  preferred: string,
+  legacy: string,
+): unknown {
+  if (preferred in obj) return obj[preferred];
+  if (legacy in obj) return obj[legacy];
+  return undefined;
+}
+
 function parseTableConfig(raw: unknown, path: string): SequencingTableConfig {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
     throw new Error(`${path}: must be an object`);
@@ -56,8 +67,16 @@ function parseTableConfig(raw: unknown, path: string): SequencingTableConfig {
   if (typeof obj.defaultDuration !== "number" || !(obj.defaultDuration > 0)) {
     throw new Error(`${path}.defaultDuration: must be a positive number`);
   }
+  const dependsRaw = pickRelationshipTypeField(
+    obj,
+    "dependsRelationshipType",
+    "dependsAssociation",
+  );
   const config: SequencingTableConfig = {
-    dependsAssociation: parseAssociationId(obj.dependsAssociation, `${path}.dependsAssociation`),
+    dependsRelationshipType: parseRelationshipTypeId(
+      dependsRaw,
+      `${path}.dependsRelationshipType`,
+    ),
     defaultDuration: obj.defaultDuration,
   };
   const dependentsPerspective = parseOptionalString(
@@ -72,12 +91,17 @@ function parseTableConfig(raw: unknown, path: string): SequencingTableConfig {
   if (dependenciesPerspective !== undefined) {
     config.dependenciesPerspective = dependenciesPerspective;
   }
-  if (obj.containmentAssociation !== undefined) {
-    if (obj.containmentAssociation === null) config.containmentAssociation = null;
+  const containmentRaw = pickRelationshipTypeField(
+    obj,
+    "containmentRelationshipType",
+    "containmentAssociation",
+  );
+  if (containmentRaw !== undefined) {
+    if (containmentRaw === null) config.containmentRelationshipType = null;
     else {
-      config.containmentAssociation = parseAssociationId(
-        obj.containmentAssociation,
-        `${path}.containmentAssociation`,
+      config.containmentRelationshipType = parseRelationshipTypeId(
+        containmentRaw,
+        `${path}.containmentRelationshipType`,
       );
     }
   }

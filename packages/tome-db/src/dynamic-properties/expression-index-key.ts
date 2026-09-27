@@ -4,7 +4,7 @@
 
 import { createHash } from "node:crypto";
 import {
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   loadSchemaFromContent,
   resolveContentPath,
 } from "tome-flatfile";
@@ -43,7 +43,7 @@ export function hashExpressionIndexKey(
 export function buildExpressionIndexContextFingerprint(contentDir?: string): Record<string, unknown> {
   const dir = contentDir ?? resolveContentPath();
   const schema = loadSchemaFromContent(dir);
-  const associations = loadAssociationsFromContent(dir);
+  const relationshipTypes = loadRelationshipTypesFromContent(dir);
   const priority = schema.enums?.priority;
   return {
     formatVersion: EXPRESSION_INDEX_FORMAT_VERSION,
@@ -51,7 +51,7 @@ export function buildExpressionIndexContextFingerprint(contentDir?: string): Rec
     priorityOptions: priority?.options ?? [],
     priorityValues: priority?.values ?? {},
     priorityDefault: priority?.default ?? null,
-    associationIds: Object.keys(associations.associations ?? {}).sort((a, b) =>
+    relationshipTypeIds: Object.keys(relationshipTypes.relationshipTypes ?? {}).sort((a, b) =>
       a.localeCompare(b),
     ),
   };

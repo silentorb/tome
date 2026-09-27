@@ -1,15 +1,15 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createTestContentFixture, destroyTestContentFixture, seedTestNode, type TestContentFixture, TEST_MEMBER_OF_ASSOCIATION_ID } from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestNode, type TestContentFixture, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID } from "../src/content/test-helpers";
 import { contentModelDir,
-  associationsFilePath,
+  relationshipTypesFilePath,
   schemaFilePath,
   tableSchemasFilePath, projectionTypeForEndpoint } from "tome-flatfile";
 import { serializeSchemaFile } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
-import { serializeAssociationsFile } from "tome-flatfile";
+import { serializeRelationshipTypesFile } from "tome-flatfile";
 import { invalidateSchemaCache } from "tome-flatfile";
-import { invalidateAssociationsCache } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
 import { createExtensionSchemaQueryServices } from "../src/extension-schema-query";
 
@@ -37,10 +37,10 @@ describe("createExtensionSchemaQueryServices", () => {
   });
 
   writeFileSync(
-    associationsFilePath(fixture.ctx.store.contentDir),
-    serializeAssociationsFile({
+    relationshipTypesFilePath(fixture.ctx.store.contentDir),
+    serializeRelationshipTypesFile({
       version: 1,
-      associations: {
+      relationshipTypes: {
         "000000000000000000000000A1": {
           perspectives: ["Members", "Membership"],
           traits: ["set"],
@@ -70,7 +70,7 @@ describe("createExtensionSchemaQueryServices", () => {
     }),
     "utf-8",
   );
-  invalidateAssociationsCache();
+  invalidateRelationshipTypesCache();
 
   writeFileSync(
     tableSchemasFilePath(fixture.ctx.store.contentDir),
@@ -145,8 +145,8 @@ describe("createExtensionSchemaQueryServices", () => {
     const member2 = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
     seedTestNode(fixture, { id: member1, properties: { title: "Scene A" } });
     seedTestNode(fixture, { id: member2, properties: { title: "Scene B" } });
-    fixture.ctx.cache.upsertRelationship(member1, sceneTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
-    fixture.ctx.cache.upsertRelationship(member2, sceneTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 1 });
+    fixture.ctx.cache.upsertRelationship(member1, sceneTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
+    fixture.ctx.cache.upsertRelationship(member2, sceneTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 1 });
 
     const tables = await Promise.resolve(services.listTypeTables());
     const scene = tables.find((table) => table.id === sceneTypeId);

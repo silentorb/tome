@@ -21,7 +21,7 @@ export type {
 } from "./relationship-expand";
 export { relationshipId } from "./relationship-id";
 export { collectSetNodeIds } from "./set-nodes";
-export { LinkResolutionError, resolveAssociationIdForLink } from "./content/resolve-composite-for-link";
+export { LinkResolutionError, resolveRelationshipTypeIdForLink } from "./content/resolve-composite-for-link";
 
 export {
   RELATIONSHIPS_FILE_VERSION,
@@ -44,15 +44,15 @@ export {
 export { ulidToBytes, relationshipKeyBytes } from "./content/ulid-bytes";
 
 export {
-  ASSOCIATIONS_FILE_VERSION,
-  UnknownAssociationError,
-  emptyAssociationsFile,
-  generateAssociationId,
-  isAssociationId,
-  normalizeAssociationId,
-  parseAssociationsFile,
+  RELATIONSHIP_TYPES_FILE_VERSION,
+  UnknownRelationshipTypeError,
+  emptyRelationshipTypesFile,
+  generateRelationshipTypeId,
+  isRelationshipTypeId,
+  normalizeRelationshipTypeId,
+  parseRelationshipTypesFile,
   parseProjectionType,
-  associationIdFromProjectionType,
+  relationshipTypeIdFromProjectionType,
   endpointIndexFromProjectionType,
   projectionTypeForEndpoint,
   oppositeProjectionType,
@@ -63,24 +63,24 @@ export {
   perspectiveLinkExisting,
   perspectiveConfigAt,
   registerBidirectionalType,
-  registerSetAssociation,
+  registerSetRelationshipType,
   registerTypeDefinition,
-  requireAssociationId,
-  serializeAssociationsFile,
+  requireRelationshipTypeId,
+  serializeRelationshipTypesFile,
   isBidirectionalComposite,
   isDualPerspectiveType,
   perspectiveCountForExpansion,
-} from "./content/associations-file";
+} from "./content/relationship-types-file";
 export type {
-  AssociationDefinition,
-  AssociationsFile,
+  RelationshipTypeDefinition,
+  RelationshipTypesFile,
   PerspectiveLabelConfig,
   PerspectivePair,
   TraitEntry,
   TraitObjectEntry,
-  AssociationEndpoints,
-  AssociationEndpointConstraint,
-} from "./content/associations-file";
+  RelationshipTypeEndpoints,
+  RelationshipTypeEndpointConstraint,
+} from "./content/relationship-types-file";
 
 export {
   DYNAMIC_PROPERTIES_FILE_VERSION,
@@ -140,7 +140,7 @@ export {
   contentRelationshipsArchiveDir,
   relationshipsFilePath,
   relationshipFilePath,
-  associationsFilePath,
+  relationshipTypesFilePath,
   defaultDbPathForContent,
   DEFAULT_DB_FILENAME,
   readEnv,
@@ -302,36 +302,36 @@ export {
   ORDERED_TRAIT,
   SYMMETRIC_TRAIT,
   ORDERED_PROPERTY_DEFAULT,
-  associationIdFromTypeOrProjection,
+  relationshipTypeIdFromTypeOrProjection,
   childNodeId,
   hasTrait,
   isMemberSideProjectionType,
   isOrderedTraitComposite,
-  isOrderedSetAssociation,
+  isOrderedSetRelationshipType,
   isOrderedSetProjectionType,
   isSetSideProjectionType,
   isSetTraitComposite,
   isSetTraitEntry,
   isSetTraitProjectionType,
   isSetTraitType,
-  isSymmetricAssociation,
+  isSymmetricRelationshipType,
   isSymmetricComposite,
   memberSideProjectionType,
   memberSideProjectionTypes,
   orderedPropertyName,
   parentNodeId,
-  setRoleAssociationForNode,
+  setRoleRelationshipTypeForNode,
   setRoleIndices,
   setRoleProjectionTypesForComposite,
   setRoleProjectionTypesForNode,
   setSideProjectionType,
   setSideProjectionTypes,
-  setTraitAssociationIds,
+  setTraitRelationshipTypeIds,
   setTraitProjectionTypes,
   traitConfig,
   traitMap,
   typesWithTrait,
-} from "./association-traits";
+} from "./relationship-type-traits";
 
 export {
   FALLBACK_PRIORITY,
@@ -384,9 +384,9 @@ export {
 } from "./sequencing/load";
 
 export {
-  loadAssociationsFromContent,
-  invalidateAssociationsCache,
-} from "./associations/load";
+  loadRelationshipTypesFromContent,
+  invalidateRelationshipTypesCache,
+} from "./relationship-types/load";
 export {
   loadTableSchemasFromContent,
   hasTableSchemaEntry,
@@ -400,7 +400,7 @@ export {
   projectionTypeForHostTable,
   targetTypeIdForHostTable,
   allowedTargetTypeIdsForEndpoint,
-  associationRulesFromRegistry,
+  relationshipTypeRulesFromRegistry,
   relationSectionSupportsLinkExisting,
   resolveEndpointTypeIds,
-} from "./association-endpoints";
+} from "./relationship-type-endpoints";

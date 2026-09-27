@@ -5,11 +5,11 @@ import {
   type RelationshipsFile,
 } from "../content/relationships-file";
 import {
-  normalizeAssociationId,
-  parseAssociationsFile,
+  normalizeRelationshipTypeId,
+  parseRelationshipTypesFile,
   projectionTypeForEndpoint,
-  type AssociationsFile,
-} from "../content/associations-file";
+  type RelationshipTypesFile,
+} from "../content/relationship-types-file";
 import { parseTableSchemasFile } from "../content/table-schemas-file";
 import {
   projectionTypeForRelationColumn,
@@ -17,12 +17,12 @@ import {
 } from "../table-relation-column";
 import {
   isSetTraitType,
-  isSymmetricAssociation,
-} from "../association-traits";
+  isSymmetricRelationshipType,
+} from "../relationship-type-traits";
 import { parseWorkspaceFile } from "../workspace/workspace-file";
 import { normalizeRelationshipType } from "../relation-type";
 import {
-  associationsFilePath,
+  relationshipTypesFilePath,
   tableSchemasFilePath,
   workspaceFilePath,
 } from "../content/paths";
@@ -30,10 +30,10 @@ import { ContentStore } from "../content/store";
 
 /**
  * Reorder relationship tuples into a *meaningful* order so relative semantics
- * come from tuple position (`a` = association endpoint 0).
+ * come from tuple position (`a` = relationship type endpoint 0).
  *
  * Orientation source of truth (in priority):
- *   - **set membership** (set-trait associations, or legacy `"member_of"`):
+ *   - **set membership** (set-trait relationship types, or legacy `"member_of"`):
  *     parent (set) at index 0, child (member) at index 1.
  *   - **asymmetric cross-type**: place the endpoint whose node type owns the
  *     endpoint-0 relation column (targeting the other endpoint's type) at
@@ -46,7 +46,7 @@ import { ContentStore } from "../content/store";
 const TRIPLE_SEP = "\u0000";
 
 export interface RelationshipOrderContext {
-  registry: AssociationsFile;
+  registry: RelationshipTypesFile;
   /** node id -> type-table ids it is a member of (from set-trait / member_of edges). */
   nodeTypes: Map<string, Set<string>>;
   /** Type-table ids plus the archive hub id. */
@@ -94,11 +94,11 @@ function ownsProjection(
 }
 
 function isMembershipType(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   type: string,
 ): boolean {
   if (normalizeRelationshipType(type) === "member_of") return true;
-  const def = registry.associations[normalizeAssociationId(type)];
+  const def = registry.relationshipTypes[normalizeRelationshipTypeId(type)];
   return isSetTraitType(def);
 }
 
@@ -117,7 +117,7 @@ function orientMemberOf(
 /** Orient an asymmetric composite so index 0 owns the endpoint-0 projection. */
 function orientAsymmetric(
   entry: RelationshipEntry,
-  associationId: string,
+  relationshipTypeId: string,
   ctx: RelationshipOrderContext,
 ): { a: string; b: string; reason?: string } | null {
   const tA = typesOf(entry.a, ctx);
@@ -125,7 +125,7 @@ function orientAsymmetric(
   if (tA.size === 0 || tB.size === 0) {
     return { a: entry.a, b: entry.b, reason: "endpoint has no resolvable node type" };
   }
-  const p0 = projectionTypeForEndpoint(associationId, 0);
+  const p0 = projectionTypeForEndpoint(relationshipTypeId, 0);
   const aOwnsP0 = ownsProjection(ctx, tA, p0, tB);
   const bOwnsP0 = ownsProjection(ctx, tB, p0, tA);
   if (aOwnsP0 && !bOwnsP0) return { a: entry.a, b: entry.b };
@@ -146,8 +146,8 @@ export function reorderRelationshipsFile(
   };
 
   const relationships = file.relationships.map((entry) => {
-    const associationId = normalizeAssociationId(entry.type);
-    const def = ctx.registry.associations[associationId];
+    const relationshipTypeId = normalizeRelationshipTypeId(entry.type);
+    const def = ctx.registry.relationshipTypes[relationshipTypeId];
     const rebuilt = (a: string, b: string): RelationshipEntry => ({
       a,
       b,
@@ -156,14 +156,14 @@ export function reorderRelationshipsFile(
     });
 
     // Unregistered or symmetric types carry no direction — leave as authored.
-    if (!def || isSymmetricAssociation(def)) {
+    if (!def || isSymmetricRelationshipType(def)) {
       report.unchanged += 1;
       return entry;
     }
 
     const oriented = isMembershipType(ctx.registry, entry.type)
       ? orientMemberOf(entry, ctx)
-      : orientAsymmetric(entry, associationId, ctx);
+      : orientAsymmetric(entry, relationshipTypeId, ctx);
 
     if (!oriented) {
       report.ambiguous.push({
@@ -223,10 +223,10 @@ export function buildRelationshipOrderContext(
   contentDir: string,
   relationships: readonly RelationshipEntry[],
 ): RelationshipOrderContext {
-  const registryRaw = safeReadJson(associationsFilePath(contentDir));
+  const registryRaw = safeReadJson(relationshipTypesFilePath(contentDir));
   const registry = registryRaw
-    ? parseAssociationsFile(registryRaw)
-    : { version: 1, associations: {} };
+    ? parseRelationshipTypesFile(registryRaw)
+    : { version: 1, relationshipTypes: {} };
 
   const schemasRaw = safeReadJson(tableSchemasFilePath(contentDir));
   const schemas = schemasRaw ? parseTableSchemasFile(schemasRaw) : { version: 1, tables: {} };
@@ -323,8 +323,8 @@ export function auditRelationColumnOrientation(
     if (members.size === 0) continue;
     for (const col of schema.columns) {
       if (col.type !== "relation") continue;
-      const association = normalizeAssociationId(col.association);
-      const def = ctx.registry.associations[association];
+      const association = normalizeRelationshipTypeId(col.association);
+      const def = ctx.registry.relationshipTypes[association];
       // Same-type asymmetries (parents/children) cannot be oriented by type triples.
       if (
         def?.endpoints &&
@@ -337,7 +337,7 @@ export function auditRelationColumnOrientation(
       let right = 0;
       let wrong = 0;
       for (const entry of relationships) {
-        if (normalizeAssociationId(entry.type) !== association) continue;
+        if (normalizeRelationshipTypeId(entry.type) !== association) continue;
         const aMember = members.has(entry.a);
         const bMember = members.has(entry.b);
         if (!aMember && !bMember) continue;

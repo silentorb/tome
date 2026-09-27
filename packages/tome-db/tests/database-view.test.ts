@@ -1,4 +1,4 @@
-import { TEST_MEMBER_OF_ASSOCIATION_ID, TEST_PARENTS_CHILDREN_ASSOCIATION_ID } from "../src/content/test-helpers";
+import { TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, TEST_PARENTS_CHILDREN_ASSOCIATION_ID } from "../src/content/test-helpers";
 import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -8,14 +8,14 @@ import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { contentModelDir,
   dynamicPropertiesFilePath,
-  associationsFilePath,
+  relationshipTypesFilePath,
   schemaFilePath,
   tableSchemasFilePath, projectionTypeForEndpoint } from "tome-flatfile";
 import { emptyDynamicPropertiesFile, serializeDynamicPropertiesFile } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
 import { serializeSchemaFile } from "tome-flatfile";
-import { serializeAssociationsFile } from "tome-flatfile";
-import { invalidateAssociationsCache } from "tome-flatfile";
+import { serializeRelationshipTypesFile } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 import { invalidateSchemaCache } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
 
@@ -28,10 +28,10 @@ describe("database-view", () => {
     serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
   );
   writeFileSync(
-    associationsFilePath(contentDir),
-    serializeAssociationsFile({
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
       version: 1,
-      associations: {
+      relationshipTypes: {
         "000000000000000000000000A1": {
           perspectives: ["Members", "Membership"],
           traits: ["set"],
@@ -46,7 +46,7 @@ describe("database-view", () => {
       },
     }),
   );
-  invalidateAssociationsCache();
+  invalidateRelationshipTypesCache();
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
 
@@ -102,7 +102,7 @@ describe("database-view", () => {
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page1", { title: "Desperation" });
-    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
+    db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), {
       priority: "High",
     });
 
@@ -138,7 +138,7 @@ describe("database-view", () => {
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page2", { title: "Peace in the eye of the storm" });
-    db.upsertRelationship("page2", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
+    db.upsertRelationship("page2", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), {
       row_index: 0,
       row_name: "Stale CSV label",
     });
@@ -162,7 +162,7 @@ describe("database-view", () => {
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
     db.upsertNode("page3", { title: "Child feature" });
     db.upsertNode(parentId, { title: "Parent feature" });
-    db.upsertRelationship("page3", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship("page3", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
     db.upsertRelationship("page3", parentId, projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1), { ordinal: 0 });
 
     const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
@@ -191,7 +191,7 @@ describe("database-view", () => {
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Inspirations") });
     db.upsertNode("insp1", { title: "Example inspiration" });
-    db.upsertRelationship("insp1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
+    db.upsertRelationship("insp1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), {
       row_index: 0,
       plot_is_driven_by_mc_desire: "True",
     });
@@ -210,10 +210,10 @@ describe("database-view", () => {
   test("exposes set membership perspectives from a non-conventional composite", () => {
     const databaseId = "FFFFFFFFFFFFFFFFFFFFFFFFFF";
     writeFileSync(
-      associationsFilePath(contentDir),
-      serializeAssociationsFile({
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile({
         version: 1,
-        associations: {
+        relationshipTypes: {
           "000000000000000000000000B6": {
             perspectives: ["cohort", "belongs_to_cohort"],
             traits: ["set"],
@@ -224,7 +224,7 @@ describe("database-view", () => {
         },
       }),
     );
-    invalidateAssociationsCache();
+    invalidateRelationshipTypesCache();
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Cohorts") });
     db.upsertNode("member1", { title: "Member one" });
@@ -232,17 +232,17 @@ describe("database-view", () => {
 
     const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
     expect(detail).toMatchObject({
-      viewAssociation: "000000000000000000000000B6",
+      viewRelationshipType: "000000000000000000000000B6",
       memberSidePerspective: projectionTypeForEndpoint("000000000000000000000000B6", 1),
       rows: [{ nodeId: "member1", name: "Member one" }],
     });
 
     // Restore conventional set types for later tests in this file.
     writeFileSync(
-      associationsFilePath(contentDir),
-      serializeAssociationsFile({
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile({
         version: 1,
-        associations: {
+        relationshipTypes: {
           "000000000000000000000000A1": {
             perspectives: ["Members", "Membership"],
             traits: ["set"],
@@ -257,7 +257,7 @@ describe("database-view", () => {
         },
       }),
     );
-    invalidateAssociationsCache();
+    invalidateRelationshipTypesCache();
   });
 
   test("ignores orphan_row properties on the database vertex", () => {

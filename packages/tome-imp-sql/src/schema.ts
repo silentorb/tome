@@ -67,12 +67,12 @@ export function tomeEdgePropertyExpression(alias: string, name: string): string 
 
 /**
  * Encode a directed association hop as a `relationship_projections.type` value
- * (`{associationId}:0` or `{associationId}:1`).
+ * (`{relationshipTypeId}:0` or `{relationshipTypeId}:1`).
  */
-export function projectionType(associationId: string, direction: 0 | 1): string {
-  const id = associationId.trim();
+export function projectionType(relationshipTypeId: string, direction: 0 | 1): string {
+  const id = relationshipTypeId.trim();
   if (!ASSOCIATION_ID_RE.test(id)) {
-    throw new Error(`Invalid association id "${associationId}"`);
+    throw new Error(`Invalid relationship type id "${relationshipTypeId}"`);
   }
   if (direction !== 0 && direction !== 1) {
     throw new Error(`direction must be 0 or 1, got ${String(direction)}`);

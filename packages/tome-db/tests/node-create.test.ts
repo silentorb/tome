@@ -2,9 +2,9 @@ import { describe, expect, test, afterEach } from "bun:test";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getNodeDetail } from "../src/queries";
 import { createNode } from "../src/node-create";
-import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestTableSchema, type TestContentFixture, TEST_MEMBER_OF_ASSOCIATION_ID, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID } from "../src/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestTableSchema, type TestContentFixture, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID } from "../src/content/test-helpers";
 import { registerBidirectionalType, projectionTypeForEndpoint } from "tome-flatfile";
-import { invalidateAssociationsCache } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 
 describe("createNode", () => {
   let fixture: TestContentFixture;
@@ -38,13 +38,13 @@ describe("createNode", () => {
 
   test("creates outgoing relation row", () => {
     fixture = createTestContentFixture("tome-create-");
-    const registry = fixture.ctx.store.readAssociationsFile();
-    const featuresAssociationId = registerBidirectionalType(registry, "Features", "Targets");
-    fixture.ctx.store.writeAssociationsFile(registry);
-    invalidateAssociationsCache();
+    const registry = fixture.ctx.store.readRelationshipTypesFile();
+    const featuresRelationshipTypeId = registerBidirectionalType(registry, "Features", "Targets");
+    fixture.ctx.store.writeRelationshipTypesFile(registry);
+    invalidateRelationshipTypesCache();
 
     const sourceId = "0000000000000000000000001C";
-    const featuresType = projectionTypeForEndpoint(featuresAssociationId, 0);
+    const featuresType = projectionTypeForEndpoint(featuresRelationshipTypeId, 0);
     seedTestNode(fixture, {
       id: sourceId,
       properties: { title: "Scene" },
@@ -81,7 +81,7 @@ describe("createNode", () => {
       id: "0000000000000000000000002K",
       properties: { title: "Old row" },
     });
-    fixture.ctx.store.upsertRelationship("0000000000000000000000002K", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {});
+    fixture.ctx.store.upsertRelationship("0000000000000000000000002K", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), {});
     fixture.ctx.sync.syncRelationships();
 
     const result = createNode(fixture.ctx, {

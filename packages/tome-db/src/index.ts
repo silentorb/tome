@@ -54,10 +54,10 @@ export { getDatabaseViewDetail } from "./database-view";
 export { hydrateRelationCellsForRows } from "./database-view-relations";
 export { relationType, normalizeRelationshipType, stripEmojis } from "tome-flatfile";
 export {
-  formatAssociationLabel,
+  formatRelationshipTypeLabel,
   labeledRelationshipTypes,
   perspectiveDisplayLabel,
-} from "./association-label";
+} from "./relationship-type-label";
 export type {
   DatabaseColumnDef,
   DatabaseRow,
@@ -202,13 +202,13 @@ export {
 export type { NodeBodyDocument, EditorNodePageDetail } from "tome-graph-interfaces";
 export {
   relationSectionSupportsLinkExisting,
-  associationRuleContext,
-  associationRulesFromRegistry,
-} from "./association-endpoints";
+  relationshipTypeRuleContext,
+  relationshipTypeRulesFromRegistry,
+} from "./relationship-type-endpoints";
 export type {
-  AssociationRuleContext,
-  AssociationRuleEntry,
-} from "./association-endpoints";
+  RelationshipTypeRuleContext,
+  RelationshipTypeRuleEntry,
+} from "./relationship-type-endpoints";
 export { UNASSIGNED_GROUP_ID } from "tome-graph-interfaces";
 export {
   getCompositionById,
@@ -259,38 +259,38 @@ export {
   findSetEdge,
   collectSetNodeIds,
 } from "./set-membership";
-export { registerSetAssociation } from "tome-flatfile";
+export { registerSetRelationshipType } from "tome-flatfile";
 export type { TraitEntry, TraitObjectEntry } from "tome-flatfile";
 export {
   SET_TRAIT,
   ORDERED_TRAIT,
   SYMMETRIC_TRAIT,
   ORDERED_PROPERTY_DEFAULT,
-  associationIdFromTypeOrProjection,
+  relationshipTypeIdFromTypeOrProjection,
   childNodeId,
   hasTrait,
   isMemberSideProjectionType,
   isOrderedTraitComposite,
-  isOrderedSetAssociation,
+  isOrderedSetRelationshipType,
   isOrderedSetProjectionType,
   isSetSideProjectionType,
   isSetTraitComposite,
   isSetTraitEntry,
   isSetTraitProjectionType,
   isSetTraitType,
-  isSymmetricAssociation,
+  isSymmetricRelationshipType,
   isSymmetricComposite,
   memberSideProjectionType,
   memberSideProjectionTypes,
   orderedPropertyName,
   parentNodeId,
-  setRoleAssociationForNode,
+  setRoleRelationshipTypeForNode,
   setRoleIndices,
   setRoleProjectionTypesForComposite,
   setRoleProjectionTypesForNode,
   setSideProjectionType,
   setSideProjectionTypes,
-  setTraitAssociationIds,
+  setTraitRelationshipTypeIds,
   setTraitProjectionTypes,
   traitConfig,
   traitMap,
@@ -304,14 +304,14 @@ export {
   listOrderedMemberConnections,
   maxOrderAtSet,
   stampOrderIfMissing,
-  setUsesOrderedAssociation,
+  setUsesOrderedRelationshipType,
 } from "./ordered-relationships";
 export {
   loadSchemaFromContent,
   loadWorkspaceSchema,
   invalidateSchemaCache,
-  loadAssociationsFromContent,
-  invalidateAssociationsCache,
+  loadRelationshipTypesFromContent,
+  invalidateRelationshipTypesCache,
   loadViewsFromContent,
   invalidateViewsCache,
   loadWorkspaceFromContent,

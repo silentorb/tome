@@ -19,7 +19,7 @@ import type {
   ViewsFile,
   WorkspaceFile,
   ListRelationshipProjectionsOptions,
-  AssociationsFile,
+  RelationshipTypesFile,
   DynamicPropertiesFile,
 } from "tome-graph-interfaces";
 import type { GraphDatabase } from "tome-sqlite";
@@ -192,12 +192,12 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     return this.flatfile.replaceRelationshipProperties(source, target, projectionType, properties);
   }
 
-  readAssociations(): AssociationsFile {
-    return this.flatfile.readAssociations();
+  readRelationshipTypes(): RelationshipTypesFile {
+    return this.flatfile.readRelationshipTypes();
   }
 
-  writeAssociations(file: AssociationsFile): void {
-    this.flatfile.writeAssociations(file);
+  writeRelationshipTypes(file: RelationshipTypesFile): void {
+    this.flatfile.writeRelationshipTypes(file);
   }
 
   readSchema(): SchemaFile {

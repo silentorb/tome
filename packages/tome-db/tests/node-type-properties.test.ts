@@ -11,16 +11,16 @@ import { serializeWorkspaceFile } from "tome-flatfile";
 import { invalidateWorkspaceCache } from "tome-flatfile";
 import { writeFileSync } from "node:fs";
 import {
-  associationsFilePath,
-  emptyAssociationsFile,
+  relationshipTypesFilePath,
+  emptyRelationshipTypesFile,
   registerBidirectionalType,
-  registerSetAssociation,
-  serializeAssociationsFile,
-  invalidateAssociationsCache,
+  registerSetRelationshipType,
+  serializeRelationshipTypesFile,
+  invalidateRelationshipTypesCache,
 } from "tome-flatfile";
 import {
-  TEST_MEMBER_OF_ASSOCIATION_ID,
-  TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
+  TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
 } from "../src/content/test-helpers";
 import { GraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
@@ -41,20 +41,20 @@ describe("node-type-properties", () => {
   );
   invalidateWorkspaceCache();
   {
-    const registry = emptyAssociationsFile();
-    registerSetAssociation(registry, {
-      id: TEST_MEMBER_OF_ASSOCIATION_ID,
+    const registry = emptyRelationshipTypesFile();
+    registerSetRelationshipType(registry, {
+      id: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
       perspectives: ["Members", "Membership"],
     });
-    registerSetAssociation(registry, {
-      id: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+    registerSetRelationshipType(registry, {
+      id: TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
       perspectives: ["Ordered members", "Ordered membership"],
       ordered: true,
     });
     // Direct cache edges use perspective "scenes"; register so page detail can resolve them.
     registerBidirectionalType(registry, "scenes", "scenes", "000000000000000000000000C3");
-    writeFileSync(associationsFilePath(contentDir), serializeAssociationsFile(registry), "utf-8");
-    invalidateAssociationsCache();
+    writeFileSync(relationshipTypesFilePath(contentDir), serializeRelationshipTypesFile(registry), "utf-8");
+    invalidateRelationshipTypesCache();
   }
   process.env.TOME_CONTENT_PATH = contentDir;
 
@@ -83,7 +83,7 @@ describe("node-type-properties", () => {
       ...typeTableMarkerProperties("Characters"),
     });
     db.upsertNode(character, { title: "James" });
-    db.upsertRelationship(character, CHAR_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0, priority: "High" });
+    db.upsertRelationship(character, CHAR_DB, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0, priority: "High" });
 
     db.upsertNode(scene1, { title: "Scene A" });
     db.upsertNode(scene2, { title: "Scene B" });
@@ -124,7 +124,7 @@ describe("node-type-properties", () => {
     const detail = getNodePageDetail(db, character, { contentDir });
     expect(detail?.properties?.cells.all_scene_count).toBe("2");
     const membership = detail?.sections.find(
-      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
+      (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1),
     );
     expect(membership?.type === "relations" ? membership.rows : undefined).toEqual([
       { targetId: CHAR_DB, name: "Characters", cells: {} },

@@ -37,21 +37,21 @@ describe("createExtensionGraphQueryServices", () => {
         b: cityA,
         typeFromA: "Children",
         typeFromB: "Parents",
-        associationId: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
+        relationshipTypeId: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
       },
       {
         a: house,
         b: cityB,
         typeFromA: "Children",
         typeFromB: "Parents",
-        associationId: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
+        relationshipTypeId: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
       },
       {
         a: cityA,
         b: cityB,
         typeFromA: "Neighbor",
         typeFromB: "Neighbor",
-        associationId: NEIGHBOR_ASSOCIATION_ID,
+        relationshipTypeId: NEIGHBOR_ASSOCIATION_ID,
       },
     ]);
   });

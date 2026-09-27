@@ -2,7 +2,7 @@
 
 ## Summary
 
-**tome-sequencing** is a page-block extension that arranges related events on a relative timeline. Event membership comes from a **page-scoped Imp query** (React Flow fence data, like tome-query). Interpretation (depends association, default duration, optional duration/parallel Imp graphs) comes from per–type-table [`content/model/sequencing.json`](../../packages/tome-flatfile/src/sequencing/sequencing-file.ts). **Layout** (non-overlapping ASAP placements + concurrency lanes) comes from [`tome-sequencing-resolution`](./tome-sequencing-resolution.md)—the display is a thin renderer of that output.
+**tome-sequencing** is a page-block extension that arranges related events on a relative timeline. Event membership comes from a **page-scoped Imp query** (React Flow fence data, like tome-query). Interpretation (depends relationship type, default duration, optional duration/parallel Imp graphs) comes from per–type-table [`content/model/sequencing.json`](../../packages/tome-flatfile/src/sequencing/sequencing-file.ts). **Layout** (non-overlapping ASAP placements + concurrency lanes) comes from [`tome-sequencing-resolution`](./tome-sequencing-resolution.md)—the display is a thin renderer of that output.
 
 ## When to read this
 
@@ -29,7 +29,7 @@
 ### sequencing.json
 
 - Keyed by type-table / set node id
-- Configures depends association, default duration, optional containment association, optional agent-authored Imp duration/parallel graphs
+- Configures depends relationship type, default duration, optional containment relationship type, optional agent-authored Imp duration/parallel graphs
 - Does **not** list which events appear (the block query does)
 
 ### Timeline UI
@@ -51,7 +51,7 @@
 - `interactive: true` embed with Refresh + **Edit query** (host tool panel React Flow editor); shows an explicit load error if the browser bundle is unavailable
 - Server `invoke` actions:
   - `arrange` / `execute` — layout DTO
-  - `addDepends` / `removeDepends` — `{ prerequisiteId, dependentId, from, to, data, parameters? }` mutates one start/end combo on the `dependsAssociation` row (direction 0 = prerequisite → dependent; `properties.endpoints` is `{ from, to }[]`) then re-arranges. Missing `endpoints` fails arrange. On resolve failure, returns `{ ok: false, error, depends }` so the client can keep previous placements and still list the new edge.
+  - `addDepends` / `removeDepends` — `{ prerequisiteId, dependentId, from, to, data, parameters? }` mutates one start/end combo on the `dependsRelationshipType` row (direction 0 = prerequisite → dependent; `properties.endpoints` is `{ from, to }[]`) then re-arranges. Missing `endpoints` fails arrange. On resolve failure, returns `{ ok: false, error, depends }` so the client can keep previous placements and still list the new edge.
 - Client may pass `parameters` (resolved graph parameter values) on invoke
 - At execute time, Imp/React Flow string literals equal to `$pageNodeId` are replaced with the host page node id, and `parameter` node values are bound from user settings (defaults from the graph when unset)
 
@@ -63,7 +63,7 @@ Notion-style absolute dates are a poor fit for story chronology. Relative depend
 
 1. Run block Imp query with page `nodeId` bound → event rows (`id`, title, optional group column)
 2. Load `sequencing.json` for that page id
-3. Load depends edges among result ids (association direction 0 = prerequisite → dependent; expand `properties.endpoints` into `DependsConstraint` rows with `from` / `to`)
+3. Load depends edges among result ids (relationship-type direction 0 = prerequisite → dependent; expand `properties.endpoints` into `DependsConstraint` rows with `from` / `to`)
 4. If the query ends in Imp `group`, partition rows into groups (enum `values` order when applicable) and `resolve` + `layoutEvents` **per group**, stacking lane bands; otherwise resolve and pack all events together
 5. Render visx / static SVG from placements only
 

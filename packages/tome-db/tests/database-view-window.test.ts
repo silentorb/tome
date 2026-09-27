@@ -1,5 +1,5 @@
 import {
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
 } from "../src/content/test-helpers";
 import { describe, expect, test, afterAll, spyOn } from "bun:test";
@@ -19,7 +19,7 @@ import { getDatabaseViewDetail } from "../src/database-view";
 import {
   contentModelDir,
   dynamicPropertiesFilePath,
-  associationsFilePath,
+  relationshipTypesFilePath,
   schemaFilePath,
   tableSchemasFilePath,
   projectionTypeForEndpoint,
@@ -27,8 +27,8 @@ import {
   serializeDynamicPropertiesFile,
   serializeTableSchemasFile,
   serializeSchemaFile,
-  serializeAssociationsFile,
-  invalidateAssociationsCache,
+  serializeRelationshipTypesFile,
+  invalidateRelationshipTypesCache,
   invalidateSchemaCache,
   invalidateTableSchemasCache,
 } from "tome-flatfile";
@@ -43,11 +43,11 @@ describe("database-view SQL windows", () => {
     serializeDynamicPropertiesFile(emptyDynamicPropertiesFile()),
   );
   writeFileSync(
-    associationsFilePath(contentDir),
-    serializeAssociationsFile({
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile({
       version: 1,
-      associations: {
-        [TEST_MEMBER_OF_ASSOCIATION_ID]: {
+      relationshipTypes: {
+        [TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID]: {
           perspectives: ["Members", "Membership"],
           traits: ["set"],
         },
@@ -57,7 +57,7 @@ describe("database-view SQL windows", () => {
       },
     }),
   );
-  invalidateAssociationsCache();
+  invalidateRelationshipTypesCache();
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
 
@@ -101,7 +101,7 @@ describe("database-view SQL windows", () => {
     const databaseId = "WWWWWWWWWWWWWWWWWWWWWWWWWW";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
-    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
     for (let i = 0; i < 120; i++) {
       const id = `01WINMEM${String(i).padStart(18, "0")}`;
       db.upsertNode(id, { title: `Feature ${String(i).padStart(3, "0")}` });
@@ -136,7 +136,7 @@ describe("database-view SQL windows", () => {
       },
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
-    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
     const parentProjection = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1);
 
     const low = "01RELLOW000000000000000001";
@@ -165,7 +165,7 @@ describe("database-view SQL windows", () => {
     const databaseId = "YYYYYYYYYYYYYYYYYYYYYYYYYY";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
-    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
     db.upsertNode("01QAAA00000000000000000001", { title: "Alpha quest" });
     db.upsertNode("01QBBB00000000000000000001", { title: "Beta note" });
     db.upsertRelationship("01QAAA00000000000000000001", databaseId, memberProjection, {});
@@ -184,7 +184,7 @@ describe("database-view SQL windows", () => {
     const databaseId = "Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
-    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
     const matchId = "01QMATCH000000000000000001";
     const otherId = "01QOTHER000000000000000001";
     db.upsertNode(matchId, { title: "Scoped quest hit" });
@@ -252,7 +252,7 @@ describe("database-view SQL windows", () => {
     invalidateDynamicPropertiesCache();
 
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Characters") });
-    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
 
     const low = "01DYNLOW000000000000000001";
     const high = "01DYNHIGH00000000000000001";
@@ -424,7 +424,7 @@ describe("database-view SQL windows", () => {
     invalidateDynamicPropertiesCache();
 
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Characters") });
-    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
 
     const low = "01COLLOW000000000000000001";
     const high = "01COLHIGH00000000000000001";
@@ -489,7 +489,7 @@ describe("database-view SQL windows", () => {
       },
     ]);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Nodes") });
-    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
     const parent = "01RELPAR000000000000000001";
     const childA = "01RELCHA000000000000000001";
     const childB = "01RELCHB000000000000000001";
@@ -542,7 +542,7 @@ describe("database-view SQL windows", () => {
     const databaseId = "01FC0SAFE00000000000000001";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
-    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
     for (let i = 0; i < 80; i++) {
       const id = `01FC0MSF${String(i).padStart(18, "0")}`;
       db.upsertNode(id, { title: `Feature ${String(i).padStart(3, "0")}` });
@@ -605,7 +605,7 @@ describe("database-view SQL windows", () => {
     invalidateDynamicPropertiesCache();
 
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
-    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
+    const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
     const first = "01FC0DYNA00000000000000001";
     const second = "01FC0DYNB00000000000000001";
     db.upsertNode(first, { title: "A first" });

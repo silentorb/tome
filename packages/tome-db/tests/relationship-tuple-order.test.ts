@@ -6,9 +6,9 @@ import {
   seedTestCompositeRelationships,
   seedTestNode,
   seedTestRelationships,
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
-  TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+  TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
 } from "../src/content/test-helpers";
 
 /**
@@ -38,7 +38,7 @@ describe("relationship tuple order carries relative semantics", () => {
         b: child,
         typeFromA: "Children",
         typeFromB: "Parents",
-        associationId: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
+        relationshipTypeId: TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
       },
     ]);
     const fromParent = projectionTypeForEndpoint(assocId!, 0);
@@ -70,14 +70,14 @@ describe("relationship tuple order carries relative semantics", () => {
         b: sceneHigh,
         typeFromA: "Scenes",
         typeFromB: "Product",
-        associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        relationshipTypeId: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
       },
       {
         a: productHigh,
         b: sceneLow,
         typeFromA: "Scenes",
         typeFromB: "Product",
-        associationId: TEST_SCENES_PRODUCT_ASSOCIATION_ID,
+        relationshipTypeId: TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
       },
     ]);
     const fromProduct = projectionTypeForEndpoint(assocId!, 0);
@@ -96,11 +96,11 @@ describe("relationship tuple order carries relative semantics", () => {
     seedTestNode(fixture, { id: member, properties: { title: "Member" } });
 
     seedTestRelationships(fixture, [
-      { source: member, target: set, type: TEST_MEMBER_OF_ASSOCIATION_ID },
+      { source: member, target: set, type: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID },
     ]);
 
-    const memberSide = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1);
-    const setSide = projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 0);
+    const memberSide = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
+    const setSide = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 0);
 
     expect(targets(member, memberSide)).toEqual([set]);
     expect(targets(set, setSide)).toEqual([member]);

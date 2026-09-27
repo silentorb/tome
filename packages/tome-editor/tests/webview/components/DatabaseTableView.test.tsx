@@ -247,9 +247,9 @@ describe("DatabaseTableView", () => {
   test("omits hidden columns from the table and toggles visibility via toolbar", async () => {
     const api = makeMockEditorApi();
     let updateInput: { properties?: string[] } | undefined;
-    api.updateRelationshipView = async (nodeId, association, viewId, input) => {
+    api.updateRelationshipView = async (nodeId, relationshipTypeId, viewId, input) => {
       void nodeId;
-      void association;
+      void relationshipTypeId;
       void viewId;
       updateInput = input;
       return {
@@ -320,7 +320,7 @@ describe("DatabaseTableView", () => {
       unlinkOutgoingRelationship,
     };
     const databaseView = makeDatabaseViewDetail({
-      viewAssociation: "cohort",
+      viewRelationshipType: "cohort",
       memberSidePerspective: "belongs_to_cohort",
     });
 
@@ -349,12 +349,12 @@ describe("DatabaseTableView", () => {
     );
   });
 
-  test("creates tabs with viewAssociation from the view payload", async () => {
+  test("creates tabs with viewRelationshipType from the view payload", async () => {
     const createRelationshipView = mock(
-      async (_nodeId: string, association: string, input: { name: string }) => ({
+      async (_nodeId: string, relationshipTypeId: string, input: { name: string }) => ({
         id: "new-tab",
         nodeId: FIXTURE_DATABASE_ID,
-        association,
+        association: relationshipTypeId,
         name: input.name,
         sorts: [{ column: "name", direction: "asc" as const }],
       }),
@@ -364,7 +364,7 @@ describe("DatabaseTableView", () => {
       createRelationshipView,
     };
     const databaseView = makeDatabaseViewDetail({
-      viewAssociation: "cohort",
+      viewRelationshipType: "cohort",
       memberSidePerspective: "belongs_to_cohort",
     });
     let selectedTab = "";

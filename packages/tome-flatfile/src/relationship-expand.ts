@@ -1,11 +1,11 @@
 import type { Properties, Relationship } from "tome-graph-interfaces";
 import type { RelationshipEntry } from "./content/relationships-file";
 import { relationshipRecordId } from "./content/relationships-file";
-import type { AssociationDefinition, AssociationsFile } from "./content/associations-file";
+import type { RelationshipTypeDefinition, RelationshipTypesFile } from "./content/relationship-types-file";
 import {
   perspectiveCountForExpansion,
   projectionTypeForEndpoint,
-} from "./content/associations-file";
+} from "./content/relationship-types-file";
 import { relationshipId } from "./relationship-id";
 
 export interface RelationshipRecordRow {
@@ -27,7 +27,7 @@ export interface RelationshipProjectionRow {
 
 export function expandRelationshipEntry(
   entry: RelationshipEntry,
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
 ): { record: RelationshipRecordRow; projections: RelationshipProjectionRow[] } {
   const properties = entry.properties ?? {};
   const recordId = relationshipRecordId(entry.a, entry.b, entry.type);
@@ -39,7 +39,7 @@ export function expandRelationshipEntry(
     properties,
   };
 
-  const typeDef = registry.associations[entry.type];
+  const typeDef = registry.relationshipTypes[entry.type];
   const projections = expandProjections(recordId, entry, typeDef, properties);
 
   return { record, projections };
@@ -48,11 +48,11 @@ export function expandRelationshipEntry(
 function expandProjections(
   recordId: string,
   entry: RelationshipEntry,
-  typeDef: AssociationDefinition | undefined,
+  typeDef: RelationshipTypeDefinition | undefined,
   properties: Properties,
 ): RelationshipProjectionRow[] {
-  const associationId = entry.type;
-  const projectionCount = perspectiveCountForExpansion(typeDef, associationId);
+  const relationshipTypeId = entry.type;
+  const projectionCount = perspectiveCountForExpansion(typeDef, relationshipTypeId);
 
   if (projectionCount >= 2) {
     return [
@@ -60,14 +60,14 @@ function expandProjections(
         recordId,
         entry.a,
         entry.b,
-        projectionTypeForEndpoint(associationId, 0),
+        projectionTypeForEndpoint(relationshipTypeId, 0),
         properties,
       ),
       projectionRow(
         recordId,
         entry.b,
         entry.a,
-        projectionTypeForEndpoint(associationId, 1),
+        projectionTypeForEndpoint(relationshipTypeId, 1),
         properties,
       ),
     ];
@@ -78,7 +78,7 @@ function expandProjections(
       recordId,
       entry.a,
       entry.b,
-      projectionTypeForEndpoint(associationId, 0),
+      projectionTypeForEndpoint(relationshipTypeId, 0),
       properties,
     ),
   ];
@@ -114,7 +114,7 @@ export function toDomainRelationship(row: RelationshipProjectionRow): Relationsh
 
 export function expandAllRelationships(
   entries: RelationshipEntry[],
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
 ): { records: RelationshipRecordRow[]; projections: RelationshipProjectionRow[] } {
   const records: RelationshipRecordRow[] = [];
   const projections: RelationshipProjectionRow[] = [];

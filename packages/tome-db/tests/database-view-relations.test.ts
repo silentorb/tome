@@ -2,7 +2,7 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { contentModelDir, dynamicPropertiesFilePath, associationsFilePath, tableSchemasFilePath, projectionTypeForEndpoint } from "tome-flatfile";
+import { contentModelDir, dynamicPropertiesFilePath, relationshipTypesFilePath, tableSchemasFilePath, projectionTypeForEndpoint } from "tome-flatfile";
 import { emptyDynamicPropertiesFile, serializeDynamicPropertiesFile } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
@@ -14,19 +14,19 @@ import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestNode,
-  TEST_MEMBER_OF_ASSOCIATION_ID,
+  TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
-  TEST_SCENES_PART_ASSOCIATION_ID,
-  TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+  TEST_SCENES_PART_RELATIONSHIP_TYPE_ID,
+  TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
 } from "../src/content/test-helpers";
 import { RELATIONSHIPS_FILE_VERSION } from "tome-flatfile";
 import {
-  emptyAssociationsFile,
-  registerSetAssociation,
+  emptyRelationshipTypesFile,
+  registerSetRelationshipType,
   registerTypeDefinition,
-  serializeAssociationsFile,
+  serializeRelationshipTypesFile,
 } from "tome-flatfile";
-import { invalidateAssociationsCache } from "tome-flatfile";
+import { invalidateRelationshipTypesCache } from "tome-flatfile";
 
 const PROP_TYPE_ASSOCIATION_ID = "000000000000000000000000BD";
 const STORY_SCALE_ASSOCIATION_ID = "000000000000000000000000BC";
@@ -54,9 +54,9 @@ describe("database-view-relations", () => {
   const partId = "0000000000000000000000000M";
   const featuresDb = "0000000000000000000000002P";
 
-  const relationTypes = emptyAssociationsFile();
-  registerSetAssociation(relationTypes, {
-    id: TEST_MEMBER_OF_ASSOCIATION_ID,
+  const relationTypes = emptyRelationshipTypesFile();
+  registerSetRelationshipType(relationTypes, {
+    id: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
     perspectives: ["Members", "Membership"],
   });
   registerTypeDefinition(relationTypes, PROP_TYPE_ASSOCIATION_ID, {
@@ -69,14 +69,14 @@ describe("database-view-relations", () => {
   registerTypeDefinition(relationTypes, TEST_PARENTS_CHILDREN_ASSOCIATION_ID, {
     perspectives: ["Children", "Parents"],
   });
-  registerTypeDefinition(relationTypes, TEST_SCENES_PART_ASSOCIATION_ID, {
+  registerTypeDefinition(relationTypes, TEST_SCENES_PART_RELATIONSHIP_TYPE_ID, {
     perspectives: ["Scenes", "Part"],
     endpoints: {
       0: { typeId: scenesDb },
       1: { typeId: partsDb },
     },
   });
-  registerTypeDefinition(relationTypes, TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, {
+  registerTypeDefinition(relationTypes, TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, {
     perspectives: ["Features", "Inspirations"],
     endpoints: {
       0: { typeId: featuresDb },
@@ -87,10 +87,10 @@ describe("database-view-relations", () => {
     perspectives: ["Story scale", "Inspirations"],
   });
   writeFileSync(
-    associationsFilePath(contentDir),
-    serializeAssociationsFile(relationTypes),
+    relationshipTypesFilePath(contentDir),
+    serializeRelationshipTypesFile(relationTypes),
   );
-  invalidateAssociationsCache();
+  invalidateRelationshipTypesCache();
 
   writeFileSync(
     tableSchemasFilePath(contentDir),
@@ -120,8 +120,8 @@ describe("database-view-relations", () => {
     db.upsertNode(inspirationTypesDb, { ...typeTableMarkerProperties("Inspiration types") });
     db.upsertNode(inspirationId, { title: "Ash vs. the Evil Dead" });
     db.upsertNode(tvSeriesTypeId, { title: "TV series" });
-    db.upsertRelationship(inspirationId, inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
-    db.upsertRelationship(tvSeriesTypeId, inspirationTypesDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship(inspirationId, inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
+    db.upsertRelationship(tvSeriesTypeId, inspirationTypesDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
     db.upsertRelationship(
       inspirationId,
       tvSeriesTypeId,
@@ -191,8 +191,8 @@ describe("database-view-relations", () => {
     db.upsertNode(locationsDb, { ...typeTableMarkerProperties("Locations") });
     db.upsertNode(parentLocationId, { title: "Marloth" });
     db.upsertNode(childLocationId, { title: "Dark forest" });
-    db.upsertRelationship(parentLocationId, locationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
-    db.upsertRelationship(childLocationId, locationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 1 });
+    db.upsertRelationship(parentLocationId, locationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
+    db.upsertRelationship(childLocationId, locationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 1 });
     db.upsertRelationship(parentLocationId, childLocationId, childrenType, { ordinal: 0 });
     db.upsertRelationship(childLocationId, parentLocationId, parentsType, { ordinal: 0 });
 
@@ -255,29 +255,29 @@ describe("database-view-relations", () => {
     seedTestNode(fixture, { id: locationsDb, properties: typeTableMarkerProperties("Locations") });
     seedTestNode(fixture, { id: locationA, properties: { title: "North grove" } });
     seedTestNode(fixture, { id: locationB, properties: { title: "South grove" } });
-    const registry = emptyAssociationsFile();
-    registerSetAssociation(registry, {
-      id: TEST_MEMBER_OF_ASSOCIATION_ID,
+    const registry = emptyRelationshipTypesFile();
+    registerSetRelationshipType(registry, {
+      id: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
       perspectives: ["Members", "Membership"],
     });
     registerTypeDefinition(registry, NEIGHBOR_ASSOCIATION_ID, {
       perspectives: ["Neighbor", "Neighbor"],
       traits: ["symmetric"],
     });
-    fixture.ctx.store.writeAssociationsFile(registry);
+    fixture.ctx.store.writeRelationshipTypesFile(registry);
     fixture.ctx.store.writeRelationshipsFile({
       version: RELATIONSHIPS_FILE_VERSION,
       relationships: [
         {
           a: locationsDb,
           b: locationA,
-          type: TEST_MEMBER_OF_ASSOCIATION_ID,
+          type: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           properties: { row_index: 0 },
         },
         {
           a: locationsDb,
           b: locationB,
-          type: TEST_MEMBER_OF_ASSOCIATION_ID,
+          type: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
           properties: { row_index: 1 },
         },
         {
@@ -349,7 +349,7 @@ describe("database-view-relations", () => {
                 key: "part",
                 name: "Part",
                 type: "relation",
-                association: TEST_SCENES_PART_ASSOCIATION_ID,
+                association: TEST_SCENES_PART_RELATIONSHIP_TYPE_ID,
               endpoint: 0,
               },
             ],
@@ -362,10 +362,10 @@ describe("database-view-relations", () => {
     db.upsertNode(partsDb, { ...typeTableMarkerProperties("Parts") });
     db.upsertNode(sceneId, { title: "Intro scene" });
     db.upsertNode(partId, { title: "Part 1" });
-    db.upsertRelationship(sceneId, scenesDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0, order: "1005" });
-    db.upsertRelationship(partId, partsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship(sceneId, scenesDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0, order: "1005" });
+    db.upsertRelationship(partId, partsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
     // From scenes host: distinct endpoints → projection index 0 ("Scenes")
-    db.upsertRelationship(sceneId, partId, projectionTypeForEndpoint(TEST_SCENES_PART_ASSOCIATION_ID, 0), { ordinal: 0 });
+    db.upsertRelationship(sceneId, partId, projectionTypeForEndpoint(TEST_SCENES_PART_RELATIONSHIP_TYPE_ID, 0), { ordinal: 0 });
 
     const detail = getDatabaseViewDetail(db, scenesDb, undefined, contentDir);
     const row = detail?.rows.find((r) => r.nodeId === sceneId);
@@ -379,7 +379,7 @@ describe("database-view-relations", () => {
     const chaoticWorldId = "0000000000000000000000000A";
     const adventureId = "0000000000000000000000000C";
     const darkForestId = "0000000000000000000000000B";
-    const inspirationsProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1);
+    const inspirationsProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 1);
 
     db.upsertNode(featuresDb, { ...typeTableMarkerProperties("Features") });
     db.upsertNode(inspirationWithMixedFeatures, { title: "The Evil Within 2" });
@@ -387,11 +387,11 @@ describe("database-view-relations", () => {
     db.upsertNode(chaoticWorldId, { title: "Chaotic world" });
     db.upsertNode(adventureId, { title: "Adventure" });
     db.upsertNode(darkForestId, { title: "Dark forest" });
-    db.upsertRelationship(inspirationWithMixedFeatures, inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
+    db.upsertRelationship(inspirationWithMixedFeatures, inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), {
       row_index: 0,
     });
     for (const featureId of [cozyHorrorId, chaoticWorldId, adventureId, darkForestId]) {
-      db.upsertRelationship(featureId, featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+      db.upsertRelationship(featureId, featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
     }
     db.upsertRelationship(inspirationWithMixedFeatures, cozyHorrorId, inspirationsProjection);
     db.upsertRelationship(inspirationWithMixedFeatures, chaoticWorldId, inspirationsProjection);
@@ -403,7 +403,7 @@ describe("database-view-relations", () => {
       inspirationWithMixedFeatures,
       inspirationsProjection,
       inspirationsDb,
-      TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+      TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
       contentDir,
     );
     expect(connections).toHaveLength(4);
@@ -430,18 +430,18 @@ describe("database-view-relations", () => {
     const featureId = "000000000000000000000000M0";
     const earlyInspirationId = "000000000000000000000000A0";
     const lateInspirationId = "000000000000000000000000Z0";
-    const featuresProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 0);
-    const inspirationsProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID, 1);
+    const featuresProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0);
+    const inspirationsProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 1);
 
     db.upsertNode(featuresDb, { ...typeTableMarkerProperties("Features") });
     db.upsertNode(featureId, { title: "Satire" });
     db.upsertNode(earlyInspirationId, { title: "Dilbert" });
     db.upsertNode(lateInspirationId, { title: "The Office" });
-    db.upsertRelationship(featureId, featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
+    db.upsertRelationship(featureId, featuresDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), {
       row_index: 0,
     });
     for (const inspirationId of [earlyInspirationId, lateInspirationId]) {
-      db.upsertRelationship(inspirationId, inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
+      db.upsertRelationship(inspirationId, inspirationsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), {
         row_index: 0,
       });
     }
@@ -451,7 +451,7 @@ describe("database-view-relations", () => {
         id: recordId,
         nodeA: featureId,
         nodeB: inspirationId,
-        compositeType: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+        compositeType: TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
         properties: {},
       });
       db.upsertRelationshipProjection({
@@ -482,7 +482,7 @@ describe("database-view-relations", () => {
       featureId,
       featuresProjection,
       featuresDb,
-      TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+      TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
       contentDir,
     );
     expect(connections).toHaveLength(2);
@@ -506,7 +506,7 @@ describe("database-view-relations", () => {
                 key: "inspirations",
                 name: "Inspirations",
                 type: "relation",
-                association: TEST_INSPIRATIONS_FEATURES_ASSOCIATION_ID,
+                association: TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
               endpoint: 0,
               },
             ],
@@ -556,11 +556,11 @@ describe("database-view-relations", () => {
     db.upsertNode(storyScaleDb, { ...typeTableMarkerProperties("Story scale") });
     db.upsertNode(storyScaleRowId, { title: "Mission-based" });
     db.upsertNode(extendedScaleId, { title: "Extended" });
-    db.upsertRelationship(storyScaleRowId, storyScaleRowsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), {
+    db.upsertRelationship(storyScaleRowId, storyScaleRowsDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), {
       row_index: 0,
       story_scale: "https://legacy.example/00000000000000000000000019",
     });
-    db.upsertRelationship(extendedScaleId, storyScaleDb, projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1), { row_index: 0 });
+    db.upsertRelationship(extendedScaleId, storyScaleDb, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
     db.upsertRelationship(storyScaleRowId, extendedScaleId, storyScaleProjection, {
       ordinal: 0,
     });

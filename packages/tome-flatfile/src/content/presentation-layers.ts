@@ -1,5 +1,5 @@
 import { isNodeId } from "./paths";
-import { isAssociationId, normalizeAssociationId } from "./associations-file";
+import { isRelationshipTypeId, normalizeRelationshipTypeId } from "./relationship-types-file";
 import type {
   RelationGroupsLayerConfig,
   RelationScopeLayerConfig,
@@ -29,12 +29,12 @@ function parseStringArray(value: unknown, path: string): string[] | undefined {
   return value.map((entry, index) => parseRequiredString(entry, `${path}[${index}]`));
 }
 
-function parseAssociationId(value: unknown, path: string): string {
+function parseRelationshipTypeId(value: unknown, path: string): string {
   if (typeof value !== "string" || !value.trim()) {
     throw new Error(`${path}: must be a non-empty string`);
   }
-  const id = normalizeAssociationId(value);
-  if (!isAssociationId(id)) {
+  const id = normalizeRelationshipTypeId(value);
+  if (!isRelationshipTypeId(id)) {
     throw new Error(`${path}: must be an association id (ULID)`);
   }
   return id;
@@ -46,7 +46,7 @@ function parseScopeLayer(raw: unknown, path: string): RelationScopeLayerConfig {
   }
   const obj = raw as Record<string, unknown>;
   const layer: RelationScopeLayerConfig = {
-    memberToScopeComposite: parseAssociationId(
+    memberToScopeComposite: parseRelationshipTypeId(
       obj.memberToScopeComposite,
       `${path}.memberToScopeComposite`,
     ),
@@ -62,7 +62,7 @@ function parseGroupsLayer(raw: unknown, path: string): RelationGroupsLayerConfig
   }
   const obj = raw as Record<string, unknown>;
   const layer: RelationGroupsLayerConfig = {
-    memberToGroupComposite: parseAssociationId(
+    memberToGroupComposite: parseRelationshipTypeId(
       obj.memberToGroupComposite,
       `${path}.memberToGroupComposite`,
     ),
@@ -73,7 +73,7 @@ function parseGroupsLayer(raw: unknown, path: string): RelationGroupsLayerConfig
     ),
   };
   if (obj.groupToScopeComposite !== undefined) {
-    layer.groupToScopeComposite = parseAssociationId(
+    layer.groupToScopeComposite = parseRelationshipTypeId(
       obj.groupToScopeComposite,
       `${path}.groupToScopeComposite`,
     );

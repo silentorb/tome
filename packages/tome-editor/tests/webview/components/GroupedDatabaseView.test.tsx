@@ -14,7 +14,7 @@ const view: DatabaseViewDetail = {
   title: "Scenes",
   view: "TWOLD",
   views: ["TWOLD", "Fairytale"],
-  viewAssociation: "000000000000000000000000A2",
+  viewRelationshipType: "000000000000000000000000A2",
   memberSidePerspective: "000000000000000000000000A2:1",
   sectionTitle: "Contents",
   tabs: {
@@ -214,7 +214,7 @@ describe("GroupedDatabaseView", () => {
     };
     const customView: DatabaseViewDetail = {
       ...view,
-      viewAssociation: "000000000000000000000000B6",
+      viewRelationshipType: "000000000000000000000000B6",
       memberSidePerspective: "000000000000000000000000B6:1",
     };
 

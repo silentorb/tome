@@ -1,7 +1,7 @@
 import type { ServerPageBlockHost } from "tome-interfaces/page-block/server";
 import { loadSchemaFromContent } from "tome-flatfile/schema-load";
 import {
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   loadTableSchemasFromContent,
 } from "tome-flatfile";
 import { resolve } from "node:path";
@@ -53,14 +53,14 @@ export function register(host: ServerPageBlockHost): void {
           return { ok: false, error: "TOME_CONTENT_PATH is not set" };
         }
         try {
-          const associations = loadAssociationsFromContent(resolve(dir));
+          const relationshipTypes = loadRelationshipTypesFromContent(resolve(dir));
           const tableSchemas = loadTableSchemasFromContent(resolve(dir));
           const titleMap = new Map<string, string>();
           if (ctx.services.schemaQuery) {
             const tables = await Promise.resolve(ctx.services.schemaQuery.listTypeTables());
             for (const t of tables) titleMap.set(t.id, t.title);
           }
-          const options = buildPathHopOptions(associations, tableSchemas, titleMap);
+          const options = buildPathHopOptions(relationshipTypes, tableSchemas, titleMap);
           return { ok: true, ...options };
         } catch (err: unknown) {
           const message = err instanceof Error ? err.message : String(err);

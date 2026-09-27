@@ -73,10 +73,10 @@ export async function runEventQuery(input: {
 export async function loadDependsEdges(
   graphQuery: ExtensionGraphQueryServices,
   eventIds: string[],
-  dependsAssociation: string,
+  dependsRelationshipType: string,
 ): Promise<DependsConstraint[]> {
   // Direction 0 projections are a→b (prerequisite→dependent for Arcs data).
-  const type0 = projectionType(dependsAssociation, 0);
+  const type0 = projectionType(dependsRelationshipType, 0);
   const edges = await Promise.resolve(
     graphQuery.listEdges({
       nodeIds: eventIds,
@@ -194,7 +194,7 @@ export async function arrangeTimeline(input: {
   const depends = await loadDependsEdges(
     input.graphQuery,
     eventIds,
-    config.dependsAssociation,
+    config.dependsRelationshipType,
   );
 
   const boundQuery = bindEventQuery({

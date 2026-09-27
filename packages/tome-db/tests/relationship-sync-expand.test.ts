@@ -4,16 +4,16 @@ import {
   expandRelationshipEntry,
 } from "../src/content/relationship-sync-expand";
 import type { RelationshipEntry } from "tome-flatfile";
-import { projectionTypeForEndpoint, type AssociationsFile } from "tome-flatfile";
+import { projectionTypeForEndpoint, type RelationshipTypesFile } from "tome-flatfile";
 
 const MEMBER_OF = "000000000000000000000000A1";
 const INCLUDES = "000000000000000000000000B3";
 const SCENES_PRODUCT = "000000000000000000000000A3";
 const PARENTS_CHILDREN = "000000000000000000000000B1";
 
-const registry: AssociationsFile = {
+const registry: RelationshipTypesFile = {
   version: 1,
-  associations: {
+  relationshipTypes: {
     [MEMBER_OF]: { perspectives: ["Members", "Membership"], traits: ["set"] },
     [INCLUDES]: { perspectives: ["Includes", "Includes"] },
     [SCENES_PRODUCT]: { perspectives: ["Scenes", "Product"] },
@@ -45,7 +45,7 @@ describe("expandRelationshipEntry", () => {
     });
   });
 
-  test("includes emits dual projections with same association endpoints", () => {
+  test("includes emits dual projections with same relationship type endpoints", () => {
     const a = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     const b = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     const entry: RelationshipEntry = { a, b, type: INCLUDES, properties: {} };

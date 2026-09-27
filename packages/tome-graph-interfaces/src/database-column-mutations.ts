@@ -17,7 +17,7 @@ export interface CreateDatabaseColumnInput {
   type: TableColumnType;
   enumId?: string;
   association?: string;
-  /** Required for relation columns unless host type uniquely matches one association endpoint. */
+  /** Required for relation columns unless host type uniquely matches one relationship type endpoint. */
   endpoint?: 0 | 1;
   /** Active custom view id — new column is appended only to this view's properties. */
   viewId?: string;

@@ -6,7 +6,7 @@ import { serializeSchemaFile } from "../schema-rules/schema-file";
 import { writeFileSync, mkdirSync, renameSync, existsSync } from "node:fs";
 import { dirname } from "node:path";
 import {
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   loadSchemaFromContent,
   loadTableSchemasFromContent,
   loadViewsFromContent,
@@ -22,7 +22,7 @@ import type {
   TomeCorpusInfo,
   TomeGraphStoreBase,
   ListRelationshipProjectionsOptions,
-  AssociationsFile,
+  RelationshipTypesFile,
   DynamicPropertiesFile,
   SchemaFile,
   TableSchemasFile,
@@ -196,12 +196,12 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
     return this.store.replaceRelationshipProperties(source, target, projectionType, properties);
   }
 
-  readAssociations(): AssociationsFile {
-    return loadAssociationsFromContent(this.contentDir) as AssociationsFile;
+  readRelationshipTypes(): RelationshipTypesFile {
+    return loadRelationshipTypesFromContent(this.contentDir) as RelationshipTypesFile;
   }
 
-  writeAssociations(file: AssociationsFile): void {
-    this.store.writeAssociationsFile(file as Parameters<ContentStore["writeAssociationsFile"]>[0]);
+  writeRelationshipTypes(file: RelationshipTypesFile): void {
+    this.store.writeRelationshipTypesFile(file as Parameters<ContentStore["writeRelationshipTypesFile"]>[0]);
   }
 
   readSchema(): SchemaFile {
@@ -284,7 +284,7 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
   ): Relationship[] {
     const direction = options?.direction ?? "both";
     const projectionType = options?.projectionType;
-    const registry = this.readAssociations();
+    const registry = this.readRelationshipTypes();
     const seen = new Set<string>();
     const results: Relationship[] = [];
 

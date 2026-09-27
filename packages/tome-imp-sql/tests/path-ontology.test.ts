@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AssociationsFile, TableSchemasFile } from "tome-flatfile";
+import type { RelationshipTypesFile, TableSchemasFile } from "tome-flatfile";
 import {
   bindTomeSemanticPath,
   createTomePathOntology,
@@ -8,10 +8,10 @@ import {
 const FEATURE_TYPE = "01KWN86X6MFZQAJ1V36T9592A9";
 const DEPENDS_ASSOC = "01KXBNPNJDENZ9BXN5BYZ7JKPD";
 
-function fixtureAssociations(): AssociationsFile {
+function fixtureRelationshipTypes(): RelationshipTypesFile {
   return {
     version: 1,
-    associations: {
+    relationshipTypes: {
       [DEPENDS_ASSOC]: {
         perspectives: ["Dependents", "Dependencies"],
         endpoints: {
@@ -56,7 +56,7 @@ function fixtureTableSchemas(): TableSchemasFile {
 
 describe("createTomePathOntology", () => {
   test("binds relation and property tokens from table-schemas", () => {
-    const ontology = createTomePathOntology(fixtureAssociations(), fixtureTableSchemas());
+    const ontology = createTomePathOntology(fixtureRelationshipTypes(), fixtureTableSchemas());
     expect(ontology.resolve(FEATURE_TYPE, "dependencies")).toEqual({
       kind: "relationship",
       association: DEPENDS_ASSOC,
@@ -90,20 +90,20 @@ describe("createTomePathOntology", () => {
         },
       },
     };
-    expect(() => createTomePathOntology(fixtureAssociations(), schemas)).toThrow(
+    expect(() => createTomePathOntology(fixtureRelationshipTypes(), schemas)).toThrow(
       /integrity/,
     );
   });
 
   test("rejects unknown tokens at resolve time", () => {
-    const ontology = createTomePathOntology(fixtureAssociations(), fixtureTableSchemas());
+    const ontology = createTomePathOntology(fixtureRelationshipTypes(), fixtureTableSchemas());
     expect(() => ontology.resolve(FEATURE_TYPE, "nope")).toThrow(/unknown token/);
   });
 });
 
 describe("bindTomeSemanticPath", () => {
   test("desugars dependencies.title to traverse then project", () => {
-    const ontology = createTomePathOntology(fixtureAssociations(), fixtureTableSchemas());
+    const ontology = createTomePathOntology(fixtureRelationshipTypes(), fixtureTableSchemas());
     const bound = bindTomeSemanticPath(["dependencies", "title"], {
       ontology,
       startType: FEATURE_TYPE,

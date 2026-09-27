@@ -51,7 +51,7 @@ Editor hosts **editor** page-block UI. Server-side extension runtime lives in **
 
 The webview talks to the Bun REST API on `http://127.0.0.1:3847` (proxied as `/api` in dev).
 
-**Do not import the `tome-db` barrel from webview code.** `tome-db` re-exports `tome-sqlite` (`bun:sqlite`), which Vite cannot run in the browser. Use browser-safe subpaths only (`tome-db/document-to-storage-body`, `tome-db/table-rows-window`, `tome-db/association-label`, `tome-db/enum-codec`, `tome-db/row-sort-helpers`, `tome-db/search-relevance`) or types from `tome-graph-interfaces`.
+**Do not import the `tome-db` barrel from webview code.** `tome-db` re-exports `tome-sqlite` (`bun:sqlite`), which Vite cannot run in the browser. Use browser-safe subpaths only (`tome-db/document-to-storage-body`, `tome-db/table-rows-window`, `tome-db/relationship-type-label`, `tome-db/enum-codec`, `tome-db/row-sort-helpers`, `tome-db/search-relevance`) or types from `tome-graph-interfaces`.
 
 **Data transport:** webview → REST (`tome-http` client via `src/shared/http-client.ts`).
 

@@ -7,7 +7,7 @@ import {
   migrateRelationshipOrder,
 } from "../../src/migrations/relationship-order";
 import { ContentStore } from "../../src/content/store";
-import { serializeAssociationsFile } from "../../src/content/associations-file";
+import { serializeRelationshipTypesFile } from "../../src/content/relationship-types-file";
 import { serializeTableSchemasFile } from "../../src/content/table-schemas-file";
 
 const SET_ASSOC = "01ARZ3NDEKTSV4RRFFQ69G5FA0";
@@ -22,9 +22,9 @@ function writeFixture(root: string): void {
   mkdirSync(resolve(root, "data", "relationships"), { recursive: true });
   writeFileSync(
     resolve(root, "model", "associations.json"),
-    serializeAssociationsFile({
+    serializeRelationshipTypesFile({
       version: 1,
-      associations: {
+      relationshipTypes: {
         [SET_ASSOC]: {
           perspectives: ["Members", "Membership"],
           traits: ["set"],

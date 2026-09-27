@@ -1,6 +1,6 @@
 import { describe, expect, test, afterAll } from "bun:test";
 import { typeTableMarkerProperties, VIEWS_FILE_VERSION } from "tome-db";
-import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestRelationships, seedTestNode, seedTestTableSchema, seedTestViews, TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID, defaultTestPresentationLayers } from "tome-db/content/test-helpers";
+import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestRelationships, seedTestNode, seedTestTableSchema, seedTestViews, TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID, defaultTestPresentationLayers } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
 
 const SCENES_DB = "0000000000000000000000000D";
@@ -63,27 +63,27 @@ describe("database members API", () => {
     { source: scene2, target: SCENES_DB, type: "ordered_member_of", properties: { order: "20" } },
   ]);
   seedTestCompositeRelationships(fixture, [
-    { a: scene1, b: book, typeFromA: "Scenes", typeFromB: "Product", associationId: "000000000000000000000000A3", properties: { ordinal: 0 } },
-    { a: scene2, b: book, typeFromA: "Scenes", typeFromB: "Product", associationId: "000000000000000000000000A3", properties: { ordinal: 0 } },
-    { a: scene1, b: part, typeFromA: "Scenes", typeFromB: "Part", associationId: "000000000000000000000000A4", properties: { ordinal: 0 } },
-    { a: scene2, b: part, typeFromA: "Scenes", typeFromB: "Part", associationId: "000000000000000000000000A4", properties: { ordinal: 1 } },
-    { a: part, b: book, typeFromA: "Products", typeFromB: "Parts database", associationId: "000000000000000000000000A5", properties: { ordinal: 0 } },
+    { a: scene1, b: book, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: "000000000000000000000000A3", properties: { ordinal: 0 } },
+    { a: scene2, b: book, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: "000000000000000000000000A3", properties: { ordinal: 0 } },
+    { a: scene1, b: part, typeFromA: "Scenes", typeFromB: "Part", relationshipTypeId: "000000000000000000000000A4", properties: { ordinal: 0 } },
+    { a: scene2, b: part, typeFromA: "Scenes", typeFromB: "Part", relationshipTypeId: "000000000000000000000000A4", properties: { ordinal: 1 } },
+    { a: part, b: book, typeFromA: "Products", typeFromB: "Parts database", relationshipTypeId: "000000000000000000000000A5", properties: { ordinal: 0 } },
   ]);
 
-  const registry = fixture.ctx.store.readAssociationsFile();
-  registry.associations["000000000000000000000000A3"] = {
+  const registry = fixture.ctx.store.readRelationshipTypesFile();
+  registry.relationshipTypes["000000000000000000000000A3"] = {
     perspectives: ["Scenes", "Product"],
     endpoints: { 0: { typeId: SCENES_DB }, 1: { typeId: PRODUCTS_DB } },
   };
-  registry.associations["000000000000000000000000A4"] = {
+  registry.relationshipTypes["000000000000000000000000A4"] = {
     perspectives: ["Scenes", "Part"],
     endpoints: { 0: { typeId: SCENES_DB }, 1: { typeId: PARTS_DB } },
   };
-  registry.associations["000000000000000000000000A5"] = {
+  registry.relationshipTypes["000000000000000000000000A5"] = {
     perspectives: ["Products", "Parts database"],
     endpoints: { 0: { typeId: PARTS_DB }, 1: { typeId: PRODUCTS_DB } },
   };
-  fixture.ctx.store.writeAssociationsFile(registry);
+  fixture.ctx.store.writeRelationshipTypesFile(registry);
   fixture.ctx.sync.syncRelationships();
 
   seedTestViews(fixture, {
@@ -91,7 +91,7 @@ describe("database members API", () => {
     views: [
       {
         nodeId: SCENES_DB,
-        association: TEST_ORDERED_MEMBER_OF_ASSOCIATION_ID,
+        association: TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
         presentation: defaultTestPresentationLayers(),
       },
     ],

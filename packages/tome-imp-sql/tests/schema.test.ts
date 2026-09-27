@@ -76,7 +76,7 @@ describe("tome-imp-sql schema", () => {
   test("edgeType rejects packed association strings in Imp graphs", () => {
     expect(() =>
       tomeLiveNodesSchema.edgeType?.(`${VALID_ASSOCIATION}:0`, 0),
-    ).toThrow(/Invalid association id/);
+    ).toThrow(/Invalid relationship type id/);
   });
 });
 

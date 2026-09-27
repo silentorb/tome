@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { AssociationsFile, TableSchemasFile } from "tome-flatfile";
+import type { RelationshipTypesFile, TableSchemasFile } from "tome-flatfile";
 import {
   buildPathHopOptions,
   matchPathHopRelation,
@@ -8,9 +8,9 @@ import {
 const FEATURE_TYPE = "01KWN86X6MFZQAJ1V36T9592A9";
 const DEPENDS_ASSOC = "01KXBNPNJDENZ9BXN5BYZ7JKPD";
 
-const associations: AssociationsFile = {
+const relationshipTypes: RelationshipTypesFile = {
   version: 1,
-  associations: {
+  relationshipTypes: {
     [DEPENDS_ASSOC]: {
       perspectives: ["Dependents", "Dependencies"],
       endpoints: {
@@ -45,7 +45,7 @@ const tableSchemas: TableSchemasFile = {
 
 describe("buildPathHopOptions", () => {
   test("lists relation tokens per type", () => {
-    const options = buildPathHopOptions(associations, tableSchemas, {
+    const options = buildPathHopOptions(relationshipTypes, tableSchemas, {
       [FEATURE_TYPE]: "Feature",
     });
     expect(options.typeTables).toEqual([{ id: FEATURE_TYPE, title: "Feature" }]);
@@ -60,7 +60,7 @@ describe("buildPathHopOptions", () => {
   });
 
   test("matchPathHopRelation finds token from association+direction", () => {
-    const options = buildPathHopOptions(associations, tableSchemas);
+    const options = buildPathHopOptions(relationshipTypes, tableSchemas);
     expect(
       matchPathHopRelation(options, FEATURE_TYPE, DEPENDS_ASSOC, 1)?.token,
     ).toBe("dependencies");

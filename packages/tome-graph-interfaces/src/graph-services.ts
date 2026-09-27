@@ -91,19 +91,19 @@ export interface TomeGraphServices {
   getNodeViews(nodeId: string): ViewDefinition[];
   createRelationshipView(
     nodeId: string,
-    association: string,
+    relationshipTypeId: string,
     input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
   ): ViewDefinition;
   updateRelationshipView(
     nodeId: string,
-    association: string,
+    relationshipTypeId: string,
     viewId: string,
     input: { name?: string; sorts?: ViewSortSpec[]; properties?: string[] },
   ): ViewDefinition;
-  deleteRelationshipView(nodeId: string, association: string, viewId: string): void;
+  deleteRelationshipView(nodeId: string, relationshipTypeId: string, viewId: string): void;
   patchRelationshipViews(
     nodeId: string,
-    association: string,
+    relationshipTypeId: string,
     input: { viewOrder?: string[]; properties?: string[] },
   ): { views?: ViewDefinition[]; properties?: string[] };
   deleteDatabaseColumn(

@@ -6,7 +6,7 @@ import {
 } from "./database-column-data";
 import { loadDynamicProperties } from "./dynamic-properties";
 import { isTypeTableNode } from "./node-capabilities";
-import { normalizeAssociationId, isAssociationId, uniqueHostEndpointIndex } from "tome-flatfile";
+import { normalizeRelationshipTypeId, isRelationshipTypeId, uniqueHostEndpointIndex } from "tome-flatfile";
 import { resolvePropertyEnumFromContent } from "./property-enums";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterRelationshipsWrite } from "./content/write-context";
@@ -27,7 +27,7 @@ import {
   appendColumnToViewsOrder,
   renameColumnInViews,
 } from "./views/mutations";
-import { setRoleAssociationForNode } from "tome-flatfile";
+import { setRoleRelationshipTypeForNode } from "tome-flatfile";
 import type {
   CreateDatabaseColumnInput,
   DatabaseColumnMutationError,
@@ -90,8 +90,8 @@ function resolveRelationEndpoint(
   endpoint: 0 | 1 | undefined,
 ): 0 | 1 | null {
   if (endpoint === 0 || endpoint === 1) return endpoint;
-  const registry = ctx.graphStore.readAssociations();
-  const def = registry.associations[association];
+  const registry = ctx.graphStore.readRelationshipTypes();
+  const def = registry.relationshipTypes[association];
   if (!def) return null;
   return uniqueHostEndpointIndex(def, databaseId);
 }
@@ -107,8 +107,8 @@ function buildColumnDef(
 
   if (input.type === "relation") {
     if (!input.association?.trim()) return null;
-    const association = normalizeAssociationId(input.association);
-    if (!isAssociationId(association)) return null;
+    const association = normalizeRelationshipTypeId(input.association);
+    if (!isRelationshipTypeId(association)) return null;
     const endpoint = resolveRelationEndpoint(ctx, databaseId, association, input.endpoint);
     if (endpoint === null) return null;
     return {
@@ -182,8 +182,8 @@ export function createDatabaseColumn(
       if (!validateEnumId(ctx, columnDef.enumId)) return "invalid_enum";
     }
   } else {
-    const registry = ctx.graphStore.readAssociations();
-    if (!registry.associations[columnDef.association]) {
+    const registry = ctx.graphStore.readRelationshipTypes();
+    if (!registry.relationshipTypes[columnDef.association]) {
       return "invalid_relation_target";
     }
   }
@@ -200,7 +200,7 @@ export function createDatabaseColumn(
   appendColumnToViewsOrder(
     ctx.graphStore,
     databaseId,
-    setRoleAssociationForNode(databaseId, writeStoreContentDir(ctx.graphStore)),
+    setRoleRelationshipTypeForNode(databaseId, writeStoreContentDir(ctx.graphStore)),
     key,
     input.viewId,
   );
@@ -231,8 +231,8 @@ function applyColumnPatch(
     const associationRaw =
       input.association ??
       (existing.type === "relation" ? existing.association : "");
-    const association = normalizeAssociationId(associationRaw);
-    if (!association || !isAssociationId(association)) return null;
+    const association = normalizeRelationshipTypeId(associationRaw);
+    if (!association || !isRelationshipTypeId(association)) return null;
     const endpointInput =
       input.endpoint ?? (existing.type === "relation" ? existing.endpoint : undefined);
     const endpoint = resolveRelationEndpoint(ctx, databaseId, association, endpointInput);
@@ -315,8 +315,8 @@ export function updateDatabaseColumn(
       if (!validateEnumId(ctx, patched.enumId)) return "invalid_enum";
     }
   } else {
-    const registry = ctx.graphStore.readAssociations();
-    if (!registry.associations[(patched as TableRelationColumn).association]) {
+    const registry = ctx.graphStore.readRelationshipTypes();
+    if (!registry.relationshipTypes[(patched as TableRelationColumn).association]) {
       return "invalid_relation_target";
     }
   }
@@ -363,7 +363,7 @@ export function updateDatabaseColumn(
     renameColumnInViews(
       ctx.graphStore,
       databaseId,
-      setRoleAssociationForNode(databaseId, writeStoreContentDir(ctx.graphStore)),
+      setRoleRelationshipTypeForNode(databaseId, writeStoreContentDir(ctx.graphStore)),
       normalizedKey,
       finalKey,
     );

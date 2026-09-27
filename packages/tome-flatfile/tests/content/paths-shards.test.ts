@@ -90,9 +90,9 @@ describe("relationship hash paths", () => {
     const root = mkdtempSync(resolve(tmpdir(), "rel-shard-"));
     try {
       const store = new ContentStore(root);
-      store.writeAssociationsFile({
+      store.writeRelationshipTypesFile({
         version: 1,
-        associations: {
+        relationshipTypes: {
           [TYPE]: { perspectives: ["From", "To"] },
         },
       });

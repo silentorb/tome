@@ -7,8 +7,8 @@ import type {
 import type { Node } from "tome-graph-interfaces";
 import { setMemberIds } from "./set-membership";
 import { loadTableSchemasFromContent } from "tome-flatfile";
-import { loadAssociationsFromContent } from "tome-flatfile";
-import { associationRulesFromRegistry } from "./association-endpoints";
+import { loadRelationshipTypesFromContent } from "tome-flatfile";
+import { relationshipTypeRulesFromRegistry } from "./relationship-type-endpoints";
 import {
   projectionTypeForRelationColumn,
   targetTypeIdForRelationColumn,
@@ -46,8 +46,8 @@ export function createExtensionSchemaQueryServices(
     },
 
     listRelationshipRules(): SchemaQueryRelationshipRule[] {
-      const registry = loadAssociationsFromContent(contentDir);
-      return associationRulesFromRegistry(registry).map((rule) => ({
+      const registry = loadRelationshipTypesFromContent(contentDir);
+      return relationshipTypeRulesFromRegistry(registry).map((rule) => ({
         id: rule.id,
         sourceTypeId: rule.sourceTypeId,
         type: rule.type,
@@ -57,7 +57,7 @@ export function createExtensionSchemaQueryServices(
 
     listRelationColumnEdges(): SchemaQueryRelationColumnEdge[] {
       const schemas = loadTableSchemasFromContent(contentDir);
-      const registry = loadAssociationsFromContent(contentDir);
+      const registry = loadRelationshipTypesFromContent(contentDir);
       const titleByTypeId = new Map<string, string>();
       for (const id of Object.keys(schemas.tables)) {
         titleByTypeId.set(id, titleFromNode(readStoreGetNode(store, id)));

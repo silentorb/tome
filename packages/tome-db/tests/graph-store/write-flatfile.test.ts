@@ -5,7 +5,7 @@ import {
   seedTestNode,
   TEST_HOME_NODE_ID,
 } from "tome-db/content/test-helpers";
-import { registerBidirectionalType, invalidateAssociationsCache } from "tome-flatfile";
+import { registerBidirectionalType, invalidateRelationshipTypesCache } from "tome-flatfile";
 import { openFlatfileQueryableGraphStore } from "../../src/graph-store/composed-graph-store";
 import {
   writeStoreFindRelationship,
@@ -27,10 +27,10 @@ describe("graph store write path flatfile", () => {
       seedTestNode(fixture, { id: TEST_HOME_NODE_ID, properties: { title: "Home" } });
       seedTestNode(fixture, { id: SOURCE, properties: { title: "Source" } });
       seedTestNode(fixture, { id: TARGET, properties: { title: "Target" } });
-      const registry = fixture.ctx.store.readAssociationsFile();
+      const registry = fixture.ctx.store.readRelationshipTypesFile();
       const assoc = registerBidirectionalType(registry, "Dependents", "Dependencies");
-      fixture.ctx.store.writeAssociationsFile(registry);
-      invalidateAssociationsCache();
+      fixture.ctx.store.writeRelationshipTypesFile(registry);
+      invalidateRelationshipTypesCache();
 
       const store = openFlatfileQueryableGraphStore({
         contentPath: fixture.ctx.store.contentDir,
@@ -57,10 +57,10 @@ describe("graph store write path flatfile", () => {
     try {
       seedTestNode(fixture, { id: SOURCE, properties: { title: "Source" } });
       seedTestNode(fixture, { id: TARGET, properties: { title: "Target" } });
-      const registry = fixture.ctx.store.readAssociationsFile();
+      const registry = fixture.ctx.store.readRelationshipTypesFile();
       const assoc = registerBidirectionalType(registry, "Links", "LinkedFrom");
-      fixture.ctx.store.writeAssociationsFile(registry);
-      invalidateAssociationsCache();
+      fixture.ctx.store.writeRelationshipTypesFile(registry);
+      invalidateRelationshipTypesCache();
 
       const store = openFlatfileQueryableGraphStore({
         contentPath: fixture.ctx.store.contentDir,

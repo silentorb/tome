@@ -58,7 +58,7 @@ export function recentNodesGraph(limit: number): ImpGraph {
  */
 export function typeMembersGraph(
   setNodeId: string,
-  associationId: string,
+  relationshipTypeId: string,
   direction: 0 | 1,
 ): ImpGraph {
   const setIdLit = "set_id_lit";
@@ -74,7 +74,7 @@ export function typeMembersGraph(
     nodes: {
       input: { id: "input", type: "input", inputs: {} },
       [setIdLit]: literalNode(setIdLit, setNodeId),
-      [assocLit]: literalNode(assocLit, associationId),
+      [assocLit]: literalNode(assocLit, relationshipTypeId),
       [dirLit]: literalNode(dirLit, direction),
       [equalsLeft]: { id: equalsLeft, type: "column", inputs: { name: "id" } },
       [equalsRight]: literalNode(equalsRight, setNodeId),
@@ -141,22 +141,22 @@ export function searchNodesGraph(limit: number): ImpGraph {
 /** Outgoing relationships from a source node (one hop, direction 0). */
 export function outgoingRelationshipsGraph(
   sourceNodeId: string,
-  associationId: string,
+  relationshipTypeId: string,
 ): ImpGraph {
-  return relationshipHopGraph(sourceNodeId, associationId, 0);
+  return relationshipHopGraph(sourceNodeId, relationshipTypeId, 0);
 }
 
 /** Incoming relationships to a target node (one hop, direction 1). */
 export function incomingRelationshipsGraph(
   targetNodeId: string,
-  associationId: string,
+  relationshipTypeId: string,
 ): ImpGraph {
-  return relationshipHopGraph(targetNodeId, associationId, 1);
+  return relationshipHopGraph(targetNodeId, relationshipTypeId, 1);
 }
 
 function relationshipHopGraph(
   anchorNodeId: string,
-  associationId: string,
+  relationshipTypeId: string,
   direction: 0 | 1,
 ): ImpGraph {
   const anchorLit = "anchor_lit";
@@ -172,7 +172,7 @@ function relationshipHopGraph(
     nodes: {
       input: { id: "input", type: "input", inputs: {} },
       [anchorLit]: literalNode(anchorLit, anchorNodeId),
-      [assocLit]: literalNode(assocLit, associationId),
+      [assocLit]: literalNode(assocLit, relationshipTypeId),
       [dirLit]: literalNode(dirLit, direction),
       [equalsLeft]: { id: equalsLeft, type: "column", inputs: { name: "id" } },
       [equalsRight]: literalNode(equalsRight, anchorNodeId),

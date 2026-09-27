@@ -4,6 +4,8 @@ Normative on-disk contract for a Tome **content root**. External projects can au
 
 This document specifies **bytes under `content/`**. It does not cover SQLite caches, HTTP APIs, or editor UI behavior. For tooling semantics (set membership expansion, table views, etc.), see the feature docs under `docs/features/`.
 
+**Terminology:** Prefer **relationship type** for the registry definition (ULID + perspectives + traits + endpoints). **Relationship** is an edge instance. On-disk legacy names (`associations.json`, JSON key `associations`, content-model fields named `"association"`) remain as filenames/keys only — not the conceptual term. **Association** is also reserved for a possible future node-type pairing concept (not implemented).
+
 ## Content root layout
 
 The content root is a directory conventionally named `content/`. Tools discover it via `TOME_CONTENT_PATH` (or by walking up from the process CWD looking for a `content/` directory). Point env vars at the **content root**, not at `content/data`.
@@ -151,7 +153,7 @@ Identity is the composite key `(a, b, type)` (order-sensitive). There is **no** 
 | --- | --- | --- |
 | `a` | string | Endpoint at tuple index 0 (ULID) |
 | `b` | string | Endpoint at tuple index 1 (ULID) |
-| `type` | string | Association ULID (trim only on read) |
+| `type` | string | Relationship type ULID (trim only on read) |
 | `properties` | object | Optional; omit when empty |
 
 **Ordered tuple, not named source/target.** Positions `a`/`b` have no inherent direction. Meaning comes from `associations.json` `perspectives[0|1]`. Do not lexicographically sort endpoints.
@@ -166,11 +168,11 @@ Identity is the composite key `(a, b, type)` (order-sensitive). There is **no** 
 
 ## Model files
 
-All model files live under `model/`. Unless noted, serialize as JSON indent 2 + trailing newline. Association ids are ULIDs (no case folding). Perspective entries are display labels only.
+All model files live under `model/`. Unless noted, serialize as JSON indent 2 + trailing newline. Relationship type ids are ULIDs (no case folding). Perspective entries are display labels only. On-disk legacy naming: filename `associations.json` and top-level key `associations` — the concept is **relationship type**.
 
 ### `associations.json` (version 1)
 
-Registry of associations keyed by **opaque ULID** ids. Perspective entries are display labels only; directed cache identity is `associationId:endpointIndex`.
+**Relationship type** registry (legacy filename / JSON key `associations`) keyed by **opaque ULID** ids. Perspective entries are display labels only; directed cache identity is `relationshipTypeId:endpointIndex`. Do not use “association” for the concept in new agent prose.
 
 ```json
 {
@@ -194,7 +196,7 @@ Registry of associations keyed by **opaque ULID** ids. Perspective entries are d
 | Field | Notes |
 | --- | --- |
 | `version` | number, required |
-| `associations` | object keyed by association ULID |
+| `associations` | object keyed by relationship type ULID |
 
 Each type definition:
 
@@ -205,7 +207,7 @@ Each type definition:
 | `traits` | no | Array of flag strings or `{ key, ...config }` objects; trait keys unique per type. Known: `set`, `ordered`, `symmetric` |
 | `endpoints` | no | `{ "0": { "typeId": "<ULID>" }, "1": { "typeId": "<ULID>" } }` — allowed `is_a` type node at each endpoint |
 
-**Set association orientation (example):** for a set-trait type with labels `["Members", "Membership"]` — **set at `a` (index 0), member at `b` (index 1)**. Cache projections use `{associationId}:0` / `{associationId}:1`. An ordered set association uses the same parent/child indices with traits `set` and `ordered`. Symmetric associations use trait `symmetric` (do not infer from equal perspective titles).
+**Set relationship type orientation (example):** for a set-trait type with labels `["Members", "Membership"]` — **set at `a` (index 0), member at `b` (index 1)**. Cache projections use `{relationshipTypeId}:0` / `{relationshipTypeId}:1`. An ordered set relationship type uses the same parent/child indices with traits `set` and `ordered`. Symmetric relationship types use trait `symmetric` (do not infer from equal perspective titles).
 
 Serialize sorts type keys and sorts traits (string flags before object entries) for stable diffs.
 
@@ -263,7 +265,7 @@ Column definitions for type tables (keys are type-node ULIDs).
       "columns": [
         { "key": "name", "name": "Name", "type": "text" },
         { "key": "status", "name": "Status", "type": "select", "enumId": "priority" },
-        { "key": "related", "name": "Related", "type": "relation", "association": "<association-ulid>", "endpoint": 0 }
+        { "key": "related", "name": "Related", "type": "relation", "association": "<relationship-type-ulid>", "endpoint": 0 }
       ]
     }
   }
@@ -285,7 +287,7 @@ Column definitions for type tables (keys are type-node ULIDs).
 
 `checkbox` | `date` | `email` | `files` | `multi_select` | `number` | `phone_number` | `rich_text` | `select` | `status` | `text` | `url`
 
-**Relation column:** `{ key, name, type: "relation", association, endpoint }` where `association` is an association ULID and `endpoint` is `0` or `1` (which association endpoint this column hosts). Perspective titles are display-only.
+**Relation column:** `{ key, name, type: "relation", association, endpoint }` where `"association"` (legacy field name) is a **relationship type** ULID and `endpoint` is `0` or `1` (which relationship type endpoint this column hosts). Perspective titles are display-only.
 
 ### `views.json` (version 2)
 
@@ -328,21 +330,21 @@ Strict version **2**. Table tab definitions (custom and generated).
 }
 ```
 
-**Custom view:** `{ id, nodeId, association, name, sorts, properties? }`
+**Custom view:** `{ id, nodeId, association, name, sorts, properties? }` (`"association"` = relationship type ULID; legacy field name)
 
 - `sorts`: `{ column, direction: "asc"|"desc" }[]`
 - `properties`: optional string array of visible column keys in display order (absent → all columns, default order)
-- Unique custom key: `(nodeId, association, id)`
+- Unique custom key: `(nodeId, association, id)` where `association` is the legacy field holding the relationship type ULID
 
-**Generated view:** `{ nodeId, association, presentation, properties? }` — must not include `id`, `name`, or `sorts`. `presentation` requires at least one of `scope` / `groups` / `sequence`. Shared `properties` apply to all tabs from the composition. Structural `excludeColumnKeys` on layers (denylist) stay separate from the UI allowlist.
+**Generated view:** `{ nodeId, association, presentation, properties? }` (`"association"` = relationship type ULID) — must not include `id`, `name`, or `sorts`. `presentation` requires at least one of `scope` / `groups` / `sequence`. Shared `properties` apply to all tabs from the composition. Structural `excludeColumnKeys` on layers (denylist) stay separate from the UI allowlist.
 
 | Layer | Fields |
 | --- | --- |
-| `scope` | `memberToScopeComposite` (association id, required); optional `excludeColumnKeys` |
+| `scope` | `memberToScopeComposite` (relationship type id, required); optional `excludeColumnKeys` |
 | `groups` | `memberToGroupComposite`, `groupTypeDatabaseId`, `unassignedGroupTitle`; optional `groupToScopeComposite`, `canonicalGroupByTitle`, `excludeColumnKeys` |
 | `sequence` | optional `excludeColumnKeys` only |
 
-Do not mix generated and custom views for the same `(nodeId, association)` pair. At most one generated view per pair.
+Do not mix generated and custom views for the same `(nodeId, association)` pair (`association` = relationship type ULID). At most one generated view per pair.
 
 ### `workspace.json` (version 1)
 
@@ -499,7 +501,7 @@ Path keys are normalized like static-site `url_alias` (trim, strip slashes, lowe
 | `data/{shard}/{id}.md` | required | Prefer `data/nodes/{shard}/{id}.md` (at least home, archive, and any referenced nodes) |
 | `data/nodes/` + `data/relationships/` | required | Live instance trees (may be empty of relationships) |
 | `archive/nodes/` + `archive/relationships/` | optional | Archived instance trees |
-| `model/associations.json` | required | At least associations you use (ids are ULIDs) |
+| `model/associations.json` | required | At least the relationship types you use (ids are ULIDs; legacy filename) |
 | `model/workspace.json` | required | Home, archive, anchors, quick links |
 | `model/schema.json` | optional | Needed when using enums / rules |
 | `model/table-schemas.json` | optional | Needed for type-table columns |
@@ -538,7 +540,7 @@ Normative parsers and path helpers in this package:
 | Node markdown | `src/content/node-file.ts` |
 | Relationships v3 | `src/content/relationships-file.ts` |
 | Type slug normalization | `src/relation-type.ts` |
-| Associations | `src/content/associations-file.ts` |
+| Relationship types (`associations.json`) | `src/content/associations-file.ts` |
 | Schema / enums | `src/schema-rules/schema-file.ts` |
 | Table schemas | `src/content/table-schemas-file.ts` |
 | Views | `src/content/views-file.ts` |

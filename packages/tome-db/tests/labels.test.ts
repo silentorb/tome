@@ -1,13 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { emptyAssociationsFile, projectionTypeForEndpoint } from "tome-flatfile";
+import { emptyRelationshipTypesFile, projectionTypeForEndpoint } from "tome-flatfile";
 import { isSetTraitProjectionType } from "tome-flatfile";
 
 const MEMBER_OF = "000000000000000000000000A1";
 
 describe("isSetTraitProjectionType", () => {
   test("recognizes projection types from set-trait registry entries", () => {
-    const registry = emptyAssociationsFile();
-    registry.associations[MEMBER_OF] = {
+    const registry = emptyRelationshipTypesFile();
+    registry.relationshipTypes[MEMBER_OF] = {
       perspectives: ["Members", "Membership"],
       traits: ["set"],
     };

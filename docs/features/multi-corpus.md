@@ -65,17 +65,17 @@ Public wire field: `corpus` (URL/JSON; use `Id` suffix only when both a corpus o
 - Delete / property update of a cross-edge applies to both copies, or refuses if either corpus is readonly.
 - Solo corpus: cross-edge files whose other endpoint is absent are kept; cache expansion skips incomplete edges.
 
-Boot **fails** on: duplicate node ids across corpora; duplicate association ids with conflicting definitions; enum keys with conflicting `options`; dual-edge property drift.
+Boot **fails** on: duplicate node ids across corpora; duplicate relationship type ids with conflicting definitions; enum keys with conflicting `options`; dual-edge property drift.
 
 ### Model merge (read)
 
 Union in memory via composite `read*File()` — do not write a merged `model/`.
 
-- Union by id: associations, table-schemas, views, dynamic-properties, extensions.
+- Union by id: relationship types (`associations.json`), table-schemas, views, dynamic-properties, extensions.
 - Schema: union relationship rules and enums (with conflict rules above).
 - `workspace.json` is **not** flattened. Each corpus **must** have `homeNodeId`. Session API lists corpora; editor chrome uses the **active** corpus only.
 - Archive: each corpus’s `archiveNodeId`; archiving uses that node’s hub; cache recompute considers every hub.
-- **Shared associations:** corpora that share an association must reuse the **same association ULID** with an identical definition; display titles alone do not merge. Example: Marloth and Translucence both declare plain set membership as `01KXBNPNJDENZ9BXN5BYZ7JKPT` (Members / Membership, `set` trait).
+- **Shared relationship types:** corpora that share a relationship type must reuse the **same relationship type ULID** with an identical definition; display titles alone do not merge. Example: Marloth and Translucence both declare plain set membership as `01KXBNPNJDENZ9BXN5BYZ7JKPT` (Members / Membership, `set` trait).
 
 ### Editor chrome
 

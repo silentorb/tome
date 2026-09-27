@@ -1,4 +1,4 @@
-import { ContentStore, loadSchemaFromContent, loadAssociationsFromContent, setTraitProjectionTypes } from "tome-flatfile";
+import { ContentStore, loadSchemaFromContent, loadRelationshipTypesFromContent, setTraitProjectionTypes } from "tome-flatfile";
 import { FlatfileGraphStore } from "tome-flatfile";
 import { GraphDatabase } from "tome-sqlite";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
@@ -22,7 +22,7 @@ export function openComposedGraphStore(contentDir: string, dbPath: string): {
       decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
     },
     memberPerspectives: () =>
-      setTraitProjectionTypes(loadAssociationsFromContent(contentDir)),
+      setTraitProjectionTypes(loadRelationshipTypesFromContent(contentDir)),
   });
   const sync = new CacheSync(flatfileBackend, cache);
   sync.ensureReady();

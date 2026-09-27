@@ -24,15 +24,17 @@ Read this doc when your task involves:
 
 For **what design nodes mean** (features, inspirations, products, traceability), read [`../ontology.md`](../ontology.md) alongside this doc.
 
-## Terminology (post-migration)
+## Terminology
 
 | Term | Meaning |
 | --- | --- |
 | **Node** | Entity in `nodes` (replaces *vertex* / *record* in API and docs). |
-| **Relationship** | Link between two nodes with a **relationship type** (association id) and JSON properties. |
-| **Association id** / **Relationship type** | Opaque uppercase ULID key in `associations.json` and on each relationship record's `type` field. Identity is not derived from perspective names. |
-| **Perspective** | User-facing label config for one endpoint of an association (`perspectives[0|1]`). Not a machine id. |
-| **Projection type** | Directed cache/query identity `{associationId}:{0\|1}` on `relationship_projections.type`. |
+| **Relationship** | Link between two nodes with a **relationship type** and JSON properties (one edge instance). |
+| **Relationship type** | Registry definition for a kind of relationship (opaque uppercase ULID + perspectives + traits + optional endpoints). Identity is not derived from perspective names. On each relationship record, the type ULID is the `type` field. Canonical term in agent prose. |
+| **Association** (on-disk legacy) | Filename / key / field naming only: `associations.json`, top-level JSON key `associations`, and content-model fields named `"association"` in `views.json` / `table-schemas.json`. Do not use “association” for the concept in new agent prose. |
+| **Association** (reserved) | Possible future node-type pairing concept — not implemented. Do not reinvent the old “association = relationship type” meaning. |
+| **Perspective** | User-facing label config for one endpoint of a relationship type (`perspectives[0|1]`). Not a machine id. |
+| **Projection type** | Directed cache/query identity `{relationshipTypeId}:{0\|1}` on `relationship_projections.type`. |
 | **Page** | Editor-facing node view (`getNodePageDetail`, `NodePageView`)—not a filesystem export file. |
 | **Type table** | Node listed in [`table-schemas.json`](./table-schemas.md) and/or receiving set-membership rows. |
 | **Schema** | Workspace model config in `content/model/schema.json` (relationship rules, enums) — see [schema.md](./schema.md). |
@@ -86,16 +88,16 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 **Content (canonical, compact):** one record per logical link:
 
 ```json
-{ "a": "<ulid>", "b": "<ulid>", "type": "<association-ulid>", "properties": { } }
+{ "a": "<ulid>", "b": "<ulid>", "type": "<relationship-type-ulid>", "properties": { } }
 ```
 
 - Endpoints `a` / `b` are an **ordered tuple**. Positions 0 (`a`) and 1 (`b`) carry **no inherent source/target meaning** — each position's meaning is defined entirely by the relationship type's ordered `perspectives` pair in `associations.json` (`perspectives[0]` describes the node at `a`, `perspectives[1]` the node at `b`). Authored order is preserved verbatim: there is **no lexicographic endpoint sorting** and no `directedFrom` field.
 - **Relative semantics come from tuple position + the type's per-endpoint display labels** — never from slug comparison, endpoint sorting, or a stored direction flag.
-- **Association ids are opaque ULIDs.** Perspective entries are display labels only (string title or `{ title, linkAdd?, linkExisting? }`); machine identity for directed edges is `associationId:endpointIndex`.
-- **Set-trait** associations expand to dual projections (`ULID:0` / `ULID:1`). Parent/child indices and which association applies come from the `set` trait and view/caller context — see [sets.md](./sets.md).
-- **Symmetric** associations carry the `symmetric` trait (not inferred from equal perspective titles). Tuple order is irrelevant for them; UI resolves association context via the relation column's `association` + `endpoint`.
-- **Peer / structural / taxonomy links** each have their own association id with a two-perspective definition and optional `endpoints`.
-- **Single-endpoint (unidirectional) types are forbidden.** Every entry in `associations.json` defines a `perspectives` **tuple of exactly two** label configs (typed `PerspectivePair`); there is no `bidirectional` field, and the parser rejects any type that does not have exactly two perspectives. All relationships are bidirectional by construction. The write path (`resolveAssociationIdForLink`) resolves via association ULID, directed projection type, or table-schema relation column, and throws `LinkResolutionError` or `UnknownAssociationError` otherwise. See `packages/tome-db/scripts/audit-relationship-resolution.ts` to verify a content directory has no unresolvable entries.
+- **Relationship type ids are opaque ULIDs.** Perspective entries are display labels only (string title or `{ title, linkAdd?, linkExisting? }`); machine identity for directed edges is `relationshipTypeId:endpointIndex`.
+- **Set-trait** relationship types expand to dual projections (`ULID:0` / `ULID:1`). Parent/child indices and which relationship type applies come from the `set` trait and view/caller context — see [sets.md](./sets.md).
+- **Symmetric** relationship types carry the `symmetric` trait (not inferred from equal perspective titles). Tuple order is irrelevant for them; UI resolves type context via the relation column's `"association"` field (relationship type ULID) + `endpoint`.
+- **Peer / structural / taxonomy links** each have their own relationship type id with a two-perspective definition and optional `endpoints`.
+- **Single-endpoint (unidirectional) types are forbidden.** Every entry in `associations.json` defines a `perspectives` **tuple of exactly two** label configs (typed `PerspectivePair`); there is no `bidirectional` field, and the parser rejects any type that does not have exactly two perspectives. All relationships are bidirectional by construction. The write path (`resolveRelationshipTypeIdForLink`) resolves via relationship type ULID, directed projection type, or table-schema relation column, and throws `LinkResolutionError` or `UnknownRelationshipTypeError` otherwise. See `packages/tome-db/scripts/audit-relationship-resolution.ts` to verify a content directory has no unresolvable entries.
 - Record id: `{a}:{b}:{type}` (keyed on authored tuple order, so it is order-sensitive).
 
 **SQLite cache (denormalized):** expanded on sync for fast directed queries:
@@ -122,8 +124,8 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTableNode` in `node-capabilities.ts`).
 
 - Node ids **must** be canonical uppercase 26-char ULIDs (`[0-9A-HJKMNP-TV-Z]{26}`), minted by `generateNodeId()` in `node-create.ts`. They are compared as exact strings — no case/dash normalization.
-- Association ids **must** use the same ULID alphabet (never lowercased). Perspective entries are display labels only (not machine ids).
-- Directed projection types **must** be `{associationId}:{0|1}`.
+- Relationship type ids **must** use the same ULID alphabet (never lowercased). Perspective entries are display labels only (not machine ids).
+- Directed projection types **must** be `{relationshipTypeId}:{0|1}`.
 - Projection ids **must** be deterministic: `{source_id}:{type}:{target_id}` (local projection type).
 
 ### Markdown body links
@@ -233,7 +235,7 @@ db.close();
 | `packages/tome-flatfile/src/content/relationships-file.ts` | Per-edge relationship JSON parse/serialize (ordered `(a, b)` tuples) |
 | `packages/tome-flatfile/src/migrations/relationship-order.ts` | Orient tuples so endpoint-0 host is `a`; `auditRelationColumnOrientation` guard |
 | `packages/tome-flatfile/src/content/associations-file.ts` | `associations.json` parse/serialize + composite helpers |
-| `packages/tome-flatfile/src/associations/load.ts` | Cached `associations.json` loader |
+| `packages/tome-flatfile/src/relationship-types/load.ts` | Cached `associations.json` loader |
 | `packages/tome-db/src/association-label.ts` | `perspectiveDisplayLabel`, `perspectiveLinkAddLabel` |
 | `packages/tome-db/src/content/relationship-sync-expand.ts` | Content → SQLite projection expansion |
 | `packages/tome-db/src/content/sync.ts` | Cache rebuild; subscribes to store change events |

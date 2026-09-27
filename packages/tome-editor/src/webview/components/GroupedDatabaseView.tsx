@@ -395,12 +395,12 @@ export function GroupedDatabaseView({
   const handleColumnsReorder = useCallback(
     async (columnOrder: string[]) => {
       setDisplayColumns(columnOrder);
-      await api.patchRelationshipViews(view.id, view.viewAssociation, {
+      await api.patchRelationshipViews(view.id, view.viewRelationshipType, {
         properties: columnOrder,
       });
       onCellUpdated?.();
     },
-    [api, onCellUpdated, view.id, view.viewAssociation],
+    [api, onCellUpdated, view.id, view.viewRelationshipType],
   );
 
   const canManageColumn = useCallback(

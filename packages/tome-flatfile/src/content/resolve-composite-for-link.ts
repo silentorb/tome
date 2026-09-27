@@ -3,7 +3,7 @@ import {
   childNodeId,
   isSetTraitType,
   parentNodeId,
-} from "../association-traits";
+} from "../relationship-type-traits";
 import { getTableSchema, relationColumns } from "../table-schema";
 import { loadTableSchemasFromContent } from "../table-schemas/load";
 import {
@@ -12,17 +12,17 @@ import {
 } from "../table-relation-column";
 import type { RelationshipEntry } from "./relationships-file";
 import {
-  isAssociationId,
-  normalizeAssociationId,
+  isRelationshipTypeId,
+  normalizeRelationshipTypeId,
   parseProjectionType,
-  requireAssociationId,
-  type AssociationsFile,
-} from "./associations-file";
+  requireRelationshipTypeId,
+  type RelationshipTypesFile,
+} from "./relationship-types-file";
 
 export class LinkResolutionError extends Error {
-  constructor(public readonly associationId: string) {
+  constructor(public readonly relationshipTypeId: string) {
     super(
-      `Cannot resolve storage type for association "${associationId}": ` +
+      `Cannot resolve storage type for relationship type "${relationshipTypeId}": ` +
         `no registered relationship type in associations.json.`,
     );
     this.name = "LinkResolutionError";
@@ -30,13 +30,13 @@ export class LinkResolutionError extends Error {
 }
 
 function memberDatabaseId(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   nodeId: string,
   relationships: RelationshipEntry[],
   setNodeIds: Set<string>,
 ): string | null {
   for (const entry of relationships) {
-    const def = registry.associations[normalizeAssociationId(entry.type)];
+    const def = registry.relationshipTypes[normalizeRelationshipTypeId(entry.type)];
     if (!isSetTraitType(def)) continue;
     const child = childNodeId(def, entry);
     const parent = parentNodeId(def, entry);
@@ -46,7 +46,7 @@ function memberDatabaseId(
 }
 
 function schemaIdForNode(
-  registry: AssociationsFile,
+  registry: RelationshipTypesFile,
   nodeId: string,
   relationships: RelationshipEntry[],
   setNodeIds: Set<string>,
@@ -56,29 +56,29 @@ function schemaIdForNode(
 }
 
 /**
- * Resolve the storage association id for a new link.
+ * Resolve the storage relationship type id for a new link.
  *
- * Callers pass an association ULID or a directed projection type (`ULID:0`).
+ * Callers pass a relationship type ULID or a directed projection type (`ULID:0`).
  * Resolution order when a bare label-like string is passed:
- *  0. already a registered association id
+ *  0. already a registered relationship type id
  *  1. table-schema relation column on source type matching the projection type
  *  2. throw LinkResolutionError
  */
-export function resolveAssociationIdForLink(
-  registry: AssociationsFile,
+export function resolveRelationshipTypeIdForLink(
+  registry: RelationshipTypesFile,
   relationships: RelationshipEntry[],
   contentDir: string,
   source: string,
   target: string,
-  associationOrProjection: string,
+  relationshipTypeOrProjection: string,
 ): string {
   void target;
-  const trimmed = associationOrProjection.trim();
+  const trimmed = relationshipTypeOrProjection.trim();
   const parsed = parseProjectionType(trimmed);
   if (parsed) {
-    return requireAssociationId(registry, parsed.associationId);
+    return requireRelationshipTypeId(registry, parsed.relationshipTypeId);
   }
-  if (isAssociationId(trimmed) && registry.associations[trimmed]) {
+  if (isRelationshipTypeId(trimmed) && registry.relationshipTypes[trimmed]) {
     return trimmed;
   }
 
@@ -100,7 +100,7 @@ export function resolveAssociationIdForLink(
   }
 
   try {
-    return requireAssociationId(registry, trimmed);
+    return requireRelationshipTypeId(registry, trimmed);
   } catch {
     throw new LinkResolutionError(trimmed);
   }

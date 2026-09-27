@@ -1,6 +1,6 @@
 import type { Relationship } from "tome-graph-interfaces";
 import { findSetEdge, setMemberIds } from "./set-membership";
-import { normalizeAssociationId } from "tome-flatfile";
+import { normalizeRelationshipTypeId } from "tome-flatfile";
 import {
   listRelationshipsFromSource,
   listRelationshipsToTarget,
@@ -66,7 +66,7 @@ export function listRelationshipsForComposite(
   nodeId: string,
   compositeType: string,
 ): Relationship[] {
-  const normalized = normalizeAssociationId(compositeType);
+  const normalized = normalizeRelationshipTypeId(compositeType);
 
   // Prefer indexed SQLite when available (ComposedGraphStore / GraphDatabase).
   // Base-tier forEach over flatfile re-scans every relationship shard.
@@ -98,10 +98,10 @@ export function listRelationshipsForComposite(
   }
 
   if (isGraphStoreBase(db)) {
-    const registry = db.readAssociations();
+    const registry = db.readRelationshipTypes();
     const results: Relationship[] = [];
     db.forEachRelationshipRecord((entry) => {
-      if (normalizeAssociationId(entry.type) !== normalized) return;
+      if (normalizeRelationshipTypeId(entry.type) !== normalized) return;
       const { projections } = expandRelationshipEntry(entry, registry);
       for (const row of projections) {
         if (row.sourceNodeId !== nodeId && row.targetNodeId !== nodeId) continue;

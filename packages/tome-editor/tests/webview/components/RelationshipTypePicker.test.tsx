@@ -1,6 +1,6 @@
 import { describe, expect, test, mock } from "bun:test";
 import { fireEvent, render, waitFor } from "@testing-library/react";
-import { filterAndSortAssociations, AssociationPicker } from "../../../src/webview/components/AssociationPicker";
+import { filterAndSortRelationshipTypes, RelationshipTypePicker } from "../../../src/webview/components/RelationshipTypePicker";
 import { makeMockEditorApi } from "../test-fixtures/mock-api";
 import type { EditorApi } from "../../../src/webview/api/client";
 
@@ -8,15 +8,15 @@ const FEATURES_TYPE = "000000000000000000000000B2:0";
 const SURREAL_TYPE = "000000000000000000000000B3:0";
 const APPLIED_TYPE = "000000000000000000000000B4:0";
 
-describe("filterAndSortAssociations", () => {
+describe("filterAndSortRelationshipTypes", () => {
   test("returns types in source order when query is empty", () => {
     const types = [
       { type: "z", label: "Zeta" },
       { type: "a", label: "Alpha" },
       { type: "m", label: "Mike" },
     ];
-    expect(filterAndSortAssociations(types, "")).toEqual(types);
-    expect(filterAndSortAssociations(types, "  ")).toEqual(types);
+    expect(filterAndSortRelationshipTypes(types, "")).toEqual(types);
+    expect(filterAndSortRelationshipTypes(types, "  ")).toEqual(types);
   });
 
   test("pins recent types first when query is empty", () => {
@@ -25,7 +25,7 @@ describe("filterAndSortAssociations", () => {
       { type: "a", label: "Alpha" },
       { type: "m", label: "Mike" },
     ];
-    expect(filterAndSortAssociations(types, "", ["m", "missing", "z"])).toEqual([
+    expect(filterAndSortRelationshipTypes(types, "", ["m", "missing", "z"])).toEqual([
       { type: "m", label: "Mike" },
       { type: "z", label: "Zeta" },
       { type: "a", label: "Alpha" },
@@ -38,7 +38,7 @@ describe("filterAndSortAssociations", () => {
       { type: SURREAL_TYPE, label: "Surreal" },
       { type: FEATURES_TYPE, label: "Features" },
     ];
-    expect(filterAndSortAssociations(types, "surreal", [APPLIED_TYPE])).toEqual([
+    expect(filterAndSortRelationshipTypes(types, "surreal", [APPLIED_TYPE])).toEqual([
       { type: SURREAL_TYPE, label: "Surreal" },
       { type: APPLIED_TYPE, label: "Applied Surrealism" },
     ]);
@@ -46,11 +46,11 @@ describe("filterAndSortAssociations", () => {
 
   test("does not match opaque type ids", () => {
     const types = [{ type: FEATURES_TYPE, label: "Features" }];
-    expect(filterAndSortAssociations(types, FEATURES_TYPE.slice(0, 8))).toEqual([]);
+    expect(filterAndSortRelationshipTypes(types, FEATURES_TYPE.slice(0, 8))).toEqual([]);
   });
 });
 
-describe("AssociationPicker", () => {
+describe("RelationshipTypePicker", () => {
   test("shows perspective labels without type ids", async () => {
     const api = {
       ...makeMockEditorApi(),
@@ -61,7 +61,7 @@ describe("AssociationPicker", () => {
     } as EditorApi;
 
     const view = render(
-      <AssociationPicker
+      <RelationshipTypePicker
         api={api}
         selectedType={null}
         ariaLabel="Relationship type"
@@ -86,7 +86,7 @@ describe("AssociationPicker", () => {
     } as EditorApi;
 
     const view = render(
-      <AssociationPicker
+      <RelationshipTypePicker
         api={api}
         selectedType={null}
         recentTypes={[SURREAL_TYPE]}
@@ -113,7 +113,7 @@ describe("AssociationPicker", () => {
     } as EditorApi;
 
     const view = render(
-      <AssociationPicker
+      <RelationshipTypePicker
         api={api}
         selectedType={null}
         ariaLabel="Relationship type"

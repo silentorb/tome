@@ -42,12 +42,12 @@ function nodeToRow(
 }
 
 function buildProjectionIndex(store: TomeGraphStoreBase): Map<string, ExecutionRow[]> {
-  const associations = store.readAssociations();
+  const relationshipTypes = store.readRelationshipTypes();
   const entries: RelationshipRecordRef[] = [];
   store.forEachRelationshipRecord((entry) => {
     entries.push(entry);
   });
-  const { projections } = expandAllRelationships(entries, associations);
+  const { projections } = expandAllRelationships(entries, relationshipTypes);
 
   const bySource = new Map<string, ExecutionRow[]>();
   for (const projection of projections) {

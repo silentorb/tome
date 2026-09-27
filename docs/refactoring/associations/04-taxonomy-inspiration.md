@@ -1,5 +1,8 @@
 # B4 — Taxonomy↔inspiration family
 
+> **Terminology (historical):** This inventory uses older “association” / composite naming. The preferred term is **relationship type** (registry definition: ULID + perspectives + traits + endpoints). On-disk files may still use `associations.json` / key `associations`.
+
+
 ## What it does
 
 Certain taxonomy perspectives link to inspirations using **named composite storage types** following the pattern `{taxonomy_perspective}_inspirations` (e.g. `monsters_inspirations`, `pacing_inspirations`).
@@ -50,7 +53,7 @@ Marloth registry examples (`associations.json`):
 ```91:97:/workspaces/tome/packages/tome-db/src/content/resolve-composite-for-link.ts
   if (TAXONOMY_INSPIRATION_PERSPECTIVES.has(normalized)) {
     const composite = compositeTypeForPerspectives(normalized, "inspirations");
-    if (registry.associations[composite] && isDualPerspectiveType(registry.associations[composite])) {
+    if (registry.relationshipTypes[composite] && isDualPerspectiveType(registry.relationshipTypes[composite])) {
       return composite;
     }
   }

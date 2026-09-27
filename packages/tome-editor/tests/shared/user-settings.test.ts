@@ -15,8 +15,8 @@ import {
   relationTableSortKey,
   sequencingShowDependencyEdges,
   relationshipsOnlyActiveTargets,
-  relationshipsRecentAssociationTypes,
-  pushRecentAssociationType,
+  relationshipsRecentRelationshipTypes,
+  pushRecentRelationshipType,
   MAX_RECENT_ASSOCIATION_TYPES,
   sortTableRows,
   effectiveTableSort,
@@ -314,26 +314,26 @@ describe("user-settings", () => {
     expect(relationshipsOnlyActiveTargets(parsed)).toBe(false);
   });
 
-  test("relationships recentAssociationTypes are MRU, capped, and merge with onlyActive", () => {
-    expect(pushRecentAssociationType([], "a:0")).toEqual(["a:0"]);
-    expect(pushRecentAssociationType(["a:0", "b:1"], "b:1")).toEqual(["b:1", "a:0"]);
+  test("relationships recentRelationshipTypes are MRU, capped, and merge with onlyActive", () => {
+    expect(pushRecentRelationshipType([], "a:0")).toEqual(["a:0"]);
+    expect(pushRecentRelationshipType(["a:0", "b:1"], "b:1")).toEqual(["b:1", "a:0"]);
 
     const many = Array.from({ length: MAX_RECENT_ASSOCIATION_TYPES + 3 }, (_, i) => `t${i}:0`);
-    const capped = pushRecentAssociationType(many.slice(1), many[0]!);
+    const capped = pushRecentRelationshipType(many.slice(1), many[0]!);
     expect(capped).toHaveLength(MAX_RECENT_ASSOCIATION_TYPES);
     expect(capped[0]).toBe(many[0]);
 
     const withRecent = applyUserSettingsPatch(
       { version: 1 },
-      { relationships: { recentAssociationTypes: ["x:0", "y:1"] } },
+      { relationships: { recentRelationshipTypes: ["x:0", "y:1"] } },
     );
-    expect(relationshipsRecentAssociationTypes(withRecent)).toEqual(["x:0", "y:1"]);
+    expect(relationshipsRecentRelationshipTypes(withRecent)).toEqual(["x:0", "y:1"]);
 
     const withBoth = applyUserSettingsPatch(withRecent, {
       relationships: { onlyActiveTargets: false },
     });
     expect(withBoth.relationships).toEqual({
-      recentAssociationTypes: ["x:0", "y:1"],
+      recentRelationshipTypes: ["x:0", "y:1"],
       onlyActiveTargets: false,
     });
 

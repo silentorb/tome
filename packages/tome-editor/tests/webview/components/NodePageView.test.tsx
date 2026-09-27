@@ -1,5 +1,5 @@
 import { projectionTypeForEndpoint } from "tome-db/content/test-helpers";
-import { TEST_MEMBER_OF_ASSOCIATION_ID } from "tome-db/content/test-helpers";
+import { TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID } from "tome-db/content/test-helpers";
 import { mock, describe, expect, test } from "bun:test";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 
@@ -395,7 +395,7 @@ describe("NodePageView IS_A relation section", () => {
             sections: [
               { type: "markdown" },
               makeRelationSection({
-                label: projectionTypeForEndpoint(TEST_MEMBER_OF_ASSOCIATION_ID, 1),
+                label: projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1),
                 title: "Membership",
                 typeNodeId: null,
                 linkAddLabel: "Link type table",

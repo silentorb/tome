@@ -4,7 +4,7 @@ import {
   CompositeStore,
   FlatfileGraphStore,
   loadSchemaFromContent,
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   setTraitProjectionTypes,
 } from "tome-flatfile";
 import type {
@@ -155,7 +155,7 @@ export async function openDataStoreSession(
   };
   const memberPerspectives =
     options.memberPerspectives ??
-    (() => setTraitProjectionTypes(loadAssociationsFromContent(contentDir)));
+    (() => setTraitProjectionTypes(loadRelationshipTypesFromContent(contentDir)));
 
   const sqliteOpts = optionsRecord(sqliteEntry.entry.options);
   const dbPath =

@@ -10,13 +10,13 @@ import {
   rowBelongsToDatabase,
 } from "./relationship-traverse";
 import {
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   normalizeRelationshipType,
   parseProjectionType,
   projectionTypeForEndpoint,
-  isSymmetricAssociation,
+  isSymmetricRelationshipType,
 } from "tome-flatfile";
-import type { AssociationsFile } from "tome-flatfile";
+import type { RelationshipTypesFile } from "tome-flatfile";
 import type {
   MemberPageRelationFieldLink,
   MemberPageRelationFieldSelect,
@@ -50,23 +50,23 @@ function scopeForRow(
   return filterRelationshipsByRowDatabaseContext(db, rowId, databaseId, relationships, contentDir);
 }
 
-/** Projection types that share direction with `connectionType` (symmetric associations). */
+/** Projection types that share direction with `connectionType` (symmetric relationship types). */
 function acceptedOutgoingTypes(
   connectionType: string,
-  registry: AssociationsFile | null,
+  registry: RelationshipTypesFile | null,
 ): Set<string> {
   const normalized = normalizeRelationshipType(connectionType);
   const accepted = new Set([normalized]);
   if (!registry) return accepted;
   const parsed = parseProjectionType(connectionType);
   if (!parsed) return accepted;
-  const def = registry.associations[parsed.associationId];
-  if (!def || !isSymmetricAssociation(def)) return accepted;
+  const def = registry.relationshipTypes[parsed.relationshipTypeId];
+  if (!def || !isSymmetricRelationshipType(def)) return accepted;
   accepted.add(
-    normalizeRelationshipType(projectionTypeForEndpoint(parsed.associationId, 0)),
+    normalizeRelationshipType(projectionTypeForEndpoint(parsed.relationshipTypeId, 0)),
   );
   accepted.add(
-    normalizeRelationshipType(projectionTypeForEndpoint(parsed.associationId, 1)),
+    normalizeRelationshipType(projectionTypeForEndpoint(parsed.relationshipTypeId, 1)),
   );
   return accepted;
 }
@@ -76,7 +76,7 @@ function filterByOutgoingPerspective(
   nodeId: string,
   connectionType: string,
   relationships: Relationship[],
-  registry: AssociationsFile | null,
+  registry: RelationshipTypesFile | null,
 ): Relationship[] {
   const accepted = acceptedOutgoingTypes(connectionType, registry);
   return relationships.filter(
@@ -95,7 +95,7 @@ export function listRelationConnectionsForRow(
   contentDir?: string,
 ): Relationship[] {
   if (!rowBelongsToDatabase(db, nodeId, databaseId, contentDir)) return [];
-  const registry = contentDir ? loadAssociationsFromContent(contentDir) : null;
+  const registry = contentDir ? loadRelationshipTypesFromContent(contentDir) : null;
 
   if (compositeType) {
     const byComposite = listRelationshipsForComposite(db, nodeId, compositeType);
@@ -115,13 +115,13 @@ export function listRelationConnectionsForRow(
     (() => {
       const parsed = parseProjectionType(connectionType);
       if (!parsed) return [] as Relationship[];
-      const def = registry.associations[parsed.associationId];
-      if (!def || !isSymmetricAssociation(def)) return [] as Relationship[];
+      const def = registry.relationshipTypes[parsed.relationshipTypeId];
+      if (!def || !isSymmetricRelationshipType(def)) return [] as Relationship[];
       const otherIndex: 0 | 1 = parsed.endpointIndex === 0 ? 1 : 0;
       return listRelationshipsFromSource(
         db,
         nodeId,
-        projectionTypeForEndpoint(parsed.associationId, otherIndex),
+        projectionTypeForEndpoint(parsed.relationshipTypeId, otherIndex),
       );
     })();
   return scopeForRow(
@@ -163,7 +163,7 @@ export function relationFieldSelectsFromColumnDefs(
   columnDefs: readonly DatabaseColumnDef[],
   contentDir?: string,
 ): MemberPageRelationFieldSelect[] {
-  const registry = contentDir ? loadAssociationsFromContent(contentDir) : null;
+  const registry = contentDir ? loadRelationshipTypesFromContent(contentDir) : null;
   const out: MemberPageRelationFieldSelect[] = [];
   for (const col of columnDefs) {
     if (col.type !== "relation") continue;
@@ -173,10 +173,10 @@ export function relationFieldSelectsFromColumnDefs(
     if (registry) {
       const parsed = parseProjectionType(type);
       if (parsed) {
-        const def = registry.associations[parsed.associationId];
-        if (def && isSymmetricAssociation(def)) {
-          projectionTypes.add(projectionTypeForEndpoint(parsed.associationId, 0));
-          projectionTypes.add(projectionTypeForEndpoint(parsed.associationId, 1));
+        const def = registry.relationshipTypes[parsed.relationshipTypeId];
+        if (def && isSymmetricRelationshipType(def)) {
+          projectionTypes.add(projectionTypeForEndpoint(parsed.relationshipTypeId, 0));
+          projectionTypes.add(projectionTypeForEndpoint(parsed.relationshipTypeId, 1));
         }
       }
     }

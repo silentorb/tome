@@ -1,6 +1,6 @@
 import type { Properties, Relationship } from "tome-graph-interfaces";
 import { relationshipId } from "../relationship-id";
-import { isAssociationId, normalizeAssociationId } from "./associations-file";
+import { isRelationshipTypeId, normalizeRelationshipTypeId } from "./relationship-types-file";
 
 /** Conceptual on-disk layout version (sharded one-file-per-edge trees). */
 export const RELATIONSHIPS_FILE_VERSION = 4;
@@ -8,7 +8,7 @@ export const RELATIONSHIPS_FILE_VERSION = 4;
 /**
  * A relationship is an ordered tuple `(a, b)`. The positions carry no built-in
  * meaning (not source/target): the edge type assigns a per-position value to
- * each index (see `AssociationDefinition.perspectives`). Relative semantics
+ * each index (see `RelationshipTypeDefinition.perspectives`). Relative semantics
  * come from tuple order + the type registry, never from lexicographic node order.
  *
  * Archive status is filesystem location (`relationships/` vs
@@ -33,7 +33,7 @@ export function connectsEndpoints(entry: RelationshipEntry, x: string, y: string
 }
 
 export function relationshipRecordId(a: string, b: string, type: string): string {
-  return `${a}:${b}:${normalizeAssociationId(type)}`;
+  return `${a}:${b}:${normalizeRelationshipTypeId(type)}`;
 }
 
 export function parseRelationshipEntry(raw: string, pathHint = "relationship"): RelationshipEntry {
@@ -45,8 +45,8 @@ export function parseRelationshipEntry(raw: string, pathHint = "relationship"): 
   if (typeof row.a !== "string" || typeof row.b !== "string" || typeof row.type !== "string") {
     throw new Error(`${pathHint}: requires a, b, type`);
   }
-  const type = normalizeAssociationId(row.type);
-  if (!isAssociationId(type)) {
+  const type = normalizeRelationshipTypeId(row.type);
+  if (!isRelationshipTypeId(type)) {
     throw new Error(`${pathHint}: relationship type "${row.type}" must be a ULID`);
   }
   const properties =
@@ -108,8 +108,8 @@ export function parseLegacyRelationshipsFile(raw: string): {
     const archived = row.archived === true ? true : undefined;
 
     if (typeof row.a === "string" && typeof row.b === "string" && typeof row.type === "string") {
-      const type = normalizeAssociationId(row.type);
-      if (!isAssociationId(type)) {
+      const type = normalizeRelationshipTypeId(row.type);
+      if (!isRelationshipTypeId(type)) {
         throw new Error(
           `relationships.json: relationship type "${row.type}" must be a ULID`,
         );

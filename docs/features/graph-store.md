@@ -32,7 +32,7 @@ Must support solo and multi-corpus flatfile (`CompositeStore`):
 - Corpus: `listCorpora`, `locateNode`, `contentDirForNode`
 - Nodes: `getNode`, `upsertNode`, `mergeNodeProperties`, `deleteNode` (markdown body separate from YAML)
 - Relationships: canonical record CRUD + directed projection CRUD (expansion via [`expandRelationshipEntry`](../../packages/tome-flatfile/src/relationship-expand.ts))
-- Model config: associations, schema, views, table-schemas, workspace, dynamic-properties, etc.
+- Model config: relationship types (`associations.json`), schema, views, table-schemas, workspace, dynamic-properties, etc.
 - Archive: live vs archived file trees
 - Iteration: `listNodeIds`, `forEachRelationshipRecord`
 
@@ -118,15 +118,15 @@ Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read 
 
 ### Standard Imp graphs (`tome-db`)
 
-Imp hop graphs use bare `association` + `direction` (not packed `ULID:dir`). Prefer `semanticPathFromAnchorGraph` / `bindTomeSemanticPath` for ordinary relation→field chains when a type context is known.
+Imp hop graphs use bare `association` (relationship type ULID; Imp field name) + `direction` (not packed `ULID:dir`). Prefer `semanticPathFromAnchorGraph` / `bindTomeSemanticPath` for ordinary relation→field chains when a type context is known.
 
 | Graph factory | Purpose |
 | --- | --- |
 | `recentNodesGraph` | Recent nodes by `modified_at` |
-| `typeMembersGraph(setNodeId, associationId, direction)` | Type-table member rows (set-side hop) |
+| `typeMembersGraph(setNodeId, relationshipTypeId, direction)` | Type-table member rows (set-side hop) |
 | `searchNodesGraph` | Title/body search |
-| `outgoingRelationshipsGraph(nodeId, associationId)` | Outgoing projections from a node (direction 0) |
-| `incomingRelationshipsGraph(nodeId, associationId)` | Incoming projections to a node (direction 1) |
+| `outgoingRelationshipsGraph(nodeId, relationshipTypeId)` | Outgoing projections from a node (direction 0) |
+| `incomingRelationshipsGraph(nodeId, relationshipTypeId)` | Incoming projections to a node (direction 1) |
 | `semanticPathFromAnchorGraph(anchorId, tokens, { ontology, startType })` | Filter to anchor then semantic navigate/project |
 
 ### Base-tier relationship writes

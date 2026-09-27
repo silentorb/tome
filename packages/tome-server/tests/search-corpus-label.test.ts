@@ -5,9 +5,9 @@ import { join } from "node:path";
 import {
   CompositeStore,
   ContentStore,
-  emptyAssociationsFile,
+  emptyRelationshipTypesFile,
   registerBidirectionalType,
-  serializeAssociationsFile,
+  serializeRelationshipTypesFile,
   serializeWorkspaceFile,
   WORKSPACE_FILE_VERSION,
   type WorkspaceFile,
@@ -50,11 +50,11 @@ function seedCorpus(
     join(content, "model", "workspace.json"),
     serializeWorkspaceFile(workspace(home, archive, appTitle)),
   );
-  const associations = emptyAssociationsFile();
+  const associations = emptyRelationshipTypesFile();
   registerBidirectionalType(associations, "Related", "Related", ASSOC);
   writeFileSync(
     join(content, "model", "associations.json"),
-    serializeAssociationsFile(associations),
+    serializeRelationshipTypesFile(associations),
   );
   writeFileSync(
     join(content, "model", "extensions.json"),

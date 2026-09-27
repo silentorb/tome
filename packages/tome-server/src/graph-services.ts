@@ -23,9 +23,9 @@ import {
   rewriteDatabaseSequence as rewriteDatabaseSequenceInDb,
   DEFAULT_TABLE_ROW_LIMIT,
   loadSchemaFromContent,
-  loadAssociationsFromContent,
+  loadRelationshipTypesFromContent,
   labeledRelationshipTypes,
-  associationRuleContext,
+  relationshipTypeRuleContext,
   recentNodesGraph,
   searchNodesGraph,
   listDistinctProjectionTypes,
@@ -312,28 +312,28 @@ function buildGraphServices(
     },
     createRelationshipView(
       nodeId: string,
-      association: string,
+      relationshipTypeId: string,
       input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
     ) {
-      return createRelationshipView(writeCtx, nodeId, association, input);
+      return createRelationshipView(writeCtx, nodeId, relationshipTypeId, input);
     },
     updateRelationshipView(
       nodeId: string,
-      association: string,
+      relationshipTypeId: string,
       viewId: string,
       input: { name?: string; sorts?: ViewSortSpec[]; properties?: string[] },
     ) {
-      return updateRelationshipView(writeCtx, nodeId, association, viewId, input);
+      return updateRelationshipView(writeCtx, nodeId, relationshipTypeId, viewId, input);
     },
-    deleteRelationshipView(nodeId: string, association: string, viewId: string) {
-      deleteRelationshipView(writeCtx, nodeId, association, viewId);
+    deleteRelationshipView(nodeId: string, relationshipTypeId: string, viewId: string) {
+      deleteRelationshipView(writeCtx, nodeId, relationshipTypeId, viewId);
     },
     patchRelationshipViews(
       nodeId: string,
-      association: string,
+      relationshipTypeId: string,
       input: { viewOrder?: string[]; properties?: string[] },
     ) {
-      return patchRelationshipViews(writeCtx, nodeId, association, input);
+      return patchRelationshipViews(writeCtx, nodeId, relationshipTypeId, input);
     },
     deleteDatabaseColumn(databaseId: string, columnKey: string) {
       return deleteDatabaseColumnInDb(writeCtx, databaseId, columnKey);
@@ -368,15 +368,15 @@ function buildGraphServices(
       return schema();
     },
   listRelationshipTypes() {
-      const registry = loadAssociationsFromContent(contentPath);
+      const registry = loadRelationshipTypesFromContent(contentPath);
       return labeledRelationshipTypes(
         registry,
         listDistinctProjectionTypes(graphStore),
       );
     },
     getRelationshipLinkOptions(sourceId: string, type: string) {
-      const registry = loadAssociationsFromContent(contentPath);
-      const rule = associationRuleContext(registry, graphStore, sourceId, type, contentPath);
+      const registry = loadRelationshipTypesFromContent(contentPath);
+      const rule = relationshipTypeRuleContext(registry, graphStore, sourceId, type, contentPath);
       return {
         allowedTargetTypeIds: rule ? [...rule.allowedTargetTypeIds] : null,
       };
@@ -492,8 +492,8 @@ function buildGraphServices(
       sourceId: string,
       input: { type: string; title: string; properties?: Record<string, string> },
     ): CreateNodeResult | CreateNodeError {
-      const registry = loadAssociationsFromContent(contentPath);
-      const rule = associationRuleContext(
+      const registry = loadRelationshipTypesFromContent(contentPath);
+      const rule = relationshipTypeRuleContext(
         registry,
         graphStore,
         sourceId,

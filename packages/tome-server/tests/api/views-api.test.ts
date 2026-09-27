@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { createTestApi } from "./test-api-setup";
 import { serializeViewsFile, serializeWorkspaceFile, VIEWS_FILE_VERSION } from "tome-db";
 import { contentModelDir, viewsFilePath, workspaceFilePath } from "tome-db/content";
-import { defaultTestWorkspaceFile, TEST_MEMBER_OF_ASSOCIATION_ID } from "tome-db/content/test-helpers";
+import { defaultTestWorkspaceFile, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID } from "tome-db/content/test-helpers";
 
 describe("views API", () => {
   test("POST and PATCH relationship views", async () => {
@@ -26,7 +26,7 @@ describe("views API", () => {
           {
             id: "all",
             nodeId,
-            association: TEST_MEMBER_OF_ASSOCIATION_ID,
+            association: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
             name: "All",
             sorts: [{ column: "name", direction: "asc" }],
           },
@@ -35,7 +35,7 @@ describe("views API", () => {
     );
 
     const { handler } = createTestApi({ dbPath: join(dir, "test.sqlite"), contentDir });
-    const base = `/api/views/nodes/${nodeId}/associations/${TEST_MEMBER_OF_ASSOCIATION_ID}`;
+    const base = `/api/views/nodes/${nodeId}/relationship-types/${TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID}`;
 
     const created = await handler(
       new Request(`http://127.0.0.1${base}/views`, {

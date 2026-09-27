@@ -11,7 +11,7 @@ import type {
   TomeQueryCache,
 } from "tome-service-interfaces";
 import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
-import { normalizeAssociationId } from "tome-flatfile";
+import { normalizeRelationshipTypeId } from "tome-flatfile";
 
 /** Read store: graph store Base tier, or legacy cache during migration. */
 export type RelationshipReadStore = TomeGraphStoreBase | TomeQueryCache;
@@ -199,7 +199,7 @@ export function listRelationshipsToTarget(
 /** All live relationship projections in the corpus (for graph export). */
 export function listAllRelationshipProjections(store: RelationshipReadStore): Relationship[] {
   if (isGraphStoreBase(store)) {
-    const registry = store.readAssociations();
+    const registry = store.readRelationshipTypes();
     const seen = new Set<string>();
     const results: Relationship[] = [];
     store.forEachRelationshipRecord((entry) => {
@@ -325,14 +325,14 @@ export function readStoreCompositeTypeForRelationship(
   relationship: Relationship,
 ): string | null {
   if (isGraphStoreBase(store)) {
-    const registry = store.readAssociations();
+    const registry = store.readRelationshipTypes();
     let match: string | null = null;
     store.forEachRelationshipRecord((entry) => {
       if (match) return;
       const { projections } = expandRelationshipEntry(entry, registry);
       for (const row of projections) {
         if (row.id !== relationship.id) continue;
-        match = normalizeAssociationId(entry.type);
+        match = normalizeRelationshipTypeId(entry.type);
         return;
       }
     });
@@ -340,7 +340,7 @@ export function readStoreCompositeTypeForRelationship(
   }
   if (!relationship.recordId) return null;
   const record = store.getRelationshipRecord(relationship.recordId);
-  return record?.compositeType ? normalizeAssociationId(record.compositeType) : null;
+  return record?.compositeType ? normalizeRelationshipTypeId(record.compositeType) : null;
 }
 
 /** Incident projection count for a node (matches SQLite cache semantics). */

@@ -7,9 +7,9 @@ import {
   ContentStore,
   CorpusConflictError,
   CorpusReadonlyError,
-  serializeAssociationsFile,
+  serializeRelationshipTypesFile,
   serializeWorkspaceFile,
-  emptyAssociationsFile,
+  emptyRelationshipTypesFile,
   registerBidirectionalType,
   WORKSPACE_FILE_VERSION,
   type WorkspaceFile,
@@ -42,9 +42,9 @@ function seedCorpus(root: string, home: string, archive: string): string {
   mkdirSync(join(content, "data", "nodes"), { recursive: true });
   mkdirSync(join(content, "data", "relationships"), { recursive: true });
   writeFileSync(join(content, "model", "workspace.json"), serializeWorkspaceFile(workspace(home, archive)));
-  const associations = emptyAssociationsFile();
+  const associations = emptyRelationshipTypesFile();
   registerBidirectionalType(associations, "Related", "Related", ASSOC);
-  writeFileSync(join(content, "model", "associations.json"), serializeAssociationsFile(associations));
+  writeFileSync(join(content, "model", "associations.json"), serializeRelationshipTypesFile(associations));
   return content;
 }
 
