@@ -1,0 +1,66 @@
+blockquote.tome-task {
+  --tome-task-checkbox-size: 1.5em;
+  display: flex;
+  gap: 0.65em;
+  align-items: flex-start;
+  border-left: none;
+  margin: 1em 0;
+  padding: 12px 14px;
+  background: var(--tome-callout-bg);
+  border: 1px solid var(--tome-callout-border);
+  border-radius: var(--tome-callout-radius);
+  color: var(--tome-text);
+}
+
+blockquote.tome-task > .tome-task-checkbox {
+  flex: 0 0 var(--tome-task-checkbox-size);
+  width: var(--tome-task-checkbox-size);
+  line-height: 1.35;
+  font-size: 1.05em;
+  text-align: center;
+  user-select: none;
+}
+
+blockquote.tome-task > .tome-task-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+blockquote.tome-task > .tome-task-body > p:first-child {
+  margin-top: 0;
+}
+
+blockquote.tome-task > .tome-task-body > p:last-child {
+  margin-bottom: 0;
+}
+
+blockquote.tome-task[data-checked="true"] > .tome-task-body {
+  opacity: 0.72;
+  text-decoration: line-through;
+}
+
+blockquote.tome-task blockquote.tome-task {
+  margin: 0.75em 0;
+}
+
+/* Fallback: checkbox marker still in text (undecorated lead). */
+blockquote.tome-task:not(:has(> .tome-task-checkbox)) {
+  --tome-task-gutter: 1.75em;
+}
+
+blockquote.tome-task:not(:has(> .tome-task-checkbox)) > p:first-child {
+  margin-top: 0;
+  padding-left: var(--tome-task-gutter);
+  text-indent: calc(-1 * var(--tome-task-gutter));
+}
+
+blockquote.tome-task:not(:has(> .tome-task-checkbox)) > p:last-child {
+  margin-bottom: 0;
+}
+
+blockquote.tome-task:not(:has(> .tome-task-checkbox)) > p ~ p,
+blockquote.tome-task:not(:has(> .tome-task-checkbox)) > blockquote,
+blockquote.tome-task:not(:has(> .tome-task-checkbox)) > ul,
+blockquote.tome-task:not(:has(> .tome-task-checkbox)) > ol {
+  padding-left: var(--tome-task-gutter);
+}

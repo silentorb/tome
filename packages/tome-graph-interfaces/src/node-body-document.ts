@@ -1,6 +1,6 @@
 /**
  * Semantic node body for the editor page-load use case.
- * CommonMark + GFM baseline, plus Tome extensions (callout, dynamic/static links, page blocks).
+ * CommonMark + GFM baseline, plus Tome extensions (callout, task, dynamic/static links, page blocks).
  * Git-tracked Extended Markdown is a storage encoding of this tree, not the wire format.
  */
 
@@ -81,6 +81,12 @@ export interface NodeBodyCallout {
   content: NodeBodyBlock[];
 }
 
+export interface NodeBodyTask {
+  type: "task";
+  checked: boolean;
+  content: NodeBodyBlock[];
+}
+
 export interface NodeBodyListItem {
   type: "list_item";
   checked: boolean | null;
@@ -143,6 +149,7 @@ export type NodeBodyBlock =
   | NodeBodyHeading
   | NodeBodyBlockquote
   | NodeBodyCallout
+  | NodeBodyTask
   | NodeBodyBulletList
   | NodeBodyOrderedList
   | NodeBodyCodeBlock
@@ -220,6 +227,7 @@ function blockMeaningful(block: NodeBodyBlock): boolean {
     case "blockquote":
       return block.content.some(blockMeaningful);
     case "callout":
+    case "task":
     case "horizontal_rule":
     case "page_block":
     case "table":
@@ -251,6 +259,7 @@ function mapBlocks(
         return mapPage(block);
       case "blockquote":
       case "callout":
+      case "task":
         return { ...block, content: mapBlocks(block.content, mapPage) };
       case "bullet_list":
       case "ordered_list":
@@ -329,6 +338,7 @@ export function collectDynamicLinkIds(document: NodeBodyDocument): string[] {
           break;
         case "blockquote":
         case "callout":
+        case "task":
           visitBlocks(block.content);
           break;
         case "bullet_list":
@@ -371,6 +381,7 @@ export function assignDynamicLinkTitles(
           return { ...block, content: visitInlines(block.content) };
         case "blockquote":
         case "callout":
+        case "task":
           return { ...block, content: visitBlocks(block.content) };
         case "bullet_list":
         case "ordered_list":

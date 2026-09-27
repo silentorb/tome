@@ -1,5 +1,6 @@
 import { expandDynamicNodeLinks, parseDynamicNodeLinkIds } from "tome-flatfile/dynamic-node-links";
 import { decorateCalloutHtml } from "./callout-html";
+import { decorateTaskHtml } from "./task-html";
 import { decorateDynamicLinkHtml } from "./dynamic-link-html";
 import { createNodeUrlResolver, type NodeUrlResolver } from "./node-urls";
 
@@ -106,7 +107,7 @@ export async function renderMarkdownToHtml(
   if (!markdown.trim()) return "";
   const { marked } = await import("marked");
   const html = (await marked.parse(markdown, { async: true })) as string;
-  return decorateDynamicLinkHtml(decorateCalloutHtml(html), dynamicNodeIds, urls);
+  return decorateDynamicLinkHtml(decorateCalloutHtml(decorateTaskHtml(html)), dynamicNodeIds, urls);
 }
 
 export type { NodeUrlResolver };

@@ -18,6 +18,7 @@ import {
   installMilkdownKitFeatures,
 } from "../milkdown-kit-features";
 import { replaceBlockquoteInputRule } from "../blockquote-input-rule";
+import { installTaskInputRule } from "../task-input-rule";
 import { pageBlockEmbed, setPageBlockEmbedNodeId } from "../extensions/page-block-embed";
 import { loadEditorBundles, setPageBlockInvokeExtension } from "../extensions/page-block-registry";
 import { scheduleSchemaDiagramViewportInit } from "../extensions/schema-diagram-viewport";
@@ -44,6 +45,8 @@ import { editorDynamicNodeHref } from "tome-flatfile/dynamic-node-links";
 import { documentToPmJson, pmNodeToDocument } from "../body-document-pm";
 import { calloutPlugin } from "../callout-schema";
 import { calloutViewPlugin } from "../callout-view";
+import { taskPlugin } from "../task-schema";
+import { taskViewPlugin } from "../task-view";
 import { classifyDocumentUpdate } from "../editor-markdown-update";
 import { TOME_EDITOR_MOUNT_DEPS } from "../tome-editor-mount-deps";
 import "./editor.css";
@@ -219,10 +222,13 @@ export function TomeEditor({
       },
     });
     installMilkdownKitFeatures(crepe.editor);
+    crepe.editor.use(taskPlugin);
+    crepe.editor.use(taskViewPlugin);
     crepe.editor.use(calloutPlugin);
     crepe.editor.use(calloutViewPlugin);
     crepe.editor.use(pageBlockEmbed);
     await replaceBlockquoteInputRule(crepe.editor);
+    installTaskInputRule(crepe.editor);
     if (destroyed || activeGeneration !== generation) return;
 
     detachEditorLinkNavigation = attachEditorLinkNavigation(root);

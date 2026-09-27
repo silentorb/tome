@@ -73,6 +73,29 @@ describe("node body document", () => {
     db.close();
   });
 
+  test("round-trips task blocks from checkbox-lead blockquotes", () => {
+    const unchecked = parseStorageBody("> [ ] Buy milk\n");
+    expect(unchecked.content.map((block) => block.type)).toEqual(["task"]);
+    const task = unchecked.content[0];
+    expect(task?.type).toBe("task");
+    if (task?.type === "task") {
+      expect(task.checked).toBe(false);
+      expect(task.content[0]).toEqual({
+        type: "paragraph",
+        content: [{ type: "text", text: "Buy milk" }],
+      });
+    }
+    expect(documentToStorageBody(unchecked)).toContain("> [ ] Buy milk");
+
+    const checked = parseStorageBody("> [x] Done\n");
+    expect(checked.content[0]).toMatchObject({ type: "task", checked: true });
+    expect(documentToStorageBody(checked)).toContain("> [x] Done");
+
+    // Task marker wins over callout emoji when both could apply (marker is first).
+    const plain = parseStorageBody("> Plain quote\n");
+    expect(plain.content[0]?.type).toBe("blockquote");
+  });
+
   test("parses headings, lists, and emphasis", () => {
     const doc = parseStorageBody("# Title\n\n- **bold** item\n- plain\n");
     expect(doc.content.map((block) => block.type)).toEqual(["heading", "bullet_list"]);

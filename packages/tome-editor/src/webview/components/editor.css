@@ -199,6 +199,71 @@
 }
 
 /*
+ * Milkdown overrides on shared task styles (callout sibling with checkbox chrome).
+ */
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-task {
+  position: relative;
+  box-sizing: border-box;
+  display: flex !important;
+  gap: 0.65em !important;
+  align-items: flex-start !important;
+  margin: 10px 0 !important;
+  padding: 12px 14px !important;
+  background: var(--tome-callout-bg) !important;
+  border-radius: var(--tome-callout-radius) !important;
+  color: var(--tome-text) !important;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-task::before {
+  content: none !important;
+  display: none !important;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-task > .tome-task-checkbox {
+  flex: 0 0 1.5em;
+  width: 1.5em;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 1.05em;
+  line-height: 1.35;
+  text-align: center;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-task > .tome-task-checkbox:hover,
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-task > .tome-task-checkbox:focus-visible {
+  background: color-mix(in srgb, var(--tome-text) 12%, transparent);
+  outline: none;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-task > .tome-task-body {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-task > .tome-task-body > p:first-child {
+  margin-top: 0;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-task > .tome-task-body > p:last-child {
+  margin-bottom: 0;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-task[data-checked="true"] > .tome-task-body {
+  opacity: 0.72;
+  text-decoration: line-through;
+}
+
+.tome-editor-body .milkdown .ProseMirror blockquote.tome-task blockquote.tome-task {
+  margin: 8px 0 !important;
+}
+
+/*
  * Native caret while editing callouts (virtual cursor can still mis-measure nested panels).
  * callout-cursor.ts toggles .tome-callout-editing while the caret is inside a callout.
  */

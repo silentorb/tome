@@ -9,6 +9,7 @@
     "./markdown-links": "./src/markdown-links.ts",
     "./dynamic-node-links": "./src/dynamic-node-links.ts",
     "./callout": "./src/callout.ts",
+    "./task": "./src/task.ts",
     "./schema-file": "./src/schema-rules/schema-file.ts",
     "./relation-type": "./src/relation-type.ts",
     "./property-enums-core": "./src/property-enums-core.ts",

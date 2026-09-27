@@ -62,10 +62,15 @@ Git-tracked node bodies are **Extended Markdown**: CommonMark + GFM, plus Tome e
 | `static_link` (`nodeId` + `label`) | `[label](./{nodeId}.md)` |
 | `page_block` (`componentId` + `data`; `editorHtml` is GET enrichment only) | ` ```tome-block ` fence |
 | `callout` (`emoji`) | Emoji-lead blockquote: `> 💡 …` |
+| `task` (`checked`) | Checkbox-lead blockquote: `> [ ] …` / `> [x] …` |
 
 **Callouts** are first-class (`callout` in the document and a ProseMirror `callout` node). The emoji-lead blockquote is a **Tome convention**. It is in the same family as alert/callout extensions, but it is **not** GitHub Alerts (`> [!NOTE]`) and **not** Obsidian callouts (`> [!info]`). Detection lives in `tome-flatfile/src/callout.ts`. Do not rewrite corpus files to another alert syntax. New storage forms should mimic an existing Markdown extension standard when one already covers the feature.
 
 In the semantic document and live editor, `emoji` is structured chrome: it lives on the callout node (`attrs.emoji` / `NodeBodyCallout.emoji`) and is **not** part of editable body text. The editor renders a fixed icon button; clicking it opens a curated emoji picker (plus a custom single-emoji field). Storage still round-trips as `> {emoji} {body}` via parse/serialize in `tome-db`.
+
+**Tasks** are first-class (`task` in the document and a ProseMirror `task` node) — callout-like chrome with a checkbox instead of an emoji. Storage is a checkbox-lead blockquote (`> [ ] …` / `> [x] …`); detection lives in `tome-flatfile/src/task.ts`. When parsing a blockquote, a leading checkbox marker wins over a callout emoji. In the editor, `checked` is structured chrome (not body text); the NodeView checkbox toggles it. Authors insert an unchecked task by typing `[]` (or `[] `) at the start of a paragraph (`task-input-rule.ts`). This is distinct from GFM **task lists** (list items with `checked`), which remain unchanged. Slash-menu insert for Task is deferred until slash is ported off Crepe; `insertTaskBlock` is Crepe-free so a future slash item can share it.
+
+**Future (not in this surface yet):** a page block that lists tasks in a scope defined by an Imp query.
 A leading `#` heading whose text matches the page title is stripped when building the GET document (`stripDuplicateTitleHeading`). It is not stripped again on every save.
 
 ### Cross-linking and navigation links

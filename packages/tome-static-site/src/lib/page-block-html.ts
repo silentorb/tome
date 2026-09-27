@@ -12,6 +12,7 @@ import {
 import type { ResolvedExtensionComponent } from "tome-db";
 import { HtmlPageBlockHostImpl } from "../extensions/html-host";
 import { decorateCalloutHtml } from "./callout-html";
+import { decorateTaskHtml } from "./task-html";
 import { decorateDynamicLinkHtml } from "./dynamic-link-html";
 import { prepareNodeMarkdown, type PreparedNodeMarkdown } from "./markdown";
 import type { NodeUrlResolver } from "./node-urls";
@@ -115,5 +116,5 @@ export async function renderNodeBodyHtml(
     blocks.map((payload) => renderBlockHtml(ctx, payload.componentId, payload.data, urls)),
   );
   const withBlocks = substitutePageBlockPlaceholders(proseHtml, blockFragments);
-  return decorateDynamicLinkHtml(decorateCalloutHtml(withBlocks), prep.dynamicNodeIds, urls);
+  return decorateDynamicLinkHtml(decorateCalloutHtml(decorateTaskHtml(withBlocks)), prep.dynamicNodeIds, urls);
 }

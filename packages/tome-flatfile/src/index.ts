@@ -208,6 +208,12 @@ export {
   extractLeadingCalloutEmoji,
   hasLeadingCalloutEmoji,
 } from "./callout";
+export {
+  extractLeadingTaskMarker,
+  hasLeadingTaskMarker,
+  taskMarkerPrefix,
+} from "./task";
+export type { TaskMarker } from "./task";
 export { relationType, normalizeRelationshipType, stripEmojis } from "./relation-type";
 
 export {

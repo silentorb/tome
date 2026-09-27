@@ -2,6 +2,10 @@ import { canonicalNodeMarkdownHref } from "tome-flatfile/markdown-links";
 import { resolveMarkdownHrefTarget } from "tome-flatfile/markdown-links";
 import { NODE_ID_RE_SRC } from "tome-flatfile/node-id";
 import { extractLeadingCalloutEmoji } from "tome-flatfile/callout";
+import {
+  extractLeadingTaskMarker,
+  taskMarkerPrefix,
+} from "tome-flatfile/task";
 import { parsePageBlockPayload, serializePageBlockInner } from "tome-interfaces/page-block";
 import {
   assignDynamicLinkTitles,
@@ -223,6 +227,27 @@ function stripLeadingEmoji(blocks: NodeBodyBlock[], emoji: string): NodeBodyBloc
   return [{ ...first, content }, ...rest];
 }
 
+function stripLeadingTaskMarker(blocks: NodeBodyBlock[]): NodeBodyBlock[] {
+  const [first, ...rest] = blocks;
+  if (!first || first.type !== "paragraph") return blocks;
+  let stripped = false;
+  const content = first.content.flatMap((inline) => {
+    if (stripped || inline.type !== "text") return [inline];
+    const trimmedStart = inline.text.trimStart();
+    const marker = extractLeadingTaskMarker(trimmedStart);
+    if (!marker) return [inline];
+    const without = trimmedStart.slice(marker.raw.length);
+    stripped = true;
+    if (!without) return [];
+    return [{ ...inline, text: without }];
+  });
+  if (!stripped) return blocks;
+  if (content.length === 0 && rest.length === 0) {
+    return [{ type: "paragraph", content: [] }];
+  }
+  return [{ ...first, content }, ...rest];
+}
+
 function convertListItem(item: ListItem): NodeBodyListItem {
   return {
     type: "list_item",
@@ -254,11 +279,21 @@ function convertBlocks(nodes: readonly (BlockContent | RootContent)[]): NodeBody
       case "blockquote": {
         const quote = node as Blockquote;
         const content = convertBlocks(quote.children);
-        const emoji = extractLeadingCalloutEmoji(firstParagraphText(content));
-        if (emoji) {
-          out.push({ type: "callout", emoji, content: stripLeadingEmoji(content, emoji) });
+        const leadText = firstParagraphText(content);
+        const taskMarker = extractLeadingTaskMarker(leadText);
+        if (taskMarker) {
+          out.push({
+            type: "task",
+            checked: taskMarker.checked,
+            content: stripLeadingTaskMarker(content),
+          });
         } else {
-          out.push({ type: "blockquote", content });
+          const emoji = extractLeadingCalloutEmoji(leadText);
+          if (emoji) {
+            out.push({ type: "callout", emoji, content: stripLeadingEmoji(content, emoji) });
+          } else {
+            out.push({ type: "blockquote", content });
+          }
         }
         break;
       }
@@ -402,6 +437,19 @@ function withCalloutEmoji(blocks: NodeBodyBlock[], emoji: string): NodeBodyBlock
   return [{ ...first, content: [{ ...lead, text: prefix + lead.text }, ...tail] }, ...rest];
 }
 
+function withTaskMarker(blocks: NodeBodyBlock[], checked: boolean): NodeBodyBlock[] {
+  const [first, ...rest] = blocks;
+  const prefix = taskMarkerPrefix(checked);
+  if (!first || first.type !== "paragraph") {
+    return [{ type: "paragraph", content: [{ type: "text", text: prefix.trimEnd() }] }, ...blocks];
+  }
+  const [lead, ...tail] = first.content;
+  if (!lead || lead.type !== "text") {
+    return [{ ...first, content: [{ type: "text", text: prefix }, ...first.content] }, ...rest];
+  }
+  return [{ ...first, content: [{ ...lead, text: prefix + lead.text }, ...tail] }, ...rest];
+}
+
 function blocksToMdast(blocks: readonly NodeBodyBlock[]): BlockContent[] {
   const out: BlockContent[] = [];
   for (const block of blocks) {
@@ -423,6 +471,12 @@ function blocksToMdast(blocks: readonly NodeBodyBlock[]): BlockContent[] {
         out.push({
           type: "blockquote",
           children: blocksToMdast(withCalloutEmoji(block.content, block.emoji)),
+        });
+        break;
+      case "task":
+        out.push({
+          type: "blockquote",
+          children: blocksToMdast(withTaskMarker(block.content, block.checked)),
         });
         break;
       case "bullet_list":
@@ -493,6 +547,11 @@ function listItemToMdast(item: NodeBodyListItem): ListItem {
   };
 }
 
+/** remark-stringify escapes `[` as `\[`; restore task checkbox markers in quote leads. */
+function unescapeTaskMarkersInStorage(markdown: string): string {
+  return markdown.replace(/^(\s*>\s*)\\(\[[ xX]\])/gm, "$1$2");
+}
+
 /** Semantic document → Extended Markdown. Browser-safe (no SQLite). */
 export function documentToStorageBody(document: NodeBodyDocument): string {
   const root: Root = { type: "root", children: blocksToMdast(document.content) };
@@ -501,7 +560,8 @@ export function documentToStorageBody(document: NodeBodyDocument): string {
     .use(wikiLinkToMarkdownPlugin)
     .use(remarkStringify, { bullet: "-", emphasis: "*", fences: true, rule: "-" })
     .stringify(root);
-  return file.endsWith("\n") ? file : `${file}\n`;
+  const withMarkers = unescapeTaskMarkersInStorage(file);
+  return withMarkers.endsWith("\n") ? withMarkers : `${withMarkers}\n`;
 }
 
 export function titleMapForNodeIds(

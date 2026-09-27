@@ -2,6 +2,7 @@ import type { Node as ProseNode } from "@milkdown/prose/model";
 import { editorDynamicNodeHref, isDynamicEditorHref } from "tome-flatfile/dynamic-node-links";
 import { resolveMarkdownHrefTarget } from "tome-flatfile/markdown-links";
 import { DEFAULT_CALLOUT_EMOJI } from "tome-flatfile/callout";
+import { extractLeadingTaskMarker } from "tome-flatfile/task";
 import { formatPageBlockEmbedComment, parsePageBlockPayload } from "tome-interfaces/page-block";
 import {
   emptyNodeBodyDocument,
@@ -137,6 +138,13 @@ function blocksToPm(blocks: readonly NodeBodyBlock[]): PmNode[] {
         out.push({
           type: "callout",
           attrs: { emoji: block.emoji || DEFAULT_CALLOUT_EMOJI },
+          content: blocksToPm(block.content),
+        });
+        break;
+      case "task":
+        out.push({
+          type: "task",
+          attrs: { checked: Boolean(block.checked) },
           content: blocksToPm(block.content),
         });
         break;
@@ -295,6 +303,20 @@ function stripEmojiPrefix(inlines: NodeBodyInline[], emoji: string): NodeBodyInl
   });
 }
 
+function stripTaskMarkerPrefix(inlines: NodeBodyInline[]): NodeBodyInline[] {
+  let stripped = false;
+  return inlines.flatMap((inline) => {
+    if (stripped || inline.type !== "text" || inline.marks?.length) return [inline];
+    const trimmed = inline.text.trimStart();
+    const marker = extractLeadingTaskMarker(trimmed);
+    if (!marker) return [inline];
+    const rest = trimmed.slice(marker.raw.length);
+    stripped = true;
+    if (!rest) return [];
+    return [{ ...inline, text: rest }];
+  });
+}
+
 function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
   const out: NodeBodyBlock[] = [];
   for (const node of nodes ?? []) {
@@ -320,17 +342,27 @@ function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
         const first = content[0];
         const lead = first?.type === "paragraph" ? first.content : [];
         const leadText = lead.map((inline) => (inline.type === "text" ? inline.text : "")).join("");
-        const emojiMatch = /^(\p{Extended_Pictographic})\s*/u.exec(leadText.trimStart());
-        if (emojiMatch?.[1]) {
-          const emoji = emojiMatch[1];
+        const taskMarker = extractLeadingTaskMarker(leadText);
+        if (taskMarker) {
           const stripped = content.map((block, index) =>
             index === 0 && block.type === "paragraph"
-              ? { ...block, content: stripEmojiPrefix(block.content, emoji) }
+              ? { ...block, content: stripTaskMarkerPrefix(block.content) }
               : block,
           );
-          out.push({ type: "callout", emoji, content: stripped });
+          out.push({ type: "task", checked: taskMarker.checked, content: stripped });
         } else {
-          out.push({ type: "blockquote", content });
+          const emojiMatch = /^(\p{Extended_Pictographic})\s*/u.exec(leadText.trimStart());
+          if (emojiMatch?.[1]) {
+            const emoji = emojiMatch[1];
+            const stripped = content.map((block, index) =>
+              index === 0 && block.type === "paragraph"
+                ? { ...block, content: stripEmojiPrefix(block.content, emoji) }
+                : block,
+            );
+            out.push({ type: "callout", emoji, content: stripped });
+          } else {
+            out.push({ type: "blockquote", content });
+          }
         }
         break;
       }
@@ -342,6 +374,16 @@ function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
             : block,
         );
         out.push({ type: "callout", emoji, content });
+        break;
+      }
+      case "task": {
+        const checked = Boolean(node.attrs?.checked);
+        const content = blocksFromPm(node.content).map((block, index) =>
+          index === 0 && block.type === "paragraph"
+            ? { ...block, content: stripTaskMarkerPrefix(block.content) }
+            : block,
+        );
+        out.push({ type: "task", checked, content });
         break;
       }
       case "bullet_list":

@@ -176,6 +176,7 @@ export type {
   NodeBodyTable,
   NodeBodyTableCell,
   NodeBodyTableRow,
+  NodeBodyTask,
   NodeBodyText,
 } from "./node-body-document";
 
