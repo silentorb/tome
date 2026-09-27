@@ -75,6 +75,11 @@ In **silentorb-workbench**, this repo mounts at `.mnt/tome/` (container path: `/
 Root `package.json` workspaces also include `../imp-ts/packages/*` so `tome-query` can depend on Imp (`imp-core-types`, `imp-sql`, …) while Imp remains a sibling repo mounted at `.mnt/imp-ts/`.
 
 **Containers:** see [`docs/features/container.md`](./docs/features/container.md). The **release** image (`docker/Dockerfile.release`, published to `ghcr.io/silentorb/tome`) bakes all dependencies at build time and runs offline.
+
+## Compatibility
+
+**Responsible prototyping:** external-facing contract changes default to dual-support (new + legacy for a few versions) with an entry in the legacy registry. Ask the user only when dual-support is costly or unclear. Full policy and registry: [`docs/features/compatibility.md`](./docs/features/compatibility.md).
+
 ## Versioning
 
 Packages use **0.x semver** (`0.MINOR.PATCH`). While `MAJOR` is 0, treat **`MINOR` as the API epoch** — bump it (reset `PATCH`) for breaking changes or new functionality; bump `PATCH` for backwards-compatible fixes only.

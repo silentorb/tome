@@ -42,6 +42,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Node search (searcher extensions + FTS) | [search.md](./search.md) |
 | Dev / release containers (GHCR) | [container.md](./container.md) |
 | Test tiers and weighted gating | [testing.md](./testing.md) |
+| Responsible prototyping / legacy registry | [compatibility.md](./compatibility.md) |
 
 ## Split of concerns
 
