@@ -1,5 +1,9 @@
-import { NodeSelection, TextSelection } from "@milkdown/prose/state";
 import type { EditorView } from "@milkdown/prose/view";
+import {
+  resolveActiveEditorBlock,
+  unwrapActiveCallout,
+  wrapActiveBlockInCallout,
+} from "./callout-wrap";
 
 const DRAG_HANDLE_SELECTOR = ".milkdown-block-handle .operation-item:last-child";
 const BLOCK_HANDLE_SELECTOR = ".milkdown-block-handle";
@@ -13,27 +17,34 @@ interface ArmedClick {
 
 /** Delete the block selected by the block handle (NodeSelection) or the top-level block at the caret. */
 export function deleteActiveEditorBlock(view: EditorView): boolean {
+  const active = resolveActiveEditorBlock(view);
+  if (!active) return false;
+
   const { state, dispatch } = view;
-  const { selection } = state;
-
-  if (selection instanceof NodeSelection) {
-    dispatch(state.tr.deleteSelection());
-    view.focus();
-    return true;
-  }
-
-  if (!(selection instanceof TextSelection)) return false;
-
-  const { $from } = selection;
-  if ($from.depth < 1) return false;
-
-  const blockPos = $from.before(1);
-  const blockNode = $from.node(1);
-  if (!blockNode) return false;
-
-  dispatch(state.tr.delete(blockPos, blockPos + blockNode.nodeSize));
+  dispatch(state.tr.delete(active.pos, active.pos + active.node.nodeSize));
   view.focus();
   return true;
+}
+
+function appendMenuItem(
+  panel: HTMLElement,
+  label: string,
+  onClick: () => void,
+  options?: { danger?: boolean },
+): void {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = options?.danger
+    ? "tome-block-handle-menu-item is-danger"
+    : "tome-block-handle-menu-item";
+  button.setAttribute("role", "menuitem");
+  button.textContent = label;
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    onClick();
+  });
+  panel.appendChild(button);
 }
 
 /** Grip clicks often target the SVG icon, which is Element but not HTMLElement. */
@@ -46,7 +57,7 @@ function isBlockHandleTarget(target: EventTarget | null): boolean {
 }
 
 /**
- * Open a Delete menu on a stationary left-click of Crepe's block grip.
+ * Open a context menu on a stationary left-click of Crepe's block grip.
  * Milkdown sets `draggable` on the whole handle, so native drag often cancels or
  * retargets `pointerup` — arm on pointerdown, resolve on window pointerup/cancel,
  * and suppress when dragstart fires.
@@ -73,19 +84,29 @@ export function installBlockHandleMenu(
     panel.className = "tome-block-handle-menu";
     panel.setAttribute("role", "menu");
 
-    const deleteButton = document.createElement("button");
-    deleteButton.type = "button";
-    deleteButton.className = "tome-block-handle-menu-item is-danger";
-    deleteButton.setAttribute("role", "menuitem");
-    deleteButton.textContent = "Delete";
-    deleteButton.addEventListener("click", (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      deleteActiveEditorBlock(view);
-      closeMenu();
-    });
+    const active = resolveActiveEditorBlock(view);
+    if (active?.node.type.name === "callout") {
+      appendMenuItem(panel, "Unwrap Callout", () => {
+        unwrapActiveCallout(view);
+        closeMenu();
+      });
+    } else {
+      appendMenuItem(panel, "Wrap in Callout", () => {
+        wrapActiveBlockInCallout(view);
+        closeMenu();
+      });
+    }
 
-    panel.appendChild(deleteButton);
+    appendMenuItem(
+      panel,
+      "Delete",
+      () => {
+        deleteActiveEditorBlock(view);
+        closeMenu();
+      },
+      { danger: true },
+    );
+
     document.body.appendChild(panel);
 
     const rect = panel.getBoundingClientRect();
