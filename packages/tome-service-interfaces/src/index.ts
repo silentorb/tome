@@ -726,6 +726,7 @@ export {
   getProfilingContext,
   getProfilingStore,
   isProfilingEnabled,
+  mbToBytes,
   mbToRows,
   newProfilingSpanId,
   newProfilingTraceId,

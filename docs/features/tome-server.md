@@ -114,8 +114,8 @@ Storage and debug vocabulary follow **OpenTelemetry span** concepts (`trace_id`,
 | `TOME_PROFILING_SLOW_MS` | Threshold in ms (default **100**) |
 | `TOME_PROFILING_DB_PATH` | Profiling SQLite path (default: sibling `tome-profiling.sqlite` next to the cache DB) |
 | `TOME_PROFILING_LOG=1` | Mirror spans to stderr (default **off**) |
-| `TOME_PROFILING_MAX_MB` | Soft retention ceiling in MB (default **32**; converted to a row cap via ~512 B/span) |
-| `TOME_PROFILING_BATCH_DELETE_MB` | Oldest-span batch to delete when over the ceiling (default **4**) |
+| `TOME_PROFILING_MAX_MB` | Soft retention ceiling in MB (default **32**; enforced via used SQLite pages, not a row heuristic) |
+| `TOME_PROFILING_BATCH_DELETE_MB` | Oldest-span batch to delete when near the ceiling (default **4**); creates headroom so the next writes are not prune-per-insert |
 | `services[].options.profiling` | `true` or `"verbose"` in `tome-server.json` |
 | `services[].options.slowMs` | Same threshold via config |
 
@@ -157,10 +157,11 @@ Items and composed table windows share the membership compiler/execute spans (on
 
 When enabled:
 
-- When the row ceiling is exceeded, the oldest **batch** of rows is deleted in one statement.
+- Before each span insert, used size is measured as `(page_count - freelist_count) * page_size`. If at or above `TOME_PROFILING_MAX_MB`, the oldest **batch** (~`TOME_PROFILING_BATCH_DELETE_MB`) is deleted first, then the new span is inserted into freed pages (never insert-then-prune as the primary gate).
+- Profiling persistence is **best-effort**: append/prune/open failures are logged and must not fail API requests or prevent HTTP listen. Instrumented SQL still returns (or rethrows) the real statement outcome if span recording fails.
 - Spans are **not** logged to stderr unless `TOME_PROFILING_LOG` is set.
 - Legacy `samples` tables are dropped on open (disposable diagnostic DB).
-- `GET /api/debug/profiling` returns `{ config, dbPath, schema: "spans" }`. **404** when profiling is off.
+- `GET /api/debug/profiling` returns `{ config, dbPath, schema: "spans" }` (`maxRows` / `batchDeleteRows` on config are advisory estimates only). **404** when profiling is off.
 - `POST /api/debug/profiling/execute-imp` with `{ graph }` runs an Imp collection query via `imp-sql` against the **`spans`** table (filter / sort / limit / project — no pathing). **404** when off.
 
 Containers: pass env at runtime (no image rebuild). Workbench Compose forwards the `TOME_PROFILING*` vars into the `tome` service — see [container.md](./container.md).

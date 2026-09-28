@@ -9,7 +9,9 @@ import {
   deriveRowCaps,
   getProfilingConfig,
   getProfilingStore,
+  instrumentSqliteDatabaseForProfiling,
   isProfilingEnabled,
+  mbToBytes,
   mbToRows,
   openProfilingStore,
   recordProfilingSpan,
@@ -17,6 +19,7 @@ import {
   resolveProfilingDbPath,
   resolveProfilingFromEnv,
   runInProfilingTrace,
+  setProfilingStore,
   truncateSql,
   withProfilingSpan,
 } from "../src/profiling";
@@ -51,6 +54,31 @@ describe("profiling", () => {
     return dir;
   }
 
+  function enableVerbose(overrides?: { maxMb?: number; batchDeleteMb?: number }) {
+    configureProfiling({
+      enabled: true,
+      verbose: true,
+      slowMs: 0,
+      logToStderr: false,
+      maxMb: overrides?.maxMb ?? 32,
+      batchDeleteMb: overrides?.batchDeleteMb ?? 4,
+      maxRows: 1,
+      batchDeleteRows: 1,
+    });
+  }
+
+  function recordNamed(name: string, payload = "x") {
+    recordProfilingSpan({
+      traceId: "a".repeat(32),
+      spanId: name.padStart(16, "0").slice(-16),
+      parentSpanId: null,
+      name,
+      kind: "INTERNAL",
+      durationMs: 1,
+      attributes: { payload },
+    });
+  }
+
   test("resolveProfilingFromEnv reads TOME_PROFILING* knobs", () => {
     process.env.TOME_PROFILING = "1";
     process.env.TOME_PROFILING_SLOW_MS = "50";
@@ -75,8 +103,10 @@ describe("profiling", () => {
     expect(resolveProfilingFromEnv({ profiling: "verbose" }).verbose).toBe(true);
   });
 
-  test("mbToRows and deriveRowCaps use the 512B heuristic", () => {
+  test("mbToRows and deriveRowCaps use the advisory bytes-per-span heuristic", () => {
+    expect(BYTES_PER_SAMPLE_EST).toBe(2048);
     expect(mbToRows(1)).toBe(Math.floor((1024 * 1024) / BYTES_PER_SAMPLE_EST));
+    expect(mbToBytes(1)).toBe(1024 * 1024);
     const caps = deriveRowCaps(32, 4);
     expect(caps.maxRows).toBeGreaterThanOrEqual(1_000);
     expect(caps.batchDeleteRows).toBeLessThanOrEqual(caps.maxRows);
@@ -153,13 +183,7 @@ describe("profiling", () => {
 
   test("verbose records every span", () => {
     const dir = tempDir();
-    configureProfiling({
-      ...resolveProfilingFromEnv(),
-      enabled: true,
-      verbose: true,
-      slowMs: 1000,
-      logToStderr: false,
-    });
+    enableVerbose();
     openProfilingStore(join(dir, "tome-profiling.sqlite"));
     recordProfilingSpan({
       traceId: "a".repeat(32),
@@ -175,16 +199,7 @@ describe("profiling", () => {
 
   test("withProfilingSpan nests parent_span_id under a shared trace_id", () => {
     const dir = tempDir();
-    configureProfiling({
-      enabled: true,
-      verbose: true,
-      slowMs: 0,
-      logToStderr: false,
-      maxMb: 32,
-      batchDeleteMb: 4,
-      maxRows: 1,
-      batchDeleteRows: 1,
-    });
+    enableVerbose();
     openProfilingStore(join(dir, "tome-profiling.sqlite"));
 
     runInProfilingTrace(() => {
@@ -296,16 +311,7 @@ describe("profiling", () => {
     );
     legacy.close();
 
-    configureProfiling({
-      enabled: true,
-      verbose: true,
-      slowMs: 0,
-      logToStderr: false,
-      maxMb: 32,
-      batchDeleteMb: 4,
-      maxRows: 1,
-      batchDeleteRows: 1,
-    });
+    enableVerbose();
     openProfilingStore(dbPath);
     const tables = getProfilingStore()!.queryAll<{ name: string }>(
       `SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name`,
@@ -314,46 +320,66 @@ describe("profiling", () => {
     expect(tables.map((t) => t.name)).not.toContain("samples");
   });
 
-  test("batch-deletes oldest rows when over maxRows", () => {
+  test("prunes by used pages before insert when near maxMb", () => {
     const dir = tempDir();
-    configureProfiling({
-      enabled: true,
-      verbose: true,
-      slowMs: 0,
-      logToStderr: false,
-      maxMb: 1,
-      batchDeleteMb: 1,
-      maxRows: 1,
-      batchDeleteRows: 1,
-    });
+    // Small ceiling so a handful of large-attribute spans trip retention.
+    enableVerbose({ maxMb: 0.25, batchDeleteMb: 0.1 });
     const store = openProfilingStore(join(dir, "tome-profiling.sqlite"));
-    store.setRetention(5, 3);
-    for (let i = 0; i < 5; i++) {
-      recordProfilingSpan({
-        traceId: "a".repeat(32),
-        spanId: `${i}`.padStart(16, "0"),
-        parentSpanId: null,
-        name: `row-${i}`,
-        kind: "INTERNAL",
-        durationMs: 1,
-        attributes: { i },
-      });
+    const big = "x".repeat(8_000);
+    let i = 0;
+    while (store.usedBytes() < mbToBytes(0.25) * 0.9 && i < 200) {
+      recordNamed(`fill-${i}`, big);
+      i += 1;
     }
-    expect(store.count()).toBe(5);
-    recordProfilingSpan({
-      traceId: "a".repeat(32),
-      spanId: "5".padStart(16, "0"),
-      parentSpanId: null,
-      name: "row-5",
-      kind: "INTERNAL",
-      durationMs: 1,
-      attributes: {},
-    });
-    expect(store.count()).toBe(3);
+    expect(i).toBeGreaterThan(5);
+    const usedBeforeOver = store.usedBytes();
+    expect(usedBeforeOver).toBeLessThan(mbToBytes(0.25));
+
+    // Push over the ceiling with more large spans; prune-before-insert must keep used under control.
+    for (let j = 0; j < 30; j++) {
+      recordNamed(`over-${j}`, big);
+    }
+    expect(store.usedBytes()).toBeLessThanOrEqual(mbToBytes(0.25) * 1.15);
+    expect(store.count()).toBeGreaterThan(0);
+
     const names = store
       .queryAll<{ name: string }>("SELECT name FROM spans ORDER BY id ASC")
       .map((r) => r.name);
-    expect(names).toEqual(["row-3", "row-4", "row-5"]);
+    // Oldest fill rows should have been deleted; recent over-* rows remain.
+    expect(names.some((n) => n.startsWith("over-"))).toBe(true);
+    expect(names[0]?.startsWith("fill-0")).toBe(false);
+  });
+
+  test("withProfilingSpan returns value when append throws", () => {
+    enableVerbose();
+    const dir = tempDir();
+    const store = openProfilingStore(join(dir, "tome-profiling.sqlite"));
+    store.append = () => {
+      throw new Error("database or disk is full");
+    };
+    setProfilingStore(store);
+
+    const result = withProfilingSpan("boom", "INTERNAL", {}, () => "ok");
+    expect(result).toBe("ok");
+  });
+
+  test("instrumented SQL preserves success and original errors when recording fails", () => {
+    enableVerbose();
+    const dir = tempDir();
+    const store = openProfilingStore(join(dir, "tome-profiling.sqlite"));
+    store.append = () => {
+      throw new Error("database or disk is full");
+    };
+    setProfilingStore(store);
+
+    const db = instrumentSqliteDatabaseForProfiling(new Database(":memory:"));
+    db.exec("CREATE TABLE t (id INTEGER PRIMARY KEY CHECK (id > 0))");
+    const stmt = db.prepare("SELECT 1 AS n");
+    const rows = stmt.all() as { n: number }[];
+    expect(rows[0]?.n).toBe(1);
+
+    const bad = db.prepare("INSERT INTO t (id) VALUES (?)");
+    expect(() => bad.run(0)).toThrow(/constraint/i);
   });
 
   test("getProfilingConfig exposes capacity fields", () => {

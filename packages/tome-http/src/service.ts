@@ -97,10 +97,17 @@ export function createTomeHttpService(): TomeServiceModule {
       });
       configureProfiling(profilingConfig);
       if (profilingConfig.enabled) {
-        if (options.profilingDbPath) {
-          openProfilingStore(resolve(options.profilingDbPath));
-        } else {
-          ensureProfilingStore(options.cacheDbPath);
+        try {
+          if (options.profilingDbPath) {
+            openProfilingStore(resolve(options.profilingDbPath));
+          } else {
+            ensureProfilingStore(options.cacheDbPath);
+          }
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          console.error(
+            `[tome-http] profiling store open failed; continuing without span persistence: ${message}`,
+          );
         }
       }
       handler = createApiHandler(host.services, settingsStore, {

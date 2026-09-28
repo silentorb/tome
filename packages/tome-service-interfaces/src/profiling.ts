@@ -40,17 +40,20 @@ export type ProfilingConfig = {
   maxMb: number;
   /** Batch delete size in MB when pruning (default 4). Env: `TOME_PROFILING_BATCH_DELETE_MB`. */
   batchDeleteMb: number;
-  /** Derived row ceiling from maxMb. */
+  /** Advisory derived row estimate from maxMb (not the retention gate). */
   maxRows: number;
-  /** Derived batch delete row count from batchDeleteMb. */
+  /** Advisory derived batch delete row estimate from batchDeleteMb. */
   batchDeleteRows: number;
 };
 
 export const DEFAULT_SLOW_MS = 100;
 export const DEFAULT_MAX_MB = 32;
 export const DEFAULT_BATCH_DELETE_MB = 4;
-/** Bytes-per-span heuristic for MB → row conversion (row + attrs + index overhead). */
-export const BYTES_PER_SAMPLE_EST = 512;
+/**
+ * Bytes-per-span heuristic for advisory MB → row conversion and batch-size
+ * estimates when the store has no rows yet (real retention uses used pages).
+ */
+export const BYTES_PER_SAMPLE_EST = 2048;
 export const SQL_TRUNCATE = 800;
 export const PROFILING_DB_FILENAME = "tome-profiling.sqlite";
 export const PROFILING_SPANS_TABLE = "spans";
@@ -86,6 +89,20 @@ function defaultConfig(): ProfilingConfig {
 
 let config: ProfilingConfig = defaultConfig();
 let store: ProfilingStore | null = null;
+let lastProfilingWarnAt = 0;
+
+function warnProfiling(message: string, err?: unknown): void {
+  const now = Date.now();
+  if (now - lastProfilingWarnAt < 5_000) return;
+  lastProfilingWarnAt = now;
+  const detail = err instanceof Error ? err.message : err != null ? String(err) : "";
+  console.error(`[tome-profiling] ${message}${detail ? `: ${detail}` : ""}`);
+}
+
+export function mbToBytes(mb: number): number {
+  if (!Number.isFinite(mb) || mb <= 0) return 0;
+  return Math.floor(mb * 1024 * 1024);
+}
 
 function readEnv(name: string): string | undefined {
   return process.env[name]?.trim() || undefined;
@@ -228,7 +245,7 @@ export function configureProfiling(next: ProfilingConfig): void {
     maxRows: caps.maxRows,
     batchDeleteRows: caps.batchDeleteRows,
   };
-  store?.setRetention(config.maxRows, config.batchDeleteRows);
+  store?.setRetention(config.maxMb, config.batchDeleteMb);
 }
 
 export function getProfilingConfig(): ProfilingConfig {
@@ -301,9 +318,17 @@ function logSpanToStderr(span: ProfilingSpan): void {
 }
 
 function appendProfilingSpan(full: ProfilingSpan): void {
-  store?.append(full);
+  try {
+    store?.append(full);
+  } catch (err) {
+    warnProfiling("span append failed", err);
+  }
   if (config.logToStderr) {
-    logSpanToStderr(full);
+    try {
+      logSpanToStderr(full);
+    } catch {
+      // ignore stderr mirror failures
+    }
   }
 }
 
@@ -314,42 +339,46 @@ function finalizeCompletedSpan(
 ): void {
   if (!config.enabled) return;
 
-  const rounded = Math.round(span.durationMs * 100) / 100;
-  const attrs: ProfilingAttributes = { ...(span.attributes ?? {}) };
+  try {
+    const rounded = Math.round(span.durationMs * 100) / 100;
+    const attrs: ProfilingAttributes = { ...(span.attributes ?? {}) };
 
-  if (parent?.spanId) {
-    parent.childDurationMs += rounded;
-  }
-
-  const meets = shouldRecord(rounded);
-  if (meets && selfCtx) {
-    const residual = Math.max(0, Math.round((rounded - selfCtx.childDurationMs) * 100) / 100);
-    if (selfCtx.deferredChildren.length > 0 || selfCtx.childDurationMs > 0) {
-      attrs.residual_ms = residual;
+    if (parent?.spanId) {
+      parent.childDurationMs += rounded;
     }
-  }
 
-  const full: ProfilingSpan = {
-    traceId: span.traceId,
-    spanId: span.spanId,
-    parentSpanId: span.parentSpanId,
-    name: span.name,
-    kind: span.kind,
-    startTime: span.startTime ?? new Date().toISOString(),
-    durationMs: rounded,
-    attributes: attrs,
-  };
-
-  if (meets) {
-    appendProfilingSpan(full);
-    if (selfCtx) {
-      for (const child of selfCtx.deferredChildren) {
-        appendProfilingSpan(child);
+    const meets = shouldRecord(rounded);
+    if (meets && selfCtx) {
+      const residual = Math.max(0, Math.round((rounded - selfCtx.childDurationMs) * 100) / 100);
+      if (selfCtx.deferredChildren.length > 0 || selfCtx.childDurationMs > 0) {
+        attrs.residual_ms = residual;
       }
-      selfCtx.deferredChildren.length = 0;
     }
-  } else if (parent?.spanId) {
-    parent.deferredChildren.push(full);
+
+    const full: ProfilingSpan = {
+      traceId: span.traceId,
+      spanId: span.spanId,
+      parentSpanId: span.parentSpanId,
+      name: span.name,
+      kind: span.kind,
+      startTime: span.startTime ?? new Date().toISOString(),
+      durationMs: rounded,
+      attributes: attrs,
+    };
+
+    if (meets) {
+      appendProfilingSpan(full);
+      if (selfCtx) {
+        for (const child of selfCtx.deferredChildren) {
+          appendProfilingSpan(child);
+        }
+        selfCtx.deferredChildren.length = 0;
+      }
+    } else if (parent?.spanId) {
+      parent.deferredChildren.push(full);
+    }
+  } catch (err) {
+    warnProfiling("span finalize failed", err);
   }
 }
 
@@ -497,13 +526,13 @@ export function recordSqlProfilingSpan(
 export class ProfilingStore {
   readonly dbPath: string;
   private readonly db: Database;
-  private maxRows: number;
-  private batchDeleteRows: number;
+  private maxBytes: number;
+  private batchDeleteBytes: number;
   private readonly insertStmt;
   private readonly countStmt;
   private readonly deleteBatchStmt;
 
-  constructor(dbPath: string, retention?: { maxRows: number; batchDeleteRows: number }) {
+  constructor(dbPath: string, retention?: { maxMb: number; batchDeleteMb: number }) {
     this.dbPath = resolve(dbPath);
     mkdirSync(dirname(this.dbPath), { recursive: true });
     this.db = new Database(this.dbPath, { create: true });
@@ -531,8 +560,8 @@ export class ProfilingStore {
       CREATE INDEX IF NOT EXISTS spans_start_time ON spans(start_time);
       CREATE INDEX IF NOT EXISTS spans_kind_duration ON spans(kind, duration_ms);
     `);
-    this.maxRows = retention?.maxRows ?? config.maxRows;
-    this.batchDeleteRows = retention?.batchDeleteRows ?? config.batchDeleteRows;
+    this.maxBytes = 0;
+    this.batchDeleteBytes = 0;
     this.insertStmt = this.db.prepare(
       `INSERT INTO spans (
          trace_id, span_id, parent_span_id, name, kind, start_time, duration_ms, attributes
@@ -544,14 +573,75 @@ export class ProfilingStore {
          SELECT id FROM spans ORDER BY id ASC LIMIT ?
        )`,
     );
+    this.setRetention(
+      retention?.maxMb ?? config.maxMb,
+      retention?.batchDeleteMb ?? config.batchDeleteMb,
+    );
   }
 
-  setRetention(maxRows: number, batchDeleteRows: number): void {
-    this.maxRows = maxRows;
-    this.batchDeleteRows = Math.min(maxRows, Math.max(1, batchDeleteRows));
+  setRetention(maxMb: number, batchDeleteMb: number): void {
+    const max = maxMb > 0 ? maxMb : DEFAULT_MAX_MB;
+    const batch = batchDeleteMb > 0 ? batchDeleteMb : DEFAULT_BATCH_DELETE_MB;
+    this.maxBytes = Math.max(4096, mbToBytes(max));
+    this.batchDeleteBytes = Math.max(4096, mbToBytes(batch));
+    if (this.batchDeleteBytes > this.maxBytes) {
+      this.batchDeleteBytes = this.maxBytes;
+    }
   }
 
+  /** Used logical bytes: allocated pages minus freelist. */
+  usedBytes(): number {
+    const pageSize = (this.db.prepare("PRAGMA page_size").get() as { page_size: number }).page_size;
+    const pageCount = (this.db.prepare("PRAGMA page_count").get() as { page_count: number })
+      .page_count;
+    const freelist = (this.db.prepare("PRAGMA freelist_count").get() as { freelist_count: number })
+      .freelist_count;
+    return Math.max(0, (pageCount - freelist) * pageSize);
+  }
+
+  private batchDeleteRowEstimate(): number {
+    const n = this.count();
+    const used = this.usedBytes();
+    const avg =
+      n > 0 ? Math.max(BYTES_PER_SAMPLE_EST, Math.floor(used / n)) : BYTES_PER_SAMPLE_EST;
+    return Math.max(1, Math.floor(this.batchDeleteBytes / avg));
+  }
+
+  /**
+   * When at/over the soft ceiling, delete oldest batches until under headroom
+   * (`maxBytes - batchDeleteBytes`). Never throws; stops on no progress or safety cap.
+   */
+  pruneForHeadroom(): number {
+    if (this.usedBytes() < this.maxBytes) return 0;
+    const target = Math.max(0, this.maxBytes - this.batchDeleteBytes);
+    let iterations = 0;
+    while (this.usedBytes() > target) {
+      const beforeCount = this.count();
+      if (beforeCount === 0) break;
+      this.deleteBatchStmt.run(this.batchDeleteRowEstimate());
+      iterations += 1;
+      if (this.count() >= beforeCount) break;
+      if (iterations > 10_000) {
+        warnProfiling("prune exceeded iteration safety limit");
+        break;
+      }
+    }
+    return iterations;
+  }
+
+  /**
+   * Check used size, prune when near/over the ceiling, then insert.
+   * Skips insert (with warning) if still over ceiling after prune and rows remain.
+   */
   append(span: ProfilingSpan): void {
+    if (this.usedBytes() >= this.maxBytes) {
+      this.pruneForHeadroom();
+    }
+    if (this.usedBytes() >= this.maxBytes && this.count() > 0) {
+      warnProfiling("skipping span insert; store still at retention ceiling");
+      return;
+    }
+
     this.insertStmt.run(
       span.traceId,
       span.spanId,
@@ -562,25 +652,16 @@ export class ProfilingStore {
       span.durationMs,
       JSON.stringify(span.attributes ?? {}),
     );
-    this.pruneIfNeeded();
+
+    // Safety net only — primary gate is prune-before-insert.
+    if (this.usedBytes() >= this.maxBytes) {
+      this.pruneForHeadroom();
+    }
   }
 
   count(): number {
     const row = this.countStmt.get() as { n: number };
     return row.n;
-  }
-
-  /** Delete oldest `batchDeleteRows` while over the ceiling. Returns prune iterations. */
-  pruneIfNeeded(): number {
-    let iterations = 0;
-    while (this.count() > this.maxRows) {
-      this.deleteBatchStmt.run(this.batchDeleteRows);
-      iterations += 1;
-      if (iterations > 10_000) {
-        throw new Error("ProfilingStore prune exceeded iteration safety limit");
-      }
-    }
-    return iterations;
   }
 
   queryAll<T extends Record<string, unknown> = Record<string, unknown>>(
@@ -613,15 +694,15 @@ export function setProfilingStore(next: ProfilingStore | null): void {
   }
   store = next;
   if (store) {
-    store.setRetention(config.maxRows, config.batchDeleteRows);
+    store.setRetention(config.maxMb, config.batchDeleteMb);
   }
 }
 
 /** Open (or replace) the process-wide profiling store at `dbPath`. */
 export function openProfilingStore(dbPath: string): ProfilingStore {
   const next = new ProfilingStore(dbPath, {
-    maxRows: config.maxRows,
-    batchDeleteRows: config.batchDeleteRows,
+    maxMb: config.maxMb,
+    batchDeleteMb: config.batchDeleteMb,
   });
   setProfilingStore(next);
   return next;
@@ -661,12 +742,20 @@ function wrapSqliteStatementForProfiling(stmt: SqliteStatement, sql: string): Sq
   const originalGet = stmt.get.bind(stmt);
   const originalRun = stmt.run.bind(stmt);
 
+  const safeRecord = (durationMs: number, attributes: ProfilingAttributes): void => {
+    try {
+      recordSqlProfilingSpan(durationMs, attributes);
+    } catch (err) {
+      warnProfiling("sql span record failed", err);
+    }
+  };
+
   stmt.all = ((...params: SQLQueryBindings[]) => {
     if (!isProfilingEnabled()) return originalAll(...params);
     const started = performance.now();
     try {
       const rows = originalAll(...params);
-      recordSqlProfilingSpan(performance.now() - started, {
+      safeRecord(performance.now() - started, {
         "db.operation": "all",
         "db.statement": truncated,
         "db.rows": Array.isArray(rows) ? rows.length : 0,
@@ -674,7 +763,7 @@ function wrapSqliteStatementForProfiling(stmt: SqliteStatement, sql: string): Sq
       });
       return rows;
     } catch (err) {
-      recordSqlProfilingSpan(performance.now() - started, {
+      safeRecord(performance.now() - started, {
         "db.operation": "all",
         "db.statement": truncated,
         "db.params_count": params.length,
@@ -689,7 +778,7 @@ function wrapSqliteStatementForProfiling(stmt: SqliteStatement, sql: string): Sq
     const started = performance.now();
     try {
       const row = originalGet(...params);
-      recordSqlProfilingSpan(performance.now() - started, {
+      safeRecord(performance.now() - started, {
         "db.operation": "get",
         "db.statement": truncated,
         "db.rows": row == null ? 0 : 1,
@@ -697,7 +786,7 @@ function wrapSqliteStatementForProfiling(stmt: SqliteStatement, sql: string): Sq
       });
       return row;
     } catch (err) {
-      recordSqlProfilingSpan(performance.now() - started, {
+      safeRecord(performance.now() - started, {
         "db.operation": "get",
         "db.statement": truncated,
         "db.params_count": params.length,
@@ -712,7 +801,7 @@ function wrapSqliteStatementForProfiling(stmt: SqliteStatement, sql: string): Sq
     const started = performance.now();
     try {
       const result = originalRun(...params);
-      recordSqlProfilingSpan(performance.now() - started, {
+      safeRecord(performance.now() - started, {
         "db.operation": "run",
         "db.statement": truncated,
         "db.rows": typeof result?.changes === "number" ? result.changes : 0,
@@ -720,7 +809,7 @@ function wrapSqliteStatementForProfiling(stmt: SqliteStatement, sql: string): Sq
       });
       return result;
     } catch (err) {
-      recordSqlProfilingSpan(performance.now() - started, {
+      safeRecord(performance.now() - started, {
         "db.operation": "run",
         "db.statement": truncated,
         "db.params_count": params.length,
