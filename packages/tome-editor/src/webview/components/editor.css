@@ -541,46 +541,64 @@
   display: none;
 }
 
-.tome-link-tooltip-preview,
-.tome-link-tooltip-edit {
+.tome-link-tooltip-preview {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
-  gap: 10px;
-  height: 32px;
-  padding: 4px 10px;
+  gap: 8px;
+  min-height: 32px;
+  padding: 8px 10px 8px 12px;
   border-radius: 8px;
   background: var(--crepe-color-surface, var(--tome-surface));
   box-shadow: var(--crepe-shadow-1, 0 8px 24px rgba(0, 0, 0, 0.18));
 }
 
-.tome-link-tooltip-edit {
-  gap: 8px;
-  padding: 4px 10px 4px 20px;
+.tome-link-tooltip-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
-.tome-link-tooltip-display {
-  width: 240px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 14px;
-  line-height: 24px;
-  color: inherit;
-  text-decoration: none;
-  cursor: pointer;
+.tome-link-tooltip-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
-.tome-link-tooltip-display:hover {
-  text-decoration: underline;
+.tome-link-tooltip-field-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--crepe-color-outline, var(--tome-muted));
+}
+
+.tome-link-tooltip-field-icon > svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.tome-link-tooltip-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  align-self: center;
 }
 
 .tome-link-tooltip-input {
+  flex: 1;
+  min-width: 0;
   width: 200px;
   outline: none;
   border: 0;
   background: transparent;
   font-size: 14px;
+  line-height: 22px;
   color: var(--crepe-color-on-background, var(--tome-text));
 }
 

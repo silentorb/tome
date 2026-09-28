@@ -162,28 +162,32 @@ describe("link tooltip convert control", () => {
       handle.showPreview(range!);
     });
 
-    const editBtn = root.querySelector(".tome-link-tooltip-edit-btn") as HTMLButtonElement | null;
-    expect(editBtn).toBeTruthy();
-    editBtn!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
-
-    const input = root.querySelector(".tome-link-tooltip-input") as HTMLInputElement | null;
-    expect(input).toBeTruthy();
-    input!.value = "https://example.com/x";
-    const confirm = root.querySelector(".tome-link-tooltip-confirm") as HTMLButtonElement | null;
-    expect(confirm).toBeTruthy();
-    confirm!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    const textInput = root.querySelector(".tome-link-tooltip-text-input") as HTMLInputElement | null;
+    const hrefInput = root.querySelector(".tome-link-tooltip-href-input") as HTMLInputElement | null;
+    expect(textInput).toBeTruthy();
+    expect(hrefInput).toBeTruthy();
+    expect(root.querySelectorAll(".tome-link-tooltip-field-icon").length).toBe(2);
+    expect(textInput!.value).toBe("Label");
+    textInput!.value = "Renamed";
+    hrefInput!.value = "https://example.com/x";
+    textInput!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
 
     await editor.action((ctx) => {
       const view = ctx.get(editorViewCtx);
       let href = "";
+      let text = "";
       view.state.doc.descendants((node) => {
         if (!node.isText) return;
         const link = node.marks.find((m) => m.type.name === "link");
-        if (link) href = String(link.attrs.href ?? "");
+        if (link) {
+          href = String(link.attrs.href ?? "");
+          text = node.text ?? "";
+        }
       });
       expect(href).toBe("https://example.com/x");
+      expect(text).toBe("Renamed");
 
-      const { from } = findLinkRange(view, "Label");
+      const { from } = findLinkRange(view, "Renamed");
       const range = findLinkMarkRange(view.state.doc, from);
       expect(range).not.toBeNull();
       handle!.showPreview(range!);
@@ -201,6 +205,84 @@ describe("link tooltip convert control", () => {
         if (node.marks.some((m) => m.type.name === "link")) hasLink = true;
       });
       expect(hasLink).toBe(false);
+    });
+
+    handle?.dispose();
+    await editor.destroy();
+  });
+
+  test("edit with empty text falls back to the URL as label", async () => {
+    const { editor, root } = await setupEditor("[Label](https://example.com/a)");
+    let handle: LinkTooltipHandle | undefined;
+
+    await editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      handle = installLinkTooltip(view, root, { resolveTitle: async () => "T" });
+      const { from } = findLinkRange(view, "Label");
+      const range = findLinkMarkRange(view.state.doc, from);
+      expect(range).not.toBeNull();
+      handle.showPreview(range!);
+    });
+
+    const textInput = root.querySelector(".tome-link-tooltip-text-input") as HTMLInputElement | null;
+    const hrefInput = root.querySelector(".tome-link-tooltip-href-input") as HTMLInputElement | null;
+    textInput!.value = "   ";
+    hrefInput!.value = "https://example.com/b";
+    hrefInput!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
+
+    await editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      let href = "";
+      let text = "";
+      view.state.doc.descendants((node) => {
+        if (!node.isText) return;
+        const link = node.marks.find((m) => m.type.name === "link");
+        if (link) {
+          href = String(link.attrs.href ?? "");
+          text = node.text ?? "";
+        }
+      });
+      expect(href).toBe("https://example.com/b");
+      expect(text).toBe("https://example.com/b");
+    });
+
+    handle?.dispose();
+    await editor.destroy();
+  });
+
+  test("Escape cancels without applying edits", async () => {
+    const { editor, root } = await setupEditor("[Label](https://example.com/a)");
+    let handle: LinkTooltipHandle | undefined;
+
+    await editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      handle = installLinkTooltip(view, root, { resolveTitle: async () => "T" });
+      const { from } = findLinkRange(view, "Label");
+      const range = findLinkMarkRange(view.state.doc, from);
+      expect(range).not.toBeNull();
+      handle.showPreview(range!);
+    });
+
+    const textInput = root.querySelector(".tome-link-tooltip-text-input") as HTMLInputElement | null;
+    const hrefInput = root.querySelector(".tome-link-tooltip-href-input") as HTMLInputElement | null;
+    textInput!.value = "Changed";
+    hrefInput!.value = "https://example.com/changed";
+    textInput!.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+
+    await editor.action((ctx) => {
+      const view = ctx.get(editorViewCtx);
+      let href = "";
+      let text = "";
+      view.state.doc.descendants((node) => {
+        if (!node.isText) return;
+        const link = node.marks.find((m) => m.type.name === "link");
+        if (link) {
+          href = String(link.attrs.href ?? "");
+          text = node.text ?? "";
+        }
+      });
+      expect(href).toBe("https://example.com/a");
+      expect(text).toBe("Label");
     });
 
     handle?.dispose();

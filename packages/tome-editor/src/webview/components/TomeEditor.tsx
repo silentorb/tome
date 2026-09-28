@@ -31,6 +31,7 @@ import { installCalloutPaste } from "../callout-paste";
 import { installDynamicLinkDecoration } from "../dynamic-node-link-decoration";
 import { installDynamicLinkDemote } from "../dynamic-node-link-demote";
 import { installLinkTooltip } from "../link-tooltip";
+import { installSmartLinkPaste } from "../smart-link-paste";
 import { installBlockHandleMenu } from "../block-handle-menu";
 import { installHeadingKeymap } from "../heading-keymap";
 import { installListItemDeleteKeymap } from "../list-item-delete-keymap";
@@ -278,6 +279,7 @@ export function TomeEditor({
         const dom = view.dom;
         installCalloutDecoration(view);
         installCalloutPaste(view);
+        installSmartLinkPaste(view);
         installCalloutCursor(view);
         installLinkCursor(view);
         installLinkHardOpen(view);

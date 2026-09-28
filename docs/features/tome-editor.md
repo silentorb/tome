@@ -98,7 +98,9 @@ Applies to: sidebar nav, **Recent**, global search result rows, database relatio
 | --- | --- |
 | Browser editor (display) | `?node={id}` (see `standaloneNodeUrl` in `src/webview/node-links.ts`) |
 
-**Milkdown body links.** Crepe’s stock `LinkTooltip` is disabled — it cannot add product actions. Tome installs a body-link tooltip (`installLinkTooltip` in `src/webview/link-tooltip.ts`) with hover preview (copy / edit / remove) plus **Use dynamic title** for static node links. Cross-link navigation uses JS on the Milkdown root (`handleEditorLinkPointerEvent` in `src/webview/editor-link-navigation.ts`): plain click soft-navigates; Ctrl/Cmd+click is JS-emulated (`openStandaloneNodeInNewTab`) because ProseMirror claims that gesture for node selection (`handleClick` in `editor-link-hard-open.ts`); shift / middle / right-click leave the real anchor to the browser. Skip when `defaultPrevented` is already set, and skip anchors inside `[data-type="tome-page-block-react"]` (interactive page blocks own those clicks; chrome soft-nav still applies if the event bubbles). Do not add custom ProseMirror plugins whose goal is to force full document navigation inside contenteditable.
+**Milkdown body links.** Crepe’s stock `LinkTooltip` is disabled — it cannot add product actions. Tome installs a body-link tooltip (`installLinkTooltip` in `src/webview/link-tooltip.ts`) with a single hover panel: editable **Text** and **URL** fields (Enter applies, Escape cancels), copy / remove, plus **Use dynamic title** for static node links. Empty text falls back to the URL as the label. There is no stacked edit popup. Cross-link navigation uses JS on the Milkdown root (`handleEditorLinkPointerEvent` in `src/webview/editor-link-navigation.ts`): plain click soft-navigates; Ctrl/Cmd+click is JS-emulated (`openStandaloneNodeInNewTab`) because ProseMirror claims that gesture for node selection (`handleClick` in `editor-link-hard-open.ts`); shift / middle / right-click leave the real anchor to the browser. Skip when `defaultPrevented` is already set, and skip anchors inside `[data-type="tome-page-block-react"]` (interactive page blocks own those clicks; chrome soft-nav still applies if the event bubbles). Do not add custom ProseMirror plugins whose goal is to force full document navigation inside contenteditable.
+
+**Smart URL paste.** `installSmartLinkPaste` (`smart-link-paste.ts`) intercepts paste of a single external `http(s)` URL (clipboard-only — no remote title fetch). When `text/html` is essentially one titled `<a href>` (e.g. Edge address-bar / “copy link”), insert that label + URL. When the clipboard is a bare URL: wrap a non-empty selection as the link label, or insert a link whose label is the URL. Rich HTML, multi-link paste, markdown, and non-URL text defer to Milkdown clipboard / GFM.
 
 When the Milkdown body has focus, **Ctrl/Cmd+1–6** turn the current block into heading levels 1–6 (`heading-keymap.ts`; overrides browser tab-switch defaults for those digits).
 
@@ -117,7 +119,7 @@ Keyboard shortcuts in combobox-style pickers (global search, Relate, record link
 - Clicking a cross-link in the Milkdown body: plain click → soft same-tab (`navigateStandaloneNode`); Ctrl/Cmd+click → JS-emulated new tab (ProseMirror would otherwise select the enclosing block); shift/middle-click and right-click → native hard open / context menu on the real `href`.
 - **Global search** result rows **should** be `<a href="…">` elements using `?node=` URLs so hard-open gestures stay native; same-tab activation is soft via the chrome interceptor.
 - Database relation column cell labels, edit-popup row links, section table name cells, and sidebar nav follow the **native-link behavior parity** rule above.
-- ProseMirror plugins handle dynamic-title icon decoration, demotion on text edit, and the Tome link tooltip — not storage parsing.
+- ProseMirror plugins handle dynamic-title icon decoration, demotion on text edit, smart external URL paste, and the Tome link tooltip — not storage parsing.
 
 ### Page blocks (extensions)
 
@@ -260,6 +262,7 @@ Production UI bundle: `bun run editor:build` → `packages/tome-editor/dist-webv
 | Recent sidebar panel | `packages/tome-db/tests/queries.test.ts`, `packages/tome-editor/tests/api/recent-nodes-api.test.ts`, `RecentNodesPanel.test.tsx` |
 | Dynamic-title demotion / paste | `packages/tome-editor/tests/webview/mention-link.test.ts`, `dynamic-link-demote-paste.test.ts` |
 | Static→dynamic link conversion / Tome link tooltip | `packages/tome-editor/tests/webview/link-tooltip-convert.test.ts` |
+| Smart external URL paste | `packages/tome-editor/tests/webview/smart-link-paste.test.ts` |
 | Properties section (stored + dynamic) | `NodePageView.test.tsx`, `node-type-properties.test.ts` |
 
 - Manual: open home → edit → reload → body persisted
