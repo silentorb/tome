@@ -21,26 +21,26 @@ describe("createFlatfileExecutionHost textSearch", () => {
   const titleHit = "0000000000000000000000001A";
   const bodyOnly = "0000000000000000000000001B";
 
-  beforeAll(() => {
-    fixture = createTestContentFixture("tome-imp-flatfile-host-");
-    seedTestNode(fixture, {
+  beforeAll(async () => {
+    fixture = await createTestContentFixture("tome-imp-flatfile-host-");
+    await seedTestNode(fixture, {
       id: titleHit,
       properties: { title: "Surreal Title", body: "no marker" },
     });
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: bodyOnly,
       properties: { title: "Other", body: "contains surreal-body text" },
     });
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 
   test("ranks title matches before body-only matches", async () => {
-    const host = createFlatfileExecutionHost(fixture.ctx.graphStore, { liveOnly: true });
-    const input = await Promise.resolve(host.listInputRows());
-    const results = await Promise.resolve(host.textSearch!(input, "surreal"));
+    const host = await createFlatfileExecutionHost(fixture.ctx.graphStore, { liveOnly: true });
+    const input = await host.listInputRows();
+    const results = await host.textSearch!(input, "surreal");
     expect(results.map((r) => r.id)).toEqual([titleHit, bodyOnly]);
   });
 });

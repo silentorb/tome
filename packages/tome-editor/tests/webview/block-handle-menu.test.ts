@@ -90,7 +90,7 @@ function openGripMenu(gripIcon: Element) {
   return document.querySelector(".tome-block-handle-menu");
 }
 
-describe("block handle menu", () => {
+describe("block handle menu", async () => {
   test("deleteActiveEditorBlock removes a node-selected top-level block", async () => {
     const { editor } = await createEditor("First\n\nSecond");
 

@@ -1,7 +1,7 @@
 import type { DatabaseColumnDef } from "../database-view";
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import type { EvalRow } from "../row-sort";
-import { withProfilingSpan } from "tome-service-interfaces";
+import { withProfilingSpanAsync } from "tome-service-interfaces";
 import { loadDynamicColumnSets, loadDynamicProperties } from "./overlay";
 import {
   materializeColumnKey,
@@ -38,11 +38,11 @@ type DynCtx = {
   rowNodeIds: string[];
 };
 
-function buildFixedPrefetch(
+async function buildFixedPrefetch(
   resolverId: string,
   ctx: DynCtx,
   params: Record<string, unknown>,
-): unknown {
+): Promise<unknown> {
   switch (resolverId) {
     case "characters.allSceneCount":
       return buildAllSceneCountPrefetch(ctx, params);
@@ -59,13 +59,13 @@ function buildFixedPrefetch(
  * Column defs and hideLegacyKeys for dynamic properties / column sets — no cell resolve.
  * Used to gate SQL windowing (dyn-sort detection) before loading membership rows.
  */
-export function listDynamicColumnDefs(
+export async function listDynamicColumnDefs(
   db: RelationshipReadStore,
   owner: string,
   viewName: string,
   registry: ResolverRegistry,
   options?: ApplyDynamicPropertiesOptions,
-): DynamicColumnDefsResult {
+): Promise<DynamicColumnDefsResult> {
   const properties = loadDynamicProperties(db, owner, options?.contentDir);
   const columnSets = loadDynamicColumnSets(db, owner, options?.contentDir);
   const dynamicColumnDefs: DatabaseColumnDef[] = [];
@@ -76,7 +76,7 @@ export function listDynamicColumnDefs(
     for (const key of set.hideLegacyKeys) hiddenColumnKeys.add(key);
     const resolver = registry.columnSets.get(set.resolverId);
     if (!resolver) continue;
-    for (const dimension of resolver.discoverDimensions(ctx, set.params)) {
+    for (const dimension of await resolver.discoverDimensions(ctx, set.params)) {
       dynamicColumnDefs.push({
         key: materializeColumnKey(set.columnKeyPattern, dimension.id),
         name: materializeColumnName(set.columnNamePattern, dimension.title),
@@ -98,19 +98,19 @@ export function listDynamicColumnDefs(
   return { dynamicColumnDefs, hiddenColumnKeys };
 }
 
-export function applyDynamicProperties(
+export async function applyDynamicProperties(
   db: RelationshipReadStore,
   owner: string,
   viewName: string,
   evalRows: EvalRow[],
   registry: ResolverRegistry,
   options?: ApplyDynamicPropertiesOptions,
-): DynamicEnrichmentResult {
-  return withProfilingSpan(
+): Promise<DynamicEnrichmentResult> {
+  return withProfilingSpanAsync(
     "table.enrich",
     "INTERNAL",
     { "table.row_count": evalRows.length },
-    () => {
+    async () => {
       const properties = loadDynamicProperties(db, owner, options?.contentDir);
       const columnSets = loadDynamicColumnSets(db, owner, options?.contentDir);
 
@@ -132,11 +132,11 @@ export function applyDynamicProperties(
 
         let prefetch = setPrefetches.get(set.id);
         if (!prefetch) {
-          prefetch = resolver.buildPrefetch(ctx, set.params);
+          prefetch = await resolver.buildPrefetch(ctx, set.params);
           setPrefetches.set(set.id, prefetch);
         }
 
-        const dimensions = resolver.discoverDimensions(ctx, set.params);
+        const dimensions = await resolver.discoverDimensions(ctx, set.params);
         for (const dimension of dimensions) {
           materializedSetColumns.push({
             setId: set.id,
@@ -154,7 +154,7 @@ export function applyDynamicProperties(
         if (!fixedPrefetches.has(property.resolverId)) {
           fixedPrefetches.set(
             property.resolverId,
-            buildFixedPrefetch(property.resolverId, ctx, property.params),
+            await buildFixedPrefetch(property.resolverId, ctx, property.params),
           );
         }
         dynamicColumnDefs.push({

@@ -28,21 +28,21 @@ function isoTimestampFromProperties(
   return new Date(parsed).toISOString();
 }
 
-export function getNodePageMetadata(db: RelationshipReadStore, id: string): NodePageMetadata | null {
-  const node = readStoreGetNode(db, id);
+export async function getNodePageMetadata(db: RelationshipReadStore, id: string): Promise<NodePageMetadata | null> {
+  const node = await readStoreGetNode(db, id);
   if (!node) return null;
 
   const backlinks: NodeBacklink[] = [];
   const seenSources = new Set<string>();
 
-  for (const candidate of readStoreListNodesWithBodyLike(db, `%${id}%`)) {
+  for (const candidate of await readStoreListNodesWithBodyLike(db, `%${id}%`)) {
     if (candidate.id === id) continue;
     const matches = findMarkdownLinksToTarget(candidate.body, id);
     if (matches.length === 0 || seenSources.has(candidate.id)) continue;
 
     seenSources.add(candidate.id);
-    // Title only — avoid getNodeDetail (re-runs isTypeTable + primaryTypeTitle).
-    const sourceNode = readStoreGetNode(db, candidate.id);
+    // Title only — avoid (await getNodeDetail(re-runs isTypeTable + primaryTypeTitle)).
+    const sourceNode = await readStoreGetNode(db, candidate.id);
     const linkText = matches[0]?.linkText.trim() || null;
     backlinks.push({
       sourceId: candidate.id,
@@ -60,7 +60,7 @@ export function getNodePageMetadata(db: RelationshipReadStore, id: string): Node
   return {
     createdAt: isoTimestampFromProperties(node.properties, "created_at"),
     modifiedAt: isoTimestampFromProperties(node.properties, "modified_at"),
-    relationshipCount: readStoreCountIncidentRelationships(db, id),
+    relationshipCount: await readStoreCountIncidentRelationships(db, id),
     backlinks,
   };
 }

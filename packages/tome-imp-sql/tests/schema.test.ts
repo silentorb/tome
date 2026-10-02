@@ -81,7 +81,7 @@ describe("tome-imp-sql schema", () => {
 });
 
 describe("tome-imp-sql compile", () => {
-  test("compiles traverse against relationship_projections", () => {
+  test("compiles traverse against relationship_projections", async () => {
     const expectedType = projectionType(VALID_ASSOCIATION, 0);
     const graph: Graph = {
       nodes: {
@@ -105,7 +105,7 @@ describe("tome-imp-sql compile", () => {
       },
     };
 
-    const { sql, parameters } = compileImpGraphToTomeSql(graph);
+    const { sql, parameters } = await compileImpGraphToTomeSql(graph);
     expect(sql).toContain("relationship_projections");
     expect(sql).toContain("source_node_id");
     expect(sql).toContain("target_node_id");
@@ -113,7 +113,7 @@ describe("tome-imp-sql compile", () => {
     expect(parameters).toContain(expectedType);
   });
 
-  test("compiles except + traverse as NOT EXISTS over relationship_projections", () => {
+  test("compiles except + traverse as NOT EXISTS over relationship_projections", async () => {
     const expectedType = projectionType(VALID_ASSOCIATION, 0);
     const graph: Graph = {
       nodes: {
@@ -146,7 +146,7 @@ describe("tome-imp-sql compile", () => {
       },
     };
 
-    const { sql, parameters } = compileImpGraphToTomeSql(graph);
+    const { sql, parameters } = await compileImpGraphToTomeSql(graph);
     expect(sql.toLowerCase()).toContain("not exists");
     expect(sql).toContain("relationship_projections");
     expect(sql).toContain('is_archived" = 0');

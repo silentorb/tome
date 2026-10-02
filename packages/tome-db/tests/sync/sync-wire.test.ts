@@ -244,9 +244,9 @@ describe("SyncGraphWire", () => {
   });
 });
 
-describe("openDataStoreSession smoke", () => {
+describe("openDataStoreSession smoke", async () => {
   test("opens solo flatfile + sqlite and wires default graph", async () => {
-    const fixture = createTestContentFixture();
+    const fixture = await createTestContentFixture();
     const dir = mkdtempSync(join(tmpdir(), "tome-sync-session-"));
     const dbPath = join(dir, "cache.sqlite");
     try {
@@ -273,7 +273,7 @@ describe("openDataStoreSession smoke", () => {
       expect(session.writeContext.sync).toBeDefined();
       session.dispose();
     } finally {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
       rmSync(dir, { recursive: true, force: true });
     }
   });

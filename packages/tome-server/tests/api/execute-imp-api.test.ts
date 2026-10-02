@@ -11,13 +11,13 @@ import {
 import { recentNodesGraph } from "tome-db";
 import { createTestApi } from "./test-api-setup";
 
-describe("queryNodes API", () => {
+describe("queryNodes API", async () => {
   test("POST /api/nodes/query runs recentNodesGraph", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-nodes-query-api-"));
     const dbPath = join(dir, "api.sqlite");
 
-    const fixture = createTestContentFixture("tome-nodes-query-content-");
-    seedTestNode(fixture, {
+    const fixture = await createTestContentFixture("tome-nodes-query-content-");
+    await seedTestNode(fixture, {
       id: TEST_HOME_NODE_ID,
       properties: {
         title: "Home",
@@ -26,7 +26,7 @@ describe("queryNodes API", () => {
     });
     fixture.ctx.sync.fullRebuild();
 
-    const { handler: apiHandler } = createTestApi({
+    const { handler: apiHandler } = await createTestApi({
       dbPath,
       contentDir: fixture.ctx.store.contentDir,
     });
@@ -47,7 +47,7 @@ describe("queryNodes API", () => {
     expect(payload.rows.some((row) => row.id === TEST_HOME_NODE_ID)).toBe(true);
 
     apiHandler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
     rmSync(dir, { recursive: true, force: true });
   });
 });

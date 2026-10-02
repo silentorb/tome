@@ -6,7 +6,7 @@ import { contentModelDir, dynamicPropertiesFilePath, relationshipTypesFilePath, 
 import { emptyDynamicPropertiesFile, serializeDynamicPropertiesFile } from "tome-flatfile";
 import { serializeTableSchemasFile } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
-import { GraphDatabase } from "tome-sqlite";
+import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { listRelationConnectionsForRow } from "../src/database-view-relations";
@@ -32,7 +32,7 @@ const PROP_TYPE_ASSOCIATION_ID = "000000000000000000000000BD";
 const STORY_SCALE_ASSOCIATION_ID = "000000000000000000000000BC";
 const NEIGHBOR_ASSOCIATION_ID = "000000000000000000000000C2";
 
-describe("database-view-relations", () => {
+describe("database-view-relations", async () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-view-rel-"));
   const contentDir = join(dir, "content");
   mkdirSync(contentModelDir(contentDir), { recursive: true });
@@ -42,6 +42,7 @@ describe("database-view-relations", () => {
   );
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
+  const cache = wrapSyncGraphDatabase(db);
   process.env.TOME_CONTENT_PATH = contentDir;
 
   const inspirationsDb = "0000000000000000000000000K";
@@ -113,7 +114,7 @@ describe("database-view-relations", () => {
   );
   invalidateTableSchemasCache();
 
-  test("listRelationConnectionsForRow resolves prop_type via row is_a membership", () => {
+  test("listRelationConnectionsForRow resolves prop_type via row is_a membership", async () => {
     db.upsertNode(inspirationsDb, {
       ...typeTableMarkerProperties("Inspirations"),
     });
@@ -131,8 +132,7 @@ describe("database-view-relations", () => {
       },
     );
 
-    const connections = listRelationConnectionsForRow(
-      db,
+    const connections = await listRelationConnectionsForRow(cache,
       inspirationId,
       projectionTypeForEndpoint(PROP_TYPE_ASSOCIATION_ID, 0),
       inspirationsDb,
@@ -145,8 +145,8 @@ describe("database-view-relations", () => {
       connections[0]!.sourceNodeId === tvSeriesTypeId).toBe(true);
   });
 
-  test("hydrates Type column from row is_a membership without via_database", () => {
-    const detail = getDatabaseViewDetail(db, inspirationsDb, undefined, contentDir);
+  test("hydrates Type column from row is_a membership without via_database", async () => {
+    const detail = await getDatabaseViewDetail(cache, inspirationsDb, undefined, contentDir);
     const row = detail?.rows.find((r) => r.nodeId === inspirationId);
     expect(row?.cells.type).toBe("TV series");
     expect(row?.relationCells?.type).toEqual([
@@ -154,7 +154,7 @@ describe("database-view-relations", () => {
     ]);
   });
 
-  test("hydrates parents and children columns without cross-column bleed", () => {
+  test("hydrates parents and children columns without cross-column bleed", async () => {
     const locationsDb = "0000000000000000000000002T";
     const parentLocationId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     const childLocationId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -196,16 +196,14 @@ describe("database-view-relations", () => {
     db.upsertRelationship(parentLocationId, childLocationId, childrenType, { ordinal: 0 });
     db.upsertRelationship(childLocationId, parentLocationId, parentsType, { ordinal: 0 });
 
-    const parentConnections = listRelationConnectionsForRow(
-      db,
+    const parentConnections = await listRelationConnectionsForRow(cache,
       parentLocationId,
       parentsType,
       locationsDb,
       TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
       contentDir,
     );
-    const childConnections = listRelationConnectionsForRow(
-      db,
+    const childConnections = await listRelationConnectionsForRow(cache,
       childLocationId,
       childrenType,
       locationsDb,
@@ -215,16 +213,14 @@ describe("database-view-relations", () => {
     expect(parentConnections).toHaveLength(0);
     expect(childConnections).toHaveLength(0);
 
-    const parentChildren = listRelationConnectionsForRow(
-      db,
+    const parentChildren = await listRelationConnectionsForRow(cache,
       parentLocationId,
       childrenType,
       locationsDb,
       TEST_PARENTS_CHILDREN_ASSOCIATION_ID,
       contentDir,
     );
-    const childParents = listRelationConnectionsForRow(
-      db,
+    const childParents = await listRelationConnectionsForRow(cache,
       childLocationId,
       parentsType,
       locationsDb,
@@ -236,7 +232,7 @@ describe("database-view-relations", () => {
     expect(parentChildren[0]!.targetNodeId).toBe(childLocationId);
     expect(childParents[0]!.targetNodeId).toBe(parentLocationId);
 
-    const detail = getDatabaseViewDetail(db, locationsDb, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, locationsDb, undefined, contentDir);
     const parentRow = detail?.rows.find((row) => row.nodeId === parentLocationId);
     const childRow = detail?.rows.find((row) => row.nodeId === childLocationId);
     expect(parentRow?.cells.parents).toBeUndefined();
@@ -245,16 +241,16 @@ describe("database-view-relations", () => {
     expect(childRow?.cells.children).toBeUndefined();
   });
 
-  test("hydrates neighbor column on both locations for symmetric neighbor links", () => {
-    const fixture = createTestContentFixture("tome-db-view-rel-neighbor-");
+  test("hydrates neighbor column on both locations for symmetric neighbor links", async () => {
+    const fixture = await createTestContentFixture("tome-db-view-rel-neighbor-");
     const locationsDb = "0000000000000000000000002T";
     const locationA = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
     const locationB = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
     const neighborType = projectionTypeForEndpoint(NEIGHBOR_ASSOCIATION_ID, 0);
 
-    seedTestNode(fixture, { id: locationsDb, properties: typeTableMarkerProperties("Locations") });
-    seedTestNode(fixture, { id: locationA, properties: { title: "North grove" } });
-    seedTestNode(fixture, { id: locationB, properties: { title: "South grove" } });
+    await seedTestNode(fixture, { id: locationsDb, properties: typeTableMarkerProperties("Locations") });
+    await seedTestNode(fixture, { id: locationA, properties: { title: "North grove" } });
+    await seedTestNode(fixture, { id: locationB, properties: { title: "South grove" } });
     const registry = emptyRelationshipTypesFile();
     registerSetRelationshipType(registry, {
       id: TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
@@ -288,7 +284,7 @@ describe("database-view-relations", () => {
         },
       ],
     });
-    fixture.ctx.sync.syncRelationships();
+    await fixture.ctx.sync.syncRelationships();
 
     writeFileSync(
       tableSchemasFilePath(fixture.ctx.store.contentDir),
@@ -312,7 +308,7 @@ describe("database-view-relations", () => {
     invalidateTableSchemasCache();
 
     const neighborContentDir = fixture.ctx.store.contentDir;
-    const fromA = listRelationConnectionsForRow(
+    const fromA = await listRelationConnectionsForRow(
       fixture.ctx.cache,
       locationA,
       neighborType,
@@ -320,7 +316,7 @@ describe("database-view-relations", () => {
       NEIGHBOR_ASSOCIATION_ID,
       neighborContentDir,
     );
-    const fromB = listRelationConnectionsForRow(
+    const fromB = await listRelationConnectionsForRow(
       fixture.ctx.cache,
       locationB,
       neighborType,
@@ -334,10 +330,10 @@ describe("database-view-relations", () => {
     expect(fromA[0]!.targetNodeId).toBe(locationB);
     expect(fromB[0]!.targetNodeId).toBe(locationA);
 
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 
-  test("hydrates scenes_part column from row is_a without via_database", () => {
+  test("hydrates scenes_part column from row is_a without via_database", async () => {
     writeFileSync(
       tableSchemasFilePath(contentDir),
       serializeTableSchemasFile({
@@ -367,13 +363,13 @@ describe("database-view-relations", () => {
     // From scenes host: distinct endpoints → projection index 0 ("Scenes")
     db.upsertRelationship(sceneId, partId, projectionTypeForEndpoint(TEST_SCENES_PART_RELATIONSHIP_TYPE_ID, 0), { ordinal: 0 });
 
-    const detail = getDatabaseViewDetail(db, scenesDb, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, scenesDb, undefined, contentDir);
     const row = detail?.rows.find((r) => r.nodeId === sceneId);
     expect(row?.cells.part).toBe("Part 1");
     expect(row?.relationCells?.part).toEqual([{ targetId: partId, title: "Part 1" }]);
   });
 
-  test("hydrates Features column with scoped and unscoped includes edges", () => {
+  test("hydrates Features column with scoped and unscoped includes edges", async () => {
     const inspirationWithMixedFeatures = "0000000000000000000000002W";
     const cozyHorrorId = "0000000000000000000000002X";
     const chaoticWorldId = "0000000000000000000000000A";
@@ -398,8 +394,7 @@ describe("database-view-relations", () => {
     db.upsertRelationship(inspirationWithMixedFeatures, adventureId, inspirationsProjection);
     db.upsertRelationship(inspirationWithMixedFeatures, darkForestId, inspirationsProjection);
 
-    const connections = listRelationConnectionsForRow(
-      db,
+    const connections = await listRelationConnectionsForRow(cache,
       inspirationWithMixedFeatures,
       inspirationsProjection,
       inspirationsDb,
@@ -424,7 +419,7 @@ describe("database-view-relations", () => {
     ]);
   });
 
-  test("hydrates all Inspirations from Features when some inspiration ids sort before the feature", () => {
+  test("hydrates all Inspirations from Features when some inspiration ids sort before the feature", async () => {
     // Mirrors Satire: bidirectional projections share a record_id; lex-smaller
     // source was previously kept and dropped the Features→Inspirations projection.
     const featureId = "000000000000000000000000M0";
@@ -477,8 +472,7 @@ describe("database-view-relations", () => {
     expect(earlyInspirationId < featureId).toBe(true);
     expect(lateInspirationId > featureId).toBe(true);
 
-    const connections = listRelationConnectionsForRow(
-      db,
+    const connections = await listRelationConnectionsForRow(cache,
       featureId,
       featuresProjection,
       featuresDb,
@@ -516,7 +510,7 @@ describe("database-view-relations", () => {
     );
     invalidateTableSchemasCache();
 
-    const detail = getDatabaseViewDetail(db, featuresDb, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, featuresDb, undefined, contentDir);
     const row = detail?.rows.find((r) => r.nodeId === featureId);
     expect(row?.relationCells?.inspirations).toEqual([
       { targetId: earlyInspirationId, title: "Dilbert" },
@@ -524,7 +518,7 @@ describe("database-view-relations", () => {
     ]);
   });
 
-  test("story_scale relation column hydrates from relationships, not a stale scalar member_of property", () => {
+  test("story_scale relation column hydrates from relationships, not a stale scalar member_of property", async () => {
     const storyScaleRowsDb = "0000000000000000000000001D";
     const storyScaleDb = "0000000000000000000000001Y";
     const storyScaleRowId = "0000000000000000000000002A";
@@ -565,7 +559,7 @@ describe("database-view-relations", () => {
       ordinal: 0,
     });
 
-    const detail = getDatabaseViewDetail(db, storyScaleRowsDb, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, storyScaleRowsDb, undefined, contentDir);
     const row = detail?.rows.find((r) => r.nodeId === storyScaleRowId);
     expect(row?.relationCells?.story_scale).toEqual([
       { targetId: extendedScaleId, title: "Extended" },
@@ -574,7 +568,7 @@ describe("database-view-relations", () => {
     expect(row?.cells.story_scale ?? "").not.toContain("://");
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     db.close();
     rmSync(dir, { recursive: true, force: true });
   });

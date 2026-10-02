@@ -61,12 +61,10 @@ export async function runEventQuery(input: {
 }): Promise<Record<string, unknown>[]> {
   const { bound, schema } = bindEventQuery(input);
   const graph = buildQueryImpGraph(bound, { schema, pageNodeId: input.pageNodeId });
-  const executed = await Promise.resolve(
-    input.executeImp.executeImp(graph, {
+  const executed = await input.executeImp.executeImp(graph, {
       pageNodeId: input.pageNodeId,
       parameters: input.parameters,
-    }),
-  );
+    });
   return executed.rows;
 }
 
@@ -77,12 +75,10 @@ export async function loadDependsEdges(
 ): Promise<DependsConstraint[]> {
   // Direction 0 projections are a→b (prerequisite→dependent for Arcs data).
   const type0 = projectionType(dependsRelationshipType, 0);
-  const edges = await Promise.resolve(
-    graphQuery.listEdges({
+  const edges = await graphQuery.listEdges({
       nodeIds: eventIds,
       types: [type0],
-    }),
-  );
+    });
   const idSet = new Set(eventIds);
   const depends: DependsConstraint[] = [];
   const seenRows = new Set<string>();

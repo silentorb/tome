@@ -8,14 +8,14 @@ import {
 import { openContentGraph } from "../../src/content/sync";
 import { getNodeDetail } from "../../src/queries";
 
-describe("CacheSync node body reconciliation", () => {
-  const fixture = createTestContentFixture("tome-node-body-reconcile-");
+describe("CacheSync node body reconciliation", async () => {
+  const fixture = await createTestContentFixture("tome-node-body-reconcile-");
   const nodeId = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
   const pageBlockBody = serializePageBlock("spatial-graph.block", {
     relationships: { parentTypes: ["parents"] },
   });
 
-  seedTestNode(
+  await seedTestNode(
     fixture,
     {
       id: nodeId,
@@ -24,19 +24,19 @@ describe("CacheSync node body reconciliation", () => {
     pageBlockBody,
   );
 
-  test("repairs SQLite body when it drifted from the node file", () => {
-    fixture.ctx.cache.upsertNode(nodeId, { title: "Locations", body: "" });
-    expect(getNodeDetail(fixture.ctx.cache, nodeId)?.body).toBe("");
+  test("repairs SQLite body when it drifted from the node file", async () => {
+    await fixture.ctx.cache.upsertNode(nodeId, { title: "Locations", body: "" });
+    expect((await getNodeDetail(fixture.ctx.cache, nodeId))?.body).toBe("");
 
-    const reopened = openContentGraph(
+    const reopened = await openContentGraph(
       fixture.ctx.store.contentDir,
       fixture.ctx.cache.path,
     );
-    expect(getNodeDetail(reopened.cache, nodeId)?.body.trimEnd()).toBe(pageBlockBody.trimEnd());
-    reopened.cache.close();
+    expect((await getNodeDetail(reopened.cache, nodeId))?.body.trimEnd()).toBe(pageBlockBody.trimEnd());
+    await reopened.cache.close();
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

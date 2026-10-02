@@ -12,7 +12,7 @@ const urls = createNodeUrlResolver({
   base: "/",
 });
 
-describe("page-block html rendering", () => {
+describe("page-block html rendering", async () => {
   test("renders fixture block html", async () => {
     const host = new HtmlPageBlockHostImpl();
     register(host);

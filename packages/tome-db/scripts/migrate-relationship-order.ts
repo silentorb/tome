@@ -51,10 +51,10 @@ if (remaining.length > 0) {
 }
 
 const dbPath = process.env.TOME_DB_PATH ?? defaultDbPathForContent(contentDir);
-const { sync, cache } = openContentGraph(contentDir, dbPath);
-sync.fullRebuild();
+const { sync, cache } = await openContentGraph(contentDir, dbPath);
+await sync.fullRebuild();
 const counts = cache.counts();
-cache.close();
+await cache.close();
 console.log(
   `  OK: ${report.reordered} reordered; cache rebuilt at ${dbPath} (${counts.relationships} projections)`,
 );

@@ -17,7 +17,11 @@ import { normalizeRelationshipTypeId } from "tome-flatfile";
 export type RelationshipReadStore = TomeGraphStoreBase | TomeQueryCache;
 
 export function isGraphStoreBase(store: RelationshipReadStore): store is TomeGraphStoreBase {
-  return typeof (store as TomeGraphStoreBase).listRelationshipProjections === "function";
+  // Do not probe arbitrary methods — async cache proxies return functions for any key.
+  return (
+    typeof (store as TomeGraphStoreBase).contentDir === "string" &&
+    "capabilities" in store
+  );
 }
 
 /**
@@ -39,11 +43,11 @@ export function getQueryCache(store: RelationshipReadStore): TomeQueryCache | nu
 }
 
 /** Outgoing directed projections from `sourceNodeId`, optionally filtered by projection type. */
-export function listRelationshipsFromSource(
+export async function listRelationshipsFromSource(
   store: RelationshipReadStore,
   sourceNodeId: string,
   type?: string,
-): Relationship[] {
+): Promise<Relationship[]> {
   if (isGraphStoreBase(store)) {
     return store.listRelationshipProjections(sourceNodeId, {
       direction: "from",
@@ -54,33 +58,33 @@ export function listRelationshipsFromSource(
 }
 
 /** Distinct outgoing projection types for a source node (SQL when cache present). */
-export function listOutgoingProjectionTypes(
+export async function listOutgoingProjectionTypes(
   store: RelationshipReadStore,
   sourceNodeId: string,
-): string[] {
+): Promise<string[]> {
   const cache = getQueryCache(store);
   if (cache && typeof cache.listOutgoingProjectionTypes === "function") {
     return cache.listOutgoingProjectionTypes(sourceNodeId);
   }
   const types = new Set<string>();
-  for (const rel of listRelationshipsFromSource(store, sourceNodeId)) {
+  for (const rel of await listRelationshipsFromSource(store, sourceNodeId)) {
     types.add(rel.type);
   }
   return [...types].sort((a, b) => a.localeCompare(b));
 }
 
 /** Distinct edge property keys for one outgoing perspective (SQL when cache present). */
-export function listOutgoingProjectionPropertyKeys(
+export async function listOutgoingProjectionPropertyKeys(
   store: RelationshipReadStore,
   sourceNodeId: string,
   type: string,
-): string[] {
+): Promise<string[]> {
   const cache = getQueryCache(store);
   if (cache && typeof cache.listOutgoingProjectionPropertyKeys === "function") {
     return cache.listOutgoingProjectionPropertyKeys(sourceNodeId, type);
   }
   const keys = new Set<string>();
-  for (const rel of listRelationshipsFromSource(store, sourceNodeId, type)) {
+  for (const rel of await listRelationshipsFromSource(store, sourceNodeId, type)) {
     for (const key of Object.keys(rel.properties)) {
       if (key === "ordinal" || key === "order" || key === "row_name") continue;
       keys.add(key);
@@ -90,12 +94,12 @@ export function listOutgoingProjectionPropertyKeys(
 }
 
 /** Ordered SQL window of outgoing projections; throws if no query cache. */
-export function listRelationshipsFromSourceWindow(
+export async function listRelationshipsFromSourceWindow(
   store: RelationshipReadStore,
   sourceNodeId: string,
   type: string,
   query?: RelationshipProjectionWindowQuery,
-): RelationshipProjectionWindowResult {
+): Promise<RelationshipProjectionWindowResult> {
   const cache = getQueryCache(store);
   if (!cache || typeof cache.listRelationshipsFromSourceWindow !== "function") {
     throw new Error("listRelationshipsFromSourceWindow requires a SQLite query cache");
@@ -104,11 +108,11 @@ export function listRelationshipsFromSourceWindow(
 }
 
 /** Ordered SQL window of set membership edges; throws if no query cache. */
-export function listMemberPage(
+export async function listMemberPage(
   store: RelationshipReadStore,
   setId: string,
   query: MemberPageQuery,
-): MemberPageResult {
+): Promise<MemberPageResult> {
   const cache = getQueryCache(store);
   if (!cache || typeof cache.listMemberPage !== "function") {
     throw new Error("listMemberPage requires a SQLite query cache");
@@ -117,11 +121,11 @@ export function listMemberPage(
 }
 
 /** Distinct member node ids for a set; throws if no query cache. */
-export function listMemberPageNodeIds(
+export async function listMemberPageNodeIds(
   store: RelationshipReadStore,
   setId: string,
   query: MemberPageQuery,
-): string[] {
+): Promise<string[]> {
   const cache = getQueryCache(store);
   if (!cache || typeof cache.listMemberPageNodeIds !== "function") {
     throw new Error("listMemberPageNodeIds requires a SQLite query cache");
@@ -130,11 +134,11 @@ export function listMemberPageNodeIds(
 }
 
 /** Related target node ids for an outgoing projection; throws if no query cache. */
-export function listRelatedTargetNodeIds(
+export async function listRelatedTargetNodeIds(
   store: RelationshipReadStore,
   sourceNodeId: string,
   type: string,
-): string[] {
+): Promise<string[]> {
   const cache = getQueryCache(store);
   if (!cache || typeof cache.listRelatedTargetNodeIds !== "function") {
     throw new Error("listRelatedTargetNodeIds requires a SQLite query cache");
@@ -143,12 +147,12 @@ export function listRelatedTargetNodeIds(
 }
 
 /** Outgoing edges for specific targets; throws if no query cache. */
-export function listRelationshipsFromSourceForTargetIds(
+export async function listRelationshipsFromSourceForTargetIds(
   store: RelationshipReadStore,
   sourceNodeId: string,
   type: string,
   targetIds: readonly string[],
-): Relationship[] {
+): Promise<Relationship[]> {
   const cache = getQueryCache(store);
   if (!cache || typeof cache.listRelationshipsFromSourceForTargetIds !== "function") {
     throw new Error("listRelationshipsFromSourceForTargetIds requires a SQLite query cache");
@@ -157,11 +161,11 @@ export function listRelationshipsFromSourceForTargetIds(
 }
 
 /** Distinct scope ids among set members; throws if no query cache. */
-export function listDistinctSetMemberScopeIds(
+export async function listDistinctSetMemberScopeIds(
   store: RelationshipReadStore,
   setId: string,
   query: DistinctSetMemberScopeQuery,
-): DistinctSetMemberScopeRow[] {
+): Promise<DistinctSetMemberScopeRow[]> {
   const cache = getQueryCache(store);
   if (!cache || typeof cache.listDistinctSetMemberScopeIds !== "function") {
     throw new Error("listDistinctSetMemberScopeIds requires a SQLite query cache");
@@ -170,10 +174,10 @@ export function listDistinctSetMemberScopeIds(
 }
 
 /** Composed group headers; throws if no query cache. */
-export function listComposedGroupHeaders(
+export async function listComposedGroupHeaders(
   store: RelationshipReadStore,
   query: ComposedGroupHeadersQuery,
-): ComposedGroupHeaderRow[] {
+): Promise<ComposedGroupHeaderRow[]> {
   const cache = getQueryCache(store);
   if (!cache || typeof cache.listComposedGroupHeaders !== "function") {
     throw new Error("listComposedGroupHeaders requires a SQLite query cache");
@@ -182,11 +186,11 @@ export function listComposedGroupHeaders(
 }
 
 /** Incoming directed projections to `targetNodeId`, optionally filtered by projection type. */
-export function listRelationshipsToTarget(
+export async function listRelationshipsToTarget(
   store: RelationshipReadStore,
   targetNodeId: string,
   type?: string,
-): Relationship[] {
+): Promise<Relationship[]> {
   if (isGraphStoreBase(store)) {
     return store.listRelationshipProjections(targetNodeId, {
       direction: "to",
@@ -197,12 +201,12 @@ export function listRelationshipsToTarget(
 }
 
 /** All live relationship projections in the corpus (for graph export). */
-export function listAllRelationshipProjections(store: RelationshipReadStore): Relationship[] {
+export async function listAllRelationshipProjections(store: RelationshipReadStore): Promise<Relationship[]> {
   if (isGraphStoreBase(store)) {
-    const registry = store.readRelationshipTypes();
+    const registry = await store.readRelationshipTypes();
     const seen = new Set<string>();
     const results: Relationship[] = [];
-    store.forEachRelationshipRecord((entry) => {
+    await store.forEachRelationshipRecord((entry) => {
       const { projections } = expandRelationshipEntry(entry, registry);
       for (const row of projections) {
         if (seen.has(row.id)) continue;
@@ -212,7 +216,7 @@ export function listAllRelationshipProjections(store: RelationshipReadStore): Re
     });
     return results;
   }
-  return store.listRelationshipsForGraphExport().map((row) => ({
+  return (await store.listRelationshipsForGraphExport()).map((row) => ({
     id: row.id,
     sourceNodeId: row.sourceNodeId,
     targetNodeId: row.targetNodeId,
@@ -223,14 +227,14 @@ export function listAllRelationshipProjections(store: RelationshipReadStore): Re
 }
 
 /** Distinct directed projection types present in live relationship data. */
-export function listDistinctProjectionTypes(store: RelationshipReadStore): string[] {
+export async function listDistinctProjectionTypes(store: RelationshipReadStore): Promise<string[]> {
   const types = new Set<string>();
   if (isGraphStoreBase(store)) {
-    for (const rel of listAllRelationshipProjections(store)) {
+    for (const rel of await listAllRelationshipProjections(store)) {
       types.add(rel.type);
     }
   } else {
-    for (const rel of store.listRelationshipsForGraphExport()) {
+    for (const rel of await store.listRelationshipsForGraphExport()) {
       types.add(rel.type);
     }
   }
@@ -238,10 +242,10 @@ export function listDistinctProjectionTypes(store: RelationshipReadStore): strin
 }
 
 /** Node ids that appear as source or target of at least one projection of `type`. */
-export function listNodeIdsForProjectionType(
+export async function listNodeIdsForProjectionType(
   store: RelationshipReadStore,
   projectionType: string,
-): string[] {
+): Promise<string[]> {
   const trimmed = projectionType.trim();
   if (!trimmed) return [];
 
@@ -253,7 +257,7 @@ export function listNodeIdsForProjectionType(
   }
 
   const ids = new Set<string>();
-  for (const rel of listAllRelationshipProjections(store)) {
+  for (const rel of await listAllRelationshipProjections(store)) {
     if (rel.type !== trimmed) continue;
     ids.add(rel.sourceNodeId);
     ids.add(rel.targetNodeId);
@@ -262,10 +266,10 @@ export function listNodeIdsForProjectionType(
 }
 
 /** Node ids that appear as source of at least one projection of `type`. */
-export function listSourceNodeIdsForProjectionType(
+export async function listSourceNodeIdsForProjectionType(
   store: RelationshipReadStore,
   projectionType: string,
-): string[] {
+): Promise<string[]> {
   const trimmed = projectionType.trim();
   if (!trimmed) return [];
 
@@ -277,7 +281,7 @@ export function listSourceNodeIdsForProjectionType(
   }
 
   const ids = new Set<string>();
-  for (const rel of listAllRelationshipProjections(store)) {
+  for (const rel of await listAllRelationshipProjections(store)) {
     if (rel.type !== trimmed) continue;
     ids.add(rel.sourceNodeId);
   }
@@ -285,24 +289,24 @@ export function listSourceNodeIdsForProjectionType(
 }
 
 /** Node lookup shared by read modules. */
-export function readStoreGetNode(
+export async function readStoreGetNode(
   store: RelationshipReadStore,
   id: string,
-): Node | null {
+): Promise<Node | null> {
   if (isGraphStoreBase(store)) {
     return store.getNode(id);
   }
   return store.getNode(id);
 }
 
-export function readStoreListNodeIds(store: RelationshipReadStore): string[] {
+export async function readStoreListNodeIds(store: RelationshipReadStore): Promise<string[]> {
   if (isGraphStoreBase(store)) {
     return store.listNodeIds();
   }
-  return store.listNodesForGraphExport().map((row) => row.id);
+  return (await store.listNodesForGraphExport()).map((row) => row.id);
 }
 
-export function readStoreIsNodeArchived(store: RelationshipReadStore, id: string): boolean {
+export async function readStoreIsNodeArchived(store: RelationshipReadStore, id: string): Promise<boolean> {
   if (isGraphStoreBase(store)) {
     return store.isNodeArchived(id);
   }
@@ -320,14 +324,14 @@ export function isQueryableReadStore(
 }
 
 /** Composite association id for a projection, when known from store data. */
-export function readStoreCompositeTypeForRelationship(
+export async function readStoreCompositeTypeForRelationship(
   store: RelationshipReadStore,
   relationship: Relationship,
-): string | null {
+): Promise<string | null> {
   if (isGraphStoreBase(store)) {
-    const registry = store.readRelationshipTypes();
+    const registry = await store.readRelationshipTypes();
     let match: string | null = null;
-    store.forEachRelationshipRecord((entry) => {
+    await store.forEachRelationshipRecord((entry) => {
       if (match) return;
       const { projections } = expandRelationshipEntry(entry, registry);
       for (const row of projections) {
@@ -339,17 +343,17 @@ export function readStoreCompositeTypeForRelationship(
     return match;
   }
   if (!relationship.recordId) return null;
-  const record = store.getRelationshipRecord(relationship.recordId);
+  const record = await store.getRelationshipRecord(relationship.recordId);
   return record?.compositeType ? normalizeRelationshipTypeId(record.compositeType) : null;
 }
 
 /** Incident projection count for a node (matches SQLite cache semantics). */
-export function readStoreCountIncidentRelationships(
+export async function readStoreCountIncidentRelationships(
   store: RelationshipReadStore,
   nodeId: string,
-): number {
+): Promise<number> {
   if (isGraphStoreBase(store)) {
-    return store.listRelationshipProjections(nodeId, { direction: "both" }).length;
+    return (await store.listRelationshipProjections(nodeId, { direction: "both" })).length;
   }
   return store.countIncidentRelationships(nodeId);
 }
@@ -357,16 +361,16 @@ export function readStoreCountIncidentRelationships(
 function hasListNodesWithBodyLike(
   store: RelationshipReadStore,
 ): store is RelationshipReadStore & {
-  listNodesWithBodyLike: (pattern: string) => { id: string; body: string }[];
+  listNodesWithBodyLike: (pattern: string) => Promise<{ id: string; body: string }[]>;
 } {
   return typeof (store as { listNodesWithBodyLike?: unknown }).listNodesWithBodyLike === "function";
 }
 
 /** Nodes whose stored body text matches a substring (backlink discovery). */
-export function readStoreListNodesWithBodyLike(
+export async function readStoreListNodesWithBodyLike(
   store: RelationshipReadStore,
   needle: string,
-): { id: string; body: string }[] {
+): Promise<{ id: string; body: string }[]> {
   if (isGraphStoreBase(store)) {
     // ComposedGraphStore exposes listNodesWithBodyLike via the SQLite cache.
     if (hasListNodesWithBodyLike(store)) {
@@ -374,8 +378,8 @@ export function readStoreListNodesWithBodyLike(
     }
     const pattern = needle.replace(/^%|%$/g, "");
     const matches: { id: string; body: string }[] = [];
-    for (const id of store.listNodeIds()) {
-      const node = store.getNode(id);
+    for (const id of await store.listNodeIds()) {
+      const node = await store.getNode(id);
       if (!node) continue;
       const body = typeof node.properties.body === "string" ? node.properties.body : "";
       if (body.includes(pattern)) {
@@ -388,11 +392,11 @@ export function readStoreListNodesWithBodyLike(
 }
 
 /** Projection lookup by id (legacy cache) or endpoint match on graph store. */
-export function readStoreGetRelationship(
+export async function readStoreGetRelationship(
   store: RelationshipReadStore,
   projectionId: string,
   endpoints?: { sourceNodeId: string; targetNodeId: string; type: string },
-): Relationship | null {
+): Promise<Relationship | null> {
   if (isGraphStoreBase(store)) {
     if (endpoints) {
       return store.findRelationshipRecord(
@@ -401,7 +405,7 @@ export function readStoreGetRelationship(
         endpoints.type,
       );
     }
-    for (const rel of listAllRelationshipProjections(store)) {
+    for (const rel of await listAllRelationshipProjections(store)) {
       if (rel.id === projectionId) return rel;
     }
     return null;

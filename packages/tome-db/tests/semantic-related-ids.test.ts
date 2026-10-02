@@ -20,19 +20,19 @@ const PRODUCTS_DB = "0000000000000000000000000S";
 const scene = "33333333333333333333333333";
 const book = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-describe("semantic-related-ids", () => {
-  const fixture = createTestContentFixture("tome-semantic-related-");
+describe("semantic-related-ids", async () => {
+  const fixture = await createTestContentFixture("tome-semantic-related-");
   const contentDir = fixture.ctx.store.contentDir;
 
-  seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
-  seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
-  seedTestNode(fixture, { id: scene, properties: { title: "Scene" } });
-  seedTestNode(fixture, { id: book, properties: { title: "Book" } });
-  seedTestRelationships(fixture, [
+  await seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
+  await seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
+  await seedTestNode(fixture, { id: scene, properties: { title: "Scene" } });
+  await seedTestNode(fixture, { id: book, properties: { title: "Book" } });
+  await seedTestRelationships(fixture, [
     { source: scene, target: SCENES_DB, type: "ordered_member_of", properties: { order: "1" } },
     { source: book, target: PRODUCTS_DB, type: "ordered_member_of", properties: { order: "1" } },
   ]);
-  seedTestCompositeRelationships(fixture, [
+  await seedTestCompositeRelationships(fixture, [
     {
       a: scene,
       b: book,
@@ -52,9 +52,9 @@ describe("semantic-related-ids", () => {
     },
   };
   fixture.ctx.store.writeRelationshipTypesFile(registry);
-  fixture.ctx.sync.syncRelationships();
+  await fixture.ctx.sync.syncRelationships();
 
-  test("resolves related id through Imp semantic bind", () => {
+  test("resolves related id through Imp semantic bind", async () => {
     const pathContext = loadSemanticRelatedPathContext(contentDir);
     expect(
       relationTokenForRelationshipType(
@@ -64,7 +64,7 @@ describe("semantic-related-ids", () => {
       ),
     ).toBe("product");
     expect(
-      firstRelatedNodeId(
+      await firstRelatedNodeId(
         fixture.ctx.graphStore,
         scene,
         TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
@@ -74,10 +74,10 @@ describe("semantic-related-ids", () => {
     ).toBe(book);
   });
 
-  test("fails without a table-schema relation column (no composite-SQL fallback)", () => {
+  test("fails without a table-schema relation column (no composite-SQL fallback)", async () => {
     seedTestTableSchema(fixture, SCENES_DB, []);
     const pathContext = loadSemanticRelatedPathContext(contentDir);
-    expect(() =>
+    await expect(
       firstRelatedNodeId(
         fixture.ctx.graphStore,
         scene,
@@ -85,10 +85,10 @@ describe("semantic-related-ids", () => {
         SCENES_DB,
         pathContext,
       ),
-    ).toThrow(/No relation column/);
+    ).rejects.toThrow(/No relation column/);
   });
 
-  test("rejects non-queryable stores", () => {
+  test("rejects non-queryable stores", async () => {
     // Restore schema so bind can succeed if executeImp were present.
     seedTestTableSchema(fixture, SCENES_DB, [
       {
@@ -100,7 +100,7 @@ describe("semantic-related-ids", () => {
       },
     ]);
     const pathContext = loadSemanticRelatedPathContext(contentDir);
-    expect(() =>
+    await expect(
       firstRelatedNodeId(
         fixture.ctx.cache,
         scene,
@@ -108,10 +108,10 @@ describe("semantic-related-ids", () => {
         SCENES_DB,
         pathContext,
       ),
-    ).toThrow(/Queryable graph store/);
+    ).rejects.toThrow(/Queryable graph store/);
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

@@ -13,25 +13,25 @@ import { createExtensionGraphQueryServices } from "../src/extension-graph-query"
 
 const NEIGHBOR_ASSOCIATION_ID = "000000000000000000000000C2";
 
-describe("createExtensionGraphQueryServices", () => {
+describe("createExtensionGraphQueryServices", async () => {
   let fixture: TestContentFixture;
   const typeId = "0000000000000000000000002K";
   const cityA = "0000000000000000000000001C";
   const cityB = "0000000000000000000000001X";
   const house = "00000000000000000000000029";
 
-  beforeAll(() => {
-    fixture = createTestContentFixture("tome-ext-graph-query-");
-    seedTestNode(fixture, { id: typeId, properties: { title: "Locations" } });
-    seedTestNode(fixture, { id: cityA, properties: { title: "City A" } });
-    seedTestNode(fixture, { id: cityB, properties: { title: "City B" } });
-    seedTestNode(fixture, { id: house, properties: { title: "House" } });
-    seedTestRelationships(fixture, [
+  beforeAll(async () => {
+    fixture = await createTestContentFixture("tome-ext-graph-query-");
+    await seedTestNode(fixture, { id: typeId, properties: { title: "Locations" } });
+    await seedTestNode(fixture, { id: cityA, properties: { title: "City A" } });
+    await seedTestNode(fixture, { id: cityB, properties: { title: "City B" } });
+    await seedTestNode(fixture, { id: house, properties: { title: "House" } });
+    await seedTestRelationships(fixture, [
       { source: house, target: typeId, type: "member_of" },
       { source: cityA, target: typeId, type: "member_of" },
       { source: cityB, target: typeId, type: "member_of" },
     ]);
-    seedTestCompositeRelationships(fixture, [
+    await seedTestCompositeRelationships(fixture, [
       {
         a: house,
         b: cityA,
@@ -56,8 +56,8 @@ describe("createExtensionGraphQueryServices", () => {
     ]);
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 
   test("listTypeMembers returns is_a instances", async () => {

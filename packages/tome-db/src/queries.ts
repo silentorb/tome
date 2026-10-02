@@ -1,5 +1,5 @@
 import type { RelationshipReadStore } from "./graph-store/relationship-read";
-import { readStoreGetNode, readStoreListNodeIds } from "./graph-store/relationship-read";
+import { readStoreGetNode } from "./graph-store/relationship-read";
 import { isArchivedNode } from "./archive-status";
 import type { TomeWriteContext } from "./content/write-context";
 import { syncAfterNodeWrite } from "./content/write-context";
@@ -46,44 +46,48 @@ function bodyFromProperties(properties: Record<string, unknown>): string {
   return typeof body === "string" ? body : "";
 }
 
-export function getNodeDetail(db: RelationshipReadStore, id: string, contentDir?: string): NodeDetail | null {
-  const node = readStoreGetNode(db, id);
+export async function getNodeDetail(
+  db: RelationshipReadStore,
+  id: string,
+  contentDir?: string,
+): Promise<NodeDetail | null> {
+  const node = await readStoreGetNode(db, id);
   if (!node) return null;
   return {
     id: node.id,
     title: titleFromProperties(node.properties),
-    primaryTypeTitle: primaryTypeTitleForInstance(db, id),
+    primaryTypeTitle: await primaryTypeTitleForInstance(db, id),
     body: bodyFromProperties(node.properties),
-    isTypeTable: isTypeTableNode(db, id, contentDir),
-    archived: isArchivedNode(db, id, contentDir),
+    isTypeTable: await isTypeTableNode(db, id, contentDir),
+    archived: await isArchivedNode(db, id, contentDir),
   };
 }
 
-function touchNodeTimestamps(
+async function touchNodeTimestamps(
   ctx: TomeWriteContext,
   id: string,
   existing: Record<string, unknown>,
-): void {
+): Promise<void> {
   const now = new Date().toISOString();
   const patch: Record<string, string> = { modified_at: now };
   if (typeof existing.created_at !== "string" || !existing.created_at.trim()) {
     patch.created_at = now;
   }
-  ctx.graphStore.mergeNodeProperties(id, patch);
-  syncAfterNodeWrite(ctx, id);
+  await ctx.graphStore.mergeNodeProperties(id, patch);
+  await syncAfterNodeWrite(ctx, id);
 }
 
-export function updateNodeBody(ctx: TomeWriteContext, id: string, body: string): boolean {
-  const node = ctx.graphStore.getNode(id);
+export async function updateNodeBody(ctx: TomeWriteContext, id: string, body: string): Promise<boolean> {
+  const node = await ctx.graphStore.getNode(id);
   if (!node) return false;
   const { body: _removed, ...props } = node.properties;
-  ctx.graphStore.upsertNode({ id: node.id, properties: props }, body);
-  touchNodeTimestamps(ctx, id, node.properties);
+  await ctx.graphStore.upsertNode({ id: node.id, properties: props }, body);
+  await touchNodeTimestamps(ctx, id, node.properties);
   return true;
 }
 
-export function updateNodeTitle(ctx: TomeWriteContext, id: string, title: string): boolean {
-  const node = ctx.graphStore.getNode(id);
+export async function updateNodeTitle(ctx: TomeWriteContext, id: string, title: string): Promise<boolean> {
+  const node = await ctx.graphStore.getNode(id);
   if (!node) return false;
   const trimmed = title.trim();
   if (!isPersistableNodeTitle(trimmed)) return false;
@@ -92,8 +96,8 @@ export function updateNodeTitle(ctx: TomeWriteContext, id: string, title: string
   const content = stripLeadingTitleHeadingIfMatches(body, oldTitle);
   const { body: _removed, ...rest } = node.properties;
   const props = { ...rest, title: trimmed };
-  ctx.graphStore.upsertNode({ id: node.id, properties: props }, content);
-  touchNodeTimestamps(ctx, id, node.properties);
+  await ctx.graphStore.upsertNode({ id: node.id, properties: props }, content);
+  await touchNodeTimestamps(ctx, id, node.properties);
   return true;
 }
 

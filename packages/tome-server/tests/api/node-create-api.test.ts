@@ -15,8 +15,8 @@ import { createTestApiFromContent } from "./test-api-setup";
 const sourceId = "0000000000000000000000001E";
 const databaseId = "0000000000000000000000001X";
 
-describe("node create API", () => {
-  const fixture = createTestContentFixture("tome-create-api-");
+describe("node create API", async () => {
+  const fixture = await createTestContentFixture("tome-create-api-");
   let featuresRelationshipTypeId = "";
   let featuresType = "";
 
@@ -27,21 +27,21 @@ describe("node create API", () => {
     fixture.ctx.store.writeRelationshipTypesFile(registry);
   });
 
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: TEST_HOME_NODE_ID,
     properties: { title: "Home" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: sourceId,
     properties: { title: "Parent page" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: databaseId,
     properties: typeTableMarkerProperties("Features DB"),
   });
   seedTestTableSchema(fixture, databaseId, []);
 
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
 
   test("POST /api/nodes creates standalone node", async () => {
     const res = await api.handler(
@@ -100,16 +100,16 @@ describe("node create API", () => {
     expect(rel).not.toBeNull();
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     api.handler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 });
 
-describe("connections API", () => {
+describe("connections API", async () => {
   const linkSourceId = "00000000000000000000000032";
   const linkTargetId = "00000000000000000000000033";
-  const fixture = createTestContentFixture("tome-conn-api-");
+  const fixture = await createTestContentFixture("tome-conn-api-");
   let featuresType = "";
 
   beforeAll(() => {
@@ -119,9 +119,9 @@ describe("connections API", () => {
     fixture.ctx.store.writeRelationshipTypesFile(registry);
   });
 
-  seedTestNode(fixture, { id: linkSourceId, properties: { title: "Link source" } });
-  seedTestNode(fixture, { id: linkTargetId, properties: { title: "Link target" } });
-  const api = createTestApiFromContent(fixture);
+  await seedTestNode(fixture, { id: linkSourceId, properties: { title: "Link source" } });
+  await seedTestNode(fixture, { id: linkTargetId, properties: { title: "Link target" } });
+  const api = await createTestApiFromContent(fixture);
 
   test("POST and DELETE connections link and unlink existing nodes", async () => {
     const linkRes = await api.handler(
@@ -153,8 +153,8 @@ describe("connections API", () => {
     expect(fixture.ctx.store.findRelationship(linkSourceId, linkTargetId, featuresType)).toBeNull();
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     api.handler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 });

@@ -18,11 +18,11 @@ import { listSetMemberRowConnections } from "../set-membership";
 import type { RelationScopeLayerConfig, RelationScopeTab } from "tome-graph-interfaces";
 import { numericSortKey, nodeTitle } from "./helpers";
 
-function scopeMembershipSortKey(
+async function scopeMembershipSortKey(
   db: RelationshipReadStore,
   scopeNodeId: string,
   contentDir: string,
-): number {
+): Promise<number> {
   const runtime = loadRelationshipRuntimeFromContent(contentDir);
   const registry = loadRelationshipTypesFromContent(contentDir);
   for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
@@ -31,7 +31,7 @@ function scopeMembershipSortKey(
     if (!def) continue;
     const memberProjection = memberSideProjectionType(registry, composite);
     const property = orderedPropertyName(def);
-    for (const edge of listRelationshipsFromSource(db, scopeNodeId, memberProjection)) {
+    for (const edge of await listRelationshipsFromSource(db, scopeNodeId, memberProjection)) {
       return numericSortKey(edge.properties[property], 999);
     }
   }
@@ -39,19 +39,19 @@ function scopeMembershipSortKey(
 }
 
 /** Discover distinct related scope nodes among type-table members. */
-export function discoverRelationScopes(
+export async function discoverRelationScopes(
   db: RelationshipReadStore,
   typeDatabaseId: string,
   config: RelationScopeLayerConfig,
   contentDir?: string,
   pathContext?: SemanticRelatedPathContext,
-): RelationScopeTab[] {
+): Promise<RelationScopeTab[]> {
   const dir = contentDir ?? resolveContentPath();
   const ctx = pathContext ?? loadSemanticRelatedPathContext(dir);
   const scopeIds = new Set<string>();
 
-  for (const connection of listSetMemberRowConnections(db, typeDatabaseId, dir)) {
-    const scopeId = firstRelatedNodeId(
+  for (const connection of await listSetMemberRowConnections(db, typeDatabaseId, dir)) {
+    const scopeId = await firstRelatedNodeId(
       db,
       connection.sourceNodeId,
       config.memberToScopeComposite,
@@ -61,37 +61,38 @@ export function discoverRelationScopes(
     if (scopeId) scopeIds.add(scopeId);
   }
 
-  const scopes: RelationScopeTab[] = [];
-  for (const id of scopeIds) {
-    scopes.push({ id, name: nodeTitle(db, id) });
-  }
-
-  scopes.sort((a, b) => {
-    const keyA = scopeMembershipSortKey(db, a.id, dir);
-    const keyB = scopeMembershipSortKey(db, b.id, dir);
-    if (keyA !== keyB) return keyA - keyB;
+  const scopesWithKeys = await Promise.all(
+    [...scopeIds].map(async (id) => ({
+      id,
+      name: await nodeTitle(db, id),
+      sortKey: await scopeMembershipSortKey(db, id, dir),
+    })),
+  );
+  scopesWithKeys.sort((a, b) => {
+    if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey;
     return a.name.localeCompare(b.name, undefined, { sensitivity: "base" });
   });
+  const scopes: RelationScopeTab[] = scopesWithKeys.map(({ id, name }) => ({ id, name }));
 
   return scopes;
 }
 
 /** Whether a member belongs to the given scope tab. */
-export function memberMatchesScope(
+export async function memberMatchesScope(
   db: RelationshipReadStore,
   memberId: string,
   config: RelationScopeLayerConfig,
   scopeId: string,
   startType: string,
   pathContext: SemanticRelatedPathContext,
-): boolean {
+): Promise<boolean> {
   return (
-    firstRelatedNodeId(
+    (await firstRelatedNodeId(
       db,
       memberId,
       config.memberToScopeComposite,
       startType,
       pathContext,
-    ) === scopeId
+    )) === scopeId
   );
 }

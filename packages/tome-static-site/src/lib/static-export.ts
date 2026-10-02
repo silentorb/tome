@@ -72,13 +72,13 @@ function buildItemsTabsMeta(
   };
 }
 
-function buildExtraTabPayload(
+async function buildExtraTabPayload(
   store: RelationshipReadStore,
   nodeId: string,
   tabId: string,
   contentDir: string,
-): TabItemsPayload | null {
-  const databaseView = getDatabaseViewDetail(store, nodeId, tabId, contentDir);
+): Promise<TabItemsPayload | null> {
+  const databaseView = await getDatabaseViewDetail(store, nodeId, tabId, contentDir);
   if (!databaseView) return null;
   return {
     kind: "database",
@@ -94,13 +94,13 @@ function buildExtraTabPayload(
   } satisfies DatabaseTabPayload;
 }
 
-export function buildSiteNode(
+export async function buildSiteNode(
   store: RelationshipReadStore,
   id: string,
   contentDir: string,
   schema: SchemaFile,
-): SiteNode | null {
-  const detail = getNodePageDetail(store, id, { contentDir });
+): Promise<SiteNode | null> {
+  const detail = await getNodePageDetail(store, id, { contentDir });
   if (!detail) return null;
 
   const itemsSection = findItemsSection(detail.sections);
@@ -108,7 +108,8 @@ export function buildSiteNode(
     detail.isTypeTable && itemsSection ? buildItemsTabsMeta(itemsSection) : undefined;
 
   const multiTab = itemsTabs !== undefined && itemsTabs.items.length > 1;
-  const nodeProperties = readStoreGetNode(store, id)?.properties ?? null;
+  const node = await readStoreGetNode(store, id);
+  const nodeProperties = node?.properties ?? null;
   const urlAlias = readUrlAlias(nodeProperties) ?? undefined;
   const layout = readStaticSiteLayout(nodeProperties);
 
@@ -128,11 +129,11 @@ export function buildSiteNode(
   };
 }
 
-export function buildExtraTabPayloadsAndRoutes(
+export async function buildExtraTabPayloadsAndRoutes(
   store: RelationshipReadStore,
   nodes: SiteNode[],
   contentDir: string,
-): { tabItemsPayloads: Record<string, TabItemsPayload>; tabRoutes: TabRoute[] } {
+): Promise<{ tabItemsPayloads: Record<string, TabItemsPayload>; tabRoutes: TabRoute[] }> {
   const tabItemsPayloads: Record<string, TabItemsPayload> = {};
   const tabRoutes: TabRoute[] = [];
 
@@ -141,7 +142,7 @@ export function buildExtraTabPayloadsAndRoutes(
     const { items, defaultTabId } = node.itemsTabs;
     for (const tab of items) {
       if (tab.id === defaultTabId) continue;
-      const payload = buildExtraTabPayload(store, node.id, tab.id, contentDir);
+      const payload = await buildExtraTabPayload(store, node.id, tab.id, contentDir);
       if (!payload) continue;
       const key = tabPayloadKey(node.id, tab.id);
       tabItemsPayloads[key] = payload;

@@ -28,12 +28,10 @@ export async function executeQueryBlock(
     pageNodeId: corpus?.pageNodeId,
     corpus: corpus?.lookup,
   });
-  const executed = await Promise.resolve(
-    executeImp.executeImp(graph, {
+  const executed = await executeImp.executeImp(graph, {
       pageNodeId: corpus?.pageNodeId,
       parameters: values,
-    }),
-  );
+    });
   return rowsToTable(executed.rows);
 }
 

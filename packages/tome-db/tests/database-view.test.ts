@@ -3,7 +3,7 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { GraphDatabase } from "tome-sqlite";
+import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { contentModelDir,
@@ -49,6 +49,7 @@ describe("database-view", () => {
   invalidateRelationshipTypesCache();
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
+  const cache = wrapSyncGraphDatabase(db);
 
   function writeSchema(
     enums: Record<
@@ -90,12 +91,12 @@ describe("database-view", () => {
     invalidateTableSchemasCache();
   }
 
-  test("returns null for non-database vertices", () => {
+  test("returns null for non-database vertices", async () => {
     db.upsertNode("page1", { title: "Alpha" });
-    expect(getDatabaseViewDetail(db, "page1", undefined, contentDir)).toBeNull();
+    expect(await getDatabaseViewDetail(cache, "page1", undefined, contentDir)).toBeNull();
   });
 
-  test("reads IS_A edges for a view", () => {
+  test("reads IS_A edges for a view", async () => {
     const databaseId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     writeTableSchema(databaseId, [
       { key: "priority", name: "Priority", type: "select", enumId: "priority" },
@@ -106,7 +107,7 @@ describe("database-view", () => {
       priority: "High",
     });
 
-    const detail = getDatabaseViewDetail(db, databaseId, "all", contentDir);
+    const detail = await getDatabaseViewDetail(cache, databaseId, "all", contentDir);
     expect(detail).toMatchObject({
       id: databaseId,
       title: "Features",
@@ -133,7 +134,7 @@ describe("database-view", () => {
     });
   });
 
-  test("derives row name from linked page title, not edge row_name", () => {
+  test("derives row name from linked page title, not edge row_name", async () => {
     const databaseId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
@@ -143,11 +144,11 @@ describe("database-view", () => {
       row_name: "Stale CSV label",
     });
 
-    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir);
     expect(detail?.rows[0]?.name).toBe("Peace in the eye of the storm");
   });
 
-  test("hydrates relation columns from row is_a membership", () => {
+  test("hydrates relation columns from row is_a membership", async () => {
     const databaseId = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
     const parentId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
     writeTableSchema(databaseId, [
@@ -165,7 +166,7 @@ describe("database-view", () => {
     db.upsertRelationship("page3", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
     db.upsertRelationship("page3", parentId, projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1), { ordinal: 0 });
 
-    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir);
     expect(detail?.rows[0]?.cells.parents).toBe("Parent feature");
     expect(detail?.columnDefs?.[0]).toMatchObject({
       type: "relation",
@@ -176,7 +177,7 @@ describe("database-view", () => {
     ]);
   });
 
-  test("enriches select column with explicit enumId to editable enum metadata", () => {
+  test("enriches select column with explicit enumId to editable enum metadata", async () => {
     const databaseId = "0000000000000000000000000K";
     writeSchema({
       yes_no: { options: ["False", "True"], default: "False" },
@@ -196,7 +197,7 @@ describe("database-view", () => {
       plot_is_driven_by_mc_desire: "True",
     });
 
-    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir);
     expect(detail?.columnDefs?.[0]).toMatchObject({
       key: "plot_is_driven_by_mc_desire",
       type: "enum",
@@ -207,7 +208,7 @@ describe("database-view", () => {
     expect(detail?.rows[0]?.cells.plot_is_driven_by_mc_desire).toBe("True");
   });
 
-  test("exposes set membership perspectives from a non-conventional composite", () => {
+  test("exposes set membership perspectives from a non-conventional composite", async () => {
     const databaseId = "FFFFFFFFFFFFFFFFFFFFFFFFFF";
     writeFileSync(
       relationshipTypesFilePath(contentDir),
@@ -230,7 +231,7 @@ describe("database-view", () => {
     db.upsertNode("member1", { title: "Member one" });
     db.upsertRelationship("member1", databaseId, projectionTypeForEndpoint("000000000000000000000000B6", 1), { row_index: 0 });
 
-    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir);
     expect(detail).toMatchObject({
       viewRelationshipType: "000000000000000000000000B6",
       memberSidePerspective: projectionTypeForEndpoint("000000000000000000000000B6", 1),
@@ -260,7 +261,7 @@ describe("database-view", () => {
     invalidateRelationshipTypesCache();
   });
 
-  test("ignores orphan_row properties on the database vertex", () => {
+  test("ignores orphan_row properties on the database vertex", async () => {
     const databaseId = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Tasks") });
@@ -271,11 +272,11 @@ describe("database-view", () => {
       }),
     });
 
-    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir);
     expect(detail?.rows).toEqual([]);
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     db.close();
     rmSync(dir, { recursive: true, force: true });
   });

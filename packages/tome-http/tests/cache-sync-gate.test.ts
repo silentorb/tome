@@ -13,7 +13,7 @@ function stubServices(): TomeGraphServices {
   } as unknown as TomeGraphServices;
 }
 
-describe("createApiHandler cache sync gate", () => {
+describe("createApiHandler cache sync gate", async () => {
   test("health reports syncing and data routes return 503 until ready", async () => {
     let status: CacheSyncPublicStatus = {
       ready: false,

@@ -86,7 +86,9 @@ Legacy singular `store` + `cache` (still accepted; normalized at load):
 - `services` may be **empty**: the host logs a warning and stays up.
 - Path defaults and `TOME_CORPORA` expand into flatfile `dataStores` during normalize — see [tome-sync.md](./tome-sync.md) and [multi-corpus.md](./multi-corpus.md). Explicit `dataStores` skip corpora env expansion; use legacy `store`+`cache` (or a multi-corpus `dataStores` map) when relying on `TOME_CORPORA`.
 
-Bootstrap order: normalize config → `openDataStoreSession` (open stores, wire Imp sync observers) → open graph services **without** blocking sync or file watchers → **start service modules (HTTP binds)** → run `CacheSync.ensureReadyAsync()` → mark ready, `startWatching()` (observers already installed; do not double-subscribe).
+Bootstrap order: normalize config → `openDataStoreSession` (open stores including **worker-backed** SQLite cache, wire Imp sync observers) → open graph services **without** waiting for full cache rebuild or file watchers → **start service modules (HTTP binds)** → await `CacheSync.ensureReady()` → mark ready, `startWatching()` (observers already installed; do not double-subscribe).
+
+`TomeGraphServices` methods are Promise-returning; HTTP handlers `await` them. Long SQL runs off the main thread (SQLite worker) so other requests and health checks can progress while a heavy query is in flight.
 
 While syncing, `/api/health` reports `ready: false` / `syncing: true` with optional numeric `progress`; other API routes return **503** `cache_syncing`. After sync completes, health reports `ready: true` and data routes work normally. See [tome-db.md](./tome-db.md) § Cache sync at startup.
 

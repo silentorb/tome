@@ -29,14 +29,14 @@ export function createExtensionSchemaQueryServices(
   contentDir: string,
 ): ExtensionSchemaQueryServices {
   return {
-    listTypeTables(): SchemaQueryTypeTable[] {
+    async listTypeTables(): Promise<SchemaQueryTypeTable[]> {
       const schemas = loadTableSchemasFromContent(contentDir);
       const entries: SchemaQueryTypeTable[] = [];
       for (const id of Object.keys(schemas.tables)) {
         entries.push({
           id,
-          title: titleFromNode(readStoreGetNode(store, id)),
-          memberCount: setMemberIds(store, id, contentDir).length,
+          title: titleFromNode(await readStoreGetNode(store, id)),
+          memberCount: (await setMemberIds(store, id, contentDir)).length,
         });
       }
       entries.sort((a, b) =>
@@ -55,12 +55,12 @@ export function createExtensionSchemaQueryServices(
       }));
     },
 
-    listRelationColumnEdges(): SchemaQueryRelationColumnEdge[] {
+    async listRelationColumnEdges(): Promise<SchemaQueryRelationColumnEdge[]> {
       const schemas = loadTableSchemasFromContent(contentDir);
       const registry = loadRelationshipTypesFromContent(contentDir);
       const titleByTypeId = new Map<string, string>();
       for (const id of Object.keys(schemas.tables)) {
-        titleByTypeId.set(id, titleFromNode(readStoreGetNode(store, id)));
+        titleByTypeId.set(id, titleFromNode(await readStoreGetNode(store, id)));
       }
 
       const edges: SchemaQueryRelationColumnEdge[] = [];

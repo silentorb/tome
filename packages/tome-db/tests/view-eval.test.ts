@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { GraphDatabase } from "tome-sqlite";
+import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { sortEvalRows, type EvalRow } from "../src/row-sort";
@@ -97,13 +97,14 @@ describe("row-sort", () => {
 });
 
 describe("getDatabaseViewDetail with custom tabs", () => {
-  test("uses views.json tab sorts and shows all schema columns", () => {
+  test("uses views.json tab sorts and shows all schema columns", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-tabs-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
     writeTestSetRelationshipTypes(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
+  const cache = wrapSyncGraphDatabase(db);
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
     writeFileSync(
@@ -143,7 +144,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { status: "Done", row_index: 0 });
     db.upsertRelationship("page2", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { status: "Todo", row_index: 1 });
 
-    const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
+    const view = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir);
     expect(view?.tabs.items.map((tab) => tab.label)).toEqual(["Done only"]);
     expect(view?.rows).toHaveLength(2);
     expect(view?.rows.map((row) => row.name)).toEqual(["Alpha", "Zebra"]);
@@ -153,13 +154,14 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("applies section properties allowlist from views.json", () => {
+  test("applies section properties allowlist from views.json", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-cols-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
     writeTestSetRelationshipTypes(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
+  const cache = wrapSyncGraphDatabase(db);
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
     writeFileSync(
@@ -201,20 +203,21 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertNode("page1", { title: "Row" });
     db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
 
-    const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
+    const view = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir);
     expect(view?.columns).toEqual(["status"]);
 
     db.close();
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("filters columns by per-view properties allowlist", () => {
+  test("filters columns by per-view properties allowlist", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-hidden-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
     writeTestSetRelationshipTypes(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
+  const cache = wrapSyncGraphDatabase(db);
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
     writeFileSync(
@@ -256,7 +259,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertNode("page1", { title: "Row" });
     db.upsertRelationship("page1", databaseId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
 
-    const view = getDatabaseViewDetail(db, databaseId, undefined, contentDir);
+    const view = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir);
     expect(view?.allColumns).toEqual(["status", "priority"]);
     expect(view?.columns).toEqual(["status"]);
     expect(view?.columnDefs?.map((col) => col.key)).toEqual(["status"]);
@@ -265,13 +268,14 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("sorts relation columns by link count using tab sorts", () => {
+  test("sorts relation columns by link count using tab sorts", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-db-view-rel-sort-"));
     const contentDir = join(dir, "content");
     mkdirSync(contentModelDir(contentDir), { recursive: true });
     writeTestSetRelationshipTypes(contentDir);
     process.env.TOME_CONTENT_PATH = contentDir;
     const db = new GraphDatabase(join(dir, "test.sqlite"), { clean: true });
+  const cache = wrapSyncGraphDatabase(db);
     const featuresDb = "0000000000000000000000002P";
     const inspirationsDb = "0000000000000000000000000K";
 
@@ -355,7 +359,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     db.upsertRelationship("feature-many", "insp-b", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0));
     db.upsertRelationship("feature-many", "insp-c", projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0));
 
-    const view = getDatabaseViewDetail(db, featuresDb, "by-inspirations", contentDir);
+    const view = await getDatabaseViewDetail(cache, featuresDb, "by-inspirations", contentDir);
     expect(view?.rows.map((row) => row.name)).toEqual([
       "Many inspirations",
       "Few inspirations",
@@ -364,7 +368,7 @@ describe("getDatabaseViewDetail with custom tabs", () => {
     expect(view?.rows[2]?.relationCells?.inspirations).toEqual([]);
     expect(view?.rowsWindow).toEqual({ offset: 0, limit: 3, total: 3, hasMore: false });
 
-    const windowed = getDatabaseViewDetail(db, featuresDb, "by-inspirations", contentDir, {
+    const windowed = await getDatabaseViewDetail(cache, featuresDb, "by-inspirations", contentDir, {
       limit: 1,
       offset: 0,
     });
@@ -393,9 +397,11 @@ describe("getDatabaseViewDetail with custom tabs", () => {
         };
       },
     };
-    const store = Object.assign(db, { getSearch: () => search });
+    const store = Object.assign(db, { getSearch: () => search }) as typeof db & {
+      getSearch: () => typeof search;
+    };
 
-    const filtered = getDatabaseViewDetail(store, featuresDb, "by-inspirations", contentDir, {
+    const filtered = await getDatabaseViewDetail(store as never, featuresDb, "by-inspirations", contentDir, {
       q: "few",
       limit: 10,
       offset: 0,

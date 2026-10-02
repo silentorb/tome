@@ -6,7 +6,7 @@ import { ContentStore } from "../../src/content/store";
 import { contentModelDir, viewsFilePath } from "../../src/content/paths";
 import type { StoreChangeEvent } from "tome-service-interfaces";
 
-describe("ContentStore watching", () => {
+describe("ContentStore watching", async () => {
   test("subscribe receives debounced StoreChangeEvent for model files", async () => {
     const root = mkdtempSync(join(tmpdir(), "tome-store-watch-"));
     const contentDir = join(root, "content");

@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import type { GraphDatabase } from "tome-sqlite";
+import type { TomeQueryCache } from "tome-service-interfaces";
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import {
   loadDynamicColumnSetsFromContent,
@@ -52,8 +52,11 @@ export function loadDynamicColumnSets(
   return [];
 }
 
-export function seedDynamicProperty(db: GraphDatabase, input: SeedDynamicPropertyInput): void {
-  db.runExec(
+export async function seedDynamicProperty(
+  db: TomeQueryCache,
+  input: SeedDynamicPropertyInput,
+): Promise<void> {
+  await db.runExec(
     `INSERT INTO dynamic_fields (id, database_id, column_key, column_name, column_type, resolver_id, docs_path, enabled)
      VALUES (?, ?, ?, ?, ?, ?, '', 1)
      ON CONFLICT(id) DO UPDATE SET
@@ -71,20 +74,23 @@ export function seedDynamicProperty(db: GraphDatabase, input: SeedDynamicPropert
     input.columnType ?? "number",
     input.resolverId,
   );
-  db.runExec("DELETE FROM dynamic_field_params WHERE field_id = ?", input.id);
+  await db.runExec("DELETE FROM dynamic_field_params WHERE field_id = ?", input.id);
   for (const [key, value] of Object.entries(input.params ?? {})) {
-    db.runExec(
+    await db.runExec(
       "INSERT INTO dynamic_field_params (field_id, param_key, param_value) VALUES (?, ?, ?)",
       input.id,
       key,
       JSON.stringify(value),
     );
   }
-  db.runExec("DELETE FROM dynamic_field_view_bindings WHERE field_id = ?", input.id);
+  await db.runExec("DELETE FROM dynamic_field_view_bindings WHERE field_id = ?", input.id);
 }
 
-export function seedDynamicColumnSet(db: GraphDatabase, input: SeedDynamicColumnSetInput): void {
-  db.runExec(
+export async function seedDynamicColumnSet(
+  db: TomeQueryCache,
+  input: SeedDynamicColumnSetInput,
+): Promise<void> {
+  await db.runExec(
     `INSERT INTO dynamic_column_sets (id, database_id, column_key_pattern, column_name_pattern, column_type, resolver_id, docs_path, enabled)
      VALUES (?, ?, ?, ?, ?, ?, '', 1)
      ON CONFLICT(id) DO UPDATE SET
@@ -102,14 +108,14 @@ export function seedDynamicColumnSet(db: GraphDatabase, input: SeedDynamicColumn
     input.columnType ?? "number",
     input.resolverId,
   );
-  db.runExec("DELETE FROM dynamic_column_set_params WHERE set_id = ?", input.id);
+  await db.runExec("DELETE FROM dynamic_column_set_params WHERE set_id = ?", input.id);
   for (const [key, value] of Object.entries(input.params ?? {})) {
-    db.runExec(
+    await db.runExec(
       "INSERT INTO dynamic_column_set_params (set_id, param_key, param_value) VALUES (?, ?, ?)",
       input.id,
       key,
       JSON.stringify(value),
     );
   }
-  db.runExec("DELETE FROM dynamic_column_set_view_bindings WHERE set_id = ?", input.id);
+  await db.runExec("DELETE FROM dynamic_column_set_view_bindings WHERE set_id = ?", input.id);
 }

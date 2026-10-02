@@ -27,29 +27,29 @@ function contentDirForReadStore(store: RelationshipReadStore, contentDir?: strin
   return resolveContentPath();
 }
 
-export function memberSetIds(
+export async function memberSetIds(
   store: RelationshipReadStore,
   memberId: string,
   contentDir?: string,
-): string[] {
+): Promise<string[]> {
   const dir = contentDirForReadStore(store, contentDir);
   const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
   const ids = new Set<string>();
   for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
     const memberProjection = memberSideProjectionType(registry, composite);
-    for (const rel of listRelationshipsFromSource(store, memberId, memberProjection)) {
+    for (const rel of await listRelationshipsFromSource(store, memberId, memberProjection)) {
       ids.add(rel.targetNodeId);
     }
   }
   return [...ids];
 }
 
-export function setMemberIds(
+export async function setMemberIds(
   store: RelationshipReadStore,
   setId: string,
   contentDir?: string,
-): string[] {
+): Promise<string[]> {
   const dir = contentDirForReadStore(store, contentDir);
   const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
@@ -57,53 +57,60 @@ export function setMemberIds(
   for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
     const setProjection = setSideProjectionType(registry, composite);
     const memberProjection = memberSideProjectionType(registry, composite);
-    for (const rel of listRelationshipsFromSource(store, setId, setProjection)) {
+    for (const rel of await listRelationshipsFromSource(store, setId, setProjection)) {
       ids.add(rel.targetNodeId);
     }
-    for (const rel of listRelationshipsToTarget(store, setId, memberProjection)) {
+    for (const rel of await listRelationshipsToTarget(store, setId, memberProjection)) {
       ids.add(rel.sourceNodeId);
     }
   }
   return [...ids];
 }
 
-export function setKindForNode(
+export async function setKindForNode(
   store: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
-): SetKind | null {
+): Promise<SetKind | null> {
   const dir = contentDirForReadStore(store, contentDir);
   const archiveId = archiveNodeId(dir);
   if (archiveId && nodeId === archiveId) return "archive";
   if (hasTableSchemaEntry(dir, nodeId)) return "type_table";
-  if (setMemberIds(store, nodeId, dir).length > 0 || memberSetIds(store, nodeId, dir).length > 0) {
+  if (
+    (await setMemberIds(store, nodeId, dir)).length > 0 ||
+    (await memberSetIds(store, nodeId, dir)).length > 0
+  ) {
     return "type_table";
   }
   return null;
 }
 
-export function isSetNode(store: RelationshipReadStore, nodeId: string, contentDir?: string): boolean {
-  return setKindForNode(store, nodeId, contentDir) !== null;
+export async function isSetNode(
+  store: RelationshipReadStore,
+  nodeId: string,
+  contentDir?: string,
+): Promise<boolean> {
+  return (await setKindForNode(store, nodeId, contentDir)) !== null;
 }
 
-export function findSetEdge(
+export async function findSetEdge(
   store: RelationshipReadStore,
   memberId: string,
   setId: string,
   contentDir?: string,
-): Relationship | null {
+): Promise<Relationship | null> {
   const dir = contentDirForReadStore(store, contentDir);
   const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
   for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
     const memberProjection = memberSideProjectionType(registry, composite);
-    const memberSide = listRelationshipsFromSource(store, memberId, memberProjection).find(
+    const memberSide = (await listRelationshipsFromSource(store, memberId, memberProjection)).find(
       (r) => r.targetNodeId === setId,
     );
     if (memberSide) return memberSide;
 
     const setProjection = setSideProjectionType(registry, composite);
-    const setSide = listRelationshipsFromSource(store, setId, setProjection).find(
+    const setSide = (await listRelationshipsFromSource(store, setId, setProjection)).find(
       (r) => r.targetNodeId === memberId,
     );
     if (setSide) {
@@ -118,11 +125,11 @@ export function findSetEdge(
 }
 
 /** Set edges normalized for type-table row building (member as sourceNodeId). */
-export function listSetMemberRowConnections(
+export async function listSetMemberRowConnections(
   store: RelationshipReadStore,
   setId: string,
   contentDir?: string,
-): Relationship[] {
+): Promise<Relationship[]> {
   const dir = contentDirForReadStore(store, contentDir);
   const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
@@ -130,14 +137,14 @@ export function listSetMemberRowConnections(
   for (const composite of typesWithTrait(runtime, SET_TRAIT)) {
     const setProjection = setSideProjectionType(registry, composite);
     const memberProjection = memberSideProjectionType(registry, composite);
-    for (const r of listRelationshipsFromSource(store, setId, setProjection)) {
+    for (const r of await listRelationshipsFromSource(store, setId, setProjection)) {
       byMember.set(r.targetNodeId, {
         ...r,
         sourceNodeId: r.targetNodeId,
         targetNodeId: setId,
       });
     }
-    for (const r of listRelationshipsToTarget(store, setId, memberProjection)) {
+    for (const r of await listRelationshipsToTarget(store, setId, memberProjection)) {
       if (!byMember.has(r.sourceNodeId)) byMember.set(r.sourceNodeId, r);
     }
   }

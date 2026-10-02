@@ -32,11 +32,11 @@ function entry(
   return { a, b, type, ...extra };
 }
 
-describe("relationship-archive helpers", () => {
-  const fixture = createTestContentFixture("tome-rel-archive-helpers-");
+describe("relationship-archive helpers", async () => {
+  const fixture = await createTestContentFixture("tome-rel-archive-helpers-");
   const contentDir = fixture.ctx.store.contentDir;
 
-  afterAll(() => destroyTestContentFixture(fixture));
+  afterAll(async () => await destroyTestContentFixture(fixture));
 
   test("isArchiveSetEntry detects hub membership", () => {
     fixture.ctx.store.writeRelationshipTypesFile({
@@ -70,8 +70,8 @@ describe("relationship-archive helpers", () => {
   });
 });
 
-describe("relationship-archive store mutations", () => {
-  const fixture: TestContentFixture = createTestContentFixture("tome-rel-archive-");
+describe("relationship-archive store mutations", async () => {
+  const fixture: TestContentFixture = await createTestContentFixture("tome-rel-archive-");
   const { store } = fixture.ctx;
 
   store.writeRelationshipTypesFile({
@@ -135,7 +135,7 @@ describe("relationship-archive store mutations", () => {
     expect(store.readRelationshipsFile().relationships).toHaveLength(2);
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

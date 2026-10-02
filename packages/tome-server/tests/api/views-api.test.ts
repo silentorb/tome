@@ -7,7 +7,7 @@ import { serializeViewsFile, serializeWorkspaceFile, VIEWS_FILE_VERSION } from "
 import { contentModelDir, viewsFilePath, workspaceFilePath } from "tome-db/content";
 import { defaultTestWorkspaceFile, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID } from "tome-db/content/test-helpers";
 
-describe("views API", () => {
+describe("views API", async () => {
   test("POST and PATCH relationship views", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-views-api-"));
     const contentDir = join(dir, "content");
@@ -34,7 +34,7 @@ describe("views API", () => {
       }),
     );
 
-    const { handler } = createTestApi({ dbPath: join(dir, "test.sqlite"), contentDir });
+    const { handler } = await createTestApi({ dbPath: join(dir, "test.sqlite"), contentDir });
     const base = `/api/views/nodes/${nodeId}/relationship-types/${TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID}`;
 
     const created = await handler(

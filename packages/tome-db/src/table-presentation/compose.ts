@@ -48,7 +48,7 @@ import {
   resolveTableSearcher,
   runTableSearchWindow,
 } from "../table-search-window";
-import { withProfilingSpan } from "tome-service-interfaces";
+import { withProfilingSpan, withProfilingSpanAsync } from "tome-service-interfaces";
 import type {
   DatabaseRow,
   DatabaseViewDetail,
@@ -102,16 +102,16 @@ function orderedSetMemberProjectionTypes(contentDir: string): string[] {
     .map((composite) => memberSideProjectionType(registry, composite));
 }
 
-function evalRowsFromMembership(
+async function evalRowsFromMembership(
   db: RelationshipReadStore,
   connections: Relationship[],
   reorder: boolean,
-): EvalRow[] {
+): Promise<EvalRow[]> {
   const evalRows: EvalRow[] = [];
   let fallbackOrder = 0;
   for (const connection of connections) {
     const memberId = connection.sourceNodeId;
-    const page = db.getNode(memberId);
+    const page = await db.getNode(memberId);
     fallbackOrder += 10;
     const rowIndex = reorder
       ? numericSortKey(connection.properties[ORDERED_PROPERTY_DEFAULT], fallbackOrder)
@@ -134,7 +134,7 @@ function evalRowsFromMembership(
   return evalRows;
 }
 
-function finishComposedView(args: {
+async function finishComposedView(args: {
   db: RelationshipReadStore;
   composition: TablePresentationComposition;
   databaseId: string;
@@ -151,7 +151,7 @@ function finishComposedView(args: {
   groupHeaders?: GroupHeader[];
   /** When true, relation cells were selected in window SQL — skip TypeScript hydrate. */
   relationFieldsFromSql?: boolean;
-}): DatabaseViewDetail {
+}): Promise<DatabaseViewDetail> {
   const {
     db,
     composition,
@@ -170,7 +170,7 @@ function finishComposedView(args: {
     relationFieldsFromSql,
   } = args;
 
-  const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
+  const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = await applyDynamicProperties(
     db,
     databaseId,
     "default",
@@ -205,7 +205,7 @@ function finishComposedView(args: {
   );
 
   if (!relationFieldsFromSql) {
-    hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, enrichedRows, dir);
+    await hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, enrichedRows, dir);
   }
 
   const windowedRows: DatabaseRow[] = enrichedRows.map((row, index) => ({
@@ -276,7 +276,7 @@ function finishComposedView(args: {
   };
 }
 
-function buildComposedDatabaseViewSql(
+async function buildComposedDatabaseViewSql(
   db: RelationshipReadStore,
   composition: TablePresentationComposition,
   requestedTabId: string | undefined,
@@ -287,7 +287,7 @@ function buildComposedDatabaseViewSql(
   relationshipTypeId: string,
   memberSidePerspective: string,
   sectionLabel: string,
-): DatabaseViewDetail {
+): Promise<DatabaseViewDetail> {
   const plan = explodeTableWindowRequest(db, rowsQuery);
   const windowAttrs = tableWindowProfilingAttrs(plan);
   const projections = listSetMemberProjectionPairs(dir);
@@ -303,7 +303,7 @@ function buildComposedDatabaseViewSql(
       dir,
       `table-presentation "${composition.id}" scope`,
     );
-    const scopeRows = listDistinctSetMemberScopeIds(db, databaseId, {
+    const scopeRows = await listDistinctSetMemberScopeIds(db, databaseId, {
       projections,
       scopeProjectionType,
       scopeOrderProjectionTypes: orderedSetMemberProjectionTypes(dir),
@@ -359,7 +359,7 @@ function buildComposedDatabaseViewSql(
     : undefined;
 
   const excludeKeys = excludedKeys(composition);
-  const { dynamicColumnDefs, hiddenColumnKeys } = listDynamicColumnDefs(
+  const { dynamicColumnDefs, hiddenColumnKeys } = await listDynamicColumnDefs(
     db,
     databaseId,
     "default",
@@ -394,7 +394,7 @@ function buildComposedDatabaseViewSql(
       : [];
   const expressionIndexSorts =
     dynPlans.length > 0
-      ? ensureDynSortIndexes(db, databaseId, dynPlans, dir)
+      ? await ensureDynSortIndexes(db, databaseId, dynPlans, dir)
       : undefined;
 
   const memberPageQuery: MemberPageQuery = {
@@ -419,20 +419,20 @@ function buildComposedDatabaseViewSql(
   let relationFieldsByRow: Record<string, MemberPageRelationFieldLink[]>[] | undefined;
 
   if (plan.searchQuery) {
-    const scopeIds = withProfilingSpan(
+    const scopeIds = await withProfilingSpanAsync(
       "table.search.scopeIds",
       "INTERNAL",
       windowAttrs,
       () => listMemberPageNodeIds(db, databaseId, memberPageQuery),
     );
-    const { hits, rowsWindow: searchWindow } = runTableSearchWindow(
+    const { hits, rowsWindow: searchWindow } = await runTableSearchWindow(
       resolveTableSearcher(db),
       rowsQuery,
       new Set(scopeIds),
       windowAttrs,
     );
     const hitIds = hits.map((h) => h.id);
-    const hydrated = listMemberPage(db, databaseId, {
+    const hydrated = await listMemberPage(db, databaseId, {
       ...memberPageQuery,
       memberIds: hitIds,
       limit: null,
@@ -465,14 +465,14 @@ function buildComposedDatabaseViewSql(
     }
     rowsWindow = searchWindow;
   } else {
-    const windowed = listMemberPage(db, databaseId, memberPageQuery);
+    const windowed = await listMemberPage(db, databaseId, memberPageQuery);
     relationships = windowed.relationships;
     groupIds = windowed.groupIds ?? [];
     relationFieldsByRow = windowed.relationFieldsByRow;
     rowsWindow = buildTableRowsWindow(offset, limit, windowed.total);
   }
 
-  const evalRows = evalRowsFromMembership(db, relationships, false);
+  const evalRows = await evalRowsFromMembership(db, relationships, false);
   applyRelationFieldsToEvalRows(evalRows, relationFieldsByRow);
 
   let memberGroupIds: Map<string, string | null> | undefined;
@@ -483,7 +483,7 @@ function buildComposedDatabaseViewSql(
       const edge = relationships[i]!;
       memberGroupIds.set(edge.sourceNodeId, groupIds[i] ?? null);
     }
-    const headerRows = listComposedGroupHeaders(db, {
+    const headerRows = await listComposedGroupHeaders(db, {
       groupTypeDatabaseId: groupsQuery.groupTypeDatabaseId,
       groupSetProjections: groupsQuery.groupSetProjections,
       groupToScopeProjectionType: groupsQuery.groupToScopeProjectionType,
@@ -496,7 +496,7 @@ function buildComposedDatabaseViewSql(
     }));
   }
 
-  return finishComposedView({
+  return await finishComposedView({
     db,
     composition,
     databaseId,
@@ -515,7 +515,7 @@ function buildComposedDatabaseViewSql(
   });
 }
 
-function buildComposedDatabaseViewLegacy(
+async function buildComposedDatabaseViewLegacy(
   db: RelationshipReadStore,
   composition: TablePresentationComposition,
   requestedTabId: string | undefined,
@@ -526,8 +526,8 @@ function buildComposedDatabaseViewLegacy(
   relationshipTypeId: string,
   memberSidePerspective: string,
   sectionLabel: string,
-): DatabaseViewDetail {
-  const incoming = listSetMemberRowConnections(db, databaseId, dir);
+): Promise<DatabaseViewDetail> {
+  const incoming = await listSetMemberRowConnections(db, databaseId, dir);
 
   let activeScopeId: string | undefined;
   let tabs: DatabaseViewDetail["tabs"];
@@ -537,7 +537,7 @@ function buildComposedDatabaseViewLegacy(
       : undefined;
 
   if (composition.scope) {
-    const scopes = discoverRelationScopes(
+    const scopes = await discoverRelationScopes(
       db,
       databaseId,
       composition.scope,
@@ -561,23 +561,23 @@ function buildComposedDatabaseViewLegacy(
       composition.scope &&
       activeScopeId &&
       pathContext &&
-      !memberMatchesScope(
+      !(await memberMatchesScope(
         db,
         memberId,
         composition.scope,
         activeScopeId,
         databaseId,
         pathContext,
-      )
+      ))
     ) {
       continue;
     }
     scopedConnections.push(connection);
   }
 
-  const evalRows = evalRowsFromMembership(db, scopedConnections, Boolean(composition.sequence));
+  const evalRows = await evalRowsFromMembership(db, scopedConnections, Boolean(composition.sequence));
 
-  const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
+  const { rows: enrichedRows, dynamicColumnDefs, hiddenColumnKeys } = await applyDynamicProperties(
     db,
     databaseId,
     "default",
@@ -622,7 +622,7 @@ function buildComposedDatabaseViewLegacy(
   let memberGroupIds = new Map<string, string | null>();
 
   if (composition.groups && pathContext) {
-    const headers = groupsForScope(
+    const headers = await groupsForScope(
       db,
       composition.groups,
       activeScopeId,
@@ -632,7 +632,7 @@ function buildComposedDatabaseViewLegacy(
     for (const row of databaseRows) {
       memberGroupIds.set(
         row.nodeId,
-        resolveMemberGroupId(
+        await resolveMemberGroupId(
           db,
           composition.groups,
           row.nodeId,
@@ -642,7 +642,7 @@ function buildComposedDatabaseViewLegacy(
         ),
       );
     }
-    groups = buildRelationGroups(
+    groups = await buildRelationGroups(
       db,
       composition.groups,
       activeScopeId,
@@ -679,7 +679,7 @@ function buildComposedDatabaseViewLegacy(
     createdAt: null,
     modifiedAt: null,
   }));
-  hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, windowEvalRows, dir);
+  await hydrateRelationCellsForRows(db, databaseId, mergedColumnDefs, windowEvalRows, dir);
   const hydratedById = new Map(windowEvalRows.map((row) => [row.nodeId, row]));
 
   const windowedRows: DatabaseRow[] = windowedFlat.map((row, index) => {
@@ -750,15 +750,15 @@ function buildComposedDatabaseViewLegacy(
  * Build a database Items view with optional relation-scope tabs, relation groups,
  * and reorder presentation layers.
  */
-export function buildComposedDatabaseView(
+export async function buildComposedDatabaseView(
   db: RelationshipReadStore,
   composition: TablePresentationComposition,
   requestedTabId?: string,
   contentDir?: string,
   rowsQuery?: TableRowsQuery,
-): DatabaseViewDetail | null {
+): Promise<DatabaseViewDetail | null> {
   const dir = contentDir ?? resolveContentPath();
-  const database = readStoreGetNode(db, composition.typeDatabaseId);
+  const database = await readStoreGetNode(db, composition.typeDatabaseId);
   if (!database) return null;
 
   const databaseId = composition.typeDatabaseId;
@@ -773,7 +773,7 @@ export function buildComposedDatabaseView(
 
   const plan = explodeTableWindowRequest(db, rowsQuery);
   if (plan.backend === "sql") {
-    return buildComposedDatabaseViewSql(
+    return await buildComposedDatabaseViewSql(
       db,
       composition,
       requestedTabId,
@@ -787,7 +787,7 @@ export function buildComposedDatabaseView(
     );
   }
 
-  return buildComposedDatabaseViewLegacy(
+  return await buildComposedDatabaseViewLegacy(
     db,
     composition,
     requestedTabId,

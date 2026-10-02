@@ -19,48 +19,48 @@ function titleFromProperties(properties: Record<string, unknown>): string {
   return "Untitled";
 }
 
-export function hasIncomingIsA(
+export async function hasIncomingIsA(
   store: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
-): boolean {
+): Promise<boolean> {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadRelationshipTypesFromContent(dir);
   for (const projection of memberSideProjectionTypes(registry)) {
-    if (listRelationshipsToTarget(store, nodeId, projection).length > 0) return true;
+    if ((await listRelationshipsToTarget(store, nodeId, projection)).length > 0) return true;
   }
   for (const projection of setSideProjectionTypes(registry)) {
-    if (listRelationshipsFromSource(store, nodeId, projection).length > 0) return true;
+    if ((await listRelationshipsFromSource(store, nodeId, projection)).length > 0) return true;
   }
   return false;
 }
 
-export function isTypeTableNode(
+export async function isTypeTableNode(
   store: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
-): boolean {
+): Promise<boolean> {
   const dir = contentDir ?? resolveContentPath();
   if (hasTableSchemaEntry(dir, nodeId)) return true;
   return hasIncomingIsA(store, nodeId, dir);
 }
 
-export function typeIdsForInstance(
+export async function typeIdsForInstance(
   store: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
-): string[] {
+): Promise<string[]> {
   return memberSetIds(store, nodeId, contentDir);
 }
 
 /** Lexicographically first IS_A type title for an instance page, when any. */
-export function primaryTypeTitleForInstance(
+export async function primaryTypeTitleForInstance(
   store: RelationshipReadStore,
   nodeId: string,
-): string | null {
+): Promise<string | null> {
   const titles: string[] = [];
-  for (const typeId of typeIdsForInstance(store, nodeId)) {
-    const typeNode = readStoreGetNode(store, typeId);
+  for (const typeId of await typeIdsForInstance(store, nodeId)) {
+    const typeNode = await readStoreGetNode(store, typeId);
     if (!typeNode) continue;
     const title = titleFromProperties(typeNode.properties);
     if (title !== "Untitled") titles.push(title);
@@ -70,12 +70,12 @@ export function primaryTypeTitleForInstance(
   return titles[0]!;
 }
 
-export function isTypeTableCandidate(
+export async function isTypeTableCandidate(
   node: Pick<Node, "properties"> & { id?: string },
   store?: RelationshipReadStore,
   nodeId?: string,
   contentDir?: string,
-): boolean {
+): Promise<boolean> {
   if (nodeId && hasTableSchemaEntry(contentDir ?? resolveContentPath(), nodeId)) {
     return true;
   }
@@ -83,31 +83,31 @@ export function isTypeTableCandidate(
   return false;
 }
 
-export function graphGroupForNode(store: RelationshipReadStore, nodeId: string): string {
-  const node = readStoreGetNode(store, nodeId);
+export async function graphGroupForNode(store: RelationshipReadStore, nodeId: string): Promise<string> {
+  const node = await readStoreGetNode(store, nodeId);
   if (!node) return "Unknown";
 
-  if (isTypeTableNode(store, nodeId)) {
+  if (await isTypeTableNode(store, nodeId)) {
     const title = titleFromProperties(node.properties);
     return title === "Untitled" ? "TypeTable" : title;
   }
 
-  const typeTitle = primaryTypeTitleForInstance(store, nodeId);
+  const typeTitle = await primaryTypeTitleForInstance(store, nodeId);
   if (typeTitle) return typeTitle;
 
   return "Node";
 }
 
 /** Labels for graph export / visualization (derived from IS_A type and node kind). */
-export function graphLabelsForNode(store: RelationshipReadStore, nodeId: string): string[] {
-  const node = readStoreGetNode(store, nodeId);
+export async function graphLabelsForNode(store: RelationshipReadStore, nodeId: string): Promise<string[]> {
+  const node = await readStoreGetNode(store, nodeId);
   if (!node) return ["Unknown"];
 
-  if (isTypeTableNode(store, nodeId)) {
+  if (await isTypeTableNode(store, nodeId)) {
     return ["TypeTable"];
   }
 
-  const typeTitle = primaryTypeTitleForInstance(store, nodeId);
+  const typeTitle = await primaryTypeTitleForInstance(store, nodeId);
   if (typeTitle) return [typeTitle];
 
   return ["Node"];
@@ -118,13 +118,13 @@ export function typeTableMarkerProperties(title: string): Properties {
   return { title };
 }
 
-export function nodeMatchesTargetTypes(
+export async function nodeMatchesTargetTypes(
   store: RelationshipReadStore,
   targetNodeId: string,
   allowedTypeIds: readonly string[],
   contentDir?: string,
-): boolean {
+): Promise<boolean> {
   if (allowedTypeIds.length === 0) return true;
-  const targetTypes = typeIdsForInstance(store, targetNodeId, contentDir);
+  const targetTypes = await typeIdsForInstance(store, targetNodeId, contentDir);
   return targetTypes.some((id) => allowedTypeIds.includes(id));
 }

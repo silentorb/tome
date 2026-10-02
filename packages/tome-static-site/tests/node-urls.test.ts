@@ -107,7 +107,7 @@ describe("resolveStaticHrefTarget", () => {
   });
 });
 
-describe("integration: alias link rewriting pipeline", () => {
+describe("integration: alias link rewriting pipeline", async () => {
   test("mixed aliased and id-based nodes", async () => {
     const { prepareNodeMarkdown } = await import("../src/lib/markdown");
     const nodes = [

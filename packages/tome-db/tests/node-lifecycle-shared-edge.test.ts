@@ -16,34 +16,34 @@ const HOME = TEST_HOME_NODE_ID;
 const NODE_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 const NODE_B = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
-describe("shared archived edge unarchive", () => {
-  const fixture = createTestContentFixture("tome-lifecycle-shared-");
+describe("shared archived edge unarchive", async () => {
+  const fixture = await createTestContentFixture("tome-lifecycle-shared-");
 
-  seedTestNode(fixture, { id: HOME, properties: { title: "Home" } });
-  seedTestNode(fixture, { id: HUB, properties: { title: "Archive" } });
-  seedTestNode(fixture, { id: NODE_A, properties: { title: "A" } });
-  seedTestNode(fixture, { id: NODE_B, properties: { title: "B" } });
+  await seedTestNode(fixture, { id: HOME, properties: { title: "Home" } });
+  await seedTestNode(fixture, { id: HUB, properties: { title: "Archive" } });
+  await seedTestNode(fixture, { id: NODE_A, properties: { title: "A" } });
+  await seedTestNode(fixture, { id: NODE_B, properties: { title: "B" } });
 
-  seedTestIncludes(fixture, [{ a: NODE_A, b: NODE_B, compositeType: "000000000000000000000000BF" }]);
+  await seedTestIncludes(fixture, [{ a: NODE_A, b: NODE_B, compositeType: "000000000000000000000000BF" }]);
 
-  test("unarchiving one endpoint keeps shared edge archived while other remains archived", () => {
-    expect(archiveNode(fixture.ctx, NODE_A)).toBeNull();
-    expect(archiveNode(fixture.ctx, NODE_B)).toBeNull();
+  test("unarchiving one endpoint keeps shared edge archived while other remains archived", async () => {
+    expect(await archiveNode(fixture.ctx, NODE_A)).toBeNull();
+    expect(await archiveNode(fixture.ctx, NODE_B)).toBeNull();
 
-    expect(unarchiveNode(fixture.ctx, NODE_A)).toBeNull();
+    expect(await unarchiveNode(fixture.ctx, NODE_A)).toBeNull();
 
     const shared = fixture.ctx.store
       .readArchivedRelationships()
       .find((e) => e.type === "000000000000000000000000BF" && e.a !== HUB && e.b !== HUB);
     expect(shared).toBeDefined();
     expect(fixture.ctx.store.isRelationshipArchived(shared!.a, shared!.b, shared!.type)).toBe(true);
-    expect(fixture.ctx.cache.listRelationshipsFromSource(NODE_A)).toHaveLength(0);
-    const nodeBOutgoing = fixture.ctx.cache.listRelationshipsFromSource(NODE_B);
+    expect(await fixture.ctx.cache.listRelationshipsFromSource(NODE_A)).toHaveLength(0);
+    const nodeBOutgoing = await fixture.ctx.cache.listRelationshipsFromSource(NODE_B);
     expect(nodeBOutgoing).toHaveLength(1);
     expect(nodeBOutgoing[0]?.type).toBe(projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1));
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

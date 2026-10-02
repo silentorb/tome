@@ -22,7 +22,7 @@ import {
   TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
   TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
 } from "../src/content/test-helpers";
-import { GraphDatabase } from "tome-sqlite";
+import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { buildPropertiesSection } from "../src/node-type-properties";
 import { getNodePageDetail } from "../src/node-page-sections";
@@ -31,6 +31,7 @@ describe("node-type-properties", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-page-props-"));
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
+  const cache = wrapSyncGraphDatabase(db);
   const contentDir = join(dir, "content");
   mkdirSync(contentDir, { recursive: true });
   mkdirSync(contentModelDir(contentDir), { recursive: true });
@@ -63,7 +64,7 @@ describe("node-type-properties", () => {
   const scene1 = "11111111111111111111111111";
   const scene2 = "22222222222222222222222222";
 
-  test("includes computed dynamic fields with allViews", () => {
+  test("includes computed dynamic fields with allViews", async () => {
     new ContentStore(contentDir).writeDynamicPropertiesFile(
       fileFromSeedInputs([
         {
@@ -90,7 +91,7 @@ describe("node-type-properties", () => {
     db.upsertRelationship(character, scene1, "SCENES", {});
     db.upsertRelationship(character, scene2, "SCENES", {});
 
-    const properties = buildPropertiesSection(db, character, contentDir);
+    const properties = await buildPropertiesSection(cache, character, contentDir);
     expect(properties).toMatchObject({
       databaseId: CHAR_DB,
       typeTitle: "Characters",
@@ -105,7 +106,7 @@ describe("node-type-properties", () => {
     ).toBe("dynamic");
   });
 
-  test("getNodePageDetail exposes properties alongside membership relation section", () => {
+  test("getNodePageDetail exposes properties alongside membership relation section", async () => {
     new ContentStore(contentDir).writeDynamicPropertiesFile(
       fileFromSeedInputs([
         {
@@ -121,7 +122,7 @@ describe("node-type-properties", () => {
       ]),
     );
     invalidateDynamicPropertiesCache();
-    const detail = getNodePageDetail(db, character, { contentDir });
+    const detail = await getNodePageDetail(cache, character, { contentDir });
     expect(detail?.properties?.cells.all_scene_count).toBe("2");
     const membership = detail?.sections.find(
       (section) => section.type === "relations" && section.label === projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1),
@@ -131,10 +132,11 @@ describe("node-type-properties", () => {
     ]);
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     delete process.env.TOME_CONTENT_PATH;
     invalidateDynamicPropertiesCache();
     invalidateWorkspaceCache();
+    void cache.close();
     db.close();
     rmSync(dir, { recursive: true, force: true });
   });

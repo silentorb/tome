@@ -13,16 +13,16 @@ const scene1 = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 const scene2 = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 const scene3 = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
 
-describe("ordered-relationships", () => {
-  const fixture = createTestContentFixture("tome-ordered-rel-");
+describe("ordered-relationships", async () => {
+  const fixture = await createTestContentFixture("tome-ordered-rel-");
 
-  seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
+  await seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
   seedTestTableSchema(fixture, SCENES_DB, []);
-  seedTestNode(fixture, { id: scene1, properties: { title: "One" } });
-  seedTestNode(fixture, { id: scene2, properties: { title: "Two" } });
-  seedTestNode(fixture, { id: scene3, properties: { title: "Three" } });
+  await seedTestNode(fixture, { id: scene1, properties: { title: "One" } });
+  await seedTestNode(fixture, { id: scene2, properties: { title: "Two" } });
+  await seedTestNode(fixture, { id: scene3, properties: { title: "Three" } });
 
-  seedTestRelationships(fixture, [
+  await seedTestRelationships(fixture, [
     { source: scene1, target: SCENES_DB, type: "ordered_member_of", properties: { order: "10" } },
     { source: scene2, target: SCENES_DB, type: "ordered_member_of", properties: { order: "30" } },
   ]);
@@ -30,31 +30,31 @@ describe("ordered-relationships", () => {
   const { ctx } = fixture;
   const contentDir = ctx.store.contentDir;
 
-  test("listOrderedMemberConnections returns ordered_member_of edges only", () => {
-    const connections = listOrderedMemberConnections(ctx.cache, SCENES_DB, contentDir);
+  test("listOrderedMemberConnections returns ordered_member_of edges only", async () => {
+    const connections = await listOrderedMemberConnections(ctx.cache, SCENES_DB, contentDir);
     expect(connections.map((c) => c.sourceNodeId).sort()).toEqual([scene1, scene2].sort());
   });
 
-  test("maxOrderAtSet reads highest order property", () => {
-    expect(maxOrderAtSet(ctx.cache, SCENES_DB, contentDir)).toBe(30);
+  test("maxOrderAtSet reads highest order property", async () => {
+    expect(await maxOrderAtSet(ctx.cache, SCENES_DB, contentDir)).toBe(30);
   });
 
-  test("stampOrderIfMissing fills order when absent", () => {
-    const stamped = stampOrderIfMissing(ctx, SCENES_DB, scene3, {});
+  test("stampOrderIfMissing fills order when absent", async () => {
+    const stamped = await stampOrderIfMissing(ctx, SCENES_DB, scene3, {});
     expect(stamped.order).toBe(31);
   });
 
-  test("applySparseSequenceRewrite renumbers to sparse tens", () => {
-    applySparseSequenceRewrite(ctx, SCENES_DB, [scene2, scene1]);
-    ctx.sync.syncRelationships();
+  test("applySparseSequenceRewrite renumbers to sparse tens", async () => {
+    await applySparseSequenceRewrite(ctx, SCENES_DB, [scene2, scene1]);
+    await ctx.sync.syncRelationships();
 
-    expect(ctx.cache.getRelationship(`${scene1}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1)}:${SCENES_DB}`)?.properties.order).toBe(
+    expect((await ctx.cache.getRelationship(`${scene1}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1)}:${SCENES_DB}`))?.properties.order).toBe(
       "20",
     );
-    expect(ctx.cache.getRelationship(`${scene2}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1)}:${SCENES_DB}`)?.properties.order).toBe(
+    expect((await ctx.cache.getRelationship(`${scene2}:${projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1)}:${SCENES_DB}`))?.properties.order).toBe(
       "10",
     );
   });
 
-  afterAll(() => destroyTestContentFixture(fixture));
+  afterAll(async () => await destroyTestContentFixture(fixture));
 });

@@ -23,7 +23,7 @@ async function createEditor(initial: string) {
   return { editor, root };
 }
 
-describe("page block embed rendering", () => {
+describe("page block embed rendering", async () => {
   test("renders embedded page block HTML instead of raw markup", async () => {
     const embed =
       `${formatPageBlockEmbedComment({ componentId: "spatial-graph.block", data: {} })}\n` +

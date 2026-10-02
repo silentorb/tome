@@ -1,7 +1,6 @@
 import { Database } from "bun:sqlite";
 import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
-import type { ImpCollectionResult } from "tome-graph-interfaces";
 import type { SyncEndpoint, SyncSignal, SyncSourceRead } from "tome-db/sync";
 import { instrumentSqliteDatabaseForProfiling } from "tome-service-interfaces";
 import { allNodesForSearchGraph, nodeByIdForSearchGraph } from "./search-graphs";
@@ -53,12 +52,6 @@ function documentFromRow(row: Record<string, unknown>): SearchDocument | null {
     body: stringField(row.body) || null,
     typeIds: typeIdsFromRow(row),
   };
-}
-
-async function awaitResult(
-  result: ImpCollectionResult | Promise<ImpCollectionResult>,
-): Promise<ImpCollectionResult> {
-  return result instanceof Promise ? await result : result;
 }
 
 export class FtsStore {
@@ -155,7 +148,7 @@ export class FtsStore {
     if (this.listDocuments) {
       return [...(await this.listDocuments())];
     }
-    const result = await awaitResult(source.executeImp(allNodesForSearchGraph()));
+    const result = await source.executeImp(allNodesForSearchGraph());
     const docs: SearchDocument[] = [];
     for (const row of result.rows) {
       const doc = documentFromRow(row);
@@ -175,7 +168,7 @@ export class FtsStore {
       const all = await this.listDocuments();
       return all.find((d) => d.id === id) ?? null;
     }
-    const result = await awaitResult(source.executeImp(nodeByIdForSearchGraph(id)));
+    const result = await source.executeImp(nodeByIdForSearchGraph(id));
     const row = result.rows[0];
     return row ? documentFromRow(row) : null;
   }

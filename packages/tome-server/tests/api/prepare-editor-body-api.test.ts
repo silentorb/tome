@@ -15,15 +15,15 @@ import { createTestApiFromContent } from "./test-api-setup";
 
 const nodeId = "00000000000000000000000029";
 
-describe("prepare-editor-body API", () => {
-  const fixture = createTestContentFixture("tome-prepare-body-api-");
+describe("prepare-editor-body API", async () => {
+  const fixture = await createTestContentFixture("tome-prepare-body-api-");
 
   seedTestWorkspace(fixture);
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: TEST_HOME_NODE_ID,
     properties: { title: "Home" },
   });
-  seedTestNode(
+  await seedTestNode(
     fixture,
     {
       id: nodeId,
@@ -62,7 +62,7 @@ describe("prepare-editor-body API", () => {
   );
 
   invalidateExtensionsCache();
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
 
   test("POST /api/nodes/:id/prepare-editor-body expands page blocks", async () => {
     const body = serializePageBlock("fixture.demo", { text: "Hello" });
@@ -81,7 +81,7 @@ describe("prepare-editor-body API", () => {
     expect(payload.markdown).not.toContain("```tome-block");
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

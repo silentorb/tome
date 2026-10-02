@@ -11,18 +11,18 @@ import {
 } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
 
-describe("database view API", () => {
-  const fixture = createTestContentFixture("tome-editor-db-view-");
+describe("database view API", async () => {
+  const fixture = await createTestContentFixture("tome-editor-db-view-");
   const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
   const nodeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-  seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Features") });
-  seedTestNode(fixture, { id: nodeId, properties: { title: "Feature row" } });
-  seedTestRelationships(fixture, [
+  await seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Features") });
+  await seedTestNode(fixture, { id: nodeId, properties: { title: "Feature row" } });
+  await seedTestRelationships(fixture, [
     { source: nodeId, target: databaseId, type: "member_of", properties: { priority: "High" } },
   ]);
 
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
 
   test("GET /api/databases/:id returns database view detail", async () => {
     const res = await api.handler(new Request(`http://127.0.0.1/api/databases/${databaseId}`));
@@ -44,16 +44,16 @@ describe("database view API", () => {
   test("POST /api/databases/:id/columns adds column to schema", async () => {
     const dbWithSchema = "77777777777777777777777777";
     seedTestTableSchema(fixture, dbWithSchema, []);
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: dbWithSchema,
       properties: typeTableMarkerProperties("Ideas"),
     });
-    const apiCtx = openContentGraph(
+    const apiCtx = await openContentGraph(
       fixture.ctx.store.contentDir,
       join(fixture.tempDir, "api.sqlite"),
     );
-    apiCtx.sync.fullRebuild();
-    apiCtx.cache.close();
+    await apiCtx.sync.fullRebuild();
+    await apiCtx.cache.close();
 
     const createRes = await api.handler(
       new Request(`http://127.0.0.1/api/databases/${dbWithSchema}/columns`, {
@@ -76,16 +76,16 @@ describe("database view API", () => {
     seedTestTableSchema(fixture, dbWithSchema, [
       { key: "notes", name: "Notes", type: "text" },
     ]);
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: dbWithSchema,
       properties: typeTableMarkerProperties("Notes DB"),
     });
-    const apiCtx = openContentGraph(
+    const apiCtx = await openContentGraph(
       fixture.ctx.store.contentDir,
       join(fixture.tempDir, "api.sqlite"),
     );
-    apiCtx.sync.fullRebuild();
-    apiCtx.cache.close();
+    await apiCtx.sync.fullRebuild();
+    await apiCtx.cache.close();
 
     const patchRes = await api.handler(
       new Request(`http://127.0.0.1/api/databases/${dbWithSchema}/columns/notes`, {
@@ -105,20 +105,20 @@ describe("database view API", () => {
     seedTestTableSchema(fixture, dbWithSchema, [
       { key: "status", name: "Status", type: "select" },
     ]);
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: dbWithSchema,
       properties: typeTableMarkerProperties("Tasks"),
     });
-    seedTestNode(fixture, { id: rowId, properties: { title: "Task row" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: rowId, properties: { title: "Task row" } });
+    await seedTestRelationships(fixture, [
       { source: rowId, target: dbWithSchema, type: "member_of", properties: { status: "Open" } },
     ]);
-    const apiCtx = openContentGraph(
+    const apiCtx = await openContentGraph(
       fixture.ctx.store.contentDir,
       join(fixture.tempDir, "api.sqlite"),
     );
-    apiCtx.sync.fullRebuild();
-    apiCtx.cache.close();
+    await apiCtx.sync.fullRebuild();
+    await apiCtx.cache.close();
 
     const deleteRes = await api.handler(
       new Request(`http://127.0.0.1/api/databases/${dbWithSchema}/columns/status`, {
@@ -134,8 +134,8 @@ describe("database view API", () => {
     expect(viewBody.databaseView.columns).not.toContain("status");
   });
 
-  afterAll(() => {
-    api.handler.close();
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await api.handler.close();
+    await destroyTestContentFixture(fixture);
   });
 });

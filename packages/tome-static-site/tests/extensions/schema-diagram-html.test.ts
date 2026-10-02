@@ -15,7 +15,7 @@ const urls = createNodeUrlResolver({
   base: "/",
 });
 
-describe("schema diagram static html", () => {
+describe("schema diagram static html", async () => {
   test("renders inline SVG when schemaQuery is provided", async () => {
     const host = new HtmlPageBlockHostImpl();
     register(host);

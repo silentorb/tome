@@ -4,7 +4,7 @@ import { editorViewCtx } from "@milkdown/kit/core";
 import { commonmark } from "@milkdown/preset-commonmark";
 import { installCalloutDecoration } from "../../src/webview/callout-decoration";
 
-describe("callout decoration plugin", () => {
+describe("callout decoration plugin", async () => {
   test("applies tome-callout class to emoji-led blockquotes in the editor DOM", async () => {
     const root = document.createElement("div");
     document.body.appendChild(root);

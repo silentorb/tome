@@ -4,7 +4,7 @@ import { Database, type SQLQueryBindings } from "bun:sqlite";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { GraphDatabase, relationshipId } from "tome-sqlite";
+import { GraphDatabase, relationshipId, wrapSyncGraphDatabase } from "tome-sqlite";
 import { getRelationTableSection } from "../src/node-page-sections";
 import {
   contentModelDir,
@@ -13,15 +13,13 @@ import {
   serializeRelationshipTypesFile,
   invalidateRelationshipTypesCache,
 } from "tome-flatfile";
-import {
-  configureProfiling,
+import { configureProfiling,
   deriveRowCaps,
   getProfilingContext,
   getProfilingStore,
   openProfilingStore,
   resetProfilingForTests,
-  runInProfilingTrace,
-} from "tome-service-interfaces";
+  runInProfilingTrace, runInProfilingTraceAsync } from "tome-service-interfaces";
 
 const RELATED_COUNT = 9000;
 const WINDOW_LIMIT = 50;
@@ -145,13 +143,14 @@ describe("relation-window benchmark", () => {
   // Setup lives inside the test so TOME_BENCHMARK=0 skips GraphDatabase / temp dirs too.
   test.skipIf(!BENCHMARK_ENABLED)(
     "SQL-windows a mid-range page of 50 over 9000 related projections",
-    () => {
+    async () => {
       const dir = mkdtempSync(join(tmpdir(), "tome-db-rel-window-bench-"));
       const contentDir = join(dir, "content");
       mkdirSync(contentModelDir(contentDir), { recursive: true });
       writeInspirationsFeaturesRelationshipTypes(contentDir);
       process.env.TOME_CONTENT_PATH = contentDir;
       const db = new GraphDatabase(join(dir, "test.sqlite"));
+  const cache = wrapSyncGraphDatabase(db);
 
       let profilingConfigured = false;
       try {
@@ -161,11 +160,11 @@ describe("relation-window benchmark", () => {
         const seedMs = seedRelatedFanOut(db.path, hostId, perspective);
 
         let queryMs = 0;
-        let section: NonNullable<ReturnType<typeof getRelationTableSection>> | null = null;
+        let section: Awaited<ReturnType<typeof getRelationTableSection>> | null = null;
 
-        const runQuery = () => {
+        const runQuery = async () => {
           const queryStarted = performance.now();
-          section = getRelationTableSection(db, hostId, perspective, {
+          section = await getRelationTableSection(cache, hostId, perspective, {
             contentDir,
             rowsQuery: { limit: WINDOW_LIMIT, offset: WINDOW_OFFSET },
           });
@@ -188,9 +187,9 @@ describe("relation-window benchmark", () => {
           openProfilingStore(join(dir, "tome-profiling.sqlite"));
           profilingConfigured = true;
           let capturedTraceId = "";
-          runInProfilingTrace(() => {
+          await runInProfilingTraceAsync(async () => {
             capturedTraceId = getProfilingContext()?.traceId ?? "";
-            runQuery();
+            await runQuery();
           });
           console.log(
             `[relation-window-benchmark] query=${queryMs.toFixed(1)}ms seed=${seedMs.toFixed(1)}ms related=${RELATED_COUNT} window=${WINDOW_OFFSET}+${WINDOW_LIMIT}`,
@@ -198,7 +197,7 @@ describe("relation-window benchmark", () => {
           if (capturedTraceId) logSpanBreakdown(capturedTraceId);
           expect(getProfilingStore()?.count() ?? 0).toBeGreaterThan(0);
         } else {
-          runQuery();
+          await runQuery();
           console.log(
             `[relation-window-benchmark] query=${queryMs.toFixed(1)}ms seed=${seedMs.toFixed(1)}ms related=${RELATED_COUNT} window=${WINDOW_OFFSET}+${WINDOW_LIMIT}`,
           );

@@ -15,7 +15,6 @@ import type {
   DistinctSetMemberScopeRow,
   ComposedGroupHeadersQuery,
   ComposedGroupHeaderRow,
-  TomeQueryCache,
 } from "tome-service-interfaces";
 import {
   instrumentSqliteDatabaseForProfiling,
@@ -261,11 +260,12 @@ export function relationshipId(sourceNodeId: string, type: string, targetNodeId:
   return `${sourceNodeId}:${type}:${targetNodeId}`;
 }
 
-export class GraphDatabase implements TomeQueryCache {
+export class GraphDatabase {
   readonly path: string;
   private db: Database;
   private readonly propertyCodec: RelationshipPropertyCodec;
-  private readonly memberPerspectives?: () => readonly string[];
+  private memberPerspectivesFn?: () => readonly string[];
+  private memberPerspectivesSnapshot: readonly string[] | null = null;
 
   private insertNodeId!: ReturnType<Database["prepare"]>;
   private updateNodeColumns!: ReturnType<Database["prepare"]>;
@@ -296,7 +296,7 @@ export class GraphDatabase implements TomeQueryCache {
   ) {
     this.path = path;
     this.propertyCodec = options?.propertyCodec ?? IDENTITY_CODEC;
-    this.memberPerspectives = options?.memberPerspectives;
+    this.memberPerspectivesFn = options?.memberPerspectives;
     if (options?.clean) {
       try {
         rmSync(path, { force: true });
@@ -637,8 +637,23 @@ export class GraphDatabase implements TomeQueryCache {
     return row?.is_archived === 1;
   }
 
+  /** Override callback-based perspectives (used by worker RPC). */
+  setMemberPerspectives(types: readonly string[]): void {
+    this.memberPerspectivesSnapshot = [...types];
+  }
+
+  private resolveMemberPerspectives(): readonly string[] {
+    if (this.memberPerspectivesSnapshot) return this.memberPerspectivesSnapshot;
+    const resolved = this.memberPerspectivesFn?.() ?? [];
+    // Do not freeze an empty snapshot — relationship types may load after open/sync.
+    if (resolved.length > 0) {
+      this.memberPerspectivesSnapshot = resolved;
+    }
+    return resolved;
+  }
+
   listArchiveMemberIds(archiveId: string, memberPerspectives?: readonly string[]): string[] {
-    const types = [...(memberPerspectives ?? this.memberPerspectives?.() ?? [])];
+    const types = [...(memberPerspectives ?? this.resolveMemberPerspectives())];
     if (types.length === 0) return [];
     const placeholders = types.map(() => "?").join(", ");
     const rows = this.db
@@ -900,7 +915,7 @@ export class GraphDatabase implements TomeQueryCache {
     nodeId: string,
     allowedTypeIds: readonly string[],
   ): boolean {
-    const types = this.memberPerspectives?.() ?? [];
+    const types = this.resolveMemberPerspectives();
     for (const type of types) {
       for (const connection of this.listRelationshipsFromSource(nodeId, type)) {
         if (allowedTypeIds.includes(connection.targetNodeId)) return true;
@@ -928,7 +943,7 @@ export class GraphDatabase implements TomeQueryCache {
     }
 
     if (allowedTypeIds && allowedTypeIds.length > 0) {
-      const perspectives = this.memberPerspectives?.() ?? [];
+      const perspectives = this.resolveMemberPerspectives();
       if (perspectives.length === 0) {
         parts.push("AND 0");
       } else {

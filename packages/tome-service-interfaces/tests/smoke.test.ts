@@ -40,8 +40,8 @@ describe("tome-service-interfaces", () => {
     };
     const cacheMod: TomeCacheModule = {
       id: "sqlite",
-      open() {
-        return { path: "/tmp/x.sqlite", close() {} } as ReturnType<TomeCacheModule["open"]>;
+      async open() {
+        return { path: "/tmp/x.sqlite", close: async () => {} } as unknown as Awaited<ReturnType<TomeCacheModule["open"]>>;
       },
     };
     expect(storeMod.id).toBe("default");

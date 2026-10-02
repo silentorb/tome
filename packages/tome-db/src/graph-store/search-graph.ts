@@ -1,10 +1,9 @@
 import type { Graph } from "imp-core-types";
 import type { ExecuteImpContext, ImpCollectionResult, ImpGraph } from "tome-graph-interfaces";
-import type { GraphDatabase } from "tome-sqlite";
+import type { TomeQueryCache } from "tome-service-interfaces";
 import type { TomeGraphStoreBase } from "tome-graph-interfaces";
 import { onlyActiveHostProjectionType } from "tome-flatfile";
 import type { TomeSearch } from "tome-interfaces/search";
-import { listRecentNodes } from "../search-text";
 
 function inboundEdge(graph: Graph, nodeId: string, port: string) {
   return Object.values(graph.edges).find((edge) => edge.to.node === nodeId && edge.to.port === port);
@@ -62,21 +61,21 @@ function resolveLimitFromGraph(graph: Graph, fallback: number): number {
 
 export type RunSearchImpOptions = {
   store: TomeGraphStoreBase;
-  cache: GraphDatabase;
+  cache: TomeQueryCache;
   graph: ImpGraph;
   context?: ExecuteImpContext;
   /** Injected searcher; null/undefined → empty results for non-empty queries. */
   search?: TomeSearch | null;
 };
 
-/** Execute Imp graphs that contain a host-delegated `search` transform (sync SQL path). */
-export function runSearchImpGraphSql(
+/** Execute Imp graphs that contain a host-delegated `search` transform (SQL path). */
+export async function runSearchImpGraphSql(
   _store: TomeGraphStoreBase,
-  cache: GraphDatabase,
+  cache: TomeQueryCache,
   graph: ImpGraph,
   context?: ExecuteImpContext,
   search?: TomeSearch | null,
-): ImpCollectionResult {
+): Promise<ImpCollectionResult> {
   const query = resolveSearchQueryFromGraph(graph, context);
   const limit = resolveLimitFromGraph(graph, 20);
   const allowedTypeIds = context?.allowedTypeIds;
@@ -86,15 +85,19 @@ export function runSearchImpGraphSql(
     ? onlyActiveHostProjectionType(selectedProjection, pickingRole)
     : null;
   const allowedNodeIds = hostProjection
-    ? new Set(cache.listSourceNodeIdsForProjectionType(hostProjection))
+    ? new Set(await cache.listSourceNodeIdsForProjectionType(hostProjection))
     : undefined;
 
   const trimmed = query.trim();
   if (!trimmed) {
-    const summaries = listRecentNodes(cache, limit, allowedTypeIds, allowedNodeIds);
+    if (allowedNodeIds && allowedNodeIds.size === 0) {
+      return { columns: ["id", "title"], rows: [] };
+    }
+    const cap = Math.max(1, Math.min(limit, 100));
+    const rows = await cache.listNodesByTitle(cap, allowedTypeIds, allowedNodeIds);
     return {
       columns: ["id", "title"],
-      rows: summaries.map((row) => ({ id: row.id, title: row.title })),
+      rows: rows.map((row) => ({ id: row.id, title: row.title })),
     };
   }
 
@@ -102,18 +105,17 @@ export function runSearchImpGraphSql(
     return { columns: ["id", "title"], rows: [] };
   }
 
-  const hitsOrPromise = search.search({
-    query: trimmed,
-    limit,
-    allowedTypeIds,
-    allowedNodeIds,
-  });
-  if (hitsOrPromise instanceof Promise) {
-    throw new Error("Async TomeSearch is not supported on the sync Imp SQL path");
-  }
+  const hits = await Promise.resolve(
+    search.search({
+      query: trimmed,
+      limit,
+      allowedTypeIds,
+      allowedNodeIds,
+    }),
+  );
   return {
     columns: ["id", "title"],
-    rows: hitsOrPromise.map((row) => ({
+    rows: hits.map((row) => ({
       id: row.id,
       title: row.title,
       ...(row.matchPreview ? { matchPreview: row.matchPreview } : {}),

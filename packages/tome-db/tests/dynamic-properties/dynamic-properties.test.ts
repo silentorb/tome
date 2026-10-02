@@ -6,7 +6,7 @@ import { ContentStore, projectionTypeForEndpoint } from "tome-flatfile";
 import { fileFromSeedInputs } from "tome-flatfile";
 import { invalidateDynamicPropertiesCache } from "../../src/content/sync";
 import { invalidateSchemaCache } from "tome-flatfile";
-import { GraphDatabase } from "tome-sqlite";
+import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { getDatabaseViewDetail } from "../../src/database-view";
 import { createTestContentFixture, destroyTestContentFixture, seedTestCompositeRelationships, seedTestDynamicProperties, seedTestIncludes, seedTestNode, seedTestRelationships, writeTestSetRelationshipTypes, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID, TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID } from "../../src/content/test-helpers";
@@ -52,6 +52,7 @@ describe("dynamic-properties resolvers", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-df-"));
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
+  const cache = wrapSyncGraphDatabase(db);
 
   const CHAR_DB = "00000000000000000000000035";
   const INSP_DB = "0000000000000000000000000K";
@@ -68,7 +69,7 @@ describe("dynamic-properties resolvers", () => {
   const featureWonder = "55555555555555555555555555";
   const featurePlain = "66666666666666666666666666";
 
-  beforeAll(() => {
+  beforeAll(async () => {
     const contentDir = join(dir, "content");
     mkdirSync(contentDir, { recursive: true });
     process.env.TOME_CONTENT_PATH = contentDir;
@@ -147,54 +148,54 @@ describe("dynamic-properties resolvers", () => {
     db.upsertRelationship(featureWonder, WONDERLAND, THEME_EDGE, {});
   });
 
-  test("all scene count", () => {
-    const ctx = { db, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
-    const prefetch = buildAllSceneCountPrefetch(ctx, LEGACY_CHARACTER_SCENE_PARAMS);
+  test("all scene count", async () => {
+    const ctx = { db: cache, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const prefetch = await buildAllSceneCountPrefetch(ctx, LEGACY_CHARACTER_SCENE_PARAMS);
     expect(resolveAllSceneCount(ctx, {}, character, prefetch)).toBe("3");
   });
 
-  test("scene count by product", () => {
-    const ctx = { db, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
-    const prefetch = buildSceneCountByProductPrefetch(ctx, LEGACY_CHARACTER_PRODUCT_PARAMS);
+  test("scene count by product", async () => {
+    const ctx = { db: cache, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const prefetch = await buildSceneCountByProductPrefetch(ctx, LEGACY_CHARACTER_PRODUCT_PARAMS);
     expect(resolveSceneCountByProduct(ctx, {}, character, TWOLD, prefetch)).toBe("2");
     expect(resolveSceneCountByProduct(ctx, {}, character, OTHER_PRODUCT, prefetch)).toBe("1");
   });
 
-  test("weighted use", () => {
-    const ctx = { db, owner: INSP_DB, viewName: "Weighted", rowNodeIds: [inspiration] };
+  test("weighted use", async () => {
+    const ctx = { db: cache, owner: INSP_DB, viewName: "Weighted", rowNodeIds: [inspiration] };
     const params = { ...LEGACY_INSPIRATION_WEIGHTED_PARAMS, features_table_id: FEAT_DB };
-    const prefetch = buildWeightedUsePrefetch(ctx, params);
+    const prefetch = await buildWeightedUsePrefetch(ctx, params);
     expect(resolveWeightedUse(ctx, {}, inspiration, prefetch)).toBe("6");
   });
 
-  test("wonder count", () => {
-    const ctx = { db, owner: INSP_DB, viewName: "Wonder", rowNodeIds: [inspiration] };
+  test("wonder count", async () => {
+    const ctx = { db: cache, owner: INSP_DB, viewName: "Wonder", rowNodeIds: [inspiration] };
     const params = { ...LEGACY_INSPIRATION_WONDER_PARAMS, theme_target_id: WONDERLAND };
-    const prefetch = buildWonderPrefetch(ctx, params);
+    const prefetch = await buildWonderPrefetch(ctx, params);
     expect(resolveWonder(ctx, {}, inspiration, prefetch)).toBe("1");
   });
 
-  test("returns zero when composite param omitted despite composite edges in graph", () => {
-    const ctx = { db, owner: INSP_DB, viewName: "Weighted", rowNodeIds: [inspiration] };
+  test("returns zero when composite param omitted despite composite edges in graph", async () => {
+    const ctx = { db: cache, owner: INSP_DB, viewName: "Weighted", rowNodeIds: [inspiration] };
     expect(
       resolveWeightedUse(
         ctx,
         {},
         inspiration,
-        buildWeightedUsePrefetch(ctx, { features_table_id: FEAT_DB }),
+        await buildWeightedUsePrefetch(ctx, { features_table_id: FEAT_DB }),
       ),
     ).toBe("0");
   });
 
-  test("returns zero for scene count when edge label param omitted", () => {
-    const ctx = { db, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
-    const prefetch = buildAllSceneCountPrefetch(ctx, {});
+  test("returns zero for scene count when edge label param omitted", async () => {
+    const ctx = { db: cache, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
+    const prefetch = await buildAllSceneCountPrefetch(ctx, {});
     expect(resolveAllSceneCount(ctx, {}, character, prefetch)).toBe("0");
   });
 
-  test("database view integration for characters", () => {
+  test("database view integration for characters", async () => {
     const contentDir = join(dir, "content");
-    const detail = getDatabaseViewDetail(db, CHAR_DB, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, CHAR_DB, undefined, contentDir);
     const james = detail?.rows.find((r) => r.nodeId === character);
     expect(james?.cells.all_scene_count).toBe("3");
     expect(james?.cells[`scene_count__${TWOLD}`]).toBe("2");
@@ -202,15 +203,15 @@ describe("dynamic-properties resolvers", () => {
     expect(detail?.columnDefs?.some((c) => c.key === `scene_count__${TWOLD}`)).toBe(true);
   });
 
-  test("database view integration for inspirations", () => {
+  test("database view integration for inspirations", async () => {
     const contentDir = join(dir, "content");
-    const detail = getDatabaseViewDetail(db, INSP_DB, undefined, contentDir);
+    const detail = await getDatabaseViewDetail(cache, INSP_DB, undefined, contentDir);
     const row = detail?.rows.find((r) => r.nodeId === inspiration);
     expect(row?.cells.weighted_use).toBe("6");
     expect(row?.cells.wonder).toBe("1");
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     delete process.env.TOME_CONTENT_PATH;
     invalidateDynamicPropertiesCache();
     db.close();
@@ -218,8 +219,8 @@ describe("dynamic-properties resolvers", () => {
   });
 });
 
-describe("dynamic-properties with composite relationships", () => {
-  const fixture = createTestContentFixture("tome-df-composite-");
+describe("dynamic-properties with composite relationships", async () => {
+  const fixture = await createTestContentFixture("tome-df-composite-");
   const INSP_DB = "0000000000000000000000000K";
   const FEAT_DB = "0000000000000000000000002P";
   const WONDERLAND = "0000000000000000000000000P";
@@ -227,7 +228,7 @@ describe("dynamic-properties with composite relationships", () => {
   const featureWonder = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
   const featurePlain = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
 
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.TOME_CONTENT_PATH = fixture.ctx.store.contentDir;
     writeFileSync(
       join(fixture.ctx.store.contentDir, "model", "schema.json"),
@@ -271,18 +272,18 @@ describe("dynamic-properties with composite relationships", () => {
         },
       },
     ]);
-    seedTestNode(fixture, { id: INSP_DB, properties: typeTableMarkerProperties("Inspirations") });
-    seedTestNode(fixture, { id: FEAT_DB, properties: typeTableMarkerProperties("Features") });
-    seedTestNode(fixture, { id: WONDERLAND, properties: { title: "Wonderland" } });
-    seedTestNode(fixture, { id: inspiration, properties: { title: "Test Inspiration" } });
-    seedTestNode(fixture, { id: featureWonder, properties: { title: "Adventure" } });
-    seedTestNode(fixture, { id: featurePlain, properties: { title: "Plain" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: INSP_DB, properties: typeTableMarkerProperties("Inspirations") });
+    await seedTestNode(fixture, { id: FEAT_DB, properties: typeTableMarkerProperties("Features") });
+    await seedTestNode(fixture, { id: WONDERLAND, properties: { title: "Wonderland" } });
+    await seedTestNode(fixture, { id: inspiration, properties: { title: "Test Inspiration" } });
+    await seedTestNode(fixture, { id: featureWonder, properties: { title: "Adventure" } });
+    await seedTestNode(fixture, { id: featurePlain, properties: { title: "Plain" } });
+    await seedTestRelationships(fixture, [
       { source: inspiration, target: INSP_DB, type: "member_of", properties: { row_index: 0 } },
       { source: featureWonder, target: FEAT_DB, type: "member_of", properties: { priority: "Medium" } },
       { source: featurePlain, target: FEAT_DB, type: "member_of", properties: { priority: "High" } },
     ]);
-    seedTestCompositeRelationships(fixture, [
+    await seedTestCompositeRelationships(fixture, [
       {
         a: inspiration,
         b: featureWonder,
@@ -300,7 +301,7 @@ describe("dynamic-properties with composite relationships", () => {
         properties: {},
       },
     ]);
-    seedTestCompositeRelationships(fixture, [
+    await seedTestCompositeRelationships(fixture, [
       {
         a: featureWonder,
         b: WONDERLAND,
@@ -312,8 +313,8 @@ describe("dynamic-properties with composite relationships", () => {
     ]);
   });
 
-  test("weighted_use and wonder with production params and composite edges", () => {
-    const detail = getDatabaseViewDetail(
+  test("weighted_use and wonder with production params and composite edges", async () => {
+    const detail = await getDatabaseViewDetail(
       fixture.ctx.cache,
       INSP_DB,
       undefined,
@@ -324,7 +325,7 @@ describe("dynamic-properties with composite relationships", () => {
     expect(row?.cells.wonder).toBe("1");
   });
 
-  test("weighted_use returns zero when inspiration_feature_composite omitted", () => {
+  test("weighted_use returns zero when inspiration_feature_composite omitted", async () => {
     const ctx = {
       db: fixture.ctx.cache,
       owner: INSP_DB,
@@ -336,20 +337,20 @@ describe("dynamic-properties with composite relationships", () => {
         ctx,
         {},
         inspiration,
-        buildWeightedUsePrefetch(ctx, { features_table_id: FEAT_DB }),
+        await buildWeightedUsePrefetch(ctx, { features_table_id: FEAT_DB }),
       ),
     ).toBe("0");
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     delete process.env.TOME_CONTENT_PATH;
     invalidateDynamicPropertiesCache();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 });
 
-describe("dynamic-properties character includes with product edges (Marloth regression)", () => {
-  const fixture = createTestContentFixture("tome-df-char-includes-");
+describe("dynamic-properties character includes with product edges (Marloth regression)", async () => {
+  const fixture = await createTestContentFixture("tome-df-char-includes-");
   const CHAR_DB = "00000000000000000000000035";
   const SCENES_DB = "0000000000000000000000000D";
   const PRODUCTS_DB = "0000000000000000000000000S";
@@ -368,7 +369,7 @@ describe("dynamic-properties character includes with product edges (Marloth regr
     products_table_id: PRODUCTS_DB,
   };
 
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.TOME_CONTENT_PATH = fixture.ctx.store.contentDir;
     seedTestDynamicProperties(
       fixture,
@@ -398,22 +399,22 @@ describe("dynamic-properties character includes with product edges (Marloth regr
         },
       ],
     );
-    seedTestNode(fixture, { id: CHAR_DB, properties: typeTableMarkerProperties("Characters") });
-    seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
-    seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
-    seedTestNode(fixture, { id: TWOLD, properties: { title: "TWOLD" } });
-    seedTestNode(fixture, { id: OTHER_PRODUCT, properties: { title: "Other Book" } });
-    seedTestNode(fixture, { id: character, properties: { title: "James" } });
-    seedTestNode(fixture, { id: scene1, properties: { title: "Scene A" } });
-    seedTestNode(fixture, { id: scene2, properties: { title: "Scene B" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: CHAR_DB, properties: typeTableMarkerProperties("Characters") });
+    await seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
+    await seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
+    await seedTestNode(fixture, { id: TWOLD, properties: { title: "TWOLD" } });
+    await seedTestNode(fixture, { id: OTHER_PRODUCT, properties: { title: "Other Book" } });
+    await seedTestNode(fixture, { id: character, properties: { title: "James" } });
+    await seedTestNode(fixture, { id: scene1, properties: { title: "Scene A" } });
+    await seedTestNode(fixture, { id: scene2, properties: { title: "Scene B" } });
+    await seedTestRelationships(fixture, [
       { source: character, target: CHAR_DB, type: "member_of" },
       { source: scene1, target: SCENES_DB, type: "ordered_member_of" },
       { source: scene2, target: SCENES_DB, type: "ordered_member_of" },
       { source: TWOLD, target: PRODUCTS_DB, type: "ordered_member_of" },
       { source: OTHER_PRODUCT, target: PRODUCTS_DB, type: "ordered_member_of" },
     ]);
-    seedTestCompositeRelationships(fixture, [
+    await seedTestCompositeRelationships(fixture, [
       { a: scene1, b: character, typeFromA: "Scenes", typeFromB: "Characters", relationshipTypeId: "000000000000000000000000B9", properties: {} },
       { a: scene2, b: character, typeFromA: "Scenes", typeFromB: "Characters", relationshipTypeId: "000000000000000000000000B9", properties: {} },
       { a: TWOLD, b: character, typeFromA: "Products", typeFromB: "Characters", properties: {} },
@@ -423,16 +424,16 @@ describe("dynamic-properties character includes with product edges (Marloth regr
     ]);
   });
 
-  test("scopes includes to scenes only and emits product dimensions only", () => {
+  test("scopes includes to scenes only and emits product dimensions only", async () => {
     const ctx = { db: fixture.ctx.cache, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
-    const allScenePrefetch = buildAllSceneCountPrefetch(ctx, {
+    const allScenePrefetch = await buildAllSceneCountPrefetch(ctx, {
       characters_scene_composite: "000000000000000000000000B9",
       scenes_edge_label: "SCENES",
       scenes_table_id: SCENES_DB,
     });
     expect(resolveAllSceneCount(ctx, {}, character, allScenePrefetch)).toBe("2");
 
-    const productPrefetch = buildSceneCountByProductPrefetch(ctx, productionParams);
+    const productPrefetch = await buildSceneCountByProductPrefetch(ctx, productionParams);
     expect(productPrefetch.dimensions.map((dimension) => dimension.id).sort()).toEqual(
       [OTHER_PRODUCT, TWOLD].sort(),
     );
@@ -442,8 +443,8 @@ describe("dynamic-properties character includes with product edges (Marloth regr
     expect(resolveSceneCountByProduct(ctx, {}, character, OTHER_PRODUCT, productPrefetch)).toBe("1");
   });
 
-  test("database view has per-product columns only, not per-scene columns", () => {
-    const detail = getDatabaseViewDetail(
+  test("database view has per-product columns only, not per-scene columns", async () => {
+    const detail = await getDatabaseViewDetail(
       fixture.ctx.cache,
       CHAR_DB,
       undefined,
@@ -462,15 +463,15 @@ describe("dynamic-properties character includes with product edges (Marloth regr
     expect(james?.cells[`scene_count__${OTHER_PRODUCT}`]).toBe("1");
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     delete process.env.TOME_CONTENT_PATH;
     invalidateDynamicPropertiesCache();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 });
 
-describe("dynamic-properties character composite relationships", () => {
-  const fixture = createTestContentFixture("tome-df-char-composite-");
+describe("dynamic-properties character composite relationships", async () => {
+  const fixture = await createTestContentFixture("tome-df-char-composite-");
   const CHAR_DB = "00000000000000000000000035";
   const TWOLD = "0000000000000000000000002V";
   const OTHER_PRODUCT = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
@@ -486,7 +487,7 @@ describe("dynamic-properties character composite relationships", () => {
     product_edge_label: "PRODUCT",
   };
 
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.TOME_CONTENT_PATH = fixture.ctx.store.contentDir;
     seedTestDynamicProperties(
       fixture,
@@ -515,17 +516,17 @@ describe("dynamic-properties character composite relationships", () => {
         },
       ],
     );
-    seedTestNode(fixture, { id: CHAR_DB, properties: typeTableMarkerProperties("Characters") });
-    seedTestNode(fixture, { id: TWOLD, properties: { title: "TWOLD" } });
-    seedTestNode(fixture, { id: OTHER_PRODUCT, properties: { title: "Other Book" } });
-    seedTestNode(fixture, { id: character, properties: { title: "James" } });
-    seedTestNode(fixture, { id: scene1, properties: { title: "Scene A" } });
-    seedTestNode(fixture, { id: scene2, properties: { title: "Scene B" } });
-    seedTestNode(fixture, { id: scene3, properties: { title: "Scene C" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: CHAR_DB, properties: typeTableMarkerProperties("Characters") });
+    await seedTestNode(fixture, { id: TWOLD, properties: { title: "TWOLD" } });
+    await seedTestNode(fixture, { id: OTHER_PRODUCT, properties: { title: "Other Book" } });
+    await seedTestNode(fixture, { id: character, properties: { title: "James" } });
+    await seedTestNode(fixture, { id: scene1, properties: { title: "Scene A" } });
+    await seedTestNode(fixture, { id: scene2, properties: { title: "Scene B" } });
+    await seedTestNode(fixture, { id: scene3, properties: { title: "Scene C" } });
+    await seedTestRelationships(fixture, [
       { source: character, target: CHAR_DB, type: "member_of", properties: { row_index: 0 } },
     ]);
-    seedTestCompositeRelationships(fixture, [
+    await seedTestCompositeRelationships(fixture, [
       { a: scene1, b: character, typeFromA: "Scenes", typeFromB: "Characters", relationshipTypeId: "000000000000000000000000B9", properties: {} },
       { a: scene2, b: character, typeFromA: "Scenes", typeFromB: "Characters", relationshipTypeId: "000000000000000000000000B9", properties: {} },
       { a: scene3, b: character, typeFromA: "Scenes", typeFromB: "Characters", relationshipTypeId: "000000000000000000000000B9", properties: {} },
@@ -535,21 +536,21 @@ describe("dynamic-properties character composite relationships", () => {
     ]);
   });
 
-  test("all scene count and per-product columns via composite edges", () => {
+  test("all scene count and per-product columns via composite edges", async () => {
     const ctx = { db: fixture.ctx.cache, owner: CHAR_DB, viewName: "All", rowNodeIds: [character] };
-    const allScenePrefetch = buildAllSceneCountPrefetch(ctx, {
+    const allScenePrefetch = await buildAllSceneCountPrefetch(ctx, {
       characters_scene_composite: "000000000000000000000000B9",
       scenes_edge_label: "SCENES",
     });
     expect(resolveAllSceneCount(ctx, {}, character, allScenePrefetch)).toBe("3");
 
-    const productPrefetch = buildSceneCountByProductPrefetch(ctx, productionParams);
+    const productPrefetch = await buildSceneCountByProductPrefetch(ctx, productionParams);
     expect(resolveSceneCountByProduct(ctx, {}, character, TWOLD, productPrefetch)).toBe("2");
     expect(resolveSceneCountByProduct(ctx, {}, character, OTHER_PRODUCT, productPrefetch)).toBe("1");
   });
 
-  test("database view integration with composite character edges", () => {
-    const detail = getDatabaseViewDetail(
+  test("database view integration with composite character edges", async () => {
+    const detail = await getDatabaseViewDetail(
       fixture.ctx.cache,
       CHAR_DB,
       undefined,
@@ -561,9 +562,9 @@ describe("dynamic-properties character composite relationships", () => {
     expect(james?.cells[`scene_count__${OTHER_PRODUCT}`]).toBe("1");
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     delete process.env.TOME_CONTENT_PATH;
     invalidateDynamicPropertiesCache();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 });

@@ -48,7 +48,7 @@ function selectAtParagraphEnd(
   return cursorPos;
 }
 
-describe("callout block insertion", () => {
+describe("callout block insertion", async () => {
   test("insertCalloutBlock creates callout with emoji chrome, not body prefix", async () => {
     const { editor, root } = await createEditor("Hello");
 

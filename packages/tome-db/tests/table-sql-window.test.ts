@@ -2,7 +2,7 @@ import { describe, expect, test, afterAll, spyOn } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { GraphDatabase } from "tome-sqlite";
+import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
 import {
   TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID,
 } from "../src/content/test-helpers";
@@ -29,14 +29,15 @@ describe("explodeTableWindowRequest", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-sql-window-explode-"));
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
+  const cache = wrapSyncGraphDatabase(db);
 
-  afterAll(() => {
-    db.close();
+  afterAll(async () => {
+    await cache.close();
     rmSync(dir, { recursive: true, force: true });
   });
 
   test("sql backend with query cache; searchQuery absent when q empty", () => {
-    const plan = explodeTableWindowRequest(db, { limit: 50, offset: 10 });
+    const plan = explodeTableWindowRequest(cache, { limit: 50, offset: 10 });
     expect(plan.backend).toBe("sql");
     expect(plan.searchQuery).toBeUndefined();
     expect(plan.limit).toBe(50);
@@ -46,7 +47,7 @@ describe("explodeTableWindowRequest", () => {
   });
 
   test("searchQuery is an operator when q is set (not a backend mode)", () => {
-    const plan = explodeTableWindowRequest(db, { q: "  hello  ", limit: 20 });
+    const plan = explodeTableWindowRequest(cache, { q: "  hello  ", limit: 20 });
     expect(plan.backend).toBe("sql");
     expect(plan.searchQuery).toBe("hello");
     expect(plan.reasons).toContain("query_cache");
@@ -54,7 +55,10 @@ describe("explodeTableWindowRequest", () => {
   });
 
   test("js backend without query cache", () => {
+    // Base store without queryCache → getQueryCache returns null (js path).
     const flat = {
+      contentDir: "/tmp/no-query-cache",
+      capabilities: { queryable: false as const },
       listRelationshipProjections() {
         return [];
       },
@@ -99,10 +103,11 @@ describe("resolveSqlWindowSorts / SQL window fail-closed", () => {
 
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
+  const cache = wrapSyncGraphDatabase(db);
   const ownerId = "01FC0CSDWN0000000000000001";
 
-  afterAll(() => {
-    db.close();
+  afterAll(async () => {
+    await cache.close();
     rmSync(dir, { recursive: true, force: true });
   });
 
@@ -114,7 +119,7 @@ describe("resolveSqlWindowSorts / SQL window fail-closed", () => {
   ];
 
   test("explode keeps sql backend even for non-expressible sorts", () => {
-    const plan = explodeTableWindowRequest(db, {
+    const plan = explodeTableWindowRequest(cache, {
       sorts: [{ column: "bad-key!", direction: "asc" }],
     });
     expect(plan.backend).toBe("sql");
@@ -123,6 +128,8 @@ describe("resolveSqlWindowSorts / SQL window fail-closed", () => {
 
   test("explode is js without query cache", () => {
     const flat = {
+      contentDir: "/tmp/no-query-cache",
+      capabilities: { queryable: false as const },
       listRelationshipProjections() {
         return [];
       },
@@ -137,7 +144,7 @@ describe("resolveSqlWindowSorts / SQL window fail-closed", () => {
     const warn = spyOn(console, "warn").mockImplementation(() => {});
     try {
       const resolved = resolveSqlWindowSorts(
-        db,
+        cache,
         ownerId,
         [
           { column: "name", direction: "asc" },
@@ -182,7 +189,7 @@ describe("resolveSqlWindowSorts / SQL window fail-closed", () => {
     const warn = spyOn(console, "warn").mockImplementation(() => {});
     try {
       const resolved = resolveSqlWindowSorts(
-        db,
+        cache,
         ownerId,
         [
           { column: "mystery", direction: "desc" },

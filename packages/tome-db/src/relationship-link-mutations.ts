@@ -51,12 +51,12 @@ function ordinalFromProperties(properties: Record<string, unknown>): number | nu
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function nextOutgoingOrdinal(
+async function nextOutgoingOrdinal(
   ctx: TomeWriteContext,
   sourceId: string,
   type: string,
-): number | undefined {
-  const outgoing = listRelationshipsFromSource(ctx.graphStore, sourceId, type);
+): Promise<number | undefined> {
+  const outgoing = await listRelationshipsFromSource(ctx.graphStore, sourceId, type);
   if (outgoing.length === 0) return undefined;
   const ordinals = outgoing
     .map((c) => ordinalFromProperties(c.properties))
@@ -65,24 +65,24 @@ function nextOutgoingOrdinal(
   return Math.max(...ordinals) + 1;
 }
 
-export function linkOutgoingRelationship(
+export async function linkOutgoingRelationship(
   ctx: TomeWriteContext,
   input: LinkOutgoingRelationshipInput,
-): LinkOutgoingRelationshipError | null {
+): Promise<LinkOutgoingRelationshipError | null> {
   const { sourceId, targetId, type, properties = {} } = input;
   const normalizedType = normalizeLinkType(type);
   const store = ctx.graphStore;
   const contentDir = writeStoreContentDir(store);
 
-  if (!writeStoreGetNode(store, sourceId)) return "source_not_found";
-  if (!writeStoreGetNode(store, targetId)) return "target_not_found";
+  if (!await writeStoreGetNode(store, sourceId)) return "source_not_found";
+  if (!await writeStoreGetNode(store, targetId)) return "target_not_found";
 
-  if (writeStoreFindRelationship(store, sourceId, targetId, normalizedType)) {
+  if (await writeStoreFindRelationship(store, sourceId, targetId, normalizedType)) {
     return "duplicate";
   }
 
   const registry = loadRelationshipTypesFromContent(contentDir);
-  const ruleContext = relationshipTypeRuleContext(
+  const ruleContext = await relationshipTypeRuleContext(
     registry,
     store,
     sourceId,
@@ -92,45 +92,45 @@ export function linkOutgoingRelationship(
   if (
     ruleContext &&
     ruleContext.allowedTargetTypeIds.length > 0 &&
-    !nodeMatchesTargetTypes(store, targetId, ruleContext.allowedTargetTypeIds, contentDir)
+    !(await nodeMatchesTargetTypes(store, targetId, ruleContext.allowedTargetTypeIds, contentDir))
   ) {
     return "target_type_not_allowed";
   }
 
   let relProps: Properties = { ...properties };
   if (!("ordinal" in relProps)) {
-    const nextOrdinal = nextOutgoingOrdinal(ctx, sourceId, normalizedType);
+    const nextOrdinal = await nextOutgoingOrdinal(ctx, sourceId, normalizedType);
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
   }
 
-  if (isTypeTableNode(store, targetId, contentDir)) {
+  if (await isTypeTableNode(store, targetId, contentDir)) {
     if (isMemberSideProjectionType(registry, normalizedType)) {
-      relProps = stampOrderIfMissing(ctx, targetId, sourceId, relProps, normalizedType);
+      relProps = await stampOrderIfMissing(ctx, targetId, sourceId, relProps, normalizedType);
     }
   }
 
   try {
-    writeStoreUpsertRelationship(store, sourceId, targetId, normalizedType, relProps);
+    await writeStoreUpsertRelationship(store, sourceId, targetId, normalizedType, relProps);
   } catch (err) {
     if (err instanceof LinkResolutionError || err instanceof UnknownRelationshipTypeError) {
       return "unresolvable_type";
     }
     throw err;
   }
-  syncAfterRelationshipsWrite(ctx);
+  await syncAfterRelationshipsWrite(ctx);
   return null;
 }
 
-export function unlinkOutgoingRelationship(
+export async function unlinkOutgoingRelationship(
   ctx: TomeWriteContext,
   sourceId: string,
   targetId: string,
   type: string,
-): UnlinkOutgoingRelationshipError | null {
+): Promise<UnlinkOutgoingRelationshipError | null> {
   const normalizedType = normalizeLinkType(type);
   const store = ctx.graphStore;
   const registry = loadRelationshipTypesFromContent(writeStoreContentDir(store));
-  const existing = writeStoreFindSetTraitRelationship(
+  const existing = await writeStoreFindSetTraitRelationship(
     store,
     registry,
     sourceId,
@@ -138,21 +138,21 @@ export function unlinkOutgoingRelationship(
     normalizedType,
   );
   if (!existing) return "not_found";
-  writeStoreDeleteRelationship(store, sourceId, targetId, existing.type);
-  syncAfterRelationshipsWrite(ctx);
+  await writeStoreDeleteRelationship(store, sourceId, targetId, existing.type);
+  await syncAfterRelationshipsWrite(ctx);
   return null;
 }
 
-export function moveRelationshipConnection(
+export async function moveRelationshipConnection(
   ctx: TomeWriteContext,
   input: MoveRelationshipConnectionInput,
-): MoveRelationshipConnectionError | null {
+): Promise<MoveRelationshipConnectionError | null> {
   const { type, oldSourceId, oldTargetId, newSourceId, newTargetId } = input;
   const normalizedType = normalizeLinkType(type);
   const store = ctx.graphStore;
   const registry = loadRelationshipTypesFromContent(writeStoreContentDir(store));
 
-  const existing = writeStoreFindSetTraitRelationship(
+  const existing = await writeStoreFindSetTraitRelationship(
     store,
     registry,
     oldSourceId,
@@ -161,7 +161,7 @@ export function moveRelationshipConnection(
   );
   if (!existing) return "not_found";
 
-  const linkError = linkOutgoingRelationship(ctx, {
+  const linkError = await linkOutgoingRelationship(ctx, {
     sourceId: newSourceId,
     targetId: newTargetId,
     type: existing.type,
@@ -169,7 +169,7 @@ export function moveRelationshipConnection(
   });
   if (linkError) return linkError;
 
-  writeStoreDeleteRelationship(store, oldSourceId, oldTargetId, existing.type);
-  syncAfterRelationshipsWrite(ctx);
+  await writeStoreDeleteRelationship(store, oldSourceId, oldTargetId, existing.type);
+  await syncAfterRelationshipsWrite(ctx);
   return null;
 }

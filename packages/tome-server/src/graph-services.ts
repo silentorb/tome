@@ -4,7 +4,6 @@ import {
   addWorkspaceQuickLink,
   removeWorkspaceQuickLink,
   reorderWorkspaceQuickLinks,
-  type QuickLinkError,
   createNode as createNodeInDb,
   deleteNode as deleteNodeInDb,
   exportExplorerLodGraph,
@@ -42,16 +41,8 @@ import {
   loadTableSchemasFromContent,
   type CreateDatabaseColumnInput,
   type UpdateDatabaseColumnInput,
-  type CreateNodeError,
-  type LinkOutgoingRelationshipError,
-  type MoveRelationshipConnectionError,
-  type UnlinkOutgoingRelationshipError,
   type CreateNodeInput,
-  type CreateNodeResult,
-  type GraphLodSnapshot,
-  type GraphSnapshot,
   type RewriteDatabaseSequenceParams,
-  type NodeLifecycleError,
   type SchemaFile,
   type ViewSortSpec,
   type TomeWriteContext,
@@ -161,7 +152,7 @@ function buildGraphServices(
 
   const schema = () => loadSchemaFromContent(contentPath);
 
-  const corpusMeta = (nodeId: string, activeCorpus?: string) => {
+  const corpusMeta = async (nodeId: string, activeCorpus?: string) => {
     const corpora = writeCtx.graphStore.listCorpora();
     const corpus = writeCtx.graphStore.locateNode(nodeId) ?? undefined;
     const info = corpus
@@ -181,14 +172,14 @@ function buildGraphServices(
     };
   };
 
-  const workspaceForCorpus = (corpus?: string): WorkspacePublic => {
+  const workspaceForCorpus = async (corpus?: string): Promise<WorkspacePublic> => {
     const corpora = writeCtx.graphStore.listCorpora();
     const match = corpus
       ? corpora.find((c) => c.id === corpus)
       : corpora[0];
     const contentDir = match?.contentDir ?? contentPath;
     const ws = match?.workspace ?? loadWorkspaceFromContent(contentDir);
-    const archiveNode = graphStore.getNode(ws.archiveNodeId);
+    const archiveNode = await graphStore.getNode(ws.archiveNodeId);
     const archiveTitleRaw = archiveNode?.properties.title ?? archiveNode?.properties.alias;
     const archiveNodeTitle =
       typeof archiveTitleRaw === "string" && archiveTitleRaw.trim()
@@ -201,10 +192,10 @@ function buildGraphServices(
   };
 
   const services: TomeGraphServices = {
-    getWorkspace(corpus?: string): WorkspacePublic {
+    async getWorkspace(corpus?: string) {
       return workspaceForCorpus(corpus);
     },
-    getDocumentIcon(corpus?: string) {
+    async getDocumentIcon(corpus?: string) {
       const corpora = writeCtx.graphStore.listCorpora();
       const match = corpus
         ? corpora.find((c) => c.id === corpus)
@@ -213,24 +204,26 @@ function buildGraphServices(
       const ws = loadWorkspaceFromContent(contentDir);
       return readDocumentIconFile(contentDir, ws.branding?.documentIconImage);
     },
-    listCorpora() {
-      return writeCtx.graphStore.listCorpora().map((c) => {
-        const workspace = workspaceForCorpus(c.id);
-        return {
+    async listCorpora() {
+      const out = [];
+      for (const c of writeCtx.graphStore.listCorpora()) {
+        const workspace = await workspaceForCorpus(c.id);
+        out.push({
           id: c.id,
           access: c.access,
           label: c.workspace.branding?.appTitle?.trim() || c.id,
           homeNodeId: c.workspace.homeNodeId,
           archiveNodeId: c.workspace.archiveNodeId,
           workspace,
-        };
-      });
+        });
+      }
+      return out;
     },
-    getHomeId(corpus?: string): string {
-      const ws = workspaceForCorpus(corpus);
-      if (graphStore.getNode(ws.homeNodeId)) return ws.homeNodeId;
-      const recent = writeCtx.graphStore.executeImp(recentNodesGraph(1));
-      const rows = recent instanceof Promise ? [] : recent.rows;
+    async getHomeId(corpus?: string) {
+      const ws = await workspaceForCorpus(corpus);
+      if (await graphStore.getNode(ws.homeNodeId)) return ws.homeNodeId;
+      const recent = await writeCtx.graphStore.executeImp(recentNodesGraph(1));
+      const rows = recent.rows;
       return rows[0]?.id ? String(rows[0].id) : ws.homeNodeId;
     },
     async getNode(
@@ -246,16 +239,18 @@ function buildGraphServices(
       const nodeContentDir =
         writeCtx.graphStore.listCorpora().find((c) => c.id === writeCtx.graphStore.locateNode(id))
           ?.contentDir ?? contentPath;
-      const detail = getNodePageDetail(graphStore, id, {
-        tabId,
-        contentDir: nodeContentDir,
-        includeSchemaEmptySections: true,
-        rows: options?.rows ?? EDITOR_TABLE_ROWS,
-      });
+      const detail = await Promise.resolve(
+        getNodePageDetail(graphStore, id, {
+          tabId,
+          contentDir: nodeContentDir,
+          includeSchemaEmptySections: true,
+          rows: options?.rows ?? EDITOR_TABLE_ROWS,
+        }),
+      );
       if (!detail) return null;
 
       let document = stripDuplicateTitleHeading(
-        storageBodyToDocument(graphStore, detail.body),
+        await Promise.resolve(storageBodyToDocument(graphStore, detail.body)),
         detail.title,
       );
       const needsPageBlockExtensions = documentHasPageBlock(document);
@@ -274,7 +269,7 @@ function buildGraphServices(
         }
       }
 
-      const meta = corpusMeta(id);
+      const meta = await corpusMeta(id);
       return {
         id: detail.id,
         title: detail.title,
@@ -291,33 +286,37 @@ function buildGraphServices(
         ),
       };
     },
-    getDatabaseView(id: string, tabId?: string, rows?: TableRowsQuery) {
-      return getDatabaseViewDetail(
-        graphStore,
-        id,
-        tabId,
-        contentPath,
-        rows ?? EDITOR_TABLE_ROWS,
+    async getDatabaseView(id: string, tabId?: string, rows?: TableRowsQuery) {
+      return Promise.resolve(
+        getDatabaseViewDetail(
+          graphStore,
+          id,
+          tabId,
+          contentPath,
+          rows ?? EDITOR_TABLE_ROWS,
+        ),
       );
     },
-    getRelationTable(nodeId: string, perspective: string, rows?: TableRowsQuery) {
-      return getRelationTableSection(graphStore, nodeId, perspective, {
-        contentDir: contentPath,
-        includeSchemaEmptySections: true,
-        rowsQuery: rows ?? EDITOR_TABLE_ROWS,
-      });
+    async getRelationTable(nodeId: string, perspective: string, rows?: TableRowsQuery) {
+      return Promise.resolve(
+        getRelationTableSection(graphStore, nodeId, perspective, {
+          contentDir: contentPath,
+          includeSchemaEmptySections: true,
+          rowsQuery: rows ?? EDITOR_TABLE_ROWS,
+        }),
+      );
     },
-    getNodeViews(nodeId: string) {
-      return readNodeViews(writeCtx, nodeId);
+    async getNodeViews(nodeId: string) {
+      return Promise.resolve(readNodeViews(writeCtx, nodeId));
     },
-    createRelationshipView(
+    async createRelationshipView(
       nodeId: string,
       relationshipTypeId: string,
       input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
     ) {
       return createRelationshipView(writeCtx, nodeId, relationshipTypeId, input);
     },
-    updateRelationshipView(
+    async updateRelationshipView(
       nodeId: string,
       relationshipTypeId: string,
       viewId: string,
@@ -325,34 +324,34 @@ function buildGraphServices(
     ) {
       return updateRelationshipView(writeCtx, nodeId, relationshipTypeId, viewId, input);
     },
-    deleteRelationshipView(nodeId: string, relationshipTypeId: string, viewId: string) {
-      deleteRelationshipView(writeCtx, nodeId, relationshipTypeId, viewId);
+    async deleteRelationshipView(nodeId: string, relationshipTypeId: string, viewId: string) {
+      await deleteRelationshipView(writeCtx, nodeId, relationshipTypeId, viewId);
     },
-    patchRelationshipViews(
+    async patchRelationshipViews(
       nodeId: string,
       relationshipTypeId: string,
       input: { viewOrder?: string[]; properties?: string[] },
     ) {
       return patchRelationshipViews(writeCtx, nodeId, relationshipTypeId, input);
     },
-    deleteDatabaseColumn(databaseId: string, columnKey: string) {
+    async deleteDatabaseColumn(databaseId: string, columnKey: string) {
       return deleteDatabaseColumnInDb(writeCtx, databaseId, columnKey);
     },
-    createDatabaseColumn(databaseId: string, input: CreateDatabaseColumnInput) {
+    async createDatabaseColumn(databaseId: string, input: CreateDatabaseColumnInput) {
       return createDatabaseColumnInDb(writeCtx, databaseId, input);
     },
-    updateDatabaseColumn(
+    async updateDatabaseColumn(
       databaseId: string,
       columnKey: string,
       input: UpdateDatabaseColumnInput,
     ) {
       return updateDatabaseColumnInDb(writeCtx, databaseId, columnKey, input);
     },
-    listTypeTables() {
+    async listTypeTables() {
       const schemas = loadTableSchemasFromContent(writeCtx.graphStore.contentDir);
       const entries: { id: string; title: string }[] = [];
       for (const id of Object.keys(schemas.tables)) {
-        const node = graphStore.getNode(id);
+        const node = await graphStore.getNode(id);
         const title =
           typeof node?.properties.title === "string" && node.properties.title.trim()
             ? node.properties.title.trim()
@@ -364,91 +363,103 @@ function buildGraphServices(
       );
       return entries;
     },
-    getSchema(): SchemaFile {
+    async getSchema(): Promise<SchemaFile> {
       return schema();
     },
-  listRelationshipTypes() {
+    async listRelationshipTypes() {
       const registry = loadRelationshipTypesFromContent(contentPath);
       return labeledRelationshipTypes(
         registry,
-        listDistinctProjectionTypes(graphStore),
+        await Promise.resolve(listDistinctProjectionTypes(graphStore)),
       );
     },
-    getRelationshipLinkOptions(sourceId: string, type: string) {
+    async getRelationshipLinkOptions(sourceId: string, type: string) {
       const registry = loadRelationshipTypesFromContent(contentPath);
-      const rule = relationshipTypeRuleContext(registry, graphStore, sourceId, type, contentPath);
+      const rule = await Promise.resolve(
+        relationshipTypeRuleContext(registry, graphStore, sourceId, type, contentPath),
+      );
       return {
         allowedTargetTypeIds: rule ? [...rule.allowedTargetTypeIds] : null,
       };
     },
-    rewriteDatabaseSequence(
+    async rewriteDatabaseSequence(
       databaseId: string,
       params: RewriteDatabaseSequenceParams,
     ) {
       return rewriteDatabaseSequenceInDb(writeCtx, databaseId, params);
     },
-    search(
+    async search(
       query: string,
       limit?: number,
       allowedTypeIds?: string[],
       options?: SearchNodesOptions,
-    ): NodeSummary[] {
+    ) {
       const cap = Math.max(1, Math.min(limit ?? 20, 100));
       const searchRole = options?.role === "title" ? "title" : "content";
-      const executed = writeCtx.graphStore.executeImp(searchNodesGraph(cap), {
+      const executed = await writeCtx.graphStore.executeImp(searchNodesGraph(cap), {
         parameters: { query },
         allowedTypeIds,
         searchRole,
         participatesInProjectionType: options?.participatesInProjectionType,
         onlyActivePickingRole: options?.onlyActivePickingRole,
       });
-      const rows = executed instanceof Promise ? [] : executed.rows;
-      return rows.map((row) => {
+      const rows = executed.rows;
+      const summaries: NodeSummary[] = [];
+      for (const row of rows) {
         const id = String(row.id);
         const title =
           typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Untitled";
         const matchPreview = row.matchPreview as NodeSummary["matchPreview"];
-        return {
+        summaries.push({
           id,
           title,
-          primaryTypeTitle: primaryTypeTitleForInstance(graphStore, id),
+          primaryTypeTitle: await Promise.resolve(
+            primaryTypeTitleForInstance(graphStore, id),
+          ),
           ...(matchPreview ? { matchPreview } : {}),
-          ...corpusMeta(id, options?.activeCorpus),
-        };
-      });
+          ...(await corpusMeta(id, options?.activeCorpus)),
+        });
+      }
+      return summaries;
     },
-    isSearchAvailable(role?: "title" | "content"): boolean {
+    async isSearchAvailable(role?: "title" | "content") {
       return extensions.isSearchAvailable(role ?? "content");
     },
-    listRecent(limit?: number): NodeSummary[] {
+    async listRecent(limit?: number) {
       const cap = Math.max(1, Math.min(limit ?? 20, 100));
-      const executed = writeCtx.graphStore.executeImp(recentNodesGraph(cap));
-      const rows = executed instanceof Promise ? [] : executed.rows;
-      return rows.map((row) => {
+      const executed = await writeCtx.graphStore.executeImp(recentNodesGraph(cap));
+      const rows = executed.rows;
+      const summaries: NodeSummary[] = [];
+      for (const row of rows) {
         const id = String(row.id);
-        return {
+        summaries.push({
           id,
           title: typeof row.title === "string" && row.title.trim() ? row.title.trim() : "Untitled",
-          primaryTypeTitle: primaryTypeTitleForInstance(graphStore, id),
-          ...corpusMeta(id),
-        };
-      });
+          primaryTypeTitle: await Promise.resolve(
+            primaryTypeTitleForInstance(graphStore, id),
+          ),
+          ...(await corpusMeta(id)),
+        });
+      }
+      return summaries;
     },
-    saveDocument(id: string, document: NodeBodyDocument): boolean {
+    async saveDocument(id: string, document: NodeBodyDocument) {
       return updateNodeBody(writeCtx, id, documentToStorageBody(document));
     },
-    saveTitle(id: string, title: string): boolean {
+    async saveTitle(id: string, title: string) {
       return updateNodeTitle(writeCtx, id, title);
     },
-    updateDatabaseRowProperty(
+    async updateDatabaseRowProperty(
       databaseId: string,
       nodeId: string,
       propertyKey: string,
       value: string | null,
     ) {
-      return updateDatabaseRowProperty(writeCtx, databaseId, nodeId, propertyKey, value);
+      return Promise.resolve(
+        updateDatabaseRowProperty(writeCtx, databaseId, nodeId, propertyKey, value),
+      );
     },
-    updateOutgoingRelationshipProperty(
+    async updateOutgoingRelationshipProperty(
       nodeId: string,
       type: string,
       targetId: string,
@@ -464,41 +475,40 @@ function buildGraphServices(
         value,
       );
     },
-    deleteNode(id: string): NodeLifecycleError | null {
+    async deleteNode(id: string) {
       return deleteNodeInDb(writeCtx, id);
     },
-    archiveNode(id: string): NodeLifecycleError | null {
+    async archiveNode(id: string) {
       return archiveNodeInDb(writeCtx, id);
     },
-    unarchiveNode(id: string): NodeLifecycleError | null {
+    async unarchiveNode(id: string) {
       return unarchiveNodeInDb(writeCtx, id);
     },
-    addQuickLink(
-      id: string,
-      options?: { label?: string },
-    ): QuickLinkError | null {
-      return addWorkspaceQuickLink(writeCtx, id, options);
+    async addQuickLink(id: string, options?: { label?: string }) {
+      return Promise.resolve(addWorkspaceQuickLink(writeCtx, id, options));
     },
-    removeQuickLink(id: string): QuickLinkError | null {
-      return removeWorkspaceQuickLink(writeCtx, id);
+    async removeQuickLink(id: string) {
+      return Promise.resolve(removeWorkspaceQuickLink(writeCtx, id));
     },
-    reorderQuickLinks(nodeIds: readonly string[]): QuickLinkError | null {
-      return reorderWorkspaceQuickLinks(writeCtx, nodeIds);
+    async reorderQuickLinks(nodeIds: readonly string[]) {
+      return Promise.resolve(reorderWorkspaceQuickLinks(writeCtx, nodeIds));
     },
-    createNode(input: CreateNodeInput): CreateNodeResult | CreateNodeError {
+    async createNode(input: CreateNodeInput) {
       return createNodeInDb(writeCtx, input);
     },
-    createRelationRow(
+    async createRelationRow(
       sourceId: string,
       input: { type: string; title: string; properties?: Record<string, string> },
-    ): CreateNodeResult | CreateNodeError {
+    ) {
       const registry = loadRelationshipTypesFromContent(contentPath);
-      const rule = relationshipTypeRuleContext(
-        registry,
-        graphStore,
-        sourceId,
-        input.type,
-        contentPath,
+      const rule = await Promise.resolve(
+        relationshipTypeRuleContext(
+          registry,
+          graphStore,
+          sourceId,
+          input.type,
+          contentPath,
+        ),
       );
       const typeTableId =
         rule && rule.allowedTargetTypeIds.length === 1
@@ -515,41 +525,43 @@ function buildGraphServices(
         },
       });
     },
-    linkOutgoingRelationship(
+    async linkOutgoingRelationship(
       sourceId: string,
       input: { type: string; targetId: string },
-    ): LinkOutgoingRelationshipError | null {
+    ) {
       return linkOutgoingRelationship(writeCtx, {
         sourceId,
         targetId: input.targetId,
         type: input.type,
       });
     },
-    unlinkOutgoingRelationship(
+    async unlinkOutgoingRelationship(
       sourceId: string,
       type: string,
       targetId: string,
-    ): UnlinkOutgoingRelationshipError | null {
+    ) {
       return unlinkOutgoingRelationship(writeCtx, sourceId, targetId, type);
     },
-    moveRelationshipConnection(input: {
+    async moveRelationshipConnection(input: {
       type: string;
       oldSourceId: string;
       oldTargetId: string;
       newSourceId: string;
       newTargetId: string;
-    }): MoveRelationshipConnectionError | null {
+    }) {
       return moveRelationshipConnection(writeCtx, {
         ...input,
       });
     },
-    getGraphFull(): GraphSnapshot {
-      return exportFullGraph(writeCtx.graphStore, contentPath);
+    async getGraphFull() {
+      return Promise.resolve(exportFullGraph(writeCtx.graphStore, contentPath));
     },
-    getGraphExplorerLod(options?: { anchorId?: string; layerCount?: number }): GraphLodSnapshot {
-      return exportExplorerLodGraph(writeCtx.graphStore, { ...options, contentDir: contentPath });
+    async getGraphExplorerLod(options?: { anchorId?: string; layerCount?: number }) {
+      return Promise.resolve(
+        exportExplorerLodGraph(writeCtx.graphStore, { ...options, contentDir: contentPath }),
+      );
     },
-    executeImp(graph, context) {
+    async executeImp(graph, context) {
       return writeCtx.graphStore.executeImp(graph, context);
     },
     async getExtensionsManifest(): Promise<PublicExtensionsManifest> {
@@ -558,21 +570,21 @@ function buildGraphServices(
       return extensions.getPublicManifest();
     },
     async prepareEditorBody(nodeId: string, markdown: string): Promise<string | null> {
-      if (!graphStore.getNode(nodeId)) return null;
+      if (!(await graphStore.getNode(nodeId))) return null;
       await extensionsReady;
       await extensions.ensureLoaded();
       return extensions.prepareEditorBody(nodeId, markdown);
     },
-    invokeExtension(componentId, input, nodeId) {
-      return extensionsReady.then(() =>
-        extensions.invokeExtension(componentId, input, nodeId),
-      );
+    async invokeExtension(componentId, input, nodeId) {
+      await extensionsReady;
+      return extensions.invokeExtension(componentId, input, nodeId);
     },
-    bundleEditorExtension(extensionId) {
-      return extensionsReady.then(() => extensions.bundleEditorModule(extensionId));
+    async bundleEditorExtension(extensionId) {
+      await extensionsReady;
+      return extensions.bundleEditorModule(extensionId);
     },
-    close(): void {
-      writeCtx.graphStore.close();
+    async close() {
+      await writeCtx.graphStore.close();
     },
   };
 
@@ -588,15 +600,15 @@ function buildGraphServices(
  * - `openTomeGraphServices({ store, cache })` — host DI path (syncs cache before return)
  * - `openTomeGraphServices(dbPath, contentPath)` — test convenience via `openContentGraph`
  */
-export function openTomeGraphServices(
+export async function openTomeGraphServices(
   args: OpenTomeGraphServicesArgs | string = resolveDbPath(),
   contentPath = resolveContentPath(),
-): TomeGraphServices {
+): Promise<TomeGraphServices> {
   if (typeof args === "object" && args !== null && "store" in args && "cache" in args) {
-    const writeCtx = openTomeWriteContext(args.store as FlatfileStore, args.cache);
+    const writeCtx = await openTomeWriteContext(args.store as FlatfileStore, args.cache);
     return buildGraphServices(writeCtx, args.store.contentDir).services;
   }
-  const writeCtx = openContentGraph(contentPath, args);
+  const writeCtx = await openContentGraph(contentPath, args);
   return buildGraphServices(writeCtx, contentPath).services;
 }
 
@@ -610,11 +622,11 @@ export type DeferredTomeGraphServices = {
 
 /**
  * Open graph services without blocking on cache sync or starting file watchers.
- * Caller runs cache sync (ensureReadyAsync / SyncGraphWire.runInitialFull), then
+ * Caller runs cache sync (`ensureReady` / SyncGraphWire.runInitialFull), then
  * `startWatching()`. When `skipStoreSyncSubscribe` is set, do not call
  * `finishDeferredWriteContextReady` — observers are already wired.
  */
-export function openTomeGraphServicesDeferred(
+export async function openTomeGraphServicesDeferred(
   args: OpenTomeGraphServicesArgs,
   options?: {
     progress?: SyncProgressReporter;
@@ -625,13 +637,13 @@ export function openTomeGraphServicesDeferred(
     /** dataStore id → TomeSearch (or FTS handle) for searcher extensions. */
     searchBackends?: Map<string, unknown>;
   },
-): DeferredTomeGraphServices {
+): Promise<DeferredTomeGraphServices> {
   const writeCtx =
     options?.writeContext ??
-    openTomeWriteContext(args.store as FlatfileStore, args.cache, {
+    (await openTomeWriteContext(args.store as FlatfileStore, args.cache, {
       deferReady: true,
       progress: options?.progress,
-    });
+    }));
   const built = buildGraphServices(writeCtx, args.store.contentDir, {
     startWatching: false,
     searchBackends: options?.searchBackends,

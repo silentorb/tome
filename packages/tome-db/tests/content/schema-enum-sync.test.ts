@@ -28,72 +28,72 @@ const SCHEMA_V2 = {
   },
 };
 
-describe("CacheSync schema enum causality", () => {
-  const fixture = createTestContentFixture("tome-schema-enum-sync-");
+describe("CacheSync schema enum causality", async () => {
+  const fixture = await createTestContentFixture("tome-schema-enum-sync-");
   const pageId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
   const databaseId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
   let recordId: string;
 
-  beforeAll(() => {
+  beforeAll(async () => {
     process.env.TOME_CONTENT_PATH = fixture.ctx.store.contentDir;
     writeFileSync(
       schemaFilePath(fixture.ctx.store.contentDir),
       serializeSchemaFile(SCHEMA_V1),
       "utf-8",
     );
-    seedTestNode(fixture, { id: databaseId, properties: { title: "Features" } });
-    seedTestNode(fixture, { id: pageId, properties: { title: "Feature A" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: databaseId, properties: { title: "Features" } });
+    await seedTestNode(fixture, { id: pageId, properties: { title: "Feature A" } });
+    await seedTestRelationships(fixture, [
       { source: pageId, target: databaseId, type: "member_of", properties: { priority: "High" } },
     ]);
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))[0];
+    const edge = (await fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1)))[0];
     recordId = edge!.recordId!;
   });
 
-  test("stores priority index for initial schema option order", () => {
-    expect(fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))[0]?.properties.priority).toBe(
+  test("stores priority index for initial schema option order", async () => {
+    expect((await fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1)))[0]?.properties.priority).toBe(
       "High",
     );
 
     expect(
-      fixture.ctx.cache.queryAll<{ priority: number | null }>(
+      (await fixture.ctx.cache.queryAll<{ priority: number | null }>(
         "SELECT priority FROM relationship_records WHERE id = ?",
         recordId,
-      )[0]?.priority,
+      ))[0]?.priority,
     ).toBe(2);
   });
 
-  test("re-encodes enum indices when schema option order changes", () => {
+  test("re-encodes enum indices when schema option order changes", async () => {
     writeFileSync(
       schemaFilePath(fixture.ctx.store.contentDir),
       serializeSchemaFile(SCHEMA_V2),
       "utf-8",
     );
-    fixture.ctx.sync.syncFile(SCHEMA_FILENAME);
+    await fixture.ctx.sync.syncFile(SCHEMA_FILENAME);
 
-    expect(fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))[0]?.properties.priority).toBe(
+    expect((await fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1)))[0]?.properties.priority).toBe(
       "High",
     );
 
     expect(
-      fixture.ctx.cache.queryAll<{ priority: number | null }>(
+      (await fixture.ctx.cache.queryAll<{ priority: number | null }>(
         "SELECT priority FROM relationship_records WHERE id = ?",
         recordId,
-      )[0]?.priority,
+      ))[0]?.priority,
     ).toBe(3);
 
-    expect(fixture.ctx.cache.getMeta("enum_config_fingerprint")).toBe(
+    expect(await fixture.ctx.cache.getMeta("enum_config_fingerprint")).toBe(
       enumConfigFingerprint(SCHEMA_V2),
     );
   });
 
-  test("cacheNeedsRebuild detects stale enum fingerprint without content mtime change", () => {
-    fixture.ctx.cache.setMeta("enum_config_fingerprint", "stale");
-    expect(fixture.ctx.sync.cacheNeedsRebuild()).toBe(true);
+  test("cacheNeedsRebuild detects stale enum fingerprint without content mtime change", async () => {
+    await fixture.ctx.cache.setMeta("enum_config_fingerprint", "stale");
+    expect(await fixture.ctx.sync.cacheNeedsRebuild()).toBe(true);
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     delete process.env.TOME_CONTENT_PATH;
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 });

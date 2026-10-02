@@ -72,20 +72,20 @@ function spyFlatfileNodeReads(store: ComposedGraphStore): {
   };
 }
 
-describe("ComposedGraphStore SQLite read path", () => {
-  const fixture = createTestContentFixture("tome-composed-read-");
+describe("ComposedGraphStore SQLite read path", async () => {
+  const fixture = await createTestContentFixture("tome-composed-read-");
   const contentDir = fixture.ctx.store.contentDir;
   const graphStore = fixture.ctx.graphStore as ComposedGraphStore;
 
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: SCENES_DB,
     properties: typeTableMarkerProperties("Scenes"),
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: PRODUCTS_DB,
     properties: typeTableMarkerProperties("Products"),
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: PARTS_DB,
     properties: typeTableMarkerProperties("Parts"),
   });
@@ -105,23 +105,23 @@ describe("ComposedGraphStore SQLite read path", () => {
               endpoint: 0,
     },
   ]);
-  seedTestNode(fixture, { id: bookA, properties: { title: "Book A" } });
-  seedTestNode(fixture, { id: part1, properties: { title: "Part 1" } });
-  seedTestNode(fixture, { id: scene1, properties: { title: "Scene One" } });
-  seedTestNode(fixture, { id: scene2, properties: { title: "Scene Two" } });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, { id: bookA, properties: { title: "Book A" } });
+  await seedTestNode(fixture, { id: part1, properties: { title: "Part 1" } });
+  await seedTestNode(fixture, { id: scene1, properties: { title: "Scene One" } });
+  await seedTestNode(fixture, { id: scene2, properties: { title: "Scene Two" } });
+  await seedTestNode(fixture, {
     id: scene3,
     properties: { title: "Scene Three" },
   }, `See [Scene One](./${scene1}.md) for setup.\n`);
 
-  seedTestRelationships(fixture, [
+  await seedTestRelationships(fixture, [
     { source: bookA, target: PRODUCTS_DB, type: "ordered_member_of", properties: { order: "1" } },
     { source: part1, target: PARTS_DB, type: "ordered_member_of", properties: { order: "1" } },
     { source: scene1, target: SCENES_DB, type: "ordered_member_of", properties: { order: "10" } },
     { source: scene2, target: SCENES_DB, type: "ordered_member_of", properties: { order: "20" } },
     { source: scene3, target: SCENES_DB, type: "ordered_member_of", properties: { order: "30" } },
   ]);
-  seedTestCompositeRelationships(fixture, [
+  await seedTestCompositeRelationships(fixture, [
     {
       a: scene1,
       b: bookA,
@@ -174,7 +174,7 @@ describe("ComposedGraphStore SQLite read path", () => {
     endpoints: { 0: { typeId: SCENES_DB }, 1: { typeId: PARTS_DB } },
   };
   fixture.ctx.store.writeRelationshipTypesFile(registry);
-  fixture.ctx.sync.syncRelationships();
+  await fixture.ctx.sync.syncRelationships();
 
   seedTestViews(fixture, {
     version: VIEWS_FILE_VERSION,
@@ -187,11 +187,11 @@ describe("ComposedGraphStore SQLite read path", () => {
     ],
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 
-  test("listRelationshipsFromSource matches cache without scanning flatfile shards", () => {
+  test("listRelationshipsFromSource matches cache without scanning flatfile shards", async () => {
     const orderedMember = projectionTypeForEndpoint(
       TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID,
       1,
@@ -199,8 +199,8 @@ describe("ComposedGraphStore SQLite read path", () => {
 
     const spy = spyRelationshipFileReads(graphStore);
     try {
-      const viaGraph = listRelationshipsFromSource(graphStore, scene1, orderedMember);
-      const viaCache = listRelationshipsFromSource(fixture.ctx.cache, scene1, orderedMember);
+      const viaGraph = await listRelationshipsFromSource(graphStore, scene1, orderedMember);
+      const viaCache = await listRelationshipsFromSource(fixture.ctx.cache, scene1, orderedMember);
       expect(viaGraph.map((r) => r.id).sort()).toEqual(viaCache.map((r) => r.id).sort());
       expect(viaGraph.some((r) => r.targetNodeId === SCENES_DB)).toBe(true);
       expect(spy.scanCount()).toBe(0);
@@ -209,15 +209,15 @@ describe("ComposedGraphStore SQLite read path", () => {
     }
   });
 
-  test("listRelationshipsForComposite uses queryAll without flatfile full-scan", () => {
+  test("listRelationshipsForComposite uses queryAll without flatfile full-scan", async () => {
     const spy = spyRelationshipFileReads(graphStore);
     try {
-      const viaGraph = listRelationshipsForComposite(
+      const viaGraph = await listRelationshipsForComposite(
         graphStore,
         scene1,
         "000000000000000000000000A3",
       );
-      const viaCache = listRelationshipsForComposite(
+      const viaCache = await listRelationshipsForComposite(
         fixture.ctx.cache,
         scene1,
         "000000000000000000000000A3",
@@ -234,10 +234,10 @@ describe("ComposedGraphStore SQLite read path", () => {
     }
   });
 
-  test("windowed composed database view does not scan flatfile relationship tree", () => {
+  test("windowed composed database view does not scan flatfile relationship tree", async () => {
     const spy = spyRelationshipFileReads(graphStore);
     try {
-      const detail = getDatabaseViewDetail(graphStore, SCENES_DB, bookA, contentDir, {
+      const detail = await getDatabaseViewDetail(graphStore, SCENES_DB, bookA, contentDir, {
         limit: 2,
         offset: 0,
       });
@@ -251,14 +251,14 @@ describe("ComposedGraphStore SQLite read path", () => {
     }
   });
 
-  test("getNode and windowed database view do not read flatfile node markdown", () => {
+  test("getNode and windowed database view do not read flatfile node markdown", async () => {
     const spy = spyFlatfileNodeReads(graphStore);
     try {
-      const node = graphStore.getNode(scene1);
+      const node = await graphStore.getNode(scene1);
       expect(node?.properties.title).toBe("Scene One");
       expect(spy.readCount()).toBe(0);
 
-      const detail = getDatabaseViewDetail(graphStore, SCENES_DB, bookA, contentDir, {
+      const detail = await getDatabaseViewDetail(graphStore, SCENES_DB, bookA, contentDir, {
         limit: 2,
         offset: 0,
       });
@@ -269,15 +269,15 @@ describe("ComposedGraphStore SQLite read path", () => {
     }
   });
 
-  test("backlink body scan uses cache listNodesWithBodyLike without node-tree walk", () => {
+  test("backlink body scan uses cache listNodesWithBodyLike without node-tree walk", async () => {
     const spy = spyRelationshipFileReads(graphStore);
     try {
-      const matches = readStoreListNodesWithBodyLike(graphStore, `%${scene1}%`);
+      const matches = await readStoreListNodesWithBodyLike(graphStore, `%${scene1}%`);
       const scene3Match = matches.find((m) => m.id === scene3);
       expect(scene3Match).toBeTruthy();
       expect(scene3Match?.body).toContain(`./${scene1}.md`);
 
-      const meta = getNodePageMetadata(graphStore, scene1);
+      const meta = await getNodePageMetadata(graphStore, scene1);
       expect(meta?.backlinks.some((b) => b.sourceId === scene3)).toBe(true);
       expect(meta?.backlinks.find((b) => b.sourceId === scene3)?.title).toBe("Scene Three");
       expect(spy.scanCount()).toBe(0);

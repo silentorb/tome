@@ -17,7 +17,10 @@ export interface ColumnSetDimension {
 }
 
 export interface ColumnSetResolver {
-  discoverDimensions(ctx: DynamicResolverContext, params: DynamicPropertyParams): ColumnSetDimension[];
+  discoverDimensions(
+    ctx: DynamicResolverContext,
+    params: DynamicPropertyParams,
+  ): ColumnSetDimension[] | Promise<ColumnSetDimension[]>;
   resolveCell(
     ctx: DynamicResolverContext,
     params: DynamicPropertyParams,
@@ -25,7 +28,10 @@ export interface ColumnSetResolver {
     dimensionId: string,
     prefetch: unknown,
   ): string;
-  buildPrefetch(ctx: DynamicResolverContext, params: DynamicPropertyParams): unknown;
+  buildPrefetch(
+    ctx: DynamicResolverContext,
+    params: DynamicPropertyParams,
+  ): unknown | Promise<unknown>;
 }
 
 export type FixedPropertyResolver = (

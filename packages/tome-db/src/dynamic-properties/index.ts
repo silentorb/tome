@@ -12,10 +12,7 @@ import {
 } from "./registry";
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import {
-  buildAllSceneCountPrefetch,
   buildSceneCountByProductPrefetch,
-  buildWeightedUsePrefetch,
-  buildWonderPrefetch,
   discoverSceneCountByProductDimensions,
   resolveAllSceneCount,
   resolveSceneCountByProduct,
@@ -34,9 +31,12 @@ export function getDefaultResolverRegistry(): ResolverRegistry {
 }
 
 function registerStarterResolvers(registry: ResolverRegistry): void {
-  registerFixedResolver(registry, "characters.allSceneCount", (ctx, params, nodeId, prefetch) =>
-    resolveAllSceneCount(ctx, params, nodeId, prefetch ?? buildAllSceneCountPrefetch(ctx, params)),
-  );
+  registerFixedResolver(registry, "characters.allSceneCount", (ctx, params, nodeId, prefetch) => {
+    if (prefetch == null) {
+      throw new Error("characters.allSceneCount requires prefetch");
+    }
+    return resolveAllSceneCount(ctx, params, nodeId, prefetch);
+  });
 
   registerColumnSetResolver(registry, "characters.sceneCountByProduct", {
     discoverDimensions: discoverSceneCountByProductDimensions,
@@ -44,33 +44,39 @@ function registerStarterResolvers(registry: ResolverRegistry): void {
     resolveCell: resolveSceneCountByProduct,
   });
 
-  registerFixedResolver(registry, "inspirations.weightedUse", (ctx, params, nodeId, prefetch) =>
-    resolveWeightedUse(ctx, params, nodeId, prefetch ?? buildWeightedUsePrefetch(ctx, params)),
-  );
+  registerFixedResolver(registry, "inspirations.weightedUse", (ctx, params, nodeId, prefetch) => {
+    if (prefetch == null) {
+      throw new Error("inspirations.weightedUse requires prefetch");
+    }
+    return resolveWeightedUse(ctx, params, nodeId, prefetch);
+  });
 
-  registerFixedResolver(registry, "inspirations.wonder", (ctx, params, nodeId, prefetch) =>
-    resolveWonder(ctx, params, nodeId, prefetch ?? buildWonderPrefetch(ctx, params)),
-  );
+  registerFixedResolver(registry, "inspirations.wonder", (ctx, params, nodeId, prefetch) => {
+    if (prefetch == null) {
+      throw new Error("inspirations.wonder requires prefetch");
+    }
+    return resolveWonder(ctx, params, nodeId, prefetch);
+  });
 }
 
-export function applyDynamicProperties(
+export async function applyDynamicProperties(
   db: RelationshipReadStore,
   owner: string,
   viewName: string,
   evalRows: EvalRow[],
   registry: ResolverRegistry = getDefaultResolverRegistry(),
   options?: import("./enrich").ApplyDynamicPropertiesOptions,
-): DynamicEnrichmentResult {
+): Promise<DynamicEnrichmentResult> {
   return enrichEvalRows(db, owner, viewName, evalRows, registry, options);
 }
 
-export function listDynamicColumnDefs(
+export async function listDynamicColumnDefs(
   db: RelationshipReadStore,
   owner: string,
   viewName: string,
   registry: ResolverRegistry = getDefaultResolverRegistry(),
   options?: import("./enrich").ApplyDynamicPropertiesOptions,
-): import("./enrich").DynamicColumnDefsResult {
+): Promise<import("./enrich").DynamicColumnDefsResult> {
   return listDynamicColumnDefsFromEnrich(db, owner, viewName, registry, options);
 }
 

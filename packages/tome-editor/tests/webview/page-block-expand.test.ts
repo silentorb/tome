@@ -49,7 +49,7 @@ async function createEditor(initial = "") {
   return { editor, root };
 }
 
-describe("expandInsertedPageBlock", () => {
+describe("expandInsertedPageBlock", async () => {
   test("replaces tome-block fence with prepared embed HTML", async () => {
     const component = {
       id: "schema-diagram.block",

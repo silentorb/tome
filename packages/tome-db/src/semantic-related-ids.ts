@@ -121,17 +121,6 @@ function requireQueryable(store: RelationshipReadStore): TomeGraphStoreQueryable
   return store as TomeGraphStoreQueryable;
 }
 
-function syncExecuteImp(
-  store: TomeGraphStoreQueryable,
-  ...args: Parameters<TomeGraphStoreQueryable["executeImp"]>
-): ImpCollectionResult {
-  const result = store.executeImp(...args);
-  if (result instanceof Promise) {
-    throw new Error("Semantic related-id hops require synchronous executeImp");
-  }
-  return result;
-}
-
 function idsFromImpResult(result: ImpCollectionResult): string[] {
   const seen = new Set<string>();
   const ids: string[] = [];
@@ -145,7 +134,7 @@ function idsFromImpResult(result: ImpCollectionResult): string[] {
 }
 
 /** Opposite node ids via one semantic relation hop from `anchorNodeId`. */
-export function relatedNodeIdsFromSemanticPath(
+export async function relatedNodeIdsFromSemanticPath(
   store: RelationshipReadStore,
   anchorNodeId: string,
   token: string,
@@ -153,7 +142,7 @@ export function relatedNodeIdsFromSemanticPath(
     startType: string;
     ontology: PathOntology;
   },
-): string[] {
+): Promise<string[]> {
   const queryable = requireQueryable(store);
   // Relation hop only — project/asScalar emits unqualified `id` after traverse joins
   // (ambiguous sources.id vs targets.id). Node-bag output qualifies targets.id like
@@ -162,20 +151,20 @@ export function relatedNodeIdsFromSemanticPath(
     ontology: options.ontology,
     startType: options.startType,
   });
-  return idsFromImpResult(syncExecuteImp(queryable, graph));
+  return idsFromImpResult(await queryable.executeImp(graph));
 }
 
 /**
  * Opposite node ids for a presentation composite: resolve relationship type → column key,
  * then Imp semantic bind + executeImp. No composite-SQL fallback.
  */
-export function relatedNodeIds(
+export async function relatedNodeIds(
   store: RelationshipReadStore,
   anchorNodeId: string,
   relationshipTypeId: string,
   startType: string,
   pathContext: SemanticRelatedPathContext,
-): string[] {
+): Promise<string[]> {
   const col = relationColumnForRelationshipType(
     pathContext.tableSchemas,
     startType,
@@ -192,12 +181,13 @@ export function relatedNodeIds(
   });
 }
 
-export function firstRelatedNodeId(
+export async function firstRelatedNodeId(
   store: RelationshipReadStore,
   anchorNodeId: string,
   relationshipTypeId: string,
   startType: string,
   pathContext: SemanticRelatedPathContext,
-): string | null {
-  return relatedNodeIds(store, anchorNodeId, relationshipTypeId, startType, pathContext)[0] ?? null;
+): Promise<string | null> {
+  const ids = await relatedNodeIds(store, anchorNodeId, relationshipTypeId, startType, pathContext);
+  return ids[0] ?? null;
 }

@@ -20,12 +20,12 @@ interface DatabaseViewPayload {
   };
 }
 
-describe("database members API", () => {
-  const fixture = createTestContentFixture("tome-members-api-");
+describe("database members API", async () => {
+  const fixture = await createTestContentFixture("tome-members-api-");
 
-  seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
-  seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
-  seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
+  await seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
+  await seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
+  await seedTestNode(fixture, { id: SCENES_DB, properties: typeTableMarkerProperties("Scenes") });
   seedTestTableSchema(fixture, SCENES_DB, [
     {
       key: "product",
@@ -52,17 +52,17 @@ describe("database members API", () => {
     },
   ]);
   seedTestTableSchema(fixture, PRODUCTS_DB, []);
-  seedTestNode(fixture, { id: book, properties: { title: "TWOLD" } });
-  seedTestNode(fixture, { id: part, properties: { title: "Part 1" } });
-  seedTestNode(fixture, { id: scene1, properties: { title: "Scene One" } });
-  seedTestNode(fixture, { id: scene2, properties: { title: "Scene Two" } });
-  seedTestRelationships(fixture, [
+  await seedTestNode(fixture, { id: book, properties: { title: "TWOLD" } });
+  await seedTestNode(fixture, { id: part, properties: { title: "Part 1" } });
+  await seedTestNode(fixture, { id: scene1, properties: { title: "Scene One" } });
+  await seedTestNode(fixture, { id: scene2, properties: { title: "Scene Two" } });
+  await seedTestRelationships(fixture, [
     { source: book, target: PRODUCTS_DB, type: "ordered_member_of", properties: { order: "1" } },
     { source: part, target: PARTS_DB, type: "ordered_member_of", properties: { order: "1" } },
     { source: scene1, target: SCENES_DB, type: "ordered_member_of", properties: { order: "10" } },
     { source: scene2, target: SCENES_DB, type: "ordered_member_of", properties: { order: "20" } },
   ]);
-  seedTestCompositeRelationships(fixture, [
+  await seedTestCompositeRelationships(fixture, [
     { a: scene1, b: book, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: "000000000000000000000000A3", properties: { ordinal: 0 } },
     { a: scene2, b: book, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: "000000000000000000000000A3", properties: { ordinal: 0 } },
     { a: scene1, b: part, typeFromA: "Scenes", typeFromB: "Part", relationshipTypeId: "000000000000000000000000A4", properties: { ordinal: 0 } },
@@ -97,7 +97,7 @@ describe("database members API", () => {
     ],
   });
 
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
 
   function rewriteSequence(body: unknown): Promise<Response> {
     return api.handler(
@@ -161,8 +161,8 @@ describe("database members API", () => {
     expect(res.status).toBe(400);
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     api.handler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 });

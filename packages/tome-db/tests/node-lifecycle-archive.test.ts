@@ -12,17 +12,17 @@ const TYPE_DB = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 const PAGE = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
 const OTHER = "FFFFFFFFFFFFFFFFFFFFFFFFFF";
 
-describe("archive relationship flags", () => {
-  const fixture = createTestContentFixture("tome-lifecycle-archive-");
+describe("archive relationship flags", async () => {
+  const fixture = await createTestContentFixture("tome-lifecycle-archive-");
 
-  seedTestNode(fixture, { id: HOME, properties: { title: "Home" } });
-  seedTestNode(fixture, { id: HUB, properties: { title: "Archive" } });
-  seedTestNode(fixture, { id: TYPE_DB, properties: typeTableMarkerProperties("Features") });
+  await seedTestNode(fixture, { id: HOME, properties: { title: "Home" } });
+  await seedTestNode(fixture, { id: HUB, properties: { title: "Archive" } });
+  await seedTestNode(fixture, { id: TYPE_DB, properties: typeTableMarkerProperties("Features") });
   seedTestTableSchema(fixture, TYPE_DB, [{ key: "priority", name: "Priority", type: "text" }]);
-  seedTestNode(fixture, { id: PAGE, properties: { title: "Draft Feature" } });
-  seedTestNode(fixture, { id: OTHER, properties: { title: "Linked Scene" } });
+  await seedTestNode(fixture, { id: PAGE, properties: { title: "Draft Feature" } });
+  await seedTestNode(fixture, { id: OTHER, properties: { title: "Linked Scene" } });
 
-  seedTestRelationships(fixture, [
+  await seedTestRelationships(fixture, [
     {
       source: PAGE,
       target: TYPE_DB,
@@ -30,12 +30,12 @@ describe("archive relationship flags", () => {
       properties: { row_index: 0 },
     },
   ]);
-  seedTestIncludes(fixture, [{ a: PAGE, b: OTHER, compositeType: "000000000000000000000000BF" }]);
+  await seedTestIncludes(fixture, [{ a: PAGE, b: OTHER, compositeType: "000000000000000000000000BF" }]);
 
-  test("archiveNode moves incident relationships and the node file into archive trees", () => {
-    expect(archiveNode(fixture.ctx, PAGE)).toBeNull();
+  test("archiveNode moves incident relationships and the node file into archive trees", async () => {
+    expect(await archiveNode(fixture.ctx, PAGE)).toBeNull();
 
-    expect(fixture.ctx.store.isNodeFileArchived(PAGE)).toBe(true);
+    expect(await fixture.ctx.store.isNodeFileArchived(PAGE)).toBe(true);
 
     const live = fixture.ctx.store.readRelationshipsFile().relationships;
     const membership = live.find(
@@ -52,41 +52,41 @@ describe("archive relationship flags", () => {
     expect(archived.length).toBeGreaterThanOrEqual(2);
   });
 
-  test("archived incident relationships are excluded from SQLite cache", () => {
-    const outgoing = fixture.ctx.cache.listRelationshipsFromSource(PAGE);
+  test("archived incident relationships are excluded from SQLite cache", async () => {
+    const outgoing = await fixture.ctx.cache.listRelationshipsFromSource(PAGE);
     expect(outgoing).toHaveLength(1);
     expect(outgoing[0]?.targetNodeId).toBe(HUB);
     expect(outgoing[0]?.type).toBe(projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1));
-    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))).toHaveLength(1);
-    expect(fixture.ctx.cache.listRelationshipsFromSource(HUB, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 0)).length).toBeGreaterThan(0);
+    expect(await fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))).toHaveLength(1);
+    expect((await fixture.ctx.cache.listRelationshipsFromSource(HUB, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 0))).length).toBeGreaterThan(0);
   });
 
-  test("archived member is absent from database table rows", () => {
-    const detail = getDatabaseViewDetail(fixture.ctx.cache, TYPE_DB, "all", fixture.ctx.store.contentDir);
+  test("archived member is absent from database table rows", async () => {
+    const detail = await getDatabaseViewDetail(fixture.ctx.cache, TYPE_DB, "all", fixture.ctx.store.contentDir);
     expect(detail?.rows.some((row) => row.nodeId === PAGE)).toBe(false);
   });
 
-  test("unarchiveNode restores relationships and archived status", () => {
-    expect(unarchiveNode(fixture.ctx, PAGE)).toBeNull();
-    expect(getNodeDetail(fixture.ctx.cache, PAGE)?.archived).toBe(false);
-    expect(fixture.ctx.store.isNodeFileArchived(PAGE)).toBe(false);
+  test("unarchiveNode restores relationships and archived status", async () => {
+    expect(await unarchiveNode(fixture.ctx, PAGE)).toBeNull();
+    expect((await getNodeDetail(fixture.ctx.cache, PAGE))?.archived).toBe(false);
+    expect(await fixture.ctx.store.isNodeFileArchived(PAGE)).toBe(false);
 
     const archivedIncident = fixture.ctx.store.readArchivedRelationships().filter(
       (e) => e.a === PAGE || e.b === PAGE,
     );
     expect(archivedIncident).toHaveLength(0);
 
-    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))).toHaveLength(1);
-    expect(fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_RELATED_ASSOCIATION_ID, 0))).toHaveLength(1);
-    const detail = getDatabaseViewDetail(fixture.ctx.cache, TYPE_DB, "all", fixture.ctx.store.contentDir);
+    expect(await fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))).toHaveLength(1);
+    expect(await fixture.ctx.cache.listRelationshipsFromSource(PAGE, projectionTypeForEndpoint(TEST_RELATED_ASSOCIATION_ID, 0))).toHaveLength(1);
+    const detail = await getDatabaseViewDetail(fixture.ctx.cache, TYPE_DB, "all", fixture.ctx.store.contentDir);
     expect(detail?.rows.some((row) => row.nodeId === PAGE)).toBe(true);
   });
 
-  test("unarchiveNode rejects non-archived page", () => {
-    expect(unarchiveNode(fixture.ctx, PAGE)).toBe("not_archived");
+  test("unarchiveNode rejects non-archived page", async () => {
+    expect(await unarchiveNode(fixture.ctx, PAGE)).toBe("not_archived");
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

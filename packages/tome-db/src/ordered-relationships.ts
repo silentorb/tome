@@ -40,14 +40,14 @@ function orderPropertyForProjection(
   return orderedPropertyName(registry.relationshipTypes[composite]);
 }
 
-export function listOrderedMemberConnections(
+export async function listOrderedMemberConnections(
   db: RelationshipReadStore,
   setId: string,
   contentDir?: string,
-): Relationship[] {
+): Promise<Relationship[]> {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadRelationshipTypesFromContent(dir);
-  return listSetMemberRowConnections(db, setId, dir).filter((edge) => {
+  return (await listSetMemberRowConnections(db, setId, dir)).filter((edge) => {
     const composite =
       relationshipTypeIdFromTypeOrProjection(registry, edge.type) ??
       (isOrderedTraitComposite(registry, edge.type) ? edge.type : null);
@@ -55,27 +55,27 @@ export function listOrderedMemberConnections(
   });
 }
 
-export function maxOrderAtSet(
+export async function maxOrderAtSet(
   db: RelationshipReadStore,
   setId: string,
   contentDir?: string,
-): number {
-  return maxOrderAmongMembers(db, setId, null, contentDir);
+): Promise<number> {
+  return await maxOrderAmongMembers(db, setId, null, contentDir);
 }
 
 /**
  * Max membership order among set members. When `memberFilter` is set, only those
  * member ids are considered (e.g. members in the active Product scope).
  */
-export function maxOrderAmongMembers(
+export async function maxOrderAmongMembers(
   db: RelationshipReadStore,
   setId: string,
   memberFilter: ReadonlySet<string> | null,
   contentDir?: string,
-): number {
+): Promise<number> {
   const dir = contentDir ?? resolveContentPath();
   let max = -1;
-  for (const connection of listOrderedMemberConnections(db, setId, dir)) {
+  for (const connection of await listOrderedMemberConnections(db, setId, dir)) {
     if (memberFilter && !memberFilter.has(connection.sourceNodeId)) continue;
     const registry = loadRelationshipTypesFromContent(dir);
     const composite =
@@ -87,14 +87,14 @@ export function maxOrderAmongMembers(
   return max;
 }
 
-export function stampOrderIfMissing(
+export async function stampOrderIfMissing(
   ctx: TomeWriteContext,
   setId: string,
   memberId: string,
   props: Properties,
   projectionType?: string,
   memberFilter?: ReadonlySet<string> | null,
-): Properties {
+): Promise<Properties> {
   const dir = writeStoreContentDir(ctx.graphStore);
   const registry = loadRelationshipTypesFromContent(dir);
   const resolvedProjection =
@@ -103,7 +103,7 @@ export function stampOrderIfMissing(
   if (!composite || !isOrderedTraitComposite(registry, composite)) return props;
   const property = orderedPropertyName(registry.relationshipTypes[composite]);
   if (property in props) return props;
-  const max = maxOrderAmongMembers(ctx.graphStore, setId, memberFilter ?? null, dir);
+  const max = await maxOrderAmongMembers(ctx.graphStore, setId, memberFilter ?? null, dir);
   return { ...props, [property]: max + 1 };
 }
 
@@ -111,11 +111,11 @@ export function stampOrderIfMissing(
  * Rewrite sparse integer `order` values on ordered-trait set edges for the given row sequence.
  * Resolves each row via {@link findSetEdge}; merges only the order property.
  */
-export function applySparseSequenceRewrite(
+export async function applySparseSequenceRewrite(
   ctx: TomeWriteContext,
   setId: string,
   orderedRowIds: string[],
-): void {
+): Promise<void> {
   const store = ctx.graphStore;
   const dir = writeStoreContentDir(store);
   const [, memberProjection] = setRoleProjectionTypesForNode(setId, dir);
@@ -124,10 +124,10 @@ export function applySparseSequenceRewrite(
 
   for (let index = 0; index < orderedRowIds.length; index++) {
     const rowId = orderedRowIds[index]!;
-    const edge = findSetEdge(store, rowId, setId, dir);
+    const edge = await findSetEdge(store, rowId, setId, dir);
     if (!edge) continue;
     const newOrder = (index + 1) * 10;
-    writeStoreMergeRelationshipProperties(
+    await writeStoreMergeRelationshipProperties(
       store,
       edge.sourceNodeId,
       edge.targetNodeId,

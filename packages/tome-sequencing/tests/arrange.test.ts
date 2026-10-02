@@ -95,7 +95,7 @@ function mockExecuteImp(
   };
 }
 
-describe("arrangeTimeline grouping", () => {
+describe("arrangeTimeline grouping", async () => {
   test("flat query still packs overlapping events onto distinct lanes", async () => {
     const layout = await arrangeTimeline({
       pageNodeId: PAGE_ID,

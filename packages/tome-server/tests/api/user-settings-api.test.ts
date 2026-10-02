@@ -9,20 +9,20 @@ import {
 } from "tome-db/content/test-helpers";
 import { createTestApi } from "./test-api-setup";
 
-describe("user-settings API", () => {
+describe("user-settings API", async () => {
   test("GET and PATCH /api/user-settings", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-user-settings-api-"));
     const settingsPath = join(dir, "user-settings.json");
     const dbPath = join(dir, "api.sqlite");
 
-    const fixture = createTestContentFixture("tome-user-settings-content-");
-    seedTestNode(fixture, {
+    const fixture = await createTestContentFixture("tome-user-settings-content-");
+    await seedTestNode(fixture, {
       id: "00000000000000000000000001",
       properties: { title: "Alpha" },
     });
 
     fixture.ctx.sync.fullRebuild();
-    const { handler: apiHandler } = createTestApi({
+    const { handler: apiHandler } = await createTestApi({
       dbPath,
       contentDir: fixture.ctx.store.contentDir,
       settingsPath,
@@ -56,7 +56,7 @@ describe("user-settings API", () => {
     });
 
     apiHandler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
     rmSync(dir, { recursive: true, force: true });
   });
 });

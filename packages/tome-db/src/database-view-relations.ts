@@ -21,7 +21,7 @@ import type {
   MemberPageRelationFieldLink,
   MemberPageRelationFieldSelect,
 } from "tome-service-interfaces";
-import { withProfilingSpan } from "tome-service-interfaces";
+import { withProfilingSpan, withProfilingSpanAsync } from "tome-service-interfaces";
 import {
   listRelationshipsFromSource,
   type RelationshipReadStore,
@@ -40,14 +40,14 @@ function ordinalFromProperties(properties: Record<string, unknown>): number {
   return Number.isFinite(parsed) ? parsed : Number.MAX_SAFE_INTEGER;
 }
 
-function scopeForRow(
+async function scopeForRow(
   db: RelationshipReadStore,
   rowId: string,
   databaseId: string,
   relationships: Relationship[],
   contentDir?: string,
-): Relationship[] {
-  return filterRelationshipsByRowDatabaseContext(db, rowId, databaseId, relationships, contentDir);
+): Promise<Relationship[]> {
+  return await filterRelationshipsByRowDatabaseContext(db, rowId, databaseId, relationships, contentDir);
 }
 
 /** Projection types that share direction with `connectionType` (symmetric relationship types). */
@@ -86,20 +86,20 @@ function filterByOutgoingPerspective(
   );
 }
 
-export function listRelationConnectionsForRow(
+export async function listRelationConnectionsForRow(
   db: RelationshipReadStore,
   nodeId: string,
   connectionType: string,
   databaseId: string,
   compositeType?: string,
   contentDir?: string,
-): Relationship[] {
-  if (!rowBelongsToDatabase(db, nodeId, databaseId, contentDir)) return [];
+): Promise<Relationship[]> {
+  if (!await rowBelongsToDatabase(db, nodeId, databaseId, contentDir)) return [];
   const registry = contentDir ? loadRelationshipTypesFromContent(contentDir) : null;
 
   if (compositeType) {
-    const byComposite = listRelationshipsForComposite(db, nodeId, compositeType);
-    const compositeFiltered = scopeForRow(
+    const byComposite = await listRelationshipsForComposite(db, nodeId, compositeType);
+    const compositeFiltered = await scopeForRow(
       db,
       nodeId,
       databaseId,
@@ -109,42 +109,43 @@ export function listRelationConnectionsForRow(
     if (compositeFiltered.length > 0) return compositeFiltered;
   }
 
-  const outgoing = listRelationshipsFromSource(db, nodeId, connectionType);
-  const symmetric =
-    registry &&
-    (() => {
-      const parsed = parseProjectionType(connectionType);
-      if (!parsed) return [] as Relationship[];
+  const outgoing = await listRelationshipsFromSource(db, nodeId, connectionType);
+  let symmetric: Relationship[] = [];
+  if (registry) {
+    const parsed = parseProjectionType(connectionType);
+    if (parsed) {
       const def = registry.relationshipTypes[parsed.relationshipTypeId];
-      if (!def || !isSymmetricRelationshipType(def)) return [] as Relationship[];
-      const otherIndex: 0 | 1 = parsed.endpointIndex === 0 ? 1 : 0;
-      return listRelationshipsFromSource(
-        db,
-        nodeId,
-        projectionTypeForEndpoint(parsed.relationshipTypeId, otherIndex),
-      );
-    })();
-  return scopeForRow(
+      if (def && isSymmetricRelationshipType(def)) {
+        const otherIndex: 0 | 1 = parsed.endpointIndex === 0 ? 1 : 0;
+        symmetric = await listRelationshipsFromSource(
+          db,
+          nodeId,
+          projectionTypeForEndpoint(parsed.relationshipTypeId, otherIndex),
+        );
+      }
+    }
+  }
+  return await scopeForRow(
     db,
     nodeId,
     databaseId,
-    [...outgoing, ...(symmetric ?? [])],
+    [...outgoing, ...symmetric],
     contentDir,
   );
 }
 
-function linksFromRelationships(
+async function linksFromRelationships(
   db: RelationshipReadStore,
   nodeId: string,
   relationships: Relationship[],
-): RelationLink[] {
+): Promise<RelationLink[]> {
   const sorted = [...relationships].sort(
     (a, b) => ordinalFromProperties(a.properties) - ordinalFromProperties(b.properties),
   );
   const links: RelationLink[] = [];
   for (const relationship of sorted) {
     const targetId = otherEndpoint(relationship, nodeId);
-    const target = db.getNode(targetId);
+    const target = await db.getNode(targetId);
     const title = target ? titleFromProperties(target.properties) : "Untitled";
     links.push({ targetId, title });
   }
@@ -219,21 +220,21 @@ export function applyRelationFieldsToEvalRows(
  * Fill relation-type table cells from outgoing graph relationships (not IS_A properties).
  * Flatfile / legacy path — SQLite window paths prefer {@link applyRelationFieldsToEvalRows}.
  */
-export function hydrateRelationCellsForRows(
+export async function hydrateRelationCellsForRows(
   db: RelationshipReadStore,
   databaseId: string,
   columnDefs: DatabaseColumnDef[],
   rows: EvalRow[],
   contentDir?: string,
-): void {
-  withProfilingSpan(
+): Promise<void> {
+  await withProfilingSpanAsync(
     "table.hydrateRelationCells",
     "INTERNAL",
     {
       "table.row_count": rows.length,
       "table.relation_column_count": columnDefs.filter((col) => col.type === "relation").length,
     },
-    () => {
+    async () => {
       const relationColumns = columnDefs.filter((col) => col.type === "relation");
       if (relationColumns.length === 0) return;
 
@@ -241,7 +242,7 @@ export function hydrateRelationCellsForRows(
         if (!row.relationCells) row.relationCells = {};
         for (const col of relationColumns) {
           const type = col.relationType ?? relationType(col.name);
-          const relationships = listRelationConnectionsForRow(
+          const relationships = await listRelationConnectionsForRow(
             db,
             row.nodeId,
             type,
@@ -249,7 +250,7 @@ export function hydrateRelationCellsForRows(
             col.relationshipCompositeType,
             contentDir,
           );
-          const links = linksFromRelationships(db, row.nodeId, relationships);
+          const links = await linksFromRelationships(db, row.nodeId, relationships);
           row.relationCells[col.key] = links;
           if (links.length > 0) {
             row.cells[col.key] = formatRelationCell(links);

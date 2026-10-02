@@ -5,6 +5,7 @@
 
 import {
   withProfilingSpan,
+  withProfilingSpanAsync,
   type MemberPageExpressionIndexSort,
   type TomeQueryCache,
 } from "tome-service-interfaces";
@@ -175,19 +176,19 @@ export function sortsIncludeColumnSetDynKey(
   });
 }
 
-export function ensureDynSortIndexes(
+export async function ensureDynSortIndexes(
   store: RelationshipReadStore,
   ownerId: string,
   plans: readonly DynSortIndexPlan[],
   contentDir?: string,
-): MemberPageExpressionIndexSort[] {
-  return withProfilingSpan(
+): Promise<MemberPageExpressionIndexSort[]> {
+  return withProfilingSpanAsync(
     "exprIndex.ensureAll",
     "INTERNAL",
     {
       "exprIndex.plan_count": plans.length,
     },
-    () => {
+    async () => {
       const cache = getQueryCache(store);
       if (!cache || typeof cache.replaceExpressionIndexValues !== "function") {
         throw new Error("Expression indexes require a SQLite query cache");
@@ -199,11 +200,11 @@ export function ensureDynSortIndexes(
       const projections = listSetMemberProjectionPairs(dir);
       const memberIds =
         projections.length > 0
-          ? listMemberPageNodeIds(store, ownerId, { projections })
+          ? await listMemberPageNodeIds(store, ownerId, { projections })
           : [];
 
       for (const plan of plans) {
-        ensureExpressionIndex(cache, store, plan, memberIds, dir);
+        await ensureExpressionIndex(cache, store, plan, memberIds, dir);
       }
 
       return plans.map((plan) => ({ column: plan.column, digest: plan.digest }));
@@ -212,13 +213,13 @@ export function ensureDynSortIndexes(
 }
 
 /** @deprecated Prefer ensureDynSortIndexes */
-export function ensureFixedDynSortIndexes(
+export async function ensureFixedDynSortIndexes(
   store: RelationshipReadStore,
   ownerId: string,
   plans: readonly DynSortIndexPlan[],
   contentDir?: string,
-): MemberPageExpressionIndexSort[] {
-  return ensureDynSortIndexes(store, ownerId, plans, contentDir);
+): Promise<MemberPageExpressionIndexSort[]> {
+  return await ensureDynSortIndexes(store, ownerId, plans, contentDir);
 }
 
 function expressionJsonForPlan(
@@ -241,11 +242,11 @@ function expressionJsonForPlan(
   });
 }
 
-function evaluatePlanValues(
+async function evaluatePlanValues(
   store: RelationshipReadStore,
   plan: DynSortIndexPlan,
   rowNodeIds: readonly string[],
-): { memberId: string; sortValue: number }[] {
+): Promise<{ memberId: string; sortValue: number }[]> {
   const ctx = {
     db: store,
     owner: plan.owner,
@@ -254,8 +255,8 @@ function evaluatePlanValues(
   };
   const values =
     plan.dimensionId != null
-      ? evaluateColumnSetAggregate(ctx, plan.resolverId, plan.params, plan.dimensionId)
-      : evaluateFixedAggregate(ctx, plan.resolverId, plan.params);
+      ? await evaluateColumnSetAggregate(ctx, plan.resolverId, plan.params, plan.dimensionId)
+      : await evaluateFixedAggregate(ctx, plan.resolverId, plan.params);
   const rows = [...values.entries()].map(([memberId, sortValue]) => ({
     memberId,
     sortValue,
@@ -267,21 +268,21 @@ function evaluatePlanValues(
   return rows;
 }
 
-function ensureExpressionIndex(
+async function ensureExpressionIndex(
   cache: TomeQueryCache,
   store: RelationshipReadStore,
   plan: DynSortIndexPlan,
   memberIds: readonly string[],
   contentDir?: string,
-): void {
-  const status = cache.getExpressionIndexStatus(plan.digest);
+): Promise<void> {
+  const status = await cache.getExpressionIndexStatus(plan.digest);
   const attrs: Record<string, string | number | boolean> = {
     "exprIndex.digest": plan.digest,
     "exprIndex.status": status ?? "missing",
     "exprIndex.path": "skip",
   };
 
-  withProfilingSpan("exprIndex.ensure", "INTERNAL", attrs, () => {
+  await withProfilingSpanAsync("exprIndex.ensure", "INTERNAL", attrs, async () => {
     if (status === "ready") {
       attrs["exprIndex.path"] = "skip";
       return;
@@ -299,7 +300,7 @@ function ensureExpressionIndex(
       const expressionJson = expressionJsonForPlan(plan, contentDir);
       const dirtyIds =
         typeof cache.getExpressionIndexDirtyMemberIds === "function"
-          ? cache.getExpressionIndexDirtyMemberIds(plan.digest)
+          ? await cache.getExpressionIndexDirtyMemberIds(plan.digest)
           : null;
 
       const canPatch =
@@ -315,21 +316,21 @@ function ensureExpressionIndex(
         const stillMembers = dirtyIds.filter((id) => memberSet.has(id));
         const removed = dirtyIds.filter((id) => !memberSet.has(id));
         if (removed.length > 0) {
-          cache.deleteExpressionIndexValues(plan.digest, removed);
+          await cache.deleteExpressionIndexValues(plan.digest, removed);
         }
         if (stillMembers.length > 0) {
-          const rows = evaluatePlanValues(store, plan, stillMembers);
-          cache.upsertExpressionIndexValues(plan.digest, expressionJson, rows);
+          const rows = await evaluatePlanValues(store, plan, stillMembers);
+          await cache.upsertExpressionIndexValues(plan.digest, expressionJson, rows);
         } else {
           // Only removals — mark ready without re-evaluating.
-          cache.upsertExpressionIndexValues(plan.digest, expressionJson, []);
+          await cache.upsertExpressionIndexValues(plan.digest, expressionJson, []);
         }
         return;
       }
 
       attrs["exprIndex.path"] = "rebuild";
-      const rows = evaluatePlanValues(store, plan, memberIds);
-      cache.replaceExpressionIndexValues(plan.digest, expressionJson, rows);
+      const rows = await evaluatePlanValues(store, plan, memberIds);
+      await cache.replaceExpressionIndexValues(plan.digest, expressionJson, rows);
     } finally {
       buildsInFlight.delete(plan.digest);
     }

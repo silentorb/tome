@@ -40,7 +40,7 @@ import type {
   ViewSortSpec,
 } from "tome-graph-interfaces";
 import type { TomeSearchHit } from "tome-interfaces/search";
-import { withProfilingSpan } from "tome-service-interfaces";
+import { withProfilingSpan, withProfilingSpanAsync } from "tome-service-interfaces";
 import { applyNameFilterAndWindow, buildTableRowsWindow, resolveWindowBounds } from "./table-rows-window";
 import {
   explodeTableWindowRequest,
@@ -129,15 +129,15 @@ function relationGroupKeyFromColumn(
   return projectionTypeForRelationColumn(registry, hostTypeId, col);
 }
 
-function tableRelationByGroupKeyForInstance(
+async function tableRelationByGroupKeyForInstance(
   db: RelationshipReadStore,
   nodeId: string,
   contentDir: string,
-): Map<string, TableRelationColumn> {
+): Promise<Map<string, TableRelationColumn>> {
   const tables = loadTableSchemasFromContent(contentDir);
   const registry = loadRelationshipTypesFromContent(contentDir);
   const byGroupKey = new Map<string, TableRelationColumn>();
-  for (const typeId of typeIdsForInstance(db, nodeId)) {
+  for (const typeId of await typeIdsForInstance(db, nodeId)) {
     const schema = getTableSchema(tables, typeId);
     if (!schema) continue;
     for (const col of relationColumns(schema)) {
@@ -168,14 +168,14 @@ function resolveTypeNodeId(
   return typeof typeId === "string" && typeId.trim() ? typeId : null;
 }
 
-function sectionTitleForType(
+async function sectionTitleForType(
   db: RelationshipReadStore,
   label: string,
   typeNodeId: string | null,
   registry: ReturnType<typeof loadRelationshipTypesFromContent>,
-): string {
+): Promise<string> {
   if (typeNodeId) {
-    const typeNode = readStoreGetNode(db, typeNodeId);
+    const typeNode = await readStoreGetNode(db, typeNodeId);
     if (typeNode) return titleFromProperties(typeNode.properties);
   }
   return perspectiveDisplayLabel(registry, label);
@@ -185,19 +185,19 @@ function typeTableIdsFromContent(contentDir: string): string[] {
   return Object.keys(loadTableSchemasFromContent(contentDir).tables);
 }
 
-function compositeTypeForRelationSection(
+async function compositeTypeForRelationSection(
   db: RelationshipReadStore,
   registry: ReturnType<typeof loadRelationshipTypesFromContent>,
   projectionType: string,
   connections: Relationship[],
   tableRelation?: TableRelationColumn,
-): string {
+): Promise<string> {
   if (tableRelation) {
     return relationColumnCompositeType(tableRelation);
   }
   const first = connections[0];
   if (first) {
-    const fromRecord = readStoreCompositeTypeForRelationship(db, first);
+    const fromRecord = await readStoreCompositeTypeForRelationship(db, first);
     if (fromRecord && registry.relationshipTypes[fromRecord]) {
       const parsed = parseProjectionType(projectionType);
       if (!parsed || parsed.relationshipTypeId === fromRecord) {
@@ -223,7 +223,7 @@ function sortRelationRows(rows: RelationRow[], sorts: ViewSortSpec[]): void {
   });
 }
 
-function buildRelationSectionForPerspective(
+async function buildRelationSectionForPerspective(
   db: RelationshipReadStore,
   nodeId: string,
   perspective: string,
@@ -237,20 +237,20 @@ function buildRelationSectionForPerspective(
     /** When set, `connections` are already ordered+windowed; skip JS sort/slice. */
     sqlWindow?: { total: number; columnKeys: string[] };
   },
-): RelationTableSection | null {
+): Promise<RelationTableSection | null> {
   const { contentDir, typeTableIds, relationshipTypes, tableRelationByGroupKey, rowsQuery, sqlWindow } =
     options;
   if (isSetSideProjectionType(relationshipTypes, perspective)) return null;
 
   const columnSet = new Set<string>(sqlWindow?.columnKeys ?? []);
-  const rows: RelationRow[] = withProfilingSpan(
+  const rows: RelationRow[] = await withProfilingSpanAsync(
     "relation.hydrateRows",
     "INTERNAL",
     { "relation.row_count": connections.length },
-    () => {
+    async () => {
       const built: RelationRow[] = [];
       for (const connection of connections) {
-        const target = readStoreGetNode(db, connection.targetNodeId);
+        const target = await readStoreGetNode(db, connection.targetNodeId);
         const cells = cellsFromConnectionProperties(connection.properties);
         for (const key of Object.keys(cells)) columnSet.add(key);
 
@@ -284,13 +284,14 @@ function buildRelationSectionForPerspective(
 
   const isSetMembership = isSetTraitProjectionType(relationshipTypes, perspective);
   const tableRelation = tableRelationByGroupKey.get(perspective);
-  const hostTypeId = typeIdsForInstance(db, nodeId, contentDir)[0];
+  const hostTypeIds = await typeIdsForInstance(db, nodeId, contentDir);
+  const hostTypeId = hostTypeIds[0];
   const typeNodeId = isSetMembership
     ? null
     : resolveTypeNodeId(perspective, relationshipTypes, tableRelation, hostTypeId);
   const ruleContext =
     !isSetMembership && !tableRelation
-      ? relationshipTypeRuleContext(relationshipTypes, db, nodeId, perspective, contentDir)
+      ? await relationshipTypeRuleContext(relationshipTypes, db, nodeId, perspective, contentDir)
       : null;
   let columns = [...columnSet].sort((a, b) => a.localeCompare(b));
   if (isSetMembership) {
@@ -323,7 +324,7 @@ function buildRelationSectionForPerspective(
     relationshipTypeIdFromTypeOrProjection(relationshipTypes, perspective) ?? perspective;
   const sectionTitle = isSetMembership
     ? perspectiveDisplayLabel(relationshipTypes, perspective, setTraitCompositeKey)
-    : sectionTitleForType(db, perspective, typeNodeId, relationshipTypes);
+    : await sectionTitleForType(db, perspective, typeNodeId, relationshipTypes);
   const linkAddLabel =
     isSetMembership && isMemberSideProjectionType(relationshipTypes, perspective)
       ? perspectiveLinkAddLabel(
@@ -334,7 +335,7 @@ function buildRelationSectionForPerspective(
         )
       : undefined;
 
-  const compositeType = compositeTypeForRelationSection(
+  const compositeType = await compositeTypeForRelationSection(
     db,
     relationshipTypes,
     perspective,
@@ -383,22 +384,22 @@ function buildRelationSectionForPerspective(
  * Uniform relation window: optional prior searcher query → window → connections.
  * Search is an operator (feeds hit ids), not a peer window backend.
  */
-function loadRelationSectionConnections(
+async function loadRelationSectionConnections(
   db: RelationshipReadStore,
   nodeId: string,
   perspective: string,
   rowsQuery: TableRowsQuery | undefined,
-): {
+): Promise<{
   connections: Relationship[];
   sqlWindow?: { total: number; columnKeys: string[] };
   plan: ReturnType<typeof explodeTableWindowRequest>;
-} {
+}> {
   const plan = explodeTableWindowRequest(db, rowsQuery);
   const windowAttrs = tableWindowProfilingAttrs(plan);
 
   if (plan.backend === "js") {
     return {
-      connections: listRelationshipsFromSource(db, nodeId, perspective),
+      connections: await listRelationshipsFromSource(db, nodeId, perspective),
       plan,
     };
   }
@@ -407,13 +408,13 @@ function loadRelationSectionConnections(
     | { hits: TomeSearchHit[]; total: number }
     | undefined;
   if (plan.searchQuery) {
-    const scopeIds = withProfilingSpan(
+    const scopeIds = await withProfilingSpanAsync(
       "table.search.scopeIds",
       "INTERNAL",
       windowAttrs,
       () => listRelatedTargetNodeIds(db, nodeId, perspective),
     );
-    const { hits, rowsWindow } = runTableSearchWindow(
+    const { hits, rowsWindow } = await runTableSearchWindow(
       resolveTableSearcher(db),
       rowsQuery,
       new Set(scopeIds),
@@ -425,7 +426,7 @@ function loadRelationSectionConnections(
   if (searchHits) {
     const hitIds = searchHits.hits.map((h) => h.id);
     const relationships = relationEdgesForHits(
-      listRelationshipsFromSourceForTargetIds(db, nodeId, perspective, hitIds),
+      await listRelationshipsFromSourceForTargetIds(db, nodeId, perspective, hitIds),
       searchHits.hits,
     );
     return {
@@ -438,7 +439,7 @@ function loadRelationSectionConnections(
     };
   }
 
-  const { relationships, total } = listRelationshipsFromSourceWindow(db, nodeId, perspective, {
+  const { relationships, total } = await listRelationshipsFromSourceWindow(db, nodeId, perspective, {
     sorts: relationWindowSortsFromQuery(rowsQuery),
     limit: plan.limit,
     offset: plan.offset,
@@ -453,7 +454,7 @@ function loadRelationSectionConnections(
   };
 }
 
-function buildRelationSections(
+async function buildRelationSections(
   db: RelationshipReadStore,
   nodeId: string,
   options?: {
@@ -461,14 +462,14 @@ function buildRelationSections(
     includeSchemaEmptySections?: boolean;
     rowsQuery?: TableRowsQuery;
   },
-): RelationTableSection[] {
+): Promise<RelationTableSection[]> {
   const contentDir = options?.contentDir ?? resolveContentPath();
   const typeTableIds = typeTableIdsFromContent(contentDir);
   const relationshipTypes = loadRelationshipTypesFromContent(contentDir);
-  const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
+  const tableRelationByGroupKey = await tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
   const rowsQuery = options?.rowsQuery;
 
-  const typeKeys = new Set<string>(listOutgoingProjectionTypes(db, nodeId));
+  const typeKeys = new Set<string>(await listOutgoingProjectionTypes(db, nodeId));
   if (options?.includeSchemaEmptySections) {
     for (const key of tableRelationByGroupKey.keys()) {
       typeKeys.add(key);
@@ -480,7 +481,7 @@ function buildRelationSections(
   for (const label of [...typeKeys].sort((a, b) =>
     relationTypeSortKey(a, relationshipTypes).localeCompare(relationTypeSortKey(b, relationshipTypes)),
   )) {
-    const { connections, sqlWindow } = loadRelationSectionConnections(
+    const { connections, sqlWindow } = await loadRelationSectionConnections(
       db,
       nodeId,
       label,
@@ -492,7 +493,7 @@ function buildRelationSections(
     ) {
       continue;
     }
-    const section = buildRelationSectionForPerspective(db, nodeId, label, connections, {
+    const section = await buildRelationSectionForPerspective(db, nodeId, label, connections, {
       contentDir,
       typeTableIds,
       relationshipTypes,
@@ -507,7 +508,7 @@ function buildRelationSections(
 }
 
 /** Fetch one windowed relation table section by perspective label. */
-export function getRelationTableSection(
+export async function getRelationTableSection(
   db: RelationshipReadStore,
   nodeId: string,
   perspective: string,
@@ -516,15 +517,15 @@ export function getRelationTableSection(
     includeSchemaEmptySections?: boolean;
     rowsQuery?: TableRowsQuery;
   },
-): RelationTableSection | null {
-  const run = (): RelationTableSection | null => {
+): Promise<RelationTableSection | null> {
+  const run = async (): Promise<RelationTableSection | null> => {
     const contentDir = options?.contentDir ?? resolveContentPath();
-    if (!readStoreGetNode(db, nodeId)) return null;
+    if (!await readStoreGetNode(db, nodeId)) return null;
 
     const relationshipTypes = loadRelationshipTypesFromContent(contentDir);
-    const tableRelationByGroupKey = tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
+    const tableRelationByGroupKey = await tableRelationByGroupKeyForInstance(db, nodeId, contentDir);
     const plan = explodeTableWindowRequest(db, options?.rowsQuery);
-    const { connections, sqlWindow } = withProfilingSpan(
+    const { connections, sqlWindow } = await withProfilingSpanAsync(
       "relation.loadConnections",
       "INTERNAL",
       tableWindowProfilingAttrs(plan),
@@ -538,7 +539,7 @@ export function getRelationTableSection(
       return null;
     }
 
-    return withProfilingSpan(
+    return withProfilingSpanAsync(
       "relation.buildSection",
       "INTERNAL",
       { "relation.row_count": connections.length },
@@ -554,11 +555,11 @@ export function getRelationTableSection(
     );
   };
 
-  return withProfilingSpan("getRelationTableSection", "INTERNAL", {}, run);
+  return withProfilingSpanAsync("getRelationTableSection", "INTERNAL", {}, run);
 }
 
 /** Build a universal node page view: markdown first, then database and relation table sections. */
-export function getNodePageDetail(
+export async function getNodePageDetail(
   db: RelationshipReadStore,
   id: string,
   options?: {
@@ -574,9 +575,9 @@ export function getNodePageDetail(
     /** When set, multi-row sections return a windowed first batch. */
     rows?: TableRowsQuery;
   },
-): NodePageDetail | null {
+): Promise<NodePageDetail | null> {
   const contentDir = options?.contentDir ?? resolveContentPath();
-  const node = getNodeDetail(db, id, contentDir);
+  const node = await getNodeDetail(db, id, contentDir);
   if (!node) return null;
 
   const tabId = options?.tabId ?? options?.scopeId ?? options?.databaseView;
@@ -585,7 +586,7 @@ export function getNodePageDetail(
   const sections: NodeSection[] = [{ type: "markdown", body: node.body }];
 
   if (node.isTypeTable) {
-    const databaseSection = getDatabaseViewDetail(
+    const databaseSection = await getDatabaseViewDetail(
       db,
       id,
       tabId,
@@ -598,16 +599,16 @@ export function getNodePageDetail(
   }
 
   sections.push(
-    ...buildRelationSections(db, id, {
+    ...(await buildRelationSections(db, id, {
       contentDir,
       includeSchemaEmptySections: options?.includeSchemaEmptySections,
       rowsQuery,
-    }),
+    })),
   );
 
-  const properties = node.isTypeTable ? null : buildPropertiesSection(db, id, contentDir);
+  const properties = node.isTypeTable ? null : await buildPropertiesSection(db, id, contentDir);
 
-  const metadata = getNodePageMetadata(db, id)!;
+  const metadata = (await getNodePageMetadata(db, id))!;
 
   return { ...node, metadata, properties, sections };
 }

@@ -26,7 +26,7 @@ function stubGraph(): TomeGraphServices {
   } as TomeGraphServices;
 }
 
-describe("tome-server config", () => {
+describe("tome-server config", async () => {
   test("allows empty services list", () => {
     const config = parseServerConfig({
       version: 1,

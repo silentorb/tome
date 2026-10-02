@@ -58,8 +58,8 @@ describe("tome-imp-sql corpus pre-SQL", () => {
     expect(corpusIdPredicateSql([])).toBe("and 0");
   });
 
-  test("compile page corpus uses lookup and id filter", () => {
-    const { sql } = compileImpGraphToTomeSql(passthroughWithCorpus("page"), {
+  test("compile page corpus uses lookup and id filter", async () => {
+    const { sql } = await compileImpGraphToTomeSql(passthroughWithCorpus("page"), {
       pageNodeId: "home",
       corpus: {
         corpusIdForNode: (id) => (id === "home" ? "translucence" : null),
@@ -71,8 +71,8 @@ describe("tome-imp-sql corpus pre-SQL", () => {
     expect(sql).not.toContain("other");
   });
 
-  test("compile slug corpus skips page node", () => {
-    const { sql } = compileImpGraphToTomeSql(passthroughWithCorpus("marloth"), {
+  test("compile slug corpus skips page node", async () => {
+    const { sql } = await compileImpGraphToTomeSql(passthroughWithCorpus("marloth"), {
       corpus: {
         corpusIdForNode: () => "translucence",
         nodeIdsInCorpus: (corpusId) => (corpusId === "marloth" ? ["m1"] : ["t1"]),
@@ -81,24 +81,26 @@ describe("tome-imp-sql corpus pre-SQL", () => {
     expect(sql).toContain(`and "id" in ('m1')`);
   });
 
-  test("compile all keeps union (no id IN)", () => {
-    const { sql } = compileImpGraphToTomeSql(passthroughWithCorpus("all"));
+  test("compile all keeps union (no id IN)", async () => {
+    const { sql } = await compileImpGraphToTomeSql(passthroughWithCorpus("all"));
     expect(sql).toContain('is_archived" = 0');
     expect(sql).not.toContain("and \"id\" in");
   });
 
-  test("compile page without pageNodeId throws", () => {
-    expect(() => compileImpGraphToTomeSql(passthroughWithCorpus("page"), {
-      corpus: {
-        corpusIdForNode: () => "x",
-        nodeIdsInCorpus: () => [],
-      },
-    })).toThrow(/page node id/);
+  test("compile page without pageNodeId throws", async () => {
+    await expect(
+      compileImpGraphToTomeSql(passthroughWithCorpus("page"), {
+        corpus: {
+          corpusIdForNode: () => "x",
+          nodeIdsInCorpus: () => [],
+        },
+      }),
+    ).rejects.toThrow(/page node id/);
   });
 
-  test("compile page without corpus lookup throws", () => {
-    expect(() =>
+  test("compile page without corpus lookup throws", async () => {
+    await expect(
       compileImpGraphToTomeSql(passthroughWithCorpus("page"), { pageNodeId: "home" }),
-    ).toThrow(/corpusQuery/);
+    ).rejects.toThrow(/corpusQuery/);
   });
 });

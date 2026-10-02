@@ -15,7 +15,7 @@ describe("GraphDatabase enum cache encoding", () => {
   const dir = mkdtempSync(join(tmpdir(), "tome-db-enum-cache-"));
   const dbPath = join(dir, "test.sqlite");
 
-  test("stores enum indices in SQLite and returns labels via API", () => {
+  test("stores enum indices in SQLite and returns labels via API", async () => {
     const schema = loadWorkspaceSchema();
     const priorityEnum = resolvePropertyEnum("priority", schema);
     expect(priorityEnum).not.toBeNull();

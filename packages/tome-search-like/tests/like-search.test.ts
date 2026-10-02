@@ -22,22 +22,22 @@ async function runSearch(
   return await search.search(request);
 }
 
-describe("tome-search-like", () => {
-  const fixture = createTestContentFixture("tome-search-like-");
+describe("tome-search-like", async () => {
+  const fixture = await createTestContentFixture("tome-search-like-");
   const search = createLikeSearch(fixture.ctx.cache);
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 
   test("is title-only — body matches do not appear", async () => {
     const titleId = "000000000000000000000000C1";
     const bodyId = "000000000000000000000000C2";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: titleId,
       properties: { title: "Zebra Like Title", body: "no marker" },
     });
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: bodyId,
       properties: { title: "Alpha Unrelated", body: "contains like-body-marker here" },
     });
@@ -50,11 +50,11 @@ describe("tome-search-like", () => {
   test("ranks exact title before longer substring title", async () => {
     const exactId = "000000000000000000000000C3";
     const longerId = "000000000000000000000000C4";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: exactId,
       properties: { title: "Surreal" },
     });
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: longerId,
       properties: { title: "Applied Surrealism" },
     });
@@ -68,15 +68,15 @@ describe("tome-search-like", () => {
     const prefixId = "000000000000000000000000E1";
     const boundaryId = "000000000000000000000000E2";
     const substrId = "000000000000000000000000E3";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: substrId,
       properties: { title: "xxcozyyy" },
     });
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: boundaryId,
       properties: { title: "The Cozy Place" },
     });
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: prefixId,
       properties: { title: "Cozy Nest" },
     });
@@ -90,7 +90,7 @@ describe("tome-search-like", () => {
 
   test("does not attach matchPreview (title-only)", async () => {
     const bodyId = "000000000000000000000000C5";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: bodyId,
       properties: {
         title: "unique-like-preview-marker in title",
@@ -109,11 +109,11 @@ describe("tome-search-like", () => {
   test("allowedNodeIds filters in SQL", async () => {
     const keepId = "000000000000000000000000C6";
     const dropId = "000000000000000000000000C7";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: keepId,
       properties: { title: "Filter Keep Node" },
     });
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: dropId,
       properties: { title: "Filter Drop Node" },
     });
@@ -131,10 +131,10 @@ describe("tome-search-like", () => {
     const alphaId = "000000000000000000000000C9";
     const outsiderId = "000000000000000000000000CA";
 
-    seedTestNode(fixture, { id: featuresDbId, properties: { title: "Like Features" } });
-    seedTestNode(fixture, { id: alphaId, properties: { title: "Like Alpha Feature" } });
-    seedTestNode(fixture, { id: outsiderId, properties: { title: "Like AAA Other" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: featuresDbId, properties: { title: "Like Features" } });
+    await seedTestNode(fixture, { id: alphaId, properties: { title: "Like Alpha Feature" } });
+    await seedTestNode(fixture, { id: outsiderId, properties: { title: "Like AAA Other" } });
+    await seedTestRelationships(fixture, [
       { source: alphaId, target: featuresDbId, type: "member_of" },
     ]);
 
@@ -181,7 +181,7 @@ describe("tome-search-like", () => {
       "000000000000000000000000D3",
     ];
     for (const [i, id] of ids.entries()) {
-      seedTestNode(fixture, {
+      await seedTestNode(fixture, {
         id,
         properties: { title: `Window Like Item ${String.fromCharCode(65 + i)}` },
       });

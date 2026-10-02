@@ -16,7 +16,7 @@ export async function selectSpatialGraph(
     return { typeId, nodes: [], edges: [] };
   }
 
-  const nodes = await Promise.resolve(graphQuery.listTypeMembers(typeId));
+  const nodes = await graphQuery.listTypeMembers(typeId);
   const nodeIds = nodes.map((node) => node.id);
   if (nodeIds.length === 0) {
     return { typeId, nodes: [], edges: [] };
@@ -28,12 +28,10 @@ export async function selectSpatialGraph(
     ...config.relationships.neighborTypes,
   ];
 
-  const edges = await Promise.resolve(
-    graphQuery.listEdges({
+  const edges = await graphQuery.listEdges({
       nodeIds,
       types: associations,
-    }),
-  );
+    });
 
   return { typeId, nodes, edges };
 }

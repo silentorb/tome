@@ -12,7 +12,7 @@ import {
   WORKSPACE_FILE_VERSION,
   type WorkspaceFile,
 } from "tome-flatfile";
-import { GraphDatabase } from "tome-sqlite";
+import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
 import { openTomeGraphServices } from "../src/graph-services";
 
 const ASSOC = "000000000000000000000000C1";
@@ -86,7 +86,7 @@ function seedCorpus(
   return content;
 }
 
-describe("search corpusLabel enrichment", () => {
+describe("search corpusLabel enrichment", async () => {
   // Full weighted suite can make SQLite sync + search exceed the default 5s.
   test(
     "labels foreign hits when activeCorpus is set in a multi-corpus session",
@@ -102,11 +102,11 @@ describe("search corpusLabel enrichment", () => {
       store.writeNodeToCorpus("a", { id: NODE_A, properties: { title: "Alpha Shared" } }, "");
       store.writeNodeToCorpus("b", { id: NODE_B, properties: { title: "Beta Shared" } }, "");
 
-      const cache = new GraphDatabase(join(temp, "session.sqlite"));
-      const services = openTomeGraphServices({ store, cache });
+      const cache = wrapSyncGraphDatabase(new GraphDatabase(join(temp, "session.sqlite")));
+      const services = await openTomeGraphServices({ store, cache });
       await services.getExtensionsManifest();
 
-      const foreign = services.search("Shared", 10, undefined, { activeCorpus: "a" });
+      const foreign = await services.search("Shared", 10, undefined, { activeCorpus: "a" });
       const beta = foreign.find((row) => row.id === NODE_B);
       const alpha = foreign.find((row) => row.id === NODE_A);
       expect(beta?.corpus).toBe("b");
@@ -114,10 +114,10 @@ describe("search corpusLabel enrichment", () => {
       expect(alpha?.corpus).toBe("a");
       expect(alpha?.corpusLabel).toBeUndefined();
 
-      const withoutActive = services.search("Shared", 10);
+      const withoutActive = await services.search("Shared", 10);
       expect(withoutActive.every((row) => row.corpusLabel === undefined)).toBe(true);
 
-      services.close();
+      await services.close();
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }
@@ -134,15 +134,15 @@ describe("search corpusLabel enrichment", () => {
       const store = new ContentStore(contentA);
       store.writeNode({ id: NODE_A, properties: { title: "Solo Node" } }, "");
 
-      const cache = new GraphDatabase(join(temp, "session.sqlite"));
-      const services = openTomeGraphServices({ store, cache });
+      const cache = wrapSyncGraphDatabase(new GraphDatabase(join(temp, "session.sqlite")));
+      const services = await openTomeGraphServices({ store, cache });
       await services.getExtensionsManifest();
 
-      const hits = services.search("Solo", 10, undefined, { activeCorpus: "other" });
+      const hits = await services.search("Solo", 10, undefined, { activeCorpus: "other" });
       expect(hits).toHaveLength(1);
       expect(hits[0]?.corpusLabel).toBeUndefined();
 
-      services.close();
+      await services.close();
     } finally {
       rmSync(temp, { recursive: true, force: true });
     }

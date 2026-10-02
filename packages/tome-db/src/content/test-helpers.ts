@@ -281,7 +281,7 @@ export function seedTestTablePresentation(
   invalidateViewsCache();
 }
 
-export function createTestContentFixture(prefix = "tome-content-test-"): TestContentFixture {
+export async function createTestContentFixture(prefix = "tome-content-test-"): Promise<TestContentFixture> {
   const tempDir = mkdtempSync(join(tmpdir(), prefix));
   const contentDir = join(tempDir, "content");
   mkdirSync(contentDir, { recursive: true });
@@ -293,7 +293,7 @@ export function createTestContentFixture(prefix = "tome-content-test-"): TestCon
   );
   invalidateWorkspaceCache();
   const dbPath = join(tempDir, "test.sqlite");
-  const ctx = openContentGraph(contentDir, dbPath);
+  const ctx = await openContentGraph(contentDir, dbPath);
   const fixture: TestContentFixture = { tempDir, ctx };
   ctx.store.writeDynamicPropertiesFile(fileFromSeedInputs([], []));
   invalidateDynamicPropertiesCache();
@@ -303,8 +303,8 @@ export function createTestContentFixture(prefix = "tome-content-test-"): TestCon
   return fixture;
 }
 
-export function destroyTestContentFixture(fixture: TestContentFixture): void {
-  fixture.ctx.cache.close();
+export async function destroyTestContentFixture(fixture: TestContentFixture): Promise<void> {
+  await fixture.ctx.cache.close();
   try {
     rmSync(fixture.tempDir, { recursive: true, force: true });
   } catch {
@@ -312,7 +312,7 @@ export function destroyTestContentFixture(fixture: TestContentFixture): void {
   }
 }
 
-export function seedTestNode(fixture: TestContentFixture, node: Node, body?: string): void {
+export async function seedTestNode(fixture: TestContentFixture, node: Node, body?: string): Promise<void> {
   const markdownBody = body ?? bodyFromNode(node);
   const { body: _b, ...properties } = node.properties;
   const path = nodeFilePath(fixture.ctx.store.contentDir, node.id);
@@ -322,7 +322,7 @@ export function seedTestNode(fixture: TestContentFixture, node: Node, body?: str
     serializeNodeFile({ id: node.id, properties }, markdownBody),
     "utf-8",
   );
-  fixture.ctx.sync.syncNode(node.id);
+  await fixture.ctx.sync.syncNode(node.id);
 }
 
 export function seedTestDynamicProperties(
@@ -472,7 +472,7 @@ function entryFromSeedConnection(connection: {
   });
 }
 
-export function seedTestIncludes(
+export async function seedTestIncludes(
   fixture: TestContentFixture,
   connections: Array<{
     a: string;
@@ -481,7 +481,7 @@ export function seedTestIncludes(
     properties?: Properties;
   }>,
   options?: { replace?: boolean },
-): void {
+): Promise<void> {
   const registry = options?.replace
     ? { version: 1 as const, relationshipTypes: {} as Record<string, never> }
     : fixture.ctx.store.readRelationshipTypesFile();
@@ -509,7 +509,7 @@ export function seedTestIncludes(
 
   fixture.ctx.store.writeRelationshipTypesFile(registry);
   fixture.ctx.store.writeRelationshipsFile(file);
-  fixture.ctx.sync.syncRelationships();
+  await fixture.ctx.sync.syncRelationships();
 }
 
 /**
@@ -518,7 +518,7 @@ export function seedTestIncludes(
  * Direction is carried by this authored order alone — there is no directedFrom.
  * Returns the association id used for each connection (minted when not already registered).
  */
-export function seedTestCompositeRelationships(
+export async function seedTestCompositeRelationships(
   fixture: TestContentFixture,
   connections: Array<{
     a: string;
@@ -529,7 +529,7 @@ export function seedTestCompositeRelationships(
     properties?: Properties;
   }>,
   options?: { replace?: boolean },
-): string[] {
+): Promise<string[]> {
   const registry = options?.replace
     ? { version: 1 as const, relationshipTypes: {} as Record<string, never> }
     : fixture.ctx.store.readRelationshipTypesFile();
@@ -581,11 +581,11 @@ export function seedTestCompositeRelationships(
 
   fixture.ctx.store.writeRelationshipTypesFile(registry);
   fixture.ctx.store.writeRelationshipsFile(file);
-  fixture.ctx.sync.syncRelationships();
+  await fixture.ctx.sync.syncRelationships();
   return relationshipTypeIds;
 }
 
-export function seedTestRelationships(
+export async function seedTestRelationships(
   fixture: TestContentFixture,
   connections: Array<{
     source: string;
@@ -594,7 +594,7 @@ export function seedTestRelationships(
     properties?: Properties;
   }>,
   options?: { replace?: boolean },
-): void {
+): Promise<void> {
   const registry = options?.replace
     ? { version: 1 as const, relationshipTypes: {} as Record<string, never> }
     : fixture.ctx.store.readRelationshipTypesFile();
@@ -620,7 +620,7 @@ export function seedTestRelationships(
 
   fixture.ctx.store.writeRelationshipTypesFile(registry);
   fixture.ctx.store.writeRelationshipsFile(file);
-  fixture.ctx.sync.syncRelationships();
+  await fixture.ctx.sync.syncRelationships();
 }
 
 export { registerBidirectionalType, projectionTypeForEndpoint };

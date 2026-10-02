@@ -33,12 +33,12 @@ const scene2 = "44444444444444444444444444";
 const scene3 = "55555555555555555555555555";
 const character1 = "77777777777777777777777777";
 
-describe("table-presentation", () => {
-  const fixture = createTestContentFixture("tome-table-presentation-");
+describe("table-presentation", async () => {
+  const fixture = await createTestContentFixture("tome-table-presentation-");
 
-  seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
-  seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
-  seedTestNode(fixture, { id: CHARACTERS_DB, properties: typeTableMarkerProperties("Characters") });
+  await seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
+  await seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
+  await seedTestNode(fixture, { id: CHARACTERS_DB, properties: typeTableMarkerProperties("Characters") });
   seedTestTableSchema(fixture, PRODUCTS_DB, []);
   seedTestTableSchema(fixture, PARTS_DB, [
     {
@@ -49,7 +49,7 @@ describe("table-presentation", () => {
       endpoint: 0,
     },
   ]);
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: SCENES_DB,
     properties: typeTableMarkerProperties("Scenes"),
   });
@@ -91,16 +91,16 @@ describe("table-presentation", () => {
     },
     { key: "order", name: "Order", type: "number" },
   ]);
-  seedTestNode(fixture, { id: bookA, properties: { title: "Book A" } });
-  seedTestNode(fixture, { id: bookB, properties: { title: "Book B" } });
-  seedTestNode(fixture, { id: part1, properties: { title: "Part 1" } });
-  seedTestNode(fixture, { id: part2, properties: { title: "Part 2" } });
-  seedTestNode(fixture, { id: scene1, properties: { title: "Scene One" } });
-  seedTestNode(fixture, { id: scene2, properties: { title: "Scene Two" } });
-  seedTestNode(fixture, { id: scene3, properties: { title: "Scene Three" } });
-  seedTestNode(fixture, { id: character1, properties: { title: "Hero" } });
+  await seedTestNode(fixture, { id: bookA, properties: { title: "Book A" } });
+  await seedTestNode(fixture, { id: bookB, properties: { title: "Book B" } });
+  await seedTestNode(fixture, { id: part1, properties: { title: "Part 1" } });
+  await seedTestNode(fixture, { id: part2, properties: { title: "Part 2" } });
+  await seedTestNode(fixture, { id: scene1, properties: { title: "Scene One" } });
+  await seedTestNode(fixture, { id: scene2, properties: { title: "Scene Two" } });
+  await seedTestNode(fixture, { id: scene3, properties: { title: "Scene Three" } });
+  await seedTestNode(fixture, { id: character1, properties: { title: "Hero" } });
 
-  seedTestRelationships(fixture, [
+  await seedTestRelationships(fixture, [
     { source: bookA, target: PRODUCTS_DB, type: "ordered_member_of", properties: { order: "1" } },
     { source: bookB, target: PRODUCTS_DB, type: "ordered_member_of", properties: { order: "2" } },
     { source: part1, target: PARTS_DB, type: "ordered_member_of", properties: { order: "1" } },
@@ -111,7 +111,7 @@ describe("table-presentation", () => {
     { source: character1, target: CHARACTERS_DB, type: "member_of" },
   ]);
 
-  seedTestCompositeRelationships(fixture, [
+  await seedTestCompositeRelationships(fixture, [
     { a: scene1, b: bookA, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: "000000000000000000000000A3", properties: { ordinal: 0 } },
     { a: scene2, b: bookA, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: "000000000000000000000000A3", properties: { ordinal: 0 } },
     { a: scene3, b: bookB, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: "000000000000000000000000A3", properties: { ordinal: 0 } },
@@ -188,7 +188,7 @@ describe("table-presentation", () => {
     },
   };
   fixture.ctx.store.writeRelationshipTypesFile(registry);
-  fixture.ctx.sync.syncRelationships();
+  await fixture.ctx.sync.syncRelationships();
 
   seedTestViews(fixture, {
     version: VIEWS_FILE_VERSION,
@@ -205,10 +205,10 @@ describe("table-presentation", () => {
   const db = () => fixture.ctx.graphStore;
   const contentDir = () => fixture.ctx.store.contentDir;
   const pathContext = () => loadSemanticRelatedPathContext(contentDir());
-  const view = (tabId?: string) => getDatabaseViewDetail(db(), SCENES_DB, tabId, contentDir());
+  const view = async (tabId?: string) => await getDatabaseViewDetail(db(), SCENES_DB, tabId, contentDir());
 
-  test("scope layer builds tabs from products that have scenes", () => {
-    const detail = view();
+  test("scope layer builds tabs from products that have scenes", async () => {
+    const detail = await view();
     expect(detail?.tabs.items.map((tab) => tab.label)).toEqual(["Book A", "Book B"]);
     expect(detail?.tabs.activeTabId).toBe(bookA);
     expect(detail?.presentation).toMatchObject({
@@ -218,8 +218,8 @@ describe("table-presentation", () => {
     });
   });
 
-  test("groups layer partitions scenes by part within the active scope", () => {
-    const detail = view(bookA);
+  test("groups layer partitions scenes by part within the active scope", async () => {
+    const detail = await view(bookA);
     expect(detail?.groups?.map((group) => group.title)).toEqual([
       "Part 1",
       "Part 2",
@@ -239,30 +239,30 @@ describe("table-presentation", () => {
     expect(sceneOne?.relationCells?.characters?.[0]?.title).toBe("Hero");
   });
 
-  test("group headers sort by group membership order", () => {
-    const detail = view(bookA);
+  test("group headers sort by group membership order", async () => {
+    const detail = await view(bookA);
     const partGroups =
       detail?.groups?.filter((group) => group.groupId !== UNASSIGNED_GROUP_ID) ?? [];
     expect(partGroups.map((group) => group.title)).toEqual(["Part 1", "Part 2"]);
   });
 
-  test("members without a group relation land in the Unassigned group", () => {
+  test("members without a group relation land in the Unassigned group", async () => {
     const unassigned = "66666666666666666666666666";
-    seedTestNode(fixture, { id: unassigned, properties: { title: "Loose Scene" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: unassigned, properties: { title: "Loose Scene" } });
+    await seedTestRelationships(fixture, [
       { source: unassigned, target: SCENES_DB, type: "ordered_member_of", properties: { order: "40" } },
     ]);
-    seedTestCompositeRelationships(fixture, [
+    await seedTestCompositeRelationships(fixture, [
       { a: unassigned, b: bookA, typeFromA: "Scenes", typeFromB: "Product", relationshipTypeId: "000000000000000000000000A3", properties: { ordinal: 0 } },
     ]);
 
-    const detail = view(bookA);
+    const detail = await view(bookA);
     const group = detail?.groups?.find((entry) => entry.groupId === UNASSIGNED_GROUP_ID);
     expect(group?.rows.map((row) => row.name)).toEqual(["Loose Scene"]);
   });
 
-  test("rewriteDatabaseSequence renumbers intrinsic edge order", () => {
-    const updated = rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
+  test("rewriteDatabaseSequence renumbers intrinsic edge order", async () => {
+    const updated = await rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
       orderedRowIds: [scene2, scene1],
       tabId: bookA,
     });
@@ -271,34 +271,34 @@ describe("table-presentation", () => {
     expect(partGroup?.rows.map((row) => row.nodeId)).toEqual([scene2, scene1]);
 
     const memberProjection = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
-    const edge1 = fixture.ctx.cache.getRelationship(`${scene1}:${memberProjection}:${SCENES_DB}`);
-    const edge2 = fixture.ctx.cache.getRelationship(`${scene2}:${memberProjection}:${SCENES_DB}`);
+    const edge1 = await fixture.ctx.cache.getRelationship(`${scene1}:${memberProjection}:${SCENES_DB}`);
+    const edge2 = await fixture.ctx.cache.getRelationship(`${scene2}:${memberProjection}:${SCENES_DB}`);
     expect(edge1?.properties.order).toBe("20");
     expect(edge2?.properties.order).toBe("10");
   });
 
-  test("rewriteDatabaseSequence rewrites only submitted orderedRowIds", () => {
+  test("rewriteDatabaseSequence rewrites only submitted orderedRowIds", async () => {
     const memberProjection = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
-    const before3 = fixture.ctx.cache.getRelationship(
+    const before3 = (await fixture.ctx.cache.getRelationship(
       `${scene3}:${memberProjection}:${SCENES_DB}`,
-    )?.properties.order;
+    ))?.properties.order;
     expect(before3).toBe("30");
 
-    rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
+    await rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
       orderedRowIds: [scene2, scene1],
       tabId: bookA,
     });
 
-    const edge1 = fixture.ctx.cache.getRelationship(`${scene1}:${memberProjection}:${SCENES_DB}`);
-    const edge2 = fixture.ctx.cache.getRelationship(`${scene2}:${memberProjection}:${SCENES_DB}`);
-    const edge3 = fixture.ctx.cache.getRelationship(`${scene3}:${memberProjection}:${SCENES_DB}`);
+    const edge1 = await fixture.ctx.cache.getRelationship(`${scene1}:${memberProjection}:${SCENES_DB}`);
+    const edge2 = await fixture.ctx.cache.getRelationship(`${scene2}:${memberProjection}:${SCENES_DB}`);
+    const edge3 = await fixture.ctx.cache.getRelationship(`${scene3}:${memberProjection}:${SCENES_DB}`);
     expect(edge1?.properties.order).toBe("20");
     expect(edge2?.properties.order).toBe("10");
     expect(edge3?.properties.order).toBe(before3);
   });
 
-  test("groupChange moves a member to a different group", () => {
-    const updated = rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
+  test("groupChange moves a member to a different group", async () => {
+    const updated = await rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
       orderedRowIds: [scene2, scene1],
       tabId: bookA,
       groupChange: { rowId: scene1, targetGroupId: part2 },
@@ -307,7 +307,7 @@ describe("table-presentation", () => {
     const part2Group = updated?.groups?.find((group) => group.groupId === part2);
     expect(part2Group?.rows.some((row) => row.nodeId === scene1)).toBe(true);
     expect(
-      firstRelatedNodeId(
+      await firstRelatedNodeId(
         db(),
         scene1,
         "000000000000000000000000A4",
@@ -328,15 +328,15 @@ describe("table-presentation", () => {
     expect(entry?.b).toBe(part2);
   });
 
-  test("groupChange to Unassigned removes the group relation", () => {
-    rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
+  test("groupChange to Unassigned removes the group relation", async () => {
+    await rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
       orderedRowIds: [scene2, scene1],
       tabId: bookA,
       groupChange: { rowId: scene2, targetGroupId: UNASSIGNED_GROUP_ID },
     });
 
     expect(
-      firstRelatedNodeId(
+      await firstRelatedNodeId(
         db(),
         scene2,
         "000000000000000000000000A4",
@@ -346,8 +346,8 @@ describe("table-presentation", () => {
     ).toBeNull();
   });
 
-  test("Scenes database page emits a composed database section", () => {
-    const detail = getNodePageDetail(db(), SCENES_DB, { tabId: bookA, contentDir: contentDir() });
+  test("Scenes database page emits a composed database section", async () => {
+    const detail = await getNodePageDetail(db(), SCENES_DB, { tabId: bookA, contentDir: contentDir() });
     const section = detail?.sections.find((s) => s.type === "database");
     expect(section?.type).toBe("database");
     expect(section?.type === "database" ? section.databaseView.presentation : undefined).
@@ -357,10 +357,10 @@ describe("table-presentation", () => {
     ).toEqual(["Part 1", "Part 2", "Unassigned"]);
   });
 
-  test("createDatabaseRow with scope and group relations appears in the target group", () => {
+  test("createDatabaseRow with scope and group relations appears in the target group", async () => {
     const productProjection = projectionTypeForEndpoint("000000000000000000000000A3", 0);
     const partProjection = projectionTypeForEndpoint("000000000000000000000000A4", 0);
-    const created = createNode(fixture.ctx, {
+    const created = await createNode(fixture.ctx, {
       title: "Brand New Scene",
       link: {
         kind: "database-row",
@@ -375,11 +375,11 @@ describe("table-presentation", () => {
     expect(typeof created).not.toBe("string");
     if (typeof created === "string") return;
 
-    const detail = view(bookA);
+    const detail = await view(bookA);
     const partGroup = detail?.groups?.find((group) => group.groupId === part1);
     expect(partGroup?.rows.some((row) => row.nodeId === created.id)).toBe(true);
     expect(
-      firstRelatedNodeId(
+      await firstRelatedNodeId(
         db(),
         created.id,
         "000000000000000000000000A3",
@@ -388,7 +388,7 @@ describe("table-presentation", () => {
       ),
     ).toBe(bookA);
     expect(
-      firstRelatedNodeId(
+      await firstRelatedNodeId(
         db(),
         created.id,
         "000000000000000000000000A4",
@@ -398,7 +398,7 @@ describe("table-presentation", () => {
     ).toBe(part1);
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

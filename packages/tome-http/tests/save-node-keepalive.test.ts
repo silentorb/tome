@@ -6,7 +6,7 @@ const hiDoc = {
   content: [{ type: "paragraph" as const, content: [{ type: "text" as const, text: "Hi" }] }],
 };
 
-describe("saveNode keepalive", () => {
+describe("saveNode keepalive", async () => {
   const originalFetch = globalThis.fetch;
 
   afterEach(() => {

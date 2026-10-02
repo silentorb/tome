@@ -20,8 +20,8 @@ import type { ViewsMutationError, TablePresentationLayers } from "tome-graph-int
 
 export type { ViewsMutationError } from "tome-graph-interfaces";
 
-function writeViews(store: TomeGraphStoreBase, file: ViewsFile): void {
-  store.writeViews(file);
+async function writeViews(store: TomeGraphStoreBase, file: ViewsFile): Promise<void> {
+  await store.writeViews(file);
 }
 
 function normalizeProperties(properties: string[]): string[] {
@@ -71,21 +71,21 @@ function setPropertiesOnRecord(
   }
 }
 
-export function getNodeViews(store: TomeGraphStoreBase, nodeId: string): ViewDefinition[] {
-  const file = store.readViews();
+export async function getNodeViews(store: TomeGraphStoreBase, nodeId: string): Promise<ViewDefinition[]> {
+  const file = await store.readViews();
   return viewsForNode(file, nodeId).filter(isViewDefinition);
 }
 
-export function createView(
+export async function createView(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
   input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
-): ViewDefinition {
+): Promise<ViewDefinition> {
   const trimmed = input.name.trim();
   if (!trimmed) throw new Error("invalid_name");
 
-  const file = store.readViews();
+  const file = await store.readViews();
   if (generatedViewForRelationship(file, nodeId, relationshipTypeId)) {
     throw new Error("not_custom_views");
   }
@@ -104,14 +104,14 @@ export function createView(
     ...(siblingProperties?.length ? { properties: [...siblingProperties] } : {}),
   };
   file.views.push(view);
-  writeViews(store, file);
+  await writeViews(store, file);
   return view;
 }
 
 /** @deprecated Use createView */
 export const createTab = createView;
 
-export function updateView(
+export async function updateView(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
@@ -121,8 +121,8 @@ export function updateView(
     sorts?: ViewSortSpec[];
     properties?: string[];
   },
-): ViewDefinition {
-  const file = store.readViews();
+): Promise<ViewDefinition> {
+  const file = await store.readViews();
   const index = findViewIndex(file, nodeId, relationshipTypeId, viewId);
   if (index < 0) throw new Error("view_not_found");
 
@@ -139,43 +139,43 @@ export function updateView(
     setPropertiesOnRecord(view, input.properties);
   }
 
-  writeViews(store, file);
+  await writeViews(store, file);
   return view;
 }
 
 /** @deprecated Use updateView */
 export const updateTab = updateView;
 
-export function deleteView(
+export async function deleteView(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
   viewId: string,
-): void {
-  const file = store.readViews();
+): Promise<void> {
+  const file = await store.readViews();
   const views = ensureCustomViews(file, nodeId, relationshipTypeId);
   if (views.length <= 1) throw new Error("last_view");
 
   const index = findViewIndex(file, nodeId, relationshipTypeId, viewId);
   if (index < 0) throw new Error("view_not_found");
   file.views.splice(index, 1);
-  writeViews(store, file);
+  await writeViews(store, file);
 }
 
 /** @deprecated Use deleteView */
 export const deleteTab = deleteView;
 
-export function reorderViews(
+export async function reorderViews(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
   viewIds: string[],
-): ViewDefinition[] {
+): Promise<ViewDefinition[]> {
   if (!Array.isArray(viewIds) || viewIds.length === 0) {
     throw new Error("invalid_view_order");
   }
 
-  const file = store.readViews();
+  const file = await store.readViews();
   const views = ensureCustomViews(file, nodeId, relationshipTypeId);
   if (viewIds.length !== views.length) {
     throw new Error("invalid_view_order");
@@ -198,7 +198,7 @@ export function reorderViews(
     file.views[indices[offset]!] = reordered[offset]!;
   }
 
-  writeViews(store, file);
+  await writeViews(store, file);
   return reordered;
 }
 
@@ -210,20 +210,20 @@ export const reorderSectionTabs = reorderViews;
  * custom view when the relationshipTypeId uses custom views and none exist yet.
  * Used by composed / generated tabs (shared allowlist).
  */
-export function updateRelationshipViewProperties(
+export async function updateRelationshipViewProperties(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
   properties: string[],
-): string[] {
+): Promise<string[]> {
   const normalized = normalizeProperties(properties);
   if (normalized.length === 0) throw new Error("invalid_column_order");
 
-  const file = store.readViews();
+  const file = await store.readViews();
   const generated = generatedViewForRelationship(file, nodeId, relationshipTypeId);
   if (generated) {
     setPropertiesOnRecord(generated, normalized);
-    writeViews(store, file);
+    await writeViews(store, file);
     return normalized;
   }
 
@@ -236,7 +236,7 @@ export function updateRelationshipViewProperties(
       properties: [...normalized],
     };
     file.views.push(defaultView);
-    writeViews(store, file);
+    await writeViews(store, file);
     return normalized;
   }
 
@@ -244,27 +244,27 @@ export function updateRelationshipViewProperties(
   // callers should updateView per tab. Keep writing the first view for API compatibility
   // when patching generated-style shared config on a single-view custom relationshipTypeId.
   setPropertiesOnRecord(views[0]!, normalized);
-  writeViews(store, file);
+  await writeViews(store, file);
   return normalized;
 }
 
 /** @deprecated Use updateRelationshipViewProperties */
-export function updateSectionColumnOrder(
+export async function updateSectionColumnOrder(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
   columnOrder: string[],
-): string[] {
-  return updateRelationshipViewProperties(store, nodeId, relationshipTypeId, columnOrder);
+): Promise<string[]> {
+  return await updateRelationshipViewProperties(store, nodeId, relationshipTypeId, columnOrder);
 }
 
-export function ensureCustomViewsForRelationship(
+export async function ensureCustomViewsForRelationship(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
   definitions: Pick<ViewDefinition, "id" | "name" | "sorts">[],
-): void {
-  const file = store.readViews();
+): Promise<void> {
+  const file = await store.readViews();
   const normalized = nodeId;
   file.views = file.views.filter(
     (view) => !(view.nodeId === normalized && view.association === relationshipTypeId),
@@ -278,44 +278,44 @@ export function ensureCustomViewsForRelationship(
       sorts: definition.sorts,
     });
   }
-  writeViews(store, file);
+  await writeViews(store, file);
 }
 
-export function ensureGeneratedView(
+export async function ensureGeneratedView(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
   presentation: TablePresentationLayers,
-): void {
-  const file = store.readViews();
+): Promise<void> {
+  const file = await store.readViews();
   const normalized = nodeId;
   file.views = file.views.filter(
     (view) => !(view.nodeId === normalized && view.association === relationshipTypeId),
   );
   file.views.push({ nodeId: normalized, association: relationshipTypeId, presentation });
-  writeViews(store, file);
+  await writeViews(store, file);
 }
 
-export function replaceViewsFile(store: TomeGraphStoreBase, file: ViewsFile): void {
-  writeViews(store, file);
+export async function replaceViewsFile(store: TomeGraphStoreBase, file: ViewsFile): Promise<void> {
+  await writeViews(store, file);
 }
 
-export function readViewsFileOrEmpty(store: TomeGraphStoreBase): ViewsFile {
+export async function readViewsFileOrEmpty(store: TomeGraphStoreBase): Promise<ViewsFile> {
   try {
-    return store.readViews();
+    return await store.readViews();
   } catch {
     return emptyViewsFile();
   }
 }
 
 /** Remove a column key from view properties and reset sorts that reference it. */
-export function purgeColumnFromViews(
+export async function purgeColumnFromViews(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
   columnKey: string,
-): void {
-  const file = store.readViews();
+): Promise<void> {
+  const file = await store.readViews();
   const generated = generatedViewForRelationship(file, nodeId, relationshipTypeId);
   let changed = false;
 
@@ -341,18 +341,18 @@ export function purgeColumnFromViews(
     }
   }
 
-  if (changed) writeViews(store, file);
+  if (changed) await writeViews(store, file);
 }
 
 /** Rename a column key in view properties and sorts. */
-export function renameColumnInViews(
+export async function renameColumnInViews(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
   oldKey: string,
   newKey: string,
-): void {
-  const file = store.readViews();
+): Promise<void> {
+  const file = await store.readViews();
   const generated = generatedViewForRelationship(file, nodeId, relationshipTypeId);
   let changed = false;
 
@@ -380,7 +380,7 @@ export function renameColumnInViews(
     }
   }
 
-  if (changed) writeViews(store, file);
+  if (changed) await writeViews(store, file);
 }
 
 /**
@@ -388,21 +388,21 @@ export function renameColumnInViews(
  * generated record properties when the relationshipTypeId is generated.
  * Does not fan out to sibling custom views.
  */
-export function appendColumnToViewsOrder(
+export async function appendColumnToViewsOrder(
   store: TomeGraphStoreBase,
   nodeId: string,
   relationshipTypeId: string,
   columnKey: string,
   viewId?: string,
-): void {
-  const file = store.readViews();
+): Promise<void> {
+  const file = await store.readViews();
   const generated = generatedViewForRelationship(file, nodeId, relationshipTypeId);
 
   if (generated) {
     if (!generated.properties?.length) return;
     if (generated.properties.includes(columnKey)) return;
     setPropertiesOnRecord(generated, [...generated.properties, columnKey]);
-    writeViews(store, file);
+    await writeViews(store, file);
     return;
   }
 
@@ -417,5 +417,5 @@ export function appendColumnToViewsOrder(
   if (!target.properties?.length) return;
   if (target.properties.includes(columnKey)) return;
   setPropertiesOnRecord(target, [...target.properties, columnKey]);
-  writeViews(store, file);
+  await writeViews(store, file);
 }

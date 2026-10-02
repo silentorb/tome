@@ -2,7 +2,7 @@ import type { TableRowsQuery, TableRowsWindow } from "tome-graph-interfaces";
 import type { TomeSearch, TomeSearchHit } from "tome-interfaces/search";
 import type { Relationship } from "tome-graph-interfaces";
 import {
-  withProfilingSpan,
+  withProfilingSpanAsync,
   type ProfilingAttributes,
 } from "tome-service-interfaces";
 import {
@@ -61,13 +61,13 @@ export type TableSearchWindowResult = {
  * When searcher is missing, returns an empty window (no legacy JS relevance).
  * Emits INTERNAL `table.search.window` when profiling is on.
  */
-export function runTableSearchWindow(
+export async function runTableSearchWindow(
   search: TomeSearch | null,
   query: TableRowsQuery | undefined,
   allowedNodeIds: ReadonlySet<string>,
   profilingAttrs: ProfilingAttributes = {},
-): TableSearchWindowResult {
-  return withProfilingSpan(
+): Promise<TableSearchWindowResult> {
+  return withProfilingSpanAsync(
     "table.search.window",
     "INTERNAL",
     {
@@ -75,7 +75,7 @@ export function runTableSearchWindow(
       "search.has_searcher": Boolean(search),
       "search.scope_size": allowedNodeIds.size,
     },
-    () => {
+    async () => {
       const q = query?.q?.trim() ?? "";
       const { offset, limit } = resolveWindowBounds(query);
 
@@ -100,19 +100,18 @@ export function runTableSearchWindow(
         };
       }
 
-      const resultOrPromise = search.searchWindow({
-        query: q,
-        offset,
-        limit,
-        allowedNodeIds,
-      });
-      if (resultOrPromise instanceof Promise) {
-        throw new Error("Async TomeSearch.searchWindow is not supported on the sync table path");
-      }
+      const result = await Promise.resolve(
+        search.searchWindow({
+          query: q,
+          offset,
+          limit,
+          allowedNodeIds,
+        }),
+      );
 
       return {
-        hits: resultOrPromise.hits,
-        rowsWindow: buildTableRowsWindow(offset, limit, resultOrPromise.total),
+        hits: result.hits,
+        rowsWindow: buildTableRowsWindow(offset, limit, result.total),
       };
     },
   );

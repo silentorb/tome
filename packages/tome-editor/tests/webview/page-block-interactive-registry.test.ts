@@ -14,7 +14,7 @@ import {
   resetPageBlockRegistryForTests,
 } from "../../src/webview/extensions/page-block-registry";
 
-describe("page-block interactive registry", () => {
+describe("page-block interactive registry", async () => {
   test("embed comment round-trips block data for persistence", () => {
     const comment = formatPageBlockEmbedComment({
       componentId: "tome-query.block",

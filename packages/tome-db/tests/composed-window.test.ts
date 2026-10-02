@@ -23,11 +23,11 @@ const bookB = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 const part1 = "11111111111111111111111111";
 const part2 = "22222222222222222222222222";
 
-describe("composed table SQL windows", () => {
-  const fixture = createTestContentFixture("tome-composed-window-");
+describe("composed table SQL windows", async () => {
+  const fixture = await createTestContentFixture("tome-composed-window-");
 
-  seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
-  seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
+  await seedTestNode(fixture, { id: PRODUCTS_DB, properties: typeTableMarkerProperties("Products") });
+  await seedTestNode(fixture, { id: PARTS_DB, properties: typeTableMarkerProperties("Parts database") });
   seedTestTableSchema(fixture, PRODUCTS_DB, []);
   seedTestTableSchema(fixture, PARTS_DB, [
     {
@@ -38,7 +38,7 @@ describe("composed table SQL windows", () => {
       endpoint: 0,
     },
   ]);
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: SCENES_DB,
     properties: typeTableMarkerProperties("Scenes"),
   });
@@ -58,19 +58,19 @@ describe("composed table SQL windows", () => {
       endpoint: 0,
     },
   ]);
-  seedTestNode(fixture, { id: bookA, properties: { title: "Book A" } });
-  seedTestNode(fixture, { id: bookB, properties: { title: "Book B" } });
-  seedTestNode(fixture, { id: part1, properties: { title: "Part 1" } });
-  seedTestNode(fixture, { id: part2, properties: { title: "Part 2" } });
+  await seedTestNode(fixture, { id: bookA, properties: { title: "Book A" } });
+  await seedTestNode(fixture, { id: bookB, properties: { title: "Book B" } });
+  await seedTestNode(fixture, { id: part1, properties: { title: "Part 1" } });
+  await seedTestNode(fixture, { id: part2, properties: { title: "Part 2" } });
 
-  seedTestRelationships(fixture, [
+  await seedTestRelationships(fixture, [
     { source: bookA, target: PRODUCTS_DB, type: "ordered_member_of", properties: { order: "1" } },
     { source: bookB, target: PRODUCTS_DB, type: "ordered_member_of", properties: { order: "2" } },
     { source: part1, target: PARTS_DB, type: "ordered_member_of", properties: { order: "1" } },
     { source: part2, target: PARTS_DB, type: "ordered_member_of", properties: { order: "2" } },
   ]);
 
-  seedTestCompositeRelationships(fixture, [
+  await seedTestCompositeRelationships(fixture, [
     {
       a: part1,
       b: bookA,
@@ -91,8 +91,8 @@ describe("composed table SQL windows", () => {
 
   for (let i = 0; i < 40; i++) {
     const id = `SC${String(i).padStart(24, "0")}`;
-    seedTestNode(fixture, { id, properties: { title: `Scene ${String(i).padStart(2, "0")}` } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id, properties: { title: `Scene ${String(i).padStart(2, "0")}` } });
+    await seedTestRelationships(fixture, [
       {
         source: id,
         target: SCENES_DB,
@@ -102,7 +102,7 @@ describe("composed table SQL windows", () => {
     ]);
     const book = i < 30 ? bookA : bookB;
     const part = i % 2 === 0 ? part1 : part2;
-    seedTestCompositeRelationships(fixture, [
+    await seedTestCompositeRelationships(fixture, [
       {
         a: id,
         b: book,
@@ -149,7 +149,7 @@ describe("composed table SQL windows", () => {
     },
   };
   fixture.ctx.store.writeRelationshipTypesFile(registry);
-  fixture.ctx.sync.syncRelationships();
+  await fixture.ctx.sync.syncRelationships();
 
   seedTestViews(fixture, {
     version: VIEWS_FILE_VERSION,
@@ -163,13 +163,13 @@ describe("composed table SQL windows", () => {
   });
   seedTestDynamicProperties(fixture, []);
 
-  afterAll(() => destroyTestContentFixture(fixture));
+  afterAll(async () => await destroyTestContentFixture(fixture));
 
   const db = () => fixture.ctx.graphStore as import("../src/graph-store/composed-graph-store").ComposedGraphStore;
   const contentDir = () => fixture.ctx.store.contentDir;
 
-  test("SQL-windows composed view by scope with bounded page size", () => {
-    const page = getDatabaseViewDetail(db(), SCENES_DB, bookA, contentDir(), {
+  test("SQL-windows composed view by scope with bounded page size", async () => {
+    const page = await getDatabaseViewDetail(db(), SCENES_DB, bookA, contentDir(), {
       limit: 10,
       offset: 0,
     });
@@ -187,8 +187,8 @@ describe("composed table SQL windows", () => {
     expect(page?.rows[0]?.name).toBe("Scene 00");
   });
 
-  test("SQL composed window second page continues group flatten order", () => {
-    const page = getDatabaseViewDetail(db(), SCENES_DB, bookA, contentDir(), {
+  test("SQL composed window second page continues group flatten order", async () => {
+    const page = await getDatabaseViewDetail(db(), SCENES_DB, bookA, contentDir(), {
       limit: 10,
       offset: 10,
     });
@@ -201,9 +201,9 @@ describe("composed table SQL windows", () => {
     expect(page?.rows).toHaveLength(10);
   });
 
-  test("q without searcher returns empty composed search window", () => {
+  test("q without searcher returns empty composed search window", async () => {
     db().setSearch(null);
-    const page = getDatabaseViewDetail(db(), SCENES_DB, bookA, contentDir(), {
+    const page = await getDatabaseViewDetail(db(), SCENES_DB, bookA, contentDir(), {
       limit: 5,
       offset: 0,
       q: "Scene 01",
@@ -212,20 +212,20 @@ describe("composed table SQL windows", () => {
     expect(page?.rows).toHaveLength(0);
   });
 
-  test("q with searcher windows composed members via scoped search", () => {
+  test("q with searcher windows composed members via scoped search", async () => {
     const cache = fixture.ctx.cache;
     const pattern = (q: string) => `%${q.replace(/[%_\\]/g, "\\$&")}%`;
     db().setSearch({
       search() {
         return [];
       },
-      searchWindow(request: {
+      async searchWindow(request: {
         query: string;
         limit?: number | null;
         offset?: number;
         allowedNodeIds?: ReadonlySet<string>;
       }) {
-        const result = cache.searchNodesLikeWindow(pattern(request.query), {
+        const result = await cache.searchNodesLikeWindow(pattern(request.query), {
           offset: request.offset,
           limit: request.limit,
           allowedNodeIds: request.allowedNodeIds,
@@ -236,7 +236,7 @@ describe("composed table SQL windows", () => {
         };
       },
     });
-    const page = getDatabaseViewDetail(db(), SCENES_DB, bookA, contentDir(), {
+    const page = await getDatabaseViewDetail(db(), SCENES_DB, bookA, contentDir(), {
       limit: 5,
       offset: 0,
       q: "Scene 01",

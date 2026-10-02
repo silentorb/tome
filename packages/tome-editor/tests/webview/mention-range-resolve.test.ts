@@ -32,7 +32,7 @@ describe("isMentionFragment", () => {
   });
 });
 
-describe("resolveMentionInsertRange", () => {
+describe("resolveMentionInsertRange", async () => {
   test("extends stale stored end through cursor", async () => {
     const root = document.createElement("div");
     document.body.appendChild(root);

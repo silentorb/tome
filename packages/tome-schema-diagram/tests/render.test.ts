@@ -16,7 +16,7 @@ const SCHEMA_QUERY = {
   ],
 };
 
-describe("schema diagram render", () => {
+describe("schema diagram render", async () => {
   test("editor shell emits inline SVG in viewport", async () => {
     const html = await renderSchemaDiagramHtml(
       {

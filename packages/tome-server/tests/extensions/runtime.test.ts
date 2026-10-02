@@ -8,11 +8,11 @@ import { ExtensionServerRuntime } from "../../src/extensions/runtime";
 import { editorBundleWatchRoot, maxSourceMtimeMs } from "../../src/extensions/editor-bundle-mtime";
 import { resolveExtensionModulePath } from "../../src/extensions/resolve-extension-module";
 
-describe("ExtensionServerRuntime", () => {
+describe("ExtensionServerRuntime", async () => {
   let fixture: TestContentFixture;
 
-  beforeAll(() => {
-    fixture = createTestContentFixture("tome-ext-api-");
+  beforeAll(async () => {
+    fixture = await createTestContentFixture("tome-ext-api-");
     const modelDir = join(fixture.tempDir, "content", "model");
     mkdirSync(modelDir, { recursive: true });
     writeFileSync(
@@ -43,8 +43,8 @@ describe("ExtensionServerRuntime", () => {
     );
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 
   test("loads manifest and invokes server handler", async () => {

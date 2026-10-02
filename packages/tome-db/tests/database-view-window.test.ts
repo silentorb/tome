@@ -6,14 +6,8 @@ import { describe, expect, test, afterAll, spyOn } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { GraphDatabase } from "tome-sqlite";
-import {
-  configureProfiling,
-  getProfilingStore,
-  openProfilingStore,
-  resetProfilingForTests,
-  runInProfilingTrace,
-} from "tome-service-interfaces";
+import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
+import { configureProfiling, getProfilingStore, openProfilingStore, resetProfilingForTests, runInProfilingTrace, runInProfilingTraceAsync } from "tome-service-interfaces";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import {
@@ -60,6 +54,7 @@ describe("database-view SQL windows", () => {
   invalidateRelationshipTypesCache();
   const dbPath = join(dir, "test.sqlite");
   const db = new GraphDatabase(dbPath);
+  const cache = wrapSyncGraphDatabase(db);
 
   function writeTableSchema(
     databaseId: string,
@@ -91,13 +86,13 @@ describe("database-view SQL windows", () => {
 
   writeSchema();
 
-  afterAll(() => {
+  afterAll(async () => {
     resetProfilingForTests();
-    db.close();
+    await cache.close();
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("windows large membership sets with limit offset and total", () => {
+  test("windows large membership sets with limit offset and total", async () => {
     const databaseId = "WWWWWWWWWWWWWWWWWWWWWWWWWW";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
@@ -108,7 +103,7 @@ describe("database-view SQL windows", () => {
       db.upsertRelationship(id, databaseId, memberProjection, {});
     }
 
-    const page = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+    const page = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir, {
       limit: 50,
       offset: 50,
       sorts: [{ column: "name", direction: "asc" }],
@@ -124,7 +119,7 @@ describe("database-view SQL windows", () => {
     expect(page?.rows[49]?.name).toBe("Feature 099");
   });
 
-  test("sorts by relation-count in SQL for expressible relation columns", () => {
+  test("sorts by relation-count in SQL for expressible relation columns", async () => {
     const databaseId = "XXXXXXXXXXXXXXXXXXXXXXXXXX";
     writeTableSchema(databaseId, [
       {
@@ -152,7 +147,7 @@ describe("database-view SQL windows", () => {
     db.upsertRelationship(high, "01PAR000000000000000000002", parentProjection, {});
     db.upsertRelationship(low, "01PAR000000000000000000001", parentProjection, {});
 
-    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+    const detail = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir, {
       limit: 10,
       offset: 0,
       sorts: [{ column: "parents", direction: "desc" }],
@@ -161,7 +156,7 @@ describe("database-view SQL windows", () => {
     expect(detail?.rows[0]?.relationCells?.parents).toHaveLength(2);
   });
 
-  test("q without searcher returns empty SQL search window", () => {
+  test("q without searcher returns empty SQL search window", async () => {
     const databaseId = "YYYYYYYYYYYYYYYYYYYYYYYYYY";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
@@ -171,7 +166,7 @@ describe("database-view SQL windows", () => {
     db.upsertRelationship("01QAAA00000000000000000001", databaseId, memberProjection, {});
     db.upsertRelationship("01QBBB00000000000000000001", databaseId, memberProjection, {});
 
-    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+    const detail = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir, {
       q: "quest",
       limit: 50,
       offset: 0,
@@ -180,7 +175,7 @@ describe("database-view SQL windows", () => {
     expect(detail?.rows).toHaveLength(0);
   });
 
-  test("q with searcher windows via scoped search without full materialize", () => {
+  test("q with searcher windows via scoped search without full materialize", async () => {
     const databaseId = "Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1Y1";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
@@ -214,9 +209,11 @@ describe("database-view SQL windows", () => {
         };
       },
     };
-    const store = Object.assign(db, { getSearch: () => search });
+    const store = Object.assign(db, { getSearch: () => search }) as typeof db & {
+      getSearch: () => typeof search;
+    };
 
-    const detail = getDatabaseViewDetail(store, databaseId, undefined, contentDir, {
+    const detail = await getDatabaseViewDetail(store as never, databaseId, undefined, contentDir, {
       q: "quest",
       limit: 50,
       offset: 0,
@@ -225,7 +222,7 @@ describe("database-view SQL windows", () => {
     expect(detail?.rows.map((r) => r.nodeId)).toEqual([matchId]);
   });
 
-  test("fixed dyn-sort uses expression index SQL window and orders by value", () => {
+  test("fixed dyn-sort uses expression index SQL window and orders by value", async () => {
     const databaseId = "ZZZZZZZZZZZZZZZZZZZZZZZZZZ";
     const sceneProj = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 0);
     writeTableSchema(databaseId, []);
@@ -281,8 +278,7 @@ describe("database-view SQL windows", () => {
     openProfilingStore(join(profilingDir, "tome-profiling.sqlite"));
     getProfilingStore()?.clear();
 
-    const detail = runInProfilingTrace(() =>
-      getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+    const detail = await runInProfilingTraceAsync(async () => await getDatabaseViewDetail(cache, databaseId, undefined, contentDir, {
         sorts: [{ column: "all_scene_count", direction: "desc" }],
         limit: 50,
         offset: 0,
@@ -318,8 +314,7 @@ describe("database-view SQL windows", () => {
     expect(db.getExpressionIndexStatus(readyDigest)).toBe("ready");
 
     getProfilingStore()?.clear();
-    runInProfilingTrace(() =>
-      getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+    await runInProfilingTraceAsync(async () => await getDatabaseViewDetail(cache, databaseId, undefined, contentDir, {
         sorts: [{ column: "all_scene_count", direction: "desc" }],
         limit: 50,
         offset: 0,
@@ -349,8 +344,7 @@ describe("database-view SQL windows", () => {
     expect(dirty?.includes(low)).toBe(true);
 
     getProfilingStore()?.clear();
-    const detailAfter = runInProfilingTrace(() =>
-      getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+    const detailAfter = await runInProfilingTraceAsync(async () => await getDatabaseViewDetail(cache, databaseId, undefined, contentDir, {
         sorts: [{ column: "all_scene_count", direction: "desc" }],
         limit: 50,
         offset: 0,
@@ -392,7 +386,7 @@ describe("database-view SQL windows", () => {
     invalidateDynamicPropertiesCache();
   });
 
-  test("column-set dyn-sort uses expression index SQL window and orders by value", () => {
+  test("column-set dyn-sort uses expression index SQL window and orders by value", async () => {
     const databaseId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     const productId = "01PRODUCTCOLSET000000000001";
     const columnKey = `scene_count__${productId}`;
@@ -446,7 +440,7 @@ describe("database-view SQL windows", () => {
     db.upsertRelationship("01COLSCEB000000000000000001", productId, productProj, {});
     db.upsertRelationship("01COLSCEC000000000000000001", productId, productProj, {});
 
-    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+    const detail = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir, {
       sorts: [{ column: columnKey, direction: "desc" }],
       limit: 50,
       offset: 0,
@@ -468,7 +462,7 @@ describe("database-view SQL windows", () => {
     invalidateDynamicPropertiesCache();
   });
 
-  test("selects relation cells in window SQL without per-row edge or getNode walks", () => {
+  test("selects relation cells in window SQL without per-row edge or getNode walks", async () => {
     const databaseId = "YYYYYYYYYYYYYYYYYYYYYYYYYY";
     const parentsProjection = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 1);
     const childrenProjection = projectionTypeForEndpoint(TEST_PARENTS_CHILDREN_ASSOCIATION_ID, 0);
@@ -511,7 +505,7 @@ describe("database-view SQL windows", () => {
       return originalList(...args);
     }) as typeof db.listRelationshipsFromSource;
 
-    const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+    const detail = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir, {
       limit: 50,
       offset: 0,
       sorts: [{ column: "name", direction: "asc" }],
@@ -534,11 +528,11 @@ describe("database-view SQL windows", () => {
     ]);
 
     // Membership / title reads may call getNode for row names; relation hydrate must not
-    // fan out via listRelationshipsFromSource (Select stage owns relation payloads).
+    // fan out via await listRelationshipsFromSource(Select stage owns relation payloads).
     expect(listFromSourceCalls).toBe(0);
   });
 
-  test("refuses unsafe sort and still SQL-windows without full membership load", () => {
+  test("refuses unsafe sort and still SQL-windows without full membership load", async () => {
     const databaseId = "01FC0SAFE00000000000000001";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
@@ -558,7 +552,7 @@ describe("database-view SQL windows", () => {
 
     const warn = spyOn(console, "warn").mockImplementation(() => {});
     try {
-      const page = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+      const page = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir, {
         limit: 20,
         offset: 20,
         sorts: [{ column: "bad-key!", direction: "asc" }],
@@ -581,7 +575,7 @@ describe("database-view SQL windows", () => {
     }
   });
 
-  test("refuses unresolved dyn sort and still SQL-windows with default order", () => {
+  test("refuses unresolved dyn sort and still SQL-windows with default order", async () => {
     const databaseId = "01FC0NDYN00000000000000001";
     writeTableSchema(databaseId, []);
     writeFileSync(
@@ -615,7 +609,7 @@ describe("database-view SQL windows", () => {
 
     const warn = spyOn(console, "warn").mockImplementation(() => {});
     try {
-      const detail = getDatabaseViewDetail(db, databaseId, undefined, contentDir, {
+      const detail = await getDatabaseViewDetail(cache, databaseId, undefined, contentDir, {
         sorts: [{ column: "mystery_score", direction: "desc" }],
         limit: 50,
         offset: 0,

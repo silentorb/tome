@@ -9,23 +9,23 @@ import {
 } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
 
-describe("GET /api/workspace", () => {
-  const fixture = createTestContentFixture("tome-workspace-api-");
+describe("GET /api/workspace", async () => {
+  const fixture = await createTestContentFixture("tome-workspace-api-");
 
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: TEST_ARCHIVE_NODE_ID,
     properties: { title: "Archive hub" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: TEST_HOME_NODE_ID,
     properties: { title: "Home" },
   });
 
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
 
-  afterAll(() => {
+  afterAll(async () => {
     api.handler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 
   test("returns workspace config from content/model/workspace.json", async () => {
@@ -51,10 +51,10 @@ describe("GET /api/workspace", () => {
     expect(((await res.json()) as { id: string }).id).toBe(TEST_HOME_NODE_ID);
   });
 
-  test("listCorpora includes archive title from point getNode", () => {
-    const corpora = api.services.listCorpora();
+  test("listCorpora includes archive title from point getNode", async () => {
+    const corpora = await api.services.listCorpora();
     expect(corpora.length).toBeGreaterThan(0);
     expect(corpora[0]?.workspace.archiveNodeTitle).toBe("Archive hub");
-    expect(api.services.getHomeId()).toBe(TEST_HOME_NODE_ID);
+    expect(await api.services.getHomeId()).toBe(TEST_HOME_NODE_ID);
   });
 });

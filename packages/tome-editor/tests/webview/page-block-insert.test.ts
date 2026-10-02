@@ -41,7 +41,7 @@ async function createEditor(initial = "") {
   return { editor, root };
 }
 
-describe("insertPageBlock slash menu", () => {
+describe("insertPageBlock slash menu", async () => {
   test("replaces slash filter text with a tome-block fence", async () => {
     const { editor } = await createEditor();
 

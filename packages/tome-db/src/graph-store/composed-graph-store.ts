@@ -22,8 +22,7 @@ import type {
   RelationshipTypesFile,
   DynamicPropertiesFile,
 } from "tome-graph-interfaces";
-import type { GraphDatabase } from "tome-sqlite";
-import type { SQLQueryBindings } from "bun:sqlite";
+import type { TomeQueryCache } from "tome-service-interfaces";
 import type { CacheSync } from "../content/sync";
 import { runExecuteImp, runExecuteImpSql } from "./execute-imp";
 
@@ -41,10 +40,10 @@ export class FlatfileQueryableGraphStore
     super(backend);
   }
 
-  executeImp(
+  async executeImp(
     graph: ImpGraph,
     context?: ExecuteImpContext,
-  ): ImpCollectionResult | Promise<ImpCollectionResult> {
+  ): Promise<ImpCollectionResult> {
     return runExecuteImp({
       backend: "execute",
       store: this,
@@ -68,7 +67,7 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
 
   constructor(
     readonly flatfile: FlatfileGraphStore,
-    private readonly cache: GraphDatabase,
+    private readonly cache: TomeQueryCache,
     readonly sync: CacheSync,
   ) {}
 
@@ -80,13 +79,13 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     return this.flatfile.backend;
   }
 
-  get queryCache(): GraphDatabase {
+  get queryCache(): TomeQueryCache {
     return this.cache;
   }
 
-  close(): void {
-    this.flatfile.close();
-    this.cache.close();
+  async close(): Promise<void> {
+    await this.flatfile.close();
+    await this.cache.close();
   }
 
   subscribe(listener: StoreChangeListener): () => void {
@@ -113,51 +112,51 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     return this.flatfile.contentDirForNode(nodeId);
   }
 
-  listNodeIds(): string[] {
+  listNodeIds(): Promise<string[]> {
     return this.flatfile.listNodeIds();
   }
 
-  getNode(id: string): Node | null {
+  getNode(id: string): Promise<Node | null> {
     return this.cache.getNode(id);
   }
 
-  upsertNode(node: Node, body?: string): void {
-    this.flatfile.upsertNode(node, body);
+  upsertNode(node: Node, body?: string): Promise<void> {
+    return this.flatfile.upsertNode(node, body);
   }
 
-  upsertNodeToCorpus(corpusId: string, node: Node, body?: string): void {
-    this.flatfile.upsertNodeToCorpus(corpusId, node, body);
+  upsertNodeToCorpus(corpusId: string, node: Node, body?: string): Promise<void> {
+    return this.flatfile.upsertNodeToCorpus(corpusId, node, body);
   }
 
-  mergeNodeProperties(id: string, patch: Properties): boolean {
+  mergeNodeProperties(id: string, patch: Properties): Promise<boolean> {
     return this.flatfile.mergeNodeProperties(id, patch);
   }
 
-  deleteNode(id: string): void {
-    this.flatfile.deleteNode(id);
+  deleteNode(id: string): Promise<void> {
+    return this.flatfile.deleteNode(id);
   }
 
-  archiveNodeFile(id: string): boolean {
+  archiveNodeFile(id: string): Promise<boolean> {
     return this.flatfile.archiveNodeFile(id);
   }
 
-  unarchiveNodeFile(id: string): boolean {
+  unarchiveNodeFile(id: string): Promise<boolean> {
     return this.flatfile.unarchiveNodeFile(id);
   }
 
-  getRelationshipRecord(a: string, b: string, type: string): RelationshipRecordRef | null {
+  getRelationshipRecord(a: string, b: string, type: string): Promise<RelationshipRecordRef | null> {
     return this.flatfile.getRelationshipRecord(a, b, type);
   }
 
-  findRelationshipRecord(a: string, b: string, type: string): Relationship | null {
+  findRelationshipRecord(a: string, b: string, type: string): Promise<Relationship | null> {
     return this.flatfile.findRelationshipRecord(a, b, type);
   }
 
-  upsertRelationshipRecord(entry: RelationshipRecordRef): void {
-    this.flatfile.upsertRelationshipRecord(entry);
+  upsertRelationshipRecord(entry: RelationshipRecordRef): Promise<void> {
+    return this.flatfile.upsertRelationshipRecord(entry);
   }
 
-  deleteRelationshipRecord(a: string, b: string, type: string): boolean {
+  deleteRelationshipRecord(a: string, b: string, type: string): Promise<boolean> {
     return this.flatfile.deleteRelationshipRecord(a, b, type);
   }
 
@@ -166,11 +165,11 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     target: string,
     projectionType: string,
     properties?: Properties,
-  ): void {
-    this.flatfile.upsertRelationship(source, target, projectionType, properties);
+  ): Promise<void> {
+    return this.flatfile.upsertRelationship(source, target, projectionType, properties);
   }
 
-  deleteRelationship(source: string, target: string, projectionType: string): boolean {
+  deleteRelationship(source: string, target: string, projectionType: string): Promise<boolean> {
     return this.flatfile.deleteRelationship(source, target, projectionType);
   }
 
@@ -179,8 +178,8 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     target: string,
     projectionType: string,
     patch: Properties,
-  ): void {
-    this.flatfile.mergeRelationshipProperties(source, target, projectionType, patch);
+  ): Promise<void> {
+    return this.flatfile.mergeRelationshipProperties(source, target, projectionType, patch);
   }
 
   replaceRelationshipProperties(
@@ -188,83 +187,83 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     target: string,
     projectionType: string,
     properties: Properties,
-  ): boolean {
+  ): Promise<boolean> {
     return this.flatfile.replaceRelationshipProperties(source, target, projectionType, properties);
   }
 
-  readRelationshipTypes(): RelationshipTypesFile {
+  readRelationshipTypes(): Promise<RelationshipTypesFile> {
     return this.flatfile.readRelationshipTypes();
   }
 
-  writeRelationshipTypes(file: RelationshipTypesFile): void {
-    this.flatfile.writeRelationshipTypes(file);
+  writeRelationshipTypes(file: RelationshipTypesFile): Promise<void> {
+    return this.flatfile.writeRelationshipTypes(file);
   }
 
-  readSchema(): SchemaFile {
+  readSchema(): Promise<SchemaFile> {
     return this.flatfile.readSchema();
   }
 
-  writeSchema(file: SchemaFile): void {
-    this.flatfile.writeSchema(file);
+  writeSchema(file: SchemaFile): Promise<void> {
+    return this.flatfile.writeSchema(file);
   }
 
-  readViews(): ViewsFile {
+  readViews(): Promise<ViewsFile> {
     return this.flatfile.readViews();
   }
 
-  writeViews(file: ViewsFile): void {
-    this.flatfile.writeViews(file);
+  writeViews(file: ViewsFile): Promise<void> {
+    return this.flatfile.writeViews(file);
   }
 
-  readTableSchemas(): TableSchemasFile {
+  readTableSchemas(): Promise<TableSchemasFile> {
     return this.flatfile.readTableSchemas();
   }
 
-  writeTableSchemas(file: TableSchemasFile): void {
-    this.flatfile.writeTableSchemas(file);
+  writeTableSchemas(file: TableSchemasFile): Promise<void> {
+    return this.flatfile.writeTableSchemas(file);
   }
 
-  readWorkspace(): WorkspaceFile {
+  readWorkspace(): Promise<WorkspaceFile> {
     return this.flatfile.readWorkspace();
   }
 
-  writeWorkspace(file: WorkspaceFile): void {
-    this.flatfile.writeWorkspace(file);
+  writeWorkspace(file: WorkspaceFile): Promise<void> {
+    return this.flatfile.writeWorkspace(file);
   }
 
-  writeWorkspaceForCorpus(corpusId: string, file: WorkspaceFile): void {
-    this.flatfile.writeWorkspaceForCorpus(corpusId, file);
+  writeWorkspaceForCorpus(corpusId: string, file: WorkspaceFile): Promise<void> {
+    return this.flatfile.writeWorkspaceForCorpus(corpusId, file);
   }
 
-  readDynamicProperties(): DynamicPropertiesFile {
+  readDynamicProperties(): Promise<DynamicPropertiesFile> {
     return this.flatfile.readDynamicProperties();
   }
 
-  writeDynamicProperties(file: DynamicPropertiesFile): void {
-    this.flatfile.writeDynamicProperties(file);
+  writeDynamicProperties(file: DynamicPropertiesFile): Promise<void> {
+    return this.flatfile.writeDynamicProperties(file);
   }
 
-  isNodeArchived(id: string): boolean {
+  isNodeArchived(id: string): Promise<boolean> {
     return this.flatfile.isNodeArchived(id);
   }
 
-  forEachRelationshipRecord(
-    fn: (entry: RelationshipRecordRef) => void,
+  async forEachRelationshipRecord(
+    fn: (entry: RelationshipRecordRef) => void | Promise<void>,
     options?: { includeArchived?: boolean },
-  ): void {
+  ): Promise<void> {
     // Live records live in the SQLite cache after sync. Archived edges are
     // flatfile-only — fall back when the caller asks for them.
     if (options?.includeArchived) {
-      this.flatfile.forEachRelationshipRecord(fn, options);
+      await this.flatfile.forEachRelationshipRecord(fn, options);
       return;
     }
-    const rows = this.cache.queryAll<{ id: string }>(
+    const rows = await this.cache.queryAll<{ id: string }>(
       `SELECT id FROM relationship_records ORDER BY id`,
     );
     for (const row of rows) {
-      const record = this.cache.getRelationshipRecord(row.id);
+      const record = await this.cache.getRelationshipRecord(row.id);
       if (!record) continue;
-      fn({
+      await fn({
         a: record.nodeA,
         b: record.nodeB,
         type: record.compositeType,
@@ -273,10 +272,10 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     }
   }
 
-  listRelationshipProjections(
+  async listRelationshipProjections(
     nodeId: string,
     options?: ListRelationshipProjectionsOptions,
-  ): Relationship[] {
+  ): Promise<Relationship[]> {
     const direction = options?.direction ?? "both";
     const projectionType = options?.projectionType;
     if (direction === "from") {
@@ -285,8 +284,8 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     if (direction === "to") {
       return this.cache.listRelationshipsToTarget(nodeId, projectionType);
     }
-    const from = this.cache.listRelationshipsFromSource(nodeId, projectionType);
-    const to = this.cache.listRelationshipsToTarget(nodeId, projectionType);
+    const from = await this.cache.listRelationshipsFromSource(nodeId, projectionType);
+    const to = await this.cache.listRelationshipsToTarget(nodeId, projectionType);
     if (to.length === 0) return from;
     if (from.length === 0) return to;
     const seen = new Set(from.map((rel) => rel.id));
@@ -300,15 +299,15 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
   }
 
   /** Body substring scan via SQLite (backlink discovery). */
-  listNodesWithBodyLike(pattern: string): { id: string; body: string }[] {
+  listNodesWithBodyLike(pattern: string): Promise<{ id: string; body: string }[]> {
     return this.cache.listNodesWithBodyLike(pattern);
   }
 
-  getRelationship(id: string): Relationship | null {
+  getRelationship(id: string): Promise<Relationship | null> {
     return this.cache.getRelationship(id);
   }
 
-  executeImp(graph: ImpGraph, context?: ExecuteImpContext): ImpCollectionResult {
+  async executeImp(graph: ImpGraph, context?: ExecuteImpContext): Promise<ImpCollectionResult> {
     const role = context?.searchRole === "title" ? "title" : "content";
     return runExecuteImpSql(
       this.flatfile,
@@ -352,8 +351,8 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     this.#searchByRole.content = search;
   }
 
-  queryAll(sql: string, ...params: unknown[]): Record<string, unknown>[] {
-    return this.cache.queryAll(sql, ...(params as SQLQueryBindings[]));
+  queryAll(sql: string, ...params: unknown[]): Promise<Record<string, unknown>[]> {
+    return this.cache.queryAll(sql, ...params);
   }
 }
 

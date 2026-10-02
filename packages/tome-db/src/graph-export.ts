@@ -54,10 +54,10 @@ interface ActiveGraphRelationship {
   type: string;
 }
 
-function collectActiveGraphData(store: TomeGraphStoreBase, contentDir?: string): {
+async function collectActiveGraphData(store: TomeGraphStoreBase, contentDir?: string): Promise<{
   nodes: ActiveGraphNode[];
   relationships: ActiveGraphRelationship[];
-} {
+}> {
   const dir = contentDir ?? store.contentDir;
   const excludedIds = new Set<string>();
   try {
@@ -65,25 +65,24 @@ function collectActiveGraphData(store: TomeGraphStoreBase, contentDir?: string):
   } catch {
     /* workspace optional */
   }
-  for (const id of store.listNodeIds()) {
-    if (store.isNodeArchived(id)) excludedIds.add(id);
+  for (const id of await store.listNodeIds()) {
+    if (await store.isNodeArchived(id)) excludedIds.add(id);
   }
 
-  const nodes = store
-    .listNodeIds()
-    .filter((id) => !excludedIds.has(id))
-    .map((id) => {
-      const node = store.getNode(id);
-      const properties = node?.properties ?? {};
-      return {
-        id,
-        title: titleFromNodeProperties(properties),
-        group: graphGroupForNode(store, id),
-        labels: graphLabelsForNode(store, id),
-      };
+  const nodeIds = (await store.listNodeIds()).filter((id) => !excludedIds.has(id));
+  const nodes: ActiveGraphNode[] = [];
+  for (const id of nodeIds) {
+    const node = await store.getNode(id);
+    const properties = node?.properties ?? {};
+    nodes.push({
+      id,
+      title: titleFromNodeProperties(properties),
+      group: await graphGroupForNode(store, id),
+      labels: await graphLabelsForNode(store, id),
     });
+  }
 
-  const relationships = listAllRelationshipProjections(store).filter(
+  const relationships = (await listAllRelationshipProjections(store)).filter(
     (relationship) =>
       !excludedIds.has(relationship.sourceNodeId) &&
       !excludedIds.has(relationship.targetNodeId),
@@ -147,8 +146,11 @@ function filterActiveGraphByAnchor(
   };
 }
 
-export function exportFullGraph(store: TomeGraphStoreBase, contentDir?: string): GraphSnapshot {
-  const { nodes, relationships } = collectActiveGraphData(store, contentDir);
+export async function exportFullGraph(
+  store: TomeGraphStoreBase,
+  contentDir?: string,
+): Promise<GraphSnapshot> {
+  const { nodes, relationships } = await collectActiveGraphData(store, contentDir);
 
   const graphNodes: GraphNode[] = nodes.map((node) => ({
     id: node.id,
@@ -167,17 +169,17 @@ export function exportFullGraph(store: TomeGraphStoreBase, contentDir?: string):
   return { nodes: graphNodes, relationships: graphRelationships };
 }
 
-export function exportExplorerLodGraph(
+export async function exportExplorerLodGraph(
   store: TomeGraphStoreBase,
   options?: {
     layerCount?: number;
     anchorId?: string;
     contentDir?: string;
   },
-): GraphLodSnapshot {
+): Promise<GraphLodSnapshot> {
   const contentDir = options?.contentDir;
   const layerCount = normalizeExplorerLayerCount(options?.layerCount);
-  let { nodes, relationships } = collectActiveGraphData(store, contentDir);
+  let { nodes, relationships } = await collectActiveGraphData(store, contentDir);
   let anchorId = options?.anchorId;
   if (!anchorId) {
     try {

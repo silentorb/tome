@@ -10,23 +10,23 @@ import { createTestApiFromContent } from "./test-api-setup";
 
 const nodeId = "0000000000000000000000002K";
 
-describe("node lifecycle API", () => {
-  const fixture = createTestContentFixture("tome-lifecycle-api-");
+describe("node lifecycle API", async () => {
+  const fixture = await createTestContentFixture("tome-lifecycle-api-");
 
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: TEST_HOME_NODE_ID,
     properties: { title: "Home" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: TEST_ARCHIVE_NODE_ID,
     properties: { title: "Archive" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: nodeId,
     properties: { title: "Draft" },
   });
 
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
 
   test("POST archive links node to Archive via includes", async () => {
     const res = await api.handler(new Request(`http://127.0.0.1/api/nodes/${nodeId}/archive`, { method: "POST" }));
@@ -79,8 +79,8 @@ describe("node lifecycle API", () => {
     expect(res.status).toBe(403);
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     api.handler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 });

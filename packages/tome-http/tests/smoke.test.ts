@@ -14,7 +14,7 @@ describe("tome-http", () => {
   });
 });
 
-describe("tome-http profiling startup", () => {
+describe("tome-http profiling startup", async () => {
   let tempDirs: string[] = [];
   let mod: ReturnType<typeof createTomeHttpService> | null = null;
 

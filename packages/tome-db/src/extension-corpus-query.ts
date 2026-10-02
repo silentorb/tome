@@ -9,8 +9,8 @@ export function createExtensionCorpusQueryServices(
     corpusIdForNode(nodeId: string): string | null {
       return store.locateNode(nodeId);
     },
-    nodeIdsInCorpus(corpusId: string): readonly string[] {
-      return store.listNodeIds().filter((id) => store.locateNode(id) === corpusId);
+    async nodeIdsInCorpus(corpusId: string): Promise<readonly string[]> {
+      return (await store.listNodeIds()).filter((id) => store.locateNode(id) === corpusId);
     },
   };
 }

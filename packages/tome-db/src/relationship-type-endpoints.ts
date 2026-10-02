@@ -43,13 +43,13 @@ export interface RelationshipTypeRuleContext {
  * Resolve endpoint rules for an outgoing link from `sourceNodeId`.
  * `typeOrProjection` is a relationship type ULID or directed projection (`ULID:0` / `ULID:1`).
  */
-export function relationshipTypeRuleContext(
+export async function relationshipTypeRuleContext(
   registry: RelationshipTypesFile,
   db: RelationshipReadStore,
   sourceNodeId: string,
   typeOrProjection: string,
   contentDir?: string,
-): RelationshipTypeRuleContext | null {
+): Promise<RelationshipTypeRuleContext | null> {
   const parsed = parseProjectionType(typeOrProjection);
   let composite: string;
   let endpointIndex: 0 | 1;
@@ -69,7 +69,7 @@ export function relationshipTypeRuleContext(
   const def = registry.relationshipTypes[composite];
   if (!def?.endpoints) return null;
 
-  const sourceTypes = typeIdsForInstance(db, sourceNodeId, contentDir);
+  const sourceTypes = await typeIdsForInstance(db, sourceNodeId, contentDir);
   const sourceTypeId = def.endpoints[endpointIndex].typeId;
   if (!sourceTypes.includes(sourceTypeId)) return null;
 
@@ -83,16 +83,16 @@ export function relationshipTypeRuleContext(
   };
 }
 
-export function endpointsMatchInstances(
+export async function endpointsMatchInstances(
   def: RelationshipTypeDefinition,
   db: RelationshipReadStore,
   nodeA: string,
   nodeB: string,
   contentDir?: string,
-): boolean {
+): Promise<boolean> {
   if (!def.endpoints) return false;
-  const typesA = typeIdsForInstance(db, nodeA, contentDir);
-  const typesB = typeIdsForInstance(db, nodeB, contentDir);
+  const typesA = await typeIdsForInstance(db, nodeA, contentDir);
+  const typesB = await typeIdsForInstance(db, nodeB, contentDir);
   const forward =
     typesA.includes(def.endpoints[0].typeId) && typesB.includes(def.endpoints[1].typeId);
   const reverse =
@@ -101,16 +101,16 @@ export function endpointsMatchInstances(
 }
 
 /** Resolve storage composite for an edge from endpoint instance types. */
-export function matchCompositeForInstances(
+export async function matchCompositeForInstances(
   registry: RelationshipTypesFile,
   db: RelationshipReadStore,
   nodeA: string,
   nodeB: string,
   contentDir?: string,
-): string | null {
+): Promise<string | null> {
   for (const [composite, def] of Object.entries(registry.relationshipTypes)) {
     if (!def.endpoints) continue;
-    if (endpointsMatchInstances(def, db, nodeA, nodeB, contentDir)) return composite;
+    if (await endpointsMatchInstances(def, db, nodeA, nodeB, contentDir)) return composite;
   }
   return null;
 }

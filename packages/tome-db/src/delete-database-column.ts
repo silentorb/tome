@@ -38,18 +38,18 @@ function removeColumnFromTableSchemas(
   return true;
 }
 
-export function deleteDatabaseColumn(
+export async function deleteDatabaseColumn(
   ctx: TomeWriteContext,
   databaseId: string,
   columnKey: string,
-): DeleteDatabaseColumnError | DeleteDatabaseColumnResult {
+): Promise<DeleteDatabaseColumnError | DeleteDatabaseColumnResult> {
   const normalizedKey = columnKey.trim();
   if (!normalizedKey || normalizedKey === "name" || ROW_META_KEYS.has(normalizedKey)) {
     return "column_not_deletable";
   }
 
   const contentDir = writeStoreContentDir(ctx.graphStore);
-  if (!isTypeTableNode(ctx.graphStore, databaseId, contentDir)) {
+  if (!(await isTypeTableNode(ctx.graphStore, databaseId, contentDir))) {
     return "database_not_found";
   }
 
@@ -58,7 +58,7 @@ export function deleteDatabaseColumn(
     return "column_not_deletable";
   }
 
-  const schemasFile = ctx.graphStore.readTableSchemas();
+  const schemasFile = await ctx.graphStore.readTableSchemas();
   const tableSchema = schemasFile.tables[databaseId];
   if (!tableSchema) {
     return "column_not_found";
@@ -73,27 +73,27 @@ export function deleteDatabaseColumn(
   let relationsUnlinked = 0;
 
   if (column.type === "relation") {
-    relationsUnlinked = unlinkRelationColumnFromAllRows(ctx, databaseId, column);
+    relationsUnlinked = await unlinkRelationColumnFromAllRows(ctx, databaseId, column);
   } else {
-    rowsAffected = stripScalarFromSetEdges(ctx, databaseId, normalizedKey);
+    rowsAffected = await stripScalarFromSetEdges(ctx, databaseId, normalizedKey);
   }
 
   if (!removeColumnFromTableSchemas(schemasFile, databaseId, normalizedKey)) {
     return "column_not_found";
   }
 
-  ctx.graphStore.writeTableSchemas(schemasFile);
+  await ctx.graphStore.writeTableSchemas(schemasFile);
   invalidateTableSchemasCache();
-  purgeColumnFromViews(
+  await purgeColumnFromViews(
     ctx.graphStore,
     databaseId,
     setRoleRelationshipTypeForNode(databaseId, contentDir),
     normalizedKey,
   );
 
-  syncAfterRelationshipsWrite(ctx);
-  ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
-  ctx.sync.syncAfterWrite("views.json");
+  await syncAfterRelationshipsWrite(ctx);
+  await ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
+  await ctx.sync.syncAfterWrite("views.json");
 
   return { rowsAffected, relationsUnlinked };
 }

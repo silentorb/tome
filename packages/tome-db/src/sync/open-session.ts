@@ -13,7 +13,7 @@ import type {
   TomeQueryCacheOpenOptions,
   TomeServerModuleConfigEntry,
 } from "tome-service-interfaces";
-import { GraphDatabase } from "tome-sqlite";
+import { openWorkerSqliteCache } from "tome-sqlite";
 import { FlatfileQueryableGraphStore, ComposedGraphStore } from "../graph-store/composed-graph-store";
 import { CacheSync, type SyncProgressReporter } from "../content/sync";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
@@ -166,16 +166,17 @@ export async function openDataStoreSession(
     throw new Error(`dataStores.${sqliteEntry.id}: dbPath required`);
   }
 
-  const cache = new GraphDatabase(dbPath, {
+  const cache = await openWorkerSqliteCache({
+    dbPath,
     clean: sqliteOpts.clean === true,
     propertyCodec,
     memberPerspectives,
-  }) as unknown as TomeQueryCache;
+  });
 
   const sync = new CacheSync(unionStore, cache, options.progress);
   const composed = new ComposedGraphStore(
     new FlatfileGraphStore(unionStore),
-    cache as unknown as GraphDatabase,
+    cache,
     sync,
   );
 

@@ -53,7 +53,7 @@ export function memberLinkPerspective(
   return perspective;
 }
 
-export function nodeTitle(db: RelationshipReadStore, nodeId: string): string {
-  const vertex = readStoreGetNode(db, nodeId);
+export async function nodeTitle(db: RelationshipReadStore, nodeId: string): Promise<string> {
+  const vertex = await readStoreGetNode(db, nodeId);
   return vertex ? titleFromProperties(vertex.properties) : "Untitled";
 }

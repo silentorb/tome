@@ -101,7 +101,7 @@ export async function startTomeServer(options?: {
     }
   }
 
-  const deferred = openTomeGraphServicesDeferred(
+  const deferred = await openTomeGraphServicesDeferred(
     { store: session.writeContext.store, cache: session.writeContext.cache },
     {
       progress,
@@ -118,7 +118,7 @@ export async function startTomeServer(options?: {
 
   const graphStartedAt = performance.now();
   console.log("[tome-server] cache sync starting…");
-  await session.writeContext.sync.ensureReadyAsync();
+  await session.writeContext.sync.ensureReady();
   if (session.wire) {
     await session.wire.runInitialFull();
   }

@@ -1,8 +1,7 @@
 import type { ContentStore, CompositeStore } from "tome-flatfile";
 import { FlatfileGraphStore, nodeRelativePath } from "tome-flatfile";
 import type { TomeQueryCache } from "tome-service-interfaces";
-import type { TomeGraphStoreBase, TomeGraphStoreQueryable } from "tome-graph-interfaces";
-import type { GraphDatabase, Properties } from "tome-sqlite";
+import type { Properties, TomeGraphStoreBase, TomeGraphStoreQueryable } from "tome-graph-interfaces";
 import { ComposedGraphStore } from "../graph-store/composed-graph-store";
 import {
   CacheSync,
@@ -18,7 +17,7 @@ export interface OpenTomeWriteContextOptions {
   progress?: SyncProgressReporter;
   /**
    * When true, skip `ensureReady()` and store→sync subscription.
-   * Caller must run `sync.ensureReady()` / `ensureReadyAsync()` then
+   * Caller must `await sync.ensureReady()` then
    * {@link finishDeferredWriteContextReady}.
    */
   deferReady?: boolean;
@@ -38,11 +37,11 @@ export interface TomeWriteContext {
  * Inject existing store + cache instances, create sync, and wire subscriptions.
  * Prefer {@link openContentGraph} or {@link openComposedGraphStore} when opening from paths.
  */
-export function openTomeWriteContext(
+export async function openTomeWriteContext(
   store: FlatfileStore,
   cache: TomeQueryCache,
   graphStoreOrOptions?: TomeGraphStoreQueryable | OpenTomeWriteContextOptions,
-): TomeWriteContext {
+): Promise<TomeWriteContext> {
   const options: OpenTomeWriteContextOptions =
     graphStoreOrOptions &&
     typeof graphStoreOrOptions === "object" &&
@@ -53,35 +52,34 @@ export function openTomeWriteContext(
       : { graphStore: graphStoreOrOptions as TomeGraphStoreQueryable | undefined };
   const sync = new CacheSync(store, cache, options.progress);
   if (!options.deferReady) {
-    sync.ensureReady();
+    await sync.ensureReady();
     subscribeStoreToCacheSync(store, sync);
   }
   const resolvedGraphStore =
-    options.graphStore ??
-    new ComposedGraphStore(new FlatfileGraphStore(store), cache as GraphDatabase, sync);
+    options.graphStore ?? new ComposedGraphStore(new FlatfileGraphStore(store), cache, sync);
   return { graphStore: resolvedGraphStore, store, sync, cache };
 }
 
-/** After deferred `ensureReady` / `ensureReadyAsync`, wire store→cache subscriptions. */
+/** After deferred `ensureReady`, wire store→cache subscriptions. */
 export function finishDeferredWriteContextReady(ctx: TomeWriteContext): () => void {
   return subscribeStoreToCacheSync(ctx.store, ctx.sync);
 }
 
-export function syncAfterNodeWrite(ctx: TomeWriteContext, id: string): void {
-  ctx.sync.syncAfterWrite(nodeRelativePath(id));
+export async function syncAfterNodeWrite(ctx: TomeWriteContext, id: string): Promise<void> {
+  await ctx.sync.syncAfterWrite(nodeRelativePath(id));
 }
 
-export function syncAfterRelationshipsWrite(ctx: TomeWriteContext): void {
-  ctx.sync.syncAfterWrite("relationships");
+export async function syncAfterRelationshipsWrite(ctx: TomeWriteContext): Promise<void> {
+  await ctx.sync.syncAfterWrite("relationships");
 }
 
-export function mergeNodePropertiesOnContent(
+export async function mergeNodePropertiesOnContent(
   ctx: TomeWriteContext,
   id: string,
   patch: Properties,
-): boolean {
-  const ok = ctx.graphStore.mergeNodeProperties(id, patch);
-  if (ok) syncAfterNodeWrite(ctx, id);
+): Promise<boolean> {
+  const ok = await ctx.graphStore.mergeNodeProperties(id, patch);
+  if (ok) await syncAfterNodeWrite(ctx, id);
   return ok;
 }
 

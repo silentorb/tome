@@ -40,7 +40,7 @@ async function createEditor(initial = "") {
   return { editor, root };
 }
 
-describe("task input rule", () => {
+describe("task input rule", async () => {
   test("typing [] at paragraph start wraps in a task block", async () => {
     const { editor } = await createEditor("");
     editor.action((ctx) => {

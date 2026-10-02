@@ -15,10 +15,10 @@ import {
 } from "tome-flatfile";
 import { createTestApiFromContent } from "./test-api-setup";
 
-describe("GET /api/workspace/document-icon", () => {
-  const fixture = createTestContentFixture("tome-document-icon-api-");
+describe("GET /api/workspace/document-icon", async () => {
+  const fixture = await createTestContentFixture("tome-document-icon-api-");
 
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: TEST_ARCHIVE_NODE_ID,
     properties: { title: "Archive hub" },
   });
@@ -43,11 +43,11 @@ describe("GET /api/workspace/document-icon", () => {
   );
   invalidateWorkspaceCache();
 
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
 
-  afterAll(() => {
+  afterAll(async () => {
     api.handler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 
   test("serves configured SVG branding icon", async () => {

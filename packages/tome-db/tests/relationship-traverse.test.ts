@@ -24,8 +24,8 @@ import type { RelationshipEntry } from "tome-flatfile";
 import { RELATIONSHIPS_FILE_VERSION } from "tome-flatfile";
 import { invalidateRelationshipTypesCache } from "tome-flatfile";
 
-describe("relationship-traverse", () => {
-  const fixture = createTestContentFixture("tome-rel-traverse-");
+describe("relationship-traverse", async () => {
+  const fixture = await createTestContentFixture("tome-rel-traverse-");
   const contentDir = fixture.ctx.store.contentDir;
   const scene = "11111111111111111111111111";
   const product = "22222222222222222222222222";
@@ -36,14 +36,14 @@ describe("relationship-traverse", () => {
   const productsDb = "77777777777777777777777777";
   const partsDb = "88888888888888888888888888";
 
-  seedTestNode(fixture, { id: scenesDb, properties: typeTableMarkerProperties("Scenes") });
-  seedTestNode(fixture, { id: locationsDb, properties: typeTableMarkerProperties("Locations") });
-  seedTestNode(fixture, { id: productsDb, properties: typeTableMarkerProperties("Products") });
-  seedTestNode(fixture, { id: partsDb, properties: typeTableMarkerProperties("Parts") });
-  seedTestNode(fixture, { id: scene, properties: { title: "Scene" } });
-  seedTestNode(fixture, { id: product, properties: { title: "Product" } });
-  seedTestNode(fixture, { id: part, properties: { title: "Part" } });
-  seedTestNode(fixture, { id: location, properties: { title: "Location" } });
+  await seedTestNode(fixture, { id: scenesDb, properties: typeTableMarkerProperties("Scenes") });
+  await seedTestNode(fixture, { id: locationsDb, properties: typeTableMarkerProperties("Locations") });
+  await seedTestNode(fixture, { id: productsDb, properties: typeTableMarkerProperties("Products") });
+  await seedTestNode(fixture, { id: partsDb, properties: typeTableMarkerProperties("Parts") });
+  await seedTestNode(fixture, { id: scene, properties: { title: "Scene" } });
+  await seedTestNode(fixture, { id: product, properties: { title: "Product" } });
+  await seedTestNode(fixture, { id: part, properties: { title: "Part" } });
+  await seedTestNode(fixture, { id: location, properties: { title: "Location" } });
   seedTestTableSchema(fixture, scenesDb, [
     {
       key: "product",
@@ -111,14 +111,14 @@ describe("relationship-traverse", () => {
     version: RELATIONSHIPS_FILE_VERSION,
     relationships,
   });
-  fixture.ctx.sync.syncRelationships();
+  await fixture.ctx.sync.syncRelationships();
 
   const pathContext = loadSemanticRelatedPathContext(contentDir);
   const store = () => fixture.ctx.graphStore;
 
-  test("finds product through scenes_product semantic path", () => {
+  test("finds product through scenes_product semantic path", async () => {
     expect(
-      firstRelatedNodeId(
+      await firstRelatedNodeId(
         store(),
         scene,
         TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
@@ -127,7 +127,7 @@ describe("relationship-traverse", () => {
       ),
     ).toBe(product);
     expect(
-      relatedNodeIds(
+      await relatedNodeIds(
         store(),
         scene,
         TEST_SCENES_PRODUCT_RELATIONSHIP_TYPE_ID,
@@ -137,9 +137,9 @@ describe("relationship-traverse", () => {
     ).toEqual([product]);
   });
 
-  test("finds part through scenes_part semantic path", () => {
+  test("finds part through scenes_part semantic path", async () => {
     expect(
-      firstRelatedNodeId(
+      await firstRelatedNodeId(
         store(),
         scene,
         TEST_SCENES_PART_RELATIONSHIP_TYPE_ID,
@@ -155,12 +155,12 @@ describe("relationship-traverse", () => {
     ).toThrow(/No relation column/);
   });
 
-  test("finds scene from location through scenes_location composite", () => {
-    const rels = listRelationshipsForComposite(fixture.ctx.cache, location, "000000000000000000000000BA");
+  test("finds scene from location through scenes_location composite", async () => {
+    const rels = await listRelationshipsForComposite(fixture.ctx.cache, location, "000000000000000000000000BA");
     expect(rels.some((rel) => rel.sourceNodeId === location || rel.targetNodeId === location)).toBe(
       true,
     );
-    const members = listRelationshipsToDatabaseMembers(
+    const members = await listRelationshipsToDatabaseMembers(
       fixture.ctx.cache,
       location,
       scenesDb,
@@ -169,20 +169,20 @@ describe("relationship-traverse", () => {
     expect(members.some((rel) => otherEndpointFrom(location, rel) === scene)).toBe(true);
   });
 
-  test("rowBelongsToDatabase reflects is_a membership", () => {
-    expect(rowBelongsToDatabase(fixture.ctx.cache, scene, scenesDb, contentDir)).toBe(true);
-    expect(rowBelongsToDatabase(fixture.ctx.cache, scene, locationsDb, contentDir)).toBe(false);
-    expect(rowBelongsToDatabase(fixture.ctx.cache, product, scenesDb, contentDir)).toBe(false);
+  test("rowBelongsToDatabase reflects is_a membership", async () => {
+    expect(await rowBelongsToDatabase(fixture.ctx.cache, scene, scenesDb, contentDir)).toBe(true);
+    expect(await rowBelongsToDatabase(fixture.ctx.cache, scene, locationsDb, contentDir)).toBe(false);
+    expect(await rowBelongsToDatabase(fixture.ctx.cache, product, scenesDb, contentDir)).toBe(false);
   });
 
-  test("filterRelationshipsByRowDatabaseContext keeps edges for row members", () => {
-    const rels = listRelationshipsToDatabaseMembers(
+  test("filterRelationshipsByRowDatabaseContext keeps edges for row members", async () => {
+    const rels = await listRelationshipsToDatabaseMembers(
       fixture.ctx.cache,
       location,
       scenesDb,
       contentDir,
     );
-    const filtered = filterRelationshipsByRowDatabaseContext(
+    const filtered = await filterRelationshipsByRowDatabaseContext(
       fixture.ctx.cache,
       location,
       locationsDb,
@@ -193,7 +193,7 @@ describe("relationship-traverse", () => {
     expect(otherEndpointFrom(location, filtered[0]!)).toBe(scene);
   });
 
-  test("filterRelationshipsByRowDatabaseContext returns empty when row is not a member", () => {
+  test("filterRelationshipsByRowDatabaseContext returns empty when row is not a member", async () => {
     const relationships = [
       {
         id: "1",
@@ -212,7 +212,7 @@ describe("relationship-traverse", () => {
         properties: {},
       },
     ];
-    const filtered = filterRelationshipsByRowDatabaseContext(
+    const filtered = await filterRelationshipsByRowDatabaseContext(
       fixture.ctx.cache,
       location,
       scenesDb,
@@ -222,8 +222,8 @@ describe("relationship-traverse", () => {
     expect(filtered).toHaveLength(0);
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });
 

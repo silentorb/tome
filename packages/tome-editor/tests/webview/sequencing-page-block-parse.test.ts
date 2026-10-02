@@ -50,13 +50,16 @@ function resolveMarlothCorpus(): { contentPath: string; sqlitePath: string } | n
 
 const corpus = resolveMarlothCorpus();
 
-describe("Arcs sequencing page-block parse", () => {
+describe("Arcs sequencing page-block parse", async () => {
   test.skipIf(!corpus)(
     "prepared Arcs markdown becomes tome_page_block (not raw HTML)",
     async () => {
       const { contentPath, sqlitePath } = corpus!;
       copyFileSync(sqlitePath, "/tmp/seq-parse.sqlite");
-      const graph = openContentGraph(contentPath, "/tmp/seq-parse.sqlite");
+      // Pre-copied cache is warm — skip ensureReady rebuild (can exceed test budget).
+      const graph = await openContentGraph(contentPath, "/tmp/seq-parse.sqlite", {
+        deferReady: true,
+      });
       const runtime = new ExtensionServerRuntime(
         contentPath,
         () => createExtensionGraphQueryServices(graph.graphStore, contentPath),
@@ -67,7 +70,7 @@ describe("Arcs sequencing page-block parse", () => {
 
       const storageMd = readFileSync(`${contentPath}/data/nodes/FZ/${arcsId}.md`, "utf8");
       const body = /^---\n[\s\S]*?\n---\n([\s\S]*)$/.exec(storageMd)?.[1] ?? storageMd;
-      const nodeDocument = storageBodyToDocument(graph.cache, body);
+      const nodeDocument = await storageBodyToDocument(graph.cache, body);
       const withHtml = await attachPageBlockEditorHtml(nodeDocument, async (componentId, data) => {
         const html = await runtime.renderPageBlockHtml(arcsId, componentId, data);
         return `${formatPageBlockEmbedComment({ componentId, data })}\n${html}`;
@@ -121,6 +124,6 @@ describe("Arcs sequencing page-block parse", () => {
 
       await editor.destroy();
     },
-    { timeout: 30_000 },
+    { timeout: 120_000 },
   );
 });

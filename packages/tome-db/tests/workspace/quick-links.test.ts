@@ -19,11 +19,11 @@ import {
 const NODE_ID = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 const OTHER_NODE_ID = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
-describe("workspace quick links", () => {
-  test("addWorkspaceQuickLink appends entry with defaults", () => {
-    const fixture = createTestContentFixture("tome-quick-link-add-");
+describe("workspace quick links", async () => {
+  test("addWorkspaceQuickLink appends entry with defaults", async () => {
+    const fixture = await createTestContentFixture("tome-quick-link-add-");
     try {
-      seedTestNode(fixture, {
+      await seedTestNode(fixture, {
         id: NODE_ID,
         properties: { title: "Features hub" },
       });
@@ -31,7 +31,7 @@ describe("workspace quick links", () => {
         branding: { defaultDocumentIcon: "T" },
       });
 
-      expect(addWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBeNull();
+      expect(await addWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBeNull();
 
       const workspace = loadWorkspaceFromContent(fixture.ctx.store.contentDir);
       expect(workspace.quickLinks).toHaveLength(1);
@@ -41,17 +41,17 @@ describe("workspace quick links", () => {
       });
       expect(isWorkspaceQuickLink(workspace, NODE_ID)).toBe(true);
     } finally {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
     }
   });
 
-  test("addWorkspaceQuickLink accepts explicit label", () => {
-    const fixture = createTestContentFixture("tome-quick-link-add-custom-");
+  test("addWorkspaceQuickLink accepts explicit label", async () => {
+    const fixture = await createTestContentFixture("tome-quick-link-add-custom-");
     try {
-      seedTestNode(fixture, { id: NODE_ID, properties: { title: "Ignored" } });
+      await seedTestNode(fixture, { id: NODE_ID, properties: { title: "Ignored" } });
 
       expect(
-        addWorkspaceQuickLink(fixture.ctx, NODE_ID, { label: "Features" }),
+        await addWorkspaceQuickLink(fixture.ctx, NODE_ID, { label: "Features" }),
       ).toBeNull();
 
       const workspace = loadWorkspaceFromContent(fixture.ctx.store.contentDir);
@@ -60,44 +60,44 @@ describe("workspace quick links", () => {
         label: "Features",
       });
     } finally {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
     }
   });
 
-  test("addWorkspaceQuickLink rejects missing node and duplicates", () => {
-    const fixture = createTestContentFixture("tome-quick-link-errors-");
+  test("addWorkspaceQuickLink rejects missing node and duplicates", async () => {
+    const fixture = await createTestContentFixture("tome-quick-link-errors-");
     try {
-      expect(addWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBe("not_found");
+      expect(await addWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBe("not_found");
 
-      seedTestNode(fixture, { id: NODE_ID, properties: { title: "Page" } });
-      expect(addWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBeNull();
-      expect(addWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBe("already_exists");
+      await seedTestNode(fixture, { id: NODE_ID, properties: { title: "Page" } });
+      expect(await addWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBeNull();
+      expect(await addWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBe("already_exists");
     } finally {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
     }
   });
 
-  test("removeWorkspaceQuickLink updates workspace.json", () => {
-    const fixture = createTestContentFixture("tome-quick-link-remove-");
+  test("removeWorkspaceQuickLink updates workspace.json", async () => {
+    const fixture = await createTestContentFixture("tome-quick-link-remove-");
     try {
-      seedTestNode(fixture, { id: NODE_ID, properties: { title: "Page" } });
+      await seedTestNode(fixture, { id: NODE_ID, properties: { title: "Page" } });
       seedTestWorkspace(fixture, {
         quickLinks: [{ nodeId: NODE_ID, label: "Page" }],
       });
 
-      expect(removeWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBeNull();
+      expect(await removeWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBeNull();
 
       const raw = readFileSync(workspaceFilePath(fixture.ctx.store.contentDir), "utf-8");
       const workspace = parseWorkspaceFile(raw);
       expect(workspace.quickLinks).toEqual([]);
-      expect(removeWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBe("not_a_quick_link");
+      expect(await removeWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBe("not_a_quick_link");
     } finally {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
     }
   });
 
-  test("reorderWorkspaceQuickLinks reorders entries", () => {
-    const fixture = createTestContentFixture("tome-quick-link-reorder-");
+  test("reorderWorkspaceQuickLinks reorders entries", async () => {
+    const fixture = await createTestContentFixture("tome-quick-link-reorder-");
     try {
       seedTestWorkspace(fixture, {
         quickLinks: [
@@ -107,7 +107,7 @@ describe("workspace quick links", () => {
       });
 
       expect(
-        reorderWorkspaceQuickLinks(fixture.ctx, [OTHER_NODE_ID, NODE_ID]),
+        await reorderWorkspaceQuickLinks(fixture.ctx, [OTHER_NODE_ID, NODE_ID]),
       ).toBeNull();
 
       const workspace = loadWorkspaceFromContent(fixture.ctx.store.contentDir);
@@ -115,9 +115,9 @@ describe("workspace quick links", () => {
         OTHER_NODE_ID,
         NODE_ID,
       ]);
-      expect(reorderWorkspaceQuickLinks(fixture.ctx, [NODE_ID])).toBe("invalid_order");
+      expect(await reorderWorkspaceQuickLinks(fixture.ctx, [NODE_ID])).toBe("invalid_order");
     } finally {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
     }
   });
 });

@@ -519,48 +519,48 @@ export interface ComposedGroupHeaderRow {
 export interface TomeQueryCache {
   readonly path: string;
 
-  setMeta(key: string, value: string): void;
-  getMeta(key: string): string | null;
+  setMeta(key: string, value: string): Promise<void>;
+  getMeta(key: string): Promise<string | null>;
 
-  upsertNode(id: string, properties?: Properties): void;
-  mergeNodeProperties(id: string, properties: Properties): void;
-  getNode(id: string): Node | null;
-  deleteNode(id: string): boolean;
-  isNodeArchived(id: string): boolean;
+  upsertNode(id: string, properties?: Properties): Promise<void>;
+  mergeNodeProperties(id: string, properties: Properties): Promise<void>;
+  getNode(id: string): Promise<Node | null>;
+  deleteNode(id: string): Promise<boolean>;
+  isNodeArchived(id: string): Promise<boolean>;
 
-  clearRelationshipCache(): void;
-  upsertRelationshipRecord(record: RelationshipRecordRow): void;
-  upsertRelationshipProjection(projection: RelationshipProjectionRow): void;
+  clearRelationshipCache(): Promise<void>;
+  upsertRelationshipRecord(record: RelationshipRecordRow): Promise<void>;
+  upsertRelationshipProjection(projection: RelationshipProjectionRow): Promise<void>;
   upsertRelationship(
     sourceNodeId: string,
     targetNodeId: string,
     type: string,
     properties?: Properties,
-  ): void;
-  mergeRelationshipProperties(id: string, properties: Properties): void;
-  deleteRelationship(sourceNodeId: string, targetNodeId: string, type: string): boolean;
-  getRelationshipRecord(id: string): RelationshipRecordRow | null;
-  getRelationship(id: string): Relationship | null;
+  ): Promise<void>;
+  mergeRelationshipProperties(id: string, properties: Properties): Promise<void>;
+  deleteRelationship(sourceNodeId: string, targetNodeId: string, type: string): Promise<boolean>;
+  getRelationshipRecord(id: string): Promise<RelationshipRecordRow | null>;
+  getRelationship(id: string): Promise<Relationship | null>;
 
-  listArchiveMemberIds(archiveId: string, memberPerspectives?: readonly string[]): string[];
+  listArchiveMemberIds(archiveId: string, memberPerspectives?: readonly string[]): Promise<string[]>;
   recomputeArchivedFlags(
     archiveId: string | readonly string[],
     memberPerspectives?: readonly string[],
-  ): void;
+  ): Promise<void>;
 
-  counts(): GraphCounts;
+  counts(): Promise<GraphCounts>;
   searchNodesByTitle(
     pattern: string,
     limit: number,
     allowedTypeIds?: readonly string[],
     allowedNodeIds?: ReadonlySet<string>,
-  ): { id: string; title: string }[];
+  ): Promise<{ id: string; title: string }[]>;
   searchNodesByBody(
     pattern: string,
     limit: number,
     allowedTypeIds?: readonly string[],
     allowedNodeIds?: ReadonlySet<string>,
-  ): { id: string; title: string }[];
+  ): Promise<{ id: string; title: string }[]>;
   /**
    * Title-then-body LIKE window for table `q` (SQL order; accurate total).
    * `limit: null` returns all matches after offset.
@@ -573,40 +573,40 @@ export interface TomeQueryCache {
       allowedTypeIds?: readonly string[];
       allowedNodeIds?: ReadonlySet<string>;
     },
-  ): { rows: { id: string; title: string }[]; total: number };
+  ): Promise<{ rows: { id: string; title: string }[]; total: number }>;
   listNodesByTitle(
     limit: number,
     allowedTypeIds?: readonly string[],
     allowedNodeIds?: ReadonlySet<string>,
-  ): { id: string; title: string }[];
+  ): Promise<{ id: string; title: string }[]>;
   listNodesByModifiedAt(
     limit: number,
     allowedTypeIds?: readonly string[],
-  ): { id: string; title: string }[];
+  ): Promise<{ id: string; title: string }[]>;
   /** Distinct node ids that participate in projections of the given type. */
-  listNodeIdsForProjectionType(projectionType: string): string[];
+  listNodeIdsForProjectionType(projectionType: string): Promise<string[]>;
   /** Distinct source node ids for projections of the given type. */
-  listSourceNodeIdsForProjectionType(projectionType: string): string[];
-  listNodesWithBodyLike(pattern: string): { id: string; body: string }[];
-  listNodesForGraphExport(): { id: string; title: string }[];
-  listRelationshipsForGraphExport(): {
+  listSourceNodeIdsForProjectionType(projectionType: string): Promise<string[]>;
+  listNodesWithBodyLike(pattern: string): Promise<{ id: string; body: string }[]>;
+  listNodesForGraphExport(): Promise<{ id: string; title: string }[]>;
+  listRelationshipsForGraphExport(): Promise<{
     id: string;
     sourceNodeId: string;
     targetNodeId: string;
     type: string;
-  }[];
-  listRelationshipsFromSource(sourceNodeId: string, type?: string): Relationship[];
-  listRelationshipsToTarget(targetNodeId: string, type?: string): Relationship[];
+  }[]>;
+  listRelationshipsFromSource(sourceNodeId: string, type?: string): Promise<Relationship[]>;
+  listRelationshipsToTarget(targetNodeId: string, type?: string): Promise<Relationship[]>;
   /**
    * Distinct projection `type` values for outgoing edges from `sourceNodeId`.
    * Used to discover relation sections without loading every projection row.
    */
-  listOutgoingProjectionTypes(sourceNodeId: string): string[];
+  listOutgoingProjectionTypes(sourceNodeId: string): Promise<string[]>;
   /**
    * Distinct EAV property keys (plus promoted cell keys such as `priority` when set)
    * on outgoing projections of `type` from `sourceNodeId`.
    */
-  listOutgoingProjectionPropertyKeys(sourceNodeId: string, type: string): string[];
+  listOutgoingProjectionPropertyKeys(sourceNodeId: string, type: string): Promise<string[]>;
   /**
    * Ordered window of outgoing projections for one type. Sort/limit/offset run in SQL.
    * `total` is the full matching count (before limit/offset).
@@ -615,7 +615,7 @@ export interface TomeQueryCache {
     sourceNodeId: string,
     type: string,
     query?: RelationshipProjectionWindowQuery,
-  ): RelationshipProjectionWindowResult;
+  ): Promise<RelationshipProjectionWindowResult>;
   /**
    * Ordered window of set membership edges for a type-table member page.
    * Optional scope/groups/sorts/display run in SQL (Analyze→Bind→Plan→Emit).
@@ -623,20 +623,20 @@ export interface TomeQueryCache {
    * Returned relationships are normalized (member as source, set as target).
    * When `memberIds` is set, returns only those members (search hydrate; ignores limit/offset).
    */
-  listMemberPage(setId: string, query: MemberPageQuery): MemberPageResult;
+  listMemberPage(setId: string, query: MemberPageQuery): Promise<MemberPageResult>;
   /**
    * Distinct member node ids for a set (optional scope filter via `query.scope`).
    * No Relationship DTOs / display fields.
    */
-  listMemberPageNodeIds(setId: string, query: MemberPageQuery): string[];
+  listMemberPageNodeIds(setId: string, query: MemberPageQuery): Promise<string[]>;
   /** Distinct related (target) node ids for an outgoing projection. */
-  listRelatedTargetNodeIds(sourceNodeId: string, type: string): string[];
+  listRelatedTargetNodeIds(sourceNodeId: string, type: string): Promise<string[]>;
   /** Outgoing edges whose target is in `targetIds`; caller reorders to search rank. */
   listRelationshipsFromSourceForTargetIds(
     sourceNodeId: string,
     type: string,
     targetIds: readonly string[],
-  ): Relationship[];
+  ): Promise<Relationship[]>;
   /**
    * Distinct scope node ids among set members (composed scope tabs).
    * Ordered by optional scope membership `order`, then title.
@@ -644,12 +644,12 @@ export interface TomeQueryCache {
   listDistinctSetMemberScopeIds(
     setId: string,
     query: DistinctSetMemberScopeQuery,
-  ): DistinctSetMemberScopeRow[];
+  ): Promise<DistinctSetMemberScopeRow[]>;
   /**
    * Expression-index catalog: status for a content-addressed digest.
    * `ready` means values may be used in ORDER BY; `missing` / `stale` need rebuild.
    */
-  getExpressionIndexStatus(digest: string): "ready" | "stale" | "building" | "missing";
+  getExpressionIndexStatus(digest: string): Promise<"ready" | "stale" | "building" | "missing">;
   /**
    * Replace all values for `digest` and mark the catalog row ready.
    * Callers hold single-flight coordination outside the DB.
@@ -658,7 +658,7 @@ export interface TomeQueryCache {
     digest: string,
     expressionJson: string,
     values: readonly { memberId: string; sortValue: number }[],
-  ): void;
+  ): Promise<void>;
   /**
    * Upsert value rows for `digest` without deleting other members.
    * Clears `dirty_member_ids` and marks the catalog row ready.
@@ -667,16 +667,16 @@ export interface TomeQueryCache {
     digest: string,
     expressionJson: string,
     values: readonly { memberId: string; sortValue: number }[],
-  ): void;
+  ): Promise<void>;
   /** Remove value rows for the given member ids (membership removals). */
-  deleteExpressionIndexValues(digest: string, memberIds: readonly string[]): void;
+  deleteExpressionIndexValues(digest: string, memberIds: readonly string[]): Promise<void>;
   /**
    * Dirty member ids recorded when this digest was marked stale, or `null`
    * when a full rebuild is required (unknown dirty set).
    */
-  getExpressionIndexDirtyMemberIds(digest: string): string[] | null;
+  getExpressionIndexDirtyMemberIds(digest: string): Promise<string[] | null>;
   /** Mark one digest (or all when omitted) as stale so the next read rebuilds. */
-  markExpressionIndexesStale(digest?: string): void;
+  markExpressionIndexesStale(digest?: string): Promise<void>;
   /**
    * Mark ready digests whose `expression_json.reachTypes` intersect `types`
    * as stale. Digests without `reachTypes` (legacy) are treated as matching.
@@ -685,16 +685,21 @@ export interface TomeQueryCache {
   markExpressionIndexesStaleForTypes(
     types: readonly string[],
     dirtyMemberIds?: readonly string[],
-  ): void;
+  ): Promise<void>;
   /** Group-type members for composed group headers (optional scope filter). */
-  listComposedGroupHeaders(query: ComposedGroupHeadersQuery): ComposedGroupHeaderRow[];
-  countIncidentRelationships(nodeId: string): number;
-  listDistinctRelationshipTypes(): string[];
+  listComposedGroupHeaders(query: ComposedGroupHeadersQuery): Promise<ComposedGroupHeaderRow[]>;
+  countIncidentRelationships(nodeId: string): Promise<number>;
+  listDistinctRelationshipTypes(): Promise<string[]>;
 
-  queryAll<T extends Record<string, unknown>>(sql: string, ...params: unknown[]): T[];
-  runExec(sql: string, ...params: unknown[]): void;
-  finalize(): void;
-  close(): void;
+  queryAll<T extends Record<string, unknown>>(sql: string, ...params: unknown[]): Promise<T[]>;
+  runExec(sql: string, ...params: unknown[]): Promise<void>;
+  /**
+   * Run `fn` with exclusive access to the cache (no interleaved RPCs).
+   * Required for BEGIN…COMMIT multi-step work against a worker-backed cache.
+   */
+  transaction<T>(fn: (cache: TomeQueryCache) => Promise<T>): Promise<T>;
+  finalize(): Promise<void>;
+  close(): Promise<void>;
 }
 
 export interface TomeStoreModule {
@@ -704,7 +709,7 @@ export interface TomeStoreModule {
 
 export interface TomeCacheModule {
   readonly id: string;
-  open(options?: TomeQueryCacheOpenOptions): TomeQueryCache;
+  open(options?: TomeQueryCacheOpenOptions): Promise<TomeQueryCache>;
 }
 
 export type TomeStoreModuleFactory = () => TomeStoreModule;

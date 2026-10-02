@@ -22,11 +22,11 @@ export interface CompileImpGraphToTomeSqlOptions {
 }
 
 /** Lower an Imp graph against the Tome cache schema (live nodes + projections). */
-export function compileImpGraphToTomeSql(
+export async function compileImpGraphToTomeSql(
   graph: Graph,
   options?: CompileImpGraphToTomeSqlOptions,
-): CompiledTomeImpSql {
-  const constraint = resolveCorpusConstraint(graph, options);
+): Promise<CompiledTomeImpSql> {
+  const constraint = await resolveCorpusConstraint(graph, options);
   const lowered = spliceCorpusNodes(graph);
   const compiled = graphToKysely(lowered, {
     registry: createTomeImpRegistry(),

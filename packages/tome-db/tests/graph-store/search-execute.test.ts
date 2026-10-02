@@ -11,8 +11,8 @@ import {
 } from "../../src/content/test-helpers";
 import type { ComposedGraphStore } from "../../src/graph-store/composed-graph-store";
 
-describe("searchNodesGraph via executeImp", () => {
-  const fixture: TestContentFixture = createTestContentFixture("tome-db-search-imp-");
+describe("searchNodesGraph via executeImp", async () => {
+  const fixture: TestContentFixture = await createTestContentFixture("tome-db-search-imp-");
   const titleMatchId = "0000000000000000000000002F";
   const bodyOnlyId = "0000000000000000000000002R";
   const hostId = "0000000000000000000000003A";
@@ -20,24 +20,24 @@ describe("searchNodesGraph via executeImp", () => {
   const outsiderId = "0000000000000000000000003C";
   const associationType = "000000000000000000000000AA";
 
-  beforeAll(() => {
+  beforeAll(async () => {
     const composed = fixture.ctx.graphStore as ComposedGraphStore;
     composed.setSearch({
-      search(request) {
-        return performTomeTextSearch(
+      async search(request) {
+        return (await performTomeTextSearch(
           fixture.ctx.cache,
           request.query,
           request.limit,
           request.allowedTypeIds,
           request.allowedNodeIds,
-        ).map((row) => ({
+        )).map((row) => ({
           id: row.id,
           title: row.title,
           ...(row.matchPreview ? { matchPreview: row.matchPreview } : {}),
         }));
       },
-      searchWindow(request) {
-        const result = fixture.ctx.cache.searchNodesLikeWindow(
+      async searchWindow(request) {
+        const result = await fixture.ctx.cache.searchNodesLikeWindow(
           `%${request.query.replace(/[%_\\]/g, "\\$&")}%`,
           {
             offset: request.offset,
@@ -54,33 +54,33 @@ describe("searchNodesGraph via executeImp", () => {
     });
   });
 
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: titleMatchId,
     properties: {
       title: "Surreal Title Match",
       body: "no marker here",
     },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: bodyOnlyId,
     properties: {
       title: "Unrelated",
       body: "contains surreal-body-marker text",
     },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: hostId,
     properties: { title: "Active Host" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: memberId,
     properties: { title: "Active Member" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: outsiderId,
     properties: { title: "Active Outsider" },
   });
-  seedTestRelationships(fixture, [
+  await seedTestRelationships(fixture, [
     {
       source: hostId,
       target: memberId,
@@ -88,8 +88,8 @@ describe("searchNodesGraph via executeImp", () => {
     },
   ]);
 
-  test("title hits rank above body-only hits", () => {
-    const executed = fixture.ctx.graphStore.executeImp(searchNodesGraph(10), {
+  test("title hits rank above body-only hits", async () => {
+    const executed = await fixture.ctx.graphStore.executeImp(searchNodesGraph(10), {
       parameters: { query: "surreal" },
     });
     expect(executed instanceof Promise).toBe(false);
@@ -98,8 +98,8 @@ describe("searchNodesGraph via executeImp", () => {
     expect(ids.indexOf(titleMatchId)).toBeLessThan(ids.indexOf(bodyOnlyId));
   });
 
-  test("body-only hits include matchPreview", () => {
-    const executed = fixture.ctx.graphStore.executeImp(searchNodesGraph(10), {
+  test("body-only hits include matchPreview", async () => {
+    const executed = await fixture.ctx.graphStore.executeImp(searchNodesGraph(10), {
       parameters: { query: "surreal-body-marker" },
     });
     expect(executed instanceof Promise).toBe(false);
@@ -108,10 +108,10 @@ describe("searchNodesGraph via executeImp", () => {
     expect(bodyRow?.matchPreview).toBeDefined();
   });
 
-  test("Only-active target picking uses opposite projection hosts", () => {
+  test("Only-active target picking uses opposite projection hosts", async () => {
     // Selecting :1 (Membership-like) → hosts of :0 (Members-like) = relationship sources.
     const membershipLike = projectionTypeForEndpoint(associationType, 1);
-    const executed = fixture.ctx.graphStore.executeImp(searchNodesGraph(20), {
+    const executed = await fixture.ctx.graphStore.executeImp(searchNodesGraph(20), {
       parameters: { query: "Active" },
       participatesInProjectionType: membershipLike,
       onlyActivePickingRole: "target",
@@ -124,9 +124,9 @@ describe("searchNodesGraph via executeImp", () => {
     expect(ids).not.toContain(outsiderId);
   });
 
-  test("Only-active source picking uses selected projection hosts", () => {
+  test("Only-active source picking uses selected projection hosts", async () => {
     const membersLike = projectionTypeForEndpoint(associationType, 0);
-    const executed = fixture.ctx.graphStore.executeImp(searchNodesGraph(20), {
+    const executed = await fixture.ctx.graphStore.executeImp(searchNodesGraph(20), {
       parameters: { query: "Active" },
       participatesInProjectionType: membersLike,
       onlyActivePickingRole: "source",
@@ -139,7 +139,7 @@ describe("searchNodesGraph via executeImp", () => {
     expect(ids).not.toContain(outsiderId);
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

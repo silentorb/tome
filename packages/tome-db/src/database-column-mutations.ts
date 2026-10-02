@@ -83,25 +83,25 @@ function validateEnumId(ctx: TomeWriteContext, enumId: string | undefined): bool
   return resolvePropertyEnumFromContent(enumId.trim(), writeStoreContentDir(ctx.graphStore)) !== null;
 }
 
-function resolveRelationEndpoint(
+async function resolveRelationEndpoint(
   ctx: TomeWriteContext,
   databaseId: string,
   association: string,
   endpoint: 0 | 1 | undefined,
-): 0 | 1 | null {
+): Promise<0 | 1 | null> {
   if (endpoint === 0 || endpoint === 1) return endpoint;
-  const registry = ctx.graphStore.readRelationshipTypes();
+  const registry = await ctx.graphStore.readRelationshipTypes();
   const def = registry.relationshipTypes[association];
   if (!def) return null;
   return uniqueHostEndpointIndex(def, databaseId);
 }
 
-function buildColumnDef(
+async function buildColumnDef(
   ctx: TomeWriteContext,
   databaseId: string,
   input: CreateDatabaseColumnInput,
   key: string,
-): TableColumnDef | null {
+): Promise<TableColumnDef | null> {
   const name = input.name.trim();
   if (!name) return null;
 
@@ -109,7 +109,7 @@ function buildColumnDef(
     if (!input.association?.trim()) return null;
     const association = normalizeRelationshipTypeId(input.association);
     if (!isRelationshipTypeId(association)) return null;
-    const endpoint = resolveRelationEndpoint(ctx, databaseId, association, input.endpoint);
+    const endpoint = await resolveRelationEndpoint(ctx, databaseId, association, input.endpoint);
     if (endpoint === null) return null;
     return {
       key,
@@ -151,12 +151,12 @@ function columnKeysTaken(schema: { columns: TableColumnDef[] }, excludeKey?: str
   );
 }
 
-export function createDatabaseColumn(
+export async function createDatabaseColumn(
   ctx: TomeWriteContext,
   databaseId: string,
   input: CreateDatabaseColumnInput,
-): DatabaseColumnMutationError | DatabaseColumnMutationResult {
-  if (!isTypeTableNode(ctx.graphStore, databaseId, writeStoreContentDir(ctx.graphStore))) {
+): Promise<DatabaseColumnMutationError | DatabaseColumnMutationResult> {
+  if (!(await isTypeTableNode(ctx.graphStore, databaseId, writeStoreContentDir(ctx.graphStore)))) {
     return "database_not_found";
   }
 
@@ -170,7 +170,7 @@ export function createDatabaseColumn(
     return "column_key_taken";
   }
 
-  const columnDef = buildColumnDef(ctx, databaseId, input, key);
+  const columnDef = await buildColumnDef(ctx, databaseId, input, key);
   if (!columnDef) {
     if (input.type === "relation") return "invalid_relation_target";
     if (input.type === "select" || input.type === "status") return "invalid_enum";
@@ -182,22 +182,22 @@ export function createDatabaseColumn(
       if (!validateEnumId(ctx, columnDef.enumId)) return "invalid_enum";
     }
   } else {
-    const registry = ctx.graphStore.readRelationshipTypes();
+    const registry = await ctx.graphStore.readRelationshipTypes();
     if (!registry.relationshipTypes[columnDef.association]) {
       return "invalid_relation_target";
     }
   }
 
-  const schemasFile = ctx.graphStore.readTableSchemas();
+  const schemasFile = await ctx.graphStore.readTableSchemas();
   const tableSchema = ensureTableSchema(schemasFile, databaseId);
   if (columnKeysTaken(tableSchema).has(key)) {
     return "column_key_taken";
   }
 
   tableSchema.columns.push(columnDef);
-  ctx.graphStore.writeTableSchemas(schemasFile);
+  await ctx.graphStore.writeTableSchemas(schemasFile);
   invalidateTableSchemasCache();
-  appendColumnToViewsOrder(
+  await appendColumnToViewsOrder(
     ctx.graphStore,
     databaseId,
     setRoleRelationshipTypeForNode(databaseId, writeStoreContentDir(ctx.graphStore)),
@@ -205,8 +205,8 @@ export function createDatabaseColumn(
     input.viewId,
   );
 
-  ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
-  ctx.sync.syncAfterWrite("views.json");
+  await ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
+  await ctx.sync.syncAfterWrite("views.json");
 
   return {
     column: columnDef,
@@ -216,12 +216,12 @@ export function createDatabaseColumn(
   };
 }
 
-function applyColumnPatch(
+async function applyColumnPatch(
   existing: TableColumnDef,
   input: UpdateDatabaseColumnInput,
   ctx: TomeWriteContext,
   databaseId: string,
-): TableColumnDef | null {
+): Promise<TableColumnDef | null> {
   const name = input.name !== undefined ? input.name.trim() : existing.name;
   if (!name) return null;
 
@@ -235,7 +235,7 @@ function applyColumnPatch(
     if (!association || !isRelationshipTypeId(association)) return null;
     const endpointInput =
       input.endpoint ?? (existing.type === "relation" ? existing.endpoint : undefined);
-    const endpoint = resolveRelationEndpoint(ctx, databaseId, association, endpointInput);
+    const endpoint = await resolveRelationEndpoint(ctx, databaseId, association, endpointInput);
     if (endpoint === null) return null;
     return {
       key: existing.key,
@@ -278,29 +278,29 @@ function relationConfigChanged(
   return oldCol.association !== newCol.association || oldCol.endpoint !== newCol.endpoint;
 }
 
-export function updateDatabaseColumn(
+export async function updateDatabaseColumn(
   ctx: TomeWriteContext,
   databaseId: string,
   columnKey: string,
   input: UpdateDatabaseColumnInput,
-): DatabaseColumnMutationError | DatabaseColumnMutationResult {
+): Promise<DatabaseColumnMutationError | DatabaseColumnMutationResult> {
   const normalizedKey = columnKey.trim();
   if (!normalizedKey || normalizedKey === "name" || ROW_META_KEYS.has(normalizedKey)) {
     return "column_not_deletable";
   }
 
-  if (!isTypeTableNode(ctx.graphStore, databaseId, writeStoreContentDir(ctx.graphStore))) {
+  if (!(await isTypeTableNode(ctx.graphStore, databaseId, writeStoreContentDir(ctx.graphStore)))) {
     return "database_not_found";
   }
 
-  const schemasFile = ctx.graphStore.readTableSchemas();
+  const schemasFile = await ctx.graphStore.readTableSchemas();
   const tableSchema = schemasFile.tables[databaseId];
   if (!tableSchema) return "column_not_found";
 
   const existing = findColumnByKey(tableSchema, normalizedKey);
   if (!existing) return "column_not_found";
 
-  const patched = applyColumnPatch(existing, input, ctx, databaseId);
+  const patched = await applyColumnPatch(existing, input, ctx, databaseId);
   if (!patched) {
     if (input.type === "relation" || existing.type === "relation") {
       return "invalid_relation_target";
@@ -315,7 +315,7 @@ export function updateDatabaseColumn(
       if (!validateEnumId(ctx, patched.enumId)) return "invalid_enum";
     }
   } else {
-    const registry = ctx.graphStore.readRelationshipTypes();
+    const registry = await ctx.graphStore.readRelationshipTypes();
     if (!registry.relationshipTypes[(patched as TableRelationColumn).association]) {
       return "invalid_relation_target";
     }
@@ -341,26 +341,26 @@ export function updateDatabaseColumn(
   const willRelation = patched.type === "relation";
 
   if (wasRelation && (!willRelation || relationConfigChanged(existing, patched as TableRelationColumn))) {
-    relationsUnlinked += unlinkRelationColumnFromAllRows(ctx, databaseId, existing);
+    relationsUnlinked += await unlinkRelationColumnFromAllRows(ctx, databaseId, existing);
   }
 
   if (!wasRelation && willRelation) {
-    valuesCleared += stripScalarFromSetEdges(ctx, databaseId, normalizedKey);
+    valuesCleared += await stripScalarFromSetEdges(ctx, databaseId, normalizedKey);
   }
 
   if (!wasRelation && !willRelation && finalKey !== normalizedKey) {
-    rowsMigrated += renameScalarOnSetEdges(ctx, databaseId, normalizedKey, finalKey);
+    rowsMigrated += await renameScalarOnSetEdges(ctx, databaseId, normalizedKey, finalKey);
   }
 
   patched.key = finalKey;
-  const index = tableSchema.columns.findIndex((col) => col.key === normalizedKey);
+  const index = tableSchema.columns.findIndex((col: TableColumnDef) => col.key === normalizedKey);
   tableSchema.columns[index] = patched;
 
-  ctx.graphStore.writeTableSchemas(schemasFile);
+  await ctx.graphStore.writeTableSchemas(schemasFile);
   invalidateTableSchemasCache();
 
   if (finalKey !== normalizedKey) {
-    renameColumnInViews(
+    await renameColumnInViews(
       ctx.graphStore,
       databaseId,
       setRoleRelationshipTypeForNode(databaseId, writeStoreContentDir(ctx.graphStore)),
@@ -369,9 +369,9 @@ export function updateDatabaseColumn(
     );
   }
 
-  syncAfterRelationshipsWrite(ctx);
-  ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
-  ctx.sync.syncAfterWrite("views.json");
+  await syncAfterRelationshipsWrite(ctx);
+  await ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
+  await ctx.sync.syncAfterWrite("views.json");
 
   return {
     column: patched,

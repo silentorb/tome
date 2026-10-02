@@ -35,7 +35,7 @@ import {
   type DynamicColumnSetRecord,
   type DynamicPropertyRecord,
 } from "tome-flatfile";
-import { GraphDatabase, type TomeQueryCache } from "tome-sqlite";
+import type { TomeQueryCache } from "tome-sqlite";
 import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum-config-fingerprint";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
 import { expandAllRelationships } from "./relationship-sync-expand";
@@ -205,7 +205,10 @@ export function subscribeStoreToCacheSync(
 ): () => void {
   return store.subscribe((event) => {
     if (sync.isApplying()) return;
-    sync.syncFile(event.path);
+    // StoreChangeListener is sync-void; kick async sync without blocking emit.
+    void sync.syncFile(event.path).catch((err) => {
+      console.error("[tome-sync] syncFile failed:", err);
+    });
   });
 }
 
@@ -357,13 +360,13 @@ export class CacheSync {
     return max;
   }
 
-  cacheNeedsRebuild(): boolean {
+  async cacheNeedsRebuild(): Promise<boolean> {
     if (!existsSync(this.cache.path)) return true;
-    const cacheMarker = this.cache.getMeta("content_mtime_ms");
+    const cacheMarker = await this.cache.getMeta("content_mtime_ms");
     const contentMtime = String(this.contentSnapshotMtime());
     if (cacheMarker !== contentMtime) return true;
     const schema = this.mergedSchemaForFingerprint();
-    const storedFingerprint = this.cache.getMeta(ENUM_CONFIG_FINGERPRINT_META_KEY) ?? "";
+    const storedFingerprint = (await this.cache.getMeta(ENUM_CONFIG_FINGERPRINT_META_KEY)) ?? "";
     return enumConfigFingerprint(schema) !== storedFingerprint;
   }
 
@@ -372,115 +375,14 @@ export class CacheSync {
     return loadSchemaFromContent(this.contentDir);
   }
 
-  private updateCacheMarkers(): void {
-    this.cache.setMeta("content_mtime_ms", String(this.contentSnapshotMtime()));
+  private async updateCacheMarkers(): Promise<void> {
+    await this.cache.setMeta("content_mtime_ms", String(this.contentSnapshotMtime()));
     const schema = this.mergedSchemaForFingerprint();
-    this.cache.setMeta(ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint(schema));
+    await this.cache.setMeta(ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint(schema));
   }
 
-  private expandRelationshipsToCache(): void {
+  private async expandRelationshipsToCache(): Promise<void> {
     // Live tree only — archived edges live under relationships/archive/.
-    const entries = this.store.readRelationshipsFile().relationships;
-    const registry = this.store.readRelationshipTypesFile();
-    const expandStarted = performance.now();
-    if (this.startupSync) {
-      this.report({ phase: "expand_relationships", total: entries.length });
-    }
-    const { records, projections } = expandAllRelationships(entries, registry);
-
-    this.cache.runExec("BEGIN");
-    try {
-      this.cache.clearRelationshipCache();
-      for (const record of records) {
-        this.cache.upsertRelationshipRecord(record);
-      }
-      for (const projection of projections) {
-        this.cache.upsertRelationshipProjection(projection);
-      }
-      this.recomputeArchivedFlags();
-      this.cache.runExec("COMMIT");
-      if (this.startupSync) {
-        this.report({
-          phase: "expand_relationships",
-          message: `relationships expanded (${formatSyncElapsed(performance.now() - expandStarted)})`,
-        });
-      }
-    } catch (err) {
-      this.cache.runExec("ROLLBACK");
-      throw err;
-    }
-  }
-
-  recomputeArchivedFlags(): void {
-    const archiveIds = this.store.listCorpora().map((c) => c.workspace.archiveNodeId);
-    this.cache.recomputeArchivedFlags(archiveIds);
-  }
-
-  fullRebuild(): void {
-    this.applying = true;
-    try {
-      this.cache.runExec("DELETE FROM nodes");
-
-      const ids = this.store.listNodeIds();
-      const total = ids.length;
-      if (this.startupSync) {
-        this.report({ phase: "rebuild", total });
-      }
-      for (let i = 0; i < ids.length; i += 1) {
-        const id = ids[i]!;
-        const node = this.store.readNode(id);
-        if (!node) continue;
-        const body = bodyFromNode(node);
-        const props = { ...node.properties, body };
-        this.cache.upsertNode(node.id, props);
-        if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
-          this.report({ phase: "rebuild_nodes", current: i + 1, total });
-        }
-      }
-
-      this.expandRelationshipsToCache();
-
-      invalidateDynamicPropertiesCache();
-      this.updateCacheMarkers();
-    } finally {
-      this.applying = false;
-    }
-  }
-
-  private async fullRebuildAsync(): Promise<void> {
-    this.applying = true;
-    try {
-      this.cache.runExec("DELETE FROM nodes");
-
-      const ids = this.store.listNodeIds();
-      const total = ids.length;
-      if (this.startupSync) {
-        this.report({ phase: "rebuild", total });
-        await Bun.sleep(0);
-      }
-      for (let i = 0; i < ids.length; i += 1) {
-        const id = ids[i]!;
-        const node = this.store.readNode(id);
-        if (!node) continue;
-        const body = bodyFromNode(node);
-        const props = { ...node.properties, body };
-        this.cache.upsertNode(node.id, props);
-        if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
-          this.report({ phase: "rebuild_nodes", current: i + 1, total });
-          await Bun.sleep(0);
-        }
-      }
-
-      await this.expandRelationshipsToCacheAsync();
-
-      invalidateDynamicPropertiesCache();
-      this.updateCacheMarkers();
-    } finally {
-      this.applying = false;
-    }
-  }
-
-  private async expandRelationshipsToCacheAsync(): Promise<void> {
     const entries = this.store.readRelationshipsFile().relationships;
     const registry = this.store.readRelationshipTypesFile();
     const expandStarted = performance.now();
@@ -489,47 +391,74 @@ export class CacheSync {
       await Bun.sleep(0);
     }
     const { records, projections } = expandAllRelationships(entries, registry);
+    const archiveIds = this.store.listCorpora().map((c) => c.workspace.archiveNodeId);
 
-    this.cache.runExec("BEGIN");
-    try {
-      this.cache.clearRelationshipCache();
-      for (const record of records) {
-        this.cache.upsertRelationshipRecord(record);
+    await this.cache.transaction(async (cache) => {
+      await cache.runExec("BEGIN");
+      try {
+        await cache.clearRelationshipCache();
+        for (const record of records) {
+          await cache.upsertRelationshipRecord(record);
+        }
+        for (const projection of projections) {
+          await cache.upsertRelationshipProjection(projection);
+        }
+        await cache.recomputeArchivedFlags(archiveIds);
+        await cache.runExec("COMMIT");
+      } catch (err) {
+        await cache.runExec("ROLLBACK");
+        throw err;
       }
-      for (const projection of projections) {
-        this.cache.upsertRelationshipProjection(projection);
-      }
-      this.recomputeArchivedFlags();
-      this.cache.runExec("COMMIT");
-      if (this.startupSync) {
-        this.report({
-          phase: "expand_relationships",
-          message: `relationships expanded (${formatSyncElapsed(performance.now() - expandStarted)})`,
-        });
-        await Bun.sleep(0);
-      }
-    } catch (err) {
-      this.cache.runExec("ROLLBACK");
-      throw err;
+    });
+
+    if (this.startupSync) {
+      this.report({
+        phase: "expand_relationships",
+        message: `relationships expanded (${formatSyncElapsed(performance.now() - expandStarted)})`,
+      });
+      await Bun.sleep(0);
     }
   }
 
-  ensureReady(): void {
-    this.startupSync = true;
-    const startedAt = performance.now();
+  async recomputeArchivedFlags(): Promise<void> {
+    const archiveIds = this.store.listCorpora().map((c) => c.workspace.archiveNodeId);
+    await this.cache.recomputeArchivedFlags(archiveIds);
+  }
+
+  /**
+   * Full cache rebuild from flatfile content. Yields on progress ticks during startup sync
+   * so HTTP can answer gated syncing responses.
+   */
+  async fullRebuild(): Promise<void> {
+    this.applying = true;
     try {
-      this.report({ phase: "check", message: "checking cache freshness…" });
-      if (this.cacheNeedsRebuild()) {
-        this.fullRebuild();
-      } else {
-        this.reconcileNodeBodiesFromFiles();
+      await this.cache.runExec("DELETE FROM nodes");
+
+      const ids = this.store.listNodeIds();
+      const total = ids.length;
+      if (this.startupSync) {
+        this.report({ phase: "rebuild", total });
+        await Bun.sleep(0);
       }
-      this.report({
-        phase: "ready",
-        message: `cache ready (${formatSyncElapsed(performance.now() - startedAt)})`,
-      });
+      for (let i = 0; i < ids.length; i += 1) {
+        const id = ids[i]!;
+        const node = this.store.readNode(id);
+        if (!node) continue;
+        const body = bodyFromNode(node);
+        const props = { ...node.properties, body };
+        await this.cache.upsertNode(node.id, props);
+        if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
+          this.report({ phase: "rebuild_nodes", current: i + 1, total });
+          await Bun.sleep(0);
+        }
+      }
+
+      await this.expandRelationshipsToCache();
+
+      invalidateDynamicPropertiesCache();
+      await this.updateCacheMarkers();
     } finally {
-      this.startupSync = false;
+      this.applying = false;
     }
   }
 
@@ -537,16 +466,16 @@ export class CacheSync {
    * Cooperative startup sync: yields to the event loop on progress ticks so HTTP
    * can answer gated syncing responses while a long rebuild runs.
    */
-  async ensureReadyAsync(): Promise<void> {
+  async ensureReady(): Promise<void> {
     this.startupSync = true;
     const startedAt = performance.now();
     try {
       this.report({ phase: "check", message: "checking cache freshness…" });
       await Bun.sleep(0);
-      if (this.cacheNeedsRebuild()) {
-        await this.fullRebuildAsync();
+      if (await this.cacheNeedsRebuild()) {
+        await this.fullRebuild();
       } else {
-        await this.reconcileNodeBodiesFromFilesAsync();
+        await this.reconcileNodeBodiesFromFiles();
       }
       this.report({
         phase: "ready",
@@ -557,31 +486,13 @@ export class CacheSync {
     }
   }
 
-  /** Repair SQLite bodies that drifted from git-tracked node files (e.g. after external edits). */
-  private reconcileNodeBodiesFromFiles(): void {
-    const ids = this.store.listNodeIds();
-    const total = ids.length;
-    if (this.startupSync) {
-      this.report({ phase: "reconcile", total });
-    }
-    for (let i = 0; i < ids.length; i += 1) {
-      const id = ids[i]!;
-      const fileNode = this.store.readNode(id);
-      if (!fileNode) continue;
-      const fileBody = bodyFromNode(fileNode);
-      const cacheNode = this.cache.getNode(id);
-      const cacheBody =
-        typeof cacheNode?.properties.body === "string" ? cacheNode.properties.body : "";
-      if (fileBody !== cacheBody) {
-        this.syncNode(id);
-      }
-      if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
-        this.report({ phase: "reconcile", current: i + 1, total });
-      }
-    }
+  /** @deprecated Prefer {@link ensureReady} — identical async API. */
+  ensureReadyAsync(): Promise<void> {
+    return this.ensureReady();
   }
 
-  private async reconcileNodeBodiesFromFilesAsync(): Promise<void> {
+  /** Repair SQLite bodies that drifted from git-tracked node files (e.g. after external edits). */
+  private async reconcileNodeBodiesFromFiles(): Promise<void> {
     const ids = this.store.listNodeIds();
     const total = ids.length;
     if (this.startupSync) {
@@ -593,11 +504,11 @@ export class CacheSync {
       const fileNode = this.store.readNode(id);
       if (!fileNode) continue;
       const fileBody = bodyFromNode(fileNode);
-      const cacheNode = this.cache.getNode(id);
+      const cacheNode = await this.cache.getNode(id);
       const cacheBody =
         typeof cacheNode?.properties.body === "string" ? cacheNode.properties.body : "";
       if (fileBody !== cacheBody) {
-        this.syncNode(id);
+        await this.syncNode(id);
       }
       if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
         this.report({ phase: "reconcile", current: i + 1, total });
@@ -606,33 +517,33 @@ export class CacheSync {
     }
   }
 
-  syncNode(id: string): void {
+  async syncNode(id: string): Promise<void> {
     if (this.applying) return;
     this.applying = true;
     try {
       const node = this.store.readNode(id);
       if (!node) {
-        this.cache.deleteNode(id);
+        await this.cache.deleteNode(id);
         return;
       }
       const body = bodyFromNode(node);
-      this.cache.upsertNode(node.id, { ...node.properties, body });
+      await this.cache.upsertNode(node.id, { ...node.properties, body });
     } finally {
       this.applying = false;
     }
   }
 
-  syncRelationships(): void {
+  async syncRelationships(): Promise<void> {
     if (this.applying) return;
     this.applying = true;
     try {
-      this.expandRelationshipsToCache();
+      await this.expandRelationshipsToCache();
     } finally {
       this.applying = false;
     }
   }
 
-  syncFile(relativeName: string): void {
+  async syncFile(relativeName: string): Promise<void> {
     if (this.applying) return;
 
     if (
@@ -642,47 +553,47 @@ export class CacheSync {
       if (relativeName === ASSOCIATIONS_FILENAME) {
         invalidateRelationshipTypesCache();
       }
-      this.syncRelationships();
-      this.updateCacheMarkers();
+      await this.syncRelationships();
+      await this.updateCacheMarkers();
       return;
     }
 
     if (relativeName === DYNAMIC_PROPERTIES_FILENAME) {
       invalidateDynamicPropertiesCache();
-      this.updateCacheMarkers();
+      await this.updateCacheMarkers();
       return;
     }
 
     if (relativeName === SCHEMA_FILENAME) {
       invalidateSchemaCache();
       // Enum indices in SQLite depend on options order; re-encode from content labels.
-      this.syncRelationships();
-      this.updateCacheMarkers();
+      await this.syncRelationships();
+      await this.updateCacheMarkers();
       return;
     }
 
     if (relativeName === VIEWS_FILENAME) {
       invalidateViewsCache();
-      this.updateCacheMarkers();
+      await this.updateCacheMarkers();
       return;
     }
 
     if (relativeName === TABLE_SCHEMAS_FILENAME) {
       invalidateTableSchemasCache();
-      this.updateCacheMarkers();
+      await this.updateCacheMarkers();
       return;
     }
 
     if (relativeName === WORKSPACE_FILENAME) {
       invalidateWorkspaceCache();
-      this.recomputeArchivedFlags();
-      this.updateCacheMarkers();
+      await this.recomputeArchivedFlags();
+      await this.updateCacheMarkers();
       return;
     }
 
     if (relativeName === EXTENSIONS_FILENAME) {
       invalidateExtensionsCache();
-      this.updateCacheMarkers();
+      await this.updateCacheMarkers();
       return;
     }
 
@@ -690,13 +601,13 @@ export class CacheSync {
     const match = NODE_FILE_PATTERN.exec(base);
     if (match) {
       const id = base.slice(0, -3);
-      this.syncNode(id);
-      this.updateCacheMarkers();
+      await this.syncNode(id);
+      await this.updateCacheMarkers();
     }
   }
 
-  syncAfterWrite(relativeName: string): void {
-    this.syncFile(relativeName);
+  async syncAfterWrite(relativeName: string): Promise<void> {
+    await this.syncFile(relativeName);
   }
 }
 
@@ -704,7 +615,11 @@ export class CacheSync {
  * Open flatfile ContentStore + sqlite GraphDatabase with enum codec and set-trait
  * perspectives, ensure the cache is ready, and wire store→sync subscriptions.
  */
-export function openContentGraph(contentDir: string, dbPath: string): TomeWriteContext {
-  const { writeContext } = openComposedGraphStore(contentDir, dbPath);
+export async function openContentGraph(
+  contentDir: string,
+  dbPath: string,
+  options?: { deferReady?: boolean },
+): Promise<TomeWriteContext> {
+  const { writeContext } = await openComposedGraphStore(contentDir, dbPath, options);
   return writeContext;
 }

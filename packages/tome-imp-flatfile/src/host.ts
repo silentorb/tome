@@ -17,12 +17,13 @@ function titleFromProperties(properties: Record<string, unknown>): string {
   return "Untitled";
 }
 
-function nodeToRow(
-  store: TomeGraphStoreBase,
+function nodeToRowFromMaps(
+  nodes: Map<string, { id: string; properties: Record<string, unknown> }>,
+  archived: Set<string>,
   id: string,
   body?: string,
 ): ExecutionRow | null {
-  const node = store.getNode(id);
+  const node = nodes.get(id);
   if (!node) return null;
   const properties: Record<string, unknown> = { ...node.properties };
   if (body !== undefined) {
@@ -37,14 +38,37 @@ function nodeToRow(
   return {
     id: node.id,
     properties,
-    is_archived: store.isNodeArchived(id),
+    is_archived: archived.has(id),
   };
 }
 
-function buildProjectionIndex(store: TomeGraphStoreBase): Map<string, ExecutionRow[]> {
-  const relationshipTypes = store.readRelationshipTypes();
+async function loadNodeMaps(
+  store: TomeGraphStoreBase,
+): Promise<{
+  nodes: Map<string, { id: string; properties: Record<string, unknown> }>;
+  archived: Set<string>;
+  nodeIds: string[];
+}> {
+  const nodeIds = await store.listNodeIds();
+  const nodes = new Map<string, { id: string; properties: Record<string, unknown> }>();
+  const archived = new Set<string>();
+  for (const id of nodeIds) {
+    const node = await store.getNode(id);
+    if (!node) continue;
+    nodes.set(id, { id: node.id, properties: { ...node.properties } });
+    if (await store.isNodeArchived(id)) archived.add(id);
+  }
+  return { nodes, archived, nodeIds };
+}
+
+async function buildProjectionIndex(
+  store: TomeGraphStoreBase,
+  nodes: Map<string, { id: string; properties: Record<string, unknown> }>,
+  archived: Set<string>,
+): Promise<Map<string, ExecutionRow[]>> {
+  const relationshipTypes = await store.readRelationshipTypes();
   const entries: RelationshipRecordRef[] = [];
-  store.forEachRelationshipRecord((entry) => {
+  await store.forEachRelationshipRecord((entry) => {
     entries.push(entry);
   });
   const { projections } = expandAllRelationships(entries, relationshipTypes);
@@ -52,7 +76,7 @@ function buildProjectionIndex(store: TomeGraphStoreBase): Map<string, ExecutionR
   const bySource = new Map<string, ExecutionRow[]>();
   for (const projection of projections) {
     const key = `${projection.sourceNodeId}\0${projection.type}`;
-    const targetRow = nodeToRow(store, projection.targetNodeId);
+    const targetRow = nodeToRowFromMaps(nodes, archived, projection.targetNodeId);
     if (!targetRow) continue;
     const list = bySource.get(key) ?? [];
     list.push({
@@ -78,17 +102,18 @@ function matchesEdgeFilter(
 }
 
 /** Read-only ExecutionHost over a Base-tier flatfile graph store. */
-export function createFlatfileExecutionHost(
+export async function createFlatfileExecutionHost(
   store: TomeGraphStoreBase,
   options: FlatfileExecutionHostOptions = {},
-): ExecutionHost {
+): Promise<ExecutionHost> {
   const liveOnly = options.liveOnly ?? true;
   const corpusSet =
     options.corpusNodeIds && options.corpusNodeIds.length > 0
       ? new Set(options.corpusNodeIds)
       : null;
 
-  let projectionIndex: Map<string, ExecutionRow[]> | null = null;
+  const { nodes, archived, nodeIds } = await loadNodeMaps(store);
+  const projectionIndex = await buildProjectionIndex(store, nodes, archived);
 
   function corpusAllows(id: string): boolean {
     if (corpusSet && !corpusSet.has(id)) return false;
@@ -97,15 +122,15 @@ export function createFlatfileExecutionHost(
 
   function liveAllows(id: string): boolean {
     if (!liveOnly) return true;
-    return !store.isNodeArchived(id);
+    return !archived.has(id);
   }
 
   return {
     listInputRows(): ExecutionRow[] {
       const rows: ExecutionRow[] = [];
-      for (const id of store.listNodeIds()) {
+      for (const id of nodeIds) {
         if (!corpusAllows(id) || !liveAllows(id)) continue;
-        const row = nodeToRow(store, id);
+        const row = nodeToRowFromMaps(nodes, archived, id);
         if (row) rows.push(row);
       }
       return rows;
@@ -118,10 +143,6 @@ export function createFlatfileExecutionHost(
       edgeProperty?: string | null,
       edgeEquals?: unknown,
     ): ExecutionRow[] {
-      if (!projectionIndex) {
-        projectionIndex = buildProjectionIndex(store);
-      }
-
       // Pack at the host boundary — Imp graphs keep association + direction separate.
       const projectionType = projectionTypeForEndpoint(association, direction);
       const out: ExecutionRow[] = [];
@@ -145,7 +166,7 @@ export function createFlatfileExecutionHost(
         for (const row of targets) {
           if (row.id !== sourceId) continue;
           if (!corpusAllows(fromId) || !liveAllows(fromId)) continue;
-          const sourceRow = nodeToRow(store, fromId);
+          const sourceRow = nodeToRowFromMaps(nodes, archived, fromId);
           if (!sourceRow) continue;
           if (!matchesEdgeFilter(row.properties, edgeProperty ?? null, edgeEquals)) continue;
           if (seen.has(fromId)) continue;

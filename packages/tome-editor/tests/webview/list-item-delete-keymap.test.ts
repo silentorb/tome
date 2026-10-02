@@ -38,7 +38,7 @@ function dispatchDelete(view: import("@milkdown/prose/view").EditorView): void {
   );
 }
 
-describe("list item delete keymap", () => {
+describe("list item delete keymap", async () => {
   test("Delete at bullet start deletes forward instead of lifting the list item", async () => {
     const { editor } = await createEditor("- hello");
 

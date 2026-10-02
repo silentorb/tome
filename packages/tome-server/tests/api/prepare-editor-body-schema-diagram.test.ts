@@ -25,23 +25,23 @@ const nodeId = "0000000000000000000000002M";
 const sceneTypeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 const featureTypeId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
-describe("prepare-editor-body API — schema diagram", () => {
-  const fixture = createTestContentFixture("tome-prepare-schema-diagram-");
+describe("prepare-editor-body API — schema diagram", async () => {
+  const fixture = await createTestContentFixture("tome-prepare-schema-diagram-");
 
   seedTestWorkspace(fixture);
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: TEST_HOME_NODE_ID,
     properties: { title: "Home" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: sceneTypeId,
     properties: { title: "Scene" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: featureTypeId,
     properties: { title: "Feature" },
   });
-  seedTestNode(
+  await seedTestNode(
     fixture,
     {
       id: nodeId,
@@ -144,7 +144,7 @@ describe("prepare-editor-body API — schema diagram", () => {
   invalidateSchemaCache();
 
   invalidateExtensionsCache();
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
 
   test("POST /api/nodes/:id/prepare-editor-body expands schema diagram block", async () => {
     const body = serializePageBlock("schema-diagram.block", {});
@@ -169,7 +169,7 @@ describe("prepare-editor-body API — schema diagram", () => {
     expect(payload.markdown).not.toContain("```tome-block");
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

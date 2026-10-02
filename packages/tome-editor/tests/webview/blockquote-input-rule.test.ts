@@ -62,7 +62,7 @@ function typeBlockquoteMarkerAfterQuote(editor: Editor): void {
   });
 }
 
-describe("blockquote input rule", () => {
+describe("blockquote input rule", async () => {
   test("stock wrapInBlockquoteInputRule joins a new quote into the previous one", async () => {
     const { editor } = await createEditor("> A\n\nq", false);
     typeBlockquoteMarkerAfterQuote(editor);

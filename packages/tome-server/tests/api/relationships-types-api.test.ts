@@ -15,13 +15,13 @@ import { schemaFilePath } from "tome-db/content";
 import { registerBidirectionalType } from "tome-flatfile";
 import { createTestApiFromContent } from "./test-api-setup";
 
-describe("relationship types API", () => {
+describe("relationship types API", async () => {
   const sourceId = "0000000000000000000000001G";
   const targetId = "00000000000000000000000021";
   const sceneTypeId = "0000000000000000000000000D";
   const featureTypeId = "0000000000000000000000002P";
 
-  const fixture = createTestContentFixture("tome-rel-types-api-");
+  const fixture = await createTestContentFixture("tome-rel-types-api-");
   const registry = fixture.ctx.store.readRelationshipTypesFile();
   registerBidirectionalType(registry, "Features", "Scenes", "000000000000000000000000B7");
   registry.relationshipTypes["000000000000000000000000B7"] = {
@@ -41,9 +41,9 @@ describe("relationship types API", () => {
   invalidateRelationshipTypesCache();
 
   seedTestTableSchema(fixture, sceneTypeId, []);
-  seedTestNode(fixture, { id: sourceId, properties: { title: "Scene page" } });
-  seedTestNode(fixture, { id: targetId, properties: { title: "Feature page" } });
-  seedTestRelationships(fixture, [
+  await seedTestNode(fixture, { id: sourceId, properties: { title: "Scene page" } });
+  await seedTestNode(fixture, { id: targetId, properties: { title: "Feature page" } });
+  await seedTestRelationships(fixture, [
     { source: sourceId, target: sceneTypeId, type: "member_of" },
     { source: targetId, target: featureTypeId, type: "member_of" },
   ]);
@@ -61,7 +61,7 @@ describe("relationship types API", () => {
   );
   invalidateSchemaCache();
 
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
   const featuresProjection = projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0);
   const memberProjection = projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
   const b7Features = projectionTypeForEndpoint("000000000000000000000000B7", 0);
@@ -97,8 +97,8 @@ describe("relationship types API", () => {
     expect(payload.allowedTargetTypeIds).toBeNull();
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     api.handler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 });

@@ -13,25 +13,25 @@ import { invalidateRelationshipTypesCache } from "tome-flatfile";
 import { invalidateTableSchemasCache } from "tome-flatfile";
 import { createExtensionSchemaQueryServices } from "../src/extension-schema-query";
 
-describe("createExtensionSchemaQueryServices", () => {
+describe("createExtensionSchemaQueryServices", async () => {
   let fixture: TestContentFixture;
   const sceneTypeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
   const featureTypeId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
   const inspirationTypeId = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
 
-  fixture = createTestContentFixture("tome-schema-query-");
+  fixture = await createTestContentFixture("tome-schema-query-");
   const modelDir = contentModelDir(fixture.ctx.store.contentDir);
   mkdirSync(modelDir, { recursive: true });
 
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: sceneTypeId,
     properties: { title: "Scene" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: featureTypeId,
     properties: { title: "Feature" },
   });
-  seedTestNode(fixture, {
+  await seedTestNode(fixture, {
     id: inspirationTypeId,
     properties: { title: "Inspiration" },
   });
@@ -124,15 +124,15 @@ describe("createExtensionSchemaQueryServices", () => {
   );
   invalidateSchemaCache();
 
-  fixture.ctx.sync.fullRebuild();
+  await fixture.ctx.sync.fullRebuild();
 
   const services = createExtensionSchemaQueryServices(
     fixture.ctx.cache,
     fixture.ctx.store.contentDir,
   );
 
-  test("listTypeTables returns titles from graph", () => {
-    const tables = services.listTypeTables();
+  test("listTypeTables returns titles from graph", async () => {
+    const tables = await services.listTypeTables();
     expect(tables).toEqual([
       { id: featureTypeId, title: "Feature", memberCount: 0 },
       { id: inspirationTypeId, title: "Inspiration", memberCount: 0 },
@@ -143,12 +143,12 @@ describe("createExtensionSchemaQueryServices", () => {
   test("listTypeTables includes memberCount from set membership", async () => {
     const member1 = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
     const member2 = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
-    seedTestNode(fixture, { id: member1, properties: { title: "Scene A" } });
-    seedTestNode(fixture, { id: member2, properties: { title: "Scene B" } });
-    fixture.ctx.cache.upsertRelationship(member1, sceneTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
-    fixture.ctx.cache.upsertRelationship(member2, sceneTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 1 });
+    await seedTestNode(fixture, { id: member1, properties: { title: "Scene A" } });
+    await seedTestNode(fixture, { id: member2, properties: { title: "Scene B" } });
+    await fixture.ctx.cache.upsertRelationship(member1, sceneTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 0 });
+    await fixture.ctx.cache.upsertRelationship(member2, sceneTypeId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1), { row_index: 1 });
 
-    const tables = await Promise.resolve(services.listTypeTables());
+    const tables = await services.listTypeTables();
     const scene = tables.find((table) => table.id === sceneTypeId);
     expect(scene?.memberCount).toBe(2);
     expect(tables.find((table) => table.id === featureTypeId)?.memberCount).toBe(0);
@@ -183,8 +183,8 @@ describe("createExtensionSchemaQueryServices", () => {
     });
   });
 
-  test("listRelationColumnEdges returns relation columns from table-schemas", () => {
-    const edges = services.listRelationColumnEdges();
+  test("listRelationColumnEdges returns relation columns from table-schemas", async () => {
+    const edges = await services.listRelationColumnEdges();
     expect(edges).toHaveLength(3);
     expect(edges).toEqual([
       {
@@ -208,7 +208,7 @@ describe("createExtensionSchemaQueryServices", () => {
     ]);
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

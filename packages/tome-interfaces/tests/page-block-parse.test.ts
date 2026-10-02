@@ -11,7 +11,7 @@ import {
   substitutePageBlockPlaceholders,
 } from "../src/page-block";
 
-describe("page-block parse", () => {
+describe("page-block parse", async () => {
   test("serialize and parse round-trip", () => {
     const fence = serializePageBlock("demo.block", { x: 1 });
     const { segments } = parsePageBlockFences(`Hello\n\n${fence}\n\nWorld`);

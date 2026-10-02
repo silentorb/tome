@@ -17,7 +17,7 @@ import {
 /** Write store: graph store Base tier for domain mutations. */
 export type GraphWriteStore = TomeGraphStoreBase;
 
-export function writeStoreGetNode(store: GraphWriteStore, id: string): Node | null {
+export async function writeStoreGetNode(store: GraphWriteStore, id: string): Promise<Node | null> {
   return store.getNode(id);
 }
 
@@ -33,96 +33,96 @@ export function writeStoreListCorpora(store: GraphWriteStore): readonly TomeCorp
   return store.listCorpora();
 }
 
-export function writeStoreFindRelationship(
+export async function writeStoreFindRelationship(
   store: GraphWriteStore,
   sourceId: string,
   targetId: string,
   type: string,
-): Relationship | null {
+): Promise<Relationship | null> {
   return store.findRelationshipRecord(sourceId, targetId, type);
 }
 
-export function writeStoreUpsertRelationship(
+export async function writeStoreUpsertRelationship(
   store: GraphWriteStore,
   source: string,
   target: string,
   projectionType: string,
   properties?: Properties,
-): void {
-  store.upsertRelationship(source, target, projectionType, properties);
+): Promise<void> {
+  await store.upsertRelationship(source, target, projectionType, properties);
 }
 
-export function writeStoreDeleteRelationship(
+export async function writeStoreDeleteRelationship(
   store: GraphWriteStore,
   source: string,
   target: string,
   projectionType: string,
-): boolean {
+): Promise<boolean> {
   return store.deleteRelationship(source, target, projectionType);
 }
 
-export function writeStoreMergeRelationshipProperties(
+export async function writeStoreMergeRelationshipProperties(
   store: GraphWriteStore,
   source: string,
   target: string,
   projectionType: string,
   patch: Properties,
-): void {
-  store.mergeRelationshipProperties(source, target, projectionType, patch);
+): Promise<void> {
+  await store.mergeRelationshipProperties(source, target, projectionType, patch);
 }
 
-export function writeStoreReplaceRelationshipProperties(
+export async function writeStoreReplaceRelationshipProperties(
   store: GraphWriteStore,
   source: string,
   target: string,
   projectionType: string,
   properties: Properties,
-): boolean {
+): Promise<boolean> {
   return store.replaceRelationshipProperties(source, target, projectionType, properties);
 }
 
 /** Scan canonical records for a set-trait edge connecting the same pair. */
-export function writeStoreFindSetTraitRelationship(
+export async function writeStoreFindSetTraitRelationship(
   store: GraphWriteStore,
   registry: RelationshipTypesFile,
   sourceId: string,
   targetId: string,
   projectionType: string,
-): Relationship | null {
-  const found = writeStoreFindRelationship(store, sourceId, targetId, projectionType);
+): Promise<Relationship | null> {
+  const found = await writeStoreFindRelationship(store, sourceId, targetId, projectionType);
   if (found) return found;
   if (!isSetTraitProjectionType(registry, projectionType)) return null;
 
   let match: Relationship | null = null;
-  store.forEachRelationshipRecord((entry) => {
+  await store.forEachRelationshipRecord(async (entry) => {
     if (match) return;
     if (!connectsEndpoints(entry, sourceId, targetId)) return;
     if (!isSetTraitComposite(registry, entry.type)) return;
-    match = writeStoreFindRelationship(store, sourceId, targetId, entry.type);
+    match = await writeStoreFindRelationship(store, sourceId, targetId, entry.type);
   });
   return match;
 }
 
-export function writeStoreUpsertNodeToCorpus(
+export async function writeStoreUpsertNodeToCorpus(
   store: GraphWriteStore,
   corpusId: string,
   node: Node,
   body?: string,
-): void {
-  store.upsertNodeToCorpus(corpusId, node, body);
+): Promise<void> {
+  await store.upsertNodeToCorpus(corpusId, node, body);
 }
 
-export function writeStoreWriteWorkspaceForCorpus(
+export async function writeStoreWriteWorkspaceForCorpus(
   store: GraphWriteStore,
   corpusId: string,
   file: WorkspaceFile,
-): void {
-  store.writeWorkspaceForCorpus(corpusId, file);
+): Promise<void> {
+  await store.writeWorkspaceForCorpus(corpusId, file);
 }
 
-export function writeStoreForEachRelationshipRecord(
+export async function writeStoreForEachRelationshipRecord(
   store: GraphWriteStore,
-  fn: (entry: RelationshipRecordRef) => void,
-): void {
-  store.forEachRelationshipRecord(fn);
+  fn: (entry: RelationshipRecordRef) => void | Promise<void>,
+): Promise<void> {
+  await store.forEachRelationshipRecord(fn);
 }

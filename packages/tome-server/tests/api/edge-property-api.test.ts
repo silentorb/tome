@@ -16,19 +16,19 @@ import {
 } from "tome-db/content/test-helpers";
 import { createTestApiFromContent } from "./test-api-setup";
 
-describe("edge property API", () => {
-  const fixture = createTestContentFixture("tome-editor-edge-");
+describe("edge property API", async () => {
+  const fixture = await createTestContentFixture("tome-editor-edge-");
 
   const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
   const nodeId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 
-  seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Features") });
-  seedTestNode(fixture, { id: nodeId, properties: { title: "Feature" } });
-  seedTestRelationships(fixture, [
+  await seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Features") });
+  await seedTestNode(fixture, { id: nodeId, properties: { title: "Feature" } });
+  await seedTestRelationships(fixture, [
     { source: nodeId, target: databaseId, type: "member_of", properties: { priority: "Low" } },
   ]);
 
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
   const contentDir = fixture.ctx.store.contentDir;
 
   test("PATCH database row priority", async () => {
@@ -66,8 +66,8 @@ describe("edge property API", () => {
     expect(res.status).toBe(400);
   });
 
-  afterAll(() => {
+  afterAll(async () => {
     api.handler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 });

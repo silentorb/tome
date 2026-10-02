@@ -32,7 +32,7 @@ function countBlockquotes(doc: { descendants: (f: (node: { type: { name: string 
   return count;
 }
 
-describe("callout paste", () => {
+describe("callout paste", async () => {
   test("paste callout HTML into outer callout preserves nested blockquote", async () => {
     const { editor, root } = await createEditor("> 💡 Outer\n> ");
 

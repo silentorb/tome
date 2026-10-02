@@ -21,18 +21,18 @@ export function readNodeViews(ctx: TomeWriteContext, nodeId: string) {
   return getNodeViews(ctx.graphStore, nodeId);
 }
 
-export function createRelationshipView(
+export async function createRelationshipView(
   ctx: TomeWriteContext,
   nodeId: string,
   relationshipTypeId: string,
   input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
 ) {
   invalidateViewsCache();
-  ctx.sync.syncFile("views.json");
+  await ctx.sync.syncFile("views.json");
   return createView(ctx.graphStore, nodeId, relationshipTypeId, input);
 }
 
-export function updateRelationshipView(
+export async function updateRelationshipView(
   ctx: TomeWriteContext,
   nodeId: string,
   relationshipTypeId: string,
@@ -40,38 +40,43 @@ export function updateRelationshipView(
   input: ViewMutationInput,
 ) {
   invalidateViewsCache();
-  ctx.sync.syncFile("views.json");
+  await ctx.sync.syncFile("views.json");
   return updateView(ctx.graphStore, nodeId, relationshipTypeId, viewId, input);
 }
 
-export function deleteRelationshipView(
+export async function deleteRelationshipView(
   ctx: TomeWriteContext,
   nodeId: string,
   relationshipTypeId: string,
   viewId: string,
 ) {
   invalidateViewsCache();
-  ctx.sync.syncFile("views.json");
-  deleteView(ctx.graphStore, nodeId, relationshipTypeId, viewId);
+  await ctx.sync.syncFile("views.json");
+  await deleteView(ctx.graphStore, nodeId, relationshipTypeId, viewId);
 }
 
-export function patchRelationshipViews(
+export async function patchRelationshipViews(
   ctx: TomeWriteContext,
   nodeId: string,
   relationshipTypeId: string,
   input: { viewOrder?: string[]; properties?: string[] },
 ) {
   invalidateViewsCache();
-  ctx.sync.syncFile("views.json");
+  await ctx.sync.syncFile("views.json");
   const response: {
-    views?: ReturnType<typeof reorderViews>;
+    views?: Awaited<ReturnType<typeof reorderViews>>;
     properties?: string[];
   } = {};
   if (input.viewOrder) {
-    response.views = reorderViews(ctx.graphStore, nodeId, relationshipTypeId, input.viewOrder);
+    response.views = await reorderViews(
+      ctx.graphStore,
+      nodeId,
+      relationshipTypeId,
+      input.viewOrder,
+    );
   }
   if (input.properties) {
-    response.properties = updateRelationshipViewProperties(
+    response.properties = await updateRelationshipViewProperties(
       ctx.graphStore,
       nodeId,
       relationshipTypeId,

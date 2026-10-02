@@ -67,7 +67,7 @@ function serverSpansGraph(): Graph {
   };
 }
 
-describe("createApiHandler profiling", () => {
+describe("createApiHandler profiling", async () => {
   let tempDirs: string[] = [];
 
   afterEach(() => {

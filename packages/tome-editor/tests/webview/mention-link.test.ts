@@ -56,7 +56,7 @@ function trailingTextPos(view: EditorView): number {
   return pos + 1;
 }
 
-describe("link cursor", () => {
+describe("link cursor", async () => {
   test("typing after a trailing link does not extend the mark", async () => {
     const { editor, root } = await setupEditor(
       `See ${formatNodeMarkdownLink("Cozy horror", TARGET_ID)}`,
@@ -82,7 +82,7 @@ describe("link cursor", () => {
   });
 });
 
-describe("@ mention dynamic link insertion", () => {
+describe("@ mention dynamic link insertion", async () => {
   test("replaceRange renders dynamic href as a clickable anchor", async () => {
     const cursor = await cursorAfterMention("See @co here", "@co");
     const { editor, root } = await setupEditor("See @co here");
@@ -161,7 +161,7 @@ describe("@ mention dynamic link insertion", () => {
   });
 });
 
-describe("dynamic link demotion", () => {
+describe("dynamic link demotion", async () => {
   test("editing dynamic link text removes dynamic marker for static save", async () => {
     const dynamicLink = formatEditorDynamicNodeLink(TARGET_ID, "Cozy horror");
     const { editor } = await setupEditor(`See ${dynamicLink} here.`);

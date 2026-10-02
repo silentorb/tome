@@ -1,7 +1,7 @@
-import { describe, expect, test, afterAll } from "bun:test";
+import { describe, expect, test, beforeAll, afterAll } from "bun:test";
 import { unlinkSync } from "node:fs";
 import { loadRelationshipTypesFromContent, loadSchemaFromContent, setTraitProjectionTypes } from "tome-flatfile";
-import { GraphDatabase } from "tome-sqlite";
+import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
 import { decodeEnumProperties, encodeEnumProperties } from "../../src/enum-codec";
 import {
   CacheSync,
@@ -13,18 +13,22 @@ import {
   createTestContentFixture,
   destroyTestContentFixture,
   seedTestNode,
+  type TestContentFixture,
 } from "../../src/content/test-helpers";
 
-describe("CacheSync startup progress", () => {
-  const fixture = createTestContentFixture("tome-sync-progress-");
+describe("CacheSync startup progress", async () => {
+  let fixture: TestContentFixture;
   const nodeId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
 
-  seedTestNode(fixture, {
-    id: nodeId,
-    properties: { title: "Progress test node" },
+  beforeAll(async () => {
+    fixture = await createTestContentFixture("tome-sync-progress-");
+    await seedTestNode(fixture, {
+      id: nodeId,
+      properties: { title: "Progress test node" },
+    });
   });
 
-  test("reports rebuild phases on a cold cache", () => {
+  test("reports rebuild phases on a cold cache", async () => {
     const events: SyncProgressEvent[] = [];
     const reporter = (event: SyncProgressEvent) => {
       events.push(event);
@@ -32,10 +36,10 @@ describe("CacheSync startup progress", () => {
 
     const contentDir = fixture.ctx.store.contentDir;
     const dbPath = fixture.ctx.cache.path;
-    fixture.ctx.cache.close();
+    await fixture.ctx.cache.close();
     unlinkSync(dbPath);
 
-    const cache = new GraphDatabase(dbPath, {
+    const db = new GraphDatabase(dbPath, {
       propertyCodec: {
         encode: (properties) => encodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
         decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
@@ -43,8 +47,9 @@ describe("CacheSync startup progress", () => {
       memberPerspectives: () =>
         setTraitProjectionTypes(loadRelationshipTypesFromContent(contentDir)),
     });
+  const cache = wrapSyncGraphDatabase(db);
     const sync = new CacheSync(fixture.ctx.store, cache, reporter);
-    sync.ensureReady();
+    await sync.ensureReady();
 
     const phases = events.map((event) => event.phase);
     const expected: SyncProgressPhase[] = [
@@ -58,10 +63,10 @@ describe("CacheSync startup progress", () => {
       expect(phases).toContain(phase);
     }
     expect(events.some((event) => event.phase === "rebuild" && (event.total ?? 0) >= 1)).toBe(true);
-    cache.close();
+    await cache.close();
   });
 
-  test("status tracker exposes numeric progress during ensureReadyAsync", async () => {
+  test("status tracker exposes numeric progress during ensureReady", async () => {
     const tracker = createCacheSyncStatusTracker();
     const contentDir = fixture.ctx.store.contentDir;
     const dbPath = `${fixture.ctx.cache.path}.async`;
@@ -71,7 +76,7 @@ describe("CacheSync startup progress", () => {
       /* fresh */
     }
 
-    const cache = new GraphDatabase(dbPath, {
+    const db = new GraphDatabase(dbPath, {
       propertyCodec: {
         encode: (properties) => encodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
         decode: (properties) => decodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
@@ -79,21 +84,22 @@ describe("CacheSync startup progress", () => {
       memberPerspectives: () =>
         setTraitProjectionTypes(loadRelationshipTypesFromContent(contentDir)),
     });
+  const cache = wrapSyncGraphDatabase(db);
     const sync = new CacheSync(fixture.ctx.store, cache, tracker.report);
     expect(tracker.getStatus().ready).toBe(false);
     expect(tracker.getStatus().syncing).toBe(true);
 
-    await sync.ensureReadyAsync();
+    await sync.ensureReady();
     tracker.markReady();
 
     const status = tracker.getStatus();
     expect(status.ready).toBe(true);
     expect(status.syncing).toBe(false);
     expect(status.phase).toBe("ready");
-    cache.close();
+    await cache.close();
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

@@ -4,6 +4,8 @@
 
 **Two-tier domain graph API** for integrators and Tome hosts: **`TomeGraphStoreBase`** (imperative CRUD on canonical storage, flatfile-viable without SQL) and **`TomeGraphStoreQueryable`** (read queries via **`executeImp`**, Imp graphs executed by SQL lowering or `imp-execution`).
 
+All I/O-facing store and cache methods return **`Promise`** (Postgres-shaped). The SQLite query cache runs in a **worker** so awaits free the main event loop — see [tome-db.md](./tome-db.md) § Async cache and SQLite worker.
+
 Replaces ad-hoc use of separate `TomeDataStore` + `TomeQueryCache` at call sites. Legacy store/cache modules remain host infrastructure during migration.
 
 ## When to read this

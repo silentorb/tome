@@ -48,8 +48,8 @@ function sqliteExecuteImp(
   },
 ): ExtensionExecuteImpServices {
   return {
-    executeImp(graph, context) {
-      const compiled = compileImpGraphToTomeSql(graph, {
+    async executeImp(graph, context) {
+      const compiled = await compileImpGraphToTomeSql(graph, {
         schema: options?.schema,
         pageNodeId: context?.pageNodeId ?? options?.pageNodeId,
         corpus: options?.corpus,
@@ -162,15 +162,15 @@ describe("tome-query schema", () => {
   });
 });
 
-describe("tome-query compile + execute", () => {
-  test("compiles default graph over nodes", () => {
-    const { sql } = compileReactFlowQuery(defaultReactFlowGraph());
+describe("tome-query compile + execute", async () => {
+  test("compiles default graph over nodes", async () => {
+    const { sql } = await compileReactFlowQuery(defaultReactFlowGraph());
     expect(sql.toLowerCase()).toContain("nodes");
     expect(sql).toContain('is_archived" = 0');
     expect(sql.toLowerCase()).toContain("select *");
   });
 
-  test("project id-only compiles with title plumbing", () => {
+  test("project id-only compiles with title plumbing", async () => {
     const reactFlow = {
       nodes: [
         {
@@ -209,7 +209,7 @@ describe("tome-query compile + execute", () => {
         },
       ],
     };
-    const { sql } = compileReactFlowQuery(reactFlow);
+    const { sql } = await compileReactFlowQuery(reactFlow);
     expect(sql.toLowerCase()).toContain("title");
     expect(sql.toLowerCase()).toContain('"id"');
   });
@@ -262,9 +262,9 @@ describe("tome-query compile + execute", () => {
     expect(sql).toBe('select * from "nodes"');
   });
 
-  test("compiles when multiple edges target the same input port", () => {
+  test("compiles when multiple edges target the same input port", async () => {
     const base = defaultReactFlowGraph();
-    const { sql } = compileReactFlowQuery({
+    const { sql } = await compileReactFlowQuery({
       ...base,
       edges: [
         ...base.edges,
@@ -280,7 +280,7 @@ describe("tome-query compile + execute", () => {
     expect(sql.toLowerCase()).toContain("nodes");
   });
 
-  test("compiles project + filter graph", () => {
+  test("compiles project + filter graph", async () => {
     const reactFlow = {
       nodes: [
         {
@@ -372,7 +372,7 @@ describe("tome-query compile + execute", () => {
       ],
     };
 
-    const { sql, parameters } = compileReactFlowQuery(reactFlow);
+    const { sql, parameters } = await compileReactFlowQuery(reactFlow);
     expect(sql.toLowerCase()).toContain("where");
     expect(sql.toLowerCase()).toContain("title");
     expect(parameters).toContain("Alpha");
@@ -577,7 +577,7 @@ describe("tome-query compile + execute", () => {
     expect(html).toContain("Alpha");
   });
 
-  test("compiles traverse over relationship_projections", () => {
+  test("compiles traverse over relationship_projections", async () => {
     const association = "00000000000000000000000001";
     const expectedType = projectionType(association, 0);
     const reactFlow = {
@@ -619,7 +619,7 @@ describe("tome-query compile + execute", () => {
       ],
     };
 
-    const { sql, parameters } = compileReactFlowQuery(reactFlow);
+    const { sql, parameters } = await compileReactFlowQuery(reactFlow);
     expect(sql).toContain("relationship_projections");
     expect(sql).toContain("source_node_id");
     expect(parameters).toContain(expectedType);
@@ -1082,8 +1082,8 @@ describe("query grouping", () => {
     expect(grouped.groups.map((group) => group.key)).toEqual(["Primary", "Consideration"]);
   });
 
-  test("compileReactFlowQuery with group emits ORDER BY", () => {
-    const { sql } = compileReactFlowQuery({
+  test("compileReactFlowQuery with group emits ORDER BY", async () => {
+    const { sql } = await compileReactFlowQuery({
       nodes: [
         { id: "in", type: "input", position: { x: 0, y: 0 }, data: { inputValues: {} } },
         {

@@ -11,6 +11,11 @@ export {
 } from "./schema";
 export type { PromotedNodeColumn, PromotedRelationshipColumn } from "./schema";
 export { createSqliteModule } from "./module";
+export { openWorkerSqliteCache } from "./async-cache";
+export {
+  openInProcessAsyncSqliteCache,
+  wrapSyncGraphDatabase,
+} from "./wrap-sync-cache";
 export { isSafeSqlPropertyKey, isSafeProjectionType } from "./membership-query";
 export type {
   RelationshipProjectionRow,

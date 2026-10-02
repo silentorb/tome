@@ -14,7 +14,7 @@ export function createExtensionGraphMutateServices(
   ctx: TomeWriteContext,
 ): ExtensionGraphMutateServices {
   return {
-    linkOutgoing(input) {
+    async linkOutgoing(input) {
       return linkOutgoingRelationship(ctx, {
         sourceId: input.sourceId,
         targetId: input.targetId,
@@ -22,11 +22,11 @@ export function createExtensionGraphMutateServices(
         properties: input.properties as Properties | undefined,
       });
     },
-    unlinkOutgoing(sourceId, targetId, type) {
+    async unlinkOutgoing(sourceId, targetId, type) {
       return unlinkOutgoingRelationship(ctx, sourceId, targetId, type);
     },
-    replaceOutgoingProperties(sourceId, targetId, type, properties) {
-      const replaced = writeStoreReplaceRelationshipProperties(
+    async replaceOutgoingProperties(sourceId, targetId, type, properties) {
+      const replaced = await writeStoreReplaceRelationshipProperties(
         ctx.graphStore,
         sourceId,
         targetId,
@@ -34,7 +34,7 @@ export function createExtensionGraphMutateServices(
         properties as Properties,
       );
       if (!replaced) return "not_found";
-      syncAfterRelationshipsWrite(ctx);
+      await syncAfterRelationshipsWrite(ctx);
       return null;
     },
   };

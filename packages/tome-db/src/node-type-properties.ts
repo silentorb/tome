@@ -13,6 +13,7 @@ import { storedScalarColumns } from "tome-flatfile";
 import { resolveContentPath } from "tome-flatfile";
 import { loadRelationshipTypesFromContent } from "tome-flatfile";
 import { memberSideProjectionTypes } from "tome-flatfile";
+import type { Relationship } from "tome-graph-interfaces";
 import {
   coalescePriorityValue,
   enrichColumnDef,
@@ -120,17 +121,17 @@ function storedColumnDefsFromTableSchema(databaseId: string): DatabaseColumnDef[
 }
 
 /** Build typed-node Properties from IS_A membership scalars and dynamic fields. */
-export function buildPropertiesSection(
+export async function buildPropertiesSection(
   db: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
-): PropertiesSection | null {
+): Promise<PropertiesSection | null> {
   const dir = contentDir ?? resolveContentPath();
   const registry = loadRelationshipTypesFromContent(dir);
   // v1: first type membership connection when a node belongs to multiple types.
-  let setRowEdge = null as ReturnType<typeof listRelationshipsFromSource>[number] | null;
+  let setRowEdge: Relationship | null = null;
   for (const type of memberSideProjectionTypes(registry)) {
-    const connections = listRelationshipsFromSource(db, nodeId, type);
+    const connections = await listRelationshipsFromSource(db, nodeId, type);
     if (connections.length > 0) {
       setRowEdge = connections[0]!;
       break;
@@ -139,8 +140,8 @@ export function buildPropertiesSection(
   if (!setRowEdge) return null;
 
   const databaseId = setRowEdge.targetNodeId;
-  const database = readStoreGetNode(db, databaseId);
-  if (!database || !isTypeTableNode(db, databaseId)) return null;
+  const database = await readStoreGetNode(db, databaseId);
+  if (!database || !(await isTypeTableNode(db, databaseId))) return null;
 
   const typeTitle = titleFromProperties(database.properties);
   const storedCells = cellsFromConnectionProperties(setRowEdge.properties);
@@ -162,7 +163,7 @@ export function buildPropertiesSection(
     );
   }
 
-  const node = db.getNode(nodeId);
+  const node = await db.getNode(nodeId);
   const evalRow: EvalRow = {
     nodeId,
     name: node ? titleFromProperties(node.properties) : "Untitled",
@@ -172,7 +173,7 @@ export function buildPropertiesSection(
     modifiedAt: null,
   };
 
-  const { rows, dynamicColumnDefs, hiddenColumnKeys } = applyDynamicProperties(
+  const { rows, dynamicColumnDefs, hiddenColumnKeys } = await applyDynamicProperties(
     db,
     databaseId,
     "",

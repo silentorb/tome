@@ -1,4 +1,3 @@
-import type { TomeGraphStoreBase } from "tome-graph-interfaces";
 import {
   loadRelationshipTypesFromContent,
   resolveContentPath,
@@ -27,27 +26,30 @@ function resolveArchiveHubId(contentDir?: string): string | null {
 }
 
 /** True when the node has a set edge on the Archive hub (not the hub itself). */
-export function isArchivedNode(
+export async function isArchivedNode(
   store: RelationshipReadStore,
   nodeId: string,
   contentDir?: string,
-): boolean {
+): Promise<boolean> {
   const dir = contentDir ?? resolveContentPath();
   const archiveId = resolveArchiveHubId(dir);
   if (archiveId && nodeId === archiveId) return false;
-  if (readStoreIsNodeArchived(store, nodeId)) return true;
+  if (await readStoreIsNodeArchived(store, nodeId)) return true;
   if (!archiveId) return false;
 
   const registry = loadRelationshipTypesFromContent(dir);
   if (setTraitProjectionTypes(registry).length === 0) return false;
 
-  return findSetEdge(store, nodeId, archiveId, dir) !== null;
+  return (await findSetEdge(store, nodeId, archiveId, dir)) !== null;
 }
 
-export function listArchivedNodeIds(store: RelationshipReadStore, contentDir?: string): string[] {
+export async function listArchivedNodeIds(
+  store: RelationshipReadStore,
+  contentDir?: string,
+): Promise<string[]> {
   const dir = contentDir ?? resolveContentPath();
   const archiveId = resolveArchiveHubId(dir);
   if (!archiveId) return [];
-  const rows = setMemberIds(store, archiveId, dir);
+  const rows = await setMemberIds(store, archiveId, dir);
   return rows.filter((id) => id !== archiveId);
 }

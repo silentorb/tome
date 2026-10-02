@@ -3,6 +3,6 @@
  * Backed by the store node→corpus map, not the SQLite cache.
  */
 export interface ExtensionCorpusQueryServices {
-  corpusIdForNode(nodeId: string): string | null;
-  nodeIdsInCorpus(corpusId: string): readonly string[];
+  corpusIdForNode(nodeId: string): string | null | Promise<string | null>;
+  nodeIdsInCorpus(corpusId: string): readonly string[] | Promise<readonly string[]>;
 }

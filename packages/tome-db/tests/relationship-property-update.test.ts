@@ -14,38 +14,38 @@ import {
 
 const RELATED_TYPE = projectionTypeForEndpoint(TEST_RELATED_ASSOCIATION_ID, 0);
 
-describe("relationship-property-update", () => {
-  const fixture = createTestContentFixture("tome-db-conn-prop-");
+describe("relationship-property-update", async () => {
+  const fixture = await createTestContentFixture("tome-db-conn-prop-");
 
-  test("updates priority on database membership edge", () => {
+  test("updates priority on database membership edge", async () => {
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
     const pageId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),
     });
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: pageId,
       properties: { title: "Feature A" },
     });
-    seedTestRelationships(fixture, [
+    await seedTestRelationships(fixture, [
       { source: pageId, target: databaseId, type: "member_of", properties: { priority: "Low" } },
     ]);
 
     expect(
-      updateDatabaseRowProperty(fixture.ctx, databaseId, pageId, "priority", "High"),
+      await updateDatabaseRowProperty(fixture.ctx, databaseId, pageId, "priority", "High"),
     ).toBeNull();
 
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))[0];
+    const edge = (await fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1)))[0];
     expect(edge?.properties.priority).toBe("High");
   });
 
-  test("coerces empty priority to Low", () => {
+  test("coerces empty priority to Low", async () => {
     const pageId = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
     const targetId = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
-    seedTestNode(fixture, { id: pageId, properties: { title: "A" } });
-    seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
-    seedTestCompositeRelationships(fixture, [
+    await seedTestNode(fixture, { id: pageId, properties: { title: "A" } });
+    await seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
+    await seedTestCompositeRelationships(fixture, [
       {
         a: pageId,
         b: targetId,
@@ -57,18 +57,18 @@ describe("relationship-property-update", () => {
     ]);
 
     expect(
-      updateOutgoingRelationshipProperty(fixture.ctx, pageId, targetId, RELATED_TYPE, "priority", ""),
+      await updateOutgoingRelationshipProperty(fixture.ctx, pageId, targetId, RELATED_TYPE, "priority", ""),
     ).toBeNull();
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, RELATED_TYPE)[0];
+    const edge = (await fixture.ctx.cache.listRelationshipsFromSource(pageId, RELATED_TYPE))[0];
     expect(edge?.properties.priority).toBe("Low");
   });
 
-  test("rejects invalid priority values", () => {
+  test("rejects invalid priority values", async () => {
     const pageId = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
     const targetId = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
-    seedTestNode(fixture, { id: pageId, properties: { title: "A" } });
-    seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
-    seedTestCompositeRelationships(fixture, [
+    await seedTestNode(fixture, { id: pageId, properties: { title: "A" } });
+    await seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
+    await seedTestCompositeRelationships(fixture, [
       {
         a: pageId,
         b: targetId,
@@ -80,11 +80,11 @@ describe("relationship-property-update", () => {
     ]);
 
     expect(
-      updateOutgoingRelationshipProperty(fixture.ctx, pageId, targetId, RELATED_TYPE, "priority", "4"),
+      await updateOutgoingRelationshipProperty(fixture.ctx, pageId, targetId, RELATED_TYPE, "priority", "4"),
     ).toBe("invalid_value");
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

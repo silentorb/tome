@@ -10,7 +10,7 @@ import {
 } from "../../src/webview/extensions/page-block-registry";
 import type { PublicExtensionComponent } from "tome-graph-interfaces";
 
-describe("interactive page-block load error", () => {
+describe("interactive page-block load error", async () => {
   test("shows explicit error instead of htmlModule snapshot when bundle missing", async () => {
     resetPageBlockRegistryForTests();
 

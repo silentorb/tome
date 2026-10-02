@@ -167,7 +167,7 @@ Consolidate legacy dual directed edges with `bun scripts/consolidate-relationshi
 
 ### Cache sync at startup
 
-`openContentGraph` and `openTomeWriteContext` (default) still call `CacheSync.ensureReady()` **synchronously** before returning. **tome-server** instead opens a deferred write context, **binds HTTP immediately**, then runs `CacheSync.ensureReadyAsync()` (cooperative yields on progress ticks so gated routes can answer).
+`openContentGraph` and `openTomeWriteContext` (default) **await** `CacheSync.ensureReady()` before returning (Promise-based; cooperative `Bun.sleep(0)` yields on progress ticks). **tome-server** opens a deferred write context, **binds HTTP immediately**, then awaits the same `ensureReady()` path (also exposed as `ensureReadyAsync()` alias) so gated routes can answer during rebuild.
 
 While startup sync is in progress:
 
@@ -178,7 +178,11 @@ Progress is also logged to **stderr** with the **`[tome-sync]`** prefix. Inject 
 
 To avoid a long rebuild when starting the API, pre-warm the SQLite cache with `bash scripts/content-sync.sh` (same sync path as startup, no HTTP).
 
-`GraphDatabase` (`packages/tome-sqlite/src/graph.ts`) — cache / legacy tests:
+### Async cache and SQLite worker
+
+`TomeQueryCache` and `TomeGraphStoreBase` / `Queryable` methods are **Promise-returning**. Production opens (`createSqliteModule` / `openDataStoreSession`) use a **Bun Worker** that owns sync `bun:sqlite` (`GraphDatabase`); the main thread talks RPC so long SQL does not freeze the HTTP/editor event loop. Multi-step `BEGIN`…`COMMIT` work must use `cache.transaction(fn)` so other RPCs cannot interleave. In-process `wrapSyncGraphDatabase` exists for focused SQL unit tests only (still blocks the event loop). Future Postgres (or other async drivers) should implement the same Promise cache/store shapes.
+
+`GraphDatabase` (`packages/tome-sqlite/src/graph.ts`) — sync implementation used inside the worker and in unit tests:
 
 - `upsertNode(id, properties)` — create or merge node
 - `listRelationshipsFromSource` / `listRelationshipsToTarget` — query projection table by local perspective type

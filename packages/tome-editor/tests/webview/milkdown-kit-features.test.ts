@@ -42,7 +42,7 @@ function createCrepeLikeBuilder() {
   };
 }
 
-describe("milkdown kit features", () => {
+describe("milkdown kit features", async () => {
   test("installMilkdownKitFeatures creates an editor with kit cursor and code-block config", async () => {
     const root = document.createElement("div");
     document.body.appendChild(root);

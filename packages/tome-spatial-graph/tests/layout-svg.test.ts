@@ -40,7 +40,7 @@ describe("buildSpatialGraphStylesheet", () => {
   });
 });
 
-describe("layoutSpatialGraphSvg", () => {
+describe("layoutSpatialGraphSvg", async () => {
   test("returns svg markup for a small compound graph", async () => {
     const { layoutSpatialGraphSvg } = await import("../src/layout-svg");
     const config = parseSpatialGraphConfig({});

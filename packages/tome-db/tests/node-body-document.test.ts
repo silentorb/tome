@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { documentsEqual } from "tome-graph-interfaces";
-import { GraphDatabase } from "tome-sqlite";
+import type { TomeQueryCache } from "tome-service-interfaces";
+import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
 import {
   documentToStorageBody,
   parseStorageBody,
@@ -10,25 +11,26 @@ import {
 const A = "0000000000000000000000000A";
 const B = "0000000000000000000000000B";
 
-function dbWithTitles(): GraphDatabase {
+function cacheWithTitles(): { db: GraphDatabase; cache: TomeQueryCache } {
   const db = new GraphDatabase(":memory:", { clean: true });
+  const cache = wrapSyncGraphDatabase(db);
   db.upsertNode(A, { title: "Alpha" });
   db.upsertNode(B, { title: "Beta" });
-  return db;
+  return { db, cache };
 }
 
-function roundTrip(db: GraphDatabase, storage: string) {
-  const doc = storageBodyToDocument(db, storage);
-  const again = storageBodyToDocument(db, documentToStorageBody(doc));
+async function roundTrip(cache: TomeQueryCache, storage: string) {
+  const doc = await storageBodyToDocument(cache, storage);
+  const again = await storageBodyToDocument(cache, documentToStorageBody(doc));
   expect(documentsEqual(again, doc)).toBe(true);
   return doc;
 }
 
 describe("node body document", () => {
-  test("round-trips dynamic and static links", () => {
-    const db = dbWithTitles();
+  test("round-trips dynamic and static links", async () => {
+    const { db, cache } = cacheWithTitles();
     const storage = `Hello [[${A}]] and [Custom](./${B}.md).\n`;
-    const doc = roundTrip(db, storage);
+    const doc = await roundTrip(cache, storage);
     expect(doc.content).toEqual([
       {
         type: "paragraph",
@@ -46,13 +48,13 @@ describe("node body document", () => {
     db.close();
   });
 
-  test("round-trips page blocks and callouts", () => {
-    const db = dbWithTitles();
+  test("round-trips page blocks and callouts", async () => {
+    const { db, cache } = cacheWithTitles();
     const fence = ["```tome-block", JSON.stringify({ componentId: "demo.block", data: { x: 1 } }, null, 2), "```"].join(
       "\n",
     );
     const storage = `Before\n\n${fence}\n\n> 💡 A note\n`;
-    const doc = roundTrip(db, storage);
+    const doc = await roundTrip(cache, storage);
     expect(doc.content.map((block) => block.type)).toEqual(["paragraph", "page_block", "callout"]);
     const block = doc.content[1];
     expect(block?.type).toBe("page_block");

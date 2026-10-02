@@ -57,7 +57,7 @@ export function register(host: ServerPageBlockHost): void {
           const tableSchemas = loadTableSchemasFromContent(resolve(dir));
           const titleMap = new Map<string, string>();
           if (ctx.services.schemaQuery) {
-            const tables = await Promise.resolve(ctx.services.schemaQuery.listTypeTables());
+            const tables = await ctx.services.schemaQuery.listTypeTables();
             for (const t of tables) titleMap.set(t.id, t.title);
           }
           const options = buildPathHopOptions(relationshipTypes, tableSchemas, titleMap);

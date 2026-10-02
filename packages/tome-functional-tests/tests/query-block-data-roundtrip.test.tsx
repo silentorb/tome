@@ -77,14 +77,14 @@ function payloadFromPreparedMarkdown(markdown: string): unknown {
   return block && block.type === "block" ? block.payload.data : undefined;
 }
 
-describe("query-block data client↔API round trip", () => {
-  const fixture = createTestContentFixture("tome-func-query-data-");
-  seedTestWorkspace(fixture);
-  seedTestNode(fixture, {
+describe("query-block data client↔API round trip", async () => {
+  const fixture = await createTestContentFixture("tome-func-query-data-");
+  await seedTestWorkspace(fixture);
+  await seedTestNode(fixture, {
     id: TEST_HOME_NODE_ID,
     properties: { title: "Home" },
   });
-  seedTestNode(
+  await seedTestNode(
     fixture,
     {
       id: NODE_ID,
@@ -94,12 +94,12 @@ describe("query-block data client↔API round trip", () => {
   );
   writeTomeQueryExtensions(fixture.ctx.store.contentDir);
 
-  const api = createTestApiFromContent(fixture);
+  const api = await createTestApiFromContent(fixture);
   const client = createHandlerClient(api.handler);
 
-  afterAll(() => {
+  afterAll(async () => {
     api.handler.close();
-    destroyTestContentFixture(fixture);
+    await destroyTestContentFixture(fixture);
   });
 
   test("graph edit survives normalize → saveBody → prepare → remount", async () => {

@@ -9,37 +9,37 @@ import { writeSiteData, defaultSiteDataPath } from "../src/generate-data";
 import { tabPayloadKey } from "../src/lib/static-export";
 import type { ResolvedConfig } from "../src/config";
 
-describe("writeSiteData", () => {
+describe("writeSiteData", async () => {
   let fixture: TestContentFixture;
   let outDir: string;
 
-  afterAll(() => {
-    if (fixture) destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    if (fixture) await destroyTestContentFixture(fixture);
     if (outDir) rmSync(outDir, { recursive: true, force: true });
   });
 
   test("exports metadata, properties, relations, and multi-tab payloads", async () => {
-    fixture = createTestContentFixture("tome-static-export-");
+    fixture = await createTestContentFixture("tome-static-export-");
     outDir = mkdtempSync(join(tmpdir(), "tome-static-out-"));
 
     const typeId = "00000000000000000000000006";
     const instanceId = "00000000000000000000000007";
     const relatedId = "00000000000000000000000008";
 
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: typeId,
       properties: { ...typeTableMarkerProperties("Features DB"), body: "# About types" },
     });
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: instanceId,
       properties: { title: "Hero", body: `Mentions [[${relatedId}]]` },
     });
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: relatedId,
       properties: { title: "Related feat", body: `See [[${instanceId}]]` },
     });
 
-    seedTestRelationships(fixture, [
+    await seedTestRelationships(fixture, [
       { source: instanceId, target: typeId, type: "member_of", properties: { view: "default", row_index: 0, status: "Done" } },
       { source: instanceId, target: relatedId, type: "features", properties: { weight: "high" } },
     ]);
@@ -85,7 +85,7 @@ describe("writeSiteData", () => {
     expect(data.redirects).toEqual([]);
 
     const aliasId = "00000000000000000000000009";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: aliasId,
       properties: { title: "Alias page", url_alias: "design/alias-test", body: "Alias body" },
     });
@@ -96,7 +96,7 @@ describe("writeSiteData", () => {
     expect(aliasNode?.urlPath).toBe("design/alias-test");
 
     const bareId = "00000000000000000000000010";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: bareId,
       properties: { title: "Bare page", static_site_layout: "bare", body: "Bare body" },
     });
@@ -128,7 +128,7 @@ describe("writeSiteData", () => {
   });
 
   test("exports resolved static site footer from workspace branding", async () => {
-    const footerFixture = createTestContentFixture("tome-static-footer-");
+    const footerFixture = await createTestContentFixture("tome-static-footer-");
     const footerOutDir = mkdtempSync(join(tmpdir(), "tome-static-footer-out-"));
 
     try {
@@ -158,19 +158,19 @@ describe("writeSiteData", () => {
       const customOnly = await writeSiteData(config, join(footerOutDir, "custom-only.json"));
       expect(customOnly.staticSiteFooter).toBe(`Built in ${year}`);
     } finally {
-      destroyTestContentFixture(footerFixture);
+      await destroyTestContentFixture(footerFixture);
       rmSync(footerOutDir, { recursive: true, force: true });
     }
   });
 
   test("resolves redirects.json into site data", async () => {
-    const redirectFixture = createTestContentFixture("tome-static-redirect-");
+    const redirectFixture = await createTestContentFixture("tome-static-redirect-");
     const redirectOutDir = mkdtempSync(join(tmpdir(), "tome-static-redirect-out-"));
     invalidateRedirectsCache();
 
     try {
       const targetId = "000000000000000000000000A1";
-      seedTestNode(redirectFixture, {
+      await seedTestNode(redirectFixture, {
         id: targetId,
         properties: { title: "Target", url_alias: "design/target", body: "Body" },
       });
@@ -200,7 +200,7 @@ describe("writeSiteData", () => {
       ]);
     } finally {
       invalidateRedirectsCache();
-      destroyTestContentFixture(redirectFixture);
+      await destroyTestContentFixture(redirectFixture);
       rmSync(redirectOutDir, { recursive: true, force: true });
     }
   });

@@ -8,39 +8,39 @@ import {
 import { registerBidirectionalType, invalidateRelationshipTypesCache } from "tome-flatfile";
 import { createExtensionGraphMutateServices } from "../src/extension-graph-mutate";
 
-describe("createExtensionGraphMutateServices", () => {
-  const fixture: TestContentFixture = createTestContentFixture("tome-ext-graph-mutate-");
+describe("createExtensionGraphMutateServices", async () => {
+  const fixture: TestContentFixture = await createTestContentFixture("tome-ext-graph-mutate-");
   const sourceId = "0000000000000000000000001C";
   const targetId = "0000000000000000000000001X";
   let assoc = "";
 
-  beforeAll(() => {
+  beforeAll(async () => {
     const registry = fixture.ctx.store.readRelationshipTypesFile();
     assoc = registerBidirectionalType(registry, "Dependents", "Dependencies");
     fixture.ctx.store.writeRelationshipTypesFile(registry);
     invalidateRelationshipTypesCache();
-    seedTestNode(fixture, { id: sourceId, properties: { title: "A" } });
-    seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
+    await seedTestNode(fixture, { id: sourceId, properties: { title: "A" } });
+    await seedTestNode(fixture, { id: targetId, properties: { title: "B" } });
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 
-  test("links and unlinks outgoing edges", () => {
+  test("links and unlinks outgoing edges", async () => {
     const services = createExtensionGraphMutateServices(fixture.ctx);
     expect(
-      services.linkOutgoing({ sourceId, targetId, type: assoc }),
+      await services.linkOutgoing({ sourceId, targetId, type: assoc }),
     ).toBeNull();
     expect(fixture.ctx.store.findRelationship(sourceId, targetId, assoc)).toBeTruthy();
-    expect(services.unlinkOutgoing(sourceId, targetId, assoc)).toBeNull();
+    expect(await services.unlinkOutgoing(sourceId, targetId, assoc)).toBeNull();
     expect(fixture.ctx.store.findRelationship(sourceId, targetId, assoc)).toBeNull();
   });
 
-  test("stores and replaces relationship properties", () => {
+  test("stores and replaces relationship properties", async () => {
     const services = createExtensionGraphMutateServices(fixture.ctx);
     expect(
-      services.linkOutgoing({
+      await services.linkOutgoing({
         sourceId,
         targetId,
         type: assoc,
@@ -53,7 +53,7 @@ describe("createExtensionGraphMutateServices", () => {
     expect(created?.properties.endpoints).toEqual([{ from: "end", to: "start" }]);
 
     expect(
-      services.replaceOutgoingProperties(sourceId, targetId, assoc, {
+      await services.replaceOutgoingProperties(sourceId, targetId, assoc, {
         endpoints: [
           { from: "end", to: "start" },
           { from: "start", to: "start" },
@@ -65,6 +65,6 @@ describe("createExtensionGraphMutateServices", () => {
       { from: "end", to: "start" },
       { from: "start", to: "start" },
     ]);
-    expect(services.unlinkOutgoing(sourceId, targetId, assoc)).toBeNull();
+    expect(await services.unlinkOutgoing(sourceId, targetId, assoc)).toBeNull();
   });
 });

@@ -135,29 +135,29 @@ function sortKeysDeep(value: unknown): unknown {
  * Delegates to existing resolvers so display and index stay one algorithm until
  * resolvers are fully inlined into the IR interpreters.
  */
-export function evaluateFixedAggregate(
+export async function evaluateFixedAggregate(
   ctx: DynamicResolverContext,
   resolverId: string,
   params: Record<string, unknown>,
-): Map<string, number> {
+): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   switch (resolverId) {
     case "characters.allSceneCount": {
-      const prefetch = buildAllSceneCountPrefetch(ctx, params);
+      const prefetch = await buildAllSceneCountPrefetch(ctx, params);
       for (const nodeId of ctx.rowNodeIds) {
         out.set(nodeId, Number(resolveAllSceneCount(ctx, params, nodeId, prefetch)) || 0);
       }
       return out;
     }
     case "inspirations.wonder": {
-      const prefetch = buildWonderPrefetch(ctx, params);
+      const prefetch = await buildWonderPrefetch(ctx, params);
       for (const nodeId of ctx.rowNodeIds) {
         out.set(nodeId, Number(resolveWonder(ctx, params, nodeId, prefetch)) || 0);
       }
       return out;
     }
     case "inspirations.weightedUse": {
-      const prefetch = buildWeightedUsePrefetch(ctx, params);
+      const prefetch = await buildWeightedUsePrefetch(ctx, params);
       for (const nodeId of ctx.rowNodeIds) {
         out.set(nodeId, Number(resolveWeightedUse(ctx, params, nodeId, prefetch)) || 0);
       }
@@ -171,16 +171,16 @@ export function evaluateFixedAggregate(
 /**
  * Evaluate a column-set aggregate for every member for one bound dimension.
  */
-export function evaluateColumnSetAggregate(
+export async function evaluateColumnSetAggregate(
   ctx: DynamicResolverContext,
   resolverId: string,
   params: Record<string, unknown>,
   dimensionId: string,
-): Map<string, number> {
+): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   switch (resolverId) {
     case "characters.sceneCountByProduct": {
-      const prefetch = buildSceneCountByProductPrefetch(ctx, params);
+      const prefetch = await buildSceneCountByProductPrefetch(ctx, params);
       for (const nodeId of ctx.rowNodeIds) {
         out.set(
           nodeId,

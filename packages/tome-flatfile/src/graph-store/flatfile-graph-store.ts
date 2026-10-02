@@ -67,7 +67,7 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
     return this.store.contentDir;
   }
 
-  close(): void {
+  async close(): Promise<void> {
     this.store.close();
   }
 
@@ -100,40 +100,44 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
     return contentDirForNode(this.store, nodeId);
   }
 
-  listNodeIds(): string[] {
+  async listNodeIds(): Promise<string[]> {
     return this.store.listNodeIds();
   }
 
-  getNode(id: string): Node | null {
+  async getNode(id: string): Promise<Node | null> {
     return this.store.readNode(id);
   }
 
-  upsertNode(node: Node, body?: string): void {
+  async upsertNode(node: Node, body?: string): Promise<void> {
     this.store.writeNode(node, body);
   }
 
-  upsertNodeToCorpus(corpusId: string, node: Node, body?: string): void {
+  async upsertNodeToCorpus(corpusId: string, node: Node, body?: string): Promise<void> {
     this.store.writeNodeToCorpus(corpusId, node, body);
   }
 
-  mergeNodeProperties(id: string, patch: Properties): boolean {
+  async mergeNodeProperties(id: string, patch: Properties): Promise<boolean> {
     return this.store.mergeNodeProperties(id, patch);
   }
 
-  deleteNode(id: string): void {
+  async deleteNode(id: string): Promise<void> {
     this.store.deleteNodeFile(id);
     this.store.removeIncidentRelationships(id);
   }
 
-  archiveNodeFile(id: string): boolean {
+  async archiveNodeFile(id: string): Promise<boolean> {
     return this.store.moveNodeToArchive(id);
   }
 
-  unarchiveNodeFile(id: string): boolean {
+  async unarchiveNodeFile(id: string): Promise<boolean> {
     return this.store.moveNodeFromArchive(id);
   }
 
-  getRelationshipRecord(a: string, b: string, type: string): RelationshipRecordRef | null {
+  async getRelationshipRecord(
+    a: string,
+    b: string,
+    type: string,
+  ): Promise<RelationshipRecordRef | null> {
     const entry = this.store.findContentEntry(a, b, type);
     if (!entry) return null;
     return {
@@ -144,7 +148,11 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
     };
   }
 
-  findRelationshipRecord(a: string, b: string, type: string): Relationship | null {
+  async findRelationshipRecord(
+    a: string,
+    b: string,
+    type: string,
+  ): Promise<Relationship | null> {
     const found = this.store.findRelationship(a, b, type);
     if (!found) return null;
     return {
@@ -157,109 +165,113 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
     };
   }
 
-  upsertRelationshipRecord(entry: RelationshipRecordRef): void {
+  async upsertRelationshipRecord(entry: RelationshipRecordRef): Promise<void> {
     this.store.upsertRelationship(entry.a, entry.b, entry.type, entry.properties ?? {});
   }
 
-  deleteRelationshipRecord(a: string, b: string, type: string): boolean {
+  async deleteRelationshipRecord(a: string, b: string, type: string): Promise<boolean> {
     return this.store.deleteRelationship(a, b, type);
   }
 
-  upsertRelationship(
+  async upsertRelationship(
     source: string,
     target: string,
     projectionType: string,
     properties?: Properties,
-  ): void {
+  ): Promise<void> {
     this.store.upsertRelationship(source, target, projectionType, properties);
   }
 
-  deleteRelationship(source: string, target: string, projectionType: string): boolean {
+  async deleteRelationship(
+    source: string,
+    target: string,
+    projectionType: string,
+  ): Promise<boolean> {
     return this.store.deleteRelationship(source, target, projectionType);
   }
 
-  mergeRelationshipProperties(
+  async mergeRelationshipProperties(
     source: string,
     target: string,
     projectionType: string,
     patch: Properties,
-  ): void {
+  ): Promise<void> {
     this.store.mergeRelationshipProperties(source, target, projectionType, patch);
   }
 
-  replaceRelationshipProperties(
+  async replaceRelationshipProperties(
     source: string,
     target: string,
     projectionType: string,
     properties: Properties,
-  ): boolean {
+  ): Promise<boolean> {
     return this.store.replaceRelationshipProperties(source, target, projectionType, properties);
   }
 
-  readRelationshipTypes(): RelationshipTypesFile {
+  async readRelationshipTypes(): Promise<RelationshipTypesFile> {
     return loadRelationshipTypesFromContent(this.contentDir) as RelationshipTypesFile;
   }
 
-  writeRelationshipTypes(file: RelationshipTypesFile): void {
+  async writeRelationshipTypes(file: RelationshipTypesFile): Promise<void> {
     this.store.writeRelationshipTypesFile(file as Parameters<ContentStore["writeRelationshipTypesFile"]>[0]);
   }
 
-  readSchema(): SchemaFile {
+  async readSchema(): Promise<SchemaFile> {
     return loadSchemaFromContent(this.contentDir);
   }
 
-  writeSchema(file: SchemaFile): void {
+  async writeSchema(file: SchemaFile): Promise<void> {
     atomicWriteSchema(this.contentDir, file);
   }
 
-  readViews(): ViewsFile {
+  async readViews(): Promise<ViewsFile> {
     return loadViewsFromContent(this.contentDir);
   }
 
-  writeViews(file: ViewsFile): void {
+  async writeViews(file: ViewsFile): Promise<void> {
     this.store.writeViewsFile(file);
   }
 
-  readTableSchemas(): TableSchemasFile {
+  async readTableSchemas(): Promise<TableSchemasFile> {
     return loadTableSchemasFromContent(this.contentDir);
   }
 
-  writeTableSchemas(file: TableSchemasFile): void {
+  async writeTableSchemas(file: TableSchemasFile): Promise<void> {
     this.store.writeTableSchemasFile(file);
   }
 
-  readWorkspace(): WorkspaceFile {
+  async readWorkspace(): Promise<WorkspaceFile> {
     return loadWorkspaceFromContent(this.contentDir);
   }
 
-  writeWorkspace(file: WorkspaceFile): void {
+  async writeWorkspace(file: WorkspaceFile): Promise<void> {
     this.store.writeWorkspaceFile(file);
   }
 
-  writeWorkspaceForCorpus(corpusId: string, file: WorkspaceFile): void {
+  async writeWorkspaceForCorpus(corpusId: string, file: WorkspaceFile): Promise<void> {
     this.store.writeWorkspaceFileForCorpus(corpusId, file);
   }
 
-  readDynamicProperties(): DynamicPropertiesFile {
+  async readDynamicProperties(): Promise<DynamicPropertiesFile> {
     return this.store.readDynamicPropertiesFile() as DynamicPropertiesFile;
   }
 
-  writeDynamicProperties(file: DynamicPropertiesFile): void {
+  async writeDynamicProperties(file: DynamicPropertiesFile): Promise<void> {
     this.store.writeDynamicPropertiesFile(
       file as Parameters<ContentStore["writeDynamicPropertiesFile"]>[0],
     );
   }
 
-  isNodeArchived(id: string): boolean {
+  async isNodeArchived(id: string): Promise<boolean> {
     return this.store.isNodeFileArchived(id);
   }
 
-  forEachRelationshipRecord(
-    fn: (entry: RelationshipRecordRef) => void,
+  async forEachRelationshipRecord(
+    fn: (entry: RelationshipRecordRef) => void | Promise<void>,
     options?: { includeArchived?: boolean },
-  ): void {
+  ): Promise<void> {
     for (const entry of this.store.readRelationshipsFile().relationships) {
-      fn({
+      await fn({
         a: entry.a,
         b: entry.b,
         type: entry.type,
@@ -268,7 +280,7 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
     }
     if (options?.includeArchived) {
       for (const entry of this.store.readArchivedRelationships()) {
-        fn({
+        await fn({
           a: entry.a,
           b: entry.b,
           type: entry.type,
@@ -278,13 +290,13 @@ export class FlatfileGraphStore implements TomeGraphStoreBase {
     }
   }
 
-  listRelationshipProjections(
+  async listRelationshipProjections(
     nodeId: string,
     options?: ListRelationshipProjectionsOptions,
-  ): Relationship[] {
+  ): Promise<Relationship[]> {
     const direction = options?.direction ?? "both";
     const projectionType = options?.projectionType;
-    const registry = this.readRelationshipTypes();
+    const registry = await this.readRelationshipTypes();
     const seen = new Set<string>();
     const results: Relationship[] = [];
 

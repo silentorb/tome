@@ -17,27 +17,27 @@ import type { RelationshipPropertyUpdateError } from "tome-graph-interfaces";
 
 export type { RelationshipPropertyUpdateError } from "tome-graph-interfaces";
 
-export function updateOutgoingRelationshipProperty(
+export async function updateOutgoingRelationshipProperty(
   ctx: TomeWriteContext,
   sourceNodeId: string,
   targetNodeId: string,
   type: string,
   propertyKey: string,
   value: string | null,
-): RelationshipPropertyUpdateError | null {
+): Promise<RelationshipPropertyUpdateError | null> {
   const store = ctx.graphStore;
-  const connection = writeStoreFindRelationship(store, sourceNodeId, targetNodeId, type);
+  const connection = await writeStoreFindRelationship(store, sourceNodeId, targetNodeId, type);
   if (!connection) return "not_found";
 
   if (isPriorityColumnKey(propertyKey)) {
     const defaultPriority = getPriorityDefault();
     const resolved: string = isUnsetPriority(value) ? defaultPriority : (value ?? defaultPriority);
     if (!isPriorityValue(resolved)) return "invalid_value";
-    writeStoreMergeRelationshipProperties(store, sourceNodeId, targetNodeId, type, {
+    await writeStoreMergeRelationshipProperties(store, sourceNodeId, targetNodeId, type, {
       ...connection.properties,
       [propertyKey]: resolved,
     });
-    syncAfterRelationshipsWrite(ctx);
+    await syncAfterRelationshipsWrite(ctx);
     return null;
   }
 
@@ -48,23 +48,28 @@ export function updateOutgoingRelationshipProperty(
     patch[propertyKey] = value;
   }
 
-  writeStoreMergeRelationshipProperties(store, sourceNodeId, targetNodeId, type, patch);
-  syncAfterRelationshipsWrite(ctx);
+  await writeStoreMergeRelationshipProperties(store, sourceNodeId, targetNodeId, type, patch);
+  await syncAfterRelationshipsWrite(ctx);
   return null;
 }
 
-export function updateDatabaseRowProperty(
+export async function updateDatabaseRowProperty(
   ctx: TomeWriteContext,
   databaseId: string,
   nodeId: string,
   propertyKey: string,
   value: string | null,
-): RelationshipPropertyUpdateError | null {
+): Promise<RelationshipPropertyUpdateError | null> {
   const [, memberPerspective] = setRoleProjectionTypesForNode(
     databaseId,
     writeStoreContentDir(ctx.graphStore),
   );
-  const connection = writeStoreFindRelationship(ctx.graphStore, nodeId, databaseId, memberPerspective);
+  const connection = await writeStoreFindRelationship(
+    ctx.graphStore,
+    nodeId,
+    databaseId,
+    memberPerspective,
+  );
   if (connection) {
     return updateOutgoingRelationshipProperty(
       ctx,

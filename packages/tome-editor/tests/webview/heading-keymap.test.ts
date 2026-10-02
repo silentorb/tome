@@ -51,7 +51,7 @@ function dispatchModDigit(
   );
 }
 
-describe("heading keymap", () => {
+describe("heading keymap", async () => {
   test("isHeadingLevelShortcut accepts Mod+1-6 without shift or alt", () => {
     expect(
       isHeadingLevelShortcut(

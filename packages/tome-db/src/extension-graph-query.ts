@@ -22,15 +22,15 @@ function titleFromProperties(properties: Record<string, unknown>): string {
   return "Untitled";
 }
 
-function titleFromStore(store: TomeGraphStoreQueryable, id: string): string {
-  return titleFromProperties(store.getNode(id)?.properties ?? {});
+async function titleFromStore(store: TomeGraphStoreQueryable, id: string): Promise<string> {
+  return titleFromProperties((await store.getNode(id))?.properties ?? {});
 }
 
-function listTypeMembersFromStore(
+async function listTypeMembersFromStore(
   store: TomeGraphStoreQueryable,
   typeId: string,
   contentDir?: string,
-): GraphQueryNode[] {
+): Promise<GraphQueryNode[]> {
   const dir = contentDir ?? store.contentDir;
   const runtime = loadRelationshipRuntimeFromContent(dir);
   const registry = loadRelationshipTypesFromContent(dir);
@@ -40,12 +40,9 @@ function listTypeMembersFromStore(
     const relationshipTypeId = normalizeRelationshipTypeId(composite);
     const def = registry.relationshipTypes[relationshipTypeId];
     const { parentIndex } = setRoleIndices(def);
-    const executed = store.executeImp(
+    const executed = await store.executeImp(
       typeMembersGraph(typeId, relationshipTypeId, parentIndex),
     );
-    if (executed instanceof Promise) {
-      throw new Error("ExtensionGraphQueryServices requires synchronous executeImp");
-    }
     for (const row of executed.rows) {
       memberIds.add(String(row.id));
     }
@@ -53,22 +50,24 @@ function listTypeMembersFromStore(
 
   const members: GraphQueryNode[] = [];
   for (const memberId of memberIds) {
-    if (store.isNodeArchived(memberId)) continue;
-    members.push({ id: memberId, title: titleFromStore(store, memberId) });
+    if (await store.isNodeArchived(memberId)) continue;
+    members.push({ id: memberId, title: await titleFromStore(store, memberId) });
   }
   members.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
   return members;
 }
 
-function listEdgesFromStore(
+async function listEdgesFromStore(
   store: TomeGraphStoreQueryable,
   options: { nodeIds: readonly string[]; types?: readonly string[] },
-): GraphQueryEdge[] {
+): Promise<GraphQueryEdge[]> {
   const nodeIdSet = new Set(options.nodeIds);
   const typeSet = options.types?.length ? new Set(options.types) : null;
-  const relationshipTypes = store.readRelationshipTypes();
+  const relationshipTypes = await store.readRelationshipTypes();
   const entries: RelationshipRecordRef[] = [];
-  store.forEachRelationshipRecord((entry) => entries.push(entry));
+  await store.forEachRelationshipRecord((entry) => {
+    entries.push(entry);
+  });
   const { projections } = expandAllRelationships(entries, relationshipTypes);
 
   const seen = new Set<string>();

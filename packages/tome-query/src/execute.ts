@@ -89,12 +89,12 @@ export function buildQueryImpGraph(
   return ensureIdentityTitleProjection(reactFlowToImp(reactFlow.nodes, edges));
 }
 
-export function compileReactFlowQuery(
+export async function compileReactFlowQuery(
   reactFlow: ReactFlowGraph,
   options?: CompileReactFlowQueryOptions,
-): CompiledTomeQuery {
+): Promise<CompiledTomeQuery> {
   const graph = buildQueryImpGraph(reactFlow, options);
-  const compiled = compileImpGraphToTomeSql(graph, {
+  const compiled = await compileImpGraphToTomeSql(graph, {
     schema: options?.schema,
     pageNodeId: options?.pageNodeId,
     corpus: options?.corpus,

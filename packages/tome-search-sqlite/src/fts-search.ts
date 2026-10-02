@@ -79,7 +79,7 @@ function mapHits(
 
 export function createFtsSearch(db: Database): TomeSearch {
   return {
-    search(request: TomeSearchRequest): TomeSearchHit[] {
+    async search(request: TomeSearchRequest): Promise<TomeSearchHit[]> {
       const { query, limit, allowedTypeIds, allowedNodeIds } = request;
       if (allowedNodeIds && allowedNodeIds.size === 0) return [];
 
@@ -107,7 +107,7 @@ export function createFtsSearch(db: Database): TomeSearch {
       return mapHits(rows, query);
     },
 
-    searchWindow(request: TomeSearchWindowRequest): TomeSearchWindowResult {
+    async searchWindow(request: TomeSearchWindowRequest): Promise<TomeSearchWindowResult> {
       const { query, allowedTypeIds, allowedNodeIds } = request;
       if (allowedNodeIds && allowedNodeIds.size === 0) {
         return { hits: [], total: 0 };

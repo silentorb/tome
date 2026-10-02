@@ -7,7 +7,7 @@ import type {
 } from "tome-interfaces/extension-services";
 import type { HtmlPageBlockRenderer } from "tome-interfaces/page-block/html";
 
-describe("extension graph query types", () => {
+describe("extension graph query types", async () => {
   test("sync graph query services satisfy the contract", () => {
     const nodes: GraphQueryNode[] = [{ id: "a", title: "A" }];
     const edges: GraphQueryEdge[] = [{ id: "e1", sourceId: "a", targetId: "b", type: "neighbor" }];

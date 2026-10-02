@@ -46,8 +46,8 @@ function considerationHopGraph(): Graph {
 }
 
 describe("tome-imp-sql edge property filter", () => {
-  test("traverse with edge_property uses promoted priority column", () => {
-    const { sql, parameters } = compileImpGraphToTomeSql(considerationHopGraph());
+  test("traverse with edge_property uses promoted priority column", async () => {
+    const { sql, parameters } = await compileImpGraphToTomeSql(considerationHopGraph());
     expect(sql).toContain("path_edges.priority");
     expect(sql.toLowerCase()).not.toContain("json_extract(path_edges.properties");
     expect(sql).toContain("relationship_projections");
@@ -55,15 +55,15 @@ describe("tome-imp-sql edge property filter", () => {
     expect(parameters).toContain("Consideration");
   });
 
-  test("schema encodes enum edge_equals to cache index", () => {
-    const { parameters } = compileImpGraphToTomeSql(considerationHopGraph(), {
+  test("schema encodes enum edge_equals to cache index", async () => {
+    const { parameters } = await compileImpGraphToTomeSql(considerationHopGraph(), {
       schema: MARLOTH_LIKE_SCHEMA,
     });
     expect(parameters).toContain(0);
     expect(parameters).not.toContain("Consideration");
   });
 
-  test("schema encodes enum label in node column equals filter", () => {
+  test("schema encodes enum label in node column equals filter", async () => {
     const graph: Graph = {
       nodes: {
         in: { id: "in", type: "input", inputs: {} },
@@ -90,7 +90,7 @@ describe("tome-imp-sql edge property filter", () => {
         },
       },
     };
-    const { parameters } = compileImpGraphToTomeSql(graph, { schema: MARLOTH_LIKE_SCHEMA });
+    const { parameters } = await compileImpGraphToTomeSql(graph, { schema: MARLOTH_LIKE_SCHEMA });
     expect(parameters).toContain(0);
     expect(parameters).not.toContain("Consideration");
   });

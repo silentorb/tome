@@ -6,7 +6,7 @@ import {
   waitForApi,
 } from "../src/create-http-client";
 
-describe("HTTP client cache syncing", () => {
+describe("HTTP client cache syncing", async () => {
   test("fetchJson throws CacheSyncingError on 503 cache_syncing", async () => {
     const originalFetch = globalThis.fetch;
     globalThis.fetch = (async () =>

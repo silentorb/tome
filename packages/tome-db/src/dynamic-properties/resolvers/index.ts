@@ -20,48 +20,48 @@ function stringParam(params: Record<string, unknown>, key: string): string {
   return String(params[key] ?? "").trim();
 }
 
-function listRelationshipTypesFromComposite(
+async function listRelationshipTypesFromComposite(
   db: RelationshipReadStore,
   nodeId: string,
   compositeType: string,
-): Relationship[] {
+): Promise<Relationship[]> {
   if (!compositeType) return [];
-  return listRelationshipsForComposite(db, nodeId, compositeType);
+  return await listRelationshipsForComposite(db, nodeId, compositeType);
 }
 
 /** Character→scene links via named composite. */
-function listCharacterSceneConnections(
+async function listCharacterSceneConnections(
   db: RelationshipReadStore,
   nodeId: string,
   params: Record<string, unknown>,
-): Relationship[] {
+): Promise<Relationship[]> {
   const composite = stringParam(params, "characters_scene_composite");
   if (!composite) return [];
-  return listRelationshipsForComposite(db, nodeId, composite);
+  return await listRelationshipsForComposite(db, nodeId, composite);
 }
 
-function relatedProductIdsFromScene(
+async function relatedProductIdsFromScene(
   db: RelationshipReadStore,
   sceneId: string,
   params: Record<string, unknown>,
-): string[] {
+): Promise<string[]> {
   const sceneProductComposite = stringParam(params, "scene_product_composite");
   const productsTableId = stringParam(params, "products_table_id");
   const productLabel = stringParam(params, "product_edge_label");
 
   if (sceneProductComposite) {
-    const candidates = listRelationshipsForComposite(db, sceneId, sceneProductComposite).map(
+    const candidates = (await listRelationshipsForComposite(db, sceneId, sceneProductComposite)).map(
       (relationship) => otherEndpoint(relationship, sceneId),
     );
     if (productsTableId) {
-      const productMembers = new Set(setMemberIds(db, productsTableId));
+      const productMembers = new Set(await setMemberIds(db, productsTableId));
       return candidates.filter((id) => productMembers.has(id));
     }
     return candidates;
   }
 
   if (productLabel) {
-    return listRelationshipsFromSource(db, sceneId)
+    return (await listRelationshipsFromSource(db, sceneId))
       .filter((relationship) => relationship.type === productLabel)
       .map((relationship) => relationship.targetNodeId);
   }
@@ -71,38 +71,38 @@ function relatedProductIdsFromScene(
 
 export { priorityWeight, PRIORITY_WEIGHT } from "../../property-enums";
 
-function titleFromNode(db: RelationshipReadStore, id: string): string {
-  const node = readStoreGetNode(db, id);
+async function titleFromNode(db: RelationshipReadStore, id: string): Promise<string> {
+  const node = await readStoreGetNode(db, id);
   const title = node?.properties.title;
   return typeof title === "string" && title.trim() ? title.trim() : "Untitled";
 }
 
 /** Prefetch: nodeId -> count of SCENES relationships */
-export function buildAllSceneCountPrefetch(
+export async function buildAllSceneCountPrefetch(
   ctx: DynamicResolverContext,
   params: Record<string, unknown>,
-): Map<string, number> {
+): Promise<Map<string, number>> {
   const counts = new Map<string, number>();
   for (const nodeId of ctx.rowNodeIds) {
-    counts.set(nodeId, countCharacterSceneRelationships(ctx.db, nodeId, params));
+    counts.set(nodeId, await countCharacterSceneRelationships(ctx.db, nodeId, params));
   }
   return counts;
 }
 
-function countCharacterSceneRelationships(
+async function countCharacterSceneRelationships(
   db: RelationshipReadStore,
   nodeId: string,
   params: Record<string, unknown>,
-): number {
+): Promise<number> {
   const composite = stringParam(params, "characters_scene_composite");
   const scenesTableId = stringParam(params, "scenes_table_id");
   if (composite || scenesTableId) {
-    const compositeCount = listCharacterSceneConnections(db, nodeId, params).length;
+    const compositeCount = (await listCharacterSceneConnections(db, nodeId, params)).length;
     if (compositeCount > 0) return compositeCount;
   }
   const scenesLabel = stringParam(params, "scenes_edge_label");
   if (!scenesLabel) return 0;
-  return listRelationshipsFromSource(db, nodeId)
+  return (await listRelationshipsFromSource(db, nodeId))
     .filter((relationship) => relationship.type === scenesLabel).length;
 }
 
@@ -122,10 +122,10 @@ export interface SceneCountByProductPrefetch {
   dimensions: { id: string; title: string }[];
 }
 
-export function buildSceneCountByProductPrefetch(
+export async function buildSceneCountByProductPrefetch(
   ctx: DynamicResolverContext,
   params: Record<string, unknown>,
-): SceneCountByProductPrefetch {
+): Promise<SceneCountByProductPrefetch> {
   const scenesLabel = stringParam(params, "scenes_edge_label");
   const charactersSceneComposite = stringParam(params, "characters_scene_composite");
 
@@ -136,9 +136,9 @@ export function buildSceneCountByProductPrefetch(
     const sceneMap = new Map<string, string[]>();
 
     if (charactersSceneComposite || stringParam(params, "scenes_table_id")) {
-      for (const sceneConnection of listCharacterSceneConnections(ctx.db, nodeId, params)) {
+      for (const sceneConnection of await listCharacterSceneConnections(ctx.db, nodeId, params)) {
         const sceneId = otherEndpoint(sceneConnection, nodeId);
-        const products = relatedProductIdsFromScene(ctx.db, sceneId, params);
+        const products = await relatedProductIdsFromScene(ctx.db, sceneId, params);
         if (products.length > 0) {
           sceneMap.set(sceneId, products);
           for (const pid of products) productIds.add(pid);
@@ -147,10 +147,10 @@ export function buildSceneCountByProductPrefetch(
     }
 
     if (scenesLabel) {
-      for (const sceneConnection of listRelationshipsFromSource(ctx.db, nodeId)) {
+      for (const sceneConnection of await listRelationshipsFromSource(ctx.db, nodeId)) {
         if (sceneConnection.type !== scenesLabel) continue;
         const sceneId = sceneConnection.targetNodeId;
-        const products = relatedProductIdsFromScene(ctx.db, sceneId, params);
+        const products = await relatedProductIdsFromScene(ctx.db, sceneId, params);
         if (products.length > 0) {
           sceneMap.set(sceneId, products);
           for (const pid of products) productIds.add(pid);
@@ -161,18 +161,19 @@ export function buildSceneCountByProductPrefetch(
     characterSceneProducts.set(nodeId, sceneMap);
   }
 
-  const dimensions = [...productIds]
-    .map((id) => ({ id, title: titleFromNode(ctx.db, id) }))
-    .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+  const dimensions = await Promise.all(
+    [...productIds].map(async (id) => ({ id, title: await titleFromNode(ctx.db, id) })),
+  );
+  dimensions.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
 
   return { characterSceneProducts, dimensions };
 }
 
-export function discoverSceneCountByProductDimensions(
+export async function discoverSceneCountByProductDimensions(
   ctx: DynamicResolverContext,
   params: Record<string, unknown>,
-): { id: string; title: string }[] {
-  return buildSceneCountByProductPrefetch(ctx, params).dimensions;
+): Promise<{ id: string; title: string }[]> {
+  return (await buildSceneCountByProductPrefetch(ctx, params)).dimensions;
 }
 
 export function resolveSceneCountByProduct(
@@ -197,32 +198,32 @@ export interface WeightedUsePrefetch {
   sums: Map<string, number>;
 }
 
-function inspirationFeatureConnections(
+async function inspirationFeatureConnections(
   db: RelationshipReadStore,
   nodeId: string,
   params: Record<string, unknown>,
-): Relationship[] {
+): Promise<Relationship[]> {
   const composite = stringParam(params, "inspiration_feature_composite");
   if (composite) {
-    const fromComposite = listRelationshipTypesFromComposite(db, nodeId, composite);
+    const fromComposite = await listRelationshipTypesFromComposite(db, nodeId, composite);
     if (fromComposite.length > 0) return fromComposite;
   }
   const featuresLabel = stringParam(params, "features_edge_label");
   if (!featuresLabel) return [];
-  return listRelationshipsFromSource(db, nodeId, featuresLabel);
+  return await listRelationshipsFromSource(db, nodeId, featuresLabel);
 }
 
-export function buildWeightedUsePrefetch(
+export async function buildWeightedUsePrefetch(
   ctx: DynamicResolverContext,
   params: Record<string, unknown>,
-): WeightedUsePrefetch {
+): Promise<WeightedUsePrefetch> {
   const featuresTableId = stringParam(params, "features_table_id");
 
   const priorityByFeature = new Map<string, number>();
   if (featuresTableId) {
     const registry = loadRelationshipTypesFromContent(resolveContentPath());
     for (const type of setTraitProjectionTypes(registry)) {
-      for (const connection of listRelationshipsToTarget(ctx.db, featuresTableId, type)) {
+      for (const connection of await listRelationshipsToTarget(ctx.db, featuresTableId, type)) {
         priorityByFeature.set(connection.sourceNodeId, priorityWeight(connection.properties.priority));
       }
     }
@@ -231,7 +232,7 @@ export function buildWeightedUsePrefetch(
   const sums = new Map<string, number>();
   for (const nodeId of ctx.rowNodeIds) {
     let sum = 0;
-    for (const featConnection of inspirationFeatureConnections(ctx.db, nodeId, params)) {
+    for (const featConnection of await inspirationFeatureConnections(ctx.db, nodeId, params)) {
       const featureId = otherEndpoint(featConnection, nodeId);
       sum += priorityByFeature.get(featureId) ?? 0;
     }
@@ -255,25 +256,25 @@ export interface WonderPrefetch {
   counts: Map<string, number>;
 }
 
-export function buildWonderPrefetch(
+export async function buildWonderPrefetch(
   ctx: DynamicResolverContext,
   params: Record<string, unknown>,
-): WonderPrefetch {
+): Promise<WonderPrefetch> {
   const themeLabelRaw = stringParam(params, "theme_edge_label");
   const themeLabel = themeLabelRaw;
   const themeTargetId = stringParam(params, "theme_target_id");
 
   const themedFeatures = new Set<string>();
   if (themeTargetId && themeLabel) {
-    for (const connection of listRelationshipsToTarget(ctx.db, themeTargetId)) {
+    for (const connection of await listRelationshipsToTarget(ctx.db, themeTargetId)) {
       if (connection.type === themeLabel) {
         themedFeatures.add(connection.sourceNodeId);
       }
     }
-    for (const connection of listRelationshipsFromSource(ctx.db, themeTargetId, themeLabel)) {
+    for (const connection of await listRelationshipsFromSource(ctx.db, themeTargetId, themeLabel)) {
       themedFeatures.add(connection.targetNodeId);
     }
-    for (const connection of listRelationshipsFromSource(ctx.db, themeTargetId)) {
+    for (const connection of await listRelationshipsFromSource(ctx.db, themeTargetId)) {
       if (connection.type === themeLabel) {
         themedFeatures.add(connection.targetNodeId);
       }
@@ -283,7 +284,7 @@ export function buildWonderPrefetch(
   const counts = new Map<string, number>();
   for (const nodeId of ctx.rowNodeIds) {
     let count = 0;
-    for (const featConnection of inspirationFeatureConnections(ctx.db, nodeId, params)) {
+    for (const featConnection of await inspirationFeatureConnections(ctx.db, nodeId, params)) {
       const featureId = otherEndpoint(featConnection, nodeId);
       if (themedFeatures.has(featureId)) count++;
     }

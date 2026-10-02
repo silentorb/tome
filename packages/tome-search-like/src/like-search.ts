@@ -22,7 +22,7 @@ const TITLE_CANDIDATE_CAP = 10_000;
  */
 export function createLikeSearch(cache: TomeQueryCache): TomeSearch {
   return {
-    search(request: TomeSearchRequest): TomeSearchHit[] {
+    async search(request: TomeSearchRequest): Promise<TomeSearchHit[]> {
       const { query, limit, allowedTypeIds, allowedNodeIds } = request;
       if (allowedNodeIds && allowedNodeIds.size === 0) return [];
 
@@ -30,13 +30,12 @@ export function createLikeSearch(cache: TomeQueryCache): TomeSearch {
       const trimmed = query.trim();
 
       if (!trimmed) {
-        return cache
-          .listNodesByTitle(cap, allowedTypeIds, allowedNodeIds)
-          .map((row) => ({ id: row.id, title: row.title }));
+        const rows = await cache.listNodesByTitle(cap, allowedTypeIds, allowedNodeIds);
+        return rows.map((row) => ({ id: row.id, title: row.title }));
       }
 
       const pattern = escapeLikePattern(trimmed);
-      const candidates = cache.searchNodesByTitle(
+      const candidates = await cache.searchNodesByTitle(
         pattern,
         TITLE_CANDIDATE_CAP,
         allowedTypeIds,
@@ -46,7 +45,7 @@ export function createLikeSearch(cache: TomeQueryCache): TomeSearch {
       return ranked.slice(0, cap).map((row) => ({ id: row.id, title: row.title }));
     },
 
-    searchWindow(request: TomeSearchWindowRequest): TomeSearchWindowResult {
+    async searchWindow(request: TomeSearchWindowRequest): Promise<TomeSearchWindowResult> {
       const { query, allowedTypeIds, allowedNodeIds } = request;
       if (allowedNodeIds && allowedNodeIds.size === 0) {
         return { hits: [], total: 0 };
@@ -71,7 +70,7 @@ export function createLikeSearch(cache: TomeQueryCache): TomeSearch {
             : null;
 
       const pattern = escapeLikePattern(trimmed);
-      const candidates = cache.searchNodesByTitle(
+      const candidates = await cache.searchNodesByTitle(
         pattern,
         TITLE_CANDIDATE_CAP,
         allowedTypeIds,

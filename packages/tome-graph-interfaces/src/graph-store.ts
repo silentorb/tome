@@ -82,7 +82,7 @@ export interface TomeGraphStoreBase {
   readonly capabilities: GraphStoreCapabilities;
   readonly contentDir: string;
 
-  close(): void;
+  close(): Promise<void>;
   subscribe(listener: StoreChangeListener): () => void;
   startWatching(): void;
   stopWatching(): void;
@@ -91,78 +91,78 @@ export interface TomeGraphStoreBase {
   locateNode(id: string): string | null;
   contentDirForNode(nodeId: string): string;
 
-  listNodeIds(): string[];
-  getNode(id: string): Node | null;
-  upsertNode(node: Node, body?: string): void;
+  listNodeIds(): Promise<string[]>;
+  getNode(id: string): Promise<Node | null>;
+  upsertNode(node: Node, body?: string): Promise<void>;
   /** Write a node into a specific corpus (multi-corpus hosts). */
-  upsertNodeToCorpus(corpusId: string, node: Node, body?: string): void;
-  mergeNodeProperties(id: string, patch: Properties): boolean;
-  deleteNode(id: string): void;
+  upsertNodeToCorpus(corpusId: string, node: Node, body?: string): Promise<void>;
+  mergeNodeProperties(id: string, patch: Properties): Promise<boolean>;
+  deleteNode(id: string): Promise<void>;
   /** Move node markdown from live tree to archive tree. */
-  archiveNodeFile(id: string): boolean;
+  archiveNodeFile(id: string): Promise<boolean>;
   /** Move node markdown from archive tree back to live tree. */
-  unarchiveNodeFile(id: string): boolean;
+  unarchiveNodeFile(id: string): Promise<boolean>;
 
-  getRelationshipRecord(a: string, b: string, type: string): RelationshipRecordRef | null;
-  findRelationshipRecord(a: string, b: string, type: string): Relationship | null;
-  upsertRelationshipRecord(entry: RelationshipRecordRef): void;
-  deleteRelationshipRecord(a: string, b: string, type: string): boolean;
+  getRelationshipRecord(a: string, b: string, type: string): Promise<RelationshipRecordRef | null>;
+  findRelationshipRecord(a: string, b: string, type: string): Promise<Relationship | null>;
+  upsertRelationshipRecord(entry: RelationshipRecordRef): Promise<void>;
+  deleteRelationshipRecord(a: string, b: string, type: string): Promise<boolean>;
 
   upsertRelationship(
     source: string,
     target: string,
     projectionType: string,
     properties?: Properties,
-  ): void;
-  deleteRelationship(source: string, target: string, projectionType: string): boolean;
+  ): Promise<void>;
+  deleteRelationship(source: string, target: string, projectionType: string): Promise<boolean>;
   mergeRelationshipProperties(
     source: string,
     target: string,
     projectionType: string,
     patch: Properties,
-  ): void;
+  ): Promise<void>;
   replaceRelationshipProperties(
     source: string,
     target: string,
     projectionType: string,
     properties: Properties,
-  ): boolean;
+  ): Promise<boolean>;
 
-  readRelationshipTypes(): RelationshipTypesFile;
-  writeRelationshipTypes(file: RelationshipTypesFile): void;
-  readSchema(): SchemaFile;
-  writeSchema(file: SchemaFile): void;
-  readViews(): ViewsFile;
-  writeViews(file: ViewsFile): void;
-  readTableSchemas(): TableSchemasFile;
-  writeTableSchemas(file: TableSchemasFile): void;
-  readWorkspace(): WorkspaceFile;
-  writeWorkspace(file: WorkspaceFile): void;
+  readRelationshipTypes(): Promise<RelationshipTypesFile>;
+  writeRelationshipTypes(file: RelationshipTypesFile): Promise<void>;
+  readSchema(): Promise<SchemaFile>;
+  writeSchema(file: SchemaFile): Promise<void>;
+  readViews(): Promise<ViewsFile>;
+  writeViews(file: ViewsFile): Promise<void>;
+  readTableSchemas(): Promise<TableSchemasFile>;
+  writeTableSchemas(file: TableSchemasFile): Promise<void>;
+  readWorkspace(): Promise<WorkspaceFile>;
+  writeWorkspace(file: WorkspaceFile): Promise<void>;
   /** Write workspace JSON for a specific corpus (quick links, etc.). */
-  writeWorkspaceForCorpus(corpusId: string, file: WorkspaceFile): void;
-  readDynamicProperties(): DynamicPropertiesFile;
-  writeDynamicProperties(file: DynamicPropertiesFile): void;
+  writeWorkspaceForCorpus(corpusId: string, file: WorkspaceFile): Promise<void>;
+  readDynamicProperties(): Promise<DynamicPropertiesFile>;
+  writeDynamicProperties(file: DynamicPropertiesFile): Promise<void>;
 
-  isNodeArchived(id: string): boolean;
+  isNodeArchived(id: string): Promise<boolean>;
   forEachRelationshipRecord(
-    fn: (entry: RelationshipRecordRef) => void,
+    fn: (entry: RelationshipRecordRef) => void | Promise<void>,
     options?: { includeArchived?: boolean },
-  ): void;
+  ): Promise<void>;
 
   /** Directed projections incident to `nodeId`, expanded from canonical relationship records. */
   listRelationshipProjections(
     nodeId: string,
     options?: ListRelationshipProjectionsOptions,
-  ): Relationship[];
+  ): Promise<Relationship[]>;
 }
 
 export interface TomeGraphStoreQueryable extends TomeGraphStoreBase {
   capabilities: Extract<GraphStoreCapabilities, { queryable: true }>;
 
-  executeImp(graph: ImpGraph, context?: ExecuteImpContext): ImpCollectionResult | Promise<ImpCollectionResult>;
+  executeImp(graph: ImpGraph, context?: ExecuteImpContext): Promise<ImpCollectionResult>;
 
   /** Imp-compiled SQL only — available when `impExecution` includes `"sql"`. */
-  queryAll?(sql: string, ...params: unknown[]): Record<string, unknown>[];
+  queryAll?(sql: string, ...params: unknown[]): Promise<Record<string, unknown>[]>;
 }
 
 export function isQueryableGraphStore(

@@ -62,7 +62,7 @@ function boomExecuteImp(): ExtensionExecuteImpServices {
   };
 }
 
-describe("mutateTimelineDepends", () => {
+describe("mutateTimelineDepends", async () => {
   test("rejects a self-loop without mutating", async () => {
     const calls: unknown[] = [];
     const graphMutate = emptyMutate({

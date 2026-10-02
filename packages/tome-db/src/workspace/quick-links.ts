@@ -19,43 +19,43 @@ export function isWorkspaceQuickLink(workspace: WorkspaceFile, nodeId: string): 
   return workspace.quickLinks.some((link) => link.nodeId === nodeId);
 }
 
-function nodeTitle(ctx: TomeWriteContext, nodeId: string): string | null {
-  const node = writeStoreGetNode(ctx.graphStore, nodeId);
+async function nodeTitle(ctx: TomeWriteContext, nodeId: string): Promise<string | null> {
+  const node = await writeStoreGetNode(ctx.graphStore, nodeId);
   if (!node) return null;
   const title = node.properties.title;
   if (typeof title === "string" && title.trim()) return title.trim();
   return "Untitled";
 }
 
-function writeWorkspaceForNode(
+async function writeWorkspaceForNode(
   ctx: TomeWriteContext,
   nodeId: string,
   workspace: WorkspaceFile,
-): void {
+): Promise<void> {
   const corpusId = writeStoreLocateNode(ctx.graphStore, nodeId);
   if (corpusId) {
-    writeStoreWriteWorkspaceForCorpus(ctx.graphStore, corpusId, workspace);
+    await writeStoreWriteWorkspaceForCorpus(ctx.graphStore, corpusId, workspace);
     return;
   }
-  ctx.graphStore.writeWorkspace(workspace);
+  await ctx.graphStore.writeWorkspace(workspace);
 }
 
 function workspaceForNode(ctx: TomeWriteContext, nodeId: string): WorkspaceFile {
   return loadWorkspaceFromContent(contentDirForGraphStore(ctx.graphStore, nodeId));
 }
 
-export function addWorkspaceQuickLink(
+export async function addWorkspaceQuickLink(
   ctx: TomeWriteContext,
   nodeId: string,
   options?: { label?: string },
-): QuickLinkError | null {
+): Promise<QuickLinkError | null> {
   const normalizedId = nodeId;
-  if (!writeStoreGetNode(ctx.graphStore, normalizedId)) return "not_found";
+  if (!await writeStoreGetNode(ctx.graphStore, normalizedId)) return "not_found";
 
   const workspace = workspaceForNode(ctx, normalizedId);
   if (isWorkspaceQuickLink(workspace, normalizedId)) return "already_exists";
 
-  const label = options?.label?.trim() || nodeTitle(ctx, normalizedId);
+  const label = options?.label?.trim() || await nodeTitle(ctx, normalizedId);
   if (!label) return "not_found";
 
   const entry: WorkspaceQuickLink = {
@@ -68,15 +68,15 @@ export function addWorkspaceQuickLink(
     quickLinks: [...workspace.quickLinks, entry],
   };
 
-  writeWorkspaceForNode(ctx, normalizedId, next);
+  await writeWorkspaceForNode(ctx, normalizedId, next);
   invalidateWorkspaceCache();
   return null;
 }
 
-export function removeWorkspaceQuickLink(
+export async function removeWorkspaceQuickLink(
   ctx: TomeWriteContext,
   nodeId: string,
-): QuickLinkError | null {
+): Promise<QuickLinkError | null> {
   const normalizedId = nodeId;
   const workspace = workspaceForNode(ctx, normalizedId);
   if (!isWorkspaceQuickLink(workspace, normalizedId)) return "not_a_quick_link";
@@ -86,15 +86,15 @@ export function removeWorkspaceQuickLink(
     quickLinks: workspace.quickLinks.filter((link) => link.nodeId !== normalizedId),
   };
 
-  writeWorkspaceForNode(ctx, normalizedId, next);
+  await writeWorkspaceForNode(ctx, normalizedId, next);
   invalidateWorkspaceCache();
   return null;
 }
 
-export function reorderWorkspaceQuickLinks(
+export async function reorderWorkspaceQuickLinks(
   ctx: TomeWriteContext,
   nodeIds: readonly string[],
-): QuickLinkError | null {
+): Promise<QuickLinkError | null> {
   if (nodeIds.length === 0) return "invalid_order";
   // Reorder applies to the corpus of the first listed quick-link node.
   const workspace = workspaceForNode(ctx, nodeIds[0]!);
@@ -117,7 +117,7 @@ export function reorderWorkspaceQuickLinks(
     quickLinks,
   };
 
-  writeWorkspaceForNode(ctx, nodeIds[0]!, next);
+  await writeWorkspaceForNode(ctx, nodeIds[0]!, next);
   invalidateWorkspaceCache();
   return null;
 }

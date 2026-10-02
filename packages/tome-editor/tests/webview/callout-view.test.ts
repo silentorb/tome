@@ -23,7 +23,7 @@ async function createEditor(initial: string) {
   return { editor, root };
 }
 
-describe("callout emoji picker", () => {
+describe("callout emoji picker", async () => {
   test("clicking the icon opens a picker and updates attrs.emoji", async () => {
     const { editor, root } = await createEditor("> 💡 Hello");
 

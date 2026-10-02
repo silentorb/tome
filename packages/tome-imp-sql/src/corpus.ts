@@ -30,8 +30,8 @@ export const tomeCorpusLibrary: NodeLibrary = {
 };
 
 export interface TomeCorpusLookup {
-  corpusIdForNode(nodeId: string): string | null;
-  nodeIdsInCorpus(corpusId: string): readonly string[];
+  corpusIdForNode(nodeId: string): string | null | Promise<string | null>;
+  nodeIdsInCorpus(corpusId: string): readonly string[] | Promise<readonly string[]>;
 }
 
 export interface ResolvedCorpusConstraint {
@@ -57,10 +57,10 @@ function corpusSpecFromNode(graph: Graph, node: Node): string {
   return PAGE_CORPUS_SPEC;
 }
 
-export function resolveCorpusConstraint(
+export async function resolveCorpusConstraint(
   graph: Graph,
   options?: { pageNodeId?: string; corpus?: TomeCorpusLookup },
-): ResolvedCorpusConstraint {
+): Promise<ResolvedCorpusConstraint> {
   const corpusNodes = Object.values(graph.nodes).filter((node) => node.type === CORPUS_NODE_TYPE_ID);
   if (corpusNodes.length === 0) {
     return { nodeIds: null };
@@ -89,14 +89,14 @@ export function resolveCorpusConstraint(
     if (!pageNodeId) {
       throw new Error('corpus id "page" requires the page node id');
     }
-    const resolved = lookup.corpusIdForNode(pageNodeId);
+    const resolved = await lookup.corpusIdForNode(pageNodeId);
     if (!resolved) {
       throw new Error(`corpus id "page": no corpus owns node "${pageNodeId}"`);
     }
     corpusId = resolved;
   }
 
-  return { nodeIds: [...lookup.nodeIdsInCorpus(corpusId)] };
+  return { nodeIds: [...(await lookup.nodeIdsInCorpus(corpusId))] };
 }
 
 function newEdgeId(edges: Graph["edges"], prefix: string): string {

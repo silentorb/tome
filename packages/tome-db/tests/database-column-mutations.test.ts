@@ -11,7 +11,7 @@ import { invalidateSchemaCache } from "tome-flatfile";
 import { createTestContentFixture, destroyTestContentFixture, seedTestNode, seedTestRelationships, seedTestCompositeRelationships, seedTestTableSchema, seedTestViews, TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, projectionTypeForEndpoint } from "../src/content/test-helpers";
 
 function seedParentsChildrenTypes(
-  fixture: ReturnType<typeof createTestContentFixture>,
+  fixture: Awaited<ReturnType<typeof createTestContentFixture>>,
   childTypeId: string,
   parentTypeId: string,
   compositeKey = "000000000000000000000000B1",
@@ -27,7 +27,7 @@ function seedParentsChildrenTypes(
   fixture.ctx.store.writeRelationshipTypesFile(file);
 }
 
-function seedSchema(fixture: ReturnType<typeof createTestContentFixture>): void {
+function seedSchema(fixture: Awaited<ReturnType<typeof createTestContentFixture>>): void {
   writeFileSync(
     join(fixture.ctx.store.contentDir, "model", "schema.json"),
     JSON.stringify({
@@ -45,22 +45,22 @@ function seedSchema(fixture: ReturnType<typeof createTestContentFixture>): void 
   invalidateSchemaCache();
 }
 
-describe("database column mutations", () => {
-  const fixture = createTestContentFixture("tome-db-col-mut-");
+describe("database column mutations", async () => {
+  const fixture = await createTestContentFixture("tome-db-col-mut-");
 
   beforeAll(() => {
     seedSchema(fixture);
   });
 
-  test("createDatabaseColumn adds scalar column to schema", () => {
+  test("createDatabaseColumn adds scalar column to schema", async () => {
     const databaseId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),
     });
     seedTestTableSchema(fixture, databaseId, []);
 
-    const result = createDatabaseColumn(fixture.ctx, databaseId, {
+    const result = await createDatabaseColumn(fixture.ctx, databaseId, {
       name: "Priority",
       type: "select",
       enumId: "priority",
@@ -70,7 +70,7 @@ describe("database column mutations", () => {
       rowsMigrated: 0,
     });
 
-    const detail = getDatabaseViewDetail(
+    const detail = await getDatabaseViewDetail(
       fixture.ctx.cache,
       databaseId,
       undefined,
@@ -79,14 +79,14 @@ describe("database column mutations", () => {
     expect(detail?.columns).toContain("priority");
   });
 
-  test("createDatabaseColumn adds relation column", () => {
+  test("createDatabaseColumn adds relation column", async () => {
     const databaseId = "EEEEEEEEEEEEEEEEEEEEEEEEEE";
     const parentDbId = "FFFFFFFFFFFFFFFFFFFFFFFFFF";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Features"),
     });
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: parentDbId,
       properties: typeTableMarkerProperties("Parents"),
     });
@@ -95,7 +95,7 @@ describe("database column mutations", () => {
 
     seedParentsChildrenTypes(fixture, databaseId, parentDbId);
 
-    const result = createDatabaseColumn(fixture.ctx, databaseId, {
+    const result = await createDatabaseColumn(fixture.ctx, databaseId, {
       name: "Parents",
       type: "relation",
       association: "000000000000000000000000B1",
@@ -111,16 +111,16 @@ describe("database column mutations", () => {
     });
   });
 
-  test("updateDatabaseColumn renames key and migrates row data", () => {
+  test("updateDatabaseColumn renames key and migrates row data", async () => {
     const databaseId = "11111111111111111111111111";
     const pageId = "22222222222222222222222222";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Notes"),
     });
     seedTestTableSchema(fixture, databaseId, [{ key: "notes", name: "Notes", type: "text" }]);
-    seedTestNode(fixture, { id: pageId, properties: { title: "Row" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: pageId, properties: { title: "Row" } });
+    await seedTestRelationships(fixture, [
       {
         source: pageId,
         target: databaseId,
@@ -142,7 +142,7 @@ describe("database column mutations", () => {
       ],
     });
 
-    const result = updateDatabaseColumn(fixture.ctx, databaseId, "notes", {
+    const result = await updateDatabaseColumn(fixture.ctx, databaseId, "notes", {
       newKey: "description",
       name: "Description",
     });
@@ -151,7 +151,7 @@ describe("database column mutations", () => {
       rowsMigrated: 1,
     });
 
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))[0];
+    const edge = (await fixture.ctx.cache.listRelationshipsFromSource(pageId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1)))[0];
     expect(edge?.properties.description).toBe("Alpha");
     expect(edge?.properties.notes).toBeUndefined();
 
@@ -162,39 +162,39 @@ describe("database column mutations", () => {
     expect(view && "properties" in view ? view.properties : undefined).toEqual(["description"]);
   });
 
-  test("updateDatabaseColumn scalar to relation clears scalars", () => {
+  test("updateDatabaseColumn scalar to relation clears scalars", async () => {
     const databaseId = "33333333333333333333333333";
     const parentDbId = "44444444444444444444444444";
     const rowId = "55555555555555555555555555";
-    seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Tasks") });
-    seedTestNode(fixture, { id: parentDbId, properties: typeTableMarkerProperties("Parents") });
+    await seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Tasks") });
+    await seedTestNode(fixture, { id: parentDbId, properties: typeTableMarkerProperties("Parents") });
     seedTestTableSchema(fixture, parentDbId, []);
     seedTestTableSchema(fixture, databaseId, [{ key: "label", name: "Label", type: "text" }]);
-    seedTestNode(fixture, { id: rowId, properties: { title: "Task" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: rowId, properties: { title: "Task" } });
+    await seedTestRelationships(fixture, [
       { source: rowId, target: databaseId, type: "member_of", properties: { label: "Important" } },
     ]);
 
     seedParentsChildrenTypes(fixture, databaseId, parentDbId);
 
-    const result = updateDatabaseColumn(fixture.ctx, databaseId, "label", {
+    const result = await updateDatabaseColumn(fixture.ctx, databaseId, "label", {
       type: "relation",
       association: "000000000000000000000000B1",
               endpoint: 0,
     });
     expect(result).toMatchObject({ valuesCleared: 1, relationsUnlinked: 0 });
 
-    const edge = fixture.ctx.cache.listRelationshipsFromSource(rowId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1))[0];
+    const edge = (await fixture.ctx.cache.listRelationshipsFromSource(rowId, projectionTypeForEndpoint(TEST_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1)))[0];
     expect(edge?.properties.label).toBeUndefined();
   });
 
-  test("updateDatabaseColumn relation to scalar unlinks edges", () => {
+  test("updateDatabaseColumn relation to scalar unlinks edges", async () => {
     const databaseId = "66666666666666666666666666";
     const parentDbId = "77777777777777777777777777";
     const rowId = "88888888888888888888888888";
     const parentId = "99999999999999999999999999";
-    seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Links") });
-    seedTestNode(fixture, { id: parentDbId, properties: typeTableMarkerProperties("Parents") });
+    await seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Links") });
+    await seedTestNode(fixture, { id: parentDbId, properties: typeTableMarkerProperties("Parents") });
     seedTestTableSchema(fixture, parentDbId, []);
     seedTestTableSchema(fixture, databaseId, [
       {
@@ -206,12 +206,12 @@ describe("database column mutations", () => {
       },
     ]);
     seedParentsChildrenTypes(fixture, databaseId, parentDbId);
-    seedTestNode(fixture, { id: rowId, properties: { title: "Child" } });
-    seedTestNode(fixture, { id: parentId, properties: { title: "Parent" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: rowId, properties: { title: "Child" } });
+    await seedTestNode(fixture, { id: parentId, properties: { title: "Parent" } });
+    await seedTestRelationships(fixture, [
       { source: rowId, target: databaseId, type: "member_of", properties: {} },
     ]);
-    seedTestCompositeRelationships(fixture, [
+    await seedTestCompositeRelationships(fixture, [
       {
         a: rowId,
         b: parentId,
@@ -222,29 +222,29 @@ describe("database column mutations", () => {
       },
     ]);
 
-    const result = updateDatabaseColumn(fixture.ctx, databaseId, "parents", {
+    const result = await updateDatabaseColumn(fixture.ctx, databaseId, "parents", {
       type: "text",
       name: "Parents text",
     });
     expect(result).toMatchObject({ relationsUnlinked: 1 });
 
     expect(
-      fixture.ctx.cache.listRelationshipsFromSource(
+      await fixture.ctx.cache.listRelationshipsFromSource(
         rowId,
         projectionTypeForEndpoint("000000000000000000000000B1", 0),
       ),
     ).toHaveLength(0);
   });
 
-  test("updateDatabaseColumn relation target change unlinks old links", () => {
+  test("updateDatabaseColumn relation target change unlinks old links", async () => {
     const databaseId = "0000000000000000000000001M";
     const parentDbId = "0000000000000000000000001N";
     const otherParentDb = "0000000000000000000000001P";
     const rowId = "0000000000000000000000001Q";
     const parentId = "0000000000000000000000001R";
-    seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Items") });
-    seedTestNode(fixture, { id: parentDbId, properties: typeTableMarkerProperties("Parents") });
-    seedTestNode(fixture, { id: otherParentDb, properties: typeTableMarkerProperties("Other") });
+    await seedTestNode(fixture, { id: databaseId, properties: typeTableMarkerProperties("Items") });
+    await seedTestNode(fixture, { id: parentDbId, properties: typeTableMarkerProperties("Parents") });
+    await seedTestNode(fixture, { id: otherParentDb, properties: typeTableMarkerProperties("Other") });
     seedTestTableSchema(fixture, parentDbId, []);
     seedTestTableSchema(fixture, otherParentDb, []);
     seedTestTableSchema(fixture, databaseId, [
@@ -258,12 +258,12 @@ describe("database column mutations", () => {
     ]);
     seedParentsChildrenTypes(fixture, databaseId, parentDbId);
     seedParentsChildrenTypes(fixture, databaseId, otherParentDb, "000000000000000000000000BE");
-    seedTestNode(fixture, { id: rowId, properties: { title: "Item" } });
-    seedTestNode(fixture, { id: parentId, properties: { title: "Parent" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: rowId, properties: { title: "Item" } });
+    await seedTestNode(fixture, { id: parentId, properties: { title: "Parent" } });
+    await seedTestRelationships(fixture, [
       { source: rowId, target: databaseId, type: "member_of", properties: {} },
     ]);
-    seedTestCompositeRelationships(fixture, [
+    await seedTestCompositeRelationships(fixture, [
       {
         a: rowId,
         b: parentId,
@@ -274,22 +274,22 @@ describe("database column mutations", () => {
       },
     ]);
 
-    const result = updateDatabaseColumn(fixture.ctx, databaseId, "parents", {
+    const result = await updateDatabaseColumn(fixture.ctx, databaseId, "parents", {
       association: "000000000000000000000000BE",
               endpoint: 0,
     });
     expect(result).toMatchObject({ relationsUnlinked: 1 });
     expect(
-      fixture.ctx.cache.listRelationshipsFromSource(
+      await fixture.ctx.cache.listRelationshipsFromSource(
         rowId,
         projectionTypeForEndpoint("000000000000000000000000B1", 0),
       ),
     ).toHaveLength(0);
   });
 
-  test("rejects duplicate and reserved keys", () => {
+  test("rejects duplicate and reserved keys", async () => {
     const databaseId = "00000000000000000000000025";
-    seedTestNode(fixture, {
+    await seedTestNode(fixture, {
       id: databaseId,
       properties: typeTableMarkerProperties("Dup"),
     });
@@ -298,14 +298,14 @@ describe("database column mutations", () => {
     ]);
 
     expect(
-      createDatabaseColumn(fixture.ctx, databaseId, {
+      await createDatabaseColumn(fixture.ctx, databaseId, {
         name: "Existing",
         type: "text",
       }),
     ).toBe("column_key_taken");
 
     expect(
-      createDatabaseColumn(fixture.ctx, databaseId, {
+      await createDatabaseColumn(fixture.ctx, databaseId, {
         key: "name",
         name: "Name",
         type: "text",
@@ -313,7 +313,7 @@ describe("database column mutations", () => {
     ).toBe("invalid_key");
   });
 
-  afterAll(() => {
-    destroyTestContentFixture(fixture);
+  afterAll(async () => {
+    await destroyTestContentFixture(fixture);
   });
 });

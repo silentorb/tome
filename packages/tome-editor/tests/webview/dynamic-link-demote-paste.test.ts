@@ -65,7 +65,7 @@ function linkHrefs(view: EditorView): string[] {
   return hrefs;
 }
 
-describe("dynamic link demotion on paste", () => {
+describe("dynamic link demotion on paste", async () => {
   test("pasting a large link-heavy slice updates the DOM without throwing", async () => {
     const { editor, root } = await setupEditor(articleBody());
 

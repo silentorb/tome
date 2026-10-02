@@ -29,14 +29,14 @@ export interface GroupHeader {
   sortKey: number;
 }
 
-function groupSortKey(
+async function groupSortKey(
   db: RelationshipReadStore,
   groupId: string,
   groupTypeDatabaseId: string,
   contentDir: string,
-): number {
+): Promise<number> {
   const [, memberPerspective] = setRoleProjectionTypesForNode(groupTypeDatabaseId, contentDir);
-  const edge = readStoreGetRelationship(db, relationshipId(groupId, memberPerspective, groupTypeDatabaseId), {
+  const edge = await readStoreGetRelationship(db, relationshipId(groupId, memberPerspective, groupTypeDatabaseId), {
     sourceNodeId: groupId,
     targetNodeId: groupTypeDatabaseId,
     type: memberPerspective,
@@ -48,26 +48,26 @@ function groupSortKey(
 }
 
 /** Group-table members relevant to the optional active scope. */
-export function groupsForScope(
+export async function groupsForScope(
   db: RelationshipReadStore,
   config: RelationGroupsLayerConfig,
   scopeId: string | undefined,
   contentDir?: string,
   pathContext?: SemanticRelatedPathContext,
-): GroupHeader[] {
+): Promise<GroupHeader[]> {
   const dir = contentDir ?? resolveContentPath();
   const ctx = pathContext ?? loadSemanticRelatedPathContext(dir);
   const groups: GroupHeader[] = [];
   const [, memberPerspective] = setRoleProjectionTypesForNode(config.groupTypeDatabaseId, dir);
 
-  for (const connection of listRelationshipsToTarget(
+  for (const connection of await listRelationshipsToTarget(
     db,
     config.groupTypeDatabaseId,
     memberPerspective,
   )) {
     const groupId = connection.sourceNodeId;
     if (scopeId && config.groupToScopeComposite) {
-      const scopeIds = relatedNodeIds(
+      const scopeIds = await relatedNodeIds(
         db,
         groupId,
         config.groupToScopeComposite,
@@ -79,8 +79,8 @@ export function groupsForScope(
 
     groups.push({
       id: groupId,
-      title: nodeTitle(db, groupId),
-      sortKey: groupSortKey(db, groupId, config.groupTypeDatabaseId, dir),
+      title: await nodeTitle(db, groupId),
+      sortKey: await groupSortKey(db, groupId, config.groupTypeDatabaseId, dir),
     });
   }
 
@@ -103,16 +103,16 @@ function canonicalGroupIdForTitle(
 }
 
 /** Resolve which group a member belongs to, tolerating duplicate group vertices from import. */
-export function resolveMemberGroupId(
+export async function resolveMemberGroupId(
   db: RelationshipReadStore,
   config: RelationGroupsLayerConfig,
   memberId: string,
   scopeGroups: GroupHeader[],
   memberStartType: string,
   pathContext: SemanticRelatedPathContext,
-): string | null {
+): Promise<string | null> {
   const scopeGroupIds = new Set(scopeGroups.map((group) => group.id));
-  const target = firstRelatedNodeId(
+  const target = await firstRelatedNodeId(
     db,
     memberId,
     config.memberToGroupComposite,
@@ -124,7 +124,7 @@ export function resolveMemberGroupId(
   if (scopeGroupIds.has(target)) return target;
 
   if (config.canonicalGroupByTitle !== false) {
-    const vertex = db.getNode(target);
+    const vertex = await db.getNode(target);
     if (vertex) {
       const canonicalId = canonicalGroupIdForTitle(
         scopeGroups,
@@ -137,7 +137,7 @@ export function resolveMemberGroupId(
   return null;
 }
 
-export function buildRelationGroups(
+export async function buildRelationGroups(
   db: RelationshipReadStore,
   config: RelationGroupsLayerConfig,
   scopeId: string | undefined,
@@ -145,9 +145,9 @@ export function buildRelationGroups(
   memberGroupIds: Map<string, string | null>,
   contentDir?: string,
   pathContext?: SemanticRelatedPathContext,
-): DatabaseRowGroup[] {
+): Promise<DatabaseRowGroup[]> {
   const dir = contentDir ?? resolveContentPath();
-  const headers = groupsForScope(db, config, scopeId, dir, pathContext);
+  const headers = await groupsForScope(db, config, scopeId, dir, pathContext);
   return buildRelationGroupsFromHeaders(headers, config, rows, memberGroupIds);
 }
 

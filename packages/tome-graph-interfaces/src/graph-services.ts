@@ -64,11 +64,11 @@ export type DocumentIconResult =
   | { ok: false; error: "not_found" | "bad_path" | "bad_type" };
 
 export interface TomeGraphServices {
-  getWorkspace(corpus?: string): WorkspacePublic;
-  listCorpora(): TomeCorpusPublic[];
+  getWorkspace(corpus?: string): Promise<WorkspacePublic>;
+  listCorpora(): Promise<TomeCorpusPublic[]>;
   /** Bytes for `branding.documentIconImage` of the given (or default) corpus. */
-  getDocumentIcon(corpus?: string): DocumentIconResult;
-  getHomeId(corpus?: string): string;
+  getDocumentIcon(corpus?: string): Promise<DocumentIconResult>;
+  getHomeId(corpus?: string): Promise<string>;
   getNode(
     id: string,
     options?: {
@@ -82,121 +82,121 @@ export interface TomeGraphServices {
     id: string,
     tabId?: string,
     rows?: TableRowsQuery,
-  ): DatabaseViewDetail | null;
+  ): Promise<DatabaseViewDetail | null>;
   getRelationTable(
     nodeId: string,
     perspective: string,
     rows?: TableRowsQuery,
-  ): RelationTableSection | null;
-  getNodeViews(nodeId: string): ViewDefinition[];
+  ): Promise<RelationTableSection | null>;
+  getNodeViews(nodeId: string): Promise<ViewDefinition[]>;
   createRelationshipView(
     nodeId: string,
     relationshipTypeId: string,
     input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
-  ): ViewDefinition;
+  ): Promise<ViewDefinition>;
   updateRelationshipView(
     nodeId: string,
     relationshipTypeId: string,
     viewId: string,
     input: { name?: string; sorts?: ViewSortSpec[]; properties?: string[] },
-  ): ViewDefinition;
-  deleteRelationshipView(nodeId: string, relationshipTypeId: string, viewId: string): void;
+  ): Promise<ViewDefinition>;
+  deleteRelationshipView(nodeId: string, relationshipTypeId: string, viewId: string): Promise<void>;
   patchRelationshipViews(
     nodeId: string,
     relationshipTypeId: string,
     input: { viewOrder?: string[]; properties?: string[] },
-  ): { views?: ViewDefinition[]; properties?: string[] };
+  ): Promise<{ views?: ViewDefinition[]; properties?: string[] }>;
   deleteDatabaseColumn(
     databaseId: string,
     columnKey: string,
-  ): DeleteDatabaseColumnResult | DeleteDatabaseColumnError;
+  ): Promise<DeleteDatabaseColumnResult | DeleteDatabaseColumnError>;
   createDatabaseColumn(
     databaseId: string,
     input: CreateDatabaseColumnInput,
-  ): DatabaseColumnMutationResult | DatabaseColumnMutationError;
+  ): Promise<DatabaseColumnMutationResult | DatabaseColumnMutationError>;
   updateDatabaseColumn(
     databaseId: string,
     columnKey: string,
     input: UpdateDatabaseColumnInput,
-  ): DatabaseColumnMutationResult | DatabaseColumnMutationError;
-  listTypeTables(): { id: string; title: string }[];
-  getSchema(): SchemaFile;
-  listRelationshipTypes(): RelationshipTypeOption[];
+  ): Promise<DatabaseColumnMutationResult | DatabaseColumnMutationError>;
+  listTypeTables(): Promise<{ id: string; title: string }[]>;
+  getSchema(): Promise<SchemaFile>;
+  listRelationshipTypes(): Promise<RelationshipTypeOption[]>;
   getRelationshipLinkOptions(
     sourceId: string,
     type: string,
-  ): { allowedTargetTypeIds: string[] | null };
+  ): Promise<{ allowedTargetTypeIds: string[] | null }>;
   rewriteDatabaseSequence(
     databaseId: string,
     params: RewriteDatabaseSequenceParams,
-  ): DatabaseViewDetail | null;
+  ): Promise<DatabaseViewDetail | null>;
   search(
     query: string,
     limit?: number,
     allowedTypeIds?: string[],
     options?: SearchNodesOptions,
-  ): NodeSummary[];
+  ): Promise<NodeSummary[]>;
   /**
    * Whether a searcher is bound for the given role (default `content`).
    * Non-empty queries for that role are supported when true.
    */
-  isSearchAvailable(role?: "title" | "content"): boolean;
-  listRecent(limit?: number): NodeSummary[];
-  saveDocument(id: string, document: NodeBodyDocument): boolean;
-  saveTitle(id: string, title: string): boolean;
+  isSearchAvailable(role?: "title" | "content"): Promise<boolean>;
+  listRecent(limit?: number): Promise<NodeSummary[]>;
+  saveDocument(id: string, document: NodeBodyDocument): Promise<boolean>;
+  saveTitle(id: string, title: string): Promise<boolean>;
   updateDatabaseRowProperty(
     databaseId: string,
     nodeId: string,
     propertyKey: string,
     value: string | null,
-  ): RelationshipPropertyUpdateError | null;
+  ): Promise<RelationshipPropertyUpdateError | null>;
   updateOutgoingRelationshipProperty(
     nodeId: string,
     type: string,
     targetId: string,
     propertyKey: string,
     value: string | null,
-  ): RelationshipPropertyUpdateError | null;
-  deleteNode(id: string): NodeLifecycleError | null;
-  archiveNode(id: string): NodeLifecycleError | null;
-  unarchiveNode(id: string): NodeLifecycleError | null;
+  ): Promise<RelationshipPropertyUpdateError | null>;
+  deleteNode(id: string): Promise<NodeLifecycleError | null>;
+  archiveNode(id: string): Promise<NodeLifecycleError | null>;
+  unarchiveNode(id: string): Promise<NodeLifecycleError | null>;
   addQuickLink(
     id: string,
     options?: { label?: string },
-  ): QuickLinkError | null;
-  removeQuickLink(id: string): QuickLinkError | null;
-  reorderQuickLinks(nodeIds: readonly string[]): QuickLinkError | null;
-  createNode(input: CreateNodeInput): CreateNodeResult | CreateNodeError;
+  ): Promise<QuickLinkError | null>;
+  removeQuickLink(id: string): Promise<QuickLinkError | null>;
+  reorderQuickLinks(nodeIds: readonly string[]): Promise<QuickLinkError | null>;
+  createNode(input: CreateNodeInput): Promise<CreateNodeResult | CreateNodeError>;
   createRelationRow(
     sourceId: string,
     input: { type: string; title: string; properties?: Record<string, string> },
-  ): CreateNodeResult | CreateNodeError;
+  ): Promise<CreateNodeResult | CreateNodeError>;
   linkOutgoingRelationship(
     sourceId: string,
     input: { type: string; targetId: string },
-  ): LinkOutgoingRelationshipError | null;
+  ): Promise<LinkOutgoingRelationshipError | null>;
   unlinkOutgoingRelationship(
     sourceId: string,
     type: string,
     targetId: string,
-  ): UnlinkOutgoingRelationshipError | null;
+  ): Promise<UnlinkOutgoingRelationshipError | null>;
   moveRelationshipConnection(input: {
     type: string;
     oldSourceId: string;
     oldTargetId: string;
     newSourceId: string;
     newTargetId: string;
-  }): MoveRelationshipConnectionError | null;
-  getGraphFull(): GraphSnapshot;
+  }): Promise<MoveRelationshipConnectionError | null>;
+  getGraphFull(): Promise<GraphSnapshot>;
   getGraphExplorerLod(options?: {
     anchorId?: string;
     layerCount?: number;
-  }): GraphLodSnapshot;
+  }): Promise<GraphLodSnapshot>;
   /** Integrator escape hatch — run read-only Imp graphs against the host graph store. */
   executeImp(
     graph: ImpGraph,
     context?: ExecuteImpContext,
-  ): ImpCollectionResult | Promise<ImpCollectionResult>;
+  ): Promise<ImpCollectionResult>;
   getExtensionsManifest(): Promise<PublicExtensionsManifest>;
   prepareEditorBody(nodeId: string, markdown: string): Promise<string | null>;
   invokeExtension(
@@ -205,5 +205,5 @@ export interface TomeGraphServices {
     nodeId?: string,
   ): Promise<{ ok: true; data: unknown } | { ok: false; error: string }>;
   bundleEditorExtension(extensionId: string): Promise<string | null>;
-  close(): void;
+  close(): Promise<void>;
 }

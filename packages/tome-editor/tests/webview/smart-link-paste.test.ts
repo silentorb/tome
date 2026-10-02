@@ -124,7 +124,7 @@ describe("parseSingleHtmlAnchor / parseClipboardLink", () => {
   });
 });
 
-describe("applySmartLinkPaste", () => {
+describe("applySmartLinkPaste", async () => {
   test("inserts titled link from clipboard metadata", async () => {
     const { editor } = await setupEditor("Hello");
     await editor.action((ctx) => {

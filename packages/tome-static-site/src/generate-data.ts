@@ -24,18 +24,18 @@ import { resolveStaticSiteFooter } from "./lib/static-site-footer";
 export type { SiteData, SiteNode } from "./lib/site-types";
 
 export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteData> {
-  const writeCtx = openContentGraph(config.contentDir, config.dbPath);
+  const writeCtx = await openContentGraph(config.contentDir, config.dbPath);
   const graphStore = writeCtx.graphStore;
   const schema = loadSchemaFromContent(config.contentDir);
   const workspace = loadWorkspaceFromContent(config.contentDir);
   const nodes: SiteNode[] = [];
 
   for (const id of writeCtx.store.listNodeIds()) {
-    const node = buildSiteNode(graphStore, id, config.contentDir, schema);
+    const node = await buildSiteNode(graphStore, id, config.contentDir, schema);
     if (node) nodes.push(node);
   }
 
-  const { tabItemsPayloads, tabRoutes } = buildExtraTabPayloadsAndRoutes(
+  const { tabItemsPayloads, tabRoutes } = await buildExtraTabPayloadsAndRoutes(
     graphStore,
     nodes,
     config.contentDir,
@@ -91,8 +91,8 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
     }
   }
 
-  writeCtx.cache.close();
-  graphStore.close();
+  await writeCtx.cache.close();
+  await graphStore.close();
 
   const staticSiteFooter = resolveStaticSiteFooter(workspace.branding);
 

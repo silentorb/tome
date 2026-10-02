@@ -89,15 +89,15 @@ export function createSqliteCacheSyncEndpoint(options: {
       applying = true;
       try {
         if (signal.scope.mode === "full") {
-          await options.sync.ensureReadyAsync();
+          await options.sync.ensureReady();
           return;
         }
         const { nodes, relationships } = signal.scope.changes;
         for (const id of nodes.deleted) {
-          options.sync.syncNode(id);
+          await options.sync.syncNode(id);
         }
         for (const id of [...nodes.created, ...nodes.modified]) {
-          options.sync.syncNode(id);
+          await options.sync.syncNode(id);
         }
         const relTouched =
           relationships.created.length +
@@ -105,7 +105,7 @@ export function createSqliteCacheSyncEndpoint(options: {
             relationships.deleted.length >
           0;
         if (relTouched) {
-          options.sync.syncRelationships();
+          await options.sync.syncRelationships();
         }
       } finally {
         applying = false;

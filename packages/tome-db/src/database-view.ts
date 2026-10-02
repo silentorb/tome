@@ -61,6 +61,7 @@ import type {
 } from "tome-graph-interfaces";
 import {
   withProfilingSpan,
+  withProfilingSpanAsync,
   type MemberPageRelationFieldLink,
 } from "tome-service-interfaces";
 import type { TomeSearchHit } from "tome-interfaces/search";
@@ -143,14 +144,14 @@ function sortsNeedRelationHydration(
   return sorts.some((sort) => relationKeys.has(sort.column));
 }
 
-function evalRowsFromMembershipConnections(
+async function evalRowsFromMembershipConnections(
   store: RelationshipReadStore,
   connections: Relationship[],
   ordered: boolean,
-): EvalRow[] {
+): Promise<EvalRow[]> {
   const evalRows: EvalRow[] = [];
   for (const connection of connections) {
-    const page = readStoreGetNode(store, connection.sourceNodeId);
+    const page = await readStoreGetNode(store, connection.sourceNodeId);
     const name = page ? titleFromProperties(page.properties) : "Untitled";
     const rowIndex = ordered
       ? numericOrderValue(connection.properties[ORDERED_PROPERTY_DEFAULT], evalRows.length)
@@ -249,14 +250,14 @@ function finishCustomViewDetail(args: {
   };
 }
 
-function buildCustomViewDetail(
+async function buildCustomViewDetail(
   store: RelationshipReadStore,
   databaseId: string,
   databaseTitle: string,
   contentDir: string,
   requestedTabId?: string,
   rowsQuery?: TableRowsQuery,
-): DatabaseViewDetail {
+): Promise<DatabaseViewDetail> {
   const { viewRelationshipType, memberSidePerspective, setSideProjection } = setPerspectives(
     databaseId,
     contentDir,
@@ -271,7 +272,7 @@ function buildCustomViewDetail(
   const ordered = setUsesOrderedRelationshipType(databaseId, contentDir);
   const sorts = rowsQuery?.sorts ?? resolved.activeDefinition.sorts;
 
-  const { dynamicColumnDefs, hiddenColumnKeys } = listDynamicColumnDefs(
+  const { dynamicColumnDefs, hiddenColumnKeys } = await listDynamicColumnDefs(
     store,
     databaseId,
     tabName,
@@ -297,13 +298,13 @@ function buildCustomViewDetail(
       | { hits: TomeSearchHit[]; rowsWindow: TableRowsWindow }
       | undefined;
     if (plan.searchQuery) {
-      const scopeIds = withProfilingSpan(
+      const scopeIds = await withProfilingSpanAsync(
         "table.search.scopeIds",
         "INTERNAL",
         windowAttrs,
         () => listMemberPageNodeIds(store, databaseId, { projections }),
       );
-      const { hits, rowsWindow } = runTableSearchWindow(
+      const { hits, rowsWindow } = await runTableSearchWindow(
         resolveTableSearcher(store),
         rowsQuery,
         new Set(scopeIds),
@@ -319,7 +320,7 @@ function buildCustomViewDetail(
 
     if (searchHits) {
       const hitIds = searchHits.hits.map((h) => h.id);
-      const memberResult = listMemberPage(store, databaseId, {
+      const memberResult = await listMemberPage(store, databaseId, {
         projections,
         memberIds: hitIds,
         relationFields: relationFields.length > 0 ? relationFields : undefined,
@@ -351,9 +352,9 @@ function buildCustomViewDetail(
           : [];
       const expressionIndexSorts =
         dynPlans.length > 0
-          ? ensureDynSortIndexes(store, databaseId, dynPlans, contentDir)
+          ? await ensureDynSortIndexes(store, databaseId, dynPlans, contentDir)
           : undefined;
-      const memberResult = listMemberPage(store, databaseId, {
+      const memberResult = await listMemberPage(store, databaseId, {
         projections,
         sorts: windowSorts.length > 0 ? windowSorts : undefined,
         relationCounts:
@@ -371,7 +372,7 @@ function buildCustomViewDetail(
       rowsWindow = buildTableRowsWindow(plan.offset, plan.limit, memberResult.total);
     }
 
-    const evalRows = evalRowsFromMembershipConnections(store, relationships, ordered);
+    const evalRows = await evalRowsFromMembershipConnections(store, relationships, ordered);
     if (fieldsByMember) {
       applyRelationFieldsToEvalRows(
         evalRows,
@@ -384,7 +385,7 @@ function buildCustomViewDetail(
       rows: enrichedRows,
       dynamicColumnDefs: enrichDynDefs,
       hiddenColumnKeys: enrichHidden,
-    } = applyDynamicProperties(store, databaseId, tabName, evalRows, undefined, { contentDir });
+    } = await applyDynamicProperties(store, databaseId, tabName, evalRows, undefined, { contentDir });
     const mergedColumnDefs = buildDatabaseColumnDefs(
       store,
       databaseId,
@@ -393,7 +394,7 @@ function buildCustomViewDetail(
       { contentDir },
     );
     if (relationFields.length === 0) {
-      hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+      await hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
     }
 
     return finishCustomViewDetail({
@@ -411,10 +412,10 @@ function buildCustomViewDetail(
     });
   }
 
-  const incoming = listSetMemberRowConnections(store, databaseId, contentDir);
-  const evalRows = evalRowsFromMembershipConnections(store, incoming, ordered);
+  const incoming = await listSetMemberRowConnections(store, databaseId, contentDir);
+  const evalRows = await evalRowsFromMembershipConnections(store, incoming, ordered);
   const { rows: enrichedRows, dynamicColumnDefs: enrichDynDefs, hiddenColumnKeys: enrichHidden } =
-    applyDynamicProperties(store, databaseId, tabName, evalRows, undefined, { contentDir });
+    await applyDynamicProperties(store, databaseId, tabName, evalRows, undefined, { contentDir });
 
   const mergedColumnDefs = buildDatabaseColumnDefs(
     store,
@@ -428,7 +429,7 @@ function buildCustomViewDetail(
   const hydrateBeforeSort = !q && sortsNeedRelationHydration(sorts, mergedColumnDefs);
 
   if (hydrateBeforeSort) {
-    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
+    await hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, enrichedRows, contentDir);
   }
 
   const sorted = q ? enrichedRows : sortEvalRowsFromViewSorts(enrichedRows, sorts);
@@ -439,7 +440,7 @@ function buildCustomViewDetail(
   );
 
   if (!hydrateBeforeSort) {
-    hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, windowedEvalRows, contentDir);
+    await hydrateRelationCellsForRows(store, databaseId, mergedColumnDefs, windowedEvalRows, contentDir);
   }
 
   return finishCustomViewDetail({
@@ -458,16 +459,16 @@ function buildCustomViewDetail(
 }
 
 /** Build a database table view from set edges and linked page titles. */
-export function getDatabaseViewDetail(
+export async function getDatabaseViewDetail(
   store: RelationshipReadStore,
   databaseId: string,
   requestedTabId?: string,
   contentDir?: string,
   rowsQuery?: TableRowsQuery,
-): DatabaseViewDetail | null {
-  const database = readStoreGetNode(store, databaseId);
+): Promise<DatabaseViewDetail | null> {
+  const database = await readStoreGetNode(store, databaseId);
   const dir = contentDir ?? resolveContentPath();
-  if (!database || !isTypeTableNode(store, databaseId, dir)) return null;
+  if (!database || !await isTypeTableNode(store, databaseId, dir)) return null;
 
   const title = titleFromProperties(database.properties);
   const views = loadViewsFromContent(dir);
@@ -480,5 +481,5 @@ export function getDatabaseViewDetail(
     return buildComposedDatabaseView(store, composition, requestedTabId, dir, rowsQuery);
   }
 
-  return buildCustomViewDetail(store, databaseId, title, dir, requestedTabId, rowsQuery);
+  return await buildCustomViewDetail(store, databaseId, title, dir, requestedTabId, rowsQuery);
 }

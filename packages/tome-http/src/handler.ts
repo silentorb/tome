@@ -69,7 +69,9 @@ function quickLinkMessage(error: QuickLinkError): string {
   return "not a quick link";
 }
 
-export type ApiFetchHandler = ((req: Request) => Promise<Response>) & { close: () => void };
+export type ApiFetchHandler = ((req: Request) => Promise<Response>) & {
+  close: () => void | Promise<void>;
+};
 
 export type CreateApiHandlerOptions = {
   getCacheSyncStatus?: () => CacheSyncPublicStatus;
@@ -208,21 +210,21 @@ async function dispatchApiRequest(
 
       if (path === "/api/home") {
         const corpus = url.searchParams.get("corpus") ?? undefined;
-        return json({ id: db.getHomeId(corpus || undefined) });
+        return json({ id: await db.getHomeId(corpus || undefined) });
       }
 
       if (path === "/api/corpora" && req.method === "GET") {
-        return json({ corpora: db.listCorpora() });
+        return json({ corpora: await db.listCorpora() });
       }
 
       if (path === "/api/workspace") {
         const corpus = url.searchParams.get("corpus") ?? undefined;
-        return json(db.getWorkspace(corpus || undefined));
+        return json(await db.getWorkspace(corpus || undefined));
       }
 
       if (path === "/api/workspace/document-icon" && req.method === "GET") {
         const corpus = url.searchParams.get("corpus") ?? undefined;
-        const result = db.getDocumentIcon(corpus || undefined);
+        const result = await db.getDocumentIcon(corpus || undefined);
         if (!result.ok) {
           if (result.error === "not_found") return json({ error: "not found" }, 404);
           if (result.error === "bad_type") return json({ error: "unsupported icon type" }, 400);
@@ -246,13 +248,13 @@ async function dispatchApiRequest(
         if (nodeIds.length !== payload.nodeIds.length) {
           return json({ error: "invalid quick link order" }, 400);
         }
-        const error = db.reorderQuickLinks(nodeIds);
+        const error = await db.reorderQuickLinks(nodeIds);
         if (error) return json({ error: quickLinkMessage(error) }, quickLinkStatus(error));
         return json({ ok: true });
       }
 
       if (path === "/api/graph/full") {
-        return json({ graph: db.getGraphFull() });
+        return json({ graph: await db.getGraphFull() });
       }
 
       if (path === "/api/graph/explorer-lod") {
@@ -260,7 +262,7 @@ async function dispatchApiRequest(
         const layersRaw = url.searchParams.get("layers");
         const layerCount = layersRaw ? Number.parseInt(layersRaw, 10) : undefined;
         return json({
-          graph: db.getGraphExplorerLod({
+          graph: await db.getGraphExplorerLod({
             anchorId: anchor,
             layerCount: Number.isFinite(layerCount) ? layerCount : undefined,
           }),
@@ -279,22 +281,23 @@ async function dispatchApiRequest(
           payload.context && typeof payload.context === "object"
             ? (payload.context as import("tome-graph-interfaces").ExecuteImpContext)
             : undefined;
-        const result = await Promise.resolve(
-          db.executeImp(payload.graph as import("tome-graph-interfaces").ImpGraph, context),
+        const result = await db.executeImp(
+          payload.graph as import("tome-graph-interfaces").ImpGraph,
+          context,
         );
         return json(result);
       }
 
       if (path === "/api/schema") {
-        return json({ schema: db.getSchema() });
+        return json({ schema: await db.getSchema() });
       }
 
       if (path === "/api/type-tables") {
-        return json({ typeTables: db.listTypeTables() });
+        return json({ typeTables: await db.listTypeTables() });
       }
 
       if (path === "/api/relationships/types") {
-        return json({ types: db.listRelationshipTypes() });
+        return json({ types: await db.listRelationshipTypes() });
       }
 
       if (path === "/api/nodes/search") {
@@ -316,19 +319,19 @@ async function dispatchApiRequest(
         const roleRaw = url.searchParams.get("role");
         const role = roleRaw === "title" ? "title" : "content";
         return json({
-          results: db.search(q, limit, allowedTypeIds, {
+          results: await db.search(q, limit, allowedTypeIds, {
             activeCorpus,
             participatesInProjectionType,
             onlyActivePickingRole,
             role,
           }),
-          searchAvailable: db.isSearchAvailable(role),
+          searchAvailable: await db.isSearchAvailable(role),
         });
       }
 
       if (path === "/api/nodes/recent") {
         const limit = Number.parseInt(url.searchParams.get("limit") ?? "8", 10);
-        return json({ results: db.listRecent(limit) });
+        return json({ results: await db.listRecent(limit) });
       }
 
       if (path === "/api/nodes" && req.method === "POST") {
@@ -340,7 +343,7 @@ async function dispatchApiRequest(
         if (typeof payload.title !== "string") {
           return json({ error: "title required" }, 400);
         }
-        const result = db.createNode({
+        const result = await db.createNode({
           title: payload.title,
           body: typeof payload.body === "string" ? payload.body : undefined,
           corpus: typeof payload.corpus === "string" ? payload.corpus : undefined,
@@ -370,7 +373,7 @@ async function dispatchApiRequest(
         if (!type?.trim()) return json({ error: "type query parameter required" }, 400);
         const node = await db.getNode(sourceId);
         if (!node) return json({ error: "not found" }, 404);
-        return json(db.getRelationshipLinkOptions(sourceId, type));
+        return json(await db.getRelationshipLinkOptions(sourceId, type));
       }
 
       const prepareBodyMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/prepare-editor-body$/i.exec(path);
@@ -391,7 +394,7 @@ async function dispatchApiRequest(
         const nodeId = relationTableMatch[1]!;
         const perspective = decodeURIComponent(relationTableMatch[2]!);
         const rows = tableRowsQueryFromSearchParams(url.searchParams);
-        const section = db.getRelationTable(nodeId, perspective, rows);
+        const section = await db.getRelationTable(nodeId, perspective, rows);
         if (!section) return json({ error: "not found" }, 404);
         return json({ section });
       }
@@ -425,7 +428,7 @@ async function dispatchApiRequest(
             return json({ error: "document or title required" }, 400);
           }
           if (hasDocument) {
-            const ok = db.saveDocument(
+            const ok = await db.saveDocument(
               id,
               payload.document as NodeBodyDocument,
             );
@@ -435,13 +438,13 @@ async function dispatchApiRequest(
             if (!isPersistableNodeTitle(payload.title!)) {
               return json({ error: "invalid title" }, 400);
             }
-            const ok = db.saveTitle(id, payload.title!);
+            const ok = await db.saveTitle(id, payload.title!);
             if (!ok) return json({ error: "not found" }, 404);
           }
           return json({ ok: true });
         }
         if (req.method === "DELETE") {
-          const error = db.deleteNode(id);
+          const error = await db.deleteNode(id);
           if (error) return json({ error: lifecycleMessage(error) }, lifecycleStatus(error));
           return json({ ok: true });
         }
@@ -459,7 +462,7 @@ async function dispatchApiRequest(
         if (typeof payload.type !== "string" || typeof payload.title !== "string") {
           return json({ error: "type and title required" }, 400);
         }
-        const result = db.createRelationRow(sourceId, {
+        const result = await db.createRelationRow(sourceId, {
           type: payload.type,
           title: payload.title,
           properties: payload.properties,
@@ -472,7 +475,7 @@ async function dispatchApiRequest(
       const archiveMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/archive$/i.exec(path);
       if (archiveMatch && req.method === "POST") {
         const id = archiveMatch[1]!;
-        const error = db.archiveNode(id);
+        const error = await db.archiveNode(id);
         if (error) return json({ error: lifecycleMessage(error) }, lifecycleStatus(error));
         return json({ ok: true });
       }
@@ -480,7 +483,7 @@ async function dispatchApiRequest(
       const unarchiveMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/unarchive$/i.exec(path);
       if (unarchiveMatch && req.method === "POST") {
         const id = unarchiveMatch[1]!;
-        const error = db.unarchiveNode(id);
+        const error = await db.unarchiveNode(id);
         if (error) return json({ error: lifecycleMessage(error) }, lifecycleStatus(error));
         return json({ ok: true });
       }
@@ -499,13 +502,13 @@ async function dispatchApiRequest(
         } catch {
           options = undefined;
         }
-        const error = db.addQuickLink(id, options);
+        const error = await db.addQuickLink(id, options);
         if (error) return json({ error: quickLinkMessage(error) }, quickLinkStatus(error));
         return json({ ok: true });
       }
       if (quickLinkMatch && req.method === "DELETE") {
         const id = quickLinkMatch[1]!;
-        const error = db.removeQuickLink(id);
+        const error = await db.removeQuickLink(id);
         if (error) return json({ error: quickLinkMessage(error) }, quickLinkStatus(error));
         return json({ ok: true });
       }
@@ -513,7 +516,7 @@ async function dispatchApiRequest(
       const viewsNodeMatch = /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (viewsNodeMatch && req.method === "GET") {
         const nodeId = viewsNodeMatch[1]!;
-        const views = db.getNodeViews(nodeId);
+        const views = await db.getNodeViews(nodeId);
         return json({ views });
       }
 
@@ -532,7 +535,7 @@ async function dispatchApiRequest(
           return json({ error: "viewOrder or properties required" }, 400);
         }
         try {
-          const response = db.patchRelationshipViews(nodeId, relationshipTypeId, {
+          const response = await db.patchRelationshipViews(nodeId, relationshipTypeId, {
             ...(hasViewOrder ? { viewOrder: payload.viewOrder } : {}),
             ...(hasProperties ? { properties: payload.properties } : {}),
           });
@@ -556,7 +559,7 @@ async function dispatchApiRequest(
           return json({ error: "name required" }, 400);
         }
         try {
-          const view = db.createRelationshipView(nodeId, relationshipTypeId, {
+          const view = await db.createRelationshipView(nodeId, relationshipTypeId, {
             name: payload.name,
             sorts: payload.sorts,
             properties: payload.properties,
@@ -582,7 +585,7 @@ async function dispatchApiRequest(
             properties?: string[];
           };
           try {
-            const view = db.updateRelationshipView(nodeId, relationshipTypeId, viewId, payload);
+            const view = await db.updateRelationshipView(nodeId, relationshipTypeId, viewId, payload);
             return json({ view });
           } catch (err) {
             return json({ error: String(err) }, 400);
@@ -590,7 +593,7 @@ async function dispatchApiRequest(
         }
         if (req.method === "DELETE") {
           try {
-            db.deleteRelationshipView(nodeId, relationshipTypeId, viewId);
+            await db.deleteRelationshipView(nodeId, relationshipTypeId, viewId);
             return json({ ok: true });
           } catch (err) {
             return json({ error: String(err) }, 400);
@@ -607,7 +610,7 @@ async function dispatchApiRequest(
             url.searchParams.get("view") ??
             undefined;
           const rows = tableRowsQueryFromSearchParams(url.searchParams);
-          const databaseView = db.getDatabaseView(id, tab ?? undefined, rows);
+          const databaseView = await db.getDatabaseView(id, tab ?? undefined, rows);
           if (!databaseView) return json({ error: "not found" }, 404);
           return json({ databaseView });
         }
@@ -626,7 +629,7 @@ async function dispatchApiRequest(
         if (typeof payload.title !== "string") {
           return json({ error: "title required" }, 400);
         }
-        const result = db.createNode({
+        const result = await db.createNode({
           title: payload.title,
           link: {
             kind: "database-row",
@@ -665,7 +668,7 @@ async function dispatchApiRequest(
                 targetGroupId: payload.groupChange.targetGroupId,
               }
             : undefined;
-        const databaseView = db.rewriteDatabaseSequence(databaseId, {
+        const databaseView = await db.rewriteDatabaseSequence(databaseId, {
           orderedRowIds: payload.orderedRowIds.filter((id) => typeof id === "string"),
           tabId: typeof payload.tabId === "string" ? payload.tabId : undefined,
           groupChange,
@@ -687,7 +690,7 @@ async function dispatchApiRequest(
           payload.value === null || payload.value === undefined
             ? null
             : String(payload.value);
-        const error = db.updateDatabaseRowProperty(
+        const error = await db.updateDatabaseRowProperty(
           databaseId,
           nodeId,
           payload.property,
@@ -713,7 +716,7 @@ async function dispatchApiRequest(
         if (typeof payload.name !== "string" || typeof payload.type !== "string") {
           return json({ error: "name and type required" }, 400);
         }
-        const result = db.createDatabaseColumn(databaseId, {
+        const result = await db.createDatabaseColumn(databaseId, {
           key: payload.key,
           name: payload.name,
           type: payload.type as import("tome-graph-interfaces").TableColumnDef["type"],
@@ -749,7 +752,7 @@ async function dispatchApiRequest(
           association?: string;
           endpoint?: 0 | 1;
         };
-        const result = db.updateDatabaseColumn(databaseId, columnKey, {
+        const result = await db.updateDatabaseColumn(databaseId, columnKey, {
           name: payload.name,
           newKey: payload.newKey,
           type: payload.type as import("tome-graph-interfaces").TableColumnDef["type"] | undefined,
@@ -778,7 +781,7 @@ async function dispatchApiRequest(
       if (databaseColumnMatch && req.method === "DELETE") {
         const databaseId = databaseColumnMatch[1]!;
         const columnKey = databaseColumnMatch[2]!.toLowerCase();
-        const result = db.deleteDatabaseColumn(databaseId, columnKey);
+        const result = await db.deleteDatabaseColumn(databaseId, columnKey);
         if (result === "database_not_found") return json({ error: "not found" }, 404);
         if (result === "column_not_found") return json({ error: "column not found" }, 404);
         if (result === "column_not_deletable") {
@@ -808,7 +811,7 @@ async function dispatchApiRequest(
             400,
           );
         }
-        const error = db.moveRelationshipConnection({
+        const error = await db.moveRelationshipConnection({
           type: payload.type,
           oldSourceId: payload.oldSourceId,
           oldTargetId: payload.oldTargetId,
@@ -839,7 +842,7 @@ async function dispatchApiRequest(
         if (typeof payload.type !== "string" || typeof payload.targetId !== "string") {
           return json({ error: "type and targetId required" }, 400);
         }
-        const error = db.linkOutgoingRelationship(sourceId, {
+        const error = await db.linkOutgoingRelationship(sourceId, {
           type: payload.type,
           targetId: payload.targetId,
         });
@@ -862,7 +865,7 @@ async function dispatchApiRequest(
         const sourceId = connectionMatch[1]!;
         const type = decodeURIComponent(connectionMatch[2]!);
         const targetId = connectionMatch[3]!;
-        const error = db.unlinkOutgoingRelationship(sourceId, type, targetId);
+        const error = await db.unlinkOutgoingRelationship(sourceId, type, targetId);
         if (error === "not_found") return json({ error: "not found" }, 404);
         return json({ ok: true });
       }
@@ -879,7 +882,7 @@ async function dispatchApiRequest(
           payload.value === null || payload.value === undefined
             ? null
             : String(payload.value);
-        const error = db.updateOutgoingRelationshipProperty(
+        const error = await db.updateOutgoingRelationshipProperty(
           nodeId,
           type,
           targetId,

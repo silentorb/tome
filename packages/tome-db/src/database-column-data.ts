@@ -14,20 +14,20 @@ import type { TableColumnDef } from "tome-flatfile";
 
 export const ROW_META_KEYS = new Set(["row_name", "order", "row_index", "number"]);
 
-export function stripScalarFromSetEdges(
+export async function stripScalarFromSetEdges(
   ctx: TomeWriteContext,
   databaseId: string,
   propertyKey: string,
-): number {
+): Promise<number> {
   const store = ctx.graphStore;
   const registry = loadRelationshipTypesFromContent(writeStoreContentDir(store));
   let count = 0;
   for (const type of setTraitProjectionTypes(registry)) {
-    for (const connection of listRelationshipsToTarget(store, databaseId, type)) {
+    for (const connection of await listRelationshipsToTarget(store, databaseId, type)) {
       if (!(propertyKey in connection.properties)) continue;
       const props = { ...connection.properties };
       delete props[propertyKey];
-      writeStoreReplaceRelationshipProperties(
+      await writeStoreReplaceRelationshipProperties(
         store,
         connection.sourceNodeId,
         connection.targetNodeId,
@@ -40,22 +40,22 @@ export function stripScalarFromSetEdges(
   return count;
 }
 
-export function renameScalarOnSetEdges(
+export async function renameScalarOnSetEdges(
   ctx: TomeWriteContext,
   databaseId: string,
   oldKey: string,
   newKey: string,
-): number {
+): Promise<number> {
   const store = ctx.graphStore;
   const registry = loadRelationshipTypesFromContent(writeStoreContentDir(store));
   let count = 0;
   for (const type of setTraitProjectionTypes(registry)) {
-    for (const connection of listRelationshipsToTarget(store, databaseId, type)) {
+    for (const connection of await listRelationshipsToTarget(store, databaseId, type)) {
       if (!(oldKey in connection.properties)) continue;
       const props = { ...connection.properties };
       props[newKey] = props[oldKey];
       delete props[oldKey];
-      writeStoreReplaceRelationshipProperties(
+      await writeStoreReplaceRelationshipProperties(
         store,
         connection.sourceNodeId,
         connection.targetNodeId,
@@ -68,11 +68,11 @@ export function renameScalarOnSetEdges(
   return count;
 }
 
-export function unlinkRelationColumnFromAllRows(
+export async function unlinkRelationColumnFromAllRows(
   ctx: TomeWriteContext,
   databaseId: string,
   column: TableColumnDef & { type: "relation" },
-): number {
+): Promise<number> {
   const store = ctx.graphStore;
   const contentDir = writeStoreContentDir(store);
   const registry = loadRelationshipTypesFromContent(contentDir);
@@ -81,14 +81,14 @@ export function unlinkRelationColumnFromAllRows(
 
   const rowIds = new Set<string>();
   for (const type of setTraitProjectionTypes(registry)) {
-    for (const connection of listRelationshipsToTarget(store, databaseId, type)) {
+    for (const connection of await listRelationshipsToTarget(store, databaseId, type)) {
       rowIds.add(connection.sourceNodeId);
     }
   }
 
   const toUnlink: Array<{ rowId: string; targetId: string }> = [];
   for (const rowId of rowIds) {
-    const relationships = listRelationConnectionsForRow(
+    const relationships = await listRelationConnectionsForRow(
       store,
       rowId,
       connectionType,
@@ -103,7 +103,7 @@ export function unlinkRelationColumnFromAllRows(
 
   let unlinked = 0;
   for (const { rowId, targetId } of toUnlink) {
-    if (unlinkOutgoingRelationship(ctx, rowId, targetId, connectionType) === null) {
+    if (await unlinkOutgoingRelationship(ctx, rowId, targetId, connectionType) === null) {
       unlinked++;
     }
   }

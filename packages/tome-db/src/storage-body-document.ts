@@ -564,13 +564,13 @@ export function documentToStorageBody(document: NodeBodyDocument): string {
   return withMarkers.endsWith("\n") ? withMarkers : `${withMarkers}\n`;
 }
 
-export function titleMapForNodeIds(
+export async function titleMapForNodeIds(
   db: RelationshipReadStore,
   ids: readonly string[],
-): Map<string, string> {
+): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   for (const id of ids) {
-    const node = db.getNode(id);
+    const node = await db.getNode(id);
     const title =
       typeof node?.properties.title === "string" ? node.properties.title.trim() : "";
     map.set(id, title || "Untitled");
@@ -579,12 +579,12 @@ export function titleMapForNodeIds(
 }
 
 /** Storage markdown → structured document with resolved titles. */
-export function storageBodyToDocument(
+export async function storageBodyToDocument(
   db: RelationshipReadStore,
   body: string,
-): NodeBodyDocument {
+): Promise<NodeBodyDocument> {
   const parsed = parseStorageBody(body);
-  const titles = titleMapForNodeIds(db, collectDynamicLinkIds(parsed));
+  const titles = await titleMapForNodeIds(db, collectDynamicLinkIds(parsed));
   return assignDynamicLinkTitles(parsed, (id) => titles.get(id) ?? "Untitled");
 }
 

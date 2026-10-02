@@ -20,13 +20,13 @@ import {
 const SOURCE = "0000000000000000000000001C";
 const TARGET = "0000000000000000000000001X";
 
-describe("graph store write path flatfile", () => {
-  test("link merge properties unlink without cache validation", () => {
-    const fixture = createTestContentFixture("tome-graph-write-flatfile-");
+describe("graph store write path flatfile", async () => {
+  test("link merge properties unlink without cache validation", async () => {
+    const fixture = await createTestContentFixture("tome-graph-write-flatfile-");
     try {
-      seedTestNode(fixture, { id: TEST_HOME_NODE_ID, properties: { title: "Home" } });
-      seedTestNode(fixture, { id: SOURCE, properties: { title: "Source" } });
-      seedTestNode(fixture, { id: TARGET, properties: { title: "Target" } });
+      await seedTestNode(fixture, { id: TEST_HOME_NODE_ID, properties: { title: "Home" } });
+      await seedTestNode(fixture, { id: SOURCE, properties: { title: "Source" } });
+      await seedTestNode(fixture, { id: TARGET, properties: { title: "Target" } });
       const registry = fixture.ctx.store.readRelationshipTypesFile();
       const assoc = registerBidirectionalType(registry, "Dependents", "Dependencies");
       fixture.ctx.store.writeRelationshipTypesFile(registry);
@@ -37,26 +37,26 @@ describe("graph store write path flatfile", () => {
       });
       const ctx = { ...fixture.ctx, graphStore: store };
 
-      expect(linkOutgoingRelationship(ctx, { sourceId: SOURCE, targetId: TARGET, type: assoc })).toBeNull();
-      expect(writeStoreFindRelationship(store, SOURCE, TARGET, assoc)).toBeTruthy();
+      expect(await linkOutgoingRelationship(ctx, { sourceId: SOURCE, targetId: TARGET, type: assoc })).toBeNull();
+      expect(await writeStoreFindRelationship(store, SOURCE, TARGET, assoc)).toBeTruthy();
 
-      writeStoreMergeRelationshipProperties(store, SOURCE, TARGET, assoc, { note: "linked" });
-      expect(writeStoreFindRelationship(store, SOURCE, TARGET, assoc)?.properties.note).toBe("linked");
+      await writeStoreMergeRelationshipProperties(store, SOURCE, TARGET, assoc, { note: "linked" });
+      expect((await writeStoreFindRelationship(store, SOURCE, TARGET, assoc))?.properties.note).toBe("linked");
 
-      expect(unlinkOutgoingRelationship(ctx, SOURCE, TARGET, assoc)).toBeNull();
-      expect(writeStoreFindRelationship(store, SOURCE, TARGET, assoc)).toBeNull();
+      expect(await unlinkOutgoingRelationship(ctx, SOURCE, TARGET, assoc)).toBeNull();
+      expect(await writeStoreFindRelationship(store, SOURCE, TARGET, assoc)).toBeNull();
 
-      store.close();
+      await store.close();
     } finally {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
     }
   });
 
-  test("direct upsertRelationship on flatfile graph store", () => {
-    const fixture = createTestContentFixture("tome-graph-write-upsert-");
+  test("direct upsertRelationship on flatfile graph store", async () => {
+    const fixture = await createTestContentFixture("tome-graph-write-upsert-");
     try {
-      seedTestNode(fixture, { id: SOURCE, properties: { title: "Source" } });
-      seedTestNode(fixture, { id: TARGET, properties: { title: "Target" } });
+      await seedTestNode(fixture, { id: SOURCE, properties: { title: "Source" } });
+      await seedTestNode(fixture, { id: TARGET, properties: { title: "Target" } });
       const registry = fixture.ctx.store.readRelationshipTypesFile();
       const assoc = registerBidirectionalType(registry, "Links", "LinkedFrom");
       fixture.ctx.store.writeRelationshipTypesFile(registry);
@@ -66,15 +66,15 @@ describe("graph store write path flatfile", () => {
         contentPath: fixture.ctx.store.contentDir,
       });
 
-      writeStoreUpsertRelationship(store, SOURCE, TARGET, assoc, { weight: 1 });
-      expect(writeStoreFindRelationship(store, SOURCE, TARGET, assoc)?.properties.weight).toBe(1);
+      await writeStoreUpsertRelationship(store, SOURCE, TARGET, assoc, { weight: 1 });
+      expect((await writeStoreFindRelationship(store, SOURCE, TARGET, assoc))?.properties.weight).toBe(1);
 
-      writeStoreMergeRelationshipProperties(store, SOURCE, TARGET, assoc, { weight: 2 });
-      expect(writeStoreFindRelationship(store, SOURCE, TARGET, assoc)?.properties.weight).toBe(2);
+      await writeStoreMergeRelationshipProperties(store, SOURCE, TARGET, assoc, { weight: 2 });
+      expect((await writeStoreFindRelationship(store, SOURCE, TARGET, assoc))?.properties.weight).toBe(2);
 
-      store.close();
+      await store.close();
     } finally {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
     }
   });
 });

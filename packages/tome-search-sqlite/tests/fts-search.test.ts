@@ -9,7 +9,7 @@ import type { SearchDocument } from "../src/fts-store";
 import type { SearcherHost, SearcherRegistration } from "tome-interfaces/search";
 import type { SyncSourceRead } from "tome-db/sync";
 
-describe("tome-search-sqlite", () => {
+describe("tome-search-sqlite", async () => {
   let tempDir: string;
 
   afterEach(() => {
@@ -34,7 +34,7 @@ describe("tome-search-sqlite", () => {
   }
 
   const emptySource: SyncSourceRead = {
-    executeImp() {
+    async executeImp() {
       return { columns: ["id"], rows: [] };
     },
   };

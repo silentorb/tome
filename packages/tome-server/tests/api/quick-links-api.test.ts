@@ -12,13 +12,13 @@ import {
 const NODE_ID = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 const OTHER_NODE_ID = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
-describe("quick links API", () => {
+describe("quick links API", async () => {
   test("POST and DELETE /api/nodes/:id/quick-link", async () => {
-    const fixture = createTestContentFixture("tome-quick-links-api-");
+    const fixture = await createTestContentFixture("tome-quick-links-api-");
     try {
-      seedTestNode(fixture, { id: NODE_ID, properties: { title: "Features" } });
+      await seedTestNode(fixture, { id: NODE_ID, properties: { title: "Features" } });
 
-      const { handler } = createTestApiFromContent(fixture);
+      const { handler } = await createTestApiFromContent(fixture);
 
       const added = await handler(
         new Request(`http://127.0.0.1/api/nodes/${NODE_ID}/quick-link`, {
@@ -51,17 +51,17 @@ describe("quick links API", () => {
       );
       expect(workspaceAfterRemove.quickLinks).toEqual([]);
     } finally {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
     }
   });
 
   test("PUT /api/workspace/quick-links/order reorders quick links", async () => {
-    const fixture = createTestContentFixture("tome-quick-links-reorder-api-");
+    const fixture = await createTestContentFixture("tome-quick-links-reorder-api-");
     try {
-      seedTestNode(fixture, { id: NODE_ID, properties: { title: "First" } });
-      seedTestNode(fixture, { id: OTHER_NODE_ID, properties: { title: "Second" } });
+      await seedTestNode(fixture, { id: NODE_ID, properties: { title: "First" } });
+      await seedTestNode(fixture, { id: OTHER_NODE_ID, properties: { title: "Second" } });
 
-      const { handler } = createTestApiFromContent(fixture);
+      const { handler } = await createTestApiFromContent(fixture);
 
       await handler(
         new Request(`http://127.0.0.1/api/nodes/${NODE_ID}/quick-link`, {
@@ -95,7 +95,7 @@ describe("quick links API", () => {
         NODE_ID,
       ]);
     } finally {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
     }
   });
 });

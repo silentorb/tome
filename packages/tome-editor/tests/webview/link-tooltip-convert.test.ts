@@ -47,7 +47,7 @@ function findLinkRange(
   return { from, to };
 }
 
-describe("convertStaticNodeLinkToDynamic", () => {
+describe("convertStaticNodeLinkToDynamic", async () => {
   test("static node link becomes dynamic_link with resolved title", async () => {
     const staticLink = formatEditorNodeMarkdownLink("Custom label", TARGET_ID);
     const { editor } = await setupEditor(`See ${staticLink} here.`);
@@ -100,7 +100,7 @@ describe("convertStaticNodeLinkToDynamic", () => {
   });
 });
 
-describe("link tooltip convert control", () => {
+describe("link tooltip convert control", async () => {
   test("shows Use dynamic title for static node links", async () => {
     const staticLink = formatEditorNodeMarkdownLink("Custom label", TARGET_ID);
     const { editor, root } = await setupEditor(`See ${staticLink} here.`);

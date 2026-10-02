@@ -6,7 +6,7 @@ import { TextSelection } from "@milkdown/prose/state";
 import { installCalloutCursor } from "../../src/webview/callout-cursor";
 import { installCalloutDecoration } from "../../src/webview/callout-decoration";
 
-describe("callout cursor", () => {
+describe("callout cursor", async () => {
   test("enables native caret styling while editing inside a callout", async () => {
     const root = document.createElement("div");
     document.body.appendChild(root);

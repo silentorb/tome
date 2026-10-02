@@ -48,11 +48,11 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-function allocateNodeId(ctx: TomeWriteContext): string {
+async function allocateNodeId(ctx: TomeWriteContext): Promise<string> {
   const store = ctx.graphStore;
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const id = generateNodeId();
-    if (!writeStoreGetNode(store, id)) return id;
+    if (!await writeStoreGetNode(store, id)) return id;
   }
   return generateNodeId();
 }
@@ -82,13 +82,13 @@ function ordinalFromProperties(properties: Record<string, unknown>): number | nu
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: string): number | undefined {
+async function nextOutgoingOrdinal(ctx: TomeWriteContext, sourceId: string, type: string): Promise<number | undefined> {
   const store = ctx.graphStore;
   const dir = contentDirForGraphStore(store, sourceId);
   const registry = loadRelationshipTypesFromContent(dir);
   const composite = relationshipTypeIdFromTypeOrProjection(registry, type);
   const parsed = parseProjectionType(type);
-  const outgoing = listRelationshipsFromSource(store, sourceId).filter((c) => {
+  const outgoing = (await listRelationshipsFromSource(store, sourceId)).filter((c) => {
     if (c.type === type) return true;
     if (composite && relationshipTypeIdFromTypeOrProjection(registry, c.type) === composite) {
       if (!parsed) return true;
@@ -121,21 +121,21 @@ function memberProjectionForSetLink(
   return setRoleProjectionTypesForNode(setId, dir)[1];
 }
 
-export function createNode(
+export async function createNode(
   ctx: TomeWriteContext,
   input: CreateNodeInput,
-): CreateNodeResult | CreateNodeError {
+): Promise<CreateNodeResult | CreateNodeError> {
   const store = ctx.graphStore;
   const title = input.title.trim();
   if (!isPersistableNodeTitle(title)) return "invalid_title";
 
   if (input.link?.kind === "outgoing") {
-    if (!writeStoreGetNode(store, input.link.sourceId)) return "source_not_found";
+    if (!await writeStoreGetNode(store, input.link.sourceId)) return "source_not_found";
   }
   if (input.link?.kind === "database-row") {
-    const database = writeStoreGetNode(store, input.link.databaseId);
+    const database = await writeStoreGetNode(store, input.link.databaseId);
     const dbDir = contentDirForGraphStore(store, input.link.databaseId);
-    if (!database || !isTypeTableNode(store, input.link.databaseId, dbDir)) {
+    if (!database || !await isTypeTableNode(store, input.link.databaseId, dbDir)) {
       return "database_not_found";
     }
   }
@@ -143,12 +143,12 @@ export function createNode(
   const corpusId = resolveCreateCorpusId(ctx, input);
   if (corpusId === "corpus_not_found") return corpusId;
 
-  const id = allocateNodeId(ctx);
+  const id = await allocateNodeId(ctx);
   const timestamp = nowIso();
   const body = input.body ?? "";
 
   try {
-    writeStoreUpsertNodeToCorpus(
+    await writeStoreUpsertNodeToCorpus(
       store,
       corpusId,
       {
@@ -165,25 +165,25 @@ export function createNode(
     if (err instanceof CorpusReadonlyError) return "corpus_readonly";
     throw err;
   }
-  syncAfterNodeWrite(ctx, id);
+  await syncAfterNodeWrite(ctx, id);
 
   if (input.link?.kind === "outgoing") {
     const { sourceId, type, properties: linkProps = {}, typeTableId, typeTablePerspective } =
       input.link;
     const relProps: Properties = { ...linkProps };
-    const nextOrdinal = nextOutgoingOrdinal(ctx, sourceId, type);
+    const nextOrdinal = await nextOutgoingOrdinal(ctx, sourceId, type);
     if (nextOrdinal !== undefined) relProps.ordinal = nextOrdinal;
-    writeStoreUpsertRelationship(store, sourceId, id, type, relProps);
+    await writeStoreUpsertRelationship(store, sourceId, id, type, relProps);
     if (typeTableId) {
       const memberProjection = memberProjectionForSetLink(
         ctx,
         typeTableId,
         typeTablePerspective,
       );
-      const setProps = stampOrderIfMissing(ctx, typeTableId, id, {}, memberProjection);
-      writeStoreUpsertRelationship(store, id, typeTableId, memberProjection, setProps);
+      const setProps = await stampOrderIfMissing(ctx, typeTableId, id, {}, memberProjection);
+      await writeStoreUpsertRelationship(store, id, typeTableId, memberProjection, setProps);
     }
-    syncAfterRelationshipsWrite(ctx);
+    await syncAfterRelationshipsWrite(ctx);
   }
 
   if (input.link?.kind === "database-row") {
@@ -199,18 +199,21 @@ export function createNode(
     let memberFilter: Set<string> | null = null;
     if (orderScopeRelations.length > 0) {
       memberFilter = new Set<string>();
-      for (const edge of listRelationshipsToTarget(store, databaseId, memberProjection)) {
+      for (const edge of await listRelationshipsToTarget(store, databaseId, memberProjection)) {
         const memberId = edge.sourceNodeId;
-        const matches = orderScopeRelations.every((scopeRel) =>
-          listRelationshipsFromSource(store, memberId, scopeRel.type).some(
-            (rel) => rel.targetNodeId === scopeRel.targetId,
-          ),
-        );
+        let matches = true;
+        for (const scopeRel of orderScopeRelations) {
+          const rels = await listRelationshipsFromSource(store, memberId, scopeRel.type);
+          if (!rels.some((rel) => rel.targetNodeId === scopeRel.targetId)) {
+            matches = false;
+            break;
+          }
+        }
         if (matches) memberFilter.add(memberId);
       }
     }
 
-    const relProps = stampOrderIfMissing(
+    const relProps = await stampOrderIfMissing(
       ctx,
       databaseId,
       id,
@@ -218,18 +221,18 @@ export function createNode(
       memberProjection,
       memberFilter,
     );
-    writeStoreUpsertRelationship(store, id, databaseId, memberProjection, relProps);
+    await writeStoreUpsertRelationship(store, id, databaseId, memberProjection, relProps);
 
     for (const relation of relations) {
-      const nextOrdinal = nextOutgoingOrdinal(ctx, id, relation.type);
+      const nextOrdinal = await nextOutgoingOrdinal(ctx, id, relation.type);
       const linkProps: Properties = { ...(relation.properties ?? {}) };
       if (nextOrdinal !== undefined && linkProps.ordinal === undefined) {
         linkProps.ordinal = nextOrdinal;
       }
-      writeStoreUpsertRelationship(store, id, relation.targetId, relation.type, linkProps);
+      await writeStoreUpsertRelationship(store, id, relation.targetId, relation.type, linkProps);
     }
 
-    syncAfterRelationshipsWrite(ctx);
+    await syncAfterRelationshipsWrite(ctx);
   }
 
   return { id, title };

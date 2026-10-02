@@ -298,13 +298,13 @@ export async function loadConfiguredStore(
   const corporaFromEnv = parseTomeCorporaEnv(readEnv("TOME_CORPORA"));
   const corpora = corporaFromOptions ?? corporaFromEnv;
   if (corpora && corpora.length > 0) {
-    return storeModule.open({ corpora });
+    return await Promise.resolve(storeModule.open({ corpora }));
   }
   const contentPath =
     typeof opts.contentPath === "string" && opts.contentPath.trim()
       ? opts.contentPath.trim()
       : defaultContentPath;
-  return storeModule.open({ contentPath });
+  return await Promise.resolve(storeModule.open({ contentPath }));
 }
 
 function parseCorporaOption(raw: unknown): TomeCorpusConfig[] | undefined {
@@ -370,7 +370,7 @@ export async function loadConfiguredCache(
     typeof opts.dbPath === "string" && opts.dbPath.trim()
       ? opts.dbPath.trim()
       : defaultDbPath;
-  return cacheModule.open({
+  return await cacheModule.open({
     dbPath,
     propertyCodec: extras?.propertyCodec,
     memberPerspectives: extras?.memberPerspectives,

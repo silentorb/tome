@@ -19,27 +19,27 @@ import {
  * Rewrite intrinsic edge sequence for the given row ids, optionally changing
  * one row's group relation using the database's relation-groups presentation layer.
  */
-export function rewriteDatabaseSequence(
+export async function rewriteDatabaseSequence(
   ctx: TomeWriteContext,
   databaseId: string,
   params: RewriteDatabaseSequenceParams,
-): DatabaseViewDetail | null {
+): Promise<DatabaseViewDetail | null> {
   const store = ctx.graphStore;
   const contentDir = writeStoreContentDir(store);
   const composition = getCompositionForDatabase(databaseId, contentDir);
 
-  applySparseSequenceRewrite(ctx, databaseId, params.orderedRowIds);
+  await applySparseSequenceRewrite(ctx, databaseId, params.orderedRowIds);
 
   if (params.groupChange && composition?.groups) {
     const { rowId, targetGroupId } = params.groupChange;
     const groupConfig = composition.groups;
-    const existing = listRelationshipsForComposite(
+    const existing = await listRelationshipsForComposite(
       store,
       rowId,
       groupConfig.memberToGroupComposite,
     );
     for (const connection of existing) {
-      writeStoreDeleteRelationship(
+      await writeStoreDeleteRelationship(
         store,
         connection.sourceNodeId,
         connection.targetNodeId,
@@ -54,7 +54,7 @@ export function rewriteDatabaseSequence(
         if (key === "ordinal") continue;
         props[key] = value;
       }
-      writeStoreUpsertRelationship(
+      await writeStoreUpsertRelationship(
         store,
         rowId,
         targetGroupId,
@@ -69,7 +69,7 @@ export function rewriteDatabaseSequence(
     }
   }
 
-  syncAfterRelationshipsWrite(ctx);
+  await syncAfterRelationshipsWrite(ctx);
 
   return getDatabaseViewDetail(store, databaseId, params.tabId, contentDir, {
     limit: DEFAULT_TABLE_ROW_LIMIT,

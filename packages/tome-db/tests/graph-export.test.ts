@@ -25,37 +25,37 @@ const NEAR = "77777777777777777777777777";
 const FAR = "88888888888888888888888888";
 const NEARBY = "99999999999999999999999999";
 
-describe("graph export", () => {
-  const fixtures: ReturnType<typeof createTestContentFixture>[] = [];
+describe("graph export", async () => {
+  const fixtures: Awaited<ReturnType<typeof createTestContentFixture>>[] = [];
 
-  afterEach(() => {
+  afterEach(async () => {
     for (const fixture of fixtures.splice(0)) {
-      destroyTestContentFixture(fixture);
+      await destroyTestContentFixture(fixture);
     }
   });
 
-  function trackFixture(prefix?: string) {
-    const fixture = createTestContentFixture(prefix);
+  async function trackFixture(prefix?: string) {
+    const fixture = await createTestContentFixture(prefix);
     fixtures.push(fixture);
     return fixture;
   }
 
-  test("exportFullGraph returns active vertices and edges", () => {
-    const fixture = trackFixture("tome-graph-export-");
+  test("exportFullGraph returns active vertices and edges", async () => {
+    const fixture = await trackFixture("tome-graph-export-");
     const { graphStore, store } = fixture.ctx;
 
-    seedTestNode(fixture, { id: PAGE1, properties: { title: "Scene A" } });
-    seedTestNode(fixture, { id: PAGE2, properties: { title: "Feature B" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: PAGE1, properties: { title: "Scene A" } });
+    await seedTestNode(fixture, { id: PAGE2, properties: { title: "Feature B" } });
+    await seedTestRelationships(fixture, [
       {
         source: PAGE1,
         target: PAGE2,
         type: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0),
       },
     ]);
-    fixture.ctx.sync.fullRebuild();
+    await fixture.ctx.sync.fullRebuild();
 
-    const snapshot = exportFullGraph(graphStore, store.contentDir);
+    const snapshot = await exportFullGraph(graphStore, store.contentDir);
 
     expect(snapshot.nodes).toHaveLength(2);
     expect(snapshot.relationships.length).toBeGreaterThanOrEqual(1);
@@ -66,37 +66,37 @@ describe("graph export", () => {
     });
   });
 
-  test("exportFullGraph excludes archived pages and their links", () => {
-    const fixture = trackFixture("tome-graph-export-arch-");
+  test("exportFullGraph excludes archived pages and their links", async () => {
+    const fixture = await trackFixture("tome-graph-export-arch-");
     const { graphStore, store } = fixture.ctx;
 
-    seedTestNode(fixture, { id: ACTIVE, properties: { title: "Active scene" } });
-    seedTestNode(fixture, { id: ARCHIVED, properties: { title: "Old foil" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: ACTIVE, properties: { title: "Active scene" } });
+    await seedTestNode(fixture, { id: ARCHIVED, properties: { title: "Old foil" } });
+    await seedTestRelationships(fixture, [
       {
         source: ACTIVE,
         target: ARCHIVED,
         type: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 1),
       },
     ]);
-    fixture.ctx.sync.fullRebuild();
-    expect(archiveNode(fixture.ctx, ARCHIVED)).toBeNull();
+    await fixture.ctx.sync.fullRebuild();
+    expect(await archiveNode(fixture.ctx, ARCHIVED)).toBeNull();
 
-    expect(fixture.ctx.store.isNodeFileArchived(ARCHIVED)).toBe(true);
-    const snapshot = exportFullGraph(graphStore, store.contentDir);
+    expect(await fixture.ctx.store.isNodeFileArchived(ARCHIVED)).toBe(true);
+    const snapshot = await exportFullGraph(graphStore, store.contentDir);
     expect(snapshot.nodes.some((node) => node.id === ARCHIVED)).toBe(false);
     expect(snapshot.nodes.some((node) => node.id === ACTIVE)).toBe(true);
     expect(snapshot.relationships).toHaveLength(0);
   });
 
-  test("exportExplorerLodGraph builds heuristic layers", () => {
-    const fixture = trackFixture("tome-graph-export-lod-");
+  test("exportExplorerLodGraph builds heuristic layers", async () => {
+    const fixture = await trackFixture("tome-graph-export-lod-");
     const { graphStore, store } = fixture.ctx;
 
-    seedTestNode(fixture, { id: PAGE1, properties: { title: "Scene 1" } });
-    seedTestNode(fixture, { id: PAGE2, properties: { title: "Scene 2" } });
-    seedTestNode(fixture, { id: PAGE3, properties: { title: "Feature 1" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: PAGE1, properties: { title: "Scene 1" } });
+    await seedTestNode(fixture, { id: PAGE2, properties: { title: "Scene 2" } });
+    await seedTestNode(fixture, { id: PAGE3, properties: { title: "Feature 1" } });
+    await seedTestRelationships(fixture, [
       {
         source: PAGE1,
         target: PAGE2,
@@ -108,9 +108,9 @@ describe("graph export", () => {
         type: projectionTypeForEndpoint(TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID, 0),
       },
     ]);
-    fixture.ctx.sync.fullRebuild();
+    await fixture.ctx.sync.fullRebuild();
 
-    const lod = exportExplorerLodGraph(graphStore, { contentDir: store.contentDir });
+    const lod = await exportExplorerLodGraph(graphStore, { contentDir: store.contentDir });
 
     expect(lod.layerCount).toBe(DEFAULT_EXPLORER_LOD_LAYER_COUNT);
     expect(lod.levels).toHaveLength(DEFAULT_EXPLORER_LOD_LAYER_COUNT);
@@ -118,23 +118,23 @@ describe("graph export", () => {
     expect(lod.levels[lod.levels.length - 1]!.nodes.some((node) => node.id === PAGE1)).toBe(true);
   });
 
-  test("exportExplorerLodGraph filters to anchor connected component", () => {
-    const fixture = trackFixture("tome-graph-export-anchor-");
+  test("exportExplorerLodGraph filters to anchor connected component", async () => {
+    const fixture = await trackFixture("tome-graph-export-anchor-");
     const { graphStore, store } = fixture.ctx;
 
-    seedTestNode(fixture, { id: ANCHOR, properties: { title: "Anchor" } });
-    seedTestNode(fixture, { id: NEAR, properties: { title: "Near" } });
-    seedTestNode(fixture, { id: FAR, properties: { title: "Far" } });
-    seedTestRelationships(fixture, [
+    await seedTestNode(fixture, { id: ANCHOR, properties: { title: "Anchor" } });
+    await seedTestNode(fixture, { id: NEAR, properties: { title: "Near" } });
+    await seedTestNode(fixture, { id: FAR, properties: { title: "Far" } });
+    await seedTestRelationships(fixture, [
       {
         source: ANCHOR,
         target: NEAR,
         type: TEST_RELATED_ASSOCIATION_ID,
       },
     ]);
-    fixture.ctx.sync.fullRebuild();
+    await fixture.ctx.sync.fullRebuild();
 
-    const lod = exportExplorerLodGraph(graphStore, {
+    const lod = await exportExplorerLodGraph(graphStore, {
       anchorId: ANCHOR,
       contentDir: store.contentDir,
     });
@@ -145,24 +145,24 @@ describe("graph export", () => {
     expect(finest.nodes.some((node) => node.id === FAR)).toBe(false);
   });
 
-  test("exportExplorerLodGraph without SQLite cache", () => {
-    const fixture = trackFixture("tome-graph-export-flatfile-");
-    seedTestNode(fixture, { id: TEST_GRAPH_ANCHOR_NODE_ID, properties: { title: "Anchor" } });
-    seedTestNode(fixture, { id: NEARBY, properties: { title: "Near" } });
-    seedTestRelationships(fixture, [
+  test("exportExplorerLodGraph without SQLite cache", async () => {
+    const fixture = await trackFixture("tome-graph-export-flatfile-");
+    await seedTestNode(fixture, { id: TEST_GRAPH_ANCHOR_NODE_ID, properties: { title: "Anchor" } });
+    await seedTestNode(fixture, { id: NEARBY, properties: { title: "Near" } });
+    await seedTestRelationships(fixture, [
       {
         source: TEST_GRAPH_ANCHOR_NODE_ID,
         target: NEARBY,
         type: TEST_INSPIRATIONS_FEATURES_RELATIONSHIP_TYPE_ID,
       },
     ]);
-    fixture.ctx.cache.close();
+    await fixture.ctx.cache.close();
 
     const store = openFlatfileQueryableGraphStore({
       contentPath: fixture.ctx.store.contentDir,
     });
-    const lod = exportExplorerLodGraph(store, { anchorId: TEST_GRAPH_ANCHOR_NODE_ID });
+    const lod = await exportExplorerLodGraph(store, { anchorId: TEST_GRAPH_ANCHOR_NODE_ID });
     expect(lod.levels[lod.levels.length - 1]!.nodes.some((n) => n.id === NEARBY)).toBe(true);
-    store.close();
+    await store.close();
   });
 });

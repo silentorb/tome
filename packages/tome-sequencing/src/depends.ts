@@ -56,12 +56,10 @@ async function findDirectedDependsRow(input: {
   relationshipTypeId: string;
 }): Promise<{ properties: Record<string, unknown> } | null> {
   const type0 = projectionType(input.relationshipTypeId, 0);
-  const edges = await Promise.resolve(
-    input.graphQuery.listEdges({
+  const edges = await input.graphQuery.listEdges({
       nodeIds: [input.prerequisiteId, input.dependentId],
       types: [type0],
-    }),
-  );
+    });
   const match = edges.find(
     (edge) => edge.sourceId === input.prerequisiteId && edge.targetId === input.dependentId,
   );
@@ -110,14 +108,12 @@ export async function mutateTimelineDepends(input: {
 
   if (input.action === "addDepends") {
     if (!existing) {
-      const error = await Promise.resolve(
-        input.graphMutate.linkOutgoing({
+      const error = await input.graphMutate.linkOutgoing({
           sourceId: input.prerequisiteId,
           targetId: input.dependentId,
           type,
           properties: endpointsProperty([{ from: input.from, to: input.to }]),
-        }),
-      );
+        });
       if (error) {
         return { ok: false, error };
       }
@@ -129,20 +125,16 @@ export async function mutateTimelineDepends(input: {
       if (pairs.some((pair) => pair.from === input.from && pair.to === input.to)) {
         return { ok: false, error: "This dependency already exists" };
       }
-      const error = await Promise.resolve(
-        input.graphMutate.replaceOutgoingProperties(input.prerequisiteId, input.dependentId, type, {
+      const error = await input.graphMutate.replaceOutgoingProperties(input.prerequisiteId, input.dependentId, type, {
           ...existing.properties,
           ...endpointsProperty([...pairs, { from: input.from, to: input.to }]),
-        }),
-      );
+        });
       if (error) {
         return { ok: false, error };
       }
     }
   } else if (!existing) {
-    const error = await Promise.resolve(
-      input.graphMutate.unlinkOutgoing(input.prerequisiteId, input.dependentId, type),
-    );
+    const error = await input.graphMutate.unlinkOutgoing(input.prerequisiteId, input.dependentId, type);
     if (error) {
       return { ok: false, error };
     }
@@ -156,19 +148,15 @@ export async function mutateTimelineDepends(input: {
       return { ok: false, error: "not_found" };
     }
     if (remaining.length === 0) {
-      const error = await Promise.resolve(
-        input.graphMutate.unlinkOutgoing(input.prerequisiteId, input.dependentId, type),
-      );
+      const error = await input.graphMutate.unlinkOutgoing(input.prerequisiteId, input.dependentId, type);
       if (error) {
         return { ok: false, error };
       }
     } else {
-      const error = await Promise.resolve(
-        input.graphMutate.replaceOutgoingProperties(input.prerequisiteId, input.dependentId, type, {
+      const error = await input.graphMutate.replaceOutgoingProperties(input.prerequisiteId, input.dependentId, type, {
           ...existing.properties,
           ...endpointsProperty(remaining),
-        }),
-      );
+        });
       if (error) {
         return { ok: false, error };
       }

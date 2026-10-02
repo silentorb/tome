@@ -8,24 +8,24 @@ import {
 } from "./graph-store/relationship-read";
 import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
 
-export function rowBelongsToDatabase(
+export async function rowBelongsToDatabase(
   db: RelationshipReadStore,
   rowId: string,
   databaseId: string,
   contentDir?: string,
-): boolean {
-  return findSetEdge(db, rowId, databaseId, contentDir) !== null;
+): Promise<boolean> {
+  return (await findSetEdge(db, rowId, databaseId, contentDir)) !== null;
 }
 
 /** Keep incident edges when row is a member of the viewing database. */
-export function filterRelationshipsByRowDatabaseContext(
+export async function filterRelationshipsByRowDatabaseContext(
   db: RelationshipReadStore,
   rowId: string,
   databaseId: string,
   relationships: Relationship[],
   contentDir?: string,
-): Relationship[] {
-  if (!rowBelongsToDatabase(db, rowId, databaseId, contentDir)) return [];
+): Promise<Relationship[]> {
+  if (!(await rowBelongsToDatabase(db, rowId, databaseId, contentDir))) return [];
   return relationships;
 }
 
@@ -43,35 +43,38 @@ function uniqueRelationships(relationships: Relationship[]): Relationship[] {
 function hasGetRelationship(
   store: RelationshipReadStore,
 ): store is RelationshipReadStore & {
-  getRelationship: (id: string) => Relationship | null;
+  getRelationship: (id: string) => Promise<Relationship | null>;
 } {
   return typeof (store as { getRelationship?: unknown }).getRelationship === "function";
 }
 
 function isGraphStoreBase(store: RelationshipReadStore): store is import("tome-graph-interfaces").TomeGraphStoreBase {
-  return typeof (store as import("tome-graph-interfaces").TomeGraphStoreBase).listRelationshipProjections === "function";
+  return (
+    typeof (store as import("tome-graph-interfaces").TomeGraphStoreBase).contentDir === "string" &&
+    "capabilities" in store
+  );
 }
 
 function hasQueryAll(
   store: RelationshipReadStore,
 ): store is RelationshipReadStore & {
-  queryAll: <T extends Record<string, unknown>>(sql: string, ...params: unknown[]) => T[];
+  queryAll: <T extends Record<string, unknown>>(sql: string, ...params: unknown[]) => Promise<T[]>;
 } {
   return typeof (store as { queryAll?: unknown }).queryAll === "function";
 }
 
 /** All projections for a composite relationship type incident to nodeId. */
-export function listRelationshipsForComposite(
+export async function listRelationshipsForComposite(
   db: RelationshipReadStore,
   nodeId: string,
   compositeType: string,
-): Relationship[] {
+): Promise<Relationship[]> {
   const normalized = normalizeRelationshipTypeId(compositeType);
 
   // Prefer indexed SQLite when available (ComposedGraphStore / GraphDatabase).
   // Base-tier forEach over flatfile re-scans every relationship shard.
   if (hasQueryAll(db) && hasGetRelationship(db)) {
-    const rows = db.queryAll<{ id: string }>(
+    const rows = await db.queryAll<{ id: string }>(
       `SELECT p.id
        FROM relationship_projections p
        INNER JOIN relationship_records r ON p.record_id = r.id
@@ -84,7 +87,7 @@ export function listRelationshipsForComposite(
     );
     const hydrated: Relationship[] = [];
     for (const row of rows) {
-      const relationship = db.getRelationship(row.id);
+      const relationship = await db.getRelationship(row.id);
       if (relationship) hydrated.push(relationship);
     }
     const composite = dedupeByRecordId(hydrated, nodeId);
@@ -98,9 +101,9 @@ export function listRelationshipsForComposite(
   }
 
   if (isGraphStoreBase(db)) {
-    const registry = db.readRelationshipTypes();
+    const registry = await db.readRelationshipTypes();
     const results: Relationship[] = [];
-    db.forEachRelationshipRecord((entry) => {
+    await db.forEachRelationshipRecord((entry) => {
       if (normalizeRelationshipTypeId(entry.type) !== normalized) return;
       const { projections } = expandRelationshipEntry(entry, registry);
       for (const row of projections) {
@@ -154,21 +157,25 @@ export function otherEndpoint(relationship: Relationship, nodeId: string): strin
     : relationship.sourceNodeId;
 }
 
-function databaseMemberIds(db: RelationshipReadStore, databaseId: string, contentDir?: string): Set<string> {
-  return new Set(setMemberIds(db, databaseId, contentDir));
+async function databaseMemberIds(
+  db: RelationshipReadStore,
+  databaseId: string,
+  contentDir?: string,
+): Promise<Set<string>> {
+  return new Set(await setMemberIds(db, databaseId, contentDir));
 }
 
 /** Incident relationships whose opposite endpoint belongs to targetDatabaseId. */
-export function listRelationshipsToDatabaseMembers(
+export async function listRelationshipsToDatabaseMembers(
   db: RelationshipReadStore,
   nodeId: string,
   targetDatabaseId: string,
   contentDir?: string,
-): Relationship[] {
-  const members = databaseMemberIds(db, targetDatabaseId, contentDir);
+): Promise<Relationship[]> {
+  const members = await databaseMemberIds(db, targetDatabaseId, contentDir);
   const incident = uniqueRelationships([
-    ...listRelationshipsFromSource(db, nodeId),
-    ...listRelationshipsToTarget(db, nodeId),
+    ...(await listRelationshipsFromSource(db, nodeId)),
+    ...(await listRelationshipsToTarget(db, nodeId)),
   ]);
   return dedupeByRecordId(
     incident.filter((relationship) => {
@@ -177,4 +184,3 @@ export function listRelationshipsToDatabaseMembers(
     }),
   );
 }
-

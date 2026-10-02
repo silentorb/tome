@@ -41,7 +41,7 @@ async function mentionRangeFor(
   return range;
 }
 
-describe("activeMentionRangeAtSelection", () => {
+describe("activeMentionRangeAtSelection", async () => {
   test("covers @ and full query at paragraph start", async () => {
     const range = await mentionRangeFor("@cozy", "@cozy");
     expect(range).not.toBeNull();
