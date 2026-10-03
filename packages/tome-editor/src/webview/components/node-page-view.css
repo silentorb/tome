@@ -29,7 +29,8 @@
 
 .tome-record-sections {
   gap: 32px;
-  padding: 24px 32px 32px;
+  /* ~82px needed for Crepe block handle (2×32px + gap + 16px offset); 96px leaves cushion. */
+  padding: 24px 96px 32px;
 }
 
 .tome-record-section {
@@ -111,6 +112,11 @@
 
 .tome-record-page .tome-markdown-section:not(:has(.tome-content-panel)) .milkdown .ProseMirror {
   padding: 14px 0 0;
+}
+
+/* Content-panel chrome does not leave room for the handle; keep a ProseMirror left gutter. */
+.tome-record-page .tome-markdown-section:has(.tome-content-panel) .milkdown .ProseMirror {
+  padding-left: 80px;
 }
 
 .tome-record-page .tome-editor-body.is-empty .milkdown .ProseMirror p {

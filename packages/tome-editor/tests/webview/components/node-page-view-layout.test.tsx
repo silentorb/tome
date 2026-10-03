@@ -18,12 +18,24 @@ describe("node page markdown editor layout CSS", () => {
     );
   });
 
+  test("leaves page gutter wide enough for the Crepe block handle", () => {
+    expect(nodePageCss).toMatch(
+      /\.tome-record-sections[\s\S]*padding:\s*24px\s+96px\s+32px/,
+    );
+  });
+
   test("uses stable ProseMirror top padding on node pages", () => {
     expect(nodePageCss).toMatch(
-      /\.tome-record-page \.tome-editor-body \.milkdown \.ProseMirror[\s\S]*padding:\s*14px\s+0\s+0/,
+      /\.tome-record-page \.tome-markdown-section:not\(:has\(\.tome-content-panel\)\) \.milkdown \.ProseMirror[\s\S]*padding:\s*14px\s+0\s+0/,
     );
     expect(nodePageCss).not.toMatch(
       /\.tome-record-page \.tome-editor-body \.milkdown \.ProseMirror\s+p[\s\S]*padding-top:\s*14px/,
+    );
+  });
+
+  test("keeps a ProseMirror left gutter when markdown uses a content panel", () => {
+    expect(nodePageCss).toMatch(
+      /\.tome-record-page \.tome-markdown-section:has\(\.tome-content-panel\) \.milkdown \.ProseMirror[\s\S]*padding-left:\s*80px/,
     );
   });
 
