@@ -54,9 +54,11 @@ For graph storage basics, read [tome-db.md](./tome-db.md). For view tabs and vie
 ### `sequence` layer
 
 - Rows **must** sort by the intrinsic edge `order` property (server-provided via member-page `intrinsicSequence`). Column header / view sorts are not offered for sequenced tables.
+- Intrinsic `order` is stored as a string on the edge; the SQL member-page path **must** sort it **numerically** (`CAST(… AS REAL)`), not as TEXT, so values like `"100"` do not precede `"20"`.
 - Users **must** be able to drag a row within its group to change the sequence, and to a different group to change the group relation.
 - Dropping onto the `__unassigned__` group **must** remove the group relation.
-- Every move **must** rewrite sparse integer order values (`10, 20, 30, …`) across the submitted row id sequence via `rewriteDatabaseSequence` (per-row edge resolve; not a full-set preload).
+- The editor may submit only the **loaded window prefix** of row ids. `rewriteDatabaseSequence` **must** expand that prefix into the full active-scope member sequence (prefix rearrangement + unloaded remainder), then rewrite sparse integer order values (`10, 20, 30, …`) across that full scoped list via `applySparseSequenceRewrite` (per-row edge resolve).
+- Post-write cache sync (`syncAfterWrite`) **must** wait for / queue behind in-flight expands — never silently skip — so the PATCH response’s `getDatabaseViewDetail` reflects the new orders.
 
 ### Editor UI
 
@@ -111,11 +113,12 @@ GET /api/nodes/:databaseId?tab=:scopeId
 Sequence edit:
 
 ```
-User drag-drop (webview)
+User drag-drop (webview; optimistic local groups; row/column collision filter)
   → PATCH /api/databases/:databaseId/sequence
   → rewriteDatabaseSequence (tome-db)
+  → expand submitted window prefix → full scoped member ids
   → applySparseSequenceRewrite (findSetEdge per row) + optional group relation move
-  → content write + SQLite cache sync
+  → content write + syncAfterWrite barrier + getDatabaseViewDetail
 ```
 
 ## Out of scope

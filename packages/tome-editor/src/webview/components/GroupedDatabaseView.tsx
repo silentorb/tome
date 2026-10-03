@@ -6,7 +6,9 @@ import {
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
+  type UniqueIdentifier,
 } from "@dnd-kit/core";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -30,6 +32,20 @@ import { SortableDataColumnHeaders, columnLabelFor, moveColumnOrderItem } from "
 import { TableRowsSentinel } from "./TableRowsSentinel";
 import "./grouped-database-view.css";
 import "./section-data-table.css";
+
+function isColumnSortableId(id: UniqueIdentifier): boolean {
+  return String(id).startsWith("col:");
+}
+
+/** Row drags ignore column headers; column drags ignore rows/groups. */
+export const groupedDatabaseCollisionDetection: CollisionDetection = (args) => {
+  const draggingColumn = isColumnSortableId(args.active.id);
+  const droppableContainers = args.droppableContainers.filter((container) => {
+    const columnTarget = isColumnSortableId(container.id);
+    return draggingColumn ? columnTarget : !columnTarget;
+  });
+  return closestCenter({ ...args, droppableContainers });
+};
 
 function mergeGroups(
   existing: DatabaseRowGroup[],
@@ -77,7 +93,7 @@ function groupDropId(groupId: string): string {
   return `group:${groupId}`;
 }
 
-function resolveDropTarget(
+export function resolveDropTarget(
   groups: DatabaseRowGroup[],
   overId: string,
 ): { targetGroupId: string; targetIndex: number } | null {
@@ -97,7 +113,7 @@ function resolveDropTarget(
   return null;
 }
 
-function flattenGroupRows(groups: DatabaseRowGroup[]): string[] {
+export function flattenGroupRows(groups: DatabaseRowGroup[]): string[] {
   const ids: string[] = [];
   for (const group of groups) {
     for (const row of group.rows) ids.push(row.nodeId);
@@ -105,7 +121,7 @@ function flattenGroupRows(groups: DatabaseRowGroup[]): string[] {
   return ids;
 }
 
-function applyMoveToGroups(
+export function applyMoveToGroups(
   groups: DatabaseRowGroup[],
   memberId: string,
   targetGroupId: string,
@@ -134,12 +150,46 @@ function applyMoveToGroups(
   return nextGroups;
 }
 
+/** Pure plan for a sequenced row drop — used by drag-end and regression tests. */
+export function planRowSequenceMove(
+  groups: DatabaseRowGroup[],
+  activeId: string,
+  overId: string,
+): {
+  nextGroups: DatabaseRowGroup[];
+  orderedRowIds: string[];
+  groupChange?: { rowId: string; targetGroupId: string };
+} | null {
+  if (isColumnSortableId(overId) || activeId === overId) return null;
+  const target = resolveDropTarget(groups, overId);
+  if (!target) return null;
+  const sourceGroupId = groups.find((group) =>
+    group.rows.some((row) => row.nodeId === activeId),
+  )?.groupId;
+  const nextGroups = applyMoveToGroups(
+    groups,
+    activeId,
+    target.targetGroupId,
+    target.targetIndex,
+  );
+  if (nextGroups === groups) return null;
+  return {
+    nextGroups,
+    orderedRowIds: flattenGroupRows(nextGroups),
+    groupChange:
+      sourceGroupId != null && sourceGroupId !== target.targetGroupId
+        ? { rowId: activeId, targetGroupId: target.targetGroupId }
+        : undefined,
+  };
+}
+
 interface SortableGroupedProps {
   row: DatabaseRow;
   groupId: string;
   index: number;
   columns: string[];
   sequenced: boolean;
+  rowDragDisabled?: boolean;
   renderCell: (column: string, row: DatabaseRow) => ReactNode;
   renderNameCell: (rowId: string, name: string) => ReactNode;
   rowPageActions?: {
@@ -158,6 +208,7 @@ function SortableGroupedRow({
   index,
   columns,
   sequenced,
+  rowDragDisabled = false,
   renderCell,
   renderNameCell,
   rowPageActions,
@@ -167,7 +218,7 @@ function SortableGroupedRow({
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: row.nodeId,
     data: { groupId, index, type: "ordered-row" },
-    disabled: !sequenced,
+    disabled: !sequenced || rowDragDisabled,
   });
 
   const style = {
@@ -230,6 +281,7 @@ interface GroupTableProps {
   columns: string[];
   columnLabels: Record<string, string>;
   sequenced: boolean;
+  rowDragDisabled?: boolean;
   renderCell: (column: string, row: DatabaseRow) => ReactNode;
   renderNameCell: (rowId: string, name: string) => ReactNode;
   onAddRow: (groupId: string, title: string) => Promise<void>;
@@ -248,6 +300,7 @@ function GroupTable({
   columns,
   columnLabels,
   sequenced,
+  rowDragDisabled = false,
   renderCell,
   renderNameCell,
   onAddRow,
@@ -264,7 +317,7 @@ function GroupTable({
   const { setNodeRef } = useDroppable({
     id: groupDropId(group.groupId),
     data: { groupId: group.groupId, type: "group" },
-    disabled: !sequenced,
+    disabled: !sequenced || rowDragDisabled,
   });
 
   return (
@@ -318,6 +371,7 @@ function GroupTable({
                       index={index}
                       columns={columns}
                       sequenced={sequenced}
+                      rowDragDisabled={rowDragDisabled}
                       renderCell={renderCell}
                       renderNameCell={renderNameCell}
                       rowPageActions={rowPageActions}
@@ -353,6 +407,7 @@ export function GroupedDatabaseView({
   const [activeColumnId, setActiveColumnId] = useState<string | null>(null);
   const [moveError, setMoveError] = useState<string | null>(null);
   const [isMoving, setIsMoving] = useState(false);
+  const [optimisticGroups, setOptimisticGroups] = useState<DatabaseRowGroup[] | null>(null);
   const [displayColumns, setDisplayColumns] = useState(view.columns);
   const [columnEditorState, setColumnEditorState] = useState<ColumnEditorState | null>(null);
 
@@ -389,8 +444,16 @@ export function GroupedDatabaseView({
     setDisplayColumns(view.columns);
   }, [view.columns]);
 
+  useEffect(() => {
+    // Server seed updates replace optimistic drag preview.
+    setOptimisticGroups(null);
+  }, [view.groups, view.rowsWindow]);
+
+  const displayGroups = optimisticGroups ?? windowedGroups;
   const sequenced = Boolean(view.presentation?.sequenced);
   const presentation = view.presentation;
+  const hasActiveSearch = searchQuery.trim().length > 0;
+  const rowDragDisabled = isMoving || hasActiveSearch;
 
   const handleColumnsReorder = useCallback(
     async (columnOrder: string[]) => {
@@ -472,12 +535,12 @@ export function GroupedDatabaseView({
 
   const activeRow = useMemo(() => {
     if (!activeRowId) return null;
-    for (const group of windowedGroups) {
+    for (const group of displayGroups) {
       const row = group.rows.find((entry) => entry.nodeId === activeRowId);
       if (row) return row;
     }
     return null;
-  }, [activeRowId, windowedGroups]);
+  }, [activeRowId, displayGroups]);
 
   const renderNameCell = useCallback(
     (rowId: string, name: string) => (
@@ -566,37 +629,37 @@ export function GroupedDatabaseView({
     async (event: DragEndEvent) => {
       const { active, over } = event;
       setActiveRowId(null);
-      if (!over || active.id === over.id || !sequenced) return;
+      if (!over || !sequenced || rowDragDisabled) return;
 
-      const target = resolveDropTarget(windowedGroups, String(over.id));
-      if (!target) return;
+      const planned = planRowSequenceMove(displayGroups, String(active.id), String(over.id));
+      if (!planned) return;
 
-      const nextGroups = applyMoveToGroups(
-        windowedGroups,
-        String(active.id),
-        target.targetGroupId,
-        target.targetIndex,
-      );
-
+      setOptimisticGroups(planned.nextGroups);
       setMoveError(null);
       setIsMoving(true);
       try {
         const nextView = await api.rewriteDatabaseSequence(view.id, {
-          orderedRowIds: flattenGroupRows(nextGroups),
+          orderedRowIds: planned.orderedRowIds,
           tabId: view.tabs.activeTabId,
-          groupChange: {
-            rowId: String(active.id),
-            targetGroupId: target.targetGroupId,
-          },
+          groupChange: planned.groupChange,
         });
         onViewChange(nextView);
       } catch (err) {
+        setOptimisticGroups(null);
         setMoveError(err instanceof Error ? err.message : String(err));
       } finally {
         setIsMoving(false);
       }
     },
-    [api, onViewChange, sequenced, view.id, view.tabs.activeTabId, windowedGroups],
+    [
+      api,
+      displayGroups,
+      onViewChange,
+      rowDragDisabled,
+      sequenced,
+      view.id,
+      view.tabs.activeTabId,
+    ],
   );
 
   const handleColumnDragEnd = useCallback(
@@ -645,10 +708,9 @@ export function GroupedDatabaseView({
   }, []);
 
   const loadedRowCount = useMemo(
-    () => windowedGroups.reduce((count, group) => count + group.rows.length, 0),
-    [windowedGroups],
+    () => displayGroups.reduce((count, group) => count + group.rows.length, 0),
+    [displayGroups],
   );
-  const hasActiveSearch = searchQuery.trim().length > 0;
 
   if (view.tabs.items.length === 0) {
     return <div className="tome-database-empty">No items in this database.</div>;
@@ -678,19 +740,20 @@ export function GroupedDatabaseView({
       ) : (
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCenter}
+          collisionDetection={groupedDatabaseCollisionDetection}
           onDragStart={handleDragStart}
           onDragEnd={handleDragEnd}
           onDragCancel={handleDragCancel}
         >
           <div className="tome-grouped-database-groups">
-            {windowedGroups.map((group) => (
+            {displayGroups.map((group) => (
               <GroupTable
                 key={group.groupId}
                 group={group}
                 columns={displayColumns}
                 columnLabels={columnLabels}
                 sequenced={sequenced}
+                rowDragDisabled={rowDragDisabled}
                 renderCell={renderCell}
                 renderNameCell={renderNameCell}
                 onAddRow={handleAddRow}

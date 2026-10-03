@@ -86,6 +86,18 @@ describe("membership-query Analyze→Bind→Plan→Emit", () => {
     ]);
   });
 
+  test("Emit: intrinsicSequence sorts order numerically, not as TEXT", () => {
+    const compiled = compileMemberPage("set1", {
+      projections: [{ setProjection: "a:0", memberProjection: "a:1" }],
+      intrinsicSequence: true,
+      limit: 10,
+      offset: 0,
+    });
+    expect(compiled.empty).toBe(false);
+    expect(compiled.pageSql).toContain('CAST(m."order" AS REAL) ASC');
+    expect(compiled.pageSql).not.toMatch(/ORDER BY[\s\S]*m\."order" ASC/);
+  });
+
   test("Emit: plain page and enriched page are one statement family", () => {
     const plain = compileMemberPage("set1", {
       projections: [{ setProjection: "a:0", memberProjection: "a:1" }],

@@ -749,6 +749,41 @@ describe("GraphDatabase", () => {
     db.close();
   });
 
+  test("listMemberPage sorts string order values numerically for intrinsicSequence", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "intrinsic-numeric-order.sqlite");
+    const db = new GraphDatabase(dbPath);
+    const setId = "01SET0000000000000000000000";
+    const setProjection = "assocSet:0";
+    const memberProjection = "assocSet:1";
+    const member10 = "01MEMBER100000000000000000";
+    const member20 = "01MEMBER200000000000000000";
+    const member100 = "01MEMBER100000000000000001";
+
+    db.upsertNode(setId, { title: "Type table" });
+    db.upsertNode(member10, { title: "Ten" });
+    db.upsertNode(member20, { title: "Twenty" });
+    db.upsertNode(member100, { title: "Hundred" });
+    // TEXT lexicographic order would be 10, 100, 20 — numeric must win.
+    db.upsertRelationship(setId, member10, setProjection, { order: "10" });
+    db.upsertRelationship(setId, member100, setProjection, { order: "100" });
+    db.upsertRelationship(setId, member20, setProjection, { order: "20" });
+
+    const page = db.listMemberPage(setId, {
+      projections: [{ setProjection, memberProjection }],
+      intrinsicSequence: true,
+      limit: 10,
+      offset: 0,
+    });
+    expect(page.relationships.map((r) => r.sourceNodeId)).toEqual([
+      member10,
+      member20,
+      member100,
+    ]);
+
+    db.close();
+  });
+
   test("selects relation field link arrays in set membership window SQL", () => {
     tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "set-member-relation-fields.sqlite");

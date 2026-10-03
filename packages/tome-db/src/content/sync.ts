@@ -204,8 +204,8 @@ export function subscribeStoreToCacheSync(
   sync: CacheSync,
 ): () => void {
   return store.subscribe((event) => {
-    if (sync.isApplying()) return;
-    // StoreChangeListener is sync-void; kick async sync without blocking emit.
+    // Queue behind in-flight applies (do not drop while applying — that left
+    // SQLite stale after flatfile writes). StoreChangeListener is sync-void.
     void sync.syncFile(event.path).catch((err) => {
       console.error("[tome-sync] syncFile failed:", err);
     });
@@ -287,6 +287,8 @@ export function loadDynamicColumnSetsFromContent(
 
 export class CacheSync {
   private applying = false;
+  /** Serializes cache applies so waiters re-run instead of silently no-oping. */
+  private applyChain: Promise<void> = Promise.resolve();
   private startupSync = false;
   private readonly progress: SyncProgressReporter;
 
@@ -309,6 +311,26 @@ export class CacheSync {
 
   isApplying(): boolean {
     return this.applying;
+  }
+
+  /**
+   * Run exclusive cache-mutating work. Concurrent callers queue and each runs
+   * after the previous finishes (never drop a post-write sync).
+   */
+  private exclusive(fn: () => Promise<void>): Promise<void> {
+    const run = this.applyChain.then(async () => {
+      this.applying = true;
+      try {
+        await fn();
+      } finally {
+        this.applying = false;
+      }
+    });
+    this.applyChain = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
   }
 
   private corpusContentDirs(): string[] {
@@ -430,8 +452,7 @@ export class CacheSync {
    * so HTTP can answer gated syncing responses.
    */
   async fullRebuild(): Promise<void> {
-    this.applying = true;
-    try {
+    await this.exclusive(async () => {
       await this.cache.runExec("DELETE FROM nodes");
 
       const ids = this.store.listNodeIds();
@@ -457,9 +478,7 @@ export class CacheSync {
 
       invalidateDynamicPropertiesCache();
       await this.updateCacheMarkers();
-    } finally {
-      this.applying = false;
-    }
+    });
   }
 
   /**
@@ -517,35 +536,29 @@ export class CacheSync {
     }
   }
 
-  async syncNode(id: string): Promise<void> {
-    if (this.applying) return;
-    this.applying = true;
-    try {
-      const node = this.store.readNode(id);
-      if (!node) {
-        await this.cache.deleteNode(id);
-        return;
-      }
-      const body = bodyFromNode(node);
-      await this.cache.upsertNode(node.id, { ...node.properties, body });
-    } finally {
-      this.applying = false;
+  private async syncNodeUnlocked(id: string): Promise<void> {
+    const node = this.store.readNode(id);
+    if (!node) {
+      await this.cache.deleteNode(id);
+      return;
     }
+    const body = bodyFromNode(node);
+    await this.cache.upsertNode(node.id, { ...node.properties, body });
+  }
+
+  async syncNode(id: string): Promise<void> {
+    await this.exclusive(() => this.syncNodeUnlocked(id));
+  }
+
+  private async syncRelationshipsUnlocked(): Promise<void> {
+    await this.expandRelationshipsToCache();
   }
 
   async syncRelationships(): Promise<void> {
-    if (this.applying) return;
-    this.applying = true;
-    try {
-      await this.expandRelationshipsToCache();
-    } finally {
-      this.applying = false;
-    }
+    await this.exclusive(() => this.syncRelationshipsUnlocked());
   }
 
-  async syncFile(relativeName: string): Promise<void> {
-    if (this.applying) return;
-
+  private async syncFileUnlocked(relativeName: string): Promise<void> {
     if (
       relativeName === RELATIONSHIPS_SYNC_MARKER ||
       relativeName === ASSOCIATIONS_FILENAME
@@ -553,7 +566,7 @@ export class CacheSync {
       if (relativeName === ASSOCIATIONS_FILENAME) {
         invalidateRelationshipTypesCache();
       }
-      await this.syncRelationships();
+      await this.syncRelationshipsUnlocked();
       await this.updateCacheMarkers();
       return;
     }
@@ -567,7 +580,7 @@ export class CacheSync {
     if (relativeName === SCHEMA_FILENAME) {
       invalidateSchemaCache();
       // Enum indices in SQLite depend on options order; re-encode from content labels.
-      await this.syncRelationships();
+      await this.syncRelationshipsUnlocked();
       await this.updateCacheMarkers();
       return;
     }
@@ -601,11 +614,19 @@ export class CacheSync {
     const match = NODE_FILE_PATTERN.exec(base);
     if (match) {
       const id = base.slice(0, -3);
-      await this.syncNode(id);
+      await this.syncNodeUnlocked(id);
       await this.updateCacheMarkers();
     }
   }
 
+  async syncFile(relativeName: string): Promise<void> {
+    await this.exclusive(() => this.syncFileUnlocked(relativeName));
+  }
+
+  /**
+   * Post-mutation barrier: wait for any in-flight apply, then refresh the cache
+   * from current flatfile. Never silently skips when another expand is running.
+   */
   async syncAfterWrite(relativeName: string): Promise<void> {
     await this.syncFile(relativeName);
   }

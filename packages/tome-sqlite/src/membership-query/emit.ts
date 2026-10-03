@@ -293,7 +293,9 @@ function buildOrderBy(
         clauses.push(
           `CASE WHEN ${memberRowAlias}."order" IS NULL THEN 1 ELSE 0 END ASC`,
         );
-        clauses.push(`${memberRowAlias}."order" ASC`);
+        // Flatfile stores order as string properties; sort numerically so
+        // "100" does not precede "20" under TEXT collation.
+        clauses.push(`CAST(${memberRowAlias}."order" AS REAL) ASC`);
         break;
       case "title":
         clauses.push(`${catalog.titleExpr} COLLATE NOCASE ASC`);

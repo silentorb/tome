@@ -2,7 +2,10 @@ import { describe, expect, test, afterAll } from "bun:test";
 import { typeTableMarkerProperties } from "../src/node-capabilities";
 import { getDatabaseViewDetail } from "../src/database-view";
 import { createNode } from "../src/node-create";
-import { rewriteDatabaseSequence } from "../src/table-presentation/rewrite-sequence";
+import {
+  mergeScopedSequencePrefix,
+  rewriteDatabaseSequence,
+} from "../src/table-presentation/rewrite-sequence";
 import { UNASSIGNED_GROUP_ID } from "tome-graph-interfaces";
 import { getNodePageDetail } from "../src/node-page-sections";
 import {
@@ -277,24 +280,109 @@ describe("table-presentation", async () => {
     expect(edge2?.properties.order).toBe("10");
   });
 
-  test("rewriteDatabaseSequence rewrites only submitted orderedRowIds", async () => {
+  test("mergeScopedSequencePrefix keeps unloaded remainder after rearranged prefix", () => {
+    expect(mergeScopedSequencePrefix(["a", "b", "c", "d"], ["b", "a"])).toEqual([
+      "b",
+      "a",
+      "c",
+      "d",
+    ]);
+    expect(() => mergeScopedSequencePrefix(["a", "b", "c"], ["a", "c"])).toThrow(
+      /rearrangement of the loaded scope prefix/,
+    );
+  });
+
+  test("rewriteDatabaseSequence expands a window prefix across the full scope", async () => {
     const memberProjection = projectionTypeForEndpoint(TEST_ORDERED_MEMBER_OF_RELATIONSHIP_TYPE_ID, 1);
-    const before3 = (await fixture.ctx.cache.getRelationship(
-      `${scene3}:${memberProjection}:${SCENES_DB}`,
-    ))?.properties.order;
-    expect(before3).toBe("30");
+    const extra = [
+      "6666666666666666666666666A",
+      "6666666666666666666666666B",
+      "6666666666666666666666666C",
+    ];
+    for (let i = 0; i < extra.length; i++) {
+      const id = extra[i]!;
+      await seedTestNode(fixture, { id, properties: { title: `Extra ${i}` } });
+      await seedTestRelationships(fixture, [
+        {
+          source: id,
+          target: SCENES_DB,
+          type: "ordered_member_of",
+          properties: { order: String(40 + i * 10) },
+        },
+      ]);
+      await seedTestCompositeRelationships(fixture, [
+        {
+          a: id,
+          b: bookA,
+          typeFromA: "Scenes",
+          typeFromB: "Product",
+          relationshipTypeId: "000000000000000000000000A3",
+          properties: { ordinal: 0 },
+        },
+        {
+          a: id,
+          b: part1,
+          typeFromA: "Scenes",
+          typeFromB: "Part",
+          relationshipTypeId: "000000000000000000000000A4",
+          properties: { ordinal: 0 },
+        },
+      ]);
+    }
+
+    // Reset bookA scene1/2 orders so the loaded prefix is stable.
+    await seedTestRelationships(fixture, [
+      {
+        source: scene1,
+        target: SCENES_DB,
+        type: "ordered_member_of",
+        properties: { order: "10" },
+      },
+      {
+        source: scene2,
+        target: SCENES_DB,
+        type: "ordered_member_of",
+        properties: { order: "20" },
+      },
+    ]);
+
+    const beforeOutOfScope = (
+      await fixture.ctx.cache.getRelationship(`${scene3}:${memberProjection}:${SCENES_DB}`)
+    )?.properties.order;
 
     await rewriteDatabaseSequence(fixture.ctx, SCENES_DB, {
+      // Window prefix only (first two bookA members); remainder must still renumber.
       orderedRowIds: [scene2, scene1],
       tabId: bookA,
     });
 
-    const edge1 = await fixture.ctx.cache.getRelationship(`${scene1}:${memberProjection}:${SCENES_DB}`);
-    const edge2 = await fixture.ctx.cache.getRelationship(`${scene2}:${memberProjection}:${SCENES_DB}`);
-    const edge3 = await fixture.ctx.cache.getRelationship(`${scene3}:${memberProjection}:${SCENES_DB}`);
-    expect(edge1?.properties.order).toBe("20");
+    const edge1 = await fixture.ctx.cache.getRelationship(
+      `${scene1}:${memberProjection}:${SCENES_DB}`,
+    );
+    const edge2 = await fixture.ctx.cache.getRelationship(
+      `${scene2}:${memberProjection}:${SCENES_DB}`,
+    );
     expect(edge2?.properties.order).toBe("10");
-    expect(edge3?.properties.order).toBe(before3);
+    expect(edge1?.properties.order).toBe("20");
+
+    const remainderOrders: number[] = [];
+    for (const id of extra) {
+      const edge = await fixture.ctx.cache.getRelationship(
+        `${id}:${memberProjection}:${SCENES_DB}`,
+      );
+      remainderOrders.push(Number(edge?.properties.order));
+    }
+    // Remainder keeps relative order and continues the sparse 10-step sequence after the prefix.
+    expect(remainderOrders).toEqual([...remainderOrders].sort((a, b) => a - b));
+    expect(remainderOrders[0]).toBeGreaterThan(Number(edge1?.properties.order));
+    expect(remainderOrders.every((order, index) => order === remainderOrders[0]! + index * 10)).toBe(
+      true,
+    );
+
+    const edge3 = await fixture.ctx.cache.getRelationship(
+      `${scene3}:${memberProjection}:${SCENES_DB}`,
+    );
+    expect(edge3?.properties.order).toBe(beforeOutOfScope);
   });
 
   test("groupChange moves a member to a different group", async () => {

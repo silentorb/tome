@@ -1,9 +1,14 @@
 import { describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { GroupedDatabaseView } from "../../../src/webview/components/GroupedDatabaseView";
+import {
+  GroupedDatabaseView,
+  groupedDatabaseCollisionDetection,
+  planRowSequenceMove,
+} from "../../../src/webview/components/GroupedDatabaseView";
 import { UserSettingsProvider } from "../../../src/webview/hooks/useUserSettings";
 import { makeMockEditorApi } from "../test-fixtures/mock-api";
 import type { DatabaseViewDetail } from "../../../src/shared/types";
+import type { DatabaseRowGroup } from "tome-graph-interfaces";
 
 const TYPE_DB = "0000000000000000000000000D";
 const SCENE_ID = "scene111111111111111111111111111";
@@ -203,6 +208,93 @@ describe("GroupedDatabaseView", () => {
       }),
     );
     await waitFor(() => expect(onViewChange).toHaveBeenCalled());
+  });
+
+  test("planRowSequenceMove omits groupChange for same-group reorder", () => {
+    const groups: DatabaseRowGroup[] = [
+      {
+        groupId: "part1",
+        title: "Part 1",
+        rows: [
+          { rowIndex: 0, nodeId: "sceneA", name: "A", cells: {} },
+          { rowIndex: 1, nodeId: "sceneB", name: "B", cells: {} },
+        ],
+      },
+      {
+        groupId: "part2",
+        title: "Part 2",
+        rows: [{ rowIndex: 2, nodeId: "sceneC", name: "C", cells: {} }],
+      },
+    ];
+    const sameGroup = planRowSequenceMove(groups, "sceneA", "sceneB");
+    expect(sameGroup?.groupChange).toBeUndefined();
+    expect(sameGroup?.orderedRowIds).toEqual(["sceneB", "sceneA", "sceneC"]);
+
+    const crossGroup = planRowSequenceMove(groups, "sceneA", "sceneC");
+    expect(crossGroup?.groupChange).toEqual({
+      rowId: "sceneA",
+      targetGroupId: "part2",
+    });
+    expect(crossGroup?.orderedRowIds).toEqual(["sceneB", "sceneA", "sceneC"]);
+  });
+
+  test("planRowSequenceMove ignores column header drop targets", () => {
+    const groups: DatabaseRowGroup[] = [
+      {
+        groupId: "part1",
+        title: "Part 1",
+        rows: [{ rowIndex: 0, nodeId: "sceneA", name: "A", cells: {} }],
+      },
+    ];
+    expect(planRowSequenceMove(groups, "sceneA", "col:part1:characters")).toBeNull();
+  });
+
+  test("collision detection filters column headers out of row drags", () => {
+    const containers = [
+      { id: "sceneA" },
+      { id: "col:part1:characters" },
+      { id: "group:part1" },
+    ] as any[];
+    const hits = groupedDatabaseCollisionDetection({
+      active: { id: "sceneA" },
+      collisionRect: { top: 0, left: 0, bottom: 10, right: 10, width: 10, height: 10 },
+      droppableRects: new Map(
+        containers.map((c) => [
+          c.id,
+          { top: 0, left: 0, bottom: 10, right: 10, width: 10, height: 10 },
+        ]),
+      ),
+      droppableContainers: containers,
+      pointerCoordinates: { x: 5, y: 5 },
+    } as any);
+    const hitIds = hits.map((hit) => String(hit.id));
+    expect(hitIds).not.toContain("col:part1:characters");
+  });
+
+  test("disables sequence drag handles while search is active", async () => {
+    window.history.replaceState({}, "", "http://127.0.0.1:5173/?node=abc&search_items=opening");
+    const getDatabaseView = mock(async () => ({
+      ...view,
+      groups: [view.groups![0]!],
+      rowsWindow: { offset: 0, limit: 50, total: 1, hasMore: false },
+    }));
+    const api = { ...makeMockEditorApi(), getDatabaseView };
+
+    render(
+      <GroupedDatabaseView
+        api={api}
+        nodeId={BOOK_A}
+        view={view}
+        onTabSelect={() => {}}
+        onViewChange={() => {}}
+      />,
+    );
+
+    await waitFor(() => expect(getDatabaseView).toHaveBeenCalled());
+    const handle = screen.getByRole("button", { name: /Move Opening in sequence/i });
+    expect(handle.getAttribute("aria-disabled") === "true" || handle.hasAttribute("disabled")).toBe(
+      true,
+    );
   });
 
   test("unlinks rows with memberSidePerspective from the view payload", async () => {
