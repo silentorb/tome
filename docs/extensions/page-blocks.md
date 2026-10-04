@@ -26,8 +26,10 @@ A logical block **may** implement editor only, html only, server only, or any co
 
 - Fence language is the **content type** (`json`).
 - Info-string `{type="…"}` is the **block role** (requested capability), not a component id.
+- Optional **`{#propertyId}`** in the info string marks a **structured body property** on the owning node (conceptually `node.<propertyId>`). Example: `{#predicate type="node-filter"}` for ontology Imp filters — see [ontology.md](../features/ontology.md).
 - Fence body is the block’s opaque JSON data (flattened — no `componentId` / `data` wrapper).
 - Hosts resolve `type` via `resolvePageBlockRole`: first enabled `kind: "page-block"` component whose `roles` includes that string; else a component whose `id` matches (legacy).
+- Fences without `{#id}` behave as before (role-only page blocks).
 
 ## Editor host (`tome-editor`)
 

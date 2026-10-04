@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "tome-graph-interfaces": "workspace:^0.5.0",
+    "tome-interfaces": "workspace:^0.5.0",
     "tome-ontology": "workspace:^0.1.0",
     "tome-service-interfaces": "workspace:^0.6.0",
     "ulid": "^3.0.2",

@@ -3,6 +3,11 @@ export interface PageBlockPayload {
   blockType: string;
   contentType: string;
   data: unknown;
+  /**
+   * Optional structured-property key from fence info `{#id type="…"}`.
+   * Conceptually `node.<propertyId>` on the owning node.
+   */
+  propertyId?: string;
 }
 
 export type MarkdownSegment =

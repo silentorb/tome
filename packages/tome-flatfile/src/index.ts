@@ -128,6 +128,7 @@ export {
   SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
   REDIRECTS_FILENAME,
+  ONTOLOGY_FILENAME,
   NODE_FILE_PATTERN,
   NODE_ID_PATTERN,
   RELATIONSHIP_FILE_PATTERN,
@@ -152,6 +153,7 @@ export {
   sequencingFilePath,
   extensionsFilePath,
   redirectsFilePath,
+  ontologyFilePath,
   isNodeId,
   nodeFileName,
   nodeFilePath,
@@ -261,6 +263,25 @@ export {
   loadWorkspace,
   invalidateWorkspaceCache,
 } from "./workspace/load";
+
+export {
+  ONTOLOGY_FILE_VERSION,
+  emptyOntologyFile,
+  parseOntologyFile,
+  serializeOntologyFile,
+  ontologyTypesConfigured,
+} from "./ontology/ontology-file";
+export type { OntologyFile, OntologyTypeKey } from "./ontology/ontology-file";
+export {
+  loadOntologyFileFromContent,
+  invalidateOntologyCache,
+  contentHasOntologyTypes,
+} from "./ontology/load";
+export { parseImpGraph } from "./ontology/imp-graph";
+export {
+  discoverActiveNodePredicates,
+  compileDiscoveredNodePredicates,
+} from "./ontology/discover";
 export {
   resolveWorkspace,
   archiveNodeId,

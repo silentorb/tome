@@ -234,3 +234,6 @@ export type {
   DynamicColumnSetFileEntry,
   DynamicPropertiesFile,
 } from "./model-config";
+
+export type { OntologyFile, OntologyTypeKey } from "./ontology-file";
+export { ONTOLOGY_FILE_VERSION } from "./ontology-file";

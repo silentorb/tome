@@ -5,7 +5,9 @@ export type {
   ParsedPageBlockMarkdown,
 } from "./types";
 export {
+  NODE_FILTER_BLOCK_ROLE,
   PAGE_BLOCK_CONTENT_TYPE_JSON,
+  extractStructuredProperties,
   formatPageBlockFenceMeta,
   normalizeLegacyBlockType,
   parsePageBlockFenceBody,
@@ -17,6 +19,7 @@ export {
   serializePageBlockInner,
   substitutePageBlockPlaceholders,
 } from "./parse";
+export type { PageBlockInfoMeta } from "./parse";
 export {
   collapsePageBlockEmbedsForStorage,
   expandPageBlockFencesForEditor,

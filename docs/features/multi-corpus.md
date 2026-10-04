@@ -71,7 +71,7 @@ Boot **fails** on: duplicate node ids across corpora; duplicate relationship typ
 
 Union in memory via composite `read*File()` — do not write a merged `model/`.
 
-- Union by id: relationship types (`associations.json`), table-schemas, views, dynamic-properties, extensions.
+- Union by id: relationship types (`associations.json`), optional node ontology from each corpus’s `ontology.json` + graph (see [ontology.md](./ontology.md)), table-schemas, views, dynamic-properties, extensions.
 - Schema: union relationship rules and enums (with conflict rules above).
 - `workspace.json` is **not** flattened. Each corpus **must** have `homeNodeId`. Session API lists corpora; editor chrome uses the **active** corpus only.
 - Archive: each corpus’s `archiveNodeId`; archiving uses that node’s hub; cache recompute considers every hub.

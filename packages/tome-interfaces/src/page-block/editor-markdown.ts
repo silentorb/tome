@@ -66,7 +66,7 @@ export function collapsePageBlockEmbedsForStorage(markdown: string): string {
     const htmlEnd = findPageBlockEmbedHtmlEnd(markdown, match.index + match[0].length);
 
     if (payload) {
-      result += serializePageBlock(payload.blockType, payload.data);
+      result += serializePageBlock(payload.blockType, payload.data, payload.propertyId);
     } else {
       result += markdown.slice(match.index, htmlEnd);
     }

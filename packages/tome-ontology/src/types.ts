@@ -1,13 +1,19 @@
 import type {
+  ImpGraph,
   PerspectivePair,
   TraitEntry,
 } from "tome-graph-interfaces";
 
 /** Edge-kind identity + display metadata. Traits do not live on predicates. */
 export interface Predicate {
-  /** Stable id (today: associations.json ULID key). */
+  /** Stable id (today: associations.json ULID key, or ontology predicate node id). */
   id: string;
   perspectives: PerspectivePair;
+  /**
+   * Optional Imp node→boolean filter from a structured body property
+   * (`{#predicate type="node-filter"}`).
+   */
+  nodeFilter?: ImpGraph;
 }
 
 /**

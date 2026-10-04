@@ -2,18 +2,22 @@ import { existsSync, readFileSync, statSync } from "node:fs";
 import {
   compileAssociationConfig,
   emptyRelationshipRuntime,
+  mergeRelationshipRuntimes,
   type RelationshipRuntime,
 } from "tome-ontology";
-import { relationshipTypesFilePath } from "../content/paths";
+import { ontologyFilePath, relationshipTypesFilePath } from "../content/paths";
 import {
   emptyRelationshipTypesFile,
   parseRelationshipTypesFile,
   type RelationshipTypesFile,
 } from "../content/relationship-types-file";
+import { compileDiscoveredNodePredicates } from "../ontology/discover";
+import { contentHasOntologyTypes, loadOntologyFileFromContent } from "../ontology/load";
 
 let cachedTypes: {
   contentDir: string;
-  mtimeMs: number;
+  associationsMtimeMs: number;
+  ontologyMtimeMs: number;
   file: RelationshipTypesFile;
   runtime: RelationshipRuntime;
 } | null = null;
@@ -22,17 +26,29 @@ export function invalidateRelationshipTypesCache(): void {
   cachedTypes = null;
 }
 
+function ontologyFileMtimeMs(contentDir: string): number {
+  const path = ontologyFilePath(contentDir);
+  if (existsSync(path)) return statSync(path).mtimeMs;
+  return 0;
+}
+
 function loadCached(contentDir: string): {
   file: RelationshipTypesFile;
   runtime: RelationshipRuntime;
 } {
   const path = relationshipTypesFilePath(contentDir);
-  let mtimeMs = 0;
+  let associationsMtimeMs = 0;
   if (existsSync(path)) {
-    mtimeMs = statSync(path).mtimeMs;
+    associationsMtimeMs = statSync(path).mtimeMs;
   }
+  const ontologyMtimeMs = ontologyFileMtimeMs(contentDir);
 
-  if (cachedTypes && cachedTypes.contentDir === contentDir && cachedTypes.mtimeMs === mtimeMs) {
+  if (
+    cachedTypes &&
+    cachedTypes.contentDir === contentDir &&
+    cachedTypes.associationsMtimeMs === associationsMtimeMs &&
+    cachedTypes.ontologyMtimeMs === ontologyMtimeMs
+  ) {
     return { file: cachedTypes.file, runtime: cachedTypes.runtime };
   }
 
@@ -47,12 +63,23 @@ function loadCached(contentDir: string): {
     }
   }
 
-  const runtime =
+  let runtime =
     Object.keys(file.relationshipTypes).length === 0
       ? emptyRelationshipRuntime()
       : compileAssociationConfig(file);
 
-  cachedTypes = { contentDir, mtimeMs, file, runtime };
+  if (contentHasOntologyTypes(contentDir)) {
+    loadOntologyFileFromContent(contentDir);
+    runtime = mergeRelationshipRuntimes(runtime, compileDiscoveredNodePredicates(contentDir));
+  }
+
+  cachedTypes = {
+    contentDir,
+    associationsMtimeMs,
+    ontologyMtimeMs,
+    file,
+    runtime,
+  };
   return { file, runtime };
 }
 
@@ -60,7 +87,7 @@ export function loadRelationshipTypesFromContent(contentDir: string): Relationsh
   return loadCached(contentDir).file;
 }
 
-/** AC → BR: associations.json compiled to the predicate/pattern runtime. */
+/** Associations.json (+ optional node ontology overlay) → RelationshipRuntime. */
 export function loadRelationshipRuntimeFromContent(contentDir: string): RelationshipRuntime {
   return loadCached(contentDir).runtime;
 }

@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
   collapsePageBlockEmbedsForStorage,
   expandPageBlockFencesForEditor,
+  extractStructuredProperties,
   formatPageBlockEmbedComment,
   normalizeLegacyBlockType,
   parsePageBlockFences,
@@ -78,6 +79,37 @@ describe("page-block parse", async () => {
     const { segments } = parsePageBlockFences(md);
     expect(segments).toHaveLength(1);
     expect(segments[0]?.type).toBe("prose");
+  });
+
+  test("optional property id on fence meta round-trips", () => {
+    const fence = serializePageBlock(
+      "node-filter",
+      { nodes: {}, edges: {} },
+      "predicate",
+    );
+    expect(fence.startsWith('```json {#predicate type="node-filter"}\n')).toBe(true);
+    const { segments } = parsePageBlockFences(fence);
+    expect(segments).toHaveLength(1);
+    expect(segments[0]?.type).toBe("block");
+    if (segments[0]?.type === "block") {
+      expect(segments[0].payload).toEqual({
+        blockType: "node-filter",
+        contentType: "json",
+        data: { nodes: {}, edges: {} },
+        propertyId: "predicate",
+      });
+    }
+  });
+
+  test("extractStructuredProperties filters by role and property id", () => {
+    const md = [
+      serializePageBlock("node-filter", { nodes: { a: 1 }, edges: {} }, "predicate"),
+      "",
+      serializePageBlock("query", { version: 1 }, "other"),
+    ].join("\n");
+    const props = extractStructuredProperties(md, "node-filter");
+    expect([...props.keys()]).toEqual(["predicate"]);
+    expect(props.get("predicate")?.data).toEqual({ nodes: { a: 1 }, edges: {} });
   });
 
   test("expand and collapse round-trip for editor embeds", async () => {

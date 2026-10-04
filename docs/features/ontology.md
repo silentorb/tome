@@ -2,7 +2,12 @@
 
 ## Summary
 
-Tome’s corpus model is an **ontology**: semantic-driven configuration of relationship meaning, traits, and constraints. Package [`tome-ontology`](../../packages/tome-ontology/) holds a store-independent **relationship runtime** (predicates + patterns). Today that runtime is **compiled from** legacy `associations.json` (relationship types file); the on-disk config shape is unchanged.
+Tome’s corpus model is an **ontology**: semantic-driven configuration of relationship meaning, traits, and constraints. Package [`tome-ontology`](../../packages/tome-ontology/) holds a store-independent **relationship runtime** (predicates + patterns).
+
+That runtime is compiled from:
+
+1. **`associations.json`** — legacy relationship-types file (unchanged on disk)
+2. **Node-authored ontology** (optional) — declared via `ontology.json` and graph membership, with Imp **node-filter** selection logic on predicate nodes
 
 ## Schema vs ontology (terminology)
 
@@ -31,43 +36,87 @@ Design-domain meaning of Marloth nodes (features, products, …) lives in the co
 
 | Concept | Role |
 | --- | --- |
-| **Predicate** | Edge-kind identity + display metadata (`id`, `perspectives`). **No traits.** |
+| **Predicate** | Edge-kind identity + display metadata (`id`, `perspectives`). Optional Imp **nodeFilter** (`node → boolean`). **No traits on the predicate.** |
 | **Pattern** | Match scope + attached traits / `linkExisting` / endpoint constraints |
 | **RelationshipRuntime** | `predicates` + `patterns` with query helpers |
 
-Plan 1 match context is `{ predicateId }` (optional `endpointIndex` for link-existing). Richer specificity (type-pair / instance patterns) is reserved for later.
+Match context today is `{ predicateId }` (optional `endpointIndex` for link-existing). Richer specificity (type-pair / instance patterns) is reserved for later.
 
 **Traits attach to patterns**, not to predicates. Set / ordered / symmetric behavior is discovered by matching patterns for a predicate id.
 
-## Config → runtime migration ladder
+## Config sources
 
-| Stage | Config → Runtime |
-| --- | --- |
-| Current (pre-Plan 1) | AC → AR (`associations.json` → definition helpers) |
-| **Plan 1 (now)** | **AC → BR** (`compileAssociationConfig`) |
-| Plan 2 (later) | AC → BR and BC → BR (new config also compiles to BR) |
-| Plan 3 (later) | BC → BR only |
-
-- **AC** — associations.json / `RelationshipTypesFile` (unchanged on disk).
-- **BR** — predicate/pattern runtime in `tome-ontology`.
-- **BC** — future better-authored config (not in this plan).
-
-## AC → BR compile rules
+### associations.json
 
 `compileAssociationConfig(file)`:
 
 1. For each `[id, def]` in `file.relationshipTypes`, emit predicate `{ id, perspectives }`.
 2. Emit one pattern `{ id: "ac:"+id, match: { predicateId: id }, traits, linkExisting, endpoints }` from the same entry.
 
-Flatfile loads AC (`loadRelationshipTypesFromContent`) and caches the compiled runtime (`loadRelationshipRuntimeFromContent`). Invalidating the relationship-types mtime cache clears both.
+Flatfile loads associations (`loadRelationshipTypesFromContent`) and caches the compiled runtime (`loadRelationshipRuntimeFromContent`).
+
+### ontology.json (node-authored)
+
+Optional file: `content/model/ontology.json`
+
+```json
+{
+  "version": 1,
+  "types": {
+    "ontology": "<ontology-type-node-ulid>",
+    "predicate": "<predicate-type-node-ulid>"
+  }
+}
+```
+
+| Field | Meaning |
+| --- | --- |
+| `types.ontology` | Type-table node whose **members** are ontology instances |
+| `types.predicate` | Type-table node whose **members** are predicate instances |
+
+**Taxonomy is relational** (not frontmatter markers):
+
+| Kind | Qualification |
+| --- | --- |
+| Ontology instance | Member of `types.ontology` (set-trait membership) |
+| Predicate instance | Member of `types.predicate` |
+| **Active** predicate | Predicate instance **and** member of ≥1 ontology instance |
+
+Set-trait relationship types still come from `associations.json` (bootstrap / chicken-egg until typing can be expressed as node-native patterns).
+
+### Imp node-filter structured properties
+
+Active predicate nodes carry selection logic as a fenced structured body property:
+
+- Fence language: `json`
+- Info string: `{#predicate type="node-filter"}`
+- Body: **raw Imp Graph JSON** (agent-authored; not a React Flow envelope)
+- Property key `predicate` means conceptually `node.predicate`
+
+Optional `{#id}` on page-block meta is the general structured-property convention — see [page-blocks.md](../extensions/page-blocks.md). React Flow visualization/editing for these filters is deferred.
+
+Predicates without a valid `node-filter` property are skipped (not active in the runtime).
+
+### Merge and site scope
+
+1. Compile associations → base runtime
+2. Discover/compile active node predicates → overlay (**node wins** on same predicate id)
+3. A site / composite session **unions** contributions from each corpus’s `ontology.json` + graph (solo corpus is the trivial case)
+
+`workspace.json` is unchanged; a future `corpus.json` for non-ontology corpus identity is deferred.
 
 ## Package layout
 
 | Package | Owns |
 | --- | --- |
-| `tome-ontology` | BR types, match/query, `compileAssociationConfig` |
-| `tome-flatfile` | AC parse/load/write; mtime-cached compile entrypoint; thin adapters |
-| `tome-db` | Domain use (sets, pages, sync) querying BR |
+| `tome-ontology` | Runtime types, match/query, `compileAssociationConfig`, `compileNodePredicates`, merge |
+| `tome-flatfile` | associations + ontology.json I/O; discovery; mtime-cached runtime load |
+| `tome-interfaces` | Page-block fence parse including optional `{#id}` |
+| `tome-db` | Domain use + sync invalidation when ontology config / membership / filter bodies change |
+
+## Sync / invalidation
+
+Invalidating the relationship-types runtime cache also covers node ontology overlay. Triggers include `associations.json`, `ontology.json`, set-membership relationship changes (when ontology types are configured), and predicate node body edits (when ontology types are configured).
 
 ## See also
 

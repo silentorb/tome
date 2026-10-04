@@ -4,6 +4,7 @@ import { resolveMarkdownHrefTarget } from "tome-flatfile/markdown-links";
 import { DEFAULT_CALLOUT_EMOJI } from "tome-flatfile/callout";
 import { extractLeadingTaskMarker } from "tome-flatfile/task";
 import {
+  PAGE_BLOCK_CONTENT_TYPE_JSON,
   formatPageBlockEmbedComment,
   parsePageBlockFenceBody,
   parsePageBlockInfoMeta,
@@ -201,6 +202,7 @@ function blocksToPm(blocks: readonly NodeBodyBlock[]): PmNode[] {
               blockType: block.blockType,
               contentType: "json",
               data: block.data,
+              ...(block.propertyId ? { propertyId: block.propertyId } : {}),
             }),
             html: block.editorHtml ?? "",
           },
@@ -413,6 +415,7 @@ function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
               type: "page_block",
               blockType: payload.blockType,
               data: payload.data,
+              ...(payload.propertyId ? { propertyId: payload.propertyId } : {}),
             });
             break;
           }
@@ -420,14 +423,20 @@ function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
         // Slash-insert interim: language is `json {type="role"}` (meta folded into language).
         if (language?.startsWith("json")) {
           const meta = language.slice("json".length).trim();
-          const blockType = meta ? parsePageBlockInfoMeta(meta) : null;
-          if (blockType) {
-            const payload = parsePageBlockFenceBody(blockType, text);
+          const info = meta ? parsePageBlockInfoMeta(meta) : null;
+          if (info) {
+            const payload = parsePageBlockFenceBody(
+              info.blockType,
+              text,
+              PAGE_BLOCK_CONTENT_TYPE_JSON,
+              info.propertyId,
+            );
             if (payload) {
               out.push({
                 type: "page_block",
                 blockType: payload.blockType,
                 data: payload.data,
+                ...(payload.propertyId ? { propertyId: payload.propertyId } : {}),
               });
               break;
             }
@@ -463,6 +472,7 @@ function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
           type: "page_block",
           blockType: payload.blockType,
           data: payload.data,
+          ...(payload.propertyId ? { propertyId: payload.propertyId } : {}),
           editorHtml: String(node.attrs?.html ?? ""),
         });
         break;

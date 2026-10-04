@@ -14,6 +14,15 @@ export {
   patternIdFromAssociationType,
 } from "./compile";
 
+export type { NodeFilterEvaluator, NodePredicateInput } from "./node-compile";
+export {
+  compileNodePredicates,
+  emptyNodePredicateRuntime,
+  mergeRelationshipRuntimes,
+  patternIdFromNodePredicate,
+  predicateSelectsNode,
+} from "./node-compile";
+
 export {
   ORDERED_PROPERTY_DEFAULT,
   ORDERED_TRAIT,

@@ -136,6 +136,8 @@ export interface NodeBodyPageBlock {
   /** Block role (fence `type=`), resolved to a component via extension `roles`. */
   blockType: string;
   data: unknown;
+  /** Optional structured-property key from fence `{#id type="…"}`. */
+  propertyId?: string;
   /** GET enrichment only. Omitted on PATCH equality. */
   editorHtml?: string;
 }

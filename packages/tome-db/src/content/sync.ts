@@ -15,6 +15,8 @@ import {
   invalidateWorkspaceCache,
   loadWorkspaceFromContent,
   invalidateExtensionsCache,
+  invalidateOntologyCache,
+  contentHasOntologyTypes,
   loadRelationshipTypesFromContent,
   RELATIONSHIPS_SYNC_MARKER,
   ASSOCIATIONS_FILENAME,
@@ -25,6 +27,7 @@ import {
   WORKSPACE_FILENAME,
   SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
+  ONTOLOGY_FILENAME,
   RELATIONSHIP_FILE_PATTERN,
   dynamicPropertiesFilePath,
   NODE_FILE_PATTERN,
@@ -367,6 +370,7 @@ export class CacheSync {
       scanFile(modelDir, WORKSPACE_FILENAME);
       scanFile(modelDir, SEQUENCING_FILENAME);
       scanFile(modelDir, EXTENSIONS_FILENAME);
+      scanFile(modelDir, ONTOLOGY_FILENAME);
     }
     try {
       for (const id of this.store.listNodeIds()) {
@@ -561,9 +565,17 @@ export class CacheSync {
   private async syncFileUnlocked(relativeName: string): Promise<void> {
     if (
       relativeName === RELATIONSHIPS_SYNC_MARKER ||
-      relativeName === ASSOCIATIONS_FILENAME
+      relativeName === ASSOCIATIONS_FILENAME ||
+      relativeName === ONTOLOGY_FILENAME
     ) {
-      if (relativeName === ASSOCIATIONS_FILENAME) {
+      if (relativeName === ASSOCIATIONS_FILENAME || relativeName === ONTOLOGY_FILENAME) {
+        invalidateRelationshipTypesCache();
+        invalidateOntologyCache();
+      } else if (
+        relativeName === RELATIONSHIPS_SYNC_MARKER &&
+        this.corpusContentDirs().some((dir) => contentHasOntologyTypes(dir))
+      ) {
+        // Membership edges can change which node predicates are active.
         invalidateRelationshipTypesCache();
       }
       await this.syncRelationshipsUnlocked();
@@ -614,6 +626,10 @@ export class CacheSync {
     const match = NODE_FILE_PATTERN.exec(base);
     if (match) {
       const id = base.slice(0, -3);
+      if (this.corpusContentDirs().some((dir) => contentHasOntologyTypes(dir))) {
+        // Predicate node-filter bodies live on node markdown.
+        invalidateRelationshipTypesCache();
+      }
       await this.syncNodeUnlocked(id);
       await this.updateCacheMarkers();
     }

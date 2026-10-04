@@ -317,14 +317,20 @@ function convertBlocks(nodes: readonly (BlockContent | RootContent)[]): NodeBody
       case "code": {
         const code = node as Code;
         if (code.lang === PAGE_BLOCK_CONTENT_TYPE_JSON && typeof code.meta === "string") {
-          const blockType = parsePageBlockInfoMeta(code.meta);
-          if (blockType) {
-            const payload = parsePageBlockFenceBody(blockType, code.value);
+          const info = parsePageBlockInfoMeta(code.meta);
+          if (info) {
+            const payload = parsePageBlockFenceBody(
+              info.blockType,
+              code.value,
+              PAGE_BLOCK_CONTENT_TYPE_JSON,
+              info.propertyId,
+            );
             if (payload) {
               out.push({
                 type: "page_block",
                 blockType: payload.blockType,
                 data: payload.data,
+                ...(payload.propertyId ? { propertyId: payload.propertyId } : {}),
               });
               break;
             }
@@ -337,6 +343,7 @@ function convertBlocks(nodes: readonly (BlockContent | RootContent)[]): NodeBody
               type: "page_block",
               blockType: payload.blockType,
               data: payload.data,
+              ...(payload.propertyId ? { propertyId: payload.propertyId } : {}),
             });
             break;
           }
@@ -544,7 +551,7 @@ function blocksToMdast(blocks: readonly NodeBodyBlock[]): BlockContent[] {
         out.push({
           type: "code",
           lang: PAGE_BLOCK_CONTENT_TYPE_JSON,
-          meta: formatPageBlockFenceMeta(block.blockType),
+          meta: formatPageBlockFenceMeta(block.blockType, block.propertyId),
           value: serializePageBlockInner(block.blockType, block.data),
         });
         break;
