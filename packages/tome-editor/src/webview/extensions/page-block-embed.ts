@@ -184,7 +184,7 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
   };
 
   const renderInteractive = (payload: PageBlockPayload) => {
-    const mount = resolveInteractivePageBlockMount(payload.componentId);
+    const mount = resolveInteractivePageBlockMount(payload.blockType);
     if (mount.kind === "interactive-unavailable") {
       renderInteractiveUnavailable(mount.component.label, mount.error);
       return;
@@ -216,9 +216,10 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
           label: publicComponent.label,
           params: {},
         },
+        blockType: payload.blockType,
         nodeId: pageBlockEmbedNodeId,
         invoke: (input) =>
-          invokePageBlockExtension(payload.componentId, input, pageBlockEmbedNodeId),
+          invokePageBlockExtension(publicComponent.id, input, pageBlockEmbedNodeId),
         openToolPanel: openPageBlockToolPanel,
         closeToolPanel: closePageBlockToolPanel,
       },
@@ -226,7 +227,8 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
       readOnly: !view.editable,
       onBlockDataChange(data) {
         const nextComment = formatPageBlockEmbedComment({
-          componentId: payload.componentId,
+          blockType: payload.blockType,
+          contentType: payload.contentType,
           data,
         });
         let pos = typeof getPos === "function" ? getPos() : undefined;
@@ -268,7 +270,7 @@ export const pageBlockEmbedView = $view(pageBlockEmbedSchema.node, () => (node, 
       renderHtmlFallback(html);
       return;
     }
-    const mount = resolveInteractivePageBlockMount(payload.componentId);
+    const mount = resolveInteractivePageBlockMount(payload.blockType);
     if (mount.kind === "interactive" || mount.kind === "interactive-unavailable") {
       renderInteractive(payload);
       return;

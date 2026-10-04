@@ -17,6 +17,7 @@ export {
   findComponentById,
   findSearcherById,
   resolveExtensionsManifest,
+  resolvePageBlockRole,
   resolveSearchRoleMap,
 } from "./manifest";
 export type {

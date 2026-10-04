@@ -14,11 +14,11 @@ export type PageBlockToolPanelHandlers = {
 export type PageBlockParameterHandlers = {
   getBlockParameters: (
     nodeId: string,
-    componentId: string,
+    blockType: string,
   ) => Record<string, string | number | boolean | null>;
   setBlockParameter: (
     nodeId: string,
-    componentId: string,
+    blockType: string,
     paramId: string,
     value: string | number | boolean | null,
   ) => void;
@@ -60,6 +60,7 @@ const host = new ClientEditorPageBlockHost();
 const loadedExtensionIds = new Set<string>();
 /** extensionId → last load error message (cleared on success). */
 const editorBundleErrors = new Map<string, string>();
+let componentsOrdered: PublicExtensionComponent[] = [];
 let componentsById = new Map<string, PublicExtensionComponent>();
 let invokeExtensionFn:
   | ((componentId: string, input?: unknown, nodeId?: string) => Promise<unknown>)
@@ -106,7 +107,20 @@ export async function invokePageBlockExtension(
   return invokeExtensionFn(componentId, input, nodeId);
 }
 
+export function resolvePageBlockRole(
+  role: string,
+): PublicExtensionComponent | undefined {
+  const trimmed = role.trim();
+  if (!trimmed) return undefined;
+  const byRole = componentsOrdered.find((component) =>
+    (component.roles ?? []).includes(trimmed),
+  );
+  if (byRole) return byRole;
+  return componentsById.get(trimmed);
+}
+
 export async function loadEditorBundles(manifest: PublicExtensionsManifest): Promise<void> {
+  componentsOrdered = [...manifest.components];
   componentsById = new Map(manifest.components.map((component) => [component.id, component]));
 
   // Load sequentially so the API's Bun.build queue is not stampeded on first paint.
@@ -145,16 +159,16 @@ export function getEditorBundleError(extensionId: string): string | undefined {
 }
 
 export function getInteractivePageBlockRegistration(
-  componentId: string,
+  roleOrComponentId: string,
 ): EditorPageBlockRegistration | undefined {
-  const component = componentsById.get(componentId);
+  const component = resolvePageBlockRole(roleOrComponentId);
   if (!component?.interactive) return undefined;
   return host.get(component.implementationId);
 }
 
 /** Resolve how an embed should mount: React, explicit error, or static HTML. */
-export function resolveInteractivePageBlockMount(componentId: string): InteractivePageBlockMount {
-  const component = componentsById.get(componentId);
+export function resolveInteractivePageBlockMount(role: string): InteractivePageBlockMount {
+  const component = resolvePageBlockRole(role);
   if (!component?.interactive) return { kind: "static" };
 
   const registration = host.get(component.implementationId);
@@ -174,6 +188,7 @@ export function resetPageBlockRegistryForTests(): void {
   host.clear();
   loadedExtensionIds.clear();
   editorBundleErrors.clear();
+  componentsOrdered = [];
   componentsById = new Map();
   invokeExtensionFn = null;
   toolPanelHandlers = null;
@@ -189,6 +204,12 @@ export function registerInteractivePageBlockForTests(
   component: PublicExtensionComponent,
   registration: EditorPageBlockRegistration,
 ): void {
-  componentsById.set(component.id, { ...component, interactive: true });
+  const next = {
+    ...component,
+    roles: component.roles?.length ? component.roles : [component.id],
+    interactive: true,
+  };
+  componentsOrdered = [...componentsOrdered.filter((c) => c.id !== next.id), next];
+  componentsById.set(next.id, next);
   host.registerPageBlock({ ...registration, interactive: true });
 }

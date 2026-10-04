@@ -70,7 +70,7 @@ function seedCorpus(
         ],
         components: [
           {
-            id: "tome-search-like.searcher",
+            id: "tome-search-like",
             extensionId: "tome-search-like",
             kind: "searcher",
             implementationId: "tome-search-like",

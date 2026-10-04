@@ -31,6 +31,7 @@ describe("ExtensionServerRuntime", async () => {
         components: [
           {
             id: "fixture.demo",
+            roles: ["fixture.demo"],
             extensionId: "fixture",
             kind: "page-block",
             implementationId: "fixture-demo",

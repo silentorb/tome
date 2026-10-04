@@ -52,7 +52,8 @@ async function createEditor(initial = "") {
 describe("expandInsertedPageBlock", async () => {
   test("replaces tome-block fence with prepared embed HTML", async () => {
     const component = {
-      id: "schema-diagram.block",
+      id: "schema-diagram",
+      roles: ["schema-diagram"],
       extensionId: "schema-diagram",
       implementationId: "schema-diagram",
       label: "Schema diagram",
@@ -60,7 +61,7 @@ describe("expandInsertedPageBlock", async () => {
     };
     const fence = serializePageBlock(component.id, {});
     const embed =
-      `${formatPageBlockEmbedComment({ componentId: component.id, data: {} })}\n` +
+      `${formatPageBlockEmbedComment({ blockType: component.roles[0] ?? component.id, contentType: "json", data: {} })}\n` +
       '<figure class="tome-schema-diagram">' +
       '<div class="tome-schema-diagram-viewport">' +
       '<svg class="schema-diagram-svg" viewBox="0 0 100 60"></svg>' +

@@ -419,6 +419,7 @@ export {
   invalidateExtensionsCache,
   loadExtensionsFromContent,
   resolveExtensionsManifest,
+  resolvePageBlockRole,
   resolveSearchRoleMap,
   findComponentById,
   findSearcherById,

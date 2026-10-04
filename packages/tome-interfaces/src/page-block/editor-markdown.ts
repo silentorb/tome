@@ -51,7 +51,7 @@ function findPageBlockEmbedHtmlEnd(markdown: string, start: number): number {
   return closeIndex + closeTag.length;
 }
 
-/** Collapse server-rendered page block embeds back to ```tome-block fences. */
+/** Collapse server-rendered page block embeds back to storage fences. */
 export function collapsePageBlockEmbedsForStorage(markdown: string): string {
   let result = "";
   let cursor = 0;
@@ -66,7 +66,7 @@ export function collapsePageBlockEmbedsForStorage(markdown: string): string {
     const htmlEnd = findPageBlockEmbedHtmlEnd(markdown, match.index + match[0].length);
 
     if (payload) {
-      result += serializePageBlock(payload.componentId, payload.data);
+      result += serializePageBlock(payload.blockType, payload.data);
     } else {
       result += markdown.slice(match.index, htmlEnd);
     }

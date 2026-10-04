@@ -2,7 +2,7 @@
 
 ## Summary
 
-The **schema diagram** page block (`schema-diagram.block`, package `tome-schema-diagram`) renders a node-link diagram of the project's **meta-model**: type tables and their relation columns from `table-schemas.json`. Diagrams are laid out with **ELK.js** and emitted as **inline SVG** server-side for both the editor and static site.
+The **schema diagram** page block (role `schema-diagram`, component `schema-diagram`, package `tome-schema-diagram`) renders a node-link diagram of the project's **meta-model**: type tables and their relation columns from `table-schemas.json`. Diagrams are laid out with **ELK.js** and emitted as **inline SVG** server-side for both the editor and static site.
 
 ## When to read this
 
@@ -31,7 +31,7 @@ For page-block contracts: [page-blocks.md](../extensions/page-blocks.md). For ex
 - Editor webview attaches **pan/zoom** via [`svg-pan-zoom`](https://github.com/bumbu/svg-pan-zoom) to the pre-rendered SVG
 - **Pan:** drag inside the viewport
 - **Zoom:** mouse wheel over the viewport; toolbar buttons for zoom in, zoom out, and reset (fit + center)
-- Block storage remains `tome-block` fenced JSON
+- Block storage remains `json {type="schema-diagram"}` fenced JSON
 
 ### Static site
 

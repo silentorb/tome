@@ -258,8 +258,8 @@ function buildGraphServices(
         await extensionsReady;
         try {
           await extensions.ensureLoaded();
-          document = await attachPageBlockEditorHtml(document, async (componentId, data) => {
-            return extensions.renderPageBlockHtml(id, componentId, data);
+          document = await attachPageBlockEditorHtml(document, async (blockType, data) => {
+            return extensions.renderPageBlockHtml(id, blockType, data);
           });
         } catch (err: unknown) {
           console.error(

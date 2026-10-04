@@ -6,7 +6,14 @@ import {
   extractLeadingTaskMarker,
   taskMarkerPrefix,
 } from "tome-flatfile/task";
-import { parsePageBlockPayload, serializePageBlockInner } from "tome-interfaces/page-block";
+import {
+  PAGE_BLOCK_CONTENT_TYPE_JSON,
+  formatPageBlockFenceMeta,
+  parsePageBlockFenceBody,
+  parsePageBlockInfoMeta,
+  parsePageBlockPayload,
+  serializePageBlockInner,
+} from "tome-interfaces/page-block";
 import {
   assignDynamicLinkTitles,
   collectDynamicLinkIds,
@@ -309,12 +316,26 @@ function convertBlocks(nodes: readonly (BlockContent | RootContent)[]): NodeBody
       }
       case "code": {
         const code = node as Code;
+        if (code.lang === PAGE_BLOCK_CONTENT_TYPE_JSON && typeof code.meta === "string") {
+          const blockType = parsePageBlockInfoMeta(code.meta);
+          if (blockType) {
+            const payload = parsePageBlockFenceBody(blockType, code.value);
+            if (payload) {
+              out.push({
+                type: "page_block",
+                blockType: payload.blockType,
+                data: payload.data,
+              });
+              break;
+            }
+          }
+        }
         if (code.lang === "tome-block") {
           const payload = parsePageBlockPayload(code.value);
           if (payload) {
             out.push({
               type: "page_block",
-              componentId: payload.componentId,
+              blockType: payload.blockType,
               data: payload.data,
             });
             break;
@@ -522,8 +543,9 @@ function blocksToMdast(blocks: readonly NodeBodyBlock[]): BlockContent[] {
       case "page_block":
         out.push({
           type: "code",
-          lang: "tome-block",
-          value: serializePageBlockInner(block.componentId, block.data),
+          lang: PAGE_BLOCK_CONTENT_TYPE_JSON,
+          meta: formatPageBlockFenceMeta(block.blockType),
+          value: serializePageBlockInner(block.blockType, block.data),
         });
         break;
       case "html":
@@ -590,19 +612,19 @@ export async function storageBodyToDocument(
 
 export async function attachPageBlockEditorHtml(
   document: NodeBodyDocument,
-  renderBlock: (componentId: string, data: unknown) => string | Promise<string>,
+  renderBlock: (blockType: string, data: unknown) => string | Promise<string>,
 ): Promise<NodeBodyDocument> {
   const rendered = new Map<string, string>();
-  const blocks: Array<{ componentId: string; data: unknown; key: string }> = [];
+  const blocks: Array<{ blockType: string; data: unknown; key: string }> = [];
   let index = 0;
   const keyed = mapPageBlocks(document, (block) => {
     const key = String(index);
     index += 1;
-    blocks.push({ componentId: block.componentId, data: block.data, key });
+    blocks.push({ blockType: block.blockType, data: block.data, key });
     return { ...block, editorHtml: key };
   });
   for (const block of blocks) {
-    rendered.set(block.key, (await renderBlock(block.componentId, block.data)).trim());
+    rendered.set(block.key, (await renderBlock(block.blockType, block.data)).trim());
   }
   return mapPageBlocks(keyed, (block) => ({
     ...block,

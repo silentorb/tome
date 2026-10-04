@@ -57,7 +57,7 @@ describe("timeline layout height", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}

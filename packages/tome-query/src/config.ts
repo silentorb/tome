@@ -4,7 +4,9 @@ import type { Graph } from "imp-core-types";
 
 export const QUERY_BLOCK_VERSION = 1;
 export const IMPLEMENTATION_ID = "tome-query";
-export const COMPONENT_ID = "tome-query.block";
+export const COMPONENT_ID = "tome-query";
+/** Fence `type=` role resolved via component `roles`. */
+export const BLOCK_ROLE = "query";
 
 export interface TomeQueryBlockData {
   version: typeof QUERY_BLOCK_VERSION;

@@ -4,10 +4,11 @@ import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-serv
 import type { ExtensionSchemaQueryServices } from "tome-interfaces/extension-services/schema-query";
 import {
   expandPageBlockFencesForEditor,
+  PAGE_BLOCK_CONTENT_TYPE_JSON,
   type PageBlockPayload,
 } from "tome-interfaces/page-block";
 import { unknownPageBlockHtml } from "tome-interfaces/page-block/html";
-import type { ResolvedExtensionComponent } from "tome-db";
+import { resolvePageBlockRole, type ResolvedExtensionComponent } from "tome-db";
 import type { HtmlPageBlockHostImpl } from "./html-host";
 
 export interface SpatialGraphPageBlockServices {
@@ -18,9 +19,16 @@ export interface SchemaDiagramPageBlockServices {
   memberBadgePosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right";
 }
 
+function resolveFromComponents(
+  components: ResolvedExtensionComponent[],
+  role: string,
+): ResolvedExtensionComponent | undefined {
+  return resolvePageBlockRole({ extensions: [], components, searchers: [], search: null }, role);
+}
+
 async function renderBlockHtml(
   host: HtmlPageBlockHostImpl,
-  componentsById: Map<string, ResolvedExtensionComponent>,
+  components: ResolvedExtensionComponent[],
   nodeId: string,
   contentPath: string,
   graphQuery: ExtensionGraphQueryServices | undefined,
@@ -31,13 +39,13 @@ async function renderBlockHtml(
   schemaDiagram: SchemaDiagramPageBlockServices | undefined,
   payload: PageBlockPayload,
 ): Promise<string> {
-  const component = componentsById.get(payload.componentId);
+  const component = resolveFromComponents(components, payload.blockType);
   if (!component) {
-    return unknownPageBlockHtml(payload.componentId);
+    return unknownPageBlockHtml(payload.blockType);
   }
   const renderer = host.get(component.implementationId);
   if (!renderer) {
-    return unknownPageBlockHtml(payload.componentId, component.label);
+    return unknownPageBlockHtml(payload.blockType, component.label);
   }
   return await renderer.renderHtml(
     {
@@ -72,11 +80,10 @@ export async function prepareEditorBodyWithPageBlocks(
   spatialGraph?: SpatialGraphPageBlockServices,
   schemaDiagram?: SchemaDiagramPageBlockServices,
 ): Promise<string> {
-  const componentsById = new Map(components.map((component) => [component.id, component]));
   return expandPageBlockFencesForEditor(body, (payload) =>
     renderBlockHtml(
       host,
-      componentsById,
+      components,
       nodeId,
       contentPath,
       graphQuery,
@@ -104,10 +111,9 @@ export async function renderPageBlockHtmlForEditor(
   spatialGraph?: SpatialGraphPageBlockServices,
   schemaDiagram?: SchemaDiagramPageBlockServices,
 ): Promise<string> {
-  const componentsById = new Map(components.map((component) => [component.id, component]));
   return renderBlockHtml(
     host,
-    componentsById,
+    components,
     nodeId,
     contentPath,
     graphQuery,
@@ -116,6 +122,6 @@ export async function renderPageBlockHtmlForEditor(
     corpusQuery,
     spatialGraph,
     schemaDiagram,
-    payload,
+    payload.contentType ? payload : { ...payload, contentType: PAGE_BLOCK_CONTENT_TYPE_JSON },
   );
 }

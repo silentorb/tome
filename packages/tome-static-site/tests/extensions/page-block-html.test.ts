@@ -20,6 +20,7 @@ describe("page-block html rendering", async () => {
     const components: ResolvedExtensionComponent[] = [
       {
         id: "fixture.demo",
+        roles: ["fixture.demo"],
         extensionId: "fixture",
         implementationId: "fixture-demo",
         label: "Fixture block",
@@ -57,6 +58,7 @@ describe("page-block html rendering", async () => {
     const components: ResolvedExtensionComponent[] = [
       {
         id: "async.demo",
+        roles: ["async.demo"],
         extensionId: "async",
         implementationId: "async-demo",
         label: "Async block",

@@ -3,7 +3,12 @@ import { editorDynamicNodeHref, isDynamicEditorHref } from "tome-flatfile/dynami
 import { resolveMarkdownHrefTarget } from "tome-flatfile/markdown-links";
 import { DEFAULT_CALLOUT_EMOJI } from "tome-flatfile/callout";
 import { extractLeadingTaskMarker } from "tome-flatfile/task";
-import { formatPageBlockEmbedComment, parsePageBlockPayload } from "tome-interfaces/page-block";
+import {
+  formatPageBlockEmbedComment,
+  parsePageBlockFenceBody,
+  parsePageBlockInfoMeta,
+  parsePageBlockPayload,
+} from "tome-interfaces/page-block";
 import {
   emptyNodeBodyDocument,
   type NodeBodyBlock,
@@ -193,7 +198,8 @@ function blocksToPm(blocks: readonly NodeBodyBlock[]): PmNode[] {
           type: "tome_page_block",
           attrs: {
             comment: formatPageBlockEmbedComment({
-              componentId: block.componentId,
+              blockType: block.blockType,
+              contentType: "json",
               data: block.data,
             }),
             html: block.editorHtml ?? "",
@@ -405,10 +411,26 @@ function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
           if (payload) {
             out.push({
               type: "page_block",
-              componentId: payload.componentId,
+              blockType: payload.blockType,
               data: payload.data,
             });
             break;
+          }
+        }
+        // Slash-insert interim: language is `json {type="role"}` (meta folded into language).
+        if (language?.startsWith("json")) {
+          const meta = language.slice("json".length).trim();
+          const blockType = meta ? parsePageBlockInfoMeta(meta) : null;
+          if (blockType) {
+            const payload = parsePageBlockFenceBody(blockType, text);
+            if (payload) {
+              out.push({
+                type: "page_block",
+                blockType: payload.blockType,
+                data: payload.data,
+              });
+              break;
+            }
           }
         }
         out.push({ type: "code_block", language, text });
@@ -439,7 +461,7 @@ function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
         if (!payload) break;
         out.push({
           type: "page_block",
-          componentId: payload.componentId,
+          blockType: payload.blockType,
           data: payload.data,
           editorHtml: String(node.attrs?.html ?? ""),
         });

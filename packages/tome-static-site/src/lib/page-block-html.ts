@@ -9,7 +9,7 @@ import {
 import {
   unknownPageBlockHtml,
 } from "tome-interfaces/page-block/html";
-import type { ResolvedExtensionComponent } from "tome-db";
+import { resolvePageBlockRole, type ResolvedExtensionComponent } from "tome-db";
 import { HtmlPageBlockHostImpl } from "../extensions/html-host";
 import { decorateCalloutHtml } from "./callout-html";
 import { decorateTaskHtml } from "./task-html";
@@ -27,7 +27,7 @@ export interface SchemaDiagramPageBlockServices {
 
 export interface PageBlockHtmlContext {
   host: HtmlPageBlockHostImpl;
-  componentsById: Map<string, ResolvedExtensionComponent>;
+  components: ResolvedExtensionComponent[];
   nodeId: string;
   contentDir: string;
   graphQuery?: ExtensionGraphQueryServices;
@@ -52,7 +52,7 @@ export function createPageBlockHtmlContext(
 ): PageBlockHtmlContext {
   return {
     host,
-    componentsById: new Map(components.map((component) => [component.id, component])),
+    components,
     nodeId,
     contentDir,
     graphQuery,
@@ -66,17 +66,20 @@ export function createPageBlockHtmlContext(
 
 async function renderBlockHtml(
   ctx: PageBlockHtmlContext,
-  componentId: string,
+  blockType: string,
   data: unknown,
   urls: NodeUrlResolver,
 ): Promise<string> {
-  const component = ctx.componentsById.get(componentId);
+  const component = resolvePageBlockRole(
+    { extensions: [], components: ctx.components, searchers: [], search: null },
+    blockType,
+  );
   if (!component) {
-    return unknownPageBlockHtml(componentId);
+    return unknownPageBlockHtml(blockType);
   }
   const renderer = ctx.host.get(component.implementationId);
   if (!renderer) {
-    return unknownPageBlockHtml(componentId, component.label);
+    return unknownPageBlockHtml(blockType, component.label);
   }
   return await renderer.renderHtml(
     {
@@ -113,7 +116,7 @@ export async function renderNodeBodyHtml(
   const { marked } = await import("marked");
   const proseHtml = (await marked.parse(markdown, { async: true })) as string;
   const blockFragments = await Promise.all(
-    blocks.map((payload) => renderBlockHtml(ctx, payload.componentId, payload.data, urls)),
+    blocks.map((payload) => renderBlockHtml(ctx, payload.blockType, payload.data, urls)),
   );
   const withBlocks = substitutePageBlockPlaceholders(proseHtml, blockFragments);
   return decorateDynamicLinkHtml(decorateCalloutHtml(decorateTaskHtml(withBlocks)), prep.dynamicNodeIds, urls);

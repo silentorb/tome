@@ -16,14 +16,12 @@ import {
 
 describe("page-block interactive registry", async () => {
   test("embed comment round-trips block data for persistence", () => {
-    const comment = formatPageBlockEmbedComment({
-      componentId: "tome-query.block",
-      data: { version: 1, reactFlow: { nodes: [], edges: [] } },
+    const comment = formatPageBlockEmbedComment({ blockType: "query", contentType: "json", data: { version: 1, reactFlow: { nodes: [], edges: [] } },
     });
     const match = /^<!-- tome-page-block (\{[\s\S]*\}) -->$/.exec(comment.trim());
     expect(match).toBeTruthy();
     const payload = parsePageBlockPayload(match![1]!);
-    expect(payload?.componentId).toBe("tome-query.block");
+    expect(payload?.blockType).toBe("query");
     expect(payload?.data).toEqual({ version: 1, reactFlow: { nodes: [], edges: [] } });
   });
 
@@ -51,6 +49,7 @@ describe("page-block interactive registry", async () => {
       components: [
         {
           id: "demo.block",
+          roles: ["demo.block"],
           extensionId: "demo",
           implementationId: "interactive-demo",
           label: "Demo",
@@ -58,6 +57,7 @@ describe("page-block interactive registry", async () => {
         },
         {
           id: "static.block",
+          roles: ["static.block"],
           extensionId: "demo",
           implementationId: "interactive-demo",
           label: "Static",

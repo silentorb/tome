@@ -54,7 +54,8 @@ describe("insertPageBlock slash menu", async () => {
 
     await editor.action((ctx) => {
       insertPageBlock(ctx, {
-        id: "schema-diagram.block",
+        id: "schema-diagram",
+        roles: ["schema-diagram"],
         extensionId: "schema-diagram",
         implementationId: "schema-diagram",
         label: "Schema diagram",
@@ -66,8 +67,7 @@ describe("insertPageBlock slash menu", async () => {
     await editor.action((ctx) => {
       stored = documentToStorageBody(pmNodeToDocument(ctx.get(editorViewCtx).state.doc));
     });
-    expect(stored).toContain("```tome-block");
-    expect(stored).toContain('"componentId": "schema-diagram.block"');
+    expect(stored).toContain("```json {type=\"schema-diagram\"}");
     expect(stored).not.toContain("/sch");
 
     await editor.destroy();

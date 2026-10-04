@@ -19,6 +19,8 @@ export interface EditorToolPanelSession {
 
 export interface EditorPageBlockContext {
   component: PageBlockComponentRef;
+  /** Fence role (`type=`) for this block instance. */
+  blockType: string;
   nodeId: string;
   /** Invoke this block's server handler (`POST /api/extensions/:componentId/invoke`). */
   invoke?(input: unknown): Promise<unknown>;

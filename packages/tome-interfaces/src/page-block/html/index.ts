@@ -41,9 +41,9 @@ export type HtmlPageBlockModule = {
 };
 
 /** Fallback when no html renderer is registered for a block. */
-export function unknownPageBlockHtml(componentId: string, label?: string): string {
-  const title = label ?? componentId;
-  return `<div class="tome-page-block-unknown" data-component-id="${escapeAttr(componentId)}"><p><em>${escapeHtml(title)}</em> (no HTML renderer)</p></div>`;
+export function unknownPageBlockHtml(blockType: string, label?: string): string {
+  const title = label ?? blockType;
+  return `<div class="tome-page-block-unknown" data-block-type="${escapeAttr(blockType)}"><p><em>${escapeHtml(title)}</em> (no HTML renderer)</p></div>`;
 }
 
 function escapeHtml(value: string): string {

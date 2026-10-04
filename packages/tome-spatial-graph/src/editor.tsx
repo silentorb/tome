@@ -1,7 +1,8 @@
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
 import { defaultSpatialGraphBlockData } from "./config";
 
-const COMPONENT_ID = "spatial-graph.block";
+const COMPONENT_ID = "spatial-graph";
+const BLOCK_ROLE = "spatial-graph";
 const IMPLEMENTATION_ID = "spatial-graph";
 
 export function register(host: EditorPageBlockHost): void {
@@ -38,4 +39,4 @@ export function register(host: EditorPageBlockHost): void {
   });
 }
 
-export { COMPONENT_ID, IMPLEMENTATION_ID };
+export { BLOCK_ROLE, COMPONENT_ID, IMPLEMENTATION_ID };

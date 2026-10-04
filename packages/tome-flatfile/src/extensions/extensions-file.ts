@@ -25,6 +25,11 @@ export interface ExtensionComponentEntry {
   implementationId: string;
   label: string;
   enabled: boolean;
+  /**
+   * Page-block roles this component can fulfill (fence `type=`).
+   * When omitted for page-blocks, defaults to `[id]` at resolve time.
+   */
+  roles?: string[];
   slashMenu?: ExtensionSlashMenuConfig;
   params?: Record<string, unknown>;
 }
@@ -137,8 +142,18 @@ function parseComponentEntry(raw: unknown, path: string): ExtensionComponentEntr
   if (entry.kind === "page-block") {
     const slashMenu = parseSlashMenu(obj.slashMenu, `${path}.slashMenu`);
     if (slashMenu) entry.slashMenu = slashMenu;
+    if (obj.roles !== undefined) {
+      if (!Array.isArray(obj.roles) || obj.roles.length === 0) {
+        throw new Error(`${path}.roles: must be a non-empty array of strings`);
+      }
+      entry.roles = obj.roles.map((role, index) =>
+        parseRequiredString(role, `${path}.roles[${index}]`),
+      );
+    }
   } else if (obj.slashMenu !== undefined) {
     throw new Error(`${path}.slashMenu: not allowed for kind "searcher"`);
+  } else if (obj.roles !== undefined) {
+    throw new Error(`${path}.roles: not allowed for kind "searcher"`);
   }
   const params = parseParams(obj.params, `${path}.params`);
   if (params) entry.params = params;

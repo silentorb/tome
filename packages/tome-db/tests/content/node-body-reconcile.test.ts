@@ -11,7 +11,7 @@ import { getNodeDetail } from "../../src/queries";
 describe("CacheSync node body reconciliation", async () => {
   const fixture = await createTestContentFixture("tome-node-body-reconcile-");
   const nodeId = "CCCCCCCCCCCCCCCCCCCCCCCCCC";
-  const pageBlockBody = serializePageBlock("spatial-graph.block", {
+  const pageBlockBody = serializePageBlock("spatial-graph", {
     relationships: { parentTypes: ["parents"] },
   });
 

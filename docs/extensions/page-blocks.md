@@ -19,27 +19,29 @@ A logical block **may** implement editor only, html only, server only, or any co
 ## Storage format
 
 ````markdown
-```tome-block
-{"componentId":"my-ext.block","data":{}}
+```json {type="query"}
+{"version":1,"reactFlow":{"nodes":[],"edges":[]}}
 ```
 ````
 
-- `componentId` matches a row in `extensions.json` `components[]`.
-- `data` is opaque JSON interpreted by the block implementations.
+- Fence language is the **content type** (`json`).
+- Info-string `{type="…"}` is the **block role** (requested capability), not a component id.
+- Fence body is the block’s opaque JSON data (flattened — no `componentId` / `data` wrapper).
+- Hosts resolve `type` via `resolvePageBlockRole`: first enabled `kind: "page-block"` component whose `roles` includes that string; else a component whose `id` matches (legacy).
 
 ## Editor host (`tome-editor`)
 
 - Loads `editorModule` (slash-menu defaults via manifest), `htmlModule`, and `serverModule` at API startup.
-- **`POST /api/nodes/:id/prepare-editor-body`** expands a newly inserted `tome-block` fence to HTML for the slash-menu path (same `htmlModule` renderers as static export). Page load does not use it: `GET` already returns `page_block` nodes with `editorHtml`.
+- **`POST /api/nodes/:id/prepare-editor-body`** expands a newly inserted page-block fence to HTML for the slash-menu path (same `htmlModule` renderers as static export). Page load does not use it: `GET` already returns `page_block` nodes with `editorHtml`.
 - The editor maps each `page_block` to a `tome_page_block` atom. Display attrs are an HTML comment (canonical JSON payload) plus rendered HTML (e.g. inline SVG):
 
 ```markdown
-<!-- tome-page-block {"componentId":"spatial-graph.block","data":{...}} -->
+<!-- tome-page-block {"blockType":"spatial-graph","contentType":"json","data":{...}} -->
 <figure class="tome-spatial-graph">…</figure>
 ```
 
-- Slash menu inserts fences via `serializePageBlock` (defaults from manifest `insertDefaultData`).
-- On save, the ProseMirror atom maps back to a `page_block` node; the server writes a `tome-block` fence. `editorHtml` is not part of the saved document.
+- Slash menu inserts fences via `serializePageBlock` using the component’s `roles[0]` (defaults from manifest `insertDefaultData`).
+- On save, the ProseMirror atom maps back to a `page_block` node; the server writes a `json {type="…"}` fence. `editorHtml` is not part of the saved document.
 - **Interactive blocks:** when `EditorPageBlockRegistration.interactive` is true (exposed on the public manifest), the webview loads `editorBundles`, mounts the extension React `Component` inside the page-block NodeView, and persists edits via `onBlockDataChange` → embed comment attrs. Non-interactive blocks keep the static HTML path (plus optional host enhancements such as schema-diagram pan/zoom).
 - **Tool panel:** `EditorPageBlockContext.openToolPanel` / `closeToolPanel` open a host right panel (sibling of `.tome-main`) for complex UIs that should not live inside Milkdown (e.g. tome-query React Flow). The panel is omitted from the layout when no session is open. Users can drag the panel’s left edge to resize it; width is stored in `localStorage`.
 

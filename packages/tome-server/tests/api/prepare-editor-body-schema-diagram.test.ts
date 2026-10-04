@@ -47,7 +47,7 @@ describe("prepare-editor-body API — schema diagram", async () => {
       id: nodeId,
       properties: { title: "Schema page" },
     },
-    serializePageBlock("schema-diagram.block", {}),
+    serializePageBlock("schema-diagram", {}),
   );
 
   const modelDir = contentModelDir(fixture.ctx.store.contentDir);
@@ -65,7 +65,8 @@ describe("prepare-editor-body API — schema diagram", async () => {
         ],
         components: [
           {
-            id: "schema-diagram.block",
+            id: "schema-diagram",
+            roles: ["schema-diagram"],
             extensionId: "schema-diagram",
             kind: "page-block",
             implementationId: "schema-diagram",
@@ -147,7 +148,7 @@ describe("prepare-editor-body API — schema diagram", async () => {
   const api = await createTestApiFromContent(fixture);
 
   test("POST /api/nodes/:id/prepare-editor-body expands schema diagram block", async () => {
-    const body = serializePageBlock("schema-diagram.block", {});
+    const body = serializePageBlock("schema-diagram", {});
     const res = await api.handler(
       new Request(`http://127.0.0.1/api/nodes/${nodeId}/prepare-editor-body`, {
         method: "POST",
@@ -166,7 +167,7 @@ describe("prepare-editor-body API — schema diagram", async () => {
     expect(payload.markdown).toContain('class="schema-diagram-node-link"');
     expect(payload.markdown).toContain(`href="?node=${sceneTypeId}"`);
     expect(payload.markdown).toContain(`href="?node=${featureTypeId}"`);
-    expect(payload.markdown).not.toContain("```tome-block");
+    expect(payload.markdown).not.toContain("```json");
   });
 
   afterAll(async () => {

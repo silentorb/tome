@@ -26,7 +26,7 @@ async function createEditor(initial: string) {
 describe("page block embed rendering", async () => {
   test("renders embedded page block HTML instead of raw markup", async () => {
     const embed =
-      `${formatPageBlockEmbedComment({ componentId: "spatial-graph.block", data: {} })}\n` +
+      `${formatPageBlockEmbedComment({ blockType: "spatial-graph", contentType: "json", data: {} })}\n` +
       '<figure class="tome-spatial-graph"><figcaption>Spatial graph</figcaption>' +
       '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><rect width="100" height="50"/></svg></figure>';
 
@@ -40,7 +40,7 @@ describe("page block embed rendering", async () => {
 
   test("round-trips page block embeds back to storage fences on save", async () => {
     const embed =
-      `${formatPageBlockEmbedComment({ componentId: "spatial-graph.block", data: { relationships: { parentTypes: ["parents"] } } })}\n` +
+      `${formatPageBlockEmbedComment({ blockType: "spatial-graph", contentType: "json", data: { relationships: { parentTypes: ["parents"] } } })}\n` +
       '<figure class="tome-spatial-graph"><figcaption>Spatial graph</figcaption></figure>';
 
     const { editor } = await createEditor(embed);
@@ -49,8 +49,8 @@ describe("page block embed rendering", async () => {
     await editor.action((ctx) => {
       stored = documentToStorageBody(pmNodeToDocument(ctx.get(editorViewCtx).state.doc));
     });
-    expect(stored).toContain("```tome-block");
-    expect(stored).toContain("spatial-graph.block");
+    expect(stored).toContain("```json");
+    expect(stored).toContain("spatial-graph");
     expect(stored).toContain("parentTypes");
 
     await editor.destroy();
@@ -58,7 +58,7 @@ describe("page block embed rendering", async () => {
 
   test("preserves page block node in the ProseMirror document", async () => {
     const embed =
-      `${formatPageBlockEmbedComment({ componentId: "demo.block", data: { x: 1 } })}\n` +
+      `${formatPageBlockEmbedComment({ blockType: "demo.block", contentType: "json", data: { x: 1 } })}\n` +
       '<figure class="demo">block</figure>';
 
     const { editor } = await createEditor(embed);
@@ -80,7 +80,7 @@ describe("page block embed rendering", async () => {
       reactFlow: { nodes: [], edges: [] },
     };
     const embed =
-      `${formatPageBlockEmbedComment({ componentId: "tome-query.block", data: initialData })}\n` +
+      `${formatPageBlockEmbedComment({ blockType: "query", contentType: "json", data: initialData })}\n` +
       '<div class="tome-query-block">snapshot</div>';
 
     const { editor } = await createEditor(embed);
@@ -96,9 +96,7 @@ describe("page block embed rendering", async () => {
       });
       expect(blockPos).not.toBeNull();
       const node = view.state.doc.nodeAt(blockPos!)!;
-      const nextComment = formatPageBlockEmbedComment({
-        componentId: "tome-query.block",
-        data: {
+      const nextComment = formatPageBlockEmbedComment({ blockType: "query", contentType: "json", data: {
           ...initialData,
           reactFlow: {
             nodes: [{ id: "in", type: "input", position: { x: 7, y: 8 }, data: {} }],

@@ -50,7 +50,8 @@ function writeTomeQueryExtensions(contentDir: string): void {
         ],
         components: [
           {
-            id: "tome-query.block",
+            id: "query",
+            roles: ["query"],
             extensionId: "tome-query",
             kind: "page-block",
             implementationId: "tome-query",
@@ -90,7 +91,7 @@ describe("query-block data client↔API round trip", async () => {
       id: NODE_ID,
       properties: { title: PAGE_TITLE },
     },
-    serializePageBlock("tome-query.block", defaultBlockData()),
+    serializePageBlock("query", defaultBlockData()),
   );
   writeTomeQueryExtensions(fixture.ctx.store.contentDir);
 
@@ -123,7 +124,7 @@ describe("query-block data client↔API round trip", async () => {
     const { unmount } = render(
       <QueryBlockComponent
         ctx={{
-          component: { id: "tome-query.block", label: "Query table" },
+          component: { id: "query", label: "Query table" },
           nodeId: NODE_ID,
           invoke,
           openToolPanel: (session) => {
@@ -166,12 +167,12 @@ describe("query-block data client↔API round trip", async () => {
       content: [
         {
           type: "page_block",
-          componentId: "tome-query.block",
+          blockType: "query",
           data: blockData,
         },
       ],
     });
-    expect(fence).toContain("```tome-block");
+    expect(fence).toContain("```json");
     expect(fence).toContain('"x": 42');
     expect(fence).not.toContain('"viewMode"');
 
@@ -199,7 +200,7 @@ describe("query-block data client↔API round trip", async () => {
     render(
       <QueryBlockComponent
         ctx={{
-          component: { id: "tome-query.block", label: "Query table" },
+          component: { id: "query", label: "Query table" },
           nodeId: NODE_ID,
           invoke: invokeAfterReload,
           openToolPanel: () => {},

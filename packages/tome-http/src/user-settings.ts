@@ -154,9 +154,9 @@ function normalizeRelationships(
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-/** Stable key for Imp graph parameter overrides on a page block. */
-export function blockParametersKey(nodeId: string, componentId: string): string {
-  return `blocks/${nodeId}/${componentId}`;
+/** Stable key for Imp graph parameter overrides on a page block (keyed by block role). */
+export function blockParametersKey(nodeId: string, blockType: string): string {
+  return `blocks/${nodeId}/${blockType}`;
 }
 
 export function blockParametersForKey(

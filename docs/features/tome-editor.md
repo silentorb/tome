@@ -60,7 +60,7 @@ Git-tracked node bodies are **Extended Markdown**: CommonMark + GFM, plus Tome e
 | CommonMark/GFM blocks and inlines | Ordinary markdown (remark parse/stringify) |
 | `dynamic_link` (`nodeId`; `title` resolved on GET) | `[[{nodeId}]]` |
 | `static_link` (`nodeId` + `label`) | `[label](./{nodeId}.md)` |
-| `page_block` (`componentId` + `data`; `editorHtml` is GET enrichment only) | ` ```tome-block ` fence |
+| `page_block` (`blockType` role + `data`; `editorHtml` is GET enrichment only) | ` ```json {type="…"} ` fence |
 | `callout` (`emoji`) | Emoji-lead blockquote: `> 💡 …` |
 | `task` (`checked`) | Checkbox-lead blockquote: `> [ ] …` / `> [x] …` |
 
@@ -123,8 +123,8 @@ Keyboard shortcuts in combobox-style pickers (global search, Relate, record link
 
 ### Page blocks (extensions)
 
-- Canonical storage uses ` ```tome-block ` JSON fences (see [page-blocks.md](../extensions/page-blocks.md)).
-- Page-block HTML for the open page **must** be included on `GET /api/nodes/:id` as `page_block.editorHtml` (rendered HTML only). The editor mapper rebuilds the embed comment from `componentId` + `data`. Initial load **must not** call `POST …/prepare-editor-body`.
+- Canonical storage uses ` ```json {type="…"} ` fences (see [page-blocks.md](../extensions/page-blocks.md)); `type` is a block role resolved via component `roles`.
+- Page-block HTML for the open page **must** be included on `GET /api/nodes/:id` as `page_block.editorHtml` (rendered HTML only). The editor mapper rebuilds the embed comment from `blockType` + `data`. Initial load **must not** call `POST …/prepare-editor-body`.
 - **`POST /api/nodes/:id/prepare-editor-body`** remains for the **slash-menu insert/preview** use case (expand a newly inserted fence into HTML), not page load.
 - On save, page blocks travel as `page_block` nodes in `document.content`; the server writes fences. `editorHtml` is ignored for dirty equality and is not required on PATCH.
 

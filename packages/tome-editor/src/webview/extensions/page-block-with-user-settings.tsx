@@ -18,11 +18,11 @@ export function PageBlockWithUserSettings({
   props: EditorPageBlockProps;
 }): ReactNode {
   const nodeId = props.ctx.nodeId;
-  const componentId = props.ctx.component.id;
+  const blockType = props.ctx.blockType;
 
   const getParams = useCallback(() => {
-    return getPageBlockParameterHandlers()?.getBlockParameters(nodeId, componentId) ?? {};
-  }, [nodeId, componentId]);
+    return getPageBlockParameterHandlers()?.getBlockParameters(nodeId, blockType) ?? {};
+  }, [nodeId, blockType]);
 
   const getParamsRevision = useCallback(() => {
     return getPageBlockParameterHandlers()?.getBlockParametersRevision() ?? 0;
@@ -40,12 +40,12 @@ export function PageBlockWithUserSettings({
     async (paramId: string, value: string | number | boolean | null) => {
       getPageBlockParameterHandlers()?.setBlockParameter(
         nodeId,
-        componentId,
+        blockType,
         paramId,
         value,
       );
     },
-    [nodeId, componentId],
+    [nodeId, blockType],
   );
 
   const nextProps = useMemo(

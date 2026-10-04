@@ -133,7 +133,8 @@ export interface NodeBodyTable {
 
 export interface NodeBodyPageBlock {
   type: "page_block";
-  componentId: string;
+  /** Block role (fence `type=`), resolved to a component via extension `roles`. */
+  blockType: string;
   data: unknown;
   /** GET enrichment only. Omitted on PATCH equality. */
   editorHtml?: string;

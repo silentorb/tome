@@ -22,7 +22,7 @@
 
 ### Block storage
 
-- Fence component id: `tome-sequencing.block`
+- Fence role: `type="tome-sequencing"` (component id `tome-sequencing`, `roles: ["tome-sequencing"]`)
 - Block `data`: `{ version: 1, reactFlow: { nodes, edges } }`
 - At execute time, Imp/React Flow string literals equal to `$pageNodeId` are replaced with the host page node id (unlike tome-query v1, which ignores `nodeId`); Imp `parameter` nodes are bound from invoke `parameters` / user settings
 

@@ -1,24 +1,41 @@
 import { afterEach, describe, expect, mock, test } from "bun:test";
+import { GlobalRegistrator } from "@happy-dom/global-registrator";
 import { defaultValueCtx, Editor, rootCtx } from "@milkdown/core";
 import { commonmark } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
 import { getMarkdown } from "@milkdown/kit/utils";
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, waitFor } from "@testing-library/react";
 import {
   formatPageBlockEmbedComment,
-  parsePageBlockPayload,
+  parsePageBlockFenceBody,
 } from "tome-interfaces/page-block";
 import type { EditorToolPanelSession } from "tome-interfaces/page-block/editor";
 import { defaultBlockData, defaultReactFlowGraph } from "tome-query/config";
 import { documentToStorageBody } from "tome-db/document-to-storage-body";
 import { editorViewCtx } from "@milkdown/kit/core";
 import { pmNodeToDocument } from "../../src/webview/body-document-pm";
-import { pageBlockEmbed } from "../../src/webview/extensions/page-block-embed";
 import {
   registerInteractivePageBlockForTests,
   resetPageBlockRegistryForTests,
   setPageBlockToolPanelHandlers,
 } from "../../src/webview/extensions/page-block-registry";
+
+try {
+  GlobalRegistrator.register();
+} catch {
+  // already registered by another test file
+}
+
+mock.module("svg-pan-zoom", () => ({
+  default: () => ({
+    destroy: () => {},
+    fit: () => {},
+    center: () => {},
+    resize: () => {},
+    zoomIn: () => {},
+    zoomOut: () => {},
+  }),
+}));
 
 mock.module(
   new URL("../../../tome-query/src/query-editor.tsx", import.meta.url).pathname,
@@ -26,6 +43,8 @@ mock.module(
     QueryFlowEditor: () => <div data-testid="query-flow-stub" />,
   }),
 );
+
+const { pageBlockEmbed } = await import("../../src/webview/extensions/page-block-embed");
 
 const { QueryBlockComponent } = await import("tome-query/editor");
 
@@ -62,7 +81,8 @@ describe("interactive page-block data persistence", () => {
     });
     registerInteractivePageBlockForTests(
       {
-        id: "tome-query.block",
+        id: "tome-query",
+        roles: ["query"],
         extensionId: "tome-query",
         implementationId: "tome-query",
         label: "Query table",
@@ -77,9 +97,7 @@ describe("interactive page-block data persistence", () => {
 
     const initial = defaultBlockData();
     const embed =
-      `${formatPageBlockEmbedComment({
-        componentId: "tome-query.block",
-        data: initial,
+      `${formatPageBlockEmbedComment({ blockType: "query", contentType: "json", data: initial,
       })}\n` + `<div class="tome-query-block">snapshot</div>`;
 
     const { editor, root } = await createEditor(embed);
@@ -88,7 +106,11 @@ describe("interactive page-block data persistence", () => {
       expect(root.querySelector(".tome-query-block-ui")).toBeTruthy();
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
+    const editBtn = [...root.querySelectorAll("button")].find((el) =>
+      el.textContent?.includes("Edit query"),
+    );
+    expect(editBtn).toBeTruthy();
+    fireEvent.click(editBtn!);
     await waitFor(() => {
       expect(session).toBeTruthy();
     });
@@ -113,10 +135,11 @@ describe("interactive page-block data persistence", () => {
     });
     expect(stored).toContain('"x": 12');
     expect(stored).not.toContain('"viewMode"');
+    expect(stored).toContain('{type="query"}');
 
-    const match = /```tome-block\n([\s\S]*?)\n```/.exec(stored);
+    const match = /```json[^\n]*\n([\s\S]*?)\n```/.exec(stored);
     expect(match).toBeTruthy();
-    const payload = parsePageBlockPayload(match![1]!);
+    const payload = parsePageBlockFenceBody("query", match![1]!);
     const data = payload?.data as { reactFlow?: { nodes?: { id: string; position: { x: number } }[] } };
     expect(data?.reactFlow?.nodes?.find((n) => n.id === "in")?.position.x).toBe(12);
 
@@ -138,7 +161,8 @@ describe("interactive page-block data persistence", () => {
     });
     registerInteractivePageBlockForTests(
       {
-        id: "tome-query.block",
+        id: "tome-query",
+        roles: ["query"],
         extensionId: "tome-query",
         implementationId: "tome-query",
         label: "Query table",
@@ -156,9 +180,7 @@ describe("interactive page-block data persistence", () => {
     document.body.appendChild(root);
     const initial = defaultBlockData();
     const embed =
-      `${formatPageBlockEmbedComment({
-        componentId: "tome-query.block",
-        data: initial,
+      `${formatPageBlockEmbedComment({ blockType: "query", contentType: "json", data: initial,
       })}\n` + `<div class="tome-query-block">snapshot</div>`;
 
     const editor = await Editor.make()
@@ -182,7 +204,11 @@ describe("interactive page-block data persistence", () => {
     await new Promise((resolve) => setTimeout(resolve, 250));
     updates.length = 0;
 
-    fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
+    const editBtn = [...root.querySelectorAll("button")].find((el) =>
+      el.textContent?.includes("Edit query"),
+    );
+    expect(editBtn).toBeTruthy();
+    fireEvent.click(editBtn!);
     await waitFor(() => {
       expect(session).toBeTruthy();
     });

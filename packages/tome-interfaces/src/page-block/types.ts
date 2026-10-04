@@ -1,6 +1,7 @@
-/** Parsed payload inside a ```tome-block fence. */
+/** Parsed page-block fence / embed payload. `blockType` is the requested role. */
 export interface PageBlockPayload {
-  componentId: string;
+  blockType: string;
+  contentType: string;
   data: unknown;
 }
 

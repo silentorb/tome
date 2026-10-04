@@ -6,7 +6,12 @@ import {
   setBlockTypeCommand,
 } from "@milkdown/kit/preset/commonmark";
 import type { BlockEditFeatureConfig } from "@milkdown/crepe/feature/block-edit";
-import { serializePageBlock, serializePageBlockInner } from "tome-interfaces/page-block";
+import {
+  PAGE_BLOCK_CONTENT_TYPE_JSON,
+  formatPageBlockFenceMeta,
+  serializePageBlock,
+  serializePageBlockInner,
+} from "tome-interfaces/page-block";
 import type { PublicExtensionComponent } from "../../shared/extensions";
 import { pageBlockEmbedSchema } from "./page-block-embed";
 import { scheduleSchemaDiagramViewportInit } from "./schema-diagram-viewport";
@@ -56,16 +61,25 @@ function codeBlockRange(ctx: Ctx): { from: number; to: number } | null {
   return null;
 }
 
+function pageBlockRole(component: PublicExtensionComponent): string {
+  return component.roles[0] ?? component.id;
+}
+
 export function insertPageBlock(ctx: Ctx, component: PublicExtensionComponent): void {
   const commands = ctx.get(commandsCtx);
   const codeBlock = codeBlockSchema.type(ctx);
   const defaultData = component.insertDefaultData ?? {};
-  const inner = serializePageBlockInner(component.id, defaultData);
+  const role = pageBlockRole(component);
+  const inner = serializePageBlockInner(role, defaultData);
 
   commands.call(clearTextInCurrentBlockCommand.key);
+  // Milkdown code_block only has `language` (no fence meta). Encode type= in the language string
+  // until prepare-editor-body expands to a tome_page_block embed.
   commands.call(setBlockTypeCommand.key, {
     nodeType: codeBlock,
-    attrs: { language: "tome-block" },
+    attrs: {
+      language: `${PAGE_BLOCK_CONTENT_TYPE_JSON} ${formatPageBlockFenceMeta(role)}`,
+    },
   });
 
   const view = ctx.get(editorViewCtx);
@@ -96,7 +110,7 @@ export async function expandInsertedPageBlock(
   if (!range) return;
 
   const defaultData = component.insertDefaultData ?? {};
-  const fence = serializePageBlock(component.id, defaultData);
+  const fence = serializePageBlock(pageBlockRole(component), defaultData);
   const expanded = (await options.prepareEditorBody(fence)).trim();
   const parsed = parsePreparedPageBlockEmbed(expanded);
   if (!parsed) return;

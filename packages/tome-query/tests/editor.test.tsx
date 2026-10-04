@@ -4,7 +4,7 @@ import { defaultBlockData, defaultReactFlowGraph } from "../src/config";
 import { QueryBlockComponent } from "../src/editor";
 
 const baseCtx = {
-  component: { id: "tome-query.block", label: "Query table" },
+  component: { id: "query", label: "Query table" },
   nodeId: "node-1",
 };
 

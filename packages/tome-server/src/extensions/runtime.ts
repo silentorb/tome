@@ -15,12 +15,14 @@ import {
   loadExtensionsFromContent,
   loadWorkspaceFromContent,
   resolveExtensionsManifest,
+  resolvePageBlockRole,
   spatialGraphNodeDimensionScale,
   schemaDiagramPageBlockServices,
   type ExtensionsManifest,
   type ResolvedExtensionComponent,
   type ResolvedSearcherComponent,
 } from "tome-db";
+import { PAGE_BLOCK_CONTENT_TYPE_JSON } from "tome-interfaces/page-block";
 import { EditorPageBlockHostImpl, SearcherHostImpl, ServerPageBlockHostImpl } from "./hosts";
 import { HtmlPageBlockHostImpl } from "./html-host";
 import {
@@ -331,6 +333,7 @@ export class ExtensionServerRuntime {
           extensionId: component.extensionId,
           implementationId: component.implementationId,
           label: component.label,
+          roles: component.roles,
           slashMenu: component.slashMenu,
           ...(registration?.interactive ? { interactive: true } : {}),
           ...(insertDefaultData !== undefined ? { insertDefaultData } : {}),
@@ -347,6 +350,10 @@ export class ExtensionServerRuntime {
 
   findComponent(componentId: string): ResolvedExtensionComponent | undefined {
     return findComponentById(this.#manifest, componentId);
+  }
+
+  resolvePageBlockRole(role: string): ResolvedExtensionComponent | undefined {
+    return resolvePageBlockRole(this.#manifest, role);
   }
 
   async invokeExtension(
@@ -456,7 +463,7 @@ export class ExtensionServerRuntime {
 
   async renderPageBlockHtml(
     nodeId: string,
-    componentId: string,
+    blockType: string,
     data: unknown,
   ): Promise<string> {
     await this.ensureLoaded();
@@ -468,7 +475,7 @@ export class ExtensionServerRuntime {
       this.#contentPath,
       this.#htmlHost,
       this.#manifest.components,
-      { componentId, data },
+      { blockType, contentType: PAGE_BLOCK_CONTENT_TYPE_JSON, data },
       this.#getGraphQueryServices?.(),
       this.#getSchemaQueryServices?.(),
       this.#getExecuteImpServices?.(),

@@ -47,6 +47,7 @@ describe("prepare-editor-body API", async () => {
         components: [
           {
             id: "fixture.demo",
+            roles: ["fixture.demo"],
             extensionId: "fixture",
             kind: "page-block",
             implementationId: "fixture-demo",
@@ -78,7 +79,7 @@ describe("prepare-editor-body API", async () => {
     expect(payload.markdown).toContain("<!-- tome-page-block ");
     expect(payload.markdown).toContain("tome-page-block-fixture");
     expect(payload.markdown).toContain("Hello");
-    expect(payload.markdown).not.toContain("```tome-block");
+    expect(payload.markdown).not.toContain("```json");
   });
 
   afterAll(async () => {

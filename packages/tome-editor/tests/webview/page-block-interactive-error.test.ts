@@ -15,7 +15,8 @@ describe("interactive page-block load error", async () => {
     resetPageBlockRegistryForTests();
 
     const component: PublicExtensionComponent = {
-      id: "tome-sequencing.block",
+      id: "tome-sequencing",
+      roles: ["tome-sequencing"],
       extensionId: "tome-sequencing",
       implementationId: "tome-sequencing",
       label: "Timeline",
@@ -36,9 +37,7 @@ describe("interactive page-block load error", async () => {
     );
 
     const embed =
-      `${formatPageBlockEmbedComment({
-        componentId: "tome-sequencing.block",
-        data: { version: 1, reactFlow: { nodes: [], edges: [] } },
+      `${formatPageBlockEmbedComment({ blockType: "tome-sequencing", contentType: "json", data: { version: 1, reactFlow: { nodes: [], edges: [] } },
       })}\n` +
       '<figure class="tome-sequencing-block"><ul class="tome-sequencing-static-list">' +
       "<li>should not appear</li></ul></figure>";

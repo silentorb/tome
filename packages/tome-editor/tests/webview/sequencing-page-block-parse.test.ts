@@ -71,9 +71,9 @@ describe("Arcs sequencing page-block parse", async () => {
       const storageMd = readFileSync(`${contentPath}/data/nodes/FZ/${arcsId}.md`, "utf8");
       const body = /^---\n[\s\S]*?\n---\n([\s\S]*)$/.exec(storageMd)?.[1] ?? storageMd;
       const nodeDocument = await storageBodyToDocument(graph.cache, body);
-      const withHtml = await attachPageBlockEditorHtml(nodeDocument, async (componentId, data) => {
-        const html = await runtime.renderPageBlockHtml(arcsId, componentId, data);
-        return `${formatPageBlockEmbedComment({ componentId, data })}\n${html}`;
+      const withHtml = await attachPageBlockEditorHtml(nodeDocument, async (blockType, data) => {
+        const html = await runtime.renderPageBlockHtml(arcsId, blockType, data);
+        return `${formatPageBlockEmbedComment({ blockType, contentType: "json", data })}\n${html}`;
       });
       const editorJson = documentToPmJson(withHtml);
       expect(JSON.stringify(editorJson).length).toBeGreaterThan(100);
@@ -82,7 +82,8 @@ describe("Arcs sequencing page-block parse", async () => {
       // Register interactive so remount prefers React path (stub component).
       registerInteractivePageBlockForTests(
         {
-          id: "tome-sequencing.block",
+          id: "tome-sequencing",
+          roles: ["tome-sequencing"],
           extensionId: "tome-sequencing",
           implementationId: "tome-sequencing",
           label: "Timeline",

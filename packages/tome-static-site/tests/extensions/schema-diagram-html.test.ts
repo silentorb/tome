@@ -22,7 +22,8 @@ describe("schema diagram static html", async () => {
 
     const components: ResolvedExtensionComponent[] = [
       {
-        id: "schema-diagram.block",
+        id: "schema-diagram",
+        roles: ["schema-diagram"],
         extensionId: "schema-diagram",
         implementationId: "schema-diagram",
         label: "Schema diagram",
@@ -56,7 +57,7 @@ describe("schema diagram static html", async () => {
       },
     );
 
-    const body = serializePageBlock("schema-diagram.block", {});
+    const body = serializePageBlock("schema-diagram", {});
     const html = await renderNodeBodyHtml(body, "Title", urls, () => "Untitled", ctx);
     expect(html).toContain('class="tome-schema-diagram"');
     expect(html).toContain("<svg");

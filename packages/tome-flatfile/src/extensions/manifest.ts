@@ -8,6 +8,8 @@ import type {
 
 export interface ResolvedExtensionComponent extends PageBlockComponentRef {
   kind: "page-block";
+  /** Roles this component fulfills (fence `type=`). Always non-empty. */
+  roles: string[];
   slashMenu?: { group?: string; order?: number };
   extension: Pick<
     ExtensionEntry,
@@ -129,12 +131,15 @@ function toResolvedComponent(
   component: ExtensionComponentEntry,
   extension: ExtensionEntry,
 ): ResolvedExtensionComponent {
+  const roles =
+    component.roles && component.roles.length > 0 ? [...component.roles] : [component.id];
   return {
     id: component.id,
     extensionId: component.extensionId,
     implementationId: component.implementationId,
     label: component.label,
     kind: "page-block",
+    roles,
     params: mergeParams(extension.params, component.params),
     slashMenu: component.slashMenu,
     extension: extensionPick(extension),
@@ -161,6 +166,21 @@ export function findComponentById(
   componentId: string,
 ): ResolvedExtensionComponent | undefined {
   return manifest.components.find((component) => component.id === componentId);
+}
+
+/**
+ * Resolve a page-block fence role to a provider component.
+ * First matching `roles` entry in `components[]` order wins; else match by component id.
+ */
+export function resolvePageBlockRole(
+  manifest: ExtensionsManifest,
+  role: string,
+): ResolvedExtensionComponent | undefined {
+  const trimmed = role.trim();
+  if (!trimmed) return undefined;
+  const byRole = manifest.components.find((component) => component.roles.includes(trimmed));
+  if (byRole) return byRole;
+  return findComponentById(manifest, trimmed);
 }
 
 export function findSearcherById(

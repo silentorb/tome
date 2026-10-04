@@ -33,7 +33,9 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 
 ### Page blocks
 
-- Storage **must** use shared `tome-block` fenced JSON (see [page-blocks.md](../extensions/page-blocks.md)).
+- Storage **must** use shared `json {type="…"}` fences (see [page-blocks.md](../extensions/page-blocks.md)); `type` is a **role** resolved via component `roles`.
+- Page-block components **should** declare `roles` (non-empty). When omitted, hosts default to `roles: [component.id]`.
+- Do **not** encode kind in component ids (no `.block` / `.searcher` suffixes). Prefer component id = extension id when there is one component per extension; put author-facing names in `roles` (e.g. component `tome-query`, role `query`).
 - Editor-only blocks **are valid** (no html module required).
 - HTML rendering uses general-purpose `HtmlPageBlockRenderer` — not static-site-specific types.
 - Registrations may set `interactive: true` so the editor mounts the React `Component` from the browser `editor.js` bundle instead of static HTML.
@@ -111,12 +113,13 @@ Hosts expose **`ExtensionGraphQueryServices`**, **`ExtensionGraphMutateServices`
   ],
   "components": [
     {
-      "id": "my-ext.block",
+      "id": "my-ext",
       "extensionId": "my-ext",
       "kind": "page-block",
       "implementationId": "my-block",
       "label": "My block",
       "enabled": true,
+      "roles": ["my-role"],
       "slashMenu": { "group": "custom", "order": 10 },
       "params": {}
     }

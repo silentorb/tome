@@ -8,6 +8,7 @@ import {
   type GraphParameterValue,
 } from "tome-query/parameters";
 import {
+  BLOCK_ROLE,
   COMPONENT_ID,
   IMPLEMENTATION_ID,
   SEQUENCING_BLOCK_VERSION,
@@ -294,4 +295,4 @@ export function register(host: EditorPageBlockHost): void {
   });
 }
 
-export { COMPONENT_ID, IMPLEMENTATION_ID };
+export { BLOCK_ROLE, COMPONENT_ID, IMPLEMENTATION_ID };

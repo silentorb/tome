@@ -3,6 +3,8 @@ export interface PublicExtensionComponent {
   extensionId: string;
   implementationId: string;
   label: string;
+  /** Page-block roles this component fulfills (fence `type=`). */
+  roles: string[];
   slashMenu?: { group?: string; order?: number };
   /** When true, the editor mounts the extension React Component for this block. */
   interactive?: boolean;

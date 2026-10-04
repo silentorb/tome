@@ -10,6 +10,7 @@ import {
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
 import type { ReactFlowGraph } from "imp-react-flow";
 import {
+  BLOCK_ROLE,
   COMPONENT_ID,
   IMPLEMENTATION_ID,
   QUERY_BLOCK_VERSION,
@@ -420,4 +421,4 @@ export function register(host: EditorPageBlockHost): void {
   });
 }
 
-export { COMPONENT_ID, IMPLEMENTATION_ID };
+export { BLOCK_ROLE, COMPONENT_ID, IMPLEMENTATION_ID };

@@ -8,7 +8,9 @@ import {
 
 export const SEQUENCING_BLOCK_VERSION = 1;
 export const IMPLEMENTATION_ID = "tome-sequencing";
-export const COMPONENT_ID = "tome-sequencing.block";
+export const COMPONENT_ID = "tome-sequencing";
+/** Fence `type=` role resolved via component `roles`. */
+export const BLOCK_ROLE = "tome-sequencing";
 
 /** Sentinel replaced with the host page node id at execute time. */
 export const PAGE_NODE_ID_LITERAL = "$pageNodeId";

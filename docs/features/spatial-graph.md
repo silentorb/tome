@@ -2,7 +2,7 @@
 
 ## Summary
 
-The **spatial graph** page block (`spatial-graph.block`, package `tome-spatial-graph`) renders compound hierarchy + neighbor adjacency diagrams as inline SVG on type-table pages (e.g. Marloth **Locations**). It uses **Cytoscape.js**, **fcose** layout, and **cytoscape-svg** export, pre-rendered at static-site build time and via editor `prepare-editor-body`.
+The **spatial graph** page block (role `spatial-graph`, package `tome-spatial-graph`) renders compound hierarchy + neighbor adjacency diagrams as inline SVG on type-table pages (e.g. Marloth **Locations**). It uses **Cytoscape.js**, **fcose** layout, and **cytoscape-svg** export, pre-rendered at static-site build time and via editor `prepare-editor-body`.
 
 ## When to read this
 
@@ -34,7 +34,7 @@ Agents **must** achieve behavior through Cytoscape **input data** (elements), **
 
 ## Block configuration
 
-Block `data` JSON (in `tome-block` fence):
+Block `data` JSON (in `json {type="spatial-graph"}` fence):
 
 | Key | Default | Purpose |
 | --- | --- | --- |

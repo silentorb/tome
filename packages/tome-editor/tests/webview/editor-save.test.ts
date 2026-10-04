@@ -30,11 +30,11 @@ describe("bodyNeedsSave", () => {
   test("ignores page-block editorHtml when comparing", () => {
     const saved: NodeBodyDocument = {
       version: 1,
-      content: [{ type: "page_block", componentId: "demo.block", data: { x: 1 }, editorHtml: "<p>a</p>" }],
+      content: [{ type: "page_block", blockType: "demo", data: { x: 1 }, editorHtml: "<p>a</p>" }],
     };
     const next: NodeBodyDocument = {
       version: 1,
-      content: [{ type: "page_block", componentId: "demo.block", data: { x: 1 }, editorHtml: "<p>b</p>" }],
+      content: [{ type: "page_block", blockType: "demo", data: { x: 1 }, editorHtml: "<p>b</p>" }],
     };
     expect(documentsEqual(saved, next)).toBe(true);
     expect(bodyNeedsSave(next, saved)).toBe(false);

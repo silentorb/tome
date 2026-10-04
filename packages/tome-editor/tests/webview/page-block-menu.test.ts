@@ -52,6 +52,7 @@ describe("page-block slash menu", () => {
     const components = [
       {
         id: "ext.demo",
+        roles: ["ext.demo"],
         extensionId: "ext",
         implementationId: "demo",
         label: "Demo block",

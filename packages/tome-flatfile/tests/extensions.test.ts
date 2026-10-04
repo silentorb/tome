@@ -3,6 +3,7 @@ import {
   emptyExtensionsFile,
   parseExtensionsFile,
   resolveExtensionsManifest,
+  resolvePageBlockRole,
 } from "../src/extensions";
 
 describe("extensions.json", () => {
@@ -125,5 +126,50 @@ describe("extensions.json", () => {
         ),
       ),
     ).toThrow(/not an enabled searcher/);
+  });
+
+  test("page-block roles default to [id] and resolvePageBlockRole picks first match", () => {
+    const file = parseExtensionsFile(
+      JSON.stringify({
+        extensions: [
+          { id: "tome-query", enabled: true, htmlModule: "tome-query/html" },
+          { id: "alt-query", enabled: true, htmlModule: "alt/html" },
+        ],
+        components: [
+          {
+            id: "tome-query",
+            extensionId: "tome-query",
+            kind: "page-block",
+            implementationId: "tome-query",
+            label: "Query",
+            enabled: true,
+            roles: ["query"],
+          },
+          {
+            id: "alt-query",
+            extensionId: "alt-query",
+            kind: "page-block",
+            implementationId: "alt",
+            label: "Alt",
+            enabled: true,
+            roles: ["query"],
+          },
+          {
+            id: "spatial-graph",
+            extensionId: "tome-query",
+            kind: "page-block",
+            implementationId: "spatial",
+            label: "Spatial",
+            enabled: true,
+          },
+        ],
+      }),
+    );
+    const manifest = resolveExtensionsManifest(file);
+    expect(manifest.components[0]?.roles).toEqual(["query"]);
+    expect(manifest.components[2]?.roles).toEqual(["spatial-graph"]);
+    expect(resolvePageBlockRole(manifest, "query")?.id).toBe("tome-query");
+    expect(resolvePageBlockRole(manifest, "spatial-graph")?.id).toBe("spatial-graph");
+    expect(resolvePageBlockRole(manifest, "missing")).toBeUndefined();
   });
 });

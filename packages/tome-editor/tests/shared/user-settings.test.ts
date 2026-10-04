@@ -27,8 +27,8 @@ import {
 
 describe("user-settings", () => {
   test("blockParameters are sparse and clearable", () => {
-    const key = blockParametersKey("page", "tome-sequencing.block");
-    expect(key).toBe("blocks/page/tome-sequencing.block");
+    const key = blockParametersKey("page", "tome-sequencing");
+    expect(key).toBe("blocks/page/tome-sequencing");
 
     const patched = applyUserSettingsPatch(
       { version: 1 },

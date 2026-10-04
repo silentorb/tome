@@ -37,7 +37,7 @@ describe("SequencingBlockComponent", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
@@ -59,7 +59,7 @@ describe("SequencingBlockComponent", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
@@ -79,7 +79,7 @@ describe("SequencingBlockComponent", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
@@ -102,7 +102,7 @@ describe("SequencingBlockComponent", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
           getSequencingShowDependencyEdges: () => false,
@@ -127,7 +127,7 @@ describe("SequencingBlockComponent", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
@@ -174,7 +174,7 @@ describe("SequencingBlockComponent", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
           getBlockParameters: () => {
@@ -242,7 +242,7 @@ describe("SequencingBlockComponent", () => {
     const { rerender } = render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
           getBlockParameters: () => ({ includeConsiderations: false }),
@@ -258,7 +258,7 @@ describe("SequencingBlockComponent", () => {
     rerender(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
           getBlockParameters: () => ({ includeConsiderations: false }),
@@ -289,7 +289,7 @@ describe("timeline dependency popup", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
@@ -345,7 +345,7 @@ describe("timeline dependency popup", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
@@ -403,7 +403,7 @@ describe("timeline dependency popup", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
@@ -424,7 +424,7 @@ describe("timeline dependency popup", () => {
     render(
       <SequencingBlockComponent
         ctx={{
-          component: { id: "tome-sequencing.block", label: "Timeline" },
+          component: { id: "tome-sequencing", label: "Timeline" },
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}

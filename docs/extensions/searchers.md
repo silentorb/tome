@@ -37,8 +37,8 @@ Enable one or more searcher components, then bind **roles** (`title` / `content`
 {
   "version": 1,
   "search": {
-    "title": "tome-search-like.searcher",
-    "content": "tome-search-sqlite.searcher"
+    "title": "tome-search-like",
+    "content": "tome-search-sqlite"
   },
   "extensions": [
     {
@@ -54,7 +54,7 @@ Enable one or more searcher components, then bind **roles** (`title` / `content`
   ],
   "components": [
     {
-      "id": "tome-search-like.searcher",
+      "id": "tome-search-like",
       "extensionId": "tome-search-like",
       "kind": "searcher",
       "implementationId": "tome-search-like",
@@ -62,7 +62,7 @@ Enable one or more searcher components, then bind **roles** (`title` / `content`
       "enabled": true
     },
     {
-      "id": "tome-search-sqlite.searcher",
+      "id": "tome-search-sqlite",
       "extensionId": "tome-search-sqlite",
       "kind": "searcher",
       "implementationId": "tome-search-sqlite",

@@ -17,8 +17,8 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 
 ### Block storage
 
-- Fence component id: `tome-query.block`
-- Block `data`: `{ version: 1, reactFlow: { nodes, edges } }` — React Flow is canonical so layout survives save
+- Fence role: `type="query"` (component id `tome-query`, `roles: ["query"]`)
+- Fence body: `{ version: 1, reactFlow: { nodes, edges } }` — React Flow is canonical so layout survives save
 - Default insert: Imp `input` → `output` (no transforms)
 - Legacy fences may still contain `viewMode`; parse ignores it
 
@@ -30,7 +30,7 @@ Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryA
 - The host tool panel is user-resizable (drag the left edge; width persists in localStorage)
 - Closing the panel re-runs the table query; Refresh re-runs while the panel is closed
 - Graph edits update fence `data` via `onBlockDataChange`
-- Table invokes `POST /api/extensions/tome-query.block/invoke` with `{ action: "execute", data, parameters? }`
+- Table invokes `POST /api/extensions/tome-query/invoke` with `{ action: "execute", data, parameters? }`
 - When the Imp graph declares **`parameter` nodes**, a settings gear appears; values persist in user settings (`blockParameters`) and are sent as `parameters` on invoke
 - Table errors are shown in a readonly field so they can be selected/copied inside the Milkdown embed
 - No page-node / type-table scope in v1 — `nodeId` is ignored for the collection source **except** as the `"page"` target of a `corpus` operator

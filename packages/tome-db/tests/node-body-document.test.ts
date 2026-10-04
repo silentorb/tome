@@ -50,16 +50,14 @@ describe("node body document", () => {
 
   test("round-trips page blocks and callouts", async () => {
     const { db, cache } = cacheWithTitles();
-    const fence = ["```tome-block", JSON.stringify({ componentId: "demo.block", data: { x: 1 } }, null, 2), "```"].join(
-      "\n",
-    );
+    const fence = ['```json {type="demo"}', JSON.stringify({ x: 1 }, null, 2), "```"].join("\n");
     const storage = `Before\n\n${fence}\n\n> 💡 A note\n`;
     const doc = await roundTrip(cache, storage);
     expect(doc.content.map((block) => block.type)).toEqual(["paragraph", "page_block", "callout"]);
     const block = doc.content[1];
     expect(block?.type).toBe("page_block");
     if (block?.type === "page_block") {
-      expect(block.componentId).toBe("demo.block");
+      expect(block.blockType).toBe("demo");
       expect(block.data).toEqual({ x: 1 });
       expect(block.editorHtml).toBeUndefined();
     }
@@ -69,8 +67,8 @@ describe("node body document", () => {
       expect(callout.emoji).toBe("💡");
     }
     const stored = documentToStorageBody(doc);
-    expect(stored).toContain("```tome-block");
-    expect(stored).toContain("demo.block");
+    expect(stored).toContain("```json {type=\"demo\"}");
+    expect(stored).toContain('"x": 1');
     expect(stored).toContain("💡");
     db.close();
   });

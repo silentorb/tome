@@ -84,6 +84,9 @@ Living table of dual-supported legacy paths.
 | Id | Surface | Legacy path | Replacement | Introduced (version / commit) | Remove after | Notes |
 | -- | ------- | ----------- | ----------- | ----------------------------- | ------------ | ----- |
 | `sequencing-depends-association` | content-model | `sequencing.json` table fields `dependsAssociation`, `containmentAssociation` | `dependsRelationshipType`, `containmentRelationshipType` | unreleased (relationship-types rename) | TBD | Parse accepts either key (preferred wins if both present). Serialize writes preferred keys only. Workspace corpora migrated to preferred keys. |
+| `page-block-tome-block-fence` | flat-file storage | ` ```tome-block ` fence with nested `{componentId,data}` JSON | ` ```json {type="<role>"} ` + flattened body JSON | unreleased (page-block role fences) | TBD | Parse accepts legacy fences; strips trailing `.block`/`.searcher` from `componentId` into `blockType`. Serialize writes new form only. Workspace corpora migrated. |
+| `page-block-kind-suffix-ids` | flat-file storage / content-model | Component ids like `tome-query.block` / `*.searcher` used as fence identity | Block **roles** (`type=`) + unsuffixed component ids + `roles[]` | unreleased (page-block role fences) | TBD | Resolver: match `roles` first, then component `id`. Missing `roles` on page-blocks defaults to `[id]`. |
+| `page-block-missing-roles` | content-model | Page-block component without `roles` | Explicit `roles` array | unreleased (page-block role fences) | TBD | Dual-support default `roles: [component.id]` at resolve time. |
 
 **Column guidance**
 
