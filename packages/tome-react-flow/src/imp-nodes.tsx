@@ -7,12 +7,12 @@ import {
 } from "@xyflow/react";
 import type { InputValues, NodeDefinition, Port, PrimitiveValue } from "imp-core-types";
 import { isConcreteSignalType } from "imp-core-types";
-import { getNodeDefinition, listNodeDefinitions } from "imp-registry";
-import { createQueryRegistry } from "./execute";
+import { getNodeDefinition, listNodeDefinitions, type Registry } from "imp-registry";
 import {
   matchPathHopRelation,
   type PathHopOptions,
 } from "./path-hop-options";
+import { useCreateRegistry, type CreateRegistry } from "./registry-context";
 
 export type ImpFlowNodeData = {
   inputValues: InputValues;
@@ -39,7 +39,8 @@ export function shouldShowPortLiteralInput(
 }
 
 function ImpOperatorNode({ id, data, type }: NodeProps<ImpFlowNode>) {
-  const registry = useMemo(() => createQueryRegistry(), []);
+  const createRegistry = useCreateRegistry();
+  const registry = useMemo(() => createRegistry(), [createRegistry]);
   const definition = type ? getNodeDefinition(registry, type) : undefined;
   const inputValues = data.inputValues ?? {};
   const connectedInputPorts = data.connectedInputPorts ?? [];
@@ -49,7 +50,7 @@ function ImpOperatorNode({ id, data, type }: NodeProps<ImpFlowNode>) {
 
   if (!definition) {
     return (
-      <div className="tome-query-rf-node tome-query-rf-node-unknown">
+      <div className="tome-rf-node tome-rf-node-unknown">
         <strong>{type ?? "unknown"}</strong>
       </div>
     );
@@ -68,13 +69,13 @@ function ImpOperatorNode({ id, data, type }: NodeProps<ImpFlowNode>) {
     : null;
 
   return (
-    <div className={`tome-query-rf-node tome-query-rf-node-${definition.id}`}>
-      <div className="tome-query-rf-node-title">{definition.id}</div>
+    <div className={`tome-rf-node tome-rf-node-${definition.id}`}>
+      <div className="tome-rf-node-title">{definition.id}</div>
       {useOntologyHops ? (
-        <div className="tome-query-rf-port tome-query-rf-port-in tome-query-rf-path-hop">
-          <span className="tome-query-rf-port-label">type</span>
+        <div className="tome-rf-port tome-rf-port-in tome-rf-path-hop">
+          <span className="tome-rf-port-label">type</span>
           <select
-            className="tome-query-rf-port-input nodrag"
+            className="tome-rf-port-input nodrag"
             value={data.pathStartType ?? ""}
             onChange={(event) => {
               data.onPathStartTypeChange?.(id, event.target.value);
@@ -87,9 +88,9 @@ function ImpOperatorNode({ id, data, type }: NodeProps<ImpFlowNode>) {
               </option>
             ))}
           </select>
-          <span className="tome-query-rf-port-label">relation</span>
+          <span className="tome-rf-port-label">relation</span>
           <select
-            className="tome-query-rf-port-input nodrag"
+            className="tome-rf-port-input nodrag"
             value={matched?.token ?? ""}
             disabled={!data.pathStartType}
             onChange={(event) => {
@@ -117,29 +118,29 @@ function ImpOperatorNode({ id, data, type }: NodeProps<ImpFlowNode>) {
           !connectedInputPorts.includes(port.id)
         ) {
           return (
-            <div key={`in-${port.id}`} className="tome-query-rf-port tome-query-rf-port-in">
+            <div key={`in-${port.id}`} className="tome-rf-port tome-rf-port-in">
               <Handle
                 type="target"
                 position={Position.Left}
                 id={port.id}
-                className="tome-query-rf-handle"
+                className="tome-rf-handle"
               />
-              <span className="tome-query-rf-port-label">{port.id}</span>
+              <span className="tome-rf-port-label">{port.id}</span>
             </div>
           );
         }
         return (
-          <div key={`in-${port.id}`} className="tome-query-rf-port tome-query-rf-port-in">
+          <div key={`in-${port.id}`} className="tome-rf-port tome-rf-port-in">
             <Handle
               type="target"
               position={Position.Left}
               id={port.id}
-              className="tome-query-rf-handle"
+              className="tome-rf-handle"
             />
-            <span className="tome-query-rf-port-label">{port.id}</span>
+            <span className="tome-rf-port-label">{port.id}</span>
             {shouldShowPortLiteralInput(port, connectedInputPorts) ? (
               <input
-                className="tome-query-rf-port-input nodrag"
+                className="tome-rf-port-input nodrag"
                 value={formatInputValue(inputValues[port.id])}
                 onChange={(event) => {
                   data.onInputChange?.(id, port.id, parseInputValue(event.target.value, port.id));
@@ -150,13 +151,13 @@ function ImpOperatorNode({ id, data, type }: NodeProps<ImpFlowNode>) {
         );
       })}
       {outputPorts.map((port) => (
-        <div key={`out-${port.id}`} className="tome-query-rf-port tome-query-rf-port-out">
-          <span className="tome-query-rf-port-label">{port.id}</span>
+        <div key={`out-${port.id}`} className="tome-rf-port tome-rf-port-out">
+          <span className="tome-rf-port-label">{port.id}</span>
           <Handle
             type="source"
             position={Position.Right}
             id={port.id}
-            className="tome-query-rf-handle"
+            className="tome-rf-handle"
           />
         </div>
       ))}
@@ -184,8 +185,7 @@ function parseInputValue(raw: string, portId: string): PrimitiveValue {
   return raw;
 }
 
-export function createImpNodeTypes(): Record<string, typeof ImpOperatorNode> {
-  const registry = createQueryRegistry();
+export function createImpNodeTypes(registry: Registry): Record<string, typeof ImpOperatorNode> {
   const types: Record<string, typeof ImpOperatorNode> = {};
   for (const definition of listNodeDefinitions(registry)) {
     types[definition.id] = ImpOperatorNode;
@@ -193,14 +193,14 @@ export function createImpNodeTypes(): Record<string, typeof ImpOperatorNode> {
   return types;
 }
 
-export function listPaletteNodeTypes(): NodeDefinition[] {
-  return listNodeDefinitions(createQueryRegistry()).filter(
+export function listPaletteNodeTypes(createRegistry: CreateRegistry): NodeDefinition[] {
+  return listNodeDefinitions(createRegistry()).filter(
     (type) => type.id !== "input" && type.id !== "output",
   );
 }
 
-export function useImpNodeTypes(): Record<string, typeof ImpOperatorNode> {
-  return useMemo(() => createImpNodeTypes(), []);
+export function useImpNodeTypes(createRegistry: CreateRegistry): Record<string, typeof ImpOperatorNode> {
+  return useMemo(() => createImpNodeTypes(createRegistry()), [createRegistry]);
 }
 
 export function newOperatorNodeId(typeId: string): string {
@@ -208,11 +208,12 @@ export function newOperatorNodeId(typeId: string): string {
 }
 
 export function createOperatorNode(
+  createRegistry: CreateRegistry,
   typeId: string,
   position: { x: number; y: number },
   onInputChange: ImpFlowNodeData["onInputChange"],
 ): ImpFlowNode {
-  const registry = createQueryRegistry();
+  const registry = createRegistry();
   const definition = getNodeDefinition(registry, typeId);
   const inputValues: InputValues = {};
   if (definition) {

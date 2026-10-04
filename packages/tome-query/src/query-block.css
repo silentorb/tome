@@ -71,8 +71,7 @@
 }
 
 .tome-query-edit,
-.tome-query-run,
-.tome-query-palette-btn {
+.tome-query-run {
   appearance: none;
   border: 1px solid var(--tome-border, #3a3a3a);
   background: var(--tome-surface-raised, #2a2a2a);
@@ -126,72 +125,12 @@
   background: var(--tome-surface, #1c1c1c);
 }
 
-.tome-query-tool-panel .tome-query-flow {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  gap: 0.5rem;
+.tome-query-tool-panel .tome-rf-flow {
   padding: 0.75rem;
 }
 
-.tome-query-palette {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  flex-shrink: 0;
-}
-
-.tome-query-tool-panel .tome-query-flow-canvas {
-  flex: 1;
+.tome-query-tool-panel .tome-rf-flow-canvas {
   min-height: 0;
-  height: auto;
-  border: 1px solid var(--tome-border, #3a3a3a);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.tome-query-rf-node {
-  min-width: 9rem;
-  padding: 0.4rem 0.5rem;
-  border: 1px solid var(--tome-border, #555);
-  background: var(--tome-surface-raised, #2a2a2a);
-  border-radius: 4px;
-  font-size: 0.8rem;
-}
-
-.tome-query-rf-node-title {
-  font-weight: 600;
-  margin-bottom: 0.35rem;
-}
-
-.tome-query-rf-port {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  position: relative;
-  margin: 0.2rem 0;
-  min-height: 1.4rem;
-}
-
-.tome-query-rf-port-out {
-  justify-content: flex-end;
-}
-
-.tome-query-rf-port-input {
-  width: 5.5rem;
-  font: inherit;
-  background: var(--tome-surface, #1c1c1c);
-  color: inherit;
-  border: 1px solid var(--tome-border, #555);
-  padding: 0.1rem 0.25rem;
-  box-shadow: none;
-}
-
-.tome-query-rf-handle {
-  width: 8px !important;
-  height: 8px !important;
-  background: var(--tome-accent, #7aa2ff) !important;
 }
 
 .tome-query-table-wrap {

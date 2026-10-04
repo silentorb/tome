@@ -5,7 +5,7 @@
 ## Dependencies
 
 - `tome-interfaces`, `tome-sequencing-interfaces`, `tome-sequencing-resolution`
-- `tome-imp-sql` / Imp via `tome-query` execute helpers + React Flow query editor
+- `tome-imp-sql` / Imp via `tome-query` execute helpers; Imp canvas via `tome-react-flow` (`ImpFlowEditor`)
 - Local `sequencing.json` parse/load (flatfile owns store watching of the same file)
 - visx for the timeline canvas
 

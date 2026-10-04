@@ -26,28 +26,53 @@ import {
   type ImpFlowNodeData,
 } from "./imp-nodes";
 import type { PathHopOptions } from "./path-hop-options";
+import { ImpFlowRegistryProvider, type CreateRegistry } from "./registry-context";
+import "./imp-flow-css.css";
 
-export interface QueryFlowEditorProps {
+export interface ImpFlowEditorProps {
   graph: ReactFlowGraph;
   readOnly?: boolean;
   onGraphChange: (graph: ReactFlowGraph) => void;
+  /** Imp NodeLibrary registry factory (required). */
+  createRegistry: CreateRegistry;
   /** Ontology-backed traverse hop options (type + relation tokens). */
   pathHopOptions?: PathHopOptions | null;
 }
 
 /** React Flow deleteKeyCode: Backspace+Delete when editable; null when read-only. */
-export function queryFlowDeleteKeyCode(readOnly?: boolean): string[] | null {
+export function impFlowDeleteKeyCode(readOnly?: boolean): string[] | null {
   return readOnly ? null : ["Backspace", "Delete"];
 }
 
-export function QueryFlowEditor({
+export function ImpFlowEditor({
   graph,
   readOnly,
   onGraphChange,
+  createRegistry,
   pathHopOptions = null,
-}: QueryFlowEditorProps) {
-  const nodeTypes = useImpNodeTypes();
-  const palette = useMemo(() => listPaletteNodeTypes(), []);
+}: ImpFlowEditorProps) {
+  return (
+    <ImpFlowRegistryProvider createRegistry={createRegistry}>
+      <ImpFlowEditorInner
+        graph={graph}
+        readOnly={readOnly}
+        onGraphChange={onGraphChange}
+        createRegistry={createRegistry}
+        pathHopOptions={pathHopOptions}
+      />
+    </ImpFlowRegistryProvider>
+  );
+}
+
+function ImpFlowEditorInner({
+  graph,
+  readOnly,
+  onGraphChange,
+  createRegistry,
+  pathHopOptions = null,
+}: ImpFlowEditorProps) {
+  const nodeTypes = useImpNodeTypes(createRegistry);
+  const palette = useMemo(() => listPaletteNodeTypes(createRegistry), [createRegistry]);
   const onGraphChangeRef = useRef(onGraphChange);
   onGraphChangeRef.current = onGraphChange;
 
@@ -213,6 +238,7 @@ export function QueryFlowEditor({
       const next = [
         ...current,
         createOperatorNode(
+          createRegistry,
           typeId,
           { x: 160 + current.length * 24, y: 80 + current.length * 24 },
           onInputChange,
@@ -227,14 +253,14 @@ export function QueryFlowEditor({
   };
 
   return (
-    <div className="tome-query-flow">
+    <div className="tome-rf-flow">
       {!readOnly ? (
-        <div className="tome-query-palette">
+        <div className="tome-rf-palette">
           {palette.map((type) => (
             <button
               key={type.id}
               type="button"
-              className="tome-query-palette-btn"
+              className="tome-rf-palette-btn"
               onClick={() => addNode(type.id)}
             >
               {type.id}
@@ -242,7 +268,7 @@ export function QueryFlowEditor({
           ))}
         </div>
       ) : null}
-      <div className="tome-query-flow-canvas">
+      <div className="tome-rf-flow-canvas">
         <ReactFlow
           nodes={nodesWithHandlers}
           edges={edges}
@@ -250,7 +276,7 @@ export function QueryFlowEditor({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
-          deleteKeyCode={queryFlowDeleteKeyCode(readOnly)}
+          deleteKeyCode={impFlowDeleteKeyCode(readOnly)}
           nodesDraggable={!readOnly}
           nodesConnectable={!readOnly}
           elementsSelectable={!readOnly}

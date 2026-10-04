@@ -10,7 +10,8 @@ This file is the **sole package inventory**: the table and diagram below must li
 | [`tome-sqlite`](./tome-sqlite/) | SQLite graph database (query cache today) |
 | [`tome-db`](./tome-db/) | Domain queries/mutations + content↔cache sync |
 | [`tome-graph-interfaces`](./tome-graph-interfaces/) | Domain DTOs and `TomeGraphServices` contract |
-| [`tome-ontology`](./tome-ontology/) | Store-independent ontology runtime (predicates + patterns) |
+| [`tome-ontology`](./tome-ontology/) | Store-independent ontology runtime (predicates + patterns); keep deps minimal; optional for minimal Tome |
+| [`tome-ontology-ui`](./tome-ontology-ui/) | Client ontology viewing/editing (node-filter page block) |
 | [`tome-service-interfaces`](./tome-service-interfaces/) | Store/cache/service module contracts |
 | [`tome-http`](./tome-http/) | HTTP service module + typed HTTP client |
 | [`tome-server`](./tome-server/) | Config-driven host (store, cache, service modules) |
@@ -25,6 +26,7 @@ This file is the **sole package inventory**: the table and diagram below must li
 | [`tome-schema-diagram`](./tome-schema-diagram/) | Schema diagram page block (ELK → SVG) |
 | [`tome-imp-sql`](./tome-imp-sql/) | Imp → Tome SQL schema/registry binder (above tome-db) |
 | [`tome-imp-flatfile`](./tome-imp-flatfile/) | Imp flatfile execution host over git-tracked content (used by tome-db) |
+| [`tome-react-flow`](./tome-react-flow/) | Shared Imp React Flow canvas (`ImpFlowEditor`) |
 | [`tome-query`](./tome-query/) | Imp-backed custom table page block (React Flow → SQL) |
 | [`tome-sequencing-interfaces`](./tome-sequencing-interfaces/) | Shared sequencing domain types |
 | [`tome-sequencing-resolution`](./tome-sequencing-resolution/) | Relative chronology constraint resolution |
@@ -45,6 +47,11 @@ flowchart TB
 
   ON[tome-ontology]
   ON --> GI
+  ONUI[tome-ontology-ui]
+  ONUI --> ON
+  ONUI --> EI
+  TRF[tome-react-flow]
+  ONUI --> TRF
 
   subgraph storage [Storage]
     SF[tome-flatfile]
@@ -122,11 +129,13 @@ flowchart TB
   SSQ --> SI
   Q --> EI
   Q --> IMPSQL
+  Q --> TRF
   SEQR --> SEQI
   SEQ --> EI
   SEQ --> SEQI
   SEQ --> SEQR
   SEQ --> Q
+  SEQ --> TRF
   SRV --> SL
   SRV --> SSQ
   SRV --> SP

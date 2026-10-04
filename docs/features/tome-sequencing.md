@@ -48,7 +48,7 @@
 
 ### Editor UX
 
-- `interactive: true` embed with Refresh + **Edit query** (host tool panel React Flow editor); shows an explicit load error if the browser bundle is unavailable
+- `interactive: true` embed with Refresh + **Edit query** (host tool panel uses shared `ImpFlowEditor` from **`tome-react-flow`**); shows an explicit load error if the browser bundle is unavailable
 - Server `invoke` actions:
   - `arrange` / `execute` — layout DTO
   - `addDepends` / `removeDepends` — `{ prerequisiteId, dependentId, from, to, data, parameters? }` mutates one start/end combo on the `dependsRelationshipType` row (direction 0 = prerequisite → dependent; `properties.endpoints` is `{ from, to }[]`) then re-arranges. Missing `endpoints` fails arrange. On resolve failure, returns `{ ok: false, error, depends }` so the client can keep previous placements and still list the new edge.

@@ -6,6 +6,8 @@
 
 Data flow: **React Flow → Imp graph → tome-imp-sql → TomeQueryCache.queryAll**.
 
+The Imp React Flow canvas (`ImpFlowEditor`) lives in **`tome-react-flow`**. This package owns query defaults, path-hop option building, SQL execute, and the results-table embed.
+
 ## When to read this
 
 - Authoring or changing the query page block

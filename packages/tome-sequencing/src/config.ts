@@ -1,10 +1,8 @@
 import type { ReactFlowGraph } from "imp-react-flow";
 import { impToReactFlow } from "imp-react-flow";
 import type { Graph } from "imp-core-types";
-import {
-  dedupeInboundReactFlowEdges,
-  defaultReactFlowGraph as defaultQueryReactFlow,
-} from "tome-query/config";
+import { dedupeInboundReactFlowEdges } from "tome-react-flow/config";
+import { defaultReactFlowGraph as defaultQueryReactFlow } from "tome-query/config";
 
 export const SEQUENCING_BLOCK_VERSION = 1;
 export const IMPLEMENTATION_ID = "tome-sequencing";

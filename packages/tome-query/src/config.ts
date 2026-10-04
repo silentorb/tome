@@ -1,6 +1,9 @@
 import type { ReactFlowGraph } from "imp-react-flow";
 import { impToReactFlow } from "imp-react-flow";
 import type { Graph } from "imp-core-types";
+import { dedupeInboundReactFlowEdges } from "tome-react-flow/config";
+
+export { dedupeInboundReactFlowEdges, withoutInboundToPort } from "tome-react-flow/config";
 
 export const QUERY_BLOCK_VERSION = 1;
 export const IMPLEMENTATION_ID = "tome-query";
@@ -46,35 +49,6 @@ export function defaultBlockData(): TomeQueryBlockData {
     version: QUERY_BLOCK_VERSION,
     reactFlow: defaultReactFlowGraph(),
   };
-}
-
-/**
- * Keep the last inbound edge per (target, targetHandle).
- * Legacy/multi-wire graphs heal for compile/display instead of failing Imp SQL's at-most-one rule.
- * Last wins so a newer wire replaces a stale default (e.g. leftover input→output).
- */
-export function dedupeInboundReactFlowEdges(
-  edges: ReactFlowGraph["edges"],
-): ReactFlowGraph["edges"] {
-  const byTarget = new Map<string, ReactFlowGraph["edges"][number]>();
-  for (const edge of edges) {
-    const key = `${edge.target}\0${edge.targetHandle ?? ""}`;
-    byTarget.set(key, edge);
-  }
-  const kept = new Set(byTarget.values());
-  return edges.filter((edge) => kept.has(edge));
-}
-
-/** Drop existing edges that target the same input port (for replace-on-connect). */
-export function withoutInboundToPort<T extends { target: string; targetHandle?: string | null }>(
-  edges: T[],
-  target: string,
-  targetHandle: string | null | undefined,
-): T[] {
-  const handle = targetHandle ?? "";
-  return edges.filter(
-    (edge) => !(edge.target === target && (edge.targetHandle ?? "") === handle),
-  );
 }
 
 export function parseQueryBlockData(raw: unknown): TomeQueryBlockData {

@@ -37,12 +37,10 @@ mock.module("svg-pan-zoom", () => ({
   }),
 }));
 
-mock.module(
-  new URL("../../../tome-query/src/query-editor.tsx", import.meta.url).pathname,
-  () => ({
-    QueryFlowEditor: () => <div data-testid="query-flow-stub" />,
-  }),
-);
+mock.module("tome-react-flow/editor", () => ({
+  ImpFlowEditor: () => <div data-testid="query-flow-stub" />,
+  impFlowDeleteKeyCode: () => null,
+}));
 
 const { pageBlockEmbed } = await import("../../src/webview/extensions/page-block-embed");
 

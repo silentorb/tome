@@ -18,8 +18,9 @@ import {
   parseQueryBlockData,
   type TomeQueryBlockData,
 } from "./config";
-import { QueryFlowEditor } from "./query-editor";
+import { ImpFlowEditor } from "tome-react-flow/editor";
 import type { QueryResultTable } from "./execute";
+import { createQueryRegistry } from "./execute";
 import { GraphParameterControls } from "./graph-parameter-controls";
 import {
   listGraphParameters,
@@ -52,10 +53,11 @@ export function QueryToolPanelContent({
 }) {
   return (
     <div className="tome-query-tool-panel">
-      <QueryFlowEditor
+      <ImpFlowEditor
         graph={graph}
         readOnly={readOnly}
         onGraphChange={onGraphChange}
+        createRegistry={createQueryRegistry}
         pathHopOptions={pathHopOptions}
       />
     </div>

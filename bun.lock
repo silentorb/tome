@@ -323,18 +323,40 @@
         "typescript": "5.8.2",
       },
     },
+    "packages/tome-ontology-ui": {
+      "name": "tome-ontology-ui",
+      "version": "0.1.0",
+      "dependencies": {
+        "imp-core-types": "workspace:^0.5.0",
+        "imp-react-flow": "workspace:^0.5.0",
+        "react": "19.0.0",
+        "tome-imp-sql": "workspace:^0.10.0",
+        "tome-interfaces": "workspace:^0.5.0",
+        "tome-ontology": "workspace:^0.1.0",
+        "tome-react-flow": "workspace:^0.1.0",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "17.4.4",
+        "@testing-library/react": "16.2.0",
+        "@types/bun": "1.2.23",
+        "@types/react": "19.0.12",
+        "@types/react-dom": "19.0.4",
+        "happy-dom": "17.4.4",
+        "react-dom": "19.0.0",
+        "typescript": "5.8.2",
+      },
+    },
     "packages/tome-query": {
       "name": "tome-query",
       "version": "0.11.0",
       "dependencies": {
-        "@xyflow/react": "12.8.2",
         "imp-core-types": "workspace:^0.5.0",
         "imp-react-flow": "workspace:^0.5.0",
-        "imp-registry": "workspace:^0.5.0",
         "react": "19.0.0",
-        "tome-flatfile": "workspace:^0.3.0",
-        "tome-imp-sql": "workspace:^0.7.0",
-        "tome-interfaces": "workspace:^0.3.0",
+        "tome-flatfile": "workspace:^0.6.0",
+        "tome-imp-sql": "workspace:^0.10.0",
+        "tome-interfaces": "workspace:^0.5.0",
+        "tome-react-flow": "workspace:^0.1.0",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "17.4.4",
@@ -345,6 +367,27 @@
         "happy-dom": "17.4.4",
         "react-dom": "19.0.0",
         "tome-test-support": "workspace:^0.2.0",
+        "typescript": "5.8.2",
+      },
+    },
+    "packages/tome-react-flow": {
+      "name": "tome-react-flow",
+      "version": "0.1.0",
+      "dependencies": {
+        "@xyflow/react": "12.8.2",
+        "imp-core-types": "workspace:^0.5.0",
+        "imp-react-flow": "workspace:^0.5.0",
+        "imp-registry": "workspace:^0.5.0",
+        "react": "19.0.0",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "17.4.4",
+        "@testing-library/react": "16.2.0",
+        "@types/bun": "1.2.23",
+        "@types/react": "19.0.12",
+        "@types/react-dom": "19.0.4",
+        "happy-dom": "17.4.4",
+        "react-dom": "19.0.0",
         "typescript": "5.8.2",
       },
     },
@@ -400,14 +443,14 @@
         "@visx/scale": "3.12.0",
         "@visx/shape": "3.12.0",
         "@visx/zoom": "3.12.0",
-        "@xyflow/react": "12.8.2",
         "imp-core-types": "workspace:^0.5.0",
         "imp-react-flow": "workspace:^0.5.0",
         "react": "19.0.0",
-        "tome-flatfile": "workspace:^0.1.0",
-        "tome-imp-sql": "workspace:^0.5.0",
-        "tome-interfaces": "workspace:^0.1.0",
-        "tome-query": "workspace:^0.5.0",
+        "tome-flatfile": "workspace:^0.6.0",
+        "tome-imp-sql": "workspace:^0.10.0",
+        "tome-interfaces": "workspace:^0.5.0",
+        "tome-query": "workspace:^0.11.0",
+        "tome-react-flow": "workspace:^0.1.0",
         "tome-sequencing-interfaces": "workspace:^0.1.0",
         "tome-sequencing-resolution": "workspace:^0.1.0",
       },
@@ -419,7 +462,7 @@
         "@types/react-dom": "19.0.4",
         "happy-dom": "17.4.4",
         "react-dom": "19.0.0",
-        "tome-test-support": "workspace:^0.1.0",
+        "tome-test-support": "workspace:^0.2.0",
         "typescript": "5.8.2",
       },
     },
@@ -1819,7 +1862,11 @@
 
     "tome-ontology": ["tome-ontology@workspace:packages/tome-ontology"],
 
+    "tome-ontology-ui": ["tome-ontology-ui@workspace:packages/tome-ontology-ui"],
+
     "tome-query": ["tome-query@workspace:packages/tome-query"],
+
+    "tome-react-flow": ["tome-react-flow@workspace:packages/tome-react-flow"],
 
     "tome-schema-diagram": ["tome-schema-diagram@workspace:packages/tome-schema-diagram"],
 
@@ -2049,9 +2096,7 @@
 
     "strip-ansi/ansi-regex": ["ansi-regex@6.2.2", "", {}, "sha512-Bq3SmSpyFHaWjPk8If9yc6svM8c56dB5BAtW4Qbw5jHTwwXXcTLoRMkpDJp6VL0XzlWaCHTXrkFURMYmD0sLqg=="],
 
-    "tome-query/@xyflow/react": ["@xyflow/react@12.8.2", "", { "dependencies": { "@xyflow/system": "0.0.66", "classcat": "^5.0.3", "zustand": "^4.4.0" }, "peerDependencies": { "react": ">=17", "react-dom": ">=17" } }, "sha512-VifLpxOy74ck283NQOtBn1e8igmB7xo7ADDKxyBHkKd8IKpyr16TgaYOhzqVwNMdB4NT+m++zfkic530L+gEXw=="],
-
-    "tome-sequencing/@xyflow/react": ["@xyflow/react@12.8.2", "", { "dependencies": { "@xyflow/system": "0.0.66", "classcat": "^5.0.3", "zustand": "^4.4.0" }, "peerDependencies": { "react": ">=17", "react-dom": ">=17" } }, "sha512-VifLpxOy74ck283NQOtBn1e8igmB7xo7ADDKxyBHkKd8IKpyr16TgaYOhzqVwNMdB4NT+m++zfkic530L+gEXw=="],
+    "tome-react-flow/@xyflow/react": ["@xyflow/react@12.8.2", "", { "dependencies": { "@xyflow/system": "0.0.66", "classcat": "^5.0.3", "zustand": "^4.4.0" }, "peerDependencies": { "react": ">=17", "react-dom": ">=17" } }, "sha512-VifLpxOy74ck283NQOtBn1e8igmB7xo7ADDKxyBHkKd8IKpyr16TgaYOhzqVwNMdB4NT+m++zfkic530L+gEXw=="],
 
     "unist-util-remove-position/unist-util-visit": ["unist-util-visit@5.1.0", "", { "dependencies": { "@types/unist": "^3.0.0", "unist-util-is": "^6.0.0", "unist-util-visit-parents": "^6.0.0" } }, "sha512-m+vIdyeCOpdr/QeQCu2EzxX/ohgS8KbnPDgFni4dQsfSCtpz8UqDyY5GjRru8PDKuYn7Fq19j1CQ+nJSsGKOzg=="],
 
@@ -2067,8 +2112,6 @@
 
     "node-fetch/whatwg-url/webidl-conversions": ["webidl-conversions@3.0.1", "", {}, "sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ=="],
 
-    "tome-query/@xyflow/react/@xyflow/system": ["@xyflow/system@0.0.66", "", { "dependencies": { "@types/d3-drag": "^3.0.7", "@types/d3-interpolate": "^3.0.4", "@types/d3-selection": "^3.0.10", "@types/d3-transition": "^3.0.8", "@types/d3-zoom": "^3.0.8", "d3-drag": "^3.0.0", "d3-interpolate": "^3.0.1", "d3-selection": "^3.0.0", "d3-zoom": "^3.0.0" } }, "sha512-TTxESDwPsATnuDMUeYYtKe4wt9v8bRO29dgYBhR8HyhSCzipnAdIL/1CDfFd+WqS1srVreo24u6zZeVIDk4r3Q=="],
-
-    "tome-sequencing/@xyflow/react/@xyflow/system": ["@xyflow/system@0.0.66", "", { "dependencies": { "@types/d3-drag": "^3.0.7", "@types/d3-interpolate": "^3.0.4", "@types/d3-selection": "^3.0.10", "@types/d3-transition": "^3.0.8", "@types/d3-zoom": "^3.0.8", "d3-drag": "^3.0.0", "d3-interpolate": "^3.0.1", "d3-selection": "^3.0.0", "d3-zoom": "^3.0.0" } }, "sha512-TTxESDwPsATnuDMUeYYtKe4wt9v8bRO29dgYBhR8HyhSCzipnAdIL/1CDfFd+WqS1srVreo24u6zZeVIDk4r3Q=="],
+    "tome-react-flow/@xyflow/react/@xyflow/system": ["@xyflow/system@0.0.66", "", { "dependencies": { "@types/d3-drag": "^3.0.7", "@types/d3-interpolate": "^3.0.4", "@types/d3-selection": "^3.0.10", "@types/d3-transition": "^3.0.8", "@types/d3-zoom": "^3.0.8", "d3-drag": "^3.0.0", "d3-interpolate": "^3.0.1", "d3-selection": "^3.0.0", "d3-zoom": "^3.0.0" } }, "sha512-TTxESDwPsATnuDMUeYYtKe4wt9v8bRO29dgYBhR8HyhSCzipnAdIL/1CDfFd+WqS1srVreo24u6zZeVIDk4r3Q=="],
   }
 }

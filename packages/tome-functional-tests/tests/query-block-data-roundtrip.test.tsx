@@ -1,7 +1,6 @@
 import { afterAll, describe, expect, mock, test } from "bun:test";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { invalidateExtensionsCache } from "tome-db";
 import { contentModelDir } from "tome-db/content";
@@ -22,11 +21,9 @@ import { defaultBlockData, defaultReactFlowGraph, parseQueryBlockData } from "to
 import { createTestApiFromContent } from "../src/harness/create-test-api";
 import { createHandlerClient } from "../src/harness/handler-client";
 
-const queryEditorPath = fileURLToPath(
-  new URL("../../tome-query/src/query-editor.tsx", import.meta.url),
-);
-mock.module(queryEditorPath, () => ({
-  QueryFlowEditor: () => <div data-testid="query-flow-stub" />,
+mock.module("tome-react-flow/editor", () => ({
+  ImpFlowEditor: () => <div data-testid="query-flow-stub" />,
+  impFlowDeleteKeyCode: () => null,
 }));
 
 const { QueryBlockComponent } = await import("tome-query/editor");

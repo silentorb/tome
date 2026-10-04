@@ -141,7 +141,7 @@ describe("QueryBlockComponent", () => {
     });
   });
 
-  test("Edit query opens the host tool panel with QueryFlowEditor props", async () => {
+  test("Edit query opens the host tool panel with ImpFlowEditor props", async () => {
     const invoke = mock(async (input: unknown) => {
       const record =
         input && typeof input === "object" && !Array.isArray(input)

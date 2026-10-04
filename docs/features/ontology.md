@@ -90,10 +90,12 @@ Active predicate nodes carry selection logic as a fenced structured body propert
 
 - Fence language: `json`
 - Info string: `{#predicate type="node-filter"}`
-- Body: **raw Imp Graph JSON** (agent-authored; not a React Flow envelope)
+- Body: **raw Imp Graph JSON** (canonical on disk / for agents; not a React Flow envelope)
 - Property key `predicate` means conceptually `node.predicate`
 
-Optional `{#id}` on page-block meta is the general structured-property convention — see [page-blocks.md](../extensions/page-blocks.md). React Flow visualization/editing for these filters is deferred.
+Optional `{#id}` on page-block meta is the general structured-property convention — see [page-blocks.md](../extensions/page-blocks.md).
+
+**Editor UI:** [`tome-ontology-ui`](../../packages/tome-ontology-ui/) registers the interactive `node-filter` page block. Authors edit the filter in the host tool panel via shared [`tome-react-flow`](../../packages/tome-react-flow/) (`ImpFlowEditor`); save converts React Flow → Imp so the fence body stays raw Imp. Static HTML shows a short summary (not a full canvas).
 
 Predicates without a valid `node-filter` property are skipped (not active in the runtime).
 
@@ -109,10 +111,13 @@ Predicates without a valid `node-filter` property are skipped (not active in the
 
 | Package | Owns |
 | --- | --- |
-| `tome-ontology` | Runtime types, match/query, `compileAssociationConfig`, `compileNodePredicates`, merge |
+| `tome-ontology` | Runtime types, match/query, `compileAssociationConfig`, `compileNodePredicates`, merge. **Keep dependencies minimal** (no React / React Flow / page-block hosts). Deepens semantic interpretation but is **optional** — Tome can run with minimal structure and minimal interpretation of relationship semantics without this package. |
+| `tome-ontology-ui` | Client viewing/editing (interactive `node-filter` page block; future ontology UI). Depends on `tome-ontology` + `tome-react-flow`. Never the reverse. |
 | `tome-flatfile` | associations + ontology.json I/O; discovery; mtime-cached runtime load |
 | `tome-interfaces` | Page-block fence parse including optional `{#id}` |
 | `tome-db` | Domain use + sync invalidation when ontology config / membership / filter bodies change |
+
+Storage/editor/server hosts must not hard-require `tome-ontology` or `tome-ontology-ui` for a basic boot.
 
 ## Sync / invalidation
 
@@ -123,4 +128,5 @@ Invalidating the relationship-types runtime cache also covers node ontology over
 - [sets.md](./sets.md) — set trait behavior (resolved via patterns)
 - [schema.md](./schema.md) — workspace `schema.json` enums
 - [tome-db.md](./tome-db.md)
-- Package notes: [`packages/tome-ontology/AGENTS.md`](../../packages/tome-ontology/AGENTS.md)
+- Package notes: [`packages/tome-ontology/AGENTS.md`](../../packages/tome-ontology/AGENTS.md), [`packages/tome-ontology-ui/AGENTS.md`](../../packages/tome-ontology-ui/AGENTS.md)
+- Shared Imp canvas: [`packages/tome-react-flow/AGENTS.md`](../../packages/tome-react-flow/AGENTS.md)

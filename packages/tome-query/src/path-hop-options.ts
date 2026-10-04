@@ -5,23 +5,10 @@
 
 import type { RelationshipTypesFile, TableSchemasFile } from "tome-flatfile";
 import { normalizeRelationshipTypeId } from "tome-flatfile";
+import type { PathHopOptions, PathHopRelationOption, PathHopTypeTable } from "tome-react-flow/path-hop-options";
 
-export type PathHopTypeTable = {
-  id: string;
-  title: string;
-};
-
-export type PathHopRelationOption = {
-  token: string;
-  label: string;
-  association: string;
-  direction: 0 | 1;
-};
-
-export type PathHopOptions = {
-  typeTables: PathHopTypeTable[];
-  relationsByType: Record<string, PathHopRelationOption[]>;
-};
+export type { PathHopOptions, PathHopRelationOption, PathHopTypeTable };
+export { matchPathHopRelation } from "tome-react-flow/path-hop-options";
 
 export function buildPathHopOptions(
   relationshipTypes: RelationshipTypesFile,
@@ -63,24 +50,4 @@ export function buildPathHopOptions(
     .sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
 
   return { typeTables, relationsByType };
-}
-
-/** Find a relation option matching stored association + direction for a type context. */
-export function matchPathHopRelation(
-  options: PathHopOptions,
-  typeId: string | undefined,
-  association: unknown,
-  direction: unknown,
-): PathHopRelationOption | null {
-  if (!typeId) return null;
-  const assoc = typeof association === "string" ? association.trim() : "";
-  const dir =
-    direction === 0 || direction === 1
-      ? direction
-      : direction === "0" || direction === "1"
-        ? (Number(direction) as 0 | 1)
-        : null;
-  if (!assoc || dir === null) return null;
-  const list = options.relationsByType[typeId] ?? [];
-  return list.find((o) => o.association === assoc && o.direction === dir) ?? null;
 }

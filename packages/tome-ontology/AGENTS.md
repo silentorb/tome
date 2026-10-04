@@ -6,10 +6,12 @@
 
 Store-independent **Tome ontology runtime**: predicates, patterns, trait/constraint query, and compilers from authored config into that runtime.
 
-- Depends on `tome-graph-interfaces` only among Tome packages.
-- No filesystem, SQLite, or HTTP.
+- Depends on `tome-graph-interfaces` only among Tome packages. **Keep this surface minimal.**
+- No filesystem, SQLite, HTTP, React, or React Flow.
 - Not SQLite cache DDL (`SCHEMA_VERSION`).
 - Not flatfile parse/load of `associations.json` / `ontology.json` — that stays in `tome-flatfile`; flatfile calls compilers after load/discovery.
+- **Client UI** (node-filter editing, future ontology views) lives in **`tome-ontology-ui`** — never add UI deps here.
+- **Optional for minimal Tome:** hosts can boot with nodes/relationships and minimal semantic interpretation without this package. Ontology deepens interpretation when present.
 
 ## Exports
 

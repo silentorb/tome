@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
 import type { ReactFlowGraph } from "imp-react-flow";
-import { QueryFlowEditor } from "tome-query/query-editor";
+import { ImpFlowEditor } from "tome-react-flow/editor";
+import { createQueryRegistry } from "tome-query/execute";
 import {
   listGraphParameters,
   resolveGraphParameterValues,
@@ -39,7 +40,12 @@ export function SequencingToolPanelContent({
 }) {
   return (
     <div className="tome-sequencing-tool-panel">
-      <QueryFlowEditor graph={graph} readOnly={readOnly} onGraphChange={onGraphChange} />
+      <ImpFlowEditor
+        graph={graph}
+        readOnly={readOnly}
+        onGraphChange={onGraphChange}
+        createRegistry={createQueryRegistry}
+      />
     </div>
   );
 }
