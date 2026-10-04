@@ -4,28 +4,7 @@
 
 **tome** holds domain-agnostic packages for git-tracked design graphs. Domain-specific node IDs, navigation, and workspace identity belong in each project's `content/model/workspace.json` — not in package source.
 
-| Package | Role |
-| ------- | ---- |
-| `packages/tome-flatfile/` | Flatfile content store (canonical git-tracked data + change watching) |
-| `packages/tome-sqlite/` | SQLite graph database (query cache today) |
-| `packages/tome-db/` | Domain queries/mutations + content↔cache sync |
-| `packages/tome-graph-interfaces/` | Domain DTOs + `TomeGraphServices` |
-| `packages/tome-ontology/` | Store-independent ontology runtime (predicates + patterns) |
-| `packages/tome-service-interfaces/` | Store/cache/service module contracts |
-| `packages/tome-http/` | HTTP service module + client SDK |
-| `packages/tome-server/` | Config-driven host (store, cache, services) |
-| `packages/tome-editor/` | Vite/React editor webview (client only) |
-| `packages/tome-static-site/` | Astro static export |
-| `packages/tome-interfaces/` | Extension / page-block integration contracts |
-| `packages/tome-imp-sql/` | Imp → Tome SQL schema/registry binder (above tome-db) |
-| `packages/tome-query/` | Imp-backed custom table page block (React Flow → SQL) |
-| `packages/tome-sequencing-interfaces/` | Shared sequencing domain types |
-| `packages/tome-sequencing-resolution/` | Relative chronology constraint resolution |
-| `packages/tome-sequencing/` | Timeline page block (Imp query + visx) |
-| `packages/tome-test-support/` | Essential/nonessential test helpers + weighted gate math |
-| `packages/tome-extension-*/` | Optional extensions (e.g. `tome-extension-fixture` for tests) |
-
-Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to work in the package). See [`packages/README.md`](./packages/README.md).
+The complete workspace package inventory (roles table + dependency diagram) lives in [`packages/README.md`](./packages/README.md). Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to work in the package).
 
 ## Project context
 
@@ -34,6 +13,7 @@ Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to w
 - Feature specs: [`docs/features/`](./docs/features/) (read only the doc matching your task).
 - Optional backlog: [`tasks/`](./tasks/) — Git-tracked ideas; not required for every change.
 - Package notes: each package's `README.md` (context) and `AGENTS.md` (implementation).
+- **Package inventory:** When adding, removing, or renaming a `packages/*` workspace package, update the table **and** mermaid diagram in [`packages/README.md`](./packages/README.md) in the same change (see the checklist there). Do not maintain a second package table or diagram in the root README.
 - TypeScript-to-TypeScript imports are extensionless (no `.ts` suffix).
 - **SQLite schema:** do not add JSON bag columns for structured maps by default — see [`packages/tome-sqlite/AGENTS.md`](./packages/tome-sqlite/AGENTS.md) (user approval required for exceptions).
 - **Regression tests:** When fixing table views, dynamic fields, or related API bugs, add a regression test in the same change. Prefer an **essential**, durable assertion; do not mark regression coverage nonessential unless the user waives a hard gate.

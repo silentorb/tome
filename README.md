@@ -117,78 +117,9 @@ The primary interface for Tome extensibility is [Imp](https://github.com/silento
 
 ## Packages
 
-| Package | Role |
-| ------- | ---- |
-| `packages/tome-db/` | Property graph storage, content sync, schema loaders |
-| `packages/tome-graph-interfaces/` | Domain DTOs + `TomeGraphServices` |
-| `packages/tome-service-interfaces/` | `TomeServiceModule` contracts |
-| `packages/tome-http/` | HTTP service module + client SDK |
-| `packages/tome-server/` | Config-driven host (wires db + services) |
-| `packages/tome-editor/` | Vite/React markdown editor (client only) |
-| `packages/tome-static-site/` | Astro static site generator |
+Tome is a Bun workspace of domain-agnostic packages under `packages/`.
 
-See [`packages/README.md`](./packages/README.md) for the full package list.
-
-```mermaid
-flowchart TB
-  subgraph contracts [Contracts]
-    GI[tome-graph-interfaces]
-    SI[tome-service-interfaces]
-    EI[tome-interfaces]
-    SI --> GI
-  end
-
-  subgraph storage [Storage]
-    SF[tome-flatfile]
-    CS[tome-sqlite]
-  end
-
-  SF --> SI
-  CS --> SI
-
-  DB[tome-db]
-  DB --> SF
-  DB --> CS
-  DB --> GI
-  DB --> EI
-
-  subgraph host [Host]
-    SRV[tome-server]
-    HTTP[tome-http]
-  end
-
-  SRV --> DB
-  SRV -.->|loads via config| HTTP
-  HTTP --> SI
-  HTTP --> GI
-
-  subgraph surfaces [Surfaces]
-    ED[tome-editor]
-    SS[tome-static-site]
-  end
-
-  ED -->|HTTP client| HTTP
-  ED --> GI
-  ED --> EI
-  SS --> DB
-  SS --> EI
-
-  subgraph plugins [Themes and extensions]
-    TH[tome-theme-midnight]
-    EXT[tome-extension-*]
-    SP[tome-spatial-graph]
-    SD[tome-schema-diagram]
-  end
-
-  EXT --> EI
-  SP --> EI
-  SD --> EI
-  ED --> TH
-  SS --> TH
-  SS --> EXT
-  SS --> SP
-  SS --> SD
-```
+See [`packages/README.md`](./packages/README.md) for every workspace package, its role, and the dependency diagram.
 
 ## Development
 
