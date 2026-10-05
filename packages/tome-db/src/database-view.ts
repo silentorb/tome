@@ -68,6 +68,10 @@ import type { TomeSearchHit } from "tome-interfaces/search";
 import { getCompositionForDatabase } from "./table-presentation/load";
 import { buildComposedDatabaseView } from "./table-presentation/compose";
 import { relationCountSortsFromColumnDefs } from "./member-page-query";
+import {
+  listPredicateScopedMemberConnections,
+  predicateScopedMemberIds,
+} from "./predicate-membership";
 
 const ROW_META_KEYS = ORDER_META_KEYS;
 const DEFAULT_SET_SECTION_TITLE = "Contents";
@@ -289,6 +293,124 @@ async function buildCustomViewDetail(
 
   const plan = explodeTableWindowRequest(store, rowsQuery);
   const windowAttrs = tableWindowProfilingAttrs(plan);
+
+  // Predicate-scoped membership: row identity from member-scope predicate.
+  const scopedMemberIds = await predicateScopedMemberIds(store, databaseId, contentDir);
+  if (scopedMemberIds) {
+    let relationships = await listPredicateScopedMemberConnections(
+      store,
+      databaseId,
+      scopedMemberIds,
+      contentDir,
+    );
+
+    if (plan.searchQuery) {
+      const scopeIds = new Set(scopedMemberIds);
+      const { hits, rowsWindow } = await runTableSearchWindow(
+        resolveTableSearcher(store),
+        rowsQuery,
+        scopeIds,
+        windowAttrs,
+      );
+      const hitOrder = new Map(hits.map((h, i) => [h.id, i]));
+      relationships = relationships
+        .filter((r) => hitOrder.has(r.sourceNodeId))
+        .sort(
+          (a, b) =>
+            (hitOrder.get(a.sourceNodeId) ?? 0) - (hitOrder.get(b.sourceNodeId) ?? 0),
+        );
+      const evalRows = await evalRowsFromMembershipConnections(store, relationships, ordered);
+      const {
+        rows: enrichedRows,
+        dynamicColumnDefs: enrichDynDefs,
+        hiddenColumnKeys: enrichHidden,
+      } = await applyDynamicProperties(store, databaseId, tabName, evalRows, undefined, {
+        contentDir,
+      });
+      const mergedColumnDefs = buildDatabaseColumnDefs(
+        store,
+        databaseId,
+        enrichDynDefs,
+        enrichHidden,
+        { contentDir },
+      );
+      await hydrateRelationCellsForRows(
+        store,
+        databaseId,
+        mergedColumnDefs,
+        enrichedRows,
+        contentDir,
+      );
+      return finishCustomViewDetail({
+        databaseId,
+        databaseTitle,
+        contentDir,
+        viewRelationshipType,
+        memberSidePerspective,
+        setSideProjection,
+        resolved,
+        tabName,
+        mergedColumnDefs,
+        windowedEvalRows: enrichedRows,
+        rowsWindow,
+      });
+    }
+
+    const evalRows = await evalRowsFromMembershipConnections(store, relationships, ordered);
+    const {
+      rows: enrichedRows,
+      dynamicColumnDefs: enrichDynDefs,
+      hiddenColumnKeys: enrichHidden,
+    } = await applyDynamicProperties(store, databaseId, tabName, evalRows, undefined, {
+      contentDir,
+    });
+    const mergedColumnDefs = buildDatabaseColumnDefs(
+      store,
+      databaseId,
+      enrichDynDefs,
+      enrichHidden,
+      { contentDir },
+    );
+    const q = rowsQuery?.q?.trim() ?? "";
+    const hydrateBeforeSort = !q && sortsNeedRelationHydration(sorts, mergedColumnDefs);
+    if (hydrateBeforeSort) {
+      await hydrateRelationCellsForRows(
+        store,
+        databaseId,
+        mergedColumnDefs,
+        enrichedRows,
+        contentDir,
+      );
+    }
+    const sorted = q ? enrichedRows : sortEvalRowsFromViewSorts(enrichedRows, sorts);
+    const { rows: windowedEvalRows, rowsWindow } = applyNameFilterAndWindow(
+      sorted,
+      rowsQuery,
+      (row) => row.name,
+    );
+    if (!hydrateBeforeSort) {
+      await hydrateRelationCellsForRows(
+        store,
+        databaseId,
+        mergedColumnDefs,
+        windowedEvalRows,
+        contentDir,
+      );
+    }
+    return finishCustomViewDetail({
+      databaseId,
+      databaseTitle,
+      contentDir,
+      viewRelationshipType,
+      memberSidePerspective,
+      setSideProjection,
+      resolved,
+      tabName,
+      mergedColumnDefs,
+      windowedEvalRows,
+      rowsWindow,
+    });
+  }
 
   if (plan.backend === "sql") {
     const projections = listSetMemberProjectionPairs(contentDir);

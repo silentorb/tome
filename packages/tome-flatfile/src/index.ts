@@ -282,6 +282,11 @@ export {
   discoverActiveNodePredicates,
   compileDiscoveredNodePredicates,
 } from "./ontology/discover";
+export { discoverActiveMemberScopes } from "./ontology/discover-member-scopes";
+export {
+  loadMemberScopesFromContent,
+  invalidateMemberScopesCache,
+} from "./ontology/member-scopes-load";
 export {
   resolveWorkspace,
   archiveNodeId,

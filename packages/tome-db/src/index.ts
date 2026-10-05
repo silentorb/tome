@@ -181,8 +181,19 @@ export {
   graphLabelsForNode,
   isTypeTableNode,
   primaryTypeTitleForInstance,
+  typeIdsForInstance,
   typeTableMarkerProperties,
+  nodeMatchesTargetTypes,
 } from "./node-capabilities";
+export {
+  createNodeFilterEvaluator,
+  listPredicateScopedMemberConnections,
+  memberPredicateIdForTypeTable,
+  nodesMatchingPredicate,
+  predicateScopedMemberIds,
+  predicateScopedTypeIdsForInstance,
+  predicateSelectsNodeInStore,
+} from "./predicate-membership";
 export { getNodePageDetail, getRelationTableSection } from "./node-page-sections";
 export type {
   DatabaseTableSection,

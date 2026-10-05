@@ -5,7 +5,7 @@ import { ONTOLOGY_FILE_VERSION } from "tome-graph-interfaces";
 export type { OntologyFile, OntologyTypeKey };
 export { ONTOLOGY_FILE_VERSION };
 
-const TYPE_KEYS: OntologyTypeKey[] = ["ontology", "predicate"];
+const TYPE_KEYS: OntologyTypeKey[] = ["ontology", "predicate", "memberScope"];
 
 export function emptyOntologyFile(): OntologyFile {
   return { version: ONTOLOGY_FILE_VERSION, types: {} };
@@ -55,5 +55,5 @@ export function serializeOntologyFile(file: OntologyFile): string {
 }
 
 export function ontologyTypesConfigured(file: OntologyFile): boolean {
-  return Boolean(file.types.ontology || file.types.predicate);
+  return Boolean(file.types.ontology || file.types.predicate || file.types.memberScope);
 }

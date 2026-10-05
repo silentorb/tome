@@ -1,4 +1,4 @@
-import type { PatternMatchContext, RelationshipRuntime } from "./types";
+import type { PatternEndpointConstraints, PatternMatchContext, RelationshipRuntime } from "./types";
 import { getPredicate, patternsMatching } from "./query";
 
 /** Directed projection identity: predicate id + endpoint index. */
@@ -12,10 +12,13 @@ export function projectionTypeForEndpoint(
 export function resolveEndpointTypeIds(
   runtime: RelationshipRuntime,
   predicateId: string,
-): [string, string] | null {
+): [string | null, string | null] | null {
   for (const pattern of patternsMatching(runtime, { predicateId })) {
     if (pattern.endpoints) {
-      return [pattern.endpoints[0].typeId, pattern.endpoints[1].typeId];
+      return [
+        pattern.endpoints[0].typeId?.trim() || null,
+        pattern.endpoints[1].typeId?.trim() || null,
+      ];
     }
   }
   return null;
@@ -28,8 +31,8 @@ export function hostEndpointIndex(
 ): 0 | 1 | null {
   const endpoints = resolveEndpointTypeIds(runtime, predicateId);
   if (!endpoints) return null;
-  if (endpoints[0] === hostTypeId) return 0;
-  if (endpoints[1] === hostTypeId) return 1;
+  if (endpoints[0] && endpoints[0] === hostTypeId) return 0;
+  if (endpoints[1] && endpoints[1] === hostTypeId) return 1;
   return null;
 }
 
@@ -42,8 +45,8 @@ export function uniqueHostEndpointIndex(
   const endpoints = resolveEndpointTypeIds(runtime, predicateId);
   if (!endpoints) return null;
   const matches: Array<0 | 1> = [];
-  if (endpoints[0] === hostTypeId) matches.push(0);
-  if (endpoints[1] === hostTypeId) matches.push(1);
+  if (endpoints[0] && endpoints[0] === hostTypeId) matches.push(0);
+  if (endpoints[1] && endpoints[1] === hostTypeId) matches.push(1);
   return matches.length === 1 ? matches[0]! : null;
 }
 
@@ -77,7 +80,8 @@ export function allowedTargetTypeIdsForEndpoint(
   const endpoints = resolveEndpointTypeIds(runtime, predicateId);
   if (!endpoints) return [];
   const other: 0 | 1 = endpointIndex === 0 ? 1 : 0;
-  return [endpoints[other]];
+  const target = endpoints[other];
+  return target ? [target] : [];
 }
 
 export interface RelationshipTypeRuleEntry {
@@ -96,9 +100,11 @@ export function relationshipTypeRulesFromRuntime(
     const endpoints = resolveEndpointTypeIds(runtime, predicateId);
     if (!endpoints) continue;
     for (const hostIndex of [0, 1] as const) {
+      const sourceTypeId = endpoints[hostIndex];
+      if (!sourceTypeId) continue;
       rules.push({
         id: predicateId,
-        sourceTypeId: endpoints[hostIndex],
+        sourceTypeId,
         type: projectionTypeForEndpoint(predicateId, hostIndex),
         allowedTargetTypeIds: allowedTargetTypeIdsForEndpoint(
           runtime,
@@ -114,7 +120,7 @@ export function relationshipTypeRulesFromRuntime(
 export function endpointConstraintsFor(
   runtime: RelationshipRuntime,
   ctx: PatternMatchContext,
-): { 0: { typeId: string }; 1: { typeId: string } } | undefined {
+): PatternEndpointConstraints | undefined {
   for (const pattern of patternsMatching(runtime, ctx)) {
     if (pattern.endpoints) return pattern.endpoints;
   }

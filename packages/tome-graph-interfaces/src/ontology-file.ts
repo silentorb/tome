@@ -1,5 +1,5 @@
 /** Supported keys in ontology.json `types` map (representative type-node ids). */
-export type OntologyTypeKey = "ontology" | "predicate";
+export type OntologyTypeKey = "ontology" | "predicate" | "memberScope";
 
 export interface OntologyFile {
   version: number;

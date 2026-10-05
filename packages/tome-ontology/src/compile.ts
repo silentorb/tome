@@ -29,8 +29,8 @@ export function compileAssociationConfig(
       linkExisting: def.linkExisting,
       endpoints: def.endpoints
         ? {
-            0: { typeId: def.endpoints[0].typeId },
-            1: { typeId: def.endpoints[1].typeId },
+            0: def.endpoints[0].typeId ? { typeId: def.endpoints[0].typeId } : {},
+            1: def.endpoints[1].typeId ? { typeId: def.endpoints[1].typeId } : {},
           }
         : undefined,
     });

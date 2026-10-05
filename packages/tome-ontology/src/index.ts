@@ -69,3 +69,15 @@ export {
   endpointConstraintsFor,
   requirePredicate,
 } from "./endpoints";
+
+export type { MemberScope } from "./member-scope";
+export { memberPredicateForTypeTable, typeTablesWithMemberScope } from "./member-scope";
+
+export type { HostsProjectionSpec } from "./node-filter-shapes";
+export {
+  HOSTS_PROJECTION_NODE_TYPE,
+  hostsProjectionFilterGraph,
+  hostsProjectionType,
+  parseHostsProjectionFilter,
+  parseLiteralBooleanFilter,
+} from "./node-filter-shapes";

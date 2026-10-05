@@ -103,8 +103,8 @@ export function createTomePathOntology(
   for (const def of Object.values(relationshipTypes.relationshipTypes)) {
     const ends = def.endpoints;
     if (!ends) continue;
-    ensureType(ends[0].typeId);
-    ensureType(ends[1].typeId);
+    if (ends[0].typeId) ensureType(ends[0].typeId);
+    if (ends[1].typeId) ensureType(ends[1].typeId);
   }
 
   for (const [typeId, schema] of Object.entries(tableSchemas.tables)) {

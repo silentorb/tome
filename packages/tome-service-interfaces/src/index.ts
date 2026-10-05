@@ -159,7 +159,8 @@ export interface TraitObjectEntry {
 export type TraitEntry = string | TraitObjectEntry;
 
 export interface RelationshipTypeEndpointConstraint {
-  typeId: string;
+  /** When omitted, the endpoint is open (any node). */
+  typeId?: string;
 }
 
 export interface RelationshipTypeEndpoints {

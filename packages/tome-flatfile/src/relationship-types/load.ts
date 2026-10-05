@@ -13,6 +13,7 @@ import {
 } from "../content/relationship-types-file";
 import { compileDiscoveredNodePredicates } from "../ontology/discover";
 import { contentHasOntologyTypes, loadOntologyFileFromContent } from "../ontology/load";
+import { invalidateMemberScopesCache } from "../ontology/member-scopes-load";
 
 let cachedTypes: {
   contentDir: string;
@@ -24,6 +25,7 @@ let cachedTypes: {
 
 export function invalidateRelationshipTypesCache(): void {
   cachedTypes = null;
+  invalidateMemberScopesCache();
 }
 
 function ontologyFileMtimeMs(contentDir: string): number {

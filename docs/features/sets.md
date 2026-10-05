@@ -92,7 +92,7 @@ Set semantics are **orthogonal** to edge type. A set node carries interpretation
 | --- | --- | --- |
 | `type_table` | Node id key in `table-schemas.json` | Members table, Properties panel scalars, type filtering |
 | `archive` | `nodeId === workspace.archiveNodeId` | Excluded from search/graph via `nodes.is_archived` |
-| Future (tags, scope) | TBD (`sets.json` or node metadata) | Per-set filter rules |
+| Predicate-scoped type table | Active ontology **member-scope** about the hub ([ontology.md](./ontology.md)) | Hub Members / type checks / typed pickers use the linked predicate; set edges optional for scalars |
 
 ### Query API
 
@@ -119,6 +119,8 @@ Archive membership uses the same set-trait family as type tables (in Marloth: `m
 ### Link vs create row
 
 Linking or creating a type-table row **must** use the set relationship type resolved for that set (`setRoleRelationshipTypeForNode` / view context). Plain tables get no placement metadata. Ordered tables auto-stamp `order` when missing (`ordered-relationships.ts`).
+
+On a **predicate-scoped** type table (e.g. Marloth Inspirations), creating a database row still writes a set-membership edge for optional scalars, but **hub listing / type identity follow the member-scope predicate**. A new Inspiration appears on the hub only after it satisfies the predicate (for Inspirations: hosts ≥1 Inspires edge).
 
 Removing a Members-table row **must** delete the stored set-trait edge between that member and the set. `listSetMemberRowConnections` lists members from **every** set-trait relationship type, while the view payload's `memberSidePerspective` is the **view-resolved** relationship type. When those differ (plain vs ordered, or an inverted tuple that makes an instance look like a set), unlink / move **must** still find and delete any set-trait relationship connecting the same pair rather than returning `not_found`.
 

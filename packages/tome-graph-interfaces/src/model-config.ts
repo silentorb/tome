@@ -11,8 +11,8 @@ export interface RelationshipTypeDefinition {
   linkExisting?: boolean;
   traits?: TraitEntry[];
   endpoints?: {
-    0: { typeId: string };
-    1: { typeId: string };
+    0: { typeId?: string };
+    1: { typeId?: string };
   };
 }
 

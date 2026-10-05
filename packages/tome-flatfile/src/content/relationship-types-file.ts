@@ -43,7 +43,8 @@ export interface TraitObjectEntry {
 export type TraitEntry = string | TraitObjectEntry;
 
 export interface RelationshipTypeEndpointConstraint {
-  typeId: string;
+  /** When omitted, the endpoint is open (any node). */
+  typeId?: string;
 }
 
 /** Tuple index 0/1 → allowed `is_a` type node id at that endpoint. */
@@ -251,6 +252,9 @@ function parseEndpointConstraint(
     throw new Error(`associations.json: ${context} must be an object`);
   }
   const obj = raw as Record<string, unknown>;
+  if (obj.typeId === undefined || obj.typeId === null) {
+    return {};
+  }
   if (typeof obj.typeId !== "string" || !isNodeId(obj.typeId)) {
     throw new Error(`associations.json: ${context}.typeId must be a valid node id`);
   }
@@ -273,8 +277,8 @@ function serializeEndpoints(
 ): RelationshipTypeEndpoints | undefined {
   if (!endpoints) return undefined;
   return {
-    0: { typeId: endpoints[0].typeId },
-    1: { typeId: endpoints[1].typeId },
+    0: endpoints[0].typeId ? { typeId: endpoints[0].typeId } : {},
+    1: endpoints[1].typeId ? { typeId: endpoints[1].typeId } : {},
   };
 }
 

@@ -273,6 +273,11 @@ export async function listSourceNodeIdsForProjectionType(
   const trimmed = projectionType.trim();
   if (!trimmed) return [];
 
+  const cache = getQueryCache(store);
+  if (cache && typeof cache.listSourceNodeIdsForProjectionType === "function") {
+    return cache.listSourceNodeIdsForProjectionType(trimmed);
+  }
+
   if (
     !isGraphStoreBase(store) &&
     typeof (store as TomeQueryCache).listSourceNodeIdsForProjectionType === "function"

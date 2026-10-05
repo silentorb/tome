@@ -71,10 +71,14 @@ export async function relationshipTypeRuleContext(
 
   const sourceTypes = await typeIdsForInstance(db, sourceNodeId, contentDir);
   const sourceTypeId = def.endpoints[endpointIndex].typeId;
-  if (!sourceTypes.includes(sourceTypeId)) return null;
+  if (sourceTypeId && !sourceTypes.includes(sourceTypeId)) return null;
 
   const allowed = allowedTargetTypeIdsForEndpoint(registry, composite, endpointIndex);
-  if (allowed.length === 0) return null;
+  // Open opposite endpoint → empty allowed list means any target (caller treats []).
+  // Keep prior behavior when typed: empty allowed means no rule / reject.
+  if (allowed.length === 0 && def.endpoints[endpointIndex === 0 ? 1 : 0].typeId) {
+    return null;
+  }
 
   return {
     compositeType: composite,
@@ -93,10 +97,12 @@ export async function endpointsMatchInstances(
   if (!def.endpoints) return false;
   const typesA = await typeIdsForInstance(db, nodeA, contentDir);
   const typesB = await typeIdsForInstance(db, nodeB, contentDir);
-  const forward =
-    typesA.includes(def.endpoints[0].typeId) && typesB.includes(def.endpoints[1].typeId);
-  const reverse =
-    typesA.includes(def.endpoints[1].typeId) && typesB.includes(def.endpoints[0].typeId);
+  const ep0 = def.endpoints[0].typeId;
+  const ep1 = def.endpoints[1].typeId;
+  const matches = (types: string[], typeId: string | undefined) =>
+    !typeId || types.includes(typeId);
+  const forward = matches(typesA, ep0) && matches(typesB, ep1);
+  const reverse = matches(typesA, ep1) && matches(typesB, ep0);
   return forward || reverse;
 }
 

@@ -4,7 +4,6 @@ import type { RelationshipReadStore } from "./graph-store/relationship-read";
 import {
   listRelationshipsFromSource,
   readStoreGetNode,
-  readStoreListNodeIds,
 } from "./graph-store/relationship-read";
 import { isTypeTableNode } from "./node-capabilities";
 import type { EvalRow } from "./row-sort";
@@ -21,6 +20,7 @@ import {
   isPriorityColumnKey,
 } from "./property-enums";
 import type { PropertiesSection } from "tome-graph-interfaces";
+import { predicateScopedTypeIdsForInstance } from "./predicate-membership";
 
 export type { PropertiesSection } from "tome-graph-interfaces";
 
@@ -137,14 +137,30 @@ export async function buildPropertiesSection(
       break;
     }
   }
-  if (!setRowEdge) return null;
 
-  const databaseId = setRowEdge.targetNodeId;
+  let databaseId: string | null = setRowEdge?.targetNodeId ?? null;
+  let storedCells: Record<string, string> = setRowEdge
+    ? cellsFromConnectionProperties(setRowEdge.properties)
+    : {};
+
+  if (!databaseId) {
+    const predicateHubs = await predicateScopedTypeIdsForInstance(db, nodeId, dir);
+    // Prefer lexicographically first hub that is a type table.
+    const sortedHubs = predicateHubs.slice().sort((a, b) => a.localeCompare(b));
+    for (const hubId of sortedHubs) {
+      if (await isTypeTableNode(db, hubId, dir)) {
+        databaseId = hubId;
+        break;
+      }
+    }
+  }
+
+  if (!databaseId) return null;
+
   const database = await readStoreGetNode(db, databaseId);
-  if (!database || !(await isTypeTableNode(db, databaseId))) return null;
+  if (!database || !(await isTypeTableNode(db, databaseId, dir))) return null;
 
   const typeTitle = titleFromProperties(database.properties);
-  const storedCells = cellsFromConnectionProperties(setRowEdge.properties);
 
   let storedColumnDefs: DatabaseColumnDef[];
   const tableSchema = loadTableSchemaForDatabase(databaseId);

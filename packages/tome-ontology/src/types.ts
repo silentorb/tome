@@ -28,8 +28,8 @@ export interface PatternMatch {
 
 /** Endpoint type constraints attached to a pattern (from AC `endpoints`). */
 export interface PatternEndpointConstraints {
-  0: { typeId: string };
-  1: { typeId: string };
+  0: { typeId?: string };
+  1: { typeId?: string };
 }
 
 /**

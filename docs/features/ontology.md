@@ -64,7 +64,8 @@ Optional file: `content/model/ontology.json`
   "version": 1,
   "types": {
     "ontology": "<ontology-type-node-ulid>",
-    "predicate": "<predicate-type-node-ulid>"
+    "predicate": "<predicate-type-node-ulid>",
+    "memberScope": "<member-scope-type-node-ulid>"
   }
 }
 ```
@@ -73,6 +74,7 @@ Optional file: `content/model/ontology.json`
 | --- | --- |
 | `types.ontology` | Type-table node whose **members** are ontology instances |
 | `types.predicate` | Type-table node whose **members** are predicate instances |
+| `types.memberScope` | Type-table node whose **members** are member-scope instances (optional) |
 
 **Taxonomy is relational** (not frontmatter markers):
 
@@ -81,6 +83,8 @@ Optional file: `content/model/ontology.json`
 | Ontology instance | Member of `types.ontology` (set-trait membership) |
 | Predicate instance | Member of `types.predicate` |
 | **Active** predicate | Predicate instance **and** member of ≥1 ontology instance |
+| Member-scope instance | Member of `types.memberScope` |
+| **Active** member-scope | Member-scope instance **and** member of ≥1 ontology instance, with a valid binding payload |
 
 Set-trait relationship types still come from `associations.json` (bootstrap / chicken-egg until typing can be expressed as node-native patterns).
 
@@ -98,6 +102,26 @@ Optional `{#id}` on page-block meta is the general structured-property conventio
 **Editor UI:** [`tome-ontology-ui`](../../packages/tome-ontology-ui/) registers the interactive `node-filter` page block. Authors edit the filter in the host tool panel via shared [`tome-react-flow`](../../packages/tome-react-flow/) (`ImpFlowEditor`); save converts React Flow → Imp so the fence body stays raw Imp. Static HTML shows a short summary (not a full canvas).
 
 Predicates without a valid `node-filter` property are skipped (not active in the runtime).
+
+**Production evaluation (tome-db):** node-filters are evaluated for hub Members, type resolution, and typed pickers. Supported shapes today:
+
+| Shape | Meaning |
+| --- | --- |
+| Boolean literal | Constant true/false |
+| `hosts_projection` | Nodes that are **sources** of `{relationshipTypeId}:{direction}` (Tome convention; not Imp catalog). Used for Inspiration membership. |
+
+### Member-scope instances
+
+A **member-scope** binds a type-table hub to a predicate that selects its members (instead of—or in addition to—set-trait edges for listing / type checks). Authored on the member-scope node:
+
+```json {#memberScope type="member-scope"}
+{
+  "typeTableId": "<type-table-hub-ulid>",
+  "predicateId": "<predicate-node-ulid>"
+}
+```
+
+Runtime: `loadMemberScopesFromContent` → hub Members / `typeIdsForInstance` / Inspired-by pickers resolve members via the linked predicate. Set-membership edges may still carry row scalars when present.
 
 ### Merge and site scope
 

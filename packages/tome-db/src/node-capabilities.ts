@@ -10,6 +10,7 @@ import {
   readStoreGetNode,
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
+import { predicateScopedTypeIdsForInstance } from "./predicate-membership";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;
@@ -50,7 +51,11 @@ export async function typeIdsForInstance(
   nodeId: string,
   contentDir?: string,
 ): Promise<string[]> {
-  return memberSetIds(store, nodeId, contentDir);
+  const fromSets = await memberSetIds(store, nodeId, contentDir);
+  const fromPredicates = await predicateScopedTypeIdsForInstance(store, nodeId, contentDir);
+  if (fromPredicates.length === 0) return fromSets;
+  const merged = new Set([...fromSets, ...fromPredicates]);
+  return [...merged];
 }
 
 /** Lexicographically first IS_A type title for an instance page, when any. */

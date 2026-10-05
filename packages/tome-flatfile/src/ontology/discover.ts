@@ -9,46 +9,15 @@ import {
 import type { ImpGraph } from "tome-graph-interfaces";
 import { ContentStore } from "../content/store";
 import { bodyFromNode } from "../content/node-file";
-import { existsSync, readFileSync } from "node:fs";
-import {
-  childNodeId,
-  isSetTraitEntry,
-  parentNodeId,
-} from "../relationship-type-traits";
-import { relationshipTypesFilePath } from "../content/paths";
-import {
-  emptyRelationshipTypesFile,
-  parseRelationshipTypesFile,
-  type RelationshipTypesFile,
-} from "../content/relationship-types-file";
 import { loadOntologyFileFromContent } from "./load";
 import { parseImpGraph } from "./imp-graph";
-import type { RelationshipEntry } from "../content/relationships-file";
+import {
+  activeOntologyMemberIds,
+  loadAssociationsRegistry,
+  setMembersFromEntries,
+} from "./discover-shared";
 
 const PREDICATE_PROPERTY_KEY = "predicate";
-
-/** Associations registry only — must not call loadRelationshipTypesFromContent (overlay recursion). */
-function loadAssociationsRegistry(contentDir: string): RelationshipTypesFile {
-  const path = relationshipTypesFilePath(contentDir);
-  if (!existsSync(path)) return emptyRelationshipTypesFile();
-  return parseRelationshipTypesFile(readFileSync(path, "utf-8"));
-}
-
-function setMembersFromEntries(
-  setId: string,
-  entries: readonly RelationshipEntry[],
-  registry: RelationshipTypesFile,
-): string[] {
-  const members = new Set<string>();
-  for (const entry of entries) {
-    if (!isSetTraitEntry(registry, entry)) continue;
-    const def = registry.relationshipTypes[entry.type];
-    const parent = parentNodeId(def, entry);
-    const child = childNodeId(def, entry);
-    if (parent === setId) members.add(child);
-  }
-  return [...members];
-}
 
 function nodeFilterFromBody(body: string): ImpGraph | undefined {
   const props = extractStructuredProperties(body, NODE_FILTER_BLOCK_ROLE);
@@ -73,16 +42,10 @@ export function discoverActiveNodePredicates(contentDir: string): NodePredicateI
   const entries = store.readRelationshipsFile().relationships;
   const registry = loadAssociationsRegistry(contentDir);
 
-  const ontologyInstances = new Set(setMembersFromEntries(ontologyTypeId, entries, registry));
-  if (ontologyInstances.size === 0) return [];
+  const activeInOntology = activeOntologyMemberIds(ontologyTypeId, entries, registry);
+  if (activeInOntology.size === 0) return [];
 
   const predicateCandidates = setMembersFromEntries(predicateTypeId, entries, registry);
-  const activeInOntology = new Set<string>();
-  for (const ontologyId of ontologyInstances) {
-    for (const memberId of setMembersFromEntries(ontologyId, entries, registry)) {
-      activeInOntology.add(memberId);
-    }
-  }
 
   const inputs: NodePredicateInput[] = [];
   for (const predicateId of predicateCandidates) {

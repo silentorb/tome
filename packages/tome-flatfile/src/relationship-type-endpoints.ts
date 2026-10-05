@@ -28,9 +28,12 @@ function runtimeFromRegistry(registry: RelationshipTypesFile): RelationshipRunti
 
 export function resolveEndpointTypeIds(
   def: RelationshipTypeDefinition | undefined,
-): [string, string] | null {
+): [string | null, string | null] | null {
   if (!def?.endpoints) return null;
-  return [def.endpoints[0].typeId, def.endpoints[1].typeId];
+  return [
+    def.endpoints[0].typeId?.trim() || null,
+    def.endpoints[1].typeId?.trim() || null,
+  ];
 }
 
 export function hostEndpointIndex(
@@ -136,7 +139,7 @@ export type { PerspectiveLabelConfig };
 export function resolveEndpointTypeIdsFromRegistry(
   registry: RelationshipTypesFile,
   predicateId: string,
-): [string, string] | null {
+): [string | null, string | null] | null {
   return runtimeResolveEndpointTypeIds(
     runtimeFromRegistry(registry),
     normalizeRelationshipTypeId(predicateId),

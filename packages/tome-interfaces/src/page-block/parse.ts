@@ -5,6 +5,9 @@ export const PAGE_BLOCK_CONTENT_TYPE_JSON = "json";
 /** Role for Imp node→boolean filter graphs stored as structured body properties. */
 export const NODE_FILTER_BLOCK_ROLE = "node-filter";
 
+/** Role for member-scope binding payloads (`{#memberScope type="member-scope"}`). */
+export const MEMBER_SCOPE_BLOCK_ROLE = "member-scope";
+
 const FENCE_CLOSE = /\n```/;
 /** New format: ```json {type="role"} or ```json {#id type="role"} */
 const JSON_FENCE_OPEN = /^```json\s+(\{[\s\S]*?\})\s*\n/;

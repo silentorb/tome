@@ -28,5 +28,5 @@ export function targetTypeIdForRelationColumn(
   const def = registry.relationshipTypes[composite];
   if (!def?.endpoints) return null;
   const other: 0 | 1 = col.endpoint === 0 ? 1 : 0;
-  return def.endpoints[other].typeId;
+  return def.endpoints[other].typeId ?? null;
 }
