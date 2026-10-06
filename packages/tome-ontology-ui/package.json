@@ -1,6 +1,6 @@
 {
   "name": "tome-ontology-ui",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -13,9 +13,9 @@
     "imp-core-types": "workspace:^0.5.0",
     "imp-react-flow": "workspace:^0.5.0",
     "react": "19.0.0",
-    "tome-imp-sql": "workspace:^0.10.0",
-    "tome-interfaces": "workspace:^0.5.0",
-    "tome-ontology": "workspace:^0.1.0",
+    "tome-imp-sql": "workspace:^0.11.0",
+    "tome-interfaces": "workspace:^0.6.0",
+    "tome-ontology": "workspace:^0.2.0",
     "tome-react-flow": "workspace:^0.1.0"
   },
   "devDependencies": {
