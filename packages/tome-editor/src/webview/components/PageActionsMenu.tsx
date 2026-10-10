@@ -20,7 +20,8 @@ interface PageActionsMenuProps {
   menuAlign?: "left" | "right";
   /** Portal + fixed positioning so menus are not clipped by scroll containers. */
   menuPlacement?: "inline" | "portal";
-  onArchive: () => Promise<void>;
+  /** Shown when provided (page app bar / table rows). Omitted for remove-only menus. */
+  onArchive?: () => Promise<void>;
   onUnarchive?: () => Promise<void>;
   /** Open relate dialog; page app bar only. */
   onRelate?: () => void;
@@ -31,7 +32,8 @@ interface PageActionsMenuProps {
   onRemove?: () => Promise<void>;
   /** Retarget row relationship; table rows only. */
   onMove?: () => void;
-  onDelete: () => Promise<void>;
+  /** Shown when provided (page app bar / table rows). Omitted for remove-only menus. */
+  onDelete?: () => Promise<void>;
   archiveHubTitle?: string;
 }
 
@@ -112,9 +114,9 @@ export function PageActionsMenu({
   const runAction = async (action: Exclude<PendingAction, null>) => {
     setBusy(true);
     try {
-      if (action === "archive") await onArchive();
+      if (action === "archive") await onArchive?.();
       else if (action === "unarchive") await onUnarchive?.();
-      else await onDelete();
+      else await onDelete?.();
       setPendingAction(null);
       setMenuOpen(false);
     } finally {
@@ -171,7 +173,7 @@ export function PageActionsMenu({
             void runQuickLinkToggle("remove");
           }}
         >
-          Remove quick link
+          {onArchive || onDelete ? "Remove quick link" : "Remove"}
         </button>
       ) : onAddQuickLink ? (
         <button
@@ -186,7 +188,7 @@ export function PageActionsMenu({
           Add quick link
         </button>
       ) : null}
-      {!isArchived ? (
+      {!isArchived && onArchive ? (
         <button
           type="button"
           role="menuitem"
@@ -198,7 +200,7 @@ export function PageActionsMenu({
         >
           Archive
         </button>
-      ) : onUnarchive ? (
+      ) : isArchived && onUnarchive ? (
         <button
           type="button"
           role="menuitem"
@@ -238,17 +240,19 @@ export function PageActionsMenu({
           Move
         </button>
       ) : null}
-      <button
-        type="button"
-        role="menuitem"
-        className="tome-page-actions-item is-danger"
-        onClick={() => {
-          setMenuOpen(false);
-          setPendingAction("delete");
-        }}
-      >
-        Delete
-      </button>
+      {onDelete ? (
+        <button
+          type="button"
+          role="menuitem"
+          className="tome-page-actions-item is-danger"
+          onClick={() => {
+            setMenuOpen(false);
+            setPendingAction("delete");
+          }}
+        >
+          Delete
+        </button>
+      ) : null}
     </>
   );
 

@@ -32,14 +32,9 @@ interface SidePanelProps {
   recentNodesRefreshKey?: number;
   quickLinks?: readonly WorkspaceQuickLink[];
   protectedNodeIds?: readonly string[];
-  archiveHubTitle?: string;
-  activeNodeArchived?: boolean;
   defaultDocumentIcon?: string | null;
   onRemoveQuickLink?: (nodeId: string) => void | Promise<void>;
   onQuickLinksReorder?: (nodeIds: string[]) => void | Promise<void>;
-  onArchiveNode?: (nodeId: string) => Promise<void>;
-  onUnarchiveNode?: (nodeId: string) => Promise<void>;
-  onDeleteNode?: (nodeId: string) => Promise<void>;
 }
 
 export function SidePanel({
@@ -58,14 +53,9 @@ export function SidePanel({
   recentNodesRefreshKey = 0,
   quickLinks = [],
   protectedNodeIds = [],
-  archiveHubTitle,
-  activeNodeArchived = false,
   defaultDocumentIcon,
   onRemoveQuickLink,
   onQuickLinksReorder,
-  onArchiveNode,
-  onUnarchiveNode,
-  onDeleteNode,
 }: SidePanelProps) {
   const [collapsed, setCollapsed] = useState(false);
   const pageBase = typeof window !== "undefined" ? window.location.href : undefined;
@@ -131,20 +121,14 @@ export function SidePanel({
         {!collapsed ? (
           <>
             <QuickLinksPanel
-              api={api}
               quickLinks={quickLinks}
               activeView={activeView}
               activeNodeId={activeNodeId}
-              activeNodeArchived={activeNodeArchived}
               standaloneUrls={standaloneUrls}
               pageBase={pageBase}
               protectedNodeIds={protectedNodeIds}
-              archiveHubTitle={archiveHubTitle}
               onRemoveQuickLink={corpusReadonly ? undefined : onRemoveQuickLink}
               onQuickLinksReorder={corpusReadonly ? undefined : onQuickLinksReorder}
-              onArchiveNode={corpusReadonly ? undefined : onArchiveNode}
-              onUnarchiveNode={corpusReadonly ? undefined : onUnarchiveNode}
-              onDeleteNode={corpusReadonly ? undefined : onDeleteNode}
             />
             <RecentNodesPanel
               api={api}

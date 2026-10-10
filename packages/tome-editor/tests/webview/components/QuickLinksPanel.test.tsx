@@ -1,6 +1,5 @@
 import { describe, expect, mock, test, afterEach, beforeEach } from "bun:test";
-import { fireEvent, render, within } from "@testing-library/react";
-import type { EditorApi } from "../../../src/webview/api/client";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { QuickLinksPanel } from "../../../src/webview/components/QuickLinksPanel";
 import { setStandaloneNavigationHandler } from "../../../src/webview/node-links";
 import {
@@ -8,22 +7,18 @@ import {
   resetStandaloneChromeNavigation,
 } from "../../../src/webview/standalone-navigation";
 
-const mockApi = {} as EditorApi;
 const NODE_A = "AAAAAAAAAAAAAAAAAAAAAAAAAA";
 const NODE_B = "BBBBBBBBBBBBBBBBBBBBBBBBBB";
 
 function nodeActionMocks() {
   return {
     onRemoveQuickLink: mock(async () => {}),
-    onArchiveNode: mock(async () => {}),
-    onDeleteNode: mock(async () => {}),
   };
 }
 
 function renderReorderableQuickLinks(onQuickLinksReorder = mock(async () => {})) {
   return render(
     <QuickLinksPanel
-      api={mockApi}
       quickLinks={[
         { nodeId: NODE_A, label: "Features" },
         { nodeId: NODE_B, label: "Scenes" },
@@ -61,7 +56,6 @@ describe("QuickLinksPanel", () => {
   test("renders non-reorderable quick links as native anchors", () => {
     const { getByRole } = render(
       <QuickLinksPanel
-        api={mockApi}
         quickLinks={[
           { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features" },
         ]}
@@ -76,28 +70,30 @@ describe("QuickLinksPanel", () => {
     expect(link.getAttribute("href")).toContain("AAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 
-  test("calls onRemoveQuickLink from page actions menu", async () => {
+  test("row menu only offers Remove", async () => {
     const onRemoveQuickLink = mock(async () => {});
 
     const { getByRole } = render(
       <QuickLinksPanel
-        api={mockApi}
         quickLinks={[
           { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features" },
         ]}
         activeView="node-page"
         activeNodeId={null}
         onRemoveQuickLink={onRemoveQuickLink}
-        onArchiveNode={mock(async () => {})}
-        onDeleteNode={mock(async () => {})}
       />,
     );
 
     fireEvent.click(getByRole("button", { name: "Page actions" }));
-    fireEvent.click(
-      within(document.body).getByRole("menuitem", { name: "Remove quick link" }),
-    );
+    const menu = within(document.body).getByRole("menu");
+    expect(within(menu).getByRole("menuitem", { name: "Remove" })).toBeTruthy();
+    expect(within(menu).queryByRole("menuitem", { name: "Remove quick link" })).toBeNull();
+    expect(within(menu).queryByRole("menuitem", { name: "Relate" })).toBeNull();
+    expect(within(menu).queryByRole("menuitem", { name: "Archive" })).toBeNull();
+    expect(within(menu).queryByRole("menuitem", { name: "Delete" })).toBeNull();
+    expect(screen.queryAllByRole("menuitem")).toHaveLength(1);
 
+    fireEvent.click(within(menu).getByRole("menuitem", { name: "Remove" }));
     expect(onRemoveQuickLink).toHaveBeenCalledWith("AAAAAAAAAAAAAAAAAAAAAAAAAA");
   });
 
@@ -115,7 +111,6 @@ describe("QuickLinksPanel", () => {
   test("does not mark links reorderable when only one quick link", () => {
     render(
       <QuickLinksPanel
-        api={mockApi}
         quickLinks={[
           { nodeId: "AAAAAAAAAAAAAAAAAAAAAAAAAA", label: "Features" },
         ]}
@@ -149,7 +144,6 @@ describe("QuickLinksPanel", () => {
   test("non-reorderable quick links remain anchors with href", () => {
     const { getByRole } = render(
       <QuickLinksPanel
-        api={mockApi}
         quickLinks={[{ nodeId: NODE_A, label: "Features" }]}
         activeView="node-page"
         activeNodeId={null}
@@ -166,7 +160,6 @@ describe("QuickLinksPanel", () => {
   test("returns null when quick links are empty", () => {
     const { container } = render(
       <QuickLinksPanel
-        api={mockApi}
         quickLinks={[]}
         activeView="node-page"
         {...nodeActionMocks()}

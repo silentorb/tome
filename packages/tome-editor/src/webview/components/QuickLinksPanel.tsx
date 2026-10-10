@@ -16,46 +16,32 @@ import { CSS } from "@dnd-kit/utilities";
 import type { WorkspaceQuickLink } from "tome-graph-interfaces";
 import type { AppView } from "../../shared/types";
 import { isProtectedEditorNode } from "../../shared/types";
-import type { EditorApi } from "../api/client";
 import type { SidePanelStandaloneUrls } from "./PrimarySidePanel";
 import { nodePageHref } from "../node-links";
 import { suppressNavigationClickAfterDragReorder } from "../quick-links-nav";
 import { moveColumnOrderItem } from "./SortableDataColumnHeaders";
-import { AddRelationshipDialog } from "./AddRelationshipDialog";
 import { PageActionsMenu } from "./PageActionsMenu";
 import "./page-actions-menu.css";
 
 interface QuickLinksPanelProps {
-  api: EditorApi;
   quickLinks: readonly WorkspaceQuickLink[];
   activeView: AppView;
   activeNodeId?: string | null;
-  activeNodeArchived?: boolean;
   standaloneUrls?: SidePanelStandaloneUrls;
   pageBase?: string;
   protectedNodeIds?: readonly string[];
-  archiveHubTitle?: string;
   onRemoveQuickLink?: (nodeId: string) => void | Promise<void>;
   onQuickLinksReorder?: (nodeIds: string[]) => void | Promise<void>;
-  onArchiveNode?: (nodeId: string) => Promise<void>;
-  onUnarchiveNode?: (nodeId: string) => Promise<void>;
-  onDeleteNode?: (nodeId: string) => Promise<void>;
 }
 
 interface SortableQuickLinkItemProps {
   link: WorkspaceQuickLink;
   active: boolean;
-  archived: boolean;
   href: string;
   reorderable: boolean;
   dragCompleted?: { current: boolean };
   showActions: boolean;
-  archiveHubTitle?: string;
-  onRelate: () => void;
   onRemoveQuickLink?: (nodeId: string) => void | Promise<void>;
-  onArchiveNode?: (nodeId: string) => Promise<void>;
-  onUnarchiveNode?: (nodeId: string) => Promise<void>;
-  onDeleteNode?: (nodeId: string) => Promise<void>;
 }
 
 function quickLinksReorderOnDragEnd(
@@ -76,17 +62,11 @@ function quickLinksReorderOnDragEnd(
 function SortableQuickLinkItem({
   link,
   active,
-  archived,
   href,
   reorderable,
   dragCompleted,
   showActions,
-  archiveHubTitle,
-  onRelate,
   onRemoveQuickLink,
-  onArchiveNode,
-  onUnarchiveNode,
-  onDeleteNode,
 }: SortableQuickLinkItemProps) {
   const { nodeId, label } = link;
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -124,32 +104,16 @@ function SortableQuickLinkItem({
       >
         {itemContent}
       </a>
-      {showActions && onArchiveNode && onDeleteNode && onRemoveQuickLink ? (
+      {showActions && onRemoveQuickLink ? (
         <div className="tome-side-panel-quick-link-actions">
           <PageActionsMenu
             recordTitle={label}
-            archived={archived}
             trigger="vertical-dots"
             menuAlign="right"
             menuPlacement="portal"
-            archiveHubTitle={archiveHubTitle}
-            onRelate={onRelate}
             isQuickLink
             onRemoveQuickLink={async () => {
               await onRemoveQuickLink(nodeId);
-            }}
-            onArchive={async () => {
-              await onArchiveNode(nodeId);
-            }}
-            onUnarchive={
-              onUnarchiveNode
-                ? async () => {
-                    await onUnarchiveNode(nodeId);
-                  }
-                : undefined
-            }
-            onDelete={async () => {
-              await onDeleteNode(nodeId);
             }}
           />
         </div>
@@ -159,28 +123,19 @@ function SortableQuickLinkItem({
 }
 
 export function QuickLinksPanel({
-  api,
   quickLinks,
   activeView,
   activeNodeId,
-  activeNodeArchived = false,
   standaloneUrls,
   pageBase,
   protectedNodeIds = [],
-  archiveHubTitle,
   onRemoveQuickLink,
   onQuickLinksReorder,
-  onArchiveNode,
-  onUnarchiveNode,
-  onDeleteNode,
 }: QuickLinksPanelProps) {
   const [displayLinks, setDisplayLinks] = useState<readonly WorkspaceQuickLink[]>(quickLinks);
-  const [relateNodeId, setRelateNodeId] = useState<string | null>(null);
   const dragCompletedRef = useRef(false);
   const reorderable = Boolean(onQuickLinksReorder) && quickLinks.length > 1;
-  const showNodeActions = Boolean(
-    onRemoveQuickLink && onArchiveNode && onDeleteNode,
-  );
+  const showLinkActions = Boolean(onRemoveQuickLink);
 
   useEffect(() => {
     setDisplayLinks(quickLinks);
@@ -212,25 +167,17 @@ export function QuickLinksPanel({
 
   const linkItems = displayLinks.map((link) => {
     const active = activeView === "node-page" && activeNodeId === link.nodeId;
-    const archived =
-      active && activeNodeArchived;
     const href = standaloneUrls?.nodes[link.nodeId] ?? nodePageHref(link.nodeId, pageBase);
     return (
       <SortableQuickLinkItem
         key={link.nodeId}
         link={link}
         active={active}
-        archived={archived}
         href={href}
         reorderable={reorderable}
         dragCompleted={reorderable ? dragCompletedRef : undefined}
-        showActions={showNodeActions && !isProtectedEditorNode(link.nodeId, protectedNodeIds)}
-        archiveHubTitle={archiveHubTitle}
-        onRelate={() => setRelateNodeId(link.nodeId)}
+        showActions={showLinkActions && !isProtectedEditorNode(link.nodeId, protectedNodeIds)}
         onRemoveQuickLink={onRemoveQuickLink}
-        onArchiveNode={onArchiveNode}
-        onUnarchiveNode={onUnarchiveNode}
-        onDeleteNode={onDeleteNode}
       />
     );
   });
@@ -255,14 +202,6 @@ export function QuickLinksPanel({
           linkItems
         )}
       </div>
-      {relateNodeId ? (
-        <AddRelationshipDialog
-          api={api}
-          nodeId={relateNodeId}
-          open
-          onClose={() => setRelateNodeId(null)}
-        />
-      ) : null}
     </>
   );
 }

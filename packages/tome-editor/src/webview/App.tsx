@@ -906,14 +906,9 @@ function AppInner({ api: baseApi }: { api: ReturnType<typeof createEditorApi> })
         recentNodesRefreshKey={recentNodesRefreshKey}
         quickLinks={workspace?.quickLinks ?? []}
         protectedNodeIds={protectedNodeIds}
-        archiveHubTitle={archiveHubTitle}
-        activeNodeArchived={node?.archived === true}
         defaultDocumentIcon={workspace?.branding?.defaultDocumentIcon}
         onRemoveQuickLink={removeQuickLinkForNode}
         onQuickLinksReorder={reorderQuickLinks}
-        onArchiveNode={archiveCurrentNode}
-        onUnarchiveNode={unarchiveCurrentNode}
-        onDeleteNode={deleteCurrentNode}
       />
       <div className={`tome-main${view === "graph-explorer" ? " tome-main-graph" : ""}`}>
         {cacheSync ? (

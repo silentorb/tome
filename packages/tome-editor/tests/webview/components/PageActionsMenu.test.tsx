@@ -126,6 +126,27 @@ describe("PageActionsMenu", () => {
     expect(onRemoveQuickLink).toHaveBeenCalledTimes(1);
   });
 
+  test("supports remove-only menus labeled Remove without archive or delete", () => {
+    const onRemoveQuickLink = mock(async () => {});
+
+    render(
+      <PageActionsMenu
+        recordTitle="Features"
+        trigger="vertical-dots"
+        menuPlacement="inline"
+        isQuickLink
+        onRemoveQuickLink={onRemoveQuickLink}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Page actions" }));
+    expect(screen.getByRole("menuitem", { name: "Remove" })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: "Remove quick link" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Archive" })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
+    expect(screen.getAllByRole("menuitem")).toHaveLength(1);
+  });
+
   test("blurs trigger after menu is dismissed", () => {
     const { getByRole } = render(
       <PageActionsMenu
