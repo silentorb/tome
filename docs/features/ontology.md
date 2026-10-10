@@ -99,7 +99,7 @@ Active predicate nodes carry selection logic as a fenced structured body propert
 
 Optional `{#id}` on page-block meta is the general structured-property convention — see [page-blocks.md](../extensions/page-blocks.md).
 
-**Editor UI:** [`tome-ontology-ui`](../../packages/tome-ontology-ui/) registers the interactive `node-filter` page block. Authors edit the filter in the host tool panel via shared [`tome-react-flow`](../../packages/tome-react-flow/) (`ImpFlowEditor`); save converts React Flow → Imp so the fence body stays raw Imp. Static HTML shows a short summary (not a full canvas).
+**Editor UI:** [`tome-ontology-ui`](../../packages/tome-ontology-ui/) registers the interactive `node-filter` page block. Authors edit the filter in the host tool panel via shared [`tome-react-flow`](../../packages/tome-react-flow/) (`ImpFlowEditor`); save converts React Flow → Imp so the fence body stays raw Imp. Static HTML shows a short summary (not a full canvas). `ImpFlowEditor` uses `createTomeImpRegistry()` from [`tome-imp-sql`](../../packages/tome-imp-sql/), which catalogs Tome-only `hosts_projection` (ports `association` / `direction` → `value`) so the canvas shows handles — evaluation still uses ontology shape parsers, not Imp SQL lowering.
 
 Predicates without a valid `node-filter` property are skipped (not active in the runtime).
 
@@ -108,7 +108,7 @@ Predicates without a valid `node-filter` property are skipped (not active in the
 | Shape | Meaning |
 | --- | --- |
 | Boolean literal | Constant true/false |
-| `hosts_projection` | Nodes that are **sources** of `{relationshipTypeId}:{direction}` (Tome convention; not Imp catalog). Used for Inspiration membership. |
+| `hosts_projection` | Nodes that are **sources** of `{relationshipTypeId}:{direction}` (Tome convention; not Imp core catalog — registered in `createTomeImpRegistry` for the editor). Used for Inspiration membership. |
 
 ### Member-scope instances
 

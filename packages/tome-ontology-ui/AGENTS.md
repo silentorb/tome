@@ -17,6 +17,8 @@ Never add React / React Flow deps to `tome-ontology`. This package depends on `t
 
 Fence body is **raw Imp** `{ nodes, edges }` (property `{#predicate type="node-filter"}`). React Flow is editor-only via `impToReactFlow` / `reactFlowToImp`.
 
+`ImpFlowEditor` receives `createRegistry={createTomeImpRegistry}` so Tome-only `hosts_projection` (and other registry ops) get port handles in the tool panel.
+
 ## Layout
 
 | Path | Role |

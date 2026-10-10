@@ -19,6 +19,7 @@ export {
   tomeCorpusLibrary,
   type TomeCorpusLookup,
 } from "./corpus";
+export { tomeHostsProjectionLibrary } from "./hosts-projection";
 export {
   compileImpGraphToTomeSql,
   type CompiledTomeImpSql,

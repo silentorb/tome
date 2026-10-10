@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { HOSTS_PROJECTION_NODE_TYPE, hostsProjectionFilterGraph } from "tome-ontology";
 import {
   BLOCK_ROLE,
   PREDICATE_PROPERTY_ID,
@@ -29,6 +30,21 @@ describe("node-filter config", () => {
     const back = reactFlowToNodeFilter(rf);
     expect(back.nodes.lit?.type).toBe("literal");
     expect(back.nodes.lit?.inputs.value).toBe(true);
+  });
+
+  test("round-trips hosts_projection Inspiration-shaped filter", () => {
+    const original = hostsProjectionFilterGraph("01KXBNPNJDENZ9BXN5BYZ7JKPR", 0);
+    const rf = nodeFilterToReactFlow(original);
+    expect(rf.nodes.map((n) => n.type).sort()).toEqual([
+      HOSTS_PROJECTION_NODE_TYPE,
+      "literal",
+      "literal",
+    ]);
+    const back = reactFlowToNodeFilter(rf);
+    expect(back.nodes.hosts?.type).toBe(HOSTS_PROJECTION_NODE_TYPE);
+    expect(back.nodes.association?.inputs.value).toBe("01KXBNPNJDENZ9BXN5BYZ7JKPR");
+    expect(back.nodes.direction?.inputs.value).toBe(0);
+    expect(Object.keys(back.edges)).toHaveLength(2);
   });
 
   test("parse falls back to default for invalid payloads", () => {

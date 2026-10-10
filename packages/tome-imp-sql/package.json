@@ -12,7 +12,8 @@
     "imp-registry": "workspace:^0.5.0",
     "imp-core-types": "workspace:^0.5.0",
     "imp-sql": "workspace:^0.7.0",
-    "tome-flatfile": "workspace:^0.7.0"
+    "tome-flatfile": "workspace:^0.7.0",
+    "tome-ontology": "workspace:^0.2.0"
   },
   "devDependencies": {
     "@types/bun": "1.2.23",

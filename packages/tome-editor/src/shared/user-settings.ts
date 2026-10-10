@@ -73,7 +73,7 @@ export type UserSettingsPatch = {
   relationships?: RelationshipsSettings | null;
 };
 
-export const DEFAULT_SIDEBAR_RECENT_MAX_ITEMS = 8;
+export const DEFAULT_SIDEBAR_RECENT_MAX_ITEMS = 6;
 export const MAX_SIDEBAR_RECENT_MAX_ITEMS = 100;
 export const MAX_RECENT_ASSOCIATION_TYPES = 10;
 
