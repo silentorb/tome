@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { RelationshipTypesFile } from "tome-graph-interfaces";
+import { parseRelationshipTypesFile } from "tome-flatfile";
 import {
   ORDERED_TRAIT,
   SET_TRAIT,
@@ -12,26 +12,6 @@ import {
   linkExistingFor,
   typesWithTrait,
 } from "../src/index";
-
-/**
- * Parse associations.json the same way flatfile does (minimal, for golden checks).
- * Uses the on-disk `associations` key.
- */
-function parseAssociationsFile(raw: string): RelationshipTypesFile {
-  const data = JSON.parse(raw) as {
-    version?: number;
-    associations?: Record<string, {
-      perspectives: RelationshipTypesFile["relationshipTypes"][string]["perspectives"];
-      traits?: RelationshipTypesFile["relationshipTypes"][string]["traits"];
-      endpoints?: RelationshipTypesFile["relationshipTypes"][string]["endpoints"];
-      linkExisting?: boolean;
-    }>;
-  };
-  return {
-    version: data.version ?? 1,
-    relationshipTypes: data.associations ?? {},
-  };
-}
 
 const MARLOTH_ASSOCIATIONS = join(
   import.meta.dir,
@@ -44,7 +24,7 @@ describe("Marloth AC → BR equivalence", () => {
       // Optional mount in some environments
       return;
     }
-    const file = parseAssociationsFile(readFileSync(MARLOTH_ASSOCIATIONS, "utf-8"));
+    const file = parseRelationshipTypesFile(readFileSync(MARLOTH_ASSOCIATIONS, "utf-8"));
     const runtime = compileAssociationConfig(file);
 
     expect(runtime.predicates.size).toBe(Object.keys(file.relationshipTypes).length);

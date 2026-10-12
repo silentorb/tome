@@ -23,6 +23,7 @@ import {
 import { normalizeRelationshipType } from "./relation-type";
 import type { RelationshipEntry } from "./content/relationships-file";
 import {
+  bridgeRoleIdsForType,
   normalizeRelationshipTypeId,
   parseProjectionType,
   projectionTypeForEndpoint,
@@ -118,7 +119,9 @@ export function setRoleIndices(def: RelationshipTypeDefinition | undefined): Set
   // Compile a one-off runtime so set-role indices come from pattern traits.
   const runtime = compileAssociationConfig({
     version: 1,
-    relationshipTypes: { _: def ?? { perspectives: ["", ""] } },
+    relationshipTypes: {
+      _: def ?? { perspectives: ["", ""], roleIds: bridgeRoleIdsForType("_") },
+    },
   });
   return setRoleIndicesFor(runtime, "_");
 }

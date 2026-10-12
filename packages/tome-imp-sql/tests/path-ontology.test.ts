@@ -7,6 +7,8 @@ import {
 
 const FEATURE_TYPE = "01KWN86X6MFZQAJ1V36T9592A9";
 const DEPENDS_ASSOC = "01KXBNPNJDENZ9BXN5BYZ7JKPD";
+const ROLE_DEPENDENTS = "000000000000000000000000D0";
+const ROLE_DEPENDENCIES = "000000000000000000000000D1";
 
 function fixtureRelationshipTypes(): RelationshipTypesFile {
   return {
@@ -14,6 +16,7 @@ function fixtureRelationshipTypes(): RelationshipTypesFile {
     relationshipTypes: {
       [DEPENDS_ASSOC]: {
         perspectives: ["Dependents", "Dependencies"],
+        roleIds: [ROLE_DEPENDENTS, ROLE_DEPENDENCIES],
         endpoints: {
           0: { typeId: FEATURE_TYPE },
           1: { typeId: FEATURE_TYPE },
@@ -99,9 +102,43 @@ describe("createTomePathOntology", () => {
     const ontology = createTomePathOntology(fixtureRelationshipTypes(), fixtureTableSchemas());
     expect(() => ontology.resolve(FEATURE_TYPE, "nope")).toThrow(/unknown token/);
   });
+
+  test("resolves relational role ULIDs globally like property tokens", () => {
+    const ontology = createTomePathOntology(fixtureRelationshipTypes(), fixtureTableSchemas());
+    expect(ontology.resolve(FEATURE_TYPE, ROLE_DEPENDENCIES)).toEqual({
+      kind: "relationship",
+      association: DEPENDS_ASSOC,
+      direction: 1,
+      nextType: FEATURE_TYPE,
+    });
+    expect(ontology.resolve(FEATURE_TYPE, ROLE_DEPENDENTS)).toEqual({
+      kind: "relationship",
+      association: DEPENDS_ASSOC,
+      direction: 0,
+      nextType: FEATURE_TYPE,
+    });
+  });
 });
 
 describe("bindTomeSemanticPath", () => {
+  test("desugars relational role ULID then title to traverse then project", () => {
+    const ontology = createTomePathOntology(fixtureRelationshipTypes(), fixtureTableSchemas());
+    const bound = bindTomeSemanticPath([ROLE_DEPENDENCIES, "title"], {
+      ontology,
+      startType: FEATURE_TYPE,
+      prefix: "p",
+      source: { node: "input", port: "value" },
+    });
+    expect(bound.steps).toEqual([
+      {
+        kind: "edge",
+        association: DEPENDS_ASSOC,
+        direction: 1,
+      },
+      { kind: "field", name: "title" },
+    ]);
+  });
+
   test("desugars dependencies.title to traverse then project", () => {
     const ontology = createTomePathOntology(fixtureRelationshipTypes(), fixtureTableSchemas());
     const bound = bindTomeSemanticPath(["dependencies", "title"], {

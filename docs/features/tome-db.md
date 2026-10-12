@@ -30,10 +30,12 @@ For **what design nodes mean** (features, inspirations, products, traceability),
 | --- | --- |
 | **Node** | Entity in `nodes` (replaces *vertex* / *record* in API and docs). |
 | **Relationship** | Link between two nodes with a **relationship type** and JSON properties (one edge instance). |
-| **Relationship type** | Registry definition for a kind of relationship (opaque uppercase ULID + perspectives + traits + optional endpoints). Identity is not derived from perspective names. On each relationship record, the type ULID is the `type` field. Canonical term in agent prose. |
+| **Relationship type** | Registry definition for a kind of relationship (opaque uppercase ULID + two **relational roles** + traits + optional endpoints). Identity is not derived from role labels. On each relationship record, the type ULID is the `type` field. Canonical term in agent prose. |
 | **Association** (on-disk legacy) | Filename / key / field naming only: `associations.json`, top-level JSON key `associations`, and content-model fields named `"association"` in `views.json` / `table-schemas.json`. Do not use “association” for the concept in new agent prose. |
 | **Association** (reserved) | Possible future node-type pairing concept — not implemented. Do not reinvent the old “association = relationship type” meaning. |
-| **Perspective** | User-facing label config for one endpoint of a relationship type (`perspectives[0|1]`). Not a machine id. |
+| **Relational role** | One half of a relationship type (correlative / converse side). Primary term; **relationship role** is a synonym; short **role** is fine in relationship context. Each type has exactly two roles. |
+| **Role id** | Globally unique ULID for a relational role (`roleIds[0\|1]` in `associations.json`), index-aligned with label tuple `roles` and endpoints `a`/`b`. |
+| **Role label** | User-facing label config for a relational role (`roles[0\|1]`; legacy JSON key `perspectives`). String title or `{ title, linkAdd?, linkExisting? }`. Not a machine id. |
 | **Projection type** | Directed cache/query identity `{relationshipTypeId}:{0\|1}` on `relationship_projections.type`. |
 | **Page** | Editor-facing node view (`getNodePageDetail`, `NodePageView`)—not a filesystem export file. |
 | **Type table** | Node listed in [`table-schemas.json`](./table-schemas.md) and/or receiving set-membership rows. |
@@ -91,13 +93,13 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 { "a": "<ulid>", "b": "<ulid>", "type": "<relationship-type-ulid>", "properties": { } }
 ```
 
-- Endpoints `a` / `b` are an **ordered tuple**. Positions 0 (`a`) and 1 (`b`) carry **no inherent source/target meaning** — each position's meaning is defined entirely by the relationship type's ordered `perspectives` pair in `associations.json` (`perspectives[0]` describes the node at `a`, `perspectives[1]` the node at `b`). Authored order is preserved verbatim: there is **no lexicographic endpoint sorting** and no `directedFrom` field.
-- **Relative semantics come from tuple position + the type's per-endpoint display labels** — never from slug comparison, endpoint sorting, or a stored direction flag.
-- **Relationship type ids are opaque ULIDs.** Perspective entries are display labels only (string title or `{ title, linkAdd?, linkExisting? }`); machine identity for directed edges is `relationshipTypeId:endpointIndex`.
+- Endpoints `a` / `b` are an **ordered tuple**. Positions 0 (`a`) and 1 (`b`) carry **no inherent source/target meaning** — each position's meaning is defined entirely by the relationship type's ordered **relational roles** in `associations.json` (`roles[0]` / `roleIds[0]` describe the node at `a`, `roles[1]` / `roleIds[1]` the node at `b`). Authored order is preserved verbatim: there is **no lexicographic endpoint sorting** and no `directedFrom` field.
+- **Relative semantics come from tuple position + the type's per-role labels and role ids** — never from slug comparison, endpoint sorting, or a stored direction flag.
+- **Relationship type ids and role ids are opaque ULIDs.** Role label entries are display only (string title or `{ title, linkAdd?, linkExisting? }`); machine identity for a side is the role ULID. Directed cache/query identity remains `relationshipTypeId:endpointIndex`.
 - **Set-trait** relationship types expand to dual projections (`ULID:0` / `ULID:1`). Parent/child indices and which relationship type applies come from the `set` trait and view/caller context — see [sets.md](./sets.md).
-- **Symmetric** relationship types carry the `symmetric` trait (not inferred from equal perspective titles). Tuple order is irrelevant for them; UI resolves type context via the relation column's `"association"` field (relationship type ULID) + `endpoint`.
-- **Peer / structural / taxonomy links** each have their own relationship type id with a two-perspective definition and optional `endpoints`.
-- **Single-endpoint (unidirectional) types are forbidden.** Every entry in `associations.json` defines a `perspectives` **tuple of exactly two** label configs (typed `PerspectivePair`); there is no `bidirectional` field, and the parser rejects any type that does not have exactly two perspectives. All relationships are bidirectional by construction. The write path (`resolveRelationshipTypeIdForLink`) resolves via relationship type ULID, directed projection type, or table-schema relation column, and throws `LinkResolutionError` or `UnknownRelationshipTypeError` otherwise. See `packages/tome-db/scripts/audit-relationship-resolution.ts` to verify a content directory has no unresolvable entries.
+- **Symmetric** relationship types carry the `symmetric` trait (not inferred from equal role titles). Tuple order is irrelevant for them; UI resolves type context via the relation column's `"association"` field (relationship type ULID) + `endpoint`.
+- **Peer / structural / taxonomy links** each have their own relationship type id with a two-role definition and optional `endpoints`.
+- **Single-endpoint (unidirectional) types are forbidden.** Every entry in `associations.json` defines a `roles` **tuple of exactly two** label configs (legacy key `perspectives`) plus a parallel `roleIds` pair; there is no `bidirectional` field, and the parser rejects any type that does not have exactly two role labels. All relationships are bidirectional by construction. The write path (`resolveRelationshipTypeIdForLink`) resolves via relationship type ULID, directed projection type, or table-schema relation column, and throws `LinkResolutionError` or `UnknownRelationshipTypeError` otherwise. See `packages/tome-db/scripts/audit-relationship-resolution.ts` to verify a content directory has no unresolvable entries.
 - Record id: `{a}:{b}:{type}` (keyed on authored tuple order, so it is order-sensitive).
 
 **SQLite cache (denormalized):** expanded on sync for fast directed queries:
@@ -124,7 +126,7 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTableNode` in `node-capabilities.ts`).
 
 - Node ids **must** be canonical uppercase 26-char ULIDs (`[0-9A-HJKMNP-TV-Z]{26}`), minted by `generateNodeId()` in `node-create.ts`. They are compared as exact strings — no case/dash normalization.
-- Relationship type ids **must** use the same ULID alphabet (never lowercased). Perspective entries are display labels only (not machine ids).
+- Relationship type ids and relational role ids **must** use the same ULID alphabet (never lowercased). Role label entries are display labels only (not machine ids).
 - Directed projection types **must** be `{relationshipTypeId}:{0|1}`.
 - Projection ids **must** be deterministic: `{source_id}:{type}:{target_id}` (local projection type).
 

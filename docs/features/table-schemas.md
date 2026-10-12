@@ -40,7 +40,7 @@ See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./s
 | --- | --- |
 | **Identity** | Column identity is `key` (slug), not legacy property ids |
 | **Scalars** | `select`, `multi_select`, `checkbox`, `number`, `text`, `date`, `url`, `email`, `phone_number` |
-| **Relations** | `"association"` (legacy field name) is a registered **relationship type** ULID in [`associations.json`](../../content/model/associations.json); **`endpoint` is `0` or `1`** (which relationship type endpoint this column hosts). Perspective titles are display-only and must not be used as keys. Directed projection identity is `{relationshipTypeId}:{endpoint}`. Authored relationship tuples must place the **endpoint-0 host at `a`** (and endpoint 1 at `b`); the Members table only hydrates outgoing `{relationshipTypeId}:{endpoint}` from each row. Empty relation cells after pinning `endpoint` usually mean inverted `a`/`b` order, not missing links — re-run `bun packages/tome-db/scripts/migrate-relationship-order.ts <contentDir>`. |
+| **Relations** | `"association"` (legacy field name) is a registered **relationship type** ULID in [`associations.json`](../../content/model/associations.json); **`endpoint` is `0` or `1`** (which relational role / endpoint this column hosts). Role labels are display-only and must not be used as keys; Imp pathing may also hop by the role’s global ULID (`roleIds[endpoint]`). Directed projection identity is `{relationshipTypeId}:{endpoint}`. Authored relationship tuples must place the **endpoint-0 host at `a`** (and endpoint 1 at `b`); the Members table only hydrates outgoing `{relationshipTypeId}:{endpoint}` from each row. Empty relation cells after pinning `endpoint` usually mean inverted `a`/`b` order, not missing links — re-run `bun packages/tome-db/scripts/migrate-relationship-order.ts <contentDir>`. |
 | **Enums** | `enumId` references [`schema.json`](../../content/model/schema.json) `enums` |
 | **Computed** | Formula/rollup columns are **not** stored here; use [`dynamic-properties.json`](./dynamic-properties.md) |
 
@@ -70,7 +70,7 @@ Row data for instances is stored on `is_a` relationship properties, not on the i
 
 - For each `type: relation` column on the instance's type table (`member_of` target), the editor shows a relation table section even when no outgoing edges exist yet (static site export still omits empty sections).
 - Section titles and link-existing pickers use the column's `"association"` relationship type ULID (same grouping as populated `includes` edges).
-- Relation section `typeNodeId` comes from relationship-type / schema config only: schema relation columns use `targetTypeIdForRelationColumn`; otherwise `associations.json` entry `endpoints[endpointIndex].typeId`. Perspective titles are display-only — never resolve type identity by scanning nodes for a matching title.
+- Relation section `typeNodeId` comes from relationship-type / schema config only: schema relation columns use `targetTypeIdForRelationColumn`; otherwise `associations.json` entry `endpoints[endpointIndex].typeId`. Role labels are display-only — never resolve type identity by scanning nodes for a matching title.
 
 ## Editing
 

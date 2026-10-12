@@ -62,6 +62,13 @@ export {
   perspectiveLinkAdd,
   perspectiveLinkExisting,
   perspectiveConfigAt,
+  roleTitle,
+  roleLinkAdd,
+  roleLinkExisting,
+  roleConfigAt,
+  generateRoleId,
+  mintRoleIdPair,
+  bridgeRoleIdsForType,
   registerBidirectionalType,
   registerSetRelationshipType,
   registerTypeDefinition,
@@ -71,11 +78,20 @@ export {
   isDualPerspectiveType,
   perspectiveCountForExpansion,
 } from "./content/relationship-types-file";
+export {
+  buildRoleIndex,
+  resolveRole,
+  roleIdsForRelationshipType,
+} from "./content/role-index";
+export type { RoleIndex, RoleResolution } from "./content/role-index";
 export type {
   RelationshipTypeDefinition,
   RelationshipTypesFile,
   PerspectiveLabelConfig,
   PerspectivePair,
+  RoleLabelConfig,
+  RoleLabelPair,
+  RoleIdPair,
   TraitEntry,
   TraitObjectEntry,
   RelationshipTypeEndpoints,

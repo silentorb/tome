@@ -58,10 +58,10 @@ Ordinary relation→field hops **must** prefer Imp semantic bind over hand-wired
 
 | Operation | Behavior |
 | --- | --- |
-| `createTomePathOntology(associations, tableSchemas)` | Type-scoped tokens from table-schema column keys + promoted node fields (`id`, `title`, …). Relation tokens bind to bare `association` (relationship type ULID) + `endpoint` as direction and opposite endpoint `typeId` as `nextType`. Fails if a token maps to both property and relationship in one type. |
+| `createTomePathOntology(associations, tableSchemas)` | **Relational role ULIDs** resolve globally to a relationship hop (`association` + `direction` + optional `nextType`). Type-scoped tokens remain: table-schema column keys + promoted node fields (`id`, `title`, …). Relation column keys still bind to bare `association` + `endpoint` as a convenience bridge. Fails if a token maps to both property and relational role / relationship in one type. |
 | `bindTomeSemanticPath(tokens, { ontology, startType, prefix, source, asScalar? })` | Resolve + desugar to `traverse` / `project` (wraps `imp-pathing` `bindSemanticPath`) |
 
-Perspective display labels are **not** semantic tokens.
+Role display labels are **not** path tokens — use the role ULID (or a type-scoped relation column key that resolves to the same hop).
 
 Editor **table-presentation** scope/group related-id reads resolve presentation composites to table-schema column keys, then use a **minimal** PathOntology for that hop plus `semanticPathFromAnchorGraph` + Queryable `executeImp` (see [table-presentation.md](./table-presentation.md), [graph-store.md](./graph-store.md)). Prefer that path over hand-wired `traverse` when only opposite node ids are needed. Hosts should not call `createTomePathOntology` over an entire corpus for these hops — unrelated relation columns without endpoint typeIds would fail integrity checks.
 

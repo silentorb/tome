@@ -1,6 +1,7 @@
 /**
  * Host PathOntology for Imp semantic paths.
- * Tokens = table-schema column keys + promoted node fields (not perspective labels).
+ * Relationship hops: relational role ULIDs (global) and table-schema column keys (type-scoped).
+ * Properties: type-scoped column keys + promoted node fields.
  * Spec: imp-spec/docs/packages/imp-pathing/semantic-paths.md
  */
 
@@ -8,11 +9,13 @@ import type {
   BindSemanticPathOptions,
   BindSemanticPathResult,
   OntologyBinding,
+  OntologyRelationshipBinding,
   PathOntology,
 } from "imp-pathing";
 import { bindSemanticPath, mapPathOntology } from "imp-pathing";
 import type { RelationshipTypesFile, TableSchemasFile } from "tome-flatfile";
 import {
+  buildRoleIndex,
   normalizeRelationshipTypeId,
   targetTypeIdForRelationColumn,
 } from "tome-flatfile";
@@ -77,8 +80,8 @@ function seedPromoted(table: Record<string, OntologyBinding>, typeId: string): v
 
 /**
  * Build a PathOntology from associations + table-schemas.
- * Relation tokens use column `association` + `endpoint` as direction; `nextType` is the
- * opposite endpoint's typeId. Fails if a type context maps the same token to both kinds.
+ * Relational role ULIDs resolve globally (no relationship type at the call site).
+ * Type-scoped relation column keys remain as a convenience bridge.
  */
 export function createTomePathOntology(
   relationshipTypes: RelationshipTypesFile,
@@ -131,7 +134,41 @@ export function createTomePathOntology(
     }
   }
 
-  return mapPathOntology(types);
+  const roleIndex = buildRoleIndex(relationshipTypes);
+  const roleBindings = new Map<string, OntologyRelationshipBinding>();
+  for (const [roleId, res] of roleIndex) {
+    const def = relationshipTypes.relationshipTypes[res.relationshipTypeId];
+    if (!def) continue;
+    const other: 0 | 1 = res.endpoint === 0 ? 1 : 0;
+    const nextType = def.endpoints?.[other]?.typeId?.trim() || undefined;
+    if (nextType) ensureType(nextType);
+    roleBindings.set(roleId, {
+      kind: "relationship",
+      association: res.relationshipTypeId,
+      direction: res.endpoint,
+      ...(nextType ? { nextType } : {}),
+    });
+  }
+
+  const scoped = mapPathOntology(types);
+
+  return {
+    resolve(typeId: string, token: string): OntologyBinding {
+      const trimmed = token.trim();
+      const roleBinding = roleBindings.get(trimmed);
+      if (roleBinding) {
+        const table = types[typeId];
+        const local = table?.[trimmed];
+        if (local?.kind === "property") {
+          throw new Error(
+            `PathOntology integrity: token "${trimmed}" in type "${typeId}" is both a property and a relational role`,
+          );
+        }
+        return roleBinding;
+      }
+      return scoped.resolve(typeId, token);
+    },
+  };
 }
 
 export type BindTomeSemanticPathOptions = Omit<BindSemanticPathOptions, "ontology"> & {

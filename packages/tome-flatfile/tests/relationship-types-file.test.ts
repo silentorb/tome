@@ -67,21 +67,74 @@ describe("relationship-types-file traits", () => {
     expect(file.relationshipTypes[ORDERED_MEMBER_OF]?.traits).toEqual(["set", "ordered"]);
   });
 
-  test("round-trips traits and object perspective labels through serialize", () => {
+  test("round-trips traits and object role labels through serialize as roles+roleIds", () => {
     const file = emptyRelationshipTypesFile();
     file.relationshipTypes[MEMBER_OF] = {
       perspectives: [
         "Members",
         { title: "Membership", linkAdd: "Link type table" },
       ],
+      roleIds: ["000000000000000000000000R1", "000000000000000000000000R2"],
       traits: ["set"],
     };
     const serialized = serializeRelationshipTypesFile(file);
-    const onDisk = JSON.parse(serialized) as Record<string, unknown>;
+    const onDisk = JSON.parse(serialized) as {
+      associations?: Record<string, { roles?: unknown; perspectives?: unknown; roleIds?: string[] }>;
+      relationshipTypes?: unknown;
+    };
     expect(onDisk.associations).toBeDefined();
     expect(onDisk.relationshipTypes).toBeUndefined();
+    expect(onDisk.associations?.[MEMBER_OF]?.roles).toEqual([
+      "Members",
+      { title: "Membership", linkAdd: "Link type table" },
+    ]);
+    expect(onDisk.associations?.[MEMBER_OF]?.perspectives).toBeUndefined();
+    expect(onDisk.associations?.[MEMBER_OF]?.roleIds).toEqual([
+      "000000000000000000000000R1",
+      "000000000000000000000000R2",
+    ]);
     const roundTrip = parseRelationshipTypesFile(serialized);
     expect(roundTrip.relationshipTypes[MEMBER_OF]).toEqual(file.relationshipTypes[MEMBER_OF]);
+  });
+
+  test("accepts legacy perspectives key and bridges missing roleIds", () => {
+    const file = parseRelationshipTypesFile(
+      JSON.stringify({
+        version: 1,
+        associations: {
+          [MEMBER_OF]: {
+            perspectives: ["Members", "Membership"],
+            traits: ["set"],
+          },
+        },
+      }),
+    );
+    expect(file.relationshipTypes[MEMBER_OF]?.perspectives).toEqual(["Members", "Membership"]);
+    expect(file.relationshipTypes[MEMBER_OF]?.roleIds?.[0]).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    expect(file.relationshipTypes[MEMBER_OF]?.roleIds?.[1]).toMatch(/^[0-9A-HJKMNP-TV-Z]{26}$/);
+    expect(file.relationshipTypes[MEMBER_OF]?.roleIds?.[0]).not.toBe(
+      file.relationshipTypes[MEMBER_OF]?.roleIds?.[1],
+    );
+  });
+
+  test("prefers roles over perspectives when both present", () => {
+    const file = parseRelationshipTypesFile(
+      JSON.stringify({
+        version: 1,
+        associations: {
+          [MEMBER_OF]: {
+            roles: ["RoleA", "RoleB"],
+            perspectives: ["OldA", "OldB"],
+            roleIds: ["000000000000000000000000R1", "000000000000000000000000R2"],
+          },
+        },
+      }),
+    );
+    expect(file.relationshipTypes[MEMBER_OF]?.perspectives).toEqual(["RoleA", "RoleB"]);
+    expect(file.relationshipTypes[MEMBER_OF]?.roleIds).toEqual([
+      "000000000000000000000000R1",
+      "000000000000000000000000R2",
+    ]);
   });
 
   test("rejects duplicate trait names", () => {
@@ -236,6 +289,7 @@ describe("relationship-types-file linkExisting", () => {
     const file = emptyRelationshipTypesFile();
     file.relationshipTypes[PARENTS_CHILDREN] = {
       perspectives: ["Children", { title: "Parents", linkExisting: true }],
+      roleIds: ["000000000000000000000000C0", "000000000000000000000000C1"],
       linkExisting: false,
     };
     const roundTrip = parseRelationshipTypesFile(serializeRelationshipTypesFile(file));
@@ -333,11 +387,12 @@ describe("relationship-types-file bidirectional field removal", () => {
         },
       }),
     );
-    expect(file.relationshipTypes[INCLUDES]).toEqual({ perspectives: ["Includes", "Includes"] });
+    expect(file.relationshipTypes[INCLUDES]?.perspectives).toEqual(["Includes", "Includes"]);
+    expect(file.relationshipTypes[INCLUDES]?.roleIds).toHaveLength(2);
     expect("bidirectional" in (file.relationshipTypes[INCLUDES] ?? {})).toBe(false);
   });
 
-  test("rejects a type with fewer than two perspectives", () => {
+  test("rejects a type with fewer than two role labels", () => {
     expect(() =>
       parseRelationshipTypesFile(
         JSON.stringify({
@@ -348,7 +403,7 @@ describe("relationship-types-file bidirectional field removal", () => {
     ).toThrow(/exactly two perspectives/);
   });
 
-  test("rejects a type with more than two perspectives", () => {
+  test("rejects a type with more than two role labels", () => {
     expect(() =>
       parseRelationshipTypesFile(
         JSON.stringify({

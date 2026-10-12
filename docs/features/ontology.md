@@ -36,7 +36,7 @@ Design-domain meaning of Marloth nodes (features, products, …) lives in the co
 
 | Concept | Role |
 | --- | --- |
-| **Predicate** | Edge-kind identity + display metadata (`id`, `perspectives`). Optional Imp **nodeFilter** (`node → boolean`). **No traits on the predicate.** |
+| **Predicate** | Edge-kind identity + display metadata (`id`, role labels as `perspectives` in the runtime object). Optional Imp **nodeFilter** (`node → boolean`). **No traits on the predicate.** |
 | **Pattern** | Match scope + attached traits / `linkExisting` / endpoint constraints |
 | **RelationshipRuntime** | `predicates` + `patterns` with query helpers |
 

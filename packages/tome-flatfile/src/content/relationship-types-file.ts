@@ -26,12 +26,21 @@ export type PerspectiveLabelConfig =
   | string
   | { title: string; linkAdd?: string; linkExisting?: boolean };
 
+/** Preferred name for a relational-role display label (alias of PerspectiveLabelConfig). */
+export type RoleLabelConfig = PerspectiveLabelConfig;
+
 /**
- * Exactly two perspectives: one display config per endpoint (a→b, b→a).
- * These are not machine ids. Symmetric relationship types use the `symmetric` trait
- * (labels may still repeat for display).
+ * Exactly two relational-role labels: one display config per endpoint (a→b, b→a).
+ * Labels are not machine ids — see `roleIds`. Symmetric relationship types use the
+ * `symmetric` trait (labels may still repeat for display).
  */
 export type PerspectivePair = [PerspectiveLabelConfig, PerspectiveLabelConfig];
+
+/** Preferred name for the label pair (alias of PerspectivePair). */
+export type RoleLabelPair = PerspectivePair;
+
+/** Globally unique ULIDs for the two relational roles (index-aligned with labels). */
+export type RoleIdPair = [string, string];
 
 /** Configured trait entry — `key` names the trait; remaining keys are trait config. */
 export interface TraitObjectEntry {
@@ -54,8 +63,16 @@ export interface RelationshipTypeEndpoints {
 }
 
 export interface RelationshipTypeDefinition {
-  /** User-facing labels for each endpoint. Always a pair — every relationship is bidirectional. */
+  /**
+   * User-facing labels for each relational role. Always a pair — every relationship is bidirectional.
+   * On disk preferred JSON key is `roles` (legacy: `perspectives`).
+   */
   perspectives: PerspectivePair;
+  /**
+   * Canonical identities for each relational role; parallel to `perspectives` / endpoints.
+   * Omitted only for legacy fixtures — prefer always set; serialize always writes them.
+   */
+  roleIds?: RoleIdPair;
   /** When false, relation sections default to omitting the inline link-existing control. */
   linkExisting?: boolean;
   /** Cross-cutting capabilities (array interpreted as a set). */
@@ -77,9 +94,14 @@ export function perspectiveTitle(config: PerspectiveLabelConfig): string {
   return typeof config === "string" ? config : config.title;
 }
 
+/** Alias — relational role display title. */
+export const roleTitle = perspectiveTitle;
+
 export function perspectiveLinkAdd(config: PerspectiveLabelConfig): string | undefined {
   return typeof config === "string" ? undefined : config.linkAdd;
 }
+
+export const roleLinkAdd = perspectiveLinkAdd;
 
 export function perspectiveLinkExisting(
   config: PerspectiveLabelConfig,
@@ -87,11 +109,94 @@ export function perspectiveLinkExisting(
   return typeof config === "string" ? undefined : config.linkExisting;
 }
 
+export const roleLinkExisting = perspectiveLinkExisting;
+
 export function perspectiveConfigAt(
   def: RelationshipTypeDefinition,
   index: 0 | 1,
 ): PerspectiveLabelConfig {
   return def.perspectives[index]!;
+}
+
+export const roleConfigAt = perspectiveConfigAt;
+
+/** Mint a new relational role id (ULID). */
+export function generateRoleId(): string {
+  return generateNodeId();
+}
+
+/** Mint a fresh role id pair for a relationship type. */
+export function mintRoleIdPair(): RoleIdPair {
+  return [generateRoleId(), generateRoleId()];
+}
+
+/**
+ * Deterministic role ids when `roleIds` is omitted from associations.json (legacy bridge).
+ * Workspace corpora should persist explicit `roleIds`; this keeps old fixtures parseable.
+ */
+export function bridgeRoleIdsForType(relationshipTypeId: string): RoleIdPair {
+  const alphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ";
+  const digest = (endpoint: 0 | 1): string => {
+    const input = `${normalizeRelationshipTypeId(relationshipTypeId)}:${endpoint}:role`;
+    let h0 = 2166136261;
+    let h1 = 2166136261 ^ 0x9e3779b9;
+    for (let i = 0; i < input.length; i++) {
+      const c = input.charCodeAt(i);
+      h0 = Math.imul(h0 ^ c, 16777619);
+      h1 = Math.imul(h1 ^ c, 16777619);
+    }
+    let out = "";
+    let x = h0 >>> 0;
+    let y = h1 >>> 0;
+    for (let i = 0; i < 26; i++) {
+      const nibble = i < 13 ? x : y;
+      const shift = (i % 13) * 2;
+      out += alphabet[(nibble >>> shift) & 31]!;
+      if (i === 12) {
+        x = y;
+      }
+    }
+    return out;
+  };
+  return [digest(0), digest(1)];
+}
+
+function ensureRoleIds(
+  relationshipTypeId: string,
+  roleIds: RoleIdPair | undefined,
+): RoleIdPair {
+  if (roleIds) return roleIds;
+  return bridgeRoleIdsForType(relationshipTypeId);
+}
+
+function parseRoleIdPair(
+  raw: unknown,
+  typeKey: string,
+): RoleIdPair | undefined {
+  if (raw === undefined) return undefined;
+  if (!Array.isArray(raw) || raw.length !== 2) {
+    throw new Error(
+      `associations.json: type ${typeKey} roleIds must be an array of exactly two ULIDs`,
+    );
+  }
+  const a = typeof raw[0] === "string" ? raw[0].trim() : "";
+  const b = typeof raw[1] === "string" ? raw[1].trim() : "";
+  if (!isRelationshipTypeId(a) || !isRelationshipTypeId(b)) {
+    throw new Error(
+      `associations.json: type ${typeKey} roleIds must be two ULIDs`,
+    );
+  }
+  if (a === b) {
+    throw new Error(
+      `associations.json: type ${typeKey} roleIds must be distinct`,
+    );
+  }
+  return [a, b];
+}
+
+function normalizeLabelConfig(config: PerspectiveLabelConfig): PerspectiveLabelConfig {
+  if (typeof config === "string") return config.trim();
+  return { ...config, title: config.title.trim() };
 }
 
 /**
@@ -334,41 +439,65 @@ export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
     const row = value as Record<string, unknown>;
     if (row.perspectiveLabels !== undefined) {
       throw new Error(
-        `associations.json: type ${key} perspectiveLabels is removed; put labels in perspectives`,
+        `associations.json: type ${key} perspectiveLabels is removed; put labels in roles`,
       );
     }
-    if (!Array.isArray(row.perspectives) || row.perspectives.length !== 2) {
+    const labelRaw = row.roles !== undefined ? row.roles : row.perspectives;
+    const labelKey = row.roles !== undefined ? "roles" : "perspectives";
+    if (!Array.isArray(labelRaw) || labelRaw.length !== 2) {
       throw new Error(
-        `associations.json: type ${key} must define exactly two perspectives`,
+        `associations.json: type ${key} must define exactly two ${labelKey} (relational role labels)`,
       );
     }
     const perspectives: PerspectivePair = [
-      parsePerspectiveLabelConfig(row.perspectives[0], `type ${key} perspectives[0]`),
-      parsePerspectiveLabelConfig(row.perspectives[1], `type ${key} perspectives[1]`),
+      parsePerspectiveLabelConfig(labelRaw[0], `type ${key} ${labelKey}[0]`),
+      parsePerspectiveLabelConfig(labelRaw[1], `type ${key} ${labelKey}[1]`),
     ];
+    const parsedRoleIds = parseRoleIdPair(row.roleIds, key);
+    const roleIds = ensureRoleIds(key, parsedRoleIds);
     const linkExisting = parseLinkExisting(row.linkExisting, `type ${key}.linkExisting`);
     const traits = parseTraits(row.traits, key);
     const endpoints = parseEndpoints(row.endpoints, key);
     relationshipTypes[key] = {
       perspectives,
+      roleIds,
       ...(linkExisting !== undefined ? { linkExisting } : {}),
       ...(traits ? { traits } : {}),
       ...(endpoints ? { endpoints } : {}),
     };
   }
 
+  // Enforce global uniqueness of role ids across the file.
+  const seenRoles = new Map<string, string>();
+  for (const [typeId, def] of Object.entries(relationshipTypes)) {
+    const pair = ensureRoleIds(typeId, def.roleIds);
+    def.roleIds = pair;
+    for (let endpoint = 0; endpoint < 2; endpoint++) {
+      const roleId = pair[endpoint as 0 | 1]!;
+      const prev = seenRoles.get(roleId);
+      if (prev) {
+        throw new Error(
+          `associations.json: duplicate relational role id "${roleId}" (${prev} and ${typeId}:${endpoint})`,
+        );
+      }
+      seenRoles.set(roleId, `${typeId}:${endpoint}`);
+    }
+  }
+
   return { version: obj.version, relationshipTypes };
 }
 
 export function serializeRelationshipTypesFile(file: RelationshipTypesFile): string {
-  const sortedRelationshipTypes: Record<string, RelationshipTypeDefinition> = {};
+  const sortedRelationshipTypes: Record<string, Record<string, unknown>> = {};
   for (const key of Object.keys(file.relationshipTypes).sort()) {
     const def = file.relationshipTypes[key]!;
+    const roleIds = ensureRoleIds(key, def.roleIds);
     sortedRelationshipTypes[key] = {
-      perspectives: [
+      roles: [
         serializePerspectiveConfig(def.perspectives[0]!),
         serializePerspectiveConfig(def.perspectives[1]!),
       ],
+      roleIds: [roleIds[0], roleIds[1]],
       ...(def.linkExisting !== undefined ? { linkExisting: def.linkExisting } : {}),
       ...(def.traits ? { traits: serializeTraits(def.traits) } : {}),
       ...(def.endpoints ? { endpoints: serializeEndpoints(def.endpoints) } : {}),
@@ -426,21 +555,30 @@ export function requireRelationshipTypeId(
 export function registerTypeDefinition(
   file: RelationshipTypesFile,
   relationshipTypeId: string,
-  def: RelationshipTypeDefinition,
+  def: Omit<RelationshipTypeDefinition, "roleIds"> & { roleIds?: RoleIdPair },
 ): void {
   const id = normalizeRelationshipTypeId(relationshipTypeId);
   if (!isRelationshipTypeId(id)) {
     throw new Error(`Relationship type id must be a ULID, got "${relationshipTypeId}"`);
   }
+  // Prefer explicit roleIds; otherwise deterministic bridge ids so the same
+  // relationship type ULID gets stable roles across corpora / test fixtures.
+  const roleIds =
+    def.roleIds && def.roleIds[0] && def.roleIds[1]
+      ? ([def.roleIds[0].trim(), def.roleIds[1].trim()] as RoleIdPair)
+      : bridgeRoleIdsForType(id);
+  if (!isRelationshipTypeId(roleIds[0]) || !isRelationshipTypeId(roleIds[1])) {
+    throw new Error(`Relational role ids must be ULIDs for type "${id}"`);
+  }
+  if (roleIds[0] === roleIds[1]) {
+    throw new Error(`Relational role ids must be distinct for type "${id}"`);
+  }
   file.relationshipTypes[id] = {
     perspectives: [
-      typeof def.perspectives[0] === "string"
-        ? def.perspectives[0].trim()
-        : { ...def.perspectives[0], title: def.perspectives[0].title.trim() },
-      typeof def.perspectives[1] === "string"
-        ? def.perspectives[1].trim()
-        : { ...def.perspectives[1], title: def.perspectives[1].title.trim() },
+      normalizeLabelConfig(def.perspectives[0]!),
+      normalizeLabelConfig(def.perspectives[1]!),
     ],
+    roleIds,
     ...(def.linkExisting !== undefined ? { linkExisting: def.linkExisting } : {}),
     ...(def.traits ? { traits: [...def.traits] } : {}),
     ...(def.endpoints ? { endpoints: serializeEndpoints(def.endpoints) } : {}),
@@ -448,36 +586,39 @@ export function registerTypeDefinition(
 }
 
 /**
- * Register a dual-perspective relationship type with display labels.
- * Pass `id` or mint a ULID. Never derives identity from labels.
+ * Register a dual-role relationship type with display labels.
+ * Pass `id` or mint a ULID. Never derives identity from labels. Mints `roleIds` when omitted.
  */
 export function registerBidirectionalType(
   file: RelationshipTypesFile,
   labelFromA: PerspectiveLabelConfig,
   labelFromB: PerspectiveLabelConfig,
   id?: string,
-  options?: { traits?: TraitEntry[] },
+  options?: { traits?: TraitEntry[]; roleIds?: RoleIdPair },
 ): string {
   const relationshipTypeId = id !== undefined ? normalizeRelationshipTypeId(id) : generateRelationshipTypeId();
   registerTypeDefinition(file, relationshipTypeId, {
     perspectives: [labelFromA, labelFromB],
     ...(options?.traits ? { traits: options.traits } : {}),
+    ...(options?.roleIds ? { roleIds: options.roleIds } : {}),
   });
   return relationshipTypeId;
 }
 
-/** Register a set-trait relationship type with explicit ULID id and perspective labels. */
+/** Register a set-trait relationship type with explicit ULID id and role labels. */
 export function registerSetRelationshipType(
   file: RelationshipTypesFile,
   options: {
     id: string;
     perspectives: PerspectivePair;
     ordered?: boolean;
+    roleIds?: RoleIdPair;
   },
 ): void {
   const traits: TraitEntry[] = options.ordered ? ["set", "ordered"] : ["set"];
   registerTypeDefinition(file, options.id, {
     perspectives: options.perspectives,
     traits,
+    ...(options.roleIds ? { roleIds: options.roleIds } : {}),
   });
 }
