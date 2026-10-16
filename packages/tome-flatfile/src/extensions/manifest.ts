@@ -6,15 +6,22 @@ import type {
   ExtensionsSearchRoleMap,
 } from "./extensions-file";
 
+type ExtensionModulePick = Pick<
+  ExtensionEntry,
+  | "id"
+  | "editorModule"
+  | "htmlModule"
+  | "serverModule"
+  | "searcherModule"
+  | "authenticationModule"
+>;
+
 export interface ResolvedExtensionComponent extends PageBlockComponentRef {
   kind: "page-block";
   /** Roles this component fulfills (fence `type=`). Always non-empty. */
   roles: string[];
   slashMenu?: { group?: string; order?: number };
-  extension: Pick<
-    ExtensionEntry,
-    "id" | "editorModule" | "htmlModule" | "serverModule" | "searcherModule"
-  >;
+  extension: ExtensionModulePick;
 }
 
 export interface ResolvedSearcherComponent {
@@ -24,10 +31,17 @@ export interface ResolvedSearcherComponent {
   label: string;
   kind: "searcher";
   params: Record<string, unknown>;
-  extension: Pick<
-    ExtensionEntry,
-    "id" | "editorModule" | "htmlModule" | "serverModule" | "searcherModule"
-  >;
+  extension: ExtensionModulePick;
+}
+
+export interface ResolvedAuthenticationProviderComponent {
+  id: string;
+  extensionId: string;
+  implementationId: string;
+  label: string;
+  kind: "authentication-provider";
+  params: Record<string, unknown>;
+  extension: ExtensionModulePick;
 }
 
 export interface ExtensionsManifest {
@@ -39,6 +53,11 @@ export interface ExtensionsManifest {
    * Null when no searchers / no binding.
    */
   search: ExtensionsSearchRoleMap | null;
+  /**
+   * At most one enabled authentication-provider.
+   * Null when none configured.
+   */
+  authenticationProvider: ResolvedAuthenticationProviderComponent | null;
 }
 
 function mergeParams(
@@ -86,6 +105,21 @@ export function resolveSearchRoleMap(
   );
 }
 
+/**
+ * Zero or one enabled authentication-provider.
+ * Multiple enabled providers are an error (ambiguous).
+ */
+export function resolveAuthenticationProvider(
+  providers: readonly ResolvedAuthenticationProviderComponent[],
+): ResolvedAuthenticationProviderComponent | null {
+  if (providers.length === 0) return null;
+  if (providers.length === 1) return providers[0]!;
+  const ids = providers.map((p) => p.id).join(", ");
+  throw new Error(
+    `extensions.json: at most one authentication-provider may be enabled (${ids})`,
+  );
+}
+
 export function resolveExtensionsManifest(file: ExtensionsFile): ExtensionsManifest {
   const enabledExtensions = new Map<string, ExtensionEntry>();
   for (const extension of file.extensions) {
@@ -96,6 +130,7 @@ export function resolveExtensionsManifest(file: ExtensionsFile): ExtensionsManif
 
   const components: ResolvedExtensionComponent[] = [];
   const searchers: ResolvedSearcherComponent[] = [];
+  const authenticationProviders: ResolvedAuthenticationProviderComponent[] = [];
   for (const component of file.components) {
     if (!component.enabled) continue;
     const extension = enabledExtensions.get(component.extensionId);
@@ -104,26 +139,31 @@ export function resolveExtensionsManifest(file: ExtensionsFile): ExtensionsManif
       components.push(toResolvedComponent(component, extension));
     } else if (component.kind === "searcher") {
       searchers.push(toResolvedSearcher(component, extension));
+    } else if (component.kind === "authentication-provider") {
+      authenticationProviders.push(toResolvedAuthenticationProvider(component, extension));
     }
   }
 
   const search = resolveSearchRoleMap(file.search, searchers);
+  const authenticationProvider = resolveAuthenticationProvider(authenticationProviders);
 
   return {
     extensions: [...enabledExtensions.values()],
     components,
     searchers,
     search,
+    authenticationProvider,
   };
 }
 
-function extensionPick(extension: ExtensionEntry) {
+function extensionPick(extension: ExtensionEntry): ExtensionModulePick {
   return {
     id: extension.id,
     editorModule: extension.editorModule,
     htmlModule: extension.htmlModule,
     serverModule: extension.serverModule,
     searcherModule: extension.searcherModule,
+    authenticationModule: extension.authenticationModule,
   };
 }
 
@@ -156,6 +196,21 @@ function toResolvedSearcher(
     implementationId: component.implementationId,
     label: component.label,
     kind: "searcher",
+    params: mergeParams(extension.params, component.params),
+    extension: extensionPick(extension),
+  };
+}
+
+function toResolvedAuthenticationProvider(
+  component: ExtensionComponentEntry,
+  extension: ExtensionEntry,
+): ResolvedAuthenticationProviderComponent {
+  return {
+    id: component.id,
+    extensionId: component.extensionId,
+    implementationId: component.implementationId,
+    label: component.label,
+    kind: "authentication-provider",
     params: mergeParams(extension.params, component.params),
     extension: extensionPick(extension),
   };

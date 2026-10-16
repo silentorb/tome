@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import type { Principal } from "./identity";
+import { extractSessionIdFromCookieHeader } from "./session-cookie";
 
 const principalStorage = new AsyncLocalStorage<Principal | null>();
 
@@ -23,10 +24,15 @@ export async function runWithRequestPrincipalAsync<T>(
   return principalStorage.run(principal, fn);
 }
 
-/** Primary credential: `Authorization: Session <sessionId>`. */
+/**
+ * Session credential: `Authorization: Session <sessionId>` first,
+ * else same-site `tome_session` cookie.
+ */
 export function extractSessionIdFromRequest(req: Request): string | null {
   const header = req.headers.get("authorization");
-  if (!header) return null;
-  const match = /^\s*Session\s+(\S+)\s*$/i.exec(header);
-  return match?.[1] ?? null;
+  if (header) {
+    const match = /^\s*Session\s+(\S+)\s*$/i.exec(header);
+    if (match?.[1]) return match[1];
+  }
+  return extractSessionIdFromCookieHeader(req.headers.get("cookie"));
 }

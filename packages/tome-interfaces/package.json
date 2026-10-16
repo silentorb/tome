@@ -15,7 +15,8 @@
     "./extension-services/corpus-query": "./src/extension-services/corpus-query.ts",
     "./extension-services/graph-mutate": "./src/extension-services/graph-mutate.ts",
     "./extension-services/execute-imp": "./src/extension-services/execute-imp.ts",
-    "./search": "./src/search/index.ts"
+    "./search": "./src/search/index.ts",
+    "./authentication": "./src/authentication/index.ts"
   },
   "dependencies": {
     "tome-graph-interfaces": "workspace:^0.6.0"

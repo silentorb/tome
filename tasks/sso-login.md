@@ -1,6 +1,6 @@
 # SSO login
 
-Status: open
+Status: implemented (phase 2 core); open for real-IdP dogfood and editor UI
 
 ## Intent
 
@@ -8,10 +8,17 @@ Allow users to sign in via single sign-on (e.g. OIDC) rather than Tome-only cred
 
 ## Notes
 
-Charter: [multi-user.md](../docs/features/multi-user.md). **Phase 2 — SSO (OIDC)** on top of the general authentication layer (phase 1 sessions / Principal). Prefer extension-owned IdP flows rather than baking OIDC into `tome-http`. Provider choice is deferred to implementation.
+Charter: [multi-user.md](../docs/features/multi-user.md). **Phase 2 — SSO (OIDC)** landed:
+
+- `authentication-provider` kind + `GET /api/auth/login` / `callback`
+- Same-site cookie `tome_session` + `Authorization: Session` (no CORS)
+- Reference package `tome-auth-oidc` (auth-code + PKCE; mock IdP in tests)
+
+Still open: dogfood against a real IdP, editor sign-in/out UI (phase 4).
 
 ## See also
 
 - [multi-user.md](../docs/features/multi-user.md)
+- [authentication-providers.md](../docs/extensions/authentication-providers.md)
 - [multi-user-system.md](./multi-user-system.md)
 - [authorization-system.md](./authorization-system.md)

@@ -6,8 +6,9 @@ Index of **integration domains** defined in [`tome-interfaces`](../../packages/t
 | --- | --- | --- |
 | Page blocks (in-body custom blocks) | [page-blocks.md](./page-blocks.md) | v1 |
 | Searchers (node search backends) | [searchers.md](./searchers.md) | v1 |
+| Authentication providers (SSO / IdP) | [authentication-providers.md](./authentication-providers.md) | v1 |
 
-Future domains (sidebar panels, graph overlays, …) add subpaths under `tome-interfaces/` when scoped.
+Future domains (authorization providers, shell panels, …) add subpaths under `tome-interfaces/` when scoped.
 
 ## Authoring an extension package
 

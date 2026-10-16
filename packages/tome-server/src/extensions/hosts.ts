@@ -7,6 +7,10 @@ import type {
   ServerPageBlockHost,
 } from "tome-interfaces/page-block/server";
 import type {
+  AuthenticationHost,
+  AuthenticationRegistration,
+} from "tome-interfaces/authentication";
+import type {
   SearcherHost,
   SearcherRegistration,
 } from "tome-interfaces/search";
@@ -60,5 +64,21 @@ export class SearcherHostImpl implements SearcherHost {
 
   clear(): void {
     this.#searchers.clear();
+  }
+}
+
+export class AuthenticationHostImpl implements AuthenticationHost {
+  readonly #providers = new Map<string, AuthenticationRegistration>();
+
+  registerAuthenticationProvider(registration: AuthenticationRegistration): void {
+    this.#providers.set(registration.implementationId, registration);
+  }
+
+  get(implementationId: string): AuthenticationRegistration | undefined {
+    return this.#providers.get(implementationId);
+  }
+
+  clear(): void {
+    this.#providers.clear();
   }
 }

@@ -318,6 +318,7 @@ export {
   serializeExtensionsFile,
   invalidateExtensionsCache,
   loadExtensionsFromContent,
+  resolveAuthenticationProvider,
   resolveExtensionsManifest,
   resolvePageBlockRole,
   resolveSearchRoleMap,
@@ -331,6 +332,7 @@ export type {
   ExtensionsFile,
   ExtensionsManifest,
   ExtensionsSearchRoleMap,
+  ResolvedAuthenticationProviderComponent,
   ResolvedExtensionComponent,
   ResolvedSearcherComponent,
 } from "./extensions";

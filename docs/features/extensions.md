@@ -4,7 +4,7 @@
 
 The **extension system** lets projects register external packages that add Tome capabilities. Extensions are **libraries of components** configured in `content/model/extensions.json` and **loaded at runtime**. Each component kind exposes **separate integration contracts per consumer subsystem** (editor, html, server) defined in [`tome-interfaces`](../packages/tome-interfaces/) — not in this doc.
 
-v1 implements **page-block** (custom in-body blocks) and **searcher** (node search backends).
+v1 implements **page-block** (custom in-body blocks), **searcher** (node search backends), and **authentication-provider** (SSO / IdP strategies; see [multi-user.md](./multi-user.md)).
 
 ## When to read this
 
@@ -13,14 +13,14 @@ v1 implements **page-block** (custom in-body blocks) and **searcher** (node sear
 - Runtime loading, manifest API, subsystem module paths
 - Page blocks in editor or static export
 
-For contract details: [page-blocks.md](../extensions/page-blocks.md) and package [`tome-interfaces/AGENTS.md`](../packages/tome-interfaces/AGENTS.md).
+For contract details: [page-blocks.md](../extensions/page-blocks.md), [searchers.md](../extensions/searchers.md), [authentication-providers.md](../extensions/authentication-providers.md), and package [`tome-interfaces/AGENTS.md`](../packages/tome-interfaces/AGENTS.md).
 
 ## Requirements
 
 ### Registration
 
 - Extension registration **must** live in `content/model/extensions.json` under the content root.
-- Each enabled extension **must** list subsystem module paths it implements: `editorModule`, `htmlModule`, `serverModule`, `searcherModule` (all optional).
+- Each enabled extension **must** list subsystem module paths it implements: `editorModule`, `htmlModule`, `serverModule`, `searcherModule`, `authenticationModule` (all optional).
 - Components **must** declare `kind`, `implementationId`, and `extensionId`; hosts merge extension-level and component-level `params`.
 - Hosts **must** dynamically import enabled extension modules at runtime (Bun `import()`).
 - Extension packages **must not** depend on `tome-editor`, `tome-db`, or `tome-static-site`; they **must** depend on `tome-interfaces` for contracts.
@@ -30,6 +30,13 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 - Components with `kind: "searcher"` register a `TomeSearch` via `searcherModule` (see [searchers.md](../extensions/searchers.md)).
 - Searcher components bind to `title` / `content` roles via `extensions.json.search` (see [search.md](./search.md)); zero searchers means search is unavailable (`searchAvailable: false`).
 - `slashMenu` is forbidden on searcher components.
+
+### Authentication providers
+
+- Components with `kind: "authentication-provider"` register via `authenticationModule` (see [authentication-providers.md](../extensions/authentication-providers.md)).
+- At most **one** enabled authentication-provider; zero means no SSO routes (anonymous + prototype sessions still work).
+- `slashMenu` / `roles` are forbidden on authentication-provider components.
+- Kind contracts live in the host; IdP protocol stays in the extension (`tome-auth-oidc` is the reference OIDC implementation).
 
 ### Page blocks
 
@@ -55,9 +62,9 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 - Marketplace / remote unsigned extensions
 - Independent front/back configuration rows for a single logical component
 
-### Future: multi-user providers
+### Future: authorization / shell providers
 
-v1 kinds remain **page-block** and **searcher** only. Thin Principal/session identity lives on the web API ([multi-user.md](./multi-user.md) phase 1) without new extension kinds yet. Later phases may add authorization-provider (and OIDC / shell) kinds. Kind contracts belong in the host; IdP and product authz policy stay in extensions.
+**authentication-provider** is shipped (phase 2). Later phases may add **authorization-provider** and shell/admin kinds. Kind contracts belong in the host; product authz policy stays in extensions.
 
 ## Design rationale
 

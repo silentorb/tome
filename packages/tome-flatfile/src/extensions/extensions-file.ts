@@ -1,6 +1,6 @@
 export const EXTENSIONS_FILE_VERSION = 1;
 
-export type ExtensionComponentKind = "page-block" | "searcher";
+export type ExtensionComponentKind = "page-block" | "searcher" | "authentication-provider";
 
 export interface ExtensionSlashMenuConfig {
   group?: string;
@@ -15,6 +15,7 @@ export interface ExtensionEntry {
   htmlModule?: string;
   serverModule?: string;
   searcherModule?: string;
+  authenticationModule?: string;
   params?: Record<string, unknown>;
 }
 
@@ -95,6 +96,11 @@ function parseExtensionEntry(raw: unknown, path: string): ExtensionEntry {
   if (serverModule) entry.serverModule = serverModule;
   const searcherModule = parseOptionalString(obj.searcherModule, `${path}.searcherModule`);
   if (searcherModule) entry.searcherModule = searcherModule;
+  const authenticationModule = parseOptionalString(
+    obj.authenticationModule,
+    `${path}.authenticationModule`,
+  );
+  if (authenticationModule) entry.authenticationModule = authenticationModule;
   const params = parseParams(obj.params, `${path}.params`);
   if (params) entry.params = params;
   return entry;
@@ -102,7 +108,7 @@ function parseExtensionEntry(raw: unknown, path: string): ExtensionEntry {
 
 function parseComponentKind(value: unknown, path: string): ExtensionComponentKind {
   const kind = parseRequiredString(value, path);
-  if (kind !== "page-block" && kind !== "searcher") {
+  if (kind !== "page-block" && kind !== "searcher" && kind !== "authentication-provider") {
     throw new Error(`${path}: unsupported kind "${kind}"`);
   }
   return kind;
@@ -151,9 +157,9 @@ function parseComponentEntry(raw: unknown, path: string): ExtensionComponentEntr
       );
     }
   } else if (obj.slashMenu !== undefined) {
-    throw new Error(`${path}.slashMenu: not allowed for kind "searcher"`);
+    throw new Error(`${path}.slashMenu: not allowed for kind "${entry.kind}"`);
   } else if (obj.roles !== undefined) {
-    throw new Error(`${path}.roles: not allowed for kind "searcher"`);
+    throw new Error(`${path}.roles: not allowed for kind "${entry.kind}"`);
   }
   const params = parseParams(obj.params, `${path}.params`);
   if (params) entry.params = params;

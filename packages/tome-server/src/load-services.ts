@@ -389,6 +389,11 @@ export async function startConfiguredServices(
     getCacheSyncStatus?: () => CacheSyncPublicStatus;
     /** Cache SQLite path — forwarded into HTTP options for profiling DB neighbor derivation. */
     cacheDbPath?: string;
+    sessionStore?: import("tome-service-interfaces").TomeSessionStorePort;
+    getAuthenticationProvider?: () =>
+      | import("tome-service-interfaces").TomeAuthenticationProviderPort
+      | null
+      | undefined;
   },
 ): Promise<StartedServices> {
   if (config.services.length === 0) {
@@ -412,6 +417,8 @@ export async function startConfiguredServices(
       services: graph,
       options,
       getCacheSyncStatus: hostExtras?.getCacheSyncStatus,
+      sessionStore: hostExtras?.sessionStore,
+      getAuthenticationProvider: hostExtras?.getAuthenticationProvider,
     });
     modules.push(service);
     console.log(`[tome-server] started service "${service.id}" from ${entry.module}`);

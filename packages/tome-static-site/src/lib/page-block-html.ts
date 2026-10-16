@@ -71,7 +71,13 @@ async function renderBlockHtml(
   urls: NodeUrlResolver,
 ): Promise<string> {
   const component = resolvePageBlockRole(
-    { extensions: [], components: ctx.components, searchers: [], search: null },
+    {
+      extensions: [],
+      components: ctx.components,
+      searchers: [],
+      search: null,
+      authenticationProvider: null,
+    },
     blockType,
   );
   if (!component) {

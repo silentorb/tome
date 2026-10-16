@@ -112,6 +112,8 @@ export function createTomeHttpService(): TomeServiceModule {
       }
       handler = createApiHandler(host.services, settingsStore, {
         getCacheSyncStatus: host.getCacheSyncStatus,
+        sessionStore: host.sessionStore,
+        getAuthenticationProvider: host.getAuthenticationProvider,
       });
       server = Bun.serve({
         port,

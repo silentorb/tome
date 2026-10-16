@@ -8,6 +8,10 @@ import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-serv
 import type { EditorPageBlockModule } from "tome-interfaces/page-block/editor";
 import type { HtmlPageBlockModule } from "tome-interfaces/page-block/html";
 import type { ServerPageBlockModule } from "tome-interfaces/page-block/server";
+import type {
+  AuthenticationModule,
+  AuthenticationProvider,
+} from "tome-interfaces/authentication";
 import type { SearcherModule, SearchRole, TomeSearch } from "tome-interfaces/search";
 import { SEARCH_ROLES } from "tome-interfaces/search";
 import {
@@ -23,7 +27,12 @@ import {
   type ResolvedSearcherComponent,
 } from "tome-db";
 import { PAGE_BLOCK_CONTENT_TYPE_JSON } from "tome-interfaces/page-block";
-import { EditorPageBlockHostImpl, SearcherHostImpl, ServerPageBlockHostImpl } from "./hosts";
+import {
+  AuthenticationHostImpl,
+  EditorPageBlockHostImpl,
+  SearcherHostImpl,
+  ServerPageBlockHostImpl,
+} from "./hosts";
 import { HtmlPageBlockHostImpl } from "./html-host";
 import {
   prepareEditorBodyWithPageBlocks,
@@ -42,7 +51,15 @@ export interface LoadedExtensionModules {
   htmlModule?: string;
   serverModule?: string;
   searcherModule?: string;
+  authenticationModule?: string;
 }
+
+export type ExtensionAuthenticationHooks = {
+  createSession: (input: {
+    subjectId: string;
+  }) => { id: string; subjectId: string } | Promise<{ id: string; subjectId: string }>;
+  sessionCookieHeader: (sessionId: string, req: Request) => string;
+};
 
 interface CachedEditorBundle {
   js: string;
@@ -93,6 +110,20 @@ async function importSearcherModule(modulePath: string, host: SearcherHostImpl):
   register(host);
 }
 
+async function importAuthenticationModule(
+  modulePath: string,
+  host: AuthenticationHostImpl,
+): Promise<void> {
+  const loaded = (await import(modulePath)) as AuthenticationModule & {
+    default?: AuthenticationModule;
+  };
+  const register = loaded.register ?? loaded.default?.register;
+  if (typeof register !== "function") {
+    throw new Error(`Extension module ${modulePath} must export register(host)`);
+  }
+  register(host);
+}
+
 /** Serialize Bun.build across extensions — concurrent builds are flaky in long-lived server processes. */
 let editorBuildChain: Promise<unknown> = Promise.resolve();
 
@@ -118,10 +149,12 @@ export class ExtensionServerRuntime {
   readonly #getCorpusQueryServices?: () => ExtensionCorpusQueryServices | undefined;
   readonly #getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined;
   readonly #searcherHooks: ExtensionSearcherHostHooks;
+  readonly #authenticationHooks: ExtensionAuthenticationHooks | undefined;
   readonly #editorHost = new EditorPageBlockHostImpl();
   readonly #htmlHost = new HtmlPageBlockHostImpl();
   readonly #serverHost = new ServerPageBlockHostImpl();
   readonly #searcherHost = new SearcherHostImpl();
+  readonly #authenticationHost = new AuthenticationHostImpl();
   readonly #editorBundleCache = new Map<string, CachedEditorBundle>();
   readonly #editorBundleInflight = new Map<string, Promise<string | null>>();
   #manifest: ExtensionsManifest = {
@@ -129,6 +162,7 @@ export class ExtensionServerRuntime {
     components: [],
     searchers: [],
     search: null,
+    authenticationProvider: null,
   };
   #loadedModules: LoadedExtensionModules[] = [];
   #lastConfigMtime = -1;
@@ -138,6 +172,7 @@ export class ExtensionServerRuntime {
     title: null,
     content: null,
   };
+  #openedAuthenticationProvider: AuthenticationProvider | null = null;
 
   constructor(
     contentPath: string,
@@ -147,6 +182,7 @@ export class ExtensionServerRuntime {
     getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined,
     getCorpusQueryServices?: () => ExtensionCorpusQueryServices | undefined,
     searcherHooks?: ExtensionSearcherHostHooks,
+    authenticationHooks?: ExtensionAuthenticationHooks,
   ) {
     this.#contentPath = contentPath;
     this.#getGraphQueryServices = getGraphQueryServices;
@@ -155,6 +191,7 @@ export class ExtensionServerRuntime {
     this.#getGraphMutateServices = getGraphMutateServices;
     this.#getCorpusQueryServices = getCorpusQueryServices;
     this.#searcherHooks = searcherHooks ?? {};
+    this.#authenticationHooks = authenticationHooks;
   }
 
   get editorHost(): EditorPageBlockHostImpl {
@@ -183,6 +220,11 @@ export class ExtensionServerRuntime {
     return this.#searchByRole[role] !== null;
   }
 
+  /** Opened authentication provider, or null when none configured / open failed. */
+  getAuthenticationProvider(): AuthenticationProvider | null {
+    return this.#openedAuthenticationProvider;
+  }
+
   configMtime(): number {
     const path = extensionsFilePath(this.#contentPath);
     if (!existsSync(path)) return 0;
@@ -205,6 +247,8 @@ export class ExtensionServerRuntime {
     this.#htmlHost.clear();
     this.#serverHost.clear();
     this.#searcherHost.clear();
+    this.#authenticationHost.clear();
+    this.#openedAuthenticationProvider = null;
     this.#searchByComponentId = new Map();
     this.#searchByRole = { title: null, content: null };
     this.#editorBundleCache.clear();
@@ -220,6 +264,7 @@ export class ExtensionServerRuntime {
         htmlModule: extension.htmlModule,
         serverModule: extension.serverModule,
         searcherModule: extension.searcherModule,
+        authenticationModule: extension.authenticationModule,
       };
       this.#loadedModules.push(record);
 
@@ -237,6 +282,12 @@ export class ExtensionServerRuntime {
         if (extension.searcherModule) {
           await importSearcherModule(extension.searcherModule, this.#searcherHost);
         }
+        if (extension.authenticationModule) {
+          await importAuthenticationModule(
+            extension.authenticationModule,
+            this.#authenticationHost,
+          );
+        }
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
         loadErrors.push(`${extension.id}: ${message}`);
@@ -245,6 +296,7 @@ export class ExtensionServerRuntime {
     }
 
     await this.#openSearchersByRole();
+    await this.#openAuthenticationProvider();
     for (const [componentId, previous] of previousByComponent) {
       if (previous !== this.#searchByComponentId.get(componentId)) {
         await previous.close?.();
@@ -258,7 +310,9 @@ export class ExtensionServerRuntime {
             this.#editorHost.get(c.implementationId) ||
             this.#htmlHost.get(c.implementationId) ||
             this.#serverHost.get(c.implementationId),
-        ) || SEARCH_ROLES.some((role) => this.#searchByRole[role] !== null);
+        ) ||
+        SEARCH_ROLES.some((role) => this.#searchByRole[role] !== null) ||
+        this.#openedAuthenticationProvider !== null;
       if (!loadedAny) {
         throw new Error(`All extensions failed to load:\n${loadErrors.join("\n")}`);
       }
@@ -321,6 +375,43 @@ export class ExtensionServerRuntime {
       title: this.#searchByComponentId.get(roleMap.title) ?? null,
       content: this.#searchByComponentId.get(roleMap.content) ?? null,
     };
+  }
+
+  async #openAuthenticationProvider(): Promise<void> {
+    const component = this.#manifest.authenticationProvider;
+    if (!component) {
+      this.#openedAuthenticationProvider = null;
+      return;
+    }
+    if (!this.#authenticationHooks) {
+      console.error(
+        `[tome-server] Authentication provider "${component.id}" configured but host session hooks are missing; auth unavailable`,
+      );
+      this.#openedAuthenticationProvider = null;
+      return;
+    }
+    const registration = this.#authenticationHost.get(component.implementationId);
+    if (!registration) {
+      console.error(
+        `[tome-server] Authentication provider "${component.id}" implementation "${component.implementationId}" was not registered; auth unavailable`,
+      );
+      this.#openedAuthenticationProvider = null;
+      return;
+    }
+    try {
+      this.#openedAuthenticationProvider = await registration.open({
+        params: component.params,
+        createSession: this.#authenticationHooks.createSession,
+        sessionCookieHeader: this.#authenticationHooks.sessionCookieHeader,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(
+        `[tome-server] Failed to open authentication provider "${component.id}"; auth unavailable:`,
+        message,
+      );
+      this.#openedAuthenticationProvider = null;
+    }
   }
 
   getPublicManifest(apiBase = "/api"): PublicExtensionsManifest {

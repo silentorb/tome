@@ -128,6 +128,91 @@ describe("extensions.json", () => {
     ).toThrow(/not an enabled searcher/);
   });
 
+  test("single authentication-provider binds on manifest", () => {
+    const file = parseExtensionsFile(
+      JSON.stringify({
+        extensions: [
+          {
+            id: "tome-auth-oidc",
+            enabled: true,
+            authenticationModule: "tome-auth-oidc/authentication",
+          },
+        ],
+        components: [
+          {
+            id: "tome-auth-oidc",
+            extensionId: "tome-auth-oidc",
+            kind: "authentication-provider",
+            implementationId: "tome-auth-oidc",
+            label: "OIDC",
+            enabled: true,
+            params: { issuer: "https://idp.example" },
+          },
+        ],
+      }),
+    );
+    const manifest = resolveExtensionsManifest(file);
+    expect(manifest.authenticationProvider?.id).toBe("tome-auth-oidc");
+    expect(manifest.authenticationProvider?.params.issuer).toBe("https://idp.example");
+    expect(manifest.authenticationProvider?.extension.authenticationModule).toBe(
+      "tome-auth-oidc/authentication",
+    );
+  });
+
+  test("multiple authentication-providers are rejected", () => {
+    expect(() =>
+      resolveExtensionsManifest(
+        parseExtensionsFile(
+          JSON.stringify({
+            extensions: [
+              { id: "a", enabled: true, authenticationModule: "a/auth" },
+              { id: "b", enabled: true, authenticationModule: "b/auth" },
+            ],
+            components: [
+              {
+                id: "a",
+                extensionId: "a",
+                kind: "authentication-provider",
+                implementationId: "a",
+                label: "A",
+                enabled: true,
+              },
+              {
+                id: "b",
+                extensionId: "b",
+                kind: "authentication-provider",
+                implementationId: "b",
+                label: "B",
+                enabled: true,
+              },
+            ],
+          }),
+        ),
+      ),
+    ).toThrow(/at most one authentication-provider/);
+  });
+
+  test("slashMenu is forbidden on authentication-provider", () => {
+    expect(() =>
+      parseExtensionsFile(
+        JSON.stringify({
+          extensions: [{ id: "a", enabled: true }],
+          components: [
+            {
+              id: "a",
+              extensionId: "a",
+              kind: "authentication-provider",
+              implementationId: "a",
+              label: "A",
+              enabled: true,
+              slashMenu: { group: "x" },
+            },
+          ],
+        }),
+      ),
+    ).toThrow(/slashMenu: not allowed/);
+  });
+
   test("page-block roles default to [id] and resolvePageBlockRole picks first match", () => {
     const file = parseExtensionsFile(
       JSON.stringify({

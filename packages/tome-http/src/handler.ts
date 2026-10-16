@@ -19,33 +19,29 @@ import type { UserSettingsPatch } from "./user-settings";
 import { UserSettingsStore } from "./user-settings-store";
 import { tableRowsQueryFromSearchParams } from "./table-rows-query";
 import { executeProfilingImp } from "./profiling-imp";
+import type { AuthenticationProvider } from "tome-interfaces/authentication";
 import type { Principal } from "./identity";
 import {
   extractSessionIdFromRequest,
   getRequestPrincipal,
   runWithRequestPrincipalAsync,
 } from "./request-principal";
+import {
+  clearSessionCookieHeader,
+  sessionCookieHeader,
+} from "./session-cookie";
 import { InMemorySessionStore, type SessionStore } from "./session-store";
 
-function json(data: unknown, status = 200): Response {
+function json(
+  data: unknown,
+  status = 200,
+  extraHeaders?: Record<string, string>,
+): Response {
   return new Response(JSON.stringify(data), {
     status,
     headers: {
       "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, PUT, PATCH, POST, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    },
-  });
-}
-
-function corsPreflight(): Response {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, PUT, PATCH, POST, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+      ...extraHeaders,
     },
   });
 }
@@ -87,6 +83,11 @@ export type CreateApiHandlerOptions = {
    * Pass a custom store later (e.g. user SQL); omit only if tests need a fresh store instance.
    */
   sessionStore?: SessionStore;
+  /**
+   * Opened authentication provider (OIDC, etc.). When absent, `/api/auth/*` returns 404.
+   * Prefer a getter so extension reload can swap the provider without recreating the handler.
+   */
+  getAuthenticationProvider?: () => AuthenticationProvider | null | undefined;
 };
 
 function cacheSyncingPayload(status: CacheSyncPublicStatus) {
@@ -146,17 +147,25 @@ export function createApiHandler(
   const settingsStore = userSettingsStore;
   const getCacheSyncStatus = options?.getCacheSyncStatus;
   const sessionStore = options?.sessionStore ?? new InMemorySessionStore();
+  const getAuthenticationProvider = options?.getAuthenticationProvider;
 
   const fetchHandler = async (req: Request): Promise<Response> => {
-    if (req.method === "OPTIONS") return corsPreflight();
-
     const url = new URL(req.url);
     const path = url.pathname;
     const principal = await resolvePrincipalFromRequest(req, sessionStore);
 
     if (!isProfilingEnabled()) {
       return runWithRequestPrincipalAsync(principal, () =>
-        dispatchApiRequest(req, url, path, db, settingsStore, getCacheSyncStatus, sessionStore),
+        dispatchApiRequest(
+          req,
+          url,
+          path,
+          db,
+          settingsStore,
+          getCacheSyncStatus,
+          sessionStore,
+          getAuthenticationProvider,
+        ),
       );
     }
 
@@ -180,6 +189,7 @@ export function createApiHandler(
               settingsStore,
               getCacheSyncStatus,
               sessionStore,
+              getAuthenticationProvider,
             ),
           );
           // Mutable attrs bag — status is set before the span's finally records.
@@ -207,6 +217,7 @@ async function dispatchApiRequest(
   settingsStore: UserSettingsStore,
   getCacheSyncStatus: CreateApiHandlerOptions["getCacheSyncStatus"],
   sessionStore: SessionStore,
+  getAuthenticationProvider: CreateApiHandlerOptions["getAuthenticationProvider"],
 ): Promise<Response> {
       const syncStatus = getCacheSyncStatus?.();
 
@@ -216,6 +227,22 @@ async function dispatchApiRequest(
 
       if (path === "/api/me" && req.method === "GET") {
         return json({ principal: getRequestPrincipal() });
+      }
+
+      if (path === "/api/auth/login" && req.method === "GET") {
+        const provider = getAuthenticationProvider?.() ?? null;
+        if (!provider) {
+          return json({ error: "authentication_not_configured" }, 404);
+        }
+        return provider.beginLogin(req);
+      }
+
+      if (path === "/api/auth/callback" && req.method === "GET") {
+        const provider = getAuthenticationProvider?.() ?? null;
+        if (!provider) {
+          return json({ error: "authentication_not_configured" }, 404);
+        }
+        return provider.handleCallback(req);
       }
 
       if (path === "/api/sessions" && req.method === "POST") {
@@ -234,7 +261,9 @@ async function dispatchApiRequest(
         }
         try {
           const session = await sessionStore.create({ subjectId: subjectId.trim() });
-          return json({ session }, 201);
+          return json({ session }, 201, {
+            "Set-Cookie": sessionCookieHeader(session.id, req),
+          });
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
           return json({ error: message }, 400);
@@ -251,7 +280,9 @@ async function dispatchApiRequest(
           return json({ error: "session not found" }, 404);
         }
         await sessionStore.delete(sessionId);
-        return json({ ok: true });
+        return json({ ok: true }, 200, {
+          "Set-Cookie": clearSessionCookieHeader(),
+        });
       }
 
       if (path === "/api/debug/profiling" && req.method === "GET") {
@@ -315,7 +346,6 @@ async function dispatchApiRequest(
           headers: {
             "Content-Type": result.contentType,
             "Cache-Control": "no-store",
-            "Access-Control-Allow-Origin": "*",
           },
         });
       }
@@ -990,7 +1020,6 @@ async function dispatchApiRequest(
             // ESM dynamic import() is picky about JS MIME in some browsers.
             "Content-Type": "text/javascript; charset=utf-8",
             "Cache-Control": "no-store",
-            "Access-Control-Allow-Origin": "*",
           },
         });
       }

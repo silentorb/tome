@@ -9,6 +9,12 @@ export {
   runWithRequestPrincipalAsync,
 } from "./request-principal";
 export {
+  SESSION_COOKIE_NAME,
+  sessionCookieHeader,
+  clearSessionCookieHeader,
+  extractSessionIdFromCookieHeader,
+} from "./session-cookie";
+export {
   InMemorySessionStore,
   type SessionStore,
   type SessionCreateInput,

@@ -44,6 +44,9 @@ describe("web API identity sessions", () => {
         }),
       );
       expect(createRes.status).toBe(201);
+      const setCookie = createRes.headers.get("Set-Cookie") ?? "";
+      expect(setCookie).toContain("tome_session=");
+      expect(setCookie).toContain("HttpOnly");
       const created = (await createRes.json()) as {
         session: { id: string; subjectId: string };
       };
@@ -80,6 +83,7 @@ describe("web API identity sessions", () => {
         }),
       );
       expect(deleteRes.status).toBe(200);
+      expect(deleteRes.headers.get("Set-Cookie") ?? "").toContain("Max-Age=0");
 
       const afterMe = await handler(
         new Request("http://localhost/api/me", {
@@ -150,6 +154,41 @@ describe("web API identity sessions", () => {
         }),
       );
       expect(res.status).toBe(400);
+      await handler.close();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("cookie credential resolves principal; /api/auth/* 404 without provider", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tome-http-identity-cookie-"));
+    try {
+      const store = new InMemorySessionStore();
+      const session = store.create({ subjectId: "cookie-user" });
+      const handler = createApiHandler(
+        mockGraphServices(),
+        new UserSettingsStore(join(dir, "settings.json")),
+        { sessionStore: store },
+      );
+
+      const meRes = await handler(
+        new Request("http://localhost/api/me", {
+          headers: { Cookie: `tome_session=${session.id}` },
+        }),
+      );
+      expect(await meRes.json()).toEqual({
+        principal: { subjectId: "cookie-user" },
+      });
+
+      const loginRes = await handler(new Request("http://localhost/api/auth/login"));
+      expect(loginRes.status).toBe(404);
+      expect(await loginRes.json()).toEqual({ error: "authentication_not_configured" });
+
+      const optionsRes = await handler(
+        new Request("http://localhost/api/me", { method: "OPTIONS" }),
+      );
+      expect(optionsRes.headers.get("Access-Control-Allow-Origin")).toBeNull();
+
       await handler.close();
     } finally {
       rmSync(dir, { recursive: true, force: true });

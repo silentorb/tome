@@ -156,6 +156,8 @@ Prefer citing **this doc + phase id** when starting work. Update this table when
 
 **Phase 1 progress:** web API owns `Principal` / `Session`, in-memory `SessionStore`, `POST/DELETE /api/sessions`, `GET /api/me`, request-scoped principal via `Authorization: Session <id>`; graph routes remain ungated by authorize.
 
+**Phase 2 progress:** `authentication-provider` extension kind + host routes `GET /api/auth/login` / `GET /api/auth/callback`; same-site session cookie `tome_session` (plus `Authorization: Session`); reference package `tome-auth-oidc` (auth-code + PKCE); API has **no CORS**. Editor sign-in UI remains phase 4; Account/user SQL remains later.
+
 Largest surfaces: authorization (3), Postgres graph (7), and auth UI / account / profile (4–6) — not core ACL matrices.
 
 ## Inputs / outputs / artifacts
@@ -175,16 +177,14 @@ Largest surfaces: authorization (3), Postgres graph (7), and auth UI / account /
 
 ## Configuration
 
-Conceptual (exact keys land as phases need them):
-
-- Phase 1 web API sessions use an **in-memory** store by default (no config). Credential: `Authorization: Session <sessionId>`. Prototype create body may pass `subjectId` until Account exists.
+- Phase 1 web API sessions use an **in-memory** store by default (no config). Credentials: `Authorization: Session <sessionId>` **or** same-site cookie `tome_session` (header wins). Prototype create body may pass `subjectId` until Account exists; create/delete also set/clear the cookie.
+- **Same-site only:** browser clients call the API via the UI origin `/api` proxy (Vite in `editor:dev`). The application API does **not** speak CORS. OIDC `redirectUri` must be the UI-origin callback (e.g. `http://127.0.0.1:5173/api/auth/callback`). Do not point `VITE_TOME_API_URL` at the API port for cookie SSO.
+- OIDC via `extensions.json` `kind: "authentication-provider"` + `authenticationModule` (at most one enabled). Reference params for `tome-auth-oidc`: `issuer`, `clientId`, `clientSecret` or `clientSecretEnv`, `redirectUri`, optional `scopes` (default `openid`), `subjectClaim` (default `sub`), `postLoginRedirect` (default `/`). See [authentication-providers.md](../extensions/authentication-providers.md).
 - Optional **user store** path (SQLite) or DSN/schema (Postgres) — durable sessions / Account when configured (still under authentication / account phases).
 - Distinct **corpus** path/DSN (already exists for content/cache; Postgres corpus later).
-- Authz / OIDC **extensions** registered like other extensions when those phases land.
+- Authz extensions when phase 3 lands.
 
 No core multi-user / operating-mode enable flag. Surface/dev or test helpers may still expose labeled presets; they are not package APIs.
-
-Do not hard-code invented key names in dependents until a phase defines them.
 
 ## Verification
 
@@ -194,18 +194,20 @@ Phase 0 is documentation only. Phase 1+: full verify for affected repos + depend
 
 | Area | Role |
 | --- | --- |
-| `tome-http` identity | `Principal` / `Session`, in-memory `SessionStore`, request scope, `/api/sessions`, `/api/me` (phase 1) |
+| `tome-http` identity | `Principal` / `Session`, in-memory `SessionStore`, request scope, `/api/sessions`, `/api/me`, cookie + `/api/auth/*` (phases 1–2) |
 | `tome-http` authorize | LCD `authorize` around dispatch (phase 3+) |
-| Extension registry/host | Authz / OIDC / admin/shell kinds as needed (phases 2–5) |
-| `tome-server` | Optional user-store open + auth wiring when configured (not a mode switch) |
-| `tome-service-interfaces` | Optional principal / authorize ports |
-| `tome-editor` | Shell mount points for sign-in / account / profile (phases 4–6) |
+| Extension registry/host | `authentication-provider` (phase 2); authz / admin/shell kinds as needed (phases 3–5) |
+| `tome-auth-oidc` | Reference OIDC auth-code + PKCE provider |
+| `tome-server` | Opens authentication provider + shared session store for HTTP |
+| `tome-service-interfaces` | Optional session / authentication ports on `TomeServiceHost` |
+| `tome-editor` | Shell mount points for sign-in / account / profile (phases 4–6); `/api` proxy for same-site |
 | User SQL open/migrate | Separate user file/schema when configured; extensions never alter corpus DDL |
 | Corpus SQL (`tome-sqlite` / future postgres) | Graph only (Postgres phase 7) |
 
 ## See also
 
-- [extensions.md](./extensions.md) — current kinds; multi-user kinds planned
+- [extensions.md](./extensions.md) — kinds including authentication-provider
+- [authentication-providers.md](../extensions/authentication-providers.md) — authn kind guide
 - [tome-db.md](./tome-db.md) — corpus flatfile + SQLite cache
 - [graph-store.md](./graph-store.md) — graph store API (corpus)
 - [tome-server.md](./tome-server.md) — config-driven host

@@ -101,8 +101,13 @@ function buildGraphServices(
   options?: {
     startWatching?: boolean;
     searchBackends?: Map<string, unknown>;
+    authenticationHooks?: import("./extensions/runtime").ExtensionAuthenticationHooks;
   },
-): { services: TomeGraphServices; extensionsReady: Promise<void> } {
+): {
+  services: TomeGraphServices;
+  extensionsReady: Promise<void>;
+  getAuthenticationProvider: () => import("tome-interfaces/authentication").AuthenticationProvider | null;
+} {
   if (options?.startWatching !== false) {
     writeCtx.graphStore.startWatching();
   }
@@ -121,6 +126,7 @@ function buildGraphServices(
       getQueryCache: () => writeCtx.cache,
       getSearcherBackend: (dataStoreId: string) => searchBackends.get(dataStoreId),
     },
+    options?.authenticationHooks,
   );
 
   const syncSearchIntoGraphStore = () => {
@@ -591,6 +597,7 @@ function buildGraphServices(
   return {
     services,
     extensionsReady: extensionsReady.then(() => undefined),
+    getAuthenticationProvider: () => extensions.getAuthenticationProvider(),
   };
 }
 
@@ -618,6 +625,7 @@ export type DeferredTomeGraphServices = {
   startWatching: () => void;
   /** Resolves when extension modules (including searcher) have loaded. */
   extensionsReady: Promise<void>;
+  getAuthenticationProvider: () => import("tome-interfaces/authentication").AuthenticationProvider | null;
 };
 
 /**
@@ -636,6 +644,7 @@ export async function openTomeGraphServicesDeferred(
     skipStoreSyncSubscribe?: boolean;
     /** dataStore id → TomeSearch (or FTS handle) for searcher extensions. */
     searchBackends?: Map<string, unknown>;
+    authenticationHooks?: import("./extensions/runtime").ExtensionAuthenticationHooks;
   },
 ): Promise<DeferredTomeGraphServices> {
   const writeCtx =
@@ -647,12 +656,14 @@ export async function openTomeGraphServicesDeferred(
   const built = buildGraphServices(writeCtx, args.store.contentDir, {
     startWatching: false,
     searchBackends: options?.searchBackends,
+    authenticationHooks: options?.authenticationHooks,
   });
   return {
     services: built.services,
     writeCtx,
     startWatching: () => writeCtx.graphStore.startWatching(),
     extensionsReady: built.extensionsReady,
+    getAuthenticationProvider: built.getAuthenticationProvider,
   };
 }
 

@@ -23,7 +23,10 @@ function resolveFromComponents(
   components: ResolvedExtensionComponent[],
   role: string,
 ): ResolvedExtensionComponent | undefined {
-  return resolvePageBlockRole({ extensions: [], components, searchers: [], search: null }, role);
+  return resolvePageBlockRole(
+    { extensions: [], components, searchers: [], search: null, authenticationProvider: null },
+    role,
+  );
 }
 
 async function renderBlockHtml(

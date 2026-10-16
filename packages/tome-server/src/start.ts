@@ -5,6 +5,7 @@ import {
   createConsoleSyncProgressReporter,
 } from "tome-db/content";
 import { openDataStoreSession } from "tome-db/sync";
+import { InMemorySessionStore, sessionCookieHeader } from "tome-http";
 import { openTomeGraphServicesDeferred } from "./graph-services";
 import {
   loadServerConfig,
@@ -101,6 +102,8 @@ export async function startTomeServer(options?: {
     }
   }
 
+  const sessionStore = new InMemorySessionStore();
+
   const deferred = await openTomeGraphServicesDeferred(
     { store: session.writeContext.store, cache: session.writeContext.cache },
     {
@@ -108,12 +111,18 @@ export async function startTomeServer(options?: {
       writeContext: session.writeContext,
       skipStoreSyncSubscribe: true,
       searchBackends,
+      authenticationHooks: {
+        createSession: (input) => sessionStore.create(input),
+        sessionCookieHeader,
+      },
     },
   );
 
   const started = await startConfiguredServices(deferred.services, rawConfig, {
     getCacheSyncStatus: () => syncStatus.getStatus(),
     cacheDbPath: dbPath,
+    sessionStore,
+    getAuthenticationProvider: () => deferred.getAuthenticationProvider(),
   });
 
   const graphStartedAt = performance.now();

@@ -16,12 +16,14 @@ export { invalidateExtensionsCache, loadExtensionsFromContent } from "./load";
 export {
   findComponentById,
   findSearcherById,
+  resolveAuthenticationProvider,
   resolveExtensionsManifest,
   resolvePageBlockRole,
   resolveSearchRoleMap,
 } from "./manifest";
 export type {
   ExtensionsManifest,
+  ResolvedAuthenticationProviderComponent,
   ResolvedExtensionComponent,
   ResolvedSearcherComponent,
 } from "./manifest";

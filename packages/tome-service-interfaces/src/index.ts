@@ -28,6 +28,19 @@ export type CacheSyncPublicStatus = {
   message?: string;
 };
 
+/** LCD session store port for HTTP identity (implemented by tome-http). */
+export type TomeSessionStorePort = {
+  create(input: { subjectId: string }): { id: string; subjectId: string } | Promise<{ id: string; subjectId: string }>;
+  get(id: string): { id: string; subjectId: string } | null | Promise<{ id: string; subjectId: string } | null>;
+  delete(id: string): void | Promise<void>;
+};
+
+/** Opened authentication provider (OIDC, etc.) — beginLogin / handleCallback. */
+export type TomeAuthenticationProviderPort = {
+  beginLogin(req: Request): Response | Promise<Response>;
+  handleCallback(req: Request): Response | Promise<Response>;
+};
+
 /**
  * Host context passed into a service module when the server starts it.
  * `services` is the domain facade (`TomeGraphServices`), not a service module.
@@ -37,6 +50,10 @@ export interface TomeServiceHost {
   options: TomeServiceModuleOptions;
   /** Present while startup cache sync may still be running. */
   getCacheSyncStatus?: () => CacheSyncPublicStatus;
+  /** Shared session store for HTTP identity + authentication providers. */
+  sessionStore?: TomeSessionStorePort;
+  /** Opened authentication provider when an authentication-provider extension is loaded. */
+  getAuthenticationProvider?: () => TomeAuthenticationProviderPort | null | undefined;
 }
 
 /**
