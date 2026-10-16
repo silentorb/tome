@@ -38,6 +38,7 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Relative event sequencing (timeline) | [tome-sequencing.md](./tome-sequencing.md) |
 | Sequencing constraint resolution | [tome-sequencing-resolution.md](./tome-sequencing-resolution.md) |
 | Multi-corpus editor sessions | [multi-corpus.md](./multi-corpus.md) |
+| Multi-user (use cases, identity, LCD authz charter) | [multi-user.md](./multi-user.md) |
 | Graph store API (Base / Queryable, executeImp) | [graph-store.md](./graph-store.md) |
 | Imp sync wiring + dataStores registry | [tome-sync.md](./tome-sync.md) |
 | Node search (searcher extensions + FTS) | [search.md](./search.md) |

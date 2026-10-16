@@ -55,6 +55,10 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 - Marketplace / remote unsigned extensions
 - Independent front/back configuration rows for a single logical component
 
+### Future: multi-user providers
+
+v1 kinds remain **page-block** and **searcher** only. Opt-in multi-user will require new extension kinds / host seams (at least authentication provider and authorization provider; possibly admin or shell slots). Kind contracts belong in the host; IdP and product authz policy stay in extensions. Charter: [multi-user.md](./multi-user.md).
+
 ## Design rationale
 
 ### `tome-interfaces` vs extension system
@@ -161,3 +165,4 @@ bun test packages/tome-static-site/tests/extensions
 - [tome-editor.md](./tome-editor.md)
 - [web-api-design.md](./web-api-design.md)
 - [static-website.md](./static-website.md)
+- [multi-user.md](./multi-user.md) — planned auth / authz provider kinds
