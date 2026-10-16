@@ -8,7 +8,7 @@ Define who can read or change which corpora, nodes, and operations once multi-us
 
 ## Notes
 
-Charter: [multi-user.md](../docs/features/multi-user.md). **Phase 2** — skeletal LCD `authorize(principal, action, resource)` in core (allow/no-op when no authz provider / null principal). **Phase 9+** — specialized policies as authorization **extensions** (multiple strategies welcome). No core multi-user mode switch. Existing corpus `readonly` / `protectedNodeIds` should fold under or sit beside the LCD interface over time.
+Charter: [multi-user.md](../docs/features/multi-user.md). **Phase 3 — Authorization** (large; may span multiple sessions): skeletal LCD `authorize(principal, action, resource)` in core (allow/no-op when no authz provider / null principal), then specialized policies as authorization **extensions**. Depends on phase 1 authentication (Principal). No core multi-user mode switch. Existing corpus `readonly` / `protectedNodeIds` should fold under or sit beside the LCD interface over time.
 
 ## See also
 

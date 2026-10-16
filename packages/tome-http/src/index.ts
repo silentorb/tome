@@ -1,6 +1,18 @@
 export { createApiHandler, type ApiFetchHandler, type CreateApiHandlerOptions } from "./handler";
 export { createTomeHttpService, type TomeHttpServiceOptions } from "./service";
 export { UserSettingsStore } from "./user-settings-store";
+export type { Principal, Session } from "./identity";
+export {
+  getRequestPrincipal,
+  extractSessionIdFromRequest,
+  runWithRequestPrincipal,
+  runWithRequestPrincipalAsync,
+} from "./request-principal";
+export {
+  InMemorySessionStore,
+  type SessionStore,
+  type SessionCreateInput,
+} from "./session-store";
 export type * from "./client-types";
 export {
   createHttpClient,

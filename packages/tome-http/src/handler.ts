@@ -19,6 +19,13 @@ import type { UserSettingsPatch } from "./user-settings";
 import { UserSettingsStore } from "./user-settings-store";
 import { tableRowsQueryFromSearchParams } from "./table-rows-query";
 import { executeProfilingImp } from "./profiling-imp";
+import type { Principal } from "./identity";
+import {
+  extractSessionIdFromRequest,
+  getRequestPrincipal,
+  runWithRequestPrincipalAsync,
+} from "./request-principal";
+import { InMemorySessionStore, type SessionStore } from "./session-store";
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -27,7 +34,7 @@ function json(data: unknown, status = 200): Response {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, PUT, PATCH, POST, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
 }
@@ -38,7 +45,7 @@ function corsPreflight(): Response {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, PUT, PATCH, POST, DELETE, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
 }
@@ -75,6 +82,11 @@ export type ApiFetchHandler = ((req: Request) => Promise<Response>) & {
 
 export type CreateApiHandlerOptions = {
   getCacheSyncStatus?: () => CacheSyncPublicStatus;
+  /**
+   * Session persistence for request identity. Defaults to an in-memory store.
+   * Pass a custom store later (e.g. user SQL); omit only if tests need a fresh store instance.
+   */
+  sessionStore?: SessionStore;
 };
 
 function cacheSyncingPayload(status: CacheSyncPublicStatus) {
@@ -89,20 +101,40 @@ function cacheSyncingPayload(status: CacheSyncPublicStatus) {
   };
 }
 
-function healthPayload(status: CacheSyncPublicStatus | undefined) {
+function healthPayload(
+  status: CacheSyncPublicStatus | undefined,
+  principal: Principal | null,
+) {
   if (!status) {
-    return { ok: true as const, ready: true as const, syncing: false as const };
+    return {
+      ok: true as const,
+      ready: true as const,
+      syncing: false as const,
+      principal,
+    };
   }
   return {
     ok: true as const,
     ready: status.ready,
     syncing: status.syncing,
+    principal,
     ...(status.phase != null ? { phase: status.phase } : {}),
     ...(status.progress != null ? { progress: status.progress } : {}),
     ...(status.current != null ? { current: status.current } : {}),
     ...(status.total != null ? { total: status.total } : {}),
     ...(status.message != null ? { message: status.message } : {}),
   };
+}
+
+async function resolvePrincipalFromRequest(
+  req: Request,
+  sessionStore: SessionStore,
+): Promise<Principal | null> {
+  const sessionId = extractSessionIdFromRequest(req);
+  if (!sessionId) return null;
+  const session = await sessionStore.get(sessionId);
+  if (!session) return null;
+  return { subjectId: session.subjectId };
 }
 
 /** Build the HTTP fetch handler against graph services (no DB/path opening). */
@@ -113,14 +145,19 @@ export function createApiHandler(
 ): ApiFetchHandler {
   const settingsStore = userSettingsStore;
   const getCacheSyncStatus = options?.getCacheSyncStatus;
+  const sessionStore = options?.sessionStore ?? new InMemorySessionStore();
 
   const fetchHandler = async (req: Request): Promise<Response> => {
     if (req.method === "OPTIONS") return corsPreflight();
 
     const url = new URL(req.url);
     const path = url.pathname;
+    const principal = await resolvePrincipalFromRequest(req, sessionStore);
+
     if (!isProfilingEnabled()) {
-      return dispatchApiRequest(req, url, path, db, settingsStore, getCacheSyncStatus);
+      return runWithRequestPrincipalAsync(principal, () =>
+        dispatchApiRequest(req, url, path, db, settingsStore, getCacheSyncStatus, sessionStore),
+      );
     }
 
     return runInProfilingTraceAsync(async () => {
@@ -134,13 +171,16 @@ export function createApiHandler(
       const spanName = `${req.method} ${path}`;
       return withProfilingSpanAsync(spanName, "SERVER", httpAttrs, async () => {
         try {
-          const response = await dispatchApiRequest(
-            req,
-            url,
-            path,
-            db,
-            settingsStore,
-            getCacheSyncStatus,
+          const response = await runWithRequestPrincipalAsync(principal, () =>
+            dispatchApiRequest(
+              req,
+              url,
+              path,
+              db,
+              settingsStore,
+              getCacheSyncStatus,
+              sessionStore,
+            ),
           );
           // Mutable attrs bag — status is set before the span's finally records.
           httpAttrs["http.status_code"] = response.status;
@@ -166,11 +206,52 @@ async function dispatchApiRequest(
   db: TomeGraphServices,
   settingsStore: UserSettingsStore,
   getCacheSyncStatus: CreateApiHandlerOptions["getCacheSyncStatus"],
+  sessionStore: SessionStore,
 ): Promise<Response> {
       const syncStatus = getCacheSyncStatus?.();
 
       if (path === "/api/health") {
-        return json(healthPayload(syncStatus));
+        return json(healthPayload(syncStatus, getRequestPrincipal()));
+      }
+
+      if (path === "/api/me" && req.method === "GET") {
+        return json({ principal: getRequestPrincipal() });
+      }
+
+      if (path === "/api/sessions" && req.method === "POST") {
+        let body: unknown;
+        try {
+          body = await req.json();
+        } catch {
+          return json({ error: "invalid JSON body" }, 400);
+        }
+        if (!body || typeof body !== "object" || Array.isArray(body)) {
+          return json({ error: "body must be an object" }, 400);
+        }
+        const subjectId = (body as { subjectId?: unknown }).subjectId;
+        if (typeof subjectId !== "string" || !subjectId.trim()) {
+          return json({ error: "subjectId must be a non-empty string" }, 400);
+        }
+        try {
+          const session = await sessionStore.create({ subjectId: subjectId.trim() });
+          return json({ session }, 201);
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          return json({ error: message }, 400);
+        }
+      }
+
+      if (path === "/api/sessions" && req.method === "DELETE") {
+        const sessionId = extractSessionIdFromRequest(req);
+        if (!sessionId) {
+          return json({ error: "missing Session authorization" }, 401);
+        }
+        const existing = await sessionStore.get(sessionId);
+        if (!existing) {
+          return json({ error: "session not found" }, 404);
+        }
+        await sessionStore.delete(sessionId);
+        return json({ ok: true });
       }
 
       if (path === "/api/debug/profiling" && req.method === "GET") {

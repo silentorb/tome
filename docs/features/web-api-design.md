@@ -25,6 +25,7 @@ Read this when adding or changing HTTP routes, graph-service methods exposed ove
   - This is **not** an editor chrome contract — responses are unassembled Imp results. Editor search/recent stay REST use cases that may call `executeImp` server-side. See [graph-store.md](./graph-store.md).
 - **Other POST-body endpoints** (including command-router RPCs such as `POST /api/extensions/:id/invoke`) **may** exist when useful. The hard rule is only that Imp collection queries are never URL-driven REST and never stuffed into a generic command multiplexer.
 - **Corpus naming on the public wire:** use an `Id` suffix only when a context can hold both a corpus **object** and a corpus **id** (e.g. editor `activeCorpus` beside `activeCorpusId`). Otherwise URL/JSON/service params use `corpus` / `activeCorpus`. Imp/SQL reads the unified session cache and do **not** require a corpus param.
+- **Thin identity / sessions (multi-user phase 1):** the application API carries optional request identity — `Principal | null` in request scope. Use cases: `POST /api/sessions` (create; prototype `{ subjectId }`), `DELETE /api/sessions` (sign-out current), `GET /api/me` (observe principal). Credential: `Authorization: Session <sessionId>`. Anonymous when missing/unknown. Graph routes must remain usable without a session; **do not** add authorize gates here until the authorization phase. See [multi-user.md](./multi-user.md).
 
 ## Design rationale
 
@@ -65,6 +66,7 @@ Save (`PATCH` with the same document) encodes back to Extended Markdown on the s
 | Area | Path |
 | --- | --- |
 | HTTP routes | `packages/tome-http/src/handler.ts` |
+| Identity / sessions | `packages/tome-http/src/identity.ts`, `session-store.ts`, `request-principal.ts` |
 | Graph services | `packages/tome-server/src/graph-services.ts` |
 | Editor client | `packages/tome-editor/src/webview/` |
 | Node page DTO | `packages/tome-graph-interfaces/src/node-page-sections.ts` |
@@ -76,3 +78,4 @@ Save (`PATCH` with the same document) encodes back to Extended Markdown on the s
 - [extensions.md](./extensions.md) — page-block prepare (insert/preview use case)
 - [graph-store.md](./graph-store.md) — `executeImp` domain API and `POST /api/nodes/query`
 - [multi-corpus.md](./multi-corpus.md) — corpus wire naming
+- [multi-user.md](./multi-user.md) — identity / sessions / authorization phases

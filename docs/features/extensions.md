@@ -57,7 +57,7 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md) and package
 
 ### Future: multi-user providers
 
-v1 kinds remain **page-block** and **searcher** only. Opt-in multi-user will require new extension kinds / host seams (at least authentication provider and authorization provider; possibly admin or shell slots). Kind contracts belong in the host; IdP and product authz policy stay in extensions. Charter: [multi-user.md](./multi-user.md).
+v1 kinds remain **page-block** and **searcher** only. Thin Principal/session identity lives on the web API ([multi-user.md](./multi-user.md) phase 1) without new extension kinds yet. Later phases may add authorization-provider (and OIDC / shell) kinds. Kind contracts belong in the host; IdP and product authz policy stay in extensions.
 
 ## Design rationale
 

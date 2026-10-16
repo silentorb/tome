@@ -8,7 +8,7 @@ Allow users to sign in via single sign-on (e.g. OIDC) rather than Tome-only cred
 
 ## Notes
 
-Charter: [multi-user.md](../docs/features/multi-user.md). **Phase 5** — SSO as an **authentication extension** capability (not IdP logic in `tome-http`). Depends on auth extension seams and Account store (**phases 1–4**). Provider choice is deferred to implementation.
+Charter: [multi-user.md](../docs/features/multi-user.md). **Phase 2 — SSO (OIDC)** on top of the general authentication layer (phase 1 sessions / Principal). Prefer extension-owned IdP flows rather than baking OIDC into `tome-http`. Provider choice is deferred to implementation.
 
 ## See also
 

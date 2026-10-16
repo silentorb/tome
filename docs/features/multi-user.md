@@ -2,7 +2,7 @@
 
 ## Summary
 
-Tome’s default is a **local single-operator** product (auth-free). **Multi-user** is an opt-in program for shared identity, authorization, and (for remote) SQL-authoritative design data. Core stays lean: a **lowest-common-denominator (LCD) authorization interface** and host seams; **authentication and specialized authorization live in extensions**. Design/corpus SQL and user/identity SQL are **separate stores** (two SQLite files locally; separate Postgres schemas remotely).
+Tome’s default is a **local single-operator** product (auth-free). **Multi-user** is an opt-in program for shared identity, authorization, and (for remote) SQL-authoritative design data. Core stays lean: a **thin web-API identity/session layer**, a later **lowest-common-denominator (LCD) authorization interface**, and host seams; **specialized authentication strategies (e.g. OIDC) and authorization policies** prefer extensions. Design/corpus SQL and user/identity SQL are **separate stores** (two SQLite files locally; separate Postgres schemas remotely).
 
 **Use-case labels** such as “local single-operator,” “local multi-user,” and “remote multi-user” are **documentation-only**. They describe common compositions of corpus store + user store + auth extensions. They are **not** first-class product modes: core packages **must not** introduce an explicit mode enum, mode flag, or mode-branched control flow. Behavior follows from what is wired (user store present or absent, auth/authz providers loaded or not, corpus backend). Tests and surface/dev helpers **may** name use cases for clarity.
 
@@ -60,13 +60,13 @@ Keep **design/corpus** and **user/identity** as separate SQL stores (migrations,
 
 | Concern | Where it lives | Core’s job |
 | --- | --- | --- |
-| **Authorization** | Specialized logic in **extensions** (multiple strategies welcome) | LCD only: e.g. `authorize(principal, action, resource) → allow \| deny` (+ minimal resource vocabulary). Few call sites. No authz provider / null principal → allow / no-op. |
-| **Authentication** | Prefer **entirely in extensions** (sessions, OIDC, sign-in/out UI) | Host seams to load auth extension, accept a **Principal**, pass into authz. No IdP logic in core. |
+| **Authorization** | Specialized logic in **extensions** (multiple strategies welcome; large, multi-session) | LCD only: e.g. `authorize(principal, action, resource) → allow \| deny` (+ minimal resource vocabulary). Few call sites. No authz provider / null principal → allow / no-op. |
+| **Authentication** | Thin **Principal + Session** vocabulary and session create/delete on the **web API**; OIDC and rich IdP flows prefer extensions | Resolve `Principal \| null` per request; keep graph usable when anonymous. No IdP protocol logic in core. |
 | **Account** | Persistence + admin lifecycle against the **user store** | Stable subject id for authz; not design-graph nodes. |
 | **Profile** | Optional later | None for current product features. |
 | **User administration** | Admin UI / extension ops over Accounts | Thin account APIs if needed; “who may administer” via authz extension. |
 
-**Extension kinds (future):** today only `page-block` and `searcher` ([extensions.md](./extensions.md)). Multi-user **requires** new kinds / host seams: at least authentication provider and authorization provider; likely admin or shell slots. Kind contracts only in the host — not OIDC or product policy inside the host.
+**Extension kinds (future):** today only `page-block` and `searcher` ([extensions.md](./extensions.md)). Authorization (and likely OIDC/auth UI) will need new kinds / host seams; kind contracts belong in the host — not OIDC or product policy inside the host.
 
 Existing corpus `readonly` / `protectedNodeIds` are resource rules without identity — fold under or sit beside the LCD authz interface over time rather than a second ad-hoc ACL style in core.
 
@@ -75,7 +75,7 @@ Existing corpus `readonly` / `protectedNodeIds` are resource rules without ident
 | Domain | Responsibility | Priority |
 | --- | --- | --- |
 | **Account** | Authz subject, ownership hooks, activity, lifecycle (active/disabled); user admin operates here | **Required** when user identity is in play |
-| **Authentication** | Methods (OIDC, etc.), sessions, sign-out, credentials | **Required** when user identity is in play, extension-owned |
+| **Authentication** | Sessions, sign-in/out, credentials; OIDC as a later strategy | **Required** when user identity is in play (web API owns thin session/Principal; strategies may be extension-owned) |
 | **Profile** | How a user appears to others; metadata | **Nice-to-have** — defer |
 
 Do **not** model login identity as design-graph nodes.
@@ -84,9 +84,9 @@ Do **not** model login identity as design-graph nodes.
 
 Every multi-user implementation plan **must** include a **Non-multi-user package impact** section: which core packages change, why, and how thinly. Prefer “added authz call + extension load” over new policy branches in `tome-db`. Prefer optional seams (null principal, absent user store) over mode switches.
 
-**Expected skeletal core touches (program-level):** extension host (new kinds), `tome-http` (principal + authorize), `tome-server` (optional user-store + auth-extension wiring), optional service-interface ports, thin editor shell slots, user-DB open/migrate helper when a user store is configured, later Postgres corpus + user schemas.
+**Expected skeletal core touches (program-level):** `tome-http` (Principal + sessions, later LCD authorize), extension host (authz / OIDC / shell kinds as needed), `tome-server` (optional user-store + auth wiring), optional service-interface ports, thin editor shell slots, user-DB open/migrate helper when a user store is configured, later Postgres corpus + user schemas.
 
-**Not expected in core:** explicit multi-user / operating-mode enums or flags, OIDC flows, rich ACL matrices, profile product UI, specialized authz policies, user tables inside the corpus SQLite/graph schema.
+**Not expected in core:** explicit multi-user / operating-mode enums or flags, OIDC protocol implementations, rich ACL matrices, profile product UI, specialized authz policies, user tables inside the corpus SQLite/graph schema.
 
 ### Out of scope
 
@@ -128,7 +128,9 @@ Resulting use case (documentation label only)
 ### Identity → authorization (target shape)
 
 ```
-Auth extension → Principal → Core LCD authz interface ← Authz extension (decide)
+Session / auth strategy → Principal (web API request scope)
+                                      ↓
+                         Core LCD authz (phase 3+) ← Authz extension (decide)
                                       ↓
                               allow or deny (tome-http / graph ops)
 ```
@@ -139,21 +141,22 @@ Account records live in the user store; user admin and (later) Profile hang off 
 
 Prefer citing **this doc + phase id** when starting work. Update this table when phases land or reorder.
 
+**Order:** general authentication (including sessions) **before** authorization. Authorization is a large subject and may span multiple implementation sessions.
+
 | Phase | Focus | Depends on |
 | --- | --- | --- |
 | **0 — Architecture charter** | This feature doc | — |
-| **1 — Extension seams** | Auth/authz provider kinds; `Principal \| null`; default stays open without providers | 0 |
-| **2 — LCD authorization interface** | Skeletal core API + allow/no-op without authz provider; few HTTP/write call sites | 1 |
-| **3 — User SQL file + Account store** | Separate user SQLite file when configured; Account persistence; extension migrations in user DB | 1 |
-| **4 — Authentication extension** | Sessions, sign-in/out; emit Principal for authz | 1–3 |
-| **5 — OIDC** | SSO as auth-extension capability | 4 |
-| **6 — Auth UI** | Sign-in via extension/shell slot | 4–5 |
-| **7 — User administration** | Admin list/create/disable (gated by authz extension) | 3, 2, 4 |
-| **8 — Postgres corpus + user schemas** | Remote authoritative corpus; separate user schema (+ account backend) | 0–3 |
-| **9+ — Authz extension implementations** | Real policies (corpus → deeper); multiple strategies allowed | 2–4; remote needs 8 |
-| **Later — Profile** | Profile records + pages | Nice-to-have |
+| **1 — General authentication** | Sign-in, **sessions**, sign-out; `Principal \| null` on the web API; testable without authorize. In-memory sessions OK; durable user-store sessions deepen under this phase or as a follow-on within it. | 0 |
+| **2 — SSO (OIDC)** | Single sign-on via OIDC on top of the authentication layer | 1 |
+| **3 — Authorization** | LCD core `authorize` + provider seams + policies; **spans multiple sessions** | 1 |
+| **4 — User authentication page(s)** | Sign-in / sign-out UI | 1–2 |
+| **5 — User account page(s)** | Account admin / account UI (user SQL / Account store as needed) | 1, 3 |
+| **6 — User profile and profile page(s)** | Profile records + pages | 5 |
+| **7 — PostgreSQL** | Better concurrency; corpus + separate user schemas as needed | 0–1 (remote graph needs corpus schema) |
 
-Largest surfaces: extension-kind design (1), Postgres graph (8), and authz *implementations* (9+) — not core policy code.
+**Phase 1 progress:** web API owns `Principal` / `Session`, in-memory `SessionStore`, `POST/DELETE /api/sessions`, `GET /api/me`, request-scoped principal via `Authorization: Session <id>`; graph routes remain ungated by authorize.
+
+Largest surfaces: authorization (3), Postgres graph (7), and auth UI / account / profile (4–6) — not core ACL matrices.
 
 ## Inputs / outputs / artifacts
 
@@ -172,11 +175,12 @@ Largest surfaces: extension-kind design (1), Postgres graph (8), and authz *impl
 
 ## Configuration
 
-Conceptual (exact keys land in later phases):
+Conceptual (exact keys land as phases need them):
 
-- Optional **user store** path (SQLite) or DSN/schema (Postgres) — presence implies identity persistence is available.
+- Phase 1 web API sessions use an **in-memory** store by default (no config). Credential: `Authorization: Session <sessionId>`. Prototype create body may pass `subjectId` until Account exists.
+- Optional **user store** path (SQLite) or DSN/schema (Postgres) — durable sessions / Account when configured (still under authentication / account phases).
 - Distinct **corpus** path/DSN (already exists for content/cache; Postgres corpus later).
-- Auth/authz **extensions** registered like other extensions when identity is wanted.
+- Authz / OIDC **extensions** registered like other extensions when those phases land.
 
 No core multi-user / operating-mode enable flag. Surface/dev or test helpers may still expose labeled presets; they are not package APIs.
 
@@ -184,21 +188,20 @@ Do not hard-code invented key names in dependents until a phase defines them.
 
 ## Verification
 
-Phase 0 is documentation only. Later phases: full verify for affected repos + dependents per workbench `AGENTS.md` § Plan verification; reason about `.github/workflows/container.yml` when server/Docker/entrypoint changes.
+Phase 0 is documentation only. Phase 1+: full verify for affected repos + dependents per workbench `AGENTS.md` § Plan verification; reason about `.github/workflows/container.yml` when server/Docker/entrypoint changes. Authentication phases should prove session create/delete and request identity in tests **before** authorize gates exist.
 
 ## Implementation pointers
 
-Future attachment points (not implemented in Phase 0):
-
 | Area | Role |
 | --- | --- |
-| Extension registry/host | New provider kinds (auth, authz, admin/shell as needed) |
-| `tome-http` | Principal on request; LCD `authorize` around dispatch |
-| `tome-server` | Optional user-store open + auth-extension wiring when configured (not a mode switch) |
+| `tome-http` identity | `Principal` / `Session`, in-memory `SessionStore`, request scope, `/api/sessions`, `/api/me` (phase 1) |
+| `tome-http` authorize | LCD `authorize` around dispatch (phase 3+) |
+| Extension registry/host | Authz / OIDC / admin/shell kinds as needed (phases 2–5) |
+| `tome-server` | Optional user-store open + auth wiring when configured (not a mode switch) |
 | `tome-service-interfaces` | Optional principal / authorize ports |
-| `tome-editor` | Shell mount points for sign-in / admin; prefer extension-owned UI |
+| `tome-editor` | Shell mount points for sign-in / account / profile (phases 4–6) |
 | User SQL open/migrate | Separate user file/schema when configured; extensions never alter corpus DDL |
-| Corpus SQL (`tome-sqlite` / future postgres) | Graph only |
+| Corpus SQL (`tome-sqlite` / future postgres) | Graph only (Postgres phase 7) |
 
 ## See also
 
@@ -207,5 +210,5 @@ Future attachment points (not implemented in Phase 0):
 - [graph-store.md](./graph-store.md) — graph store API (corpus)
 - [tome-server.md](./tome-server.md) — config-driven host
 - [multi-corpus.md](./multi-corpus.md) — multiple content roots (orthogonal to multi-user)
-- [web-api-design.md](./web-api-design.md) — HTTP API shape
+- [web-api-design.md](./web-api-design.md) — HTTP API shape (includes thin identity/session)
 - Backlog: [multi-user-system.md](../../tasks/multi-user-system.md), [authorization-system.md](../../tasks/authorization-system.md), [sso-login.md](../../tasks/sso-login.md), [postgresql-support.md](../../tasks/postgresql-support.md), [independent-sql-database.md](../../tasks/independent-sql-database.md)
