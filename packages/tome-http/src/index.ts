@@ -4,12 +4,10 @@ export { UserSettingsStore } from "./user-settings-store";
 export type { Principal, Session } from "./identity";
 export {
   allowEverythingAuthorizerOptions,
-  defaultImpQueryAuthorizerGetter,
-  defaultModificationAuthorizerGetter,
+  defaultAuthorizerGetter,
   decideImpQuery,
   decideModification,
-  type ImpQueryAuthorizer,
-  type ModificationAuthorizer,
+  type Authorizer,
 } from "./authorization";
 export {
   getRequestPrincipal,

@@ -1,9 +1,9 @@
 /**
- * Denial authorizers (multi-user phase 3a).
+ * Denial authorizer (multi-user phase 3a).
  *
- * Separate interfaces per payload family so Imp-query and modification policies
- * can be mixed independently. Additive / fail-closed: server defaults to deny;
- * grants are explicit (allow-everything or custom authorizers).
+ * One Authorizer handles Imp-query and modification denial. Additive / fail-closed:
+ * server defaults to deny-everything; grants are explicit (allow-everything,
+ * authorization-model, or a custom registered authorizer).
  */
 
 /** Subject for authorization decisions (aligns with web API Principal). */
@@ -15,7 +15,10 @@ export type AuthorizationPrincipal = {
 export type AuthorizationDecision = "allow" | "deny";
 
 /** Built-in authorizer implementation ids selectable from server config. */
-export type BuiltInAuthorizerId = "deny-everything" | "allow-everything";
+export type BuiltInAuthorizerId =
+  | "deny-everything"
+  | "allow-everything"
+  | "authorization-model";
 
 /** Context for Imp / open-ended query denial. */
 export type ImpQueryAuthorizationContext = {
@@ -23,17 +26,6 @@ export type ImpQueryAuthorizationContext = {
   graph: unknown;
   context?: unknown;
 };
-
-/**
- * Authorizer for Imp query payloads (e.g. POST /api/nodes/query).
- * Not bundled with modification — register independently.
- */
-export interface ImpQueryAuthorizer {
-  authorize(
-    principal: AuthorizationPrincipal | null,
-    context: ImpQueryAuthorizationContext,
-  ): AuthorizationDecision | Promise<AuthorizationDecision>;
-}
 
 /** Context for graph/content modification denial. */
 export type ModificationAuthorizationContext = {
@@ -47,20 +39,23 @@ export type ModificationAuthorizationContext = {
 };
 
 /**
- * Authorizer for graph/content modification payloads.
- * Not bundled with Imp query — register independently.
+ * Denial authorizer for Imp queries and graph/content modifications.
  */
-export interface ModificationAuthorizer {
-  authorize(
+export interface Authorizer {
+  authorizeImpQuery(
+    principal: AuthorizationPrincipal | null,
+    context: ImpQueryAuthorizationContext,
+  ): AuthorizationDecision | Promise<AuthorizationDecision>;
+
+  authorizeModification(
     principal: AuthorizationPrincipal | null,
     context: ModificationAuthorizationContext,
   ): AuthorizationDecision | Promise<AuthorizationDecision>;
 }
 
-/** Host seam: extensions (or tests) replace slots independently. */
+/** Host seam: extensions (or tests) replace the active authorizer. */
 export interface AuthorizationHost {
-  registerImpQueryAuthorizer(authorizer: ImpQueryAuthorizer): void;
-  registerModificationAuthorizer(authorizer: ModificationAuthorizer): void;
+  registerAuthorizer(authorizer: Authorizer): void;
 }
 
 export type AuthorizationModule = {
@@ -68,51 +63,60 @@ export type AuthorizationModule = {
 };
 
 /** Always deny — additive baseline / server default. */
-export function createDenyEverythingImpQueryAuthorizer(): ImpQueryAuthorizer {
+export function createDenyEverythingAuthorizer(): Authorizer {
   return {
-    authorize() {
+    authorizeImpQuery() {
       return "deny";
     },
-  };
-}
-
-export function createDenyEverythingModificationAuthorizer(): ModificationAuthorizer {
-  return {
-    authorize() {
+    authorizeModification() {
       return "deny";
     },
   };
 }
 
 /** Always allow — explicit light solo / trusted-host grant only. */
-export function createAllowEverythingImpQueryAuthorizer(): ImpQueryAuthorizer {
+export function createAllowEverythingAuthorizer(): Authorizer {
   return {
-    authorize() {
+    authorizeImpQuery() {
+      return "allow";
+    },
+    authorizeModification() {
       return "allow";
     },
   };
 }
 
-export function createAllowEverythingModificationAuthorizer(): ModificationAuthorizer {
+/**
+ * Authorization-model authorizer (first pass): discovers model instance ids via
+ * the provided callback but always denies until policy child nodes exist.
+ */
+export type AuthorizationModelAuthorizerOptions = {
+  /**
+   * Returns Authorization Model instance node ids (set members of the
+   * ontology.json types.authorizationModel type-table), across configured corpora.
+   */
+  listInstanceIds: () => readonly string[] | Promise<readonly string[]>;
+};
+
+export function createAuthorizationModelAuthorizer(
+  options: AuthorizationModelAuthorizerOptions,
+): Authorizer & { listInstanceIds: () => readonly string[] | Promise<readonly string[]> } {
   return {
-    authorize() {
-      return "allow";
+    listInstanceIds: options.listInstanceIds,
+    authorizeImpQuery() {
+      return "deny";
+    },
+    authorizeModification() {
+      return "deny";
     },
   };
 }
 
-export function resolveBuiltInImpQueryAuthorizer(
-  id: BuiltInAuthorizerId,
-): ImpQueryAuthorizer {
+/** Resolve allow/deny built-ins only (authorization-model needs discovery deps). */
+export function resolveConstantBuiltInAuthorizer(
+  id: "deny-everything" | "allow-everything",
+): Authorizer {
   return id === "allow-everything"
-    ? createAllowEverythingImpQueryAuthorizer()
-    : createDenyEverythingImpQueryAuthorizer();
-}
-
-export function resolveBuiltInModificationAuthorizer(
-  id: BuiltInAuthorizerId,
-): ModificationAuthorizer {
-  return id === "allow-everything"
-    ? createAllowEverythingModificationAuthorizer()
-    : createDenyEverythingModificationAuthorizer();
+    ? createAllowEverythingAuthorizer()
+    : createDenyEverythingAuthorizer();
 }

@@ -64,7 +64,7 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md), [searchers
 
 ### Authorization modules / shell providers
 
-**authentication-provider** is shipped (phase 2). **Denial authorizers** (phase 3a) register via optional extension `authorizationModule` onto separate Imp-query and modification host slots (not a single bundled kind)—see [authorization-authorizers.md](../extensions/authorization-authorizers.md). Later phases may add shell/admin kinds and Filtering/Probing seams. Specialized policy stays in extensions; fail-closed defaults and call sites stay in core.
+**authentication-provider** is shipped (phase 2). **Denial authorizers** (phase 3a) use a single `Authorizer` interface; built-ins are selected from `tome-server.json`. Optional extension `authorizationModule` registers an alternate implementation (minimal config — Authorization Model type ULIDs live in `ontology.json`, not extension params)—see [authorization-authorizers.md](../extensions/authorization-authorizers.md). Later phases may add shell/admin kinds and Filtering/Probing seams. Fail-closed defaults and call sites stay in core.
 
 ## Design rationale
 

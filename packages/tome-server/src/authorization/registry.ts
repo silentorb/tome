@@ -1,62 +1,103 @@
 import {
-  resolveBuiltInImpQueryAuthorizer,
-  resolveBuiltInModificationAuthorizer,
+  createAuthorizationModelAuthorizer,
+  resolveConstantBuiltInAuthorizer,
   type AuthorizationHost,
+  type Authorizer,
   type BuiltInAuthorizerId,
-  type ImpQueryAuthorizer,
-  type ModificationAuthorizer,
 } from "tome-interfaces/authorization";
 import type { TomeAuthorizationConfig } from "tome-service-interfaces";
 
+export type AuthorizationRegistryOptions = {
+  /**
+   * Content roots for authorization-model discovery (ontology.json + set membership).
+   * Required when applying implementationId "authorization-model".
+   */
+  listContentDirs?: () => readonly string[];
+  /**
+   * Discover Authorization Model instance ids for the given content dirs.
+   * Injected so the registry stays free of a hard flatfile import cycle in tests;
+   * production wires discoverAuthorizationModelInstanceIds from tome-flatfile.
+   */
+  discoverAuthorizationModelInstanceIds?: (contentDir: string) => readonly string[];
+  /**
+   * True when ontology.json declares types.authorizationModel for the content dir.
+   */
+  contentHasAuthorizationModelType?: (contentDir: string) => boolean;
+};
+
 /**
- * Holds Imp-query and modification authorizer slots.
+ * Holds the active denial authorizer.
  * Starts deny-everything; built-in config and extension registration grant over that baseline.
  */
 export class AuthorizationRegistry implements AuthorizationHost {
-  #impQuery: ImpQueryAuthorizer = resolveBuiltInImpQueryAuthorizer("deny-everything");
-  #modification: ModificationAuthorizer =
-    resolveBuiltInModificationAuthorizer("deny-everything");
+  #authorizer: Authorizer = resolveConstantBuiltInAuthorizer("deny-everything");
+  readonly #options: AuthorizationRegistryOptions;
 
-  getImpQueryAuthorizer(): ImpQueryAuthorizer {
-    return this.#impQuery;
+  constructor(options: AuthorizationRegistryOptions = {}) {
+    this.#options = options;
   }
 
-  getModificationAuthorizer(): ModificationAuthorizer {
-    return this.#modification;
+  getAuthorizer(): Authorizer {
+    return this.#authorizer;
   }
 
-  registerImpQueryAuthorizer(authorizer: ImpQueryAuthorizer): void {
-    this.#impQuery = authorizer;
+  registerAuthorizer(authorizer: Authorizer): void {
+    this.#authorizer = authorizer;
   }
 
-  registerModificationAuthorizer(authorizer: ModificationAuthorizer): void {
-    this.#modification = authorizer;
-  }
-
-  /** Reset to deny, then apply explicit built-in config (allow only when named). */
+  /** Reset to deny, then apply explicit built-in config (allow / model only when named). */
   resetAndApplyBuiltIns(config?: TomeAuthorizationConfig | null): void {
-    this.#impQuery = resolveBuiltInImpQueryAuthorizer("deny-everything");
-    this.#modification = resolveBuiltInModificationAuthorizer("deny-everything");
-    if (!config) return;
-    if (config.impQueryAuthorizer) {
-      this.#impQuery = resolveBuiltInImpQueryAuthorizer(config.impQueryAuthorizer);
+    const id = config?.implementationId ?? "deny-everything";
+    if (id === "allow-everything" || id === "deny-everything") {
+      this.#authorizer = resolveConstantBuiltInAuthorizer(id);
+      return;
     }
-    if (config.modificationAuthorizer) {
-      this.#modification = resolveBuiltInModificationAuthorizer(
-        config.modificationAuthorizer,
+    if (id === "authorization-model") {
+      this.#authorizer = this.#createAuthorizationModelAuthorizer();
+      return;
+    }
+    this.#authorizer = resolveConstantBuiltInAuthorizer("deny-everything");
+  }
+
+  #createAuthorizationModelAuthorizer(): Authorizer {
+    const listContentDirs = this.#options.listContentDirs;
+    const discover = this.#options.discoverAuthorizationModelInstanceIds;
+    const hasType = this.#options.contentHasAuthorizationModelType;
+    if (!listContentDirs || !discover || !hasType) {
+      throw new Error(
+        'authorization.implementationId is "authorization-model" but the registry was not given content-dir discovery hooks',
       );
     }
+    const contentDirs = listContentDirs();
+    const configured = contentDirs.some((dir) => hasType(dir));
+    if (!configured) {
+      throw new Error(
+        'authorization.implementationId is "authorization-model" but ontology.json types.authorizationModel is not configured in any corpus',
+      );
+    }
+    return createAuthorizationModelAuthorizer({
+      listInstanceIds: () => {
+        const ids = new Set<string>();
+        for (const dir of listContentDirs()) {
+          for (const id of discover(dir)) ids.add(id);
+        }
+        return [...ids];
+      },
+    });
   }
 }
 
 export function parseBuiltInAuthorizerId(
   value: unknown,
   path: string,
-): BuiltInAuthorizerId | undefined {
-  if (value === undefined) return undefined;
-  if (value !== "deny-everything" && value !== "allow-everything") {
+): BuiltInAuthorizerId {
+  if (
+    value !== "deny-everything" &&
+    value !== "allow-everything" &&
+    value !== "authorization-model"
+  ) {
     throw new Error(
-      `${path}: must be "deny-everything" or "allow-everything" (got ${JSON.stringify(value)})`,
+      `${path}: must be "deny-everything", "allow-everything", or "authorization-model" (got ${JSON.stringify(value)})`,
     );
   }
   return value;
@@ -70,28 +111,21 @@ export function parseAuthorizationConfig(
     throw new Error("tome-server config: authorization must be an object");
   }
   const obj = raw as Record<string, unknown>;
-  const config: TomeAuthorizationConfig = {};
-  const imp = parseBuiltInAuthorizerId(
-    obj.impQueryAuthorizer,
-    "authorization.impQueryAuthorizer",
-  );
-  if (imp) config.impQueryAuthorizer = imp;
-  const mod = parseBuiltInAuthorizerId(
-    obj.modificationAuthorizer,
-    "authorization.modificationAuthorizer",
-  );
-  if (mod) config.modificationAuthorizer = mod;
-  return config;
+  if (obj.implementationId === undefined) {
+    throw new Error("tome-server config: authorization.implementationId is required");
+  }
+  return {
+    implementationId: parseBuiltInAuthorizerId(
+      obj.implementationId,
+      "authorization.implementationId",
+    ),
+  };
 }
 
 export function resolveAuthorizationBuiltIns(
   config?: TomeAuthorizationConfig | null,
-): {
-  impQueryAuthorizer: BuiltInAuthorizerId;
-  modificationAuthorizer: BuiltInAuthorizerId;
-} {
+): TomeAuthorizationConfig {
   return {
-    impQueryAuthorizer: config?.impQueryAuthorizer ?? "deny-everything",
-    modificationAuthorizer: config?.modificationAuthorizer ?? "deny-everything",
+    implementationId: config?.implementationId ?? "deny-everything",
   };
 }

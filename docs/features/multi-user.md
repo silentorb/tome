@@ -70,7 +70,7 @@ Three layers — do not collapse them:
 
 | Concern | Where it lives | Core’s job |
 | --- | --- | --- |
-| **Authorization (Denial)** | Built-in **deny-everything** / **allow-everything**; specialized policies via extension `authorizationModule` (mix-and-match slots); richer policies may query user-corpus Imp/relationships | **Fundamental:** Imp-query + modification **authorizer** slots; server **defaults to deny-everything**; consult on Imp + modification HTTP paths; 403 on deny. Additive — access is granted, never open-by-default. |
+| **Authorization (Denial)** | Built-in **deny-everything** / **allow-everything** / **authorization-model**; specialized policies via extension `authorizationModule` (register only); Authorization Model type in `ontology.json`; richer policies may query user-corpus Imp/relationships later | **Fundamental:** single **Authorizer** (`authorizeImpQuery` + `authorizeModification`); server **defaults to deny-everything**; consult on Imp + modification HTTP paths; 403 on deny. Additive — access is granted, never open-by-default. |
 | **Authorization (Filtering)** | Later (prefer query mutation) | Seams when phase work lands |
 | **Authorization (Probing)** | Later (UX boundary APIs) | Seams when phase work lands |
 | **Authentication** | Thin **Principal + Session** vocabulary and session create/delete on the **web API**; OIDC and rich IdP flows prefer extensions | Resolve `Principal \| null` per request (`accountNodeId`). No IdP protocol logic in core. |
@@ -79,9 +79,9 @@ Three layers — do not collapse them:
 | **Profile** | Optional later (may hang off Account nodes) | None for current product features. |
 | **User administration** | Admin UI / extension ops over Account (and role) nodes | Thin account APIs if needed; “who may administer” via authz policy. |
 
-**Authorizer slots (Denial):** separate interfaces — `ImpQueryAuthorizer` and `ModificationAuthorizer` — not one bundled provider and not HTTP verbs. See [authorization-authorizers.md](../extensions/authorization-authorizers.md).
+**Authorizer (Denial):** one `Authorizer` interface with Imp-query and modification methods — not HTTP verbs. Server selects the implementation; `ontology.json` may declare `types.authorizationModel` so model data carries a minimal authz footprint. See [authorization-authorizers.md](../extensions/authorization-authorizers.md).
 
-**Extension kinds:** `page-block`, `searcher`, `authentication-provider` ([extensions.md](./extensions.md)). Denial authorizers register via optional `authorizationModule` (host APIs), not a single megaprovider kind. Shell/admin kinds may come later.
+**Extension kinds:** `page-block`, `searcher`, `authentication-provider` ([extensions.md](./extensions.md)). Denial authorizers register via optional `authorizationModule` (host APIs) with minimal config. Shell/admin kinds may come later.
 
 Existing design-corpus `readonly` / `protectedNodeIds` are resource rules without identity — fold under or sit beside Denial / Filtering over time rather than a second ad-hoc ACL style in core.
 
@@ -121,9 +121,11 @@ Without isolation, specialized IdP and product ACL concerns leak into `tome-db` 
 
 **Why additive denial:** secure baseline is deny; access is granted (allow-everything or richer authorizers). Never “open unless denied.”
 
-**Why authorizer slots in core, policy in extensions:** call sites and fail-closed defaults are product safety; specialized who-may-do-what stays swappable without forking `tome-http`.
+**Why authorizer selection in core, policy swappable:** call sites and fail-closed defaults are product safety; specialized who-may-do-what stays swappable without forking `tome-http`.
 
-**Why separate Imp vs modification authorizers:** different payload families; mix and match without a bundled megainterface.
+**Why one Authorizer with two methods:** Imp and modification are different payload families on one coherent policy surface — independent slots proved impractical.
+
+**Why Authorization Model types in ontology.json:** treating authz as fully detachable extension-only config is insecure in practice; the corpus model should carry at least a minimal authz type root.
 
 **Why Account/role as nodes in user corpora:** Imp and Tome relationships can express grants and membership without a bespoke ACL schema; admin UX can reuse graph tooling; design corpora stay free of identity pollution.
 
@@ -162,9 +164,9 @@ Resulting use case (documentation label only)
 ```
 Session / auth strategy → Principal { accountNodeId } (web API request scope)
                                       ↓
-              Imp query authorizer  |  Modification authorizer
-              (default deny-everything; allow-everything or extension grant;
-               later: consult user-corpus roles/relationships)
+                         Authorizer (Imp + modification methods)
+              (default deny-everything; allow-everything / authorization-model
+               / extension grant; later: consult user-corpus roles/relationships)
                                       ↓
                          allow → handler  |  deny → 403 forbidden
 ```
@@ -194,7 +196,7 @@ Prefer citing **this doc + phase id** when starting work. Update this table when
 
 **Phase 2 progress:** `authentication-provider` extension kind + host routes `GET /api/auth/login` / `GET /api/auth/callback`; same-site session cookie `tome_session` (plus `Authorization: Session`); reference package `tome-auth-oidc` (auth-code + PKCE); API has **no CORS**. Editor sign-in UI remains phase 4. OIDC currently maps IdP claim → session `accountNodeId` as a **provisional stand-in** until user corpora + IdP↔Account bindings exist.
 
-**Phase 3a progress (Denial):** separate `ImpQueryAuthorizer` + `ModificationAuthorizer`; core deny-everything (server default) and allow-everything (explicit only); wired on Imp + modification HTTP paths; workbench config explicitly sets allow-everything for light solo; extension `authorizationModule` can replace slots. Filtering, probing, catch-all for other APIs, folding `readonly` / `protectedNodeIds`, and identity-graph Imp policy remain later 3x sessions.
+**Phase 3a progress (Denial):** single `Authorizer` (Imp + modification methods); core deny-everything (server default), allow-everything (explicit), and authorization-model (ontology-backed, fail-closed until policy children); wired on Imp + modification HTTP paths; workbench config explicitly sets allow-everything for light solo; extension `authorizationModule` can replace the authorizer. Filtering, probing, catch-all for other APIs, folding `readonly` / `protectedNodeIds`, and identity-graph Imp policy remain later 3x sessions.
 
 **Not yet implemented:** user-corpus open/migrate, Account/role type tables, composite mix of user corpora, Imp binder for identity stores, local IdP bindings as graph/text, remote auth specialty SQL.
 
@@ -225,29 +227,29 @@ Largest surfaces: authorization (3), user corpora + account UI (5), Postgres gra
 - Optional **user corpora** (paths/ids analogous to design `corpora`) — mixable; one corpus may be shared across design hosts.
 - Optional **ephemeral session** store (memory today; SQLite later, still not corpus SoT). Remote: auth specialty DSN beside identity schema.
 - Distinct **design corpus** path/DSN (already exists for content/cache; Postgres design later).
-- **Denial authorizers** in `tome-server.json` `authorization`:
-  - `impQueryAuthorizer`: `"deny-everything"` \| `"allow-everything"` (default **deny-everything**)
-  - `modificationAuthorizer`: same (default **deny-everything**)
-  - Workbench solo: set both to `"allow-everything"` explicitly ([tome-server.workbench.json](../../packages/tome-server/config/tome-server.workbench.json)).
-  - Extension `authorizationModule` may replace either slot after built-ins apply. See [authorization-authorizers.md](../extensions/authorization-authorizers.md).
+- **Denial authorizer** in `tome-server.json` `authorization`:
+  - `implementationId`: `"deny-everything"` \| `"allow-everything"` \| `"authorization-model"` (omitted → **deny-everything**)
+  - Workbench solo: `"allow-everything"` explicitly ([tome-server.workbench.json](../../packages/tome-server/config/tome-server.workbench.json)).
+  - `authorization-model` requires `ontology.json` `types.authorizationModel` in at least one corpus.
+  - Extension `authorizationModule` may replace the authorizer after built-ins apply. See [authorization-authorizers.md](../extensions/authorization-authorizers.md).
 
 No core multi-user / operating-mode enable flag. Surface/dev or test helpers may still expose labeled presets; they are not package APIs.
 
 ## Verification
 
-Phase 0 is documentation only. Phase 1+: full verify for affected repos + dependents per workbench `AGENTS.md` § Plan verification; reason about `.github/workflows/container.yml` when server/Docker/entrypoint changes. Denial tests should prove default deny, explicit allow, and independent Imp vs modification slots.
+Phase 0 is documentation only. Phase 1+: full verify for affected repos + dependents per workbench `AGENTS.md` § Plan verification; reason about `.github/workflows/container.yml` when server/Docker/entrypoint changes. Denial tests should prove default deny, explicit allow, and that one authorizer drives both Imp and modification families.
 
 ## Implementation pointers
 
 | Area | Role |
 | --- | --- |
 | `tome-http` identity | `Principal` / `Session` (`accountNodeId`), in-memory `SessionStore`, request scope, `/api/sessions`, `/api/me`, cookie + `/api/auth/*` (phases 1–2) |
-| `tome-http` denial | Imp query + modification authorizer consultation; 403 `forbidden` (phase 3a) |
-| `tome-interfaces/authorization` | Separate authorizer interfaces + deny/allow built-ins (`AuthorizationPrincipal.accountNodeId`) |
+| `tome-http` denial | Single authorizer consultation (Imp + modification); 403 `forbidden` (phase 3a) |
+| `tome-interfaces/authorization` | `Authorizer` + deny/allow/authorization-model built-ins (`AuthorizationPrincipal.accountNodeId`) |
 | Extension registry/host | `authentication-provider` (phase 2); `authorizationModule` registration (phase 3a); admin/shell kinds as needed (phases 4–5) |
 | `tome-auth-oidc` | Reference OIDC auth-code + PKCE provider (provisional claim → `accountNodeId` until bindings) |
-| `tome-server` | Session store; authn provider; **AuthorizationRegistry** (deny default); passes authorizers to HTTP |
-| `tome-service-interfaces` | Session / authentication / authorizer ports on `TomeServiceHost`; `authorization` config |
+| `tome-server` | Session store; authn provider; **AuthorizationRegistry** (deny default); passes authorizer to HTTP |
+| `tome-service-interfaces` | Session / authentication / authorizer ports on `TomeServiceHost`; `authorization.implementationId` config |
 | `tome-editor` | Shell mount points for sign-in / account / profile (phases 4–6); `/api` proxy for same-site |
 | User corpora open/migrate | Future: identity graph roots (mix + share); never alter design corpus DDL; local durable identity is flatfile |
 | Auth specialty SQL | Future **remote**: sessions / IdP bindings keyed by Account node id |

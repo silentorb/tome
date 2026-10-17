@@ -12,8 +12,7 @@ import type {
 } from "tome-interfaces/authentication";
 import type {
   AuthorizationHost,
-  ImpQueryAuthorizer,
-  ModificationAuthorizer,
+  Authorizer,
 } from "tome-interfaces/authorization";
 import type {
   SearcherHost,
@@ -93,11 +92,7 @@ export class AuthenticationHostImpl implements AuthenticationHost {
 export class AuthorizationHostImpl implements AuthorizationHost {
   constructor(readonly registry: AuthorizationRegistry) {}
 
-  registerImpQueryAuthorizer(authorizer: ImpQueryAuthorizer): void {
-    this.registry.registerImpQueryAuthorizer(authorizer);
-  }
-
-  registerModificationAuthorizer(authorizer: ModificationAuthorizer): void {
-    this.registry.registerModificationAuthorizer(authorizer);
+  registerAuthorizer(authorizer: Authorizer): void {
+    this.registry.registerAuthorizer(authorizer);
   }
 }

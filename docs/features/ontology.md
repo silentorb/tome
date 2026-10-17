@@ -65,16 +65,20 @@ Optional file: `content/model/ontology.json`
   "types": {
     "ontology": "<ontology-type-node-ulid>",
     "predicate": "<predicate-type-node-ulid>",
-    "memberScope": "<member-scope-type-node-ulid>"
+    "memberScope": "<member-scope-type-node-ulid>",
+    "authorizationModel": "<authorization-model-type-table-ulid>"
   }
 }
 ```
+
+`types` is a **closed, strongly typed** optional map (not a free-form bucket). Keys may be omitted independently.
 
 | Field | Meaning |
 | --- | --- |
 | `types.ontology` | Type-table node whose **members** are ontology instances |
 | `types.predicate` | Type-table node whose **members** are predicate instances |
 | `types.memberScope` | Type-table node whose **members** are member-scope instances (optional) |
+| `types.authorizationModel` | Type-table node whose **members** are Authorization Model instances (optional). Couples a minimal authz footprint into the model so authorization is not fully detachable from corpus data. Used by the `authorization-model` server authorizer — see [authorization-authorizers.md](../extensions/authorization-authorizers.md). |
 
 **Taxonomy is relational** (not frontmatter markers):
 
@@ -85,6 +89,7 @@ Optional file: `content/model/ontology.json`
 | **Active** predicate | Predicate instance **and** member of ≥1 ontology instance |
 | Member-scope instance | Member of `types.memberScope` |
 | **Active** member-scope | Member-scope instance **and** member of ≥1 ontology instance, with a valid binding payload |
+| Authorization Model instance | Member of `types.authorizationModel` (container; grant/logic child nodes later) |
 
 Set-trait relationship types still come from `associations.json` (bootstrap / chicken-egg until typing can be expressed as node-native patterns).
 

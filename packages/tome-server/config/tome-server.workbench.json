@@ -60,8 +60,7 @@
     }
   },
   "authorization": {
-    "impQueryAuthorizer": "allow-everything",
-    "modificationAuthorizer": "allow-everything"
+    "implementationId": "allow-everything"
   },
   "services": [
     {

@@ -12,9 +12,9 @@ Charter: [multi-user.md](../docs/features/multi-user.md).
 
 **Subdomains:** Denial | Filtering | Probing.
 
-**Phase 3a (landed):** Denial — separate `ImpQueryAuthorizer` + `ModificationAuthorizer`; core deny-everything (server default) + allow-everything (explicit); wired on Imp + modification HTTP paths; extension `authorizationModule` registration. Guide: [authorization-authorizers.md](../docs/extensions/authorization-authorizers.md).
+**Phase 3a (landed):** Denial — single `Authorizer` (`authorizeImpQuery` + `authorizeModification`); core deny-everything (server default), allow-everything (explicit), authorization-model (ontology `types.authorizationModel`, fail-closed until policy children); wired on Imp + modification HTTP paths; extension `authorizationModule` registration (minimal config). Guide: [authorization-authorizers.md](../docs/extensions/authorization-authorizers.md).
 
-**Remaining:** Filtering (prefer query mutation); probing APIs; catch-all / specialized authorizers for other routes; fold or align `readonly` / `protectedNodeIds`; richer product policies (including Imp against **user corpora** for role/grant relationships — see [multi-user.md](../docs/features/multi-user.md)).
+**Remaining:** Filtering (prefer query mutation); probing APIs; catch-all / specialized authorizers for other routes; fold or align `readonly` / `protectedNodeIds`; richer product policies (including Imp against **user corpora** for role/grant relationships — see [multi-user.md](../docs/features/multi-user.md)); Authorization Model related grant/logic node types.
 
 ## See also
 

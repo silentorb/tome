@@ -4,10 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TomeGraphServices } from "tome-graph-interfaces";
 import {
-  createAllowEverythingImpQueryAuthorizer,
-  createAllowEverythingModificationAuthorizer,
-  createDenyEverythingImpQueryAuthorizer,
-  createDenyEverythingModificationAuthorizer,
+  createAllowEverythingAuthorizer,
+  createDenyEverythingAuthorizer,
 } from "tome-interfaces/authorization";
 import {
   allowEverythingAuthorizerOptions,
@@ -91,16 +89,14 @@ describe("denial authorizers", () => {
     }
   });
 
-  test("slots mix independently — allow Imp, deny modification", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "tome-http-authz-mix-"));
+  test("single authorizer drives both Imp and modification families", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tome-http-authz-single-"));
     try {
+      const deny = createDenyEverythingAuthorizer();
       const handler = createApiHandler(
         mockGraphServices(),
         new UserSettingsStore(join(dir, "settings.json")),
-        {
-          getImpQueryAuthorizer: () => createAllowEverythingImpQueryAuthorizer(),
-          getModificationAuthorizer: () => createDenyEverythingModificationAuthorizer(),
-        },
+        { getAuthorizer: () => deny },
       );
 
       const queryRes = await handler(
@@ -110,7 +106,7 @@ describe("denial authorizers", () => {
           body: JSON.stringify({ graph: { nodes: {}, edges: {} } }),
         }),
       );
-      expect(queryRes.status).toBe(200);
+      expect(queryRes.status).toBe(403);
 
       const createRes = await handler(
         new Request("http://localhost/api/nodes", {
@@ -127,16 +123,14 @@ describe("denial authorizers", () => {
     }
   });
 
-  test("slots mix independently — deny Imp, allow modification", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "tome-http-authz-mix2-"));
+  test("allow authorizer permits both families", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tome-http-authz-allow-both-"));
     try {
+      const allow = createAllowEverythingAuthorizer();
       const handler = createApiHandler(
         mockGraphServices(),
         new UserSettingsStore(join(dir, "settings.json")),
-        {
-          getImpQueryAuthorizer: () => createDenyEverythingImpQueryAuthorizer(),
-          getModificationAuthorizer: () => createAllowEverythingModificationAuthorizer(),
-        },
+        { getAuthorizer: () => allow },
       );
 
       const queryRes = await handler(
@@ -146,7 +140,7 @@ describe("denial authorizers", () => {
           body: JSON.stringify({ graph: { nodes: {}, edges: {} } }),
         }),
       );
-      expect(queryRes.status).toBe(403);
+      expect(queryRes.status).toBe(200);
 
       const createRes = await handler(
         new Request("http://localhost/api/nodes", {

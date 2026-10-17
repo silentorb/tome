@@ -404,10 +404,7 @@ export async function startConfiguredServices(
       | import("tome-service-interfaces").TomeAuthenticationProviderPort
       | null
       | undefined;
-    getImpQueryAuthorizer?: () =>
-      import("tome-service-interfaces").TomeImpQueryAuthorizerPort;
-    getModificationAuthorizer?: () =>
-      import("tome-service-interfaces").TomeModificationAuthorizerPort;
+    getAuthorizer?: () => import("tome-service-interfaces").TomeAuthorizerPort;
   },
 ): Promise<StartedServices> {
   if (config.services.length === 0) {
@@ -433,8 +430,7 @@ export async function startConfiguredServices(
       getCacheSyncStatus: hostExtras?.getCacheSyncStatus,
       sessionStore: hostExtras?.sessionStore,
       getAuthenticationProvider: hostExtras?.getAuthenticationProvider,
-      getImpQueryAuthorizer: hostExtras?.getImpQueryAuthorizer,
-      getModificationAuthorizer: hostExtras?.getModificationAuthorizer,
+      getAuthorizer: hostExtras?.getAuthorizer,
     });
     modules.push(service);
     console.log(`[tome-server] started service "${service.id}" from ${entry.module}`);

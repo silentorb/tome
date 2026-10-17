@@ -304,6 +304,10 @@ export {
 } from "./ontology/discover";
 export { discoverActiveMemberScopes } from "./ontology/discover-member-scopes";
 export {
+  contentHasAuthorizationModelType,
+  discoverAuthorizationModelInstanceIds,
+} from "./ontology/discover-authorization-models";
+export {
   loadMemberScopesFromContent,
   invalidateMemberScopesCache,
 } from "./ontology/member-scopes-load";

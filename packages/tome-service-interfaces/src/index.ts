@@ -53,17 +53,13 @@ export type TomeAuthenticationProviderPort = {
 /** Denial decision from Imp-query / modification authorizers. */
 export type TomeAuthorizationDecision = "allow" | "deny";
 
-/** Imp query denial authorizer port (payload-typed; not HTTP verbs). */
-export type TomeImpQueryAuthorizerPort = {
-  authorize(
+/** Denial authorizer port (Imp query + modification; not HTTP verbs). */
+export type TomeAuthorizerPort = {
+  authorizeImpQuery(
     principal: { accountNodeId: string } | null,
     context: { graph: unknown; context?: unknown },
   ): TomeAuthorizationDecision | Promise<TomeAuthorizationDecision>;
-};
-
-/** Modification denial authorizer port. */
-export type TomeModificationAuthorizerPort = {
-  authorize(
+  authorizeModification(
     principal: { accountNodeId: string } | null,
     context: { modification: string; payload?: unknown },
   ): TomeAuthorizationDecision | Promise<TomeAuthorizationDecision>;
@@ -72,13 +68,17 @@ export type TomeModificationAuthorizerPort = {
 /**
  * Built-in authorizer ids for `tome-server.json` `authorization` block.
  * Default when omitted: deny-everything (fail closed). allow-everything is
- * explicit opt-in only (light solo / trusted host).
+ * explicit opt-in only (light solo / trusted host). authorization-model reads
+ * ontology.json types.authorizationModel.
  */
-export type TomeBuiltInAuthorizerId = "deny-everything" | "allow-everything";
+export type TomeBuiltInAuthorizerId =
+  | "deny-everything"
+  | "allow-everything"
+  | "authorization-model";
 
+/** Heterogeneous authorization selection (implementationId + future host-only options). */
 export type TomeAuthorizationConfig = {
-  impQueryAuthorizer?: TomeBuiltInAuthorizerId;
-  modificationAuthorizer?: TomeBuiltInAuthorizerId;
+  implementationId: TomeBuiltInAuthorizerId;
 };
 
 /**
@@ -94,10 +94,8 @@ export interface TomeServiceHost {
   sessionStore?: TomeSessionStorePort;
   /** Opened authentication provider when an authentication-provider extension is loaded. */
   getAuthenticationProvider?: () => TomeAuthenticationProviderPort | null | undefined;
-  /** Imp query denial authorizer (server defaults to deny-everything). */
-  getImpQueryAuthorizer?: () => TomeImpQueryAuthorizerPort;
-  /** Modification denial authorizer (server defaults to deny-everything). */
-  getModificationAuthorizer?: () => TomeModificationAuthorizerPort;
+  /** Denial authorizer (server defaults to deny-everything). */
+  getAuthorizer?: () => TomeAuthorizerPort;
 }
 
 /**
@@ -138,7 +136,7 @@ export interface TomeServerConfig {
     libraries?: TomeServerModuleConfigEntry[];
   };
   /**
-   * Denial authorizers (built-in ids). Omitted slots default to deny-everything.
+   * Denial authorizer selection. Omitted → deny-everything.
    * allow-everything must be set explicitly (never implied).
    */
   authorization?: TomeAuthorizationConfig;
@@ -163,11 +161,8 @@ export interface NormalizedTomeServerConfig {
     queryStoreId?: string;
     libraries?: TomeServerModuleConfigEntry[];
   };
-  /** Resolved built-in authorizer ids (always present; default deny-everything). */
-  authorization: {
-    impQueryAuthorizer: TomeBuiltInAuthorizerId;
-    modificationAuthorizer: TomeBuiltInAuthorizerId;
-  };
+  /** Resolved built-in authorizer selection (always present; default deny-everything). */
+  authorization: TomeAuthorizationConfig;
   services: TomeServerModuleConfigEntry[];
   /** Convenience: primary flatfile module entry (first flatfile in dataStores). */
   store: TomeServerModuleConfigEntry;

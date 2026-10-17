@@ -24,10 +24,8 @@ import type { Principal } from "./identity";
 import {
   decideImpQuery,
   decideModification,
-  defaultImpQueryAuthorizerGetter,
-  defaultModificationAuthorizerGetter,
-  type ImpQueryAuthorizer,
-  type ModificationAuthorizer,
+  defaultAuthorizerGetter,
+  type Authorizer,
 } from "./authorization";
 import {
   extractSessionIdFromRequest,
@@ -97,15 +95,10 @@ export type CreateApiHandlerOptions = {
    */
   getAuthenticationProvider?: () => AuthenticationProvider | null | undefined;
   /**
-   * Imp query denial authorizer. When omitted, defaults to deny-everything (fail closed).
+   * Denial authorizer. When omitted, defaults to deny-everything (fail closed).
    * Pass allow-everything explicitly for light solo / tests.
    */
-  getImpQueryAuthorizer?: () => ImpQueryAuthorizer;
-  /**
-   * Modification denial authorizer. When omitted, defaults to deny-everything (fail closed).
-   * Pass allow-everything explicitly for light solo / tests.
-   */
-  getModificationAuthorizer?: () => ModificationAuthorizer;
+  getAuthorizer?: () => Authorizer;
 };
 
 function cacheSyncingPayload(status: CacheSyncPublicStatus) {
@@ -166,10 +159,7 @@ export function createApiHandler(
   const getCacheSyncStatus = options?.getCacheSyncStatus;
   const sessionStore = options?.sessionStore ?? new InMemorySessionStore();
   const getAuthenticationProvider = options?.getAuthenticationProvider;
-  const getImpQueryAuthorizer =
-    options?.getImpQueryAuthorizer ?? defaultImpQueryAuthorizerGetter;
-  const getModificationAuthorizer =
-    options?.getModificationAuthorizer ?? defaultModificationAuthorizerGetter;
+  const getAuthorizer = options?.getAuthorizer ?? defaultAuthorizerGetter;
 
   const fetchHandler = async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
@@ -187,8 +177,7 @@ export function createApiHandler(
           getCacheSyncStatus,
           sessionStore,
           getAuthenticationProvider,
-          getImpQueryAuthorizer,
-          getModificationAuthorizer,
+          getAuthorizer,
         ),
       );
     }
@@ -214,8 +203,7 @@ export function createApiHandler(
               getCacheSyncStatus,
               sessionStore,
               getAuthenticationProvider,
-              getImpQueryAuthorizer,
-              getModificationAuthorizer,
+              getAuthorizer,
             ),
           );
           // Mutable attrs bag — status is set before the span's finally records.
@@ -244,8 +232,7 @@ async function dispatchApiRequest(
   getCacheSyncStatus: CreateApiHandlerOptions["getCacheSyncStatus"],
   sessionStore: SessionStore,
   getAuthenticationProvider: CreateApiHandlerOptions["getAuthenticationProvider"],
-  getImpQueryAuthorizer: () => ImpQueryAuthorizer,
-  getModificationAuthorizer: () => ModificationAuthorizer,
+  getAuthorizer: () => Authorizer,
 ): Promise<Response> {
       const syncStatus = getCacheSyncStatus?.();
 
@@ -254,7 +241,7 @@ async function dispatchApiRequest(
         context?: unknown,
       ): Promise<Response | null> => {
         const decision = await decideImpQuery(
-          getImpQueryAuthorizer(),
+          getAuthorizer(),
           getRequestPrincipal(),
           { graph, context },
         );
@@ -266,7 +253,7 @@ async function dispatchApiRequest(
         payload?: unknown,
       ): Promise<Response | null> => {
         const decision = await decideModification(
-          getModificationAuthorizer(),
+          getAuthorizer(),
           getRequestPrincipal(),
           { modification, payload },
         );

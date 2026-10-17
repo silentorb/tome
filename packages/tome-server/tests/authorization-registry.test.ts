@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import {
-  createAllowEverythingImpQueryAuthorizer,
-  createDenyEverythingModificationAuthorizer,
-} from "tome-interfaces/authorization";
+import { mkdirSync, writeFileSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { createAllowEverythingAuthorizer } from "tome-interfaces/authorization";
 import {
   AuthorizationRegistry,
   parseAuthorizationConfig,
@@ -26,61 +26,91 @@ const CACHE_ENTRY: TomeServerModuleConfigEntry = {
 };
 
 describe("authorization registry", () => {
-  test("defaults to deny-everything on both slots", async () => {
+  test("defaults to deny-everything", async () => {
     const registry = new AuthorizationRegistry();
-    expect(await registry.getImpQueryAuthorizer().authorize(null, { graph: {} })).toBe(
-      "deny",
-    );
+    const authorizer = registry.getAuthorizer();
+    expect(await authorizer.authorizeImpQuery(null, { graph: {} })).toBe("deny");
     expect(
-      await registry.getModificationAuthorizer().authorize(null, { modification: "node.create" }),
+      await authorizer.authorizeModification(null, { modification: "node.create" }),
     ).toBe("deny");
   });
 
-  test("built-in allow-everything replaces a slot when configured", async () => {
+  test("built-in allow-everything replaces the authorizer when configured", async () => {
     const registry = new AuthorizationRegistry();
-    registry.resetAndApplyBuiltIns({
-      impQueryAuthorizer: "allow-everything",
-      modificationAuthorizer: "deny-everything",
-    });
-    expect(await registry.getImpQueryAuthorizer().authorize(null, { graph: {} })).toBe(
-      "allow",
-    );
+    registry.resetAndApplyBuiltIns({ implementationId: "allow-everything" });
+    const authorizer = registry.getAuthorizer();
+    expect(await authorizer.authorizeImpQuery(null, { graph: {} })).toBe("allow");
     expect(
-      await registry.getModificationAuthorizer().authorize(null, { modification: "node.create" }),
-    ).toBe("deny");
+      await authorizer.authorizeModification(null, { modification: "node.create" }),
+    ).toBe("allow");
   });
 
-  test("extension registration can replace slots independently", async () => {
+  test("extension registration can replace the authorizer", async () => {
     const registry = new AuthorizationRegistry();
-    registry.resetAndApplyBuiltIns({
-      impQueryAuthorizer: "deny-everything",
-      modificationAuthorizer: "deny-everything",
-    });
-    registry.registerImpQueryAuthorizer(createAllowEverythingImpQueryAuthorizer());
-    registry.registerModificationAuthorizer(createDenyEverythingModificationAuthorizer());
-    expect(await registry.getImpQueryAuthorizer().authorize(null, { graph: {} })).toBe(
+    registry.resetAndApplyBuiltIns({ implementationId: "deny-everything" });
+    registry.registerAuthorizer(createAllowEverythingAuthorizer());
+    expect(await registry.getAuthorizer().authorizeImpQuery(null, { graph: {} })).toBe(
       "allow",
     );
-    expect(
-      await registry.getModificationAuthorizer().authorize(null, { modification: "node.create" }),
-    ).toBe("deny");
   });
 
   test("resetAndApplyBuiltIns restores deny then applies config", async () => {
     const registry = new AuthorizationRegistry();
-    registry.registerImpQueryAuthorizer(createAllowEverythingImpQueryAuthorizer());
+    registry.registerAuthorizer(createAllowEverythingAuthorizer());
     registry.resetAndApplyBuiltIns(null);
-    expect(await registry.getImpQueryAuthorizer().authorize(null, { graph: {} })).toBe(
+    expect(await registry.getAuthorizer().authorizeImpQuery(null, { graph: {} })).toBe(
       "deny",
     );
+  });
+
+  test("authorization-model denies and lists instance ids", async () => {
+    const contentDir = mkdtempSync(join(tmpdir(), "tome-authz-model-"));
+    try {
+      mkdirSync(join(contentDir, "model"), { recursive: true });
+      writeFileSync(
+        join(contentDir, "model", "ontology.json"),
+        JSON.stringify({
+          version: 1,
+          types: { authorizationModel: "01ARZ3NDEKTSV4RRFFQ69G5FAV" },
+        }),
+      );
+      const registry = new AuthorizationRegistry({
+        listContentDirs: () => [contentDir],
+        contentHasAuthorizationModelType: () => true,
+        discoverAuthorizationModelInstanceIds: () => ["01ARZ3NDEKTSV4RRFFQ69G5FB0"],
+      });
+      registry.resetAndApplyBuiltIns({ implementationId: "authorization-model" });
+      const authorizer = registry.getAuthorizer() as {
+        authorizeImpQuery: (...args: unknown[]) => Promise<"allow" | "deny"> | "allow" | "deny";
+        authorizeModification: (...args: unknown[]) => Promise<"allow" | "deny"> | "allow" | "deny";
+        listInstanceIds: () => readonly string[];
+      };
+      expect(await authorizer.authorizeImpQuery(null, { graph: {} })).toBe("deny");
+      expect(
+        await authorizer.authorizeModification(null, { modification: "node.create" }),
+      ).toBe("deny");
+      expect(authorizer.listInstanceIds()).toEqual(["01ARZ3NDEKTSV4RRFFQ69G5FB0"]);
+    } finally {
+      rmSync(contentDir, { recursive: true, force: true });
+    }
+  });
+
+  test("authorization-model throws when type is not configured", () => {
+    const registry = new AuthorizationRegistry({
+      listContentDirs: () => ["/tmp/empty"],
+      contentHasAuthorizationModelType: () => false,
+      discoverAuthorizationModelInstanceIds: () => [],
+    });
+    expect(() =>
+      registry.resetAndApplyBuiltIns({ implementationId: "authorization-model" }),
+    ).toThrow(/types\.authorizationModel/);
   });
 });
 
 describe("authorization config parse", () => {
   test("omitted authorization resolves to deny-everything", () => {
     expect(resolveAuthorizationBuiltIns(undefined)).toEqual({
-      impQueryAuthorizer: "deny-everything",
-      modificationAuthorizer: "deny-everything",
+      implementationId: "deny-everything",
     });
     const normalized = normalizeServerConfig({
       version: 1,
@@ -89,8 +119,7 @@ describe("authorization config parse", () => {
       services: [],
     });
     expect(normalized.authorization).toEqual({
-      impQueryAuthorizer: "deny-everything",
-      modificationAuthorizer: "deny-everything",
+      implementationId: "deny-everything",
     });
   });
 
@@ -101,16 +130,20 @@ describe("authorization config parse", () => {
       cache: CACHE_ENTRY,
       services: [],
       authorization: {
-        impQueryAuthorizer: "allow-everything",
-        modificationAuthorizer: "allow-everything",
+        implementationId: "allow-everything",
       },
     });
     expect(config.authorization).toEqual({
-      impQueryAuthorizer: "allow-everything",
-      modificationAuthorizer: "allow-everything",
+      implementationId: "allow-everything",
     });
-    expect(() =>
-      parseAuthorizationConfig({ impQueryAuthorizer: "maybe" }),
-    ).toThrow(/deny-everything|allow-everything/);
+    expect(() => parseAuthorizationConfig({ implementationId: "maybe" })).toThrow(
+      /deny-everything|allow-everything|authorization-model/,
+    );
+  });
+
+  test("parses authorization-model", () => {
+    expect(
+      parseAuthorizationConfig({ implementationId: "authorization-model" }),
+    ).toEqual({ implementationId: "authorization-model" });
   });
 });

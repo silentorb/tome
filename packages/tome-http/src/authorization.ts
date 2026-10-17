@@ -1,59 +1,47 @@
 import {
-  createAllowEverythingImpQueryAuthorizer,
-  createAllowEverythingModificationAuthorizer,
-  createDenyEverythingImpQueryAuthorizer,
-  createDenyEverythingModificationAuthorizer,
-  type ImpQueryAuthorizer,
+  createAllowEverythingAuthorizer,
+  createDenyEverythingAuthorizer,
+  type Authorizer,
   type ImpQueryAuthorizationContext,
-  type ModificationAuthorizer,
   type ModificationAuthorizationContext,
 } from "tome-interfaces/authorization";
 import type { Principal } from "./identity";
 
 export type {
-  ImpQueryAuthorizer,
-  ModificationAuthorizer,
+  Authorizer,
   ImpQueryAuthorizationContext,
   ModificationAuthorizationContext,
 } from "tome-interfaces/authorization";
 
-const defaultImpQueryAuthorizer = createDenyEverythingImpQueryAuthorizer();
-const defaultModificationAuthorizer = createDenyEverythingModificationAuthorizer();
+const defaultAuthorizer = createDenyEverythingAuthorizer();
 
-/** Fail-closed defaults when handler options omit authorizer getters. */
-export function defaultImpQueryAuthorizerGetter(): ImpQueryAuthorizer {
-  return defaultImpQueryAuthorizer;
-}
-
-export function defaultModificationAuthorizerGetter(): ModificationAuthorizer {
-  return defaultModificationAuthorizer;
+/** Fail-closed default when handler options omit the authorizer getter. */
+export function defaultAuthorizerGetter(): Authorizer {
+  return defaultAuthorizer;
 }
 
 /** Explicit light solo / test grant — never used as an implicit default. */
 export function allowEverythingAuthorizerOptions(): {
-  getImpQueryAuthorizer: () => ImpQueryAuthorizer;
-  getModificationAuthorizer: () => ModificationAuthorizer;
+  getAuthorizer: () => Authorizer;
 } {
-  const imp = createAllowEverythingImpQueryAuthorizer();
-  const mod = createAllowEverythingModificationAuthorizer();
+  const authorizer = createAllowEverythingAuthorizer();
   return {
-    getImpQueryAuthorizer: () => imp,
-    getModificationAuthorizer: () => mod,
+    getAuthorizer: () => authorizer,
   };
 }
 
 export async function decideImpQuery(
-  authorizer: ImpQueryAuthorizer,
+  authorizer: Authorizer,
   principal: Principal | null,
   context: ImpQueryAuthorizationContext,
 ): Promise<"allow" | "deny"> {
-  return authorizer.authorize(principal, context);
+  return authorizer.authorizeImpQuery(principal, context);
 }
 
 export async function decideModification(
-  authorizer: ModificationAuthorizer,
+  authorizer: Authorizer,
   principal: Principal | null,
   context: ModificationAuthorizationContext,
 ): Promise<"allow" | "deny"> {
-  return authorizer.authorize(principal, context);
+  return authorizer.authorizeModification(principal, context);
 }

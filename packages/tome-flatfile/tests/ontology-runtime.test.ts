@@ -6,6 +6,8 @@ import { serializePageBlock } from "tome-interfaces/page-block";
 import { hostsProjectionFilterGraph } from "tome-ontology";
 import {
   ContentStore,
+  contentHasAuthorizationModelType,
+  discoverAuthorizationModelInstanceIds,
   invalidateOntologyCache,
   invalidateRelationshipTypesCache,
   loadMemberScopesFromContent,
@@ -29,6 +31,8 @@ const PRED_INACTIVE = "000000000000000000000000C6";
 const MEMBER_SCOPE_TYPE = "000000000000000000000000C7";
 const MEMBER_SCOPE_INST = "000000000000000000000000C8";
 const TYPE_TABLE_HUB = "000000000000000000000000C9";
+const AUTH_MODEL_TYPE = "000000000000000000000000D1";
+const AUTH_MODEL_INST = "000000000000000000000000D2";
 
 function writeNode(contentDir: string, id: string, title: string, body = ""): void {
   const path = nodeFilePath(contentDir, id);
@@ -203,5 +207,57 @@ describe("node ontology runtime overlay", () => {
     const runtime = loadRelationshipRuntimeFromContent(contentDir);
     expect(runtime.predicates.size).toBe(1);
     expect(runtime.predicates.has(SET_TYPE)).toBe(true);
+  });
+
+  test("discovers Authorization Model instances from types.authorizationModel", () => {
+    const contentDir = mkdtempSync(join(tmpdir(), "tome-authz-model-"));
+    dirs.push(contentDir);
+    mkdirSync(join(contentDir, "model"), { recursive: true });
+
+    const registry = emptyRelationshipTypesFile();
+    registerSetRelationshipType(registry, {
+      id: SET_TYPE,
+      perspectives: ["Members", "Membership"],
+    });
+    writeFileSync(
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile(registry),
+      "utf-8",
+    );
+    writeFileSync(
+      ontologyFilePath(contentDir),
+      serializeOntologyFile({
+        version: 1,
+        types: { authorizationModel: AUTH_MODEL_TYPE },
+      }),
+      "utf-8",
+    );
+    writeNode(contentDir, AUTH_MODEL_TYPE, "Authorization Model");
+    writeNode(contentDir, AUTH_MODEL_INST, "Demo authz model");
+
+    const store = new ContentStore(contentDir);
+    store.writeRelationshipsFile({
+      version: 1,
+      relationships: [{ a: AUTH_MODEL_TYPE, b: AUTH_MODEL_INST, type: SET_TYPE }],
+    });
+
+    expect(contentHasAuthorizationModelType(contentDir)).toBe(true);
+    expect(discoverAuthorizationModelInstanceIds(contentDir)).toEqual([AUTH_MODEL_INST]);
+  });
+
+  test("authorizationModel type key is optional", () => {
+    const contentDir = mkdtempSync(join(tmpdir(), "tome-authz-optional-"));
+    dirs.push(contentDir);
+    mkdirSync(join(contentDir, "model"), { recursive: true });
+    writeFileSync(
+      ontologyFilePath(contentDir),
+      serializeOntologyFile({
+        version: 1,
+        types: { ontology: ONTOLOGY_TYPE },
+      }),
+      "utf-8",
+    );
+    expect(contentHasAuthorizationModelType(contentDir)).toBe(false);
+    expect(discoverAuthorizationModelInstanceIds(contentDir)).toEqual([]);
   });
 });
