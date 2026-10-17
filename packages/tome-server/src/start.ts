@@ -6,6 +6,7 @@ import {
 } from "tome-db/content";
 import { openDataStoreSession } from "tome-db/sync";
 import { InMemorySessionStore, sessionCookieHeader } from "tome-http";
+import { AuthorizationRegistry } from "./authorization/registry";
 import { openTomeGraphServicesDeferred } from "./graph-services";
 import {
   loadServerConfig,
@@ -103,6 +104,8 @@ export async function startTomeServer(options?: {
   }
 
   const sessionStore = new InMemorySessionStore();
+  const authorizationRegistry = new AuthorizationRegistry();
+  authorizationRegistry.resetAndApplyBuiltIns(config.authorization);
 
   const deferred = await openTomeGraphServicesDeferred(
     { store: session.writeContext.store, cache: session.writeContext.cache },
@@ -115,6 +118,10 @@ export async function startTomeServer(options?: {
         createSession: (input) => sessionStore.create(input),
         sessionCookieHeader,
       },
+      authorization: {
+        registry: authorizationRegistry,
+        builtIns: config.authorization,
+      },
     },
   );
 
@@ -123,6 +130,8 @@ export async function startTomeServer(options?: {
     cacheDbPath: dbPath,
     sessionStore,
     getAuthenticationProvider: () => deferred.getAuthenticationProvider(),
+    getImpQueryAuthorizer: () => authorizationRegistry.getImpQueryAuthorizer(),
+    getModificationAuthorizer: () => authorizationRegistry.getModificationAuthorizer(),
   });
 
   const graphStartedAt = performance.now();

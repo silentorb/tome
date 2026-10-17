@@ -3,6 +3,15 @@ export { createTomeHttpService, type TomeHttpServiceOptions } from "./service";
 export { UserSettingsStore } from "./user-settings-store";
 export type { Principal, Session } from "./identity";
 export {
+  allowEverythingAuthorizerOptions,
+  defaultImpQueryAuthorizerGetter,
+  defaultModificationAuthorizerGetter,
+  decideImpQuery,
+  decideModification,
+  type ImpQueryAuthorizer,
+  type ModificationAuthorizer,
+} from "./authorization";
+export {
   getRequestPrincipal,
   extractSessionIdFromRequest,
   runWithRequestPrincipal,

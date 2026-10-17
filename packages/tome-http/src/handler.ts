@@ -22,6 +22,14 @@ import { executeProfilingImp } from "./profiling-imp";
 import type { AuthenticationProvider } from "tome-interfaces/authentication";
 import type { Principal } from "./identity";
 import {
+  decideImpQuery,
+  decideModification,
+  defaultImpQueryAuthorizerGetter,
+  defaultModificationAuthorizerGetter,
+  type ImpQueryAuthorizer,
+  type ModificationAuthorizer,
+} from "./authorization";
+import {
   extractSessionIdFromRequest,
   getRequestPrincipal,
   runWithRequestPrincipalAsync,
@@ -88,6 +96,16 @@ export type CreateApiHandlerOptions = {
    * Prefer a getter so extension reload can swap the provider without recreating the handler.
    */
   getAuthenticationProvider?: () => AuthenticationProvider | null | undefined;
+  /**
+   * Imp query denial authorizer. When omitted, defaults to deny-everything (fail closed).
+   * Pass allow-everything explicitly for light solo / tests.
+   */
+  getImpQueryAuthorizer?: () => ImpQueryAuthorizer;
+  /**
+   * Modification denial authorizer. When omitted, defaults to deny-everything (fail closed).
+   * Pass allow-everything explicitly for light solo / tests.
+   */
+  getModificationAuthorizer?: () => ModificationAuthorizer;
 };
 
 function cacheSyncingPayload(status: CacheSyncPublicStatus) {
@@ -148,6 +166,10 @@ export function createApiHandler(
   const getCacheSyncStatus = options?.getCacheSyncStatus;
   const sessionStore = options?.sessionStore ?? new InMemorySessionStore();
   const getAuthenticationProvider = options?.getAuthenticationProvider;
+  const getImpQueryAuthorizer =
+    options?.getImpQueryAuthorizer ?? defaultImpQueryAuthorizerGetter;
+  const getModificationAuthorizer =
+    options?.getModificationAuthorizer ?? defaultModificationAuthorizerGetter;
 
   const fetchHandler = async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
@@ -165,6 +187,8 @@ export function createApiHandler(
           getCacheSyncStatus,
           sessionStore,
           getAuthenticationProvider,
+          getImpQueryAuthorizer,
+          getModificationAuthorizer,
         ),
       );
     }
@@ -190,6 +214,8 @@ export function createApiHandler(
               getCacheSyncStatus,
               sessionStore,
               getAuthenticationProvider,
+              getImpQueryAuthorizer,
+              getModificationAuthorizer,
             ),
           );
           // Mutable attrs bag — status is set before the span's finally records.
@@ -218,8 +244,34 @@ async function dispatchApiRequest(
   getCacheSyncStatus: CreateApiHandlerOptions["getCacheSyncStatus"],
   sessionStore: SessionStore,
   getAuthenticationProvider: CreateApiHandlerOptions["getAuthenticationProvider"],
+  getImpQueryAuthorizer: () => ImpQueryAuthorizer,
+  getModificationAuthorizer: () => ModificationAuthorizer,
 ): Promise<Response> {
       const syncStatus = getCacheSyncStatus?.();
+
+      const forbiddenIfImpDenied = async (
+        graph: unknown,
+        context?: unknown,
+      ): Promise<Response | null> => {
+        const decision = await decideImpQuery(
+          getImpQueryAuthorizer(),
+          getRequestPrincipal(),
+          { graph, context },
+        );
+        return decision === "deny" ? json({ error: "forbidden" }, 403) : null;
+      };
+
+      const forbiddenIfModificationDenied = async (
+        modification: string,
+        payload?: unknown,
+      ): Promise<Response | null> => {
+        const decision = await decideModification(
+          getModificationAuthorizer(),
+          getRequestPrincipal(),
+          { modification, payload },
+        );
+        return decision === "deny" ? json({ error: "forbidden" }, 403) : null;
+      };
 
       if (path === "/api/health") {
         return json(healthPayload(syncStatus, getRequestPrincipal()));
@@ -305,6 +357,10 @@ async function dispatchApiRequest(
         if (!payload.graph || typeof payload.graph !== "object") {
           return json({ error: "graph object required" }, 400);
         }
+        {
+          const denied = await forbiddenIfImpDenied(payload.graph);
+          if (denied) return denied;
+        }
         try {
           const result = executeProfilingImp(
             payload.graph as import("imp-core-types").Graph,
@@ -351,6 +407,10 @@ async function dispatchApiRequest(
       }
 
       if (path === "/api/workspace/quick-links/order" && req.method === "PUT") {
+        {
+          const denied = await forbiddenIfModificationDenied("workspace.quick_links.reorder");
+          if (denied) return denied;
+        }
         const payload = (await req.json()) as { nodeIds?: unknown };
         if (!Array.isArray(payload.nodeIds)) {
           return json({ error: "nodeIds array required" }, 400);
@@ -392,6 +452,10 @@ async function dispatchApiRequest(
           payload.context && typeof payload.context === "object"
             ? (payload.context as import("tome-graph-interfaces").ExecuteImpContext)
             : undefined;
+        {
+          const denied = await forbiddenIfImpDenied(payload.graph, context);
+          if (denied) return denied;
+        }
         const result = await db.executeImp(
           payload.graph as import("tome-graph-interfaces").ImpGraph,
           context,
@@ -446,6 +510,10 @@ async function dispatchApiRequest(
       }
 
       if (path === "/api/nodes" && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("node.create");
+          if (denied) return denied;
+        }
         const payload = (await req.json()) as {
           title?: string;
           body?: string;
@@ -525,6 +593,10 @@ async function dispatchApiRequest(
           return json({ node });
         }
         if (req.method === "PATCH") {
+          {
+            const denied = await forbiddenIfModificationDenied("node.patch");
+            if (denied) return denied;
+          }
           const payload = (await req.json()) as {
             document?: unknown;
             title?: string;
@@ -555,6 +627,10 @@ async function dispatchApiRequest(
           return json({ ok: true });
         }
         if (req.method === "DELETE") {
+          {
+            const denied = await forbiddenIfModificationDenied("node.delete");
+            if (denied) return denied;
+          }
           const error = await db.deleteNode(id);
           if (error) return json({ error: lifecycleMessage(error) }, lifecycleStatus(error));
           return json({ ok: true });
@@ -564,6 +640,10 @@ async function dispatchApiRequest(
       const relationRowMatch =
         /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relation-rows$/i.exec(path);
       if (relationRowMatch && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("relation_row.create");
+          if (denied) return denied;
+        }
         const sourceId = relationRowMatch[1]!;
         const payload = (await req.json()) as {
           type?: string;
@@ -585,6 +665,10 @@ async function dispatchApiRequest(
 
       const archiveMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/archive$/i.exec(path);
       if (archiveMatch && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("node.archive");
+          if (denied) return denied;
+        }
         const id = archiveMatch[1]!;
         const error = await db.archiveNode(id);
         if (error) return json({ error: lifecycleMessage(error) }, lifecycleStatus(error));
@@ -593,6 +677,10 @@ async function dispatchApiRequest(
 
       const unarchiveMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/unarchive$/i.exec(path);
       if (unarchiveMatch && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("node.unarchive");
+          if (denied) return denied;
+        }
         const id = unarchiveMatch[1]!;
         const error = await db.unarchiveNode(id);
         if (error) return json({ error: lifecycleMessage(error) }, lifecycleStatus(error));
@@ -601,6 +689,10 @@ async function dispatchApiRequest(
 
       const quickLinkMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/quick-link$/i.exec(path);
       if (quickLinkMatch && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("quick_link.add");
+          if (denied) return denied;
+        }
         const id = quickLinkMatch[1]!;
         let options: { label?: string } | undefined;
         try {
@@ -618,6 +710,10 @@ async function dispatchApiRequest(
         return json({ ok: true });
       }
       if (quickLinkMatch && req.method === "DELETE") {
+        {
+          const denied = await forbiddenIfModificationDenied("quick_link.remove");
+          if (denied) return denied;
+        }
         const id = quickLinkMatch[1]!;
         const error = await db.removeQuickLink(id);
         if (error) return json({ error: quickLinkMessage(error) }, quickLinkStatus(error));
@@ -634,6 +730,10 @@ async function dispatchApiRequest(
       const viewsRelationshipMatch =
         /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationship-types\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (viewsRelationshipMatch && req.method === "PATCH") {
+        {
+          const denied = await forbiddenIfModificationDenied("views.relationship.patch");
+          if (denied) return denied;
+        }
         const nodeId = viewsRelationshipMatch[1]!;
         const relationshipTypeId = viewsRelationshipMatch[2]!;
         const payload = (await req.json()) as {
@@ -659,6 +759,10 @@ async function dispatchApiRequest(
       const viewsCollectionMatch =
         /^\/api\/views\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/relationship-types\/([0-9A-HJKMNP-TV-Z]{26})\/views$/i.exec(path);
       if (viewsCollectionMatch && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("views.relationship.create");
+          if (denied) return denied;
+        }
         const nodeId = viewsCollectionMatch[1]!;
         const relationshipTypeId = viewsCollectionMatch[2]!;
         const payload = (await req.json()) as {
@@ -690,6 +794,10 @@ async function dispatchApiRequest(
         const relationshipTypeId = viewsItemMatch[2]!;
         const viewId = viewsItemMatch[3]!;
         if (req.method === "PATCH") {
+          {
+            const denied = await forbiddenIfModificationDenied("views.relationship.update");
+            if (denied) return denied;
+          }
           const payload = (await req.json()) as {
             name?: string;
             sorts?: ViewSortSpec[];
@@ -703,6 +811,10 @@ async function dispatchApiRequest(
           }
         }
         if (req.method === "DELETE") {
+          {
+            const denied = await forbiddenIfModificationDenied("views.relationship.delete");
+            if (denied) return denied;
+          }
           try {
             await db.deleteRelationshipView(nodeId, relationshipTypeId, viewId);
             return json({ ok: true });
@@ -729,6 +841,10 @@ async function dispatchApiRequest(
 
       const databaseRowsMatch = /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/rows$/i.exec(path);
       if (databaseRowsMatch && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("database.row.create");
+          if (denied) return denied;
+        }
         const databaseId = databaseRowsMatch[1]!;
         const payload = (await req.json()) as {
           title?: string;
@@ -761,6 +877,10 @@ async function dispatchApiRequest(
       const sequenceMatch =
         /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/sequence$/i.exec(path);
       if (sequenceMatch && req.method === "PATCH") {
+        {
+          const denied = await forbiddenIfModificationDenied("database.sequence.rewrite");
+          if (denied) return denied;
+        }
         const databaseId = sequenceMatch[1]!;
         const payload = (await req.json()) as {
           orderedRowIds?: string[];
@@ -791,6 +911,10 @@ async function dispatchApiRequest(
       const databaseRowMatch =
         /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/rows\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (databaseRowMatch && req.method === "PATCH") {
+        {
+          const denied = await forbiddenIfModificationDenied("database.row.property");
+          if (denied) return denied;
+        }
         const databaseId = databaseRowMatch[1]!;
         const nodeId = databaseRowMatch[2]!;
         const payload = (await req.json()) as { property?: string; value?: string | null };
@@ -814,6 +938,10 @@ async function dispatchApiRequest(
 
       const databaseColumnsMatch = /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/columns$/i.exec(path);
       if (databaseColumnsMatch && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("database.column.create");
+          if (denied) return denied;
+        }
         const databaseId = databaseColumnsMatch[1]!;
         const payload = (await req.json()) as {
           key?: string;
@@ -853,6 +981,10 @@ async function dispatchApiRequest(
       const databaseColumnMatch =
         /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/columns\/([a-z0-9_]+)$/i.exec(path);
       if (databaseColumnMatch && req.method === "PATCH") {
+        {
+          const denied = await forbiddenIfModificationDenied("database.column.update");
+          if (denied) return denied;
+        }
         const databaseId = databaseColumnMatch[1]!;
         const columnKey = databaseColumnMatch[2]!.toLowerCase();
         const payload = (await req.json()) as {
@@ -890,6 +1022,10 @@ async function dispatchApiRequest(
       }
 
       if (databaseColumnMatch && req.method === "DELETE") {
+        {
+          const denied = await forbiddenIfModificationDenied("database.column.delete");
+          if (denied) return denied;
+        }
         const databaseId = databaseColumnMatch[1]!;
         const columnKey = databaseColumnMatch[2]!.toLowerCase();
         const result = await db.deleteDatabaseColumn(databaseId, columnKey);
@@ -903,6 +1039,10 @@ async function dispatchApiRequest(
 
       const connectionsMoveMatch = path === "/api/nodes/connections/move";
       if (connectionsMoveMatch && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("connection.move");
+          if (denied) return denied;
+        }
         const payload = (await req.json()) as {
           type?: string;
           oldSourceId?: string;
@@ -945,6 +1085,10 @@ async function dispatchApiRequest(
 
       const connectionsPostMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/connections$/i.exec(path);
       if (connectionsPostMatch && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("connection.link");
+          if (denied) return denied;
+        }
         const sourceId = connectionsPostMatch[1]!;
         const payload = (await req.json()) as {
           type?: string;
@@ -973,6 +1117,10 @@ async function dispatchApiRequest(
       const connectionMatch =
         /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/connections\/([^/]+)\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (connectionMatch && req.method === "DELETE") {
+        {
+          const denied = await forbiddenIfModificationDenied("connection.unlink");
+          if (denied) return denied;
+        }
         const sourceId = connectionMatch[1]!;
         const type = decodeURIComponent(connectionMatch[2]!);
         const targetId = connectionMatch[3]!;
@@ -982,6 +1130,10 @@ async function dispatchApiRequest(
       }
 
       if (connectionMatch && req.method === "PATCH") {
+        {
+          const denied = await forbiddenIfModificationDenied("connection.property");
+          if (denied) return denied;
+        }
         const nodeId = connectionMatch[1]!;
         const type = decodeURIComponent(connectionMatch[2]!);
         const targetId = connectionMatch[3]!;
@@ -1026,6 +1178,10 @@ async function dispatchApiRequest(
 
       const invokeMatch = /^\/api\/extensions\/([^/]+)\/invoke$/.exec(path);
       if (invokeMatch && req.method === "POST") {
+        {
+          const denied = await forbiddenIfModificationDenied("extension.invoke");
+          if (denied) return denied;
+        }
         const componentId = decodeURIComponent(invokeMatch[1]!);
         let payload: Record<string, unknown> = {};
         try {

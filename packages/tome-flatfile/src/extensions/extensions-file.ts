@@ -16,6 +16,8 @@ export interface ExtensionEntry {
   serverModule?: string;
   searcherModule?: string;
   authenticationModule?: string;
+  /** Optional module that registers Imp-query / modification authorizers on the host. */
+  authorizationModule?: string;
   params?: Record<string, unknown>;
 }
 
@@ -101,6 +103,11 @@ function parseExtensionEntry(raw: unknown, path: string): ExtensionEntry {
     `${path}.authenticationModule`,
   );
   if (authenticationModule) entry.authenticationModule = authenticationModule;
+  const authorizationModule = parseOptionalString(
+    obj.authorizationModule,
+    `${path}.authorizationModule`,
+  );
+  if (authorizationModule) entry.authorizationModule = authorizationModule;
   const params = parseParams(obj.params, `${path}.params`);
   if (params) entry.params = params;
   return entry;

@@ -12,8 +12,10 @@ import type {
   AuthenticationModule,
   AuthenticationProvider,
 } from "tome-interfaces/authentication";
+import type { AuthorizationModule } from "tome-interfaces/authorization";
 import type { SearcherModule, SearchRole, TomeSearch } from "tome-interfaces/search";
 import { SEARCH_ROLES } from "tome-interfaces/search";
+import type { TomeAuthorizationConfig } from "tome-service-interfaces";
 import {
   findComponentById,
   loadExtensionsFromContent,
@@ -27,8 +29,10 @@ import {
   type ResolvedSearcherComponent,
 } from "tome-db";
 import { PAGE_BLOCK_CONTENT_TYPE_JSON } from "tome-interfaces/page-block";
+import type { AuthorizationRegistry } from "../authorization/registry";
 import {
   AuthenticationHostImpl,
+  AuthorizationHostImpl,
   EditorPageBlockHostImpl,
   SearcherHostImpl,
   ServerPageBlockHostImpl,
@@ -52,6 +56,7 @@ export interface LoadedExtensionModules {
   serverModule?: string;
   searcherModule?: string;
   authenticationModule?: string;
+  authorizationModule?: string;
 }
 
 export type ExtensionAuthenticationHooks = {
@@ -59,6 +64,12 @@ export type ExtensionAuthenticationHooks = {
     subjectId: string;
   }) => { id: string; subjectId: string } | Promise<{ id: string; subjectId: string }>;
   sessionCookieHeader: (sessionId: string, req: Request) => string;
+};
+
+export type ExtensionAuthorizationOptions = {
+  registry: AuthorizationRegistry;
+  /** Built-in ids from server config; re-applied on each extension reload before modules register. */
+  builtIns?: TomeAuthorizationConfig | null;
 };
 
 interface CachedEditorBundle {
@@ -124,6 +135,20 @@ async function importAuthenticationModule(
   register(host);
 }
 
+async function importAuthorizationModule(
+  modulePath: string,
+  host: AuthorizationHostImpl,
+): Promise<void> {
+  const loaded = (await import(modulePath)) as AuthorizationModule & {
+    default?: AuthorizationModule;
+  };
+  const register = loaded.register ?? loaded.default?.register;
+  if (typeof register !== "function") {
+    throw new Error(`Extension module ${modulePath} must export register(host)`);
+  }
+  register(host);
+}
+
 /** Serialize Bun.build across extensions — concurrent builds are flaky in long-lived server processes. */
 let editorBuildChain: Promise<unknown> = Promise.resolve();
 
@@ -150,6 +175,8 @@ export class ExtensionServerRuntime {
   readonly #getGraphMutateServices?: () => ExtensionGraphMutateServices | undefined;
   readonly #searcherHooks: ExtensionSearcherHostHooks;
   readonly #authenticationHooks: ExtensionAuthenticationHooks | undefined;
+  readonly #authorization: ExtensionAuthorizationOptions | undefined;
+  readonly #authorizationHost: AuthorizationHostImpl | null;
   readonly #editorHost = new EditorPageBlockHostImpl();
   readonly #htmlHost = new HtmlPageBlockHostImpl();
   readonly #serverHost = new ServerPageBlockHostImpl();
@@ -183,6 +210,7 @@ export class ExtensionServerRuntime {
     getCorpusQueryServices?: () => ExtensionCorpusQueryServices | undefined,
     searcherHooks?: ExtensionSearcherHostHooks,
     authenticationHooks?: ExtensionAuthenticationHooks,
+    authorization?: ExtensionAuthorizationOptions,
   ) {
     this.#contentPath = contentPath;
     this.#getGraphQueryServices = getGraphQueryServices;
@@ -192,6 +220,10 @@ export class ExtensionServerRuntime {
     this.#getCorpusQueryServices = getCorpusQueryServices;
     this.#searcherHooks = searcherHooks ?? {};
     this.#authenticationHooks = authenticationHooks;
+    this.#authorization = authorization;
+    this.#authorizationHost = authorization
+      ? new AuthorizationHostImpl(authorization.registry)
+      : null;
   }
 
   get editorHost(): EditorPageBlockHostImpl {
@@ -265,6 +297,7 @@ export class ExtensionServerRuntime {
         serverModule: extension.serverModule,
         searcherModule: extension.searcherModule,
         authenticationModule: extension.authenticationModule,
+        authorizationModule: extension.authorizationModule,
       };
       this.#loadedModules.push(record);
 
@@ -292,6 +325,27 @@ export class ExtensionServerRuntime {
         const message = err instanceof Error ? err.message : String(err);
         loadErrors.push(`${extension.id}: ${message}`);
         console.error(`[tome-server] Failed to load extension ${extension.id}:`, err);
+      }
+    }
+
+    // Deny baseline + built-in config, then extension authorizers may replace slots.
+    this.#authorization?.registry.resetAndApplyBuiltIns(this.#authorization.builtIns);
+    if (this.#authorizationHost) {
+      for (const extension of this.#manifest.extensions) {
+        if (!extension.authorizationModule) continue;
+        try {
+          await importAuthorizationModule(
+            extension.authorizationModule,
+            this.#authorizationHost,
+          );
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : String(err);
+          loadErrors.push(`${extension.id} authorization: ${message}`);
+          console.error(
+            `[tome-server] Failed to load authorization module for ${extension.id}:`,
+            err,
+          );
+        }
       }
     }
 

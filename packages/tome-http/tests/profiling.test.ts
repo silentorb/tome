@@ -2,7 +2,11 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createApiHandler, UserSettingsStore } from "../src/index";
+import {
+  allowEverythingAuthorizerOptions,
+  createApiHandler,
+  UserSettingsStore,
+} from "../src/index";
 import {
   configureProfiling,
   getProfilingStore,
@@ -202,6 +206,7 @@ describe("createApiHandler profiling", async () => {
     const handler = createApiHandler(
       stubServices(),
       new UserSettingsStore("/tmp/tome-http-profiling-imp-settings.json"),
+      { ...allowEverythingAuthorizerOptions() },
     );
     const res = await handler(
       new Request("http://127.0.0.1/api/debug/profiling/execute-imp", {

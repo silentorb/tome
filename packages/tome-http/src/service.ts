@@ -114,6 +114,8 @@ export function createTomeHttpService(): TomeServiceModule {
         getCacheSyncStatus: host.getCacheSyncStatus,
         sessionStore: host.sessionStore,
         getAuthenticationProvider: host.getAuthenticationProvider,
+        getImpQueryAuthorizer: host.getImpQueryAuthorizer,
+        getModificationAuthorizer: host.getModificationAuthorizer,
       });
       server = Bun.serve({
         port,

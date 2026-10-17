@@ -16,8 +16,13 @@ import type {
   TomeCorpusConfig,
   CacheSyncPublicStatus,
   NormalizedTomeServerConfig,
+  TomeAuthorizationConfig,
 } from "tome-service-interfaces";
 import type { TomeGraphServices } from "tome-graph-interfaces";
+import {
+  parseAuthorizationConfig,
+  resolveAuthorizationBuiltIns,
+} from "./authorization/registry";
 
 const moduleDir = dirname(fileURLToPath(import.meta.url));
 const DEFAULT_CONFIG_PATH = resolve(moduleDir, "../config/tome-server.json");
@@ -197,6 +202,7 @@ export function normalizeServerConfig(config: TomeServerConfig): NormalizedTomeS
       queryStoreId,
       libraries: config.sync?.libraries,
     },
+    authorization: resolveAuthorizationBuiltIns(config.authorization),
     services: config.services,
     store,
     cache,
@@ -224,6 +230,10 @@ export function parseServerConfig(raw: unknown): TomeServerConfig {
   const hasDataStores = obj.dataStores != null;
   const hasLegacy = obj.store != null || obj.cache != null;
 
+  const authorization = parseAuthorizationConfig(obj.authorization) as
+    | TomeAuthorizationConfig
+    | undefined;
+
   if (hasDataStores) {
     const dataStores = parseDataStoresMap(obj.dataStores);
     const sync = parseSyncBlock(obj.sync);
@@ -232,7 +242,7 @@ export function parseServerConfig(raw: unknown): TomeServerConfig {
       obj.store != null ? parseModuleEntry(obj.store, "store") : undefined;
     const cache =
       obj.cache != null ? parseModuleEntry(obj.cache, "cache") : undefined;
-    return { version, dataStores, sync, store, cache, services };
+    return { version, dataStores, sync, store, cache, services, authorization };
   }
 
   if (!hasLegacy) {
@@ -241,7 +251,7 @@ export function parseServerConfig(raw: unknown): TomeServerConfig {
   const store = parseModuleEntry(obj.store, "store");
   const cache = parseModuleEntry(obj.cache, "cache");
   const sync = obj.sync != null ? parseSyncBlock(obj.sync) : undefined;
-  return { version, store, cache, sync, services };
+  return { version, store, cache, sync, services, authorization };
 }
 
 export function loadServerConfig(path = resolveServerConfigPath()): TomeServerConfig {
@@ -394,6 +404,10 @@ export async function startConfiguredServices(
       | import("tome-service-interfaces").TomeAuthenticationProviderPort
       | null
       | undefined;
+    getImpQueryAuthorizer?: () =>
+      import("tome-service-interfaces").TomeImpQueryAuthorizerPort;
+    getModificationAuthorizer?: () =>
+      import("tome-service-interfaces").TomeModificationAuthorizerPort;
   },
 ): Promise<StartedServices> {
   if (config.services.length === 0) {
@@ -419,6 +433,8 @@ export async function startConfiguredServices(
       getCacheSyncStatus: hostExtras?.getCacheSyncStatus,
       sessionStore: hostExtras?.sessionStore,
       getAuthenticationProvider: hostExtras?.getAuthenticationProvider,
+      getImpQueryAuthorizer: hostExtras?.getImpQueryAuthorizer,
+      getModificationAuthorizer: hostExtras?.getModificationAuthorizer,
     });
     modules.push(service);
     console.log(`[tome-server] started service "${service.id}" from ${entry.module}`);

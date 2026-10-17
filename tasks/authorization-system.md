@@ -1,14 +1,20 @@
 # Authorization system
 
-Status: open
+Status: open (phase 3 in progress)
 
 ## Intent
 
-Define who can read or change which corpora, nodes, and operations once multi-user is enabled — without turning product policy into a core monolith.
+Define who can read or change which corpora, nodes, and operations — with additive, fail-closed denial in core and specialized policy via extensions.
 
 ## Notes
 
-Charter: [multi-user.md](../docs/features/multi-user.md). **Phase 3 — Authorization** (large; may span multiple sessions): skeletal LCD `authorize(principal, action, resource)` in core (allow/no-op when no authz provider / null principal), then specialized policies as authorization **extensions**. Depends on phase 1 authentication (Principal). No core multi-user mode switch. Existing corpus `readonly` / `protectedNodeIds` should fold under or sit beside the LCD interface over time.
+Charter: [multi-user.md](../docs/features/multi-user.md).
+
+**Subdomains:** Denial | Filtering | Probing.
+
+**Phase 3a (landed):** Denial — separate `ImpQueryAuthorizer` + `ModificationAuthorizer`; core deny-everything (server default) + allow-everything (explicit); wired on Imp + modification HTTP paths; extension `authorizationModule` registration. Guide: [authorization-authorizers.md](../docs/extensions/authorization-authorizers.md).
+
+**Remaining:** Filtering (prefer query mutation); probing APIs; catch-all / specialized authorizers for other routes; fold or align `readonly` / `protectedNodeIds`; richer product policies.
 
 ## See also
 

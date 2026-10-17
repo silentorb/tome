@@ -62,9 +62,9 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md), [searchers
 - Marketplace / remote unsigned extensions
 - Independent front/back configuration rows for a single logical component
 
-### Future: authorization / shell providers
+### Authorization modules / shell providers
 
-**authentication-provider** is shipped (phase 2). Later phases may add **authorization-provider** and shell/admin kinds. Kind contracts belong in the host; product authz policy stays in extensions.
+**authentication-provider** is shipped (phase 2). **Denial authorizers** (phase 3a) register via optional extension `authorizationModule` onto separate Imp-query and modification host slots (not a single bundled kind)—see [authorization-authorizers.md](../extensions/authorization-authorizers.md). Later phases may add shell/admin kinds and Filtering/Probing seams. Specialized policy stays in extensions; fail-closed defaults and call sites stay in core.
 
 ## Design rationale
 

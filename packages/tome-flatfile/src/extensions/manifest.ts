@@ -14,6 +14,7 @@ type ExtensionModulePick = Pick<
   | "serverModule"
   | "searcherModule"
   | "authenticationModule"
+  | "authorizationModule"
 >;
 
 export interface ResolvedExtensionComponent extends PageBlockComponentRef {
@@ -164,6 +165,7 @@ function extensionPick(extension: ExtensionEntry): ExtensionModulePick {
     serverModule: extension.serverModule,
     searcherModule: extension.searcherModule,
     authenticationModule: extension.authenticationModule,
+    authorizationModule: extension.authorizationModule,
   };
 }
 

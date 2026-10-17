@@ -11,9 +11,15 @@ import type {
   AuthenticationRegistration,
 } from "tome-interfaces/authentication";
 import type {
+  AuthorizationHost,
+  ImpQueryAuthorizer,
+  ModificationAuthorizer,
+} from "tome-interfaces/authorization";
+import type {
   SearcherHost,
   SearcherRegistration,
 } from "tome-interfaces/search";
+import type { AuthorizationRegistry } from "../authorization/registry";
 
 export class EditorPageBlockHostImpl implements EditorPageBlockHost {
   readonly #blocks = new Map<string, EditorPageBlockRegistration>();
@@ -80,5 +86,18 @@ export class AuthenticationHostImpl implements AuthenticationHost {
 
   clear(): void {
     this.#providers.clear();
+  }
+}
+
+/** Delegates authorizer registration onto a shared AuthorizationRegistry. */
+export class AuthorizationHostImpl implements AuthorizationHost {
+  constructor(readonly registry: AuthorizationRegistry) {}
+
+  registerImpQueryAuthorizer(authorizer: ImpQueryAuthorizer): void {
+    this.registry.registerImpQueryAuthorizer(authorizer);
+  }
+
+  registerModificationAuthorizer(authorizer: ModificationAuthorizer): void {
+    this.registry.registerModificationAuthorizer(authorizer);
   }
 }

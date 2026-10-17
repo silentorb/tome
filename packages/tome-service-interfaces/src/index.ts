@@ -41,6 +41,37 @@ export type TomeAuthenticationProviderPort = {
   handleCallback(req: Request): Response | Promise<Response>;
 };
 
+/** Denial decision from Imp-query / modification authorizers. */
+export type TomeAuthorizationDecision = "allow" | "deny";
+
+/** Imp query denial authorizer port (payload-typed; not HTTP verbs). */
+export type TomeImpQueryAuthorizerPort = {
+  authorize(
+    principal: { subjectId: string } | null,
+    context: { graph: unknown; context?: unknown },
+  ): TomeAuthorizationDecision | Promise<TomeAuthorizationDecision>;
+};
+
+/** Modification denial authorizer port. */
+export type TomeModificationAuthorizerPort = {
+  authorize(
+    principal: { subjectId: string } | null,
+    context: { modification: string; payload?: unknown },
+  ): TomeAuthorizationDecision | Promise<TomeAuthorizationDecision>;
+};
+
+/**
+ * Built-in authorizer ids for `tome-server.json` `authorization` block.
+ * Default when omitted: deny-everything (fail closed). allow-everything is
+ * explicit opt-in only (light solo / trusted host).
+ */
+export type TomeBuiltInAuthorizerId = "deny-everything" | "allow-everything";
+
+export type TomeAuthorizationConfig = {
+  impQueryAuthorizer?: TomeBuiltInAuthorizerId;
+  modificationAuthorizer?: TomeBuiltInAuthorizerId;
+};
+
 /**
  * Host context passed into a service module when the server starts it.
  * `services` is the domain facade (`TomeGraphServices`), not a service module.
@@ -54,6 +85,10 @@ export interface TomeServiceHost {
   sessionStore?: TomeSessionStorePort;
   /** Opened authentication provider when an authentication-provider extension is loaded. */
   getAuthenticationProvider?: () => TomeAuthenticationProviderPort | null | undefined;
+  /** Imp query denial authorizer (server defaults to deny-everything). */
+  getImpQueryAuthorizer?: () => TomeImpQueryAuthorizerPort;
+  /** Modification denial authorizer (server defaults to deny-everything). */
+  getModificationAuthorizer?: () => TomeModificationAuthorizerPort;
 }
 
 /**
@@ -94,6 +129,11 @@ export interface TomeServerConfig {
     libraries?: TomeServerModuleConfigEntry[];
   };
   /**
+   * Denial authorizers (built-in ids). Omitted slots default to deny-everything.
+   * allow-everything must be set explicitly (never implied).
+   */
+  authorization?: TomeAuthorizationConfig;
+  /**
    * @deprecated Prefer `dataStores`. Still accepted; migrated at parse time.
    */
   store?: TomeServerModuleConfigEntry;
@@ -113,6 +153,11 @@ export interface NormalizedTomeServerConfig {
     graph?: unknown;
     queryStoreId?: string;
     libraries?: TomeServerModuleConfigEntry[];
+  };
+  /** Resolved built-in authorizer ids (always present; default deny-everything). */
+  authorization: {
+    impQueryAuthorizer: TomeBuiltInAuthorizerId;
+    modificationAuthorizer: TomeBuiltInAuthorizerId;
   };
   services: TomeServerModuleConfigEntry[];
   /** Convenience: primary flatfile module entry (first flatfile in dataStores). */

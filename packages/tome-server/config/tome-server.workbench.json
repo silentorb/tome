@@ -59,6 +59,10 @@
       }
     }
   },
+  "authorization": {
+    "impQueryAuthorizer": "allow-everything",
+    "modificationAuthorizer": "allow-everything"
+  },
   "services": [
     {
       "id": "http",

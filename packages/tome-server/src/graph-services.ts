@@ -102,6 +102,7 @@ function buildGraphServices(
     startWatching?: boolean;
     searchBackends?: Map<string, unknown>;
     authenticationHooks?: import("./extensions/runtime").ExtensionAuthenticationHooks;
+    authorization?: import("./extensions/runtime").ExtensionAuthorizationOptions;
   },
 ): {
   services: TomeGraphServices;
@@ -127,6 +128,7 @@ function buildGraphServices(
       getSearcherBackend: (dataStoreId: string) => searchBackends.get(dataStoreId),
     },
     options?.authenticationHooks,
+    options?.authorization,
   );
 
   const syncSearchIntoGraphStore = () => {
@@ -645,6 +647,7 @@ export async function openTomeGraphServicesDeferred(
     /** dataStore id → TomeSearch (or FTS handle) for searcher extensions. */
     searchBackends?: Map<string, unknown>;
     authenticationHooks?: import("./extensions/runtime").ExtensionAuthenticationHooks;
+    authorization?: import("./extensions/runtime").ExtensionAuthorizationOptions;
   },
 ): Promise<DeferredTomeGraphServices> {
   const writeCtx =
@@ -657,6 +660,7 @@ export async function openTomeGraphServicesDeferred(
     startWatching: false,
     searchBackends: options?.searchBackends,
     authenticationHooks: options?.authenticationHooks,
+    authorization: options?.authorization,
   });
   return {
     services: built.services,

@@ -16,6 +16,11 @@ export {
 } from "./load-services";
 export { startTomeServer } from "./start";
 export {
+  AuthorizationRegistry,
+  parseAuthorizationConfig,
+  resolveAuthorizationBuiltIns,
+} from "./authorization/registry";
+export {
   pickExistingDbPath,
   resolveApiPort,
   resolveContentPath,

@@ -49,6 +49,10 @@ Preferred (`dataStores` + optional `sync`):
     }
   },
   "sync": { "queryStoreId": "sqlite" },
+  "authorization": {
+    "impQueryAuthorizer": "deny-everything",
+    "modificationAuthorizer": "deny-everything"
+  },
   "services": [
     {
       "id": "http",
@@ -59,6 +63,9 @@ Preferred (`dataStores` + optional `sync`):
   ]
 }
 ```
+
+**Denial authorizers:** `authorization.impQueryAuthorizer` / `authorization.modificationAuthorizer` are `"deny-everything"` or `"allow-everything"`. Omitted → deny-everything (fail closed). Workbench solo config sets allow-everything explicitly. See [multi-user.md](./multi-user.md) and [authorization-authorizers.md](../extensions/authorization-authorizers.md).
+
 
 Legacy singular `store` + `cache` (still accepted; normalized at load):
 
