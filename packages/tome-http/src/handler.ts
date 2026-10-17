@@ -99,6 +99,11 @@ export type CreateApiHandlerOptions = {
    * Pass allow-everything explicitly for light solo / tests.
    */
   getAuthorizer?: () => Authorizer;
+  /**
+   * When set (user corpus configured), session create must pass an Account node id.
+   * Return false → 400 `unknown_account`.
+   */
+  validateAccountNodeId?: (accountNodeId: string) => boolean | Promise<boolean>;
 };
 
 function cacheSyncingPayload(status: CacheSyncPublicStatus) {
@@ -160,6 +165,7 @@ export function createApiHandler(
   const sessionStore = options?.sessionStore ?? new InMemorySessionStore();
   const getAuthenticationProvider = options?.getAuthenticationProvider;
   const getAuthorizer = options?.getAuthorizer ?? defaultAuthorizerGetter;
+  const validateAccountNodeId = options?.validateAccountNodeId;
 
   const fetchHandler = async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
@@ -178,6 +184,7 @@ export function createApiHandler(
           sessionStore,
           getAuthenticationProvider,
           getAuthorizer,
+          validateAccountNodeId,
         ),
       );
     }
@@ -204,6 +211,7 @@ export function createApiHandler(
               sessionStore,
               getAuthenticationProvider,
               getAuthorizer,
+              validateAccountNodeId,
             ),
           );
           // Mutable attrs bag — status is set before the span's finally records.
@@ -233,6 +241,7 @@ async function dispatchApiRequest(
   sessionStore: SessionStore,
   getAuthenticationProvider: CreateApiHandlerOptions["getAuthenticationProvider"],
   getAuthorizer: () => Authorizer,
+  validateAccountNodeId?: CreateApiHandlerOptions["validateAccountNodeId"],
 ): Promise<Response> {
       const syncStatus = getCacheSyncStatus?.();
 
@@ -298,9 +307,16 @@ async function dispatchApiRequest(
         if (typeof accountNodeId !== "string" || !accountNodeId.trim()) {
           return json({ error: "accountNodeId must be a non-empty string" }, 400);
         }
+        const trimmedAccountId = accountNodeId.trim();
+        if (validateAccountNodeId) {
+          const ok = await validateAccountNodeId(trimmedAccountId);
+          if (!ok) {
+            return json({ error: "unknown_account" }, 400);
+          }
+        }
         try {
           const session = await sessionStore.create({
-            accountNodeId: accountNodeId.trim(),
+            accountNodeId: trimmedAccountId,
           });
           return json({ session }, 201, {
             "Set-Cookie": sessionCookieHeader(session.id, req),

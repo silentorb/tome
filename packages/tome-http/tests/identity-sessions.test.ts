@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { TomeGraphServices } from "tome-graph-interfaces";
 import {
+  allowEverythingAuthorizerOptions,
   createApiHandler,
   getRequestPrincipal,
   InMemorySessionStore,
@@ -131,6 +132,43 @@ describe("web API identity sessions", () => {
       );
       expect(res.status).toBe(200);
       expect(seen).toEqual({ accountNodeId: "als-user" });
+
+      await handler.close();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("POST /api/sessions rejects unknown account when validator is set", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tome-http-session-validate-"));
+    try {
+      const handler = createApiHandler(
+        mockGraphServices(),
+        new UserSettingsStore(join(dir, "settings.json")),
+        {
+          ...allowEverythingAuthorizerOptions(),
+          validateAccountNodeId: (id) => id === "real-account",
+        },
+      );
+
+      const bad = await handler(
+        new Request("http://localhost/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accountNodeId: "unknown" }),
+        }),
+      );
+      expect(bad.status).toBe(400);
+      expect(await bad.json()).toEqual({ error: "unknown_account" });
+
+      const good = await handler(
+        new Request("http://localhost/api/sessions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ accountNodeId: "real-account" }),
+        }),
+      );
+      expect(good.status).toBe(201);
 
       await handler.close();
     } finally {

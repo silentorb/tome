@@ -3,7 +3,8 @@ export type OntologyTypeKey =
   | "ontology"
   | "predicate"
   | "memberScope"
-  | "authorizationModel";
+  | "authorizationModel"
+  | "authorizationPolicy";
 
 export interface OntologyFile {
   version: number;

@@ -1,5 +1,5 @@
 /**
- * Denial authorizer (multi-user phase 3a).
+ * Denial authorizer (multi-user phase 3a/3b).
  *
  * One Authorizer handles Imp-query and modification denial. Additive / fail-closed:
  * server defaults to deny-everything; grants are explicit (allow-everything,
@@ -86,9 +86,21 @@ export function createAllowEverythingAuthorizer(): Authorizer {
   };
 }
 
+/** Modification families gated by the can-edit-nodes policy (phase 3b). */
+export const NODE_EDIT_MODIFICATION_FAMILIES: readonly string[] = [
+  "node.create",
+  "node.patch",
+  "node.delete",
+  "node.archive",
+  "node.unarchive",
+];
+
 /**
- * Authorization-model authorizer (first pass): discovers model instance ids via
- * the provided callback but always denies until policy child nodes exist.
+ * Authorization-model authorizer.
+ *
+ * Without `evaluateModification`, remains fail-closed (always deny) after discovery.
+ * With `evaluateModification` (phase 3b): Imp queries are allowed; listed node-edit
+ * families call the evaluator; other modifications deny.
  */
 export type AuthorizationModelAuthorizerOptions = {
   /**
@@ -96,18 +108,40 @@ export type AuthorizationModelAuthorizerOptions = {
    * ontology.json types.authorizationModel type-table), across configured corpora.
    */
   listInstanceIds: () => readonly string[] | Promise<readonly string[]>;
+  /**
+   * When set, Imp queries allow and node-edit modifications consult this callback.
+   * Fail closed on errors (caller should return "deny").
+   */
+  evaluateModification?: (
+    principal: AuthorizationPrincipal | null,
+    context: ModificationAuthorizationContext,
+  ) => AuthorizationDecision | Promise<AuthorizationDecision>;
+  /**
+   * Modification families that use `evaluateModification`.
+   * Defaults to {@link NODE_EDIT_MODIFICATION_FAMILIES}.
+   */
+  nodeEditModifications?: readonly string[];
 };
 
 export function createAuthorizationModelAuthorizer(
   options: AuthorizationModelAuthorizerOptions,
 ): Authorizer & { listInstanceIds: () => readonly string[] | Promise<readonly string[]> } {
+  const nodeEdit = new Set(
+    options.nodeEditModifications ?? NODE_EDIT_MODIFICATION_FAMILIES,
+  );
+  const evaluate = options.evaluateModification;
+
   return {
     listInstanceIds: options.listInstanceIds,
     authorizeImpQuery() {
-      return "deny";
+      // View path: allow Imp when policy evaluation is wired (phase 3b).
+      // Stub without evaluator stays fail-closed.
+      return evaluate ? "allow" : "deny";
     },
-    authorizeModification() {
-      return "deny";
+    async authorizeModification(principal, context) {
+      if (!evaluate) return "deny";
+      if (!nodeEdit.has(context.modification)) return "deny";
+      return evaluate(principal, context);
     },
   };
 }

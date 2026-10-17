@@ -10,9 +10,12 @@ import {
   discoverAuthorizationModelInstanceIds,
 } from "tome-flatfile";
 import { InMemorySessionStore, sessionCookieHeader } from "tome-http";
+import { createCanEditNodesEvaluator } from "./authorization/can-edit-nodes-policy";
 import { AuthorizationRegistry } from "./authorization/registry";
 import { openTomeGraphServicesDeferred } from "./graph-services";
+import { createAccountNodeValidator } from "./identity/account-validation";
 import {
+  DEFAULT_USER_CORPUS_ID,
   loadServerConfig,
   normalizeServerConfig,
   resolveServerConfigPath,
@@ -108,10 +111,20 @@ export async function startTomeServer(options?: {
   }
 
   const sessionStore = new InMemorySessionStore();
+  const hasUserCorpus = store
+    .listCorpora()
+    .some((c) => c.id === DEFAULT_USER_CORPUS_ID);
+  const evaluateModification =
+    config.authorization.implementationId === "authorization-model" && hasUserCorpus
+      ? createCanEditNodesEvaluator({
+          queryAll: (sql, ...params) => session.writeContext.cache.queryAll(sql, ...params),
+        })
+      : undefined;
   const authorizationRegistry = new AuthorizationRegistry({
     listContentDirs: () => store.listCorpora().map((c) => c.contentDir),
     discoverAuthorizationModelInstanceIds,
     contentHasAuthorizationModelType,
+    evaluateModification,
   });
   authorizationRegistry.resetAndApplyBuiltIns(config.authorization);
 
@@ -133,12 +146,17 @@ export async function startTomeServer(options?: {
     },
   );
 
+  const validateAccountNodeId = hasUserCorpus
+    ? createAccountNodeValidator(store)
+    : undefined;
+
   const started = await startConfiguredServices(deferred.services, rawConfig, {
     getCacheSyncStatus: () => syncStatus.getStatus(),
     cacheDbPath: dbPath,
     sessionStore,
     getAuthenticationProvider: () => deferred.getAuthenticationProvider(),
     getAuthorizer: () => authorizationRegistry.getAuthorizer(),
+    validateAccountNodeId,
   });
 
   const graphStartedAt = performance.now();

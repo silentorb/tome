@@ -115,6 +115,7 @@ export function createTomeHttpService(): TomeServiceModule {
         sessionStore: host.sessionStore,
         getAuthenticationProvider: host.getAuthenticationProvider,
         getAuthorizer: host.getAuthorizer,
+        validateAccountNodeId: host.validateAccountNodeId,
       });
       server = Bun.serve({
         port,

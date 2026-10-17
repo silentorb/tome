@@ -6,7 +6,7 @@ Tome’s default is a **local single-operator** product. **Multi-user** is an op
 
 **Identity is a graph, not Account SQL rows.** Canonical Account and role data live as **nodes** (and relationships) in one or more **user corpora** — identity content roots separate from design/content corpora. Design corpora stay free of Account/role nodes. Design Imp stays on design corpora; authz policy may later query the **identity** graph by Account node id.
 
-**Local vs remote storage (locked):** On the **local flat-file** stack, **all durable data is text** (user-corpus flat files; nodes/relationships first for Account, role, IdP bindings). Local SQLite is **ephemeral only** (identity query cache, sessions, diagnostics) — see [tome-db.md](./tome-db.md) § Local SQLite is ephemeral-only. Secrets that must not be git-shared may be **gitignored text**, still not SQLite. **Auth specialty SQL** (durable sessions/bindings/credentials as tables) belongs to the **remote Postgres** composition, not to local identity SQLite as a durable store. Ephemeral **sessions** may use in-memory or SQLite locally and still count as non-corpus.
+**Local vs remote storage (locked):** On the **local flat-file** stack, **all durable data is text** (user-corpus flat files; nodes/relationships first for Account, role, IdP bindings). Local SQLite is **ephemeral only** (shared session query cache for design + user corpora, sessions, diagnostics) — see [tome-db.md](./tome-db.md) § Local SQLite is ephemeral-only. Secrets that must not be git-shared may be **gitignored text**, still not SQLite. **Auth specialty SQL** (durable sessions/bindings/credentials as tables) belongs to the **remote Postgres** composition, not to local SQLite as a durable store. Ephemeral **sessions** may use in-memory or SQLite locally and still count as non-corpus.
 
 **Use-case labels** such as “local single-operator,” “local multi-user,” and “remote multi-user” are **documentation-only**. They describe common compositions of design corpora + user corpora + (remote) auth specialty SQL + auth extensions. They are **not** first-class product modes: core packages **must not** introduce an explicit mode enum, mode flag, or mode-branched control flow. Behavior follows from what is wired (user corpora present or absent, optional ephemeral session store, auth/authz providers loaded or not, design corpus backend). Tests and surface/dev helpers **may** name use cases for clarity.
 
@@ -32,7 +32,7 @@ These rows are **use cases**, not selectable modes in core:
 | Use case (label only) | Design corpus | User corpora + auth | Auth |
 | --- | --- | --- | --- |
 | **Local single-operator (default)** | Flatfile + ephemeral corpus SQLite | None | Auth-free |
-| **Local multi-user** (dev / opt-in) | Flatfile + ephemeral corpus SQLite | **User corpus** flatfile (+ ephemeral identity SQLite cache); durable bindings/credentials in text (nodes/relationships first); ephemeral sessions (memory or SQLite) | Present when auth extensions + identity wiring are present |
+| **Local multi-user** (dev / opt-in) | Flatfile + shared ephemeral session SQLite | **User corpus** flatfile (synced into the **same** session SQLite); durable bindings/credentials in text (nodes/relationships first); ephemeral sessions (memory or SQLite) | Present when auth extensions + identity wiring are present |
 | **Remote multi-user** | **Postgres design/corpus schema** | **Postgres identity schema(s)** + **auth specialty SQL** | Present when auth extensions + identity wiring are present |
 
 **Must:**
@@ -48,23 +48,22 @@ Three layers — do not collapse them:
 
 | Layer | What it holds | Physical sketch (local / remote) |
 | --- | --- | --- |
-| **Design corpora** | Story/design graph nodes and relationships | Flatfile + ephemeral design SQLite cache; or Postgres **design/corpus** schema. See [multi-corpus.md](./multi-corpus.md) for mixing design roots. |
-| **User corpora** | **Account** and **role** nodes (and identity relationships for grants/membership); local first stab also IdP bindings as graph | Separate identity content root(s) + ephemeral identity SQLite cache; or Postgres **identity** schema(s). Same graph machinery as design, different domain. |
+| **Design corpora** | Story/design graph nodes and relationships | Flatfile SoT; or Postgres **design/corpus** schema. See [multi-corpus.md](./multi-corpus.md) for mixing design roots. |
+| **User corpora** | **Account** and **role** nodes (and identity relationships for grants/membership); local first stab also IdP bindings as graph | Separate identity **flatfile** content root(s); or Postgres **identity** schema(s). Same graph machinery as design, different domain. |
 | **Auth specialty (remote)** / **ephemeral sessions (local)** | Remote: sessions, IdP↔Account bindings, credentials as SQL tables. Local: durable bindings/credentials in user-corpus text; sessions ephemeral (memory/SQLite) | Specialty SQL beside Postgres identity schema. **Never** durable auth rows in local SQLite or in a design corpus file/schema. |
 
 **Must:**
 
-- Prefer real separation of design vs identity stores over **table-name prefixes** in a shared design SQLite file.
+- Keep **durable** design vs identity as separate flatfile (or Postgres) roots — do **not** put Account/role nodes in design corpora.
+- On the **local** stack, sync design and user-corpus flatfiles into the **same ephemeral session SQLite** (corpus ownership via `locateNode` / corpus id — table mixing in the cache is fine). Do not require a second identity DB file or `ATTACH`.
 - Treat **Account and role** as **nodes in user corpora** — not as canonical rows in SQL tables, and **not** as nodes in design corpora.
 - Reference **Account node ids** (`accountNodeId` on Principal / Session) from sessions and from durable bindings (local: user-corpus text/graph; remote: specialty SQL).
 - Own design graph migrations on the design file/schema; identity graph migrations on user-corpus stores; remote auth specialty migrations only in Postgres identity/auth SQL — never alter design corpus DDL; never treat local SQLite as durable identity SoT.
-- Allow **mix-and-match** of design vs identity layers (distinct paths/DSNs).
+- Allow **mix-and-match** of design vs identity **content** layers (distinct paths/DSNs).
 - Support **mixing user corpora** in one host/session (analogous to design multi-corpus).
 - Support **sharing one user corpus across multiple design corpora / hosts** (one identity graph, many content projects).
 
-**SQLite cross-file caveat (accepted):** indexes spanning joins across separate files / `ATTACH` are weaker. Prototype first; explore manual workarounds before merging design and identity **caches** into one file with prefixes — still ephemeral-only.
-
-**Future infrastructure (not required for charter):** composite open/migrate for user corpora; Imp/`executeImp` against the identity graph for rich authz policy. Today design Imp is corpus-bound ([graph-store.md](./graph-store.md), [tome-imp-sql.md](./tome-imp-sql.md)); Denial authorizers gate design Imp and later may consult identity by Account node id.
+**Future infrastructure:** richer Imp policy against Account/permission relationships in the shared cache ([tome-imp-sql.md](./tome-imp-sql.md) — prefer `compileImpGraphToTomeSql` + `queryAll`); Denial authorizers gate Imp and modifications and consult identity by Account node id.
 
 ### Isolation (core vs extensions)
 
@@ -137,7 +136,9 @@ Without isolation, specialized IdP and product ACL concerns leak into `tome-db` 
 
 **Why mixable / shareable user corpora:** same composition story as design multi-corpus — attach multiple identity roots when needed, or point many design hosts at one shared identity root.
 
-**Why local identity before Postgres graph:** identity and auth can dogfood on user-corpus flatfile (+ ephemeral identity SQLite cache); remote concurrency needs SQL-authoritative design data later.
+**Why local identity before Postgres graph:** identity and auth can dogfood on user-corpus flatfile synced into the shared ephemeral session SQLite; remote concurrency needs SQL-authoritative design data later.
+
+**Why one ephemeral SQLite for design + user corpora:** SQLite is cache-only; durable separation is the flatfile roots. A single session DB avoids `ATTACH` and lets Denial Imp policies query grants without a second handle.
 
 **Why implicit use cases:** an explicit mode variable invites every package to branch on “which world am I in?” Composition (authorizer grants + optional user corpora + providers + design backend) keeps solo light without a mode flag.
 
@@ -196,9 +197,11 @@ Prefer citing **this doc + phase id** when starting work. Update this table when
 
 **Phase 2 progress:** `authentication-provider` extension kind + host routes `GET /api/auth/login` / `GET /api/auth/callback`; same-site session cookie `tome_session` (plus `Authorization: Session`); reference package `tome-auth-oidc` (auth-code + PKCE); API has **no CORS**. Editor sign-in UI remains phase 4. OIDC currently maps IdP claim → session `accountNodeId` as a **provisional stand-in** until user corpora + IdP↔Account bindings exist.
 
-**Phase 3a progress (Denial):** single `Authorizer` (Imp + modification methods); core deny-everything (server default), allow-everything (explicit), and authorization-model (ontology-backed, fail-closed until policy children); wired on Imp + modification HTTP paths; workbench config explicitly sets allow-everything for light solo; extension `authorizationModule` can replace the authorizer. Filtering, probing, catch-all for other APIs, folding `readonly` / `protectedNodeIds`, and identity-graph Imp policy remain later 3x sessions.
+**Phase 3a progress (Denial):** single `Authorizer` (Imp + modification methods); core deny-everything (server default), allow-everything (explicit), and authorization-model (ontology-backed, fail-closed until policy children); wired on Imp + modification HTTP paths; workbench config explicitly sets allow-everything for light solo; extension `authorizationModule` can replace the authorizer. Filtering, probing, catch-all for other APIs, folding `readonly` / `protectedNodeIds` remain later 3x sessions.
 
-**Not yet implemented:** user-corpus open/migrate, Account/role type tables, composite mix of user corpora, Imp binder for identity stores, local IdP bindings as graph/text, remote auth specialty SQL.
+**Phase 3b progress (user corpus + node-edit policy):** opt-in user flatfile corpus via `userCorpora` / `TOME_USER_CONTENT_PATH` (corpus id `identity`), synced into the shared session SQLite; Account + Permission fixture; session create validates Account membership when identity is configured; `authorization-model` allows Imp views and allows node modifications when an Imp policy (compiled to SQL) shows the principal holds **can-edit-nodes**. No Role nodes yet (permissions attach directly to Accounts).
+
+**Not yet implemented:** Role nodes, composite mix of multiple user corpora, local IdP bindings as graph/text, remote auth specialty SQL.
 
 Largest surfaces: authorization (3), user corpora + account UI (5), Postgres graph (7), and auth UI / profile (4–6) — not core ACL matrices.
 
@@ -208,7 +211,7 @@ Largest surfaces: authorization (3), user corpora + account UI (5), Postgres gra
 | --- | --- |
 | This doc | Living charter (use-case shapes, isolation, phase index) |
 | [`tasks/multi-user-system.md`](../../tasks/multi-user-system.md) (+ related stubs) | Optional backlog pointers into this program |
-| User corpora (flatfile + ephemeral identity SQLite / Postgres identity schema) | Future: Account + role **nodes** and identity relationships (local bindings as graph/text first) |
+| User corpora (flatfile synced into shared ephemeral session SQLite / Postgres identity schema) | Account + permission **nodes** and grant relationships (roles later; local bindings as graph/text first) |
 | Ephemeral sessions (local memory/SQLite) | Present (in-memory); optional SQLite session store later |
 | Auth specialty SQL (Postgres / remote) | Future: sessions, IdP↔Account bindings, credentials keyed by Account node id |
 | Design corpus SQLite / Postgres design schema | Design graph only — no Account/role nodes or durable auth |
@@ -224,7 +227,7 @@ Largest surfaces: authorization (3), user corpora + account UI (5), Postgres gra
 - Phase 1 web API sessions use an **in-memory** store by default (no config). Credentials: `Authorization: Session <sessionId>` **or** same-site cookie `tome_session` (header wins). Create body uses `{ accountNodeId }` (prototype may pass any non-empty string until user corpora enforce real Account nodes); create/delete also set/clear the cookie.
 - **Same-site only:** browser clients call the API via the UI origin `/api` proxy (Vite in `editor:dev`). The application API does **not** speak CORS. OIDC `redirectUri` must be the UI-origin callback (e.g. `http://127.0.0.1:5173/api/auth/callback`). Do not point `VITE_TOME_API_URL` at the API port for cookie SSO.
 - OIDC via `extensions.json` `kind: "authentication-provider"` + `authenticationModule` (at most one enabled). Reference params for `tome-auth-oidc`: `issuer`, `clientId`, `clientSecret` or `clientSecretEnv`, `redirectUri`, optional `scopes` (default `openid`), `subjectClaim` (default `sub`), `postLoginRedirect` (default `/`). See [authentication-providers.md](../extensions/authentication-providers.md). Durable path: claim → user-corpus binding (local) or specialty SQL (remote) → Account node id → `createSession({ accountNodeId })`.
-- Optional **user corpora** (paths/ids analogous to design `corpora`) — mixable; one corpus may be shared across design hosts.
+- Optional **user corpora**: `userCorpora` on `tome-server.json` and/or `TOME_USER_CONTENT_PATH` (single root → corpus id `identity`). Merged into the same `dataStores` / session SQLite as design corpora. Fixture: `packages/tome-server/fixtures/identity-corpus/`.
 - Optional **ephemeral session** store (memory today; SQLite later, still not corpus SoT). Remote: auth specialty DSN beside identity schema.
 - Distinct **design corpus** path/DSN (already exists for content/cache; Postgres design later).
 - **Denial authorizer** in `tome-server.json` `authorization`:

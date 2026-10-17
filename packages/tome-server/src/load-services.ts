@@ -127,11 +127,88 @@ function ensureFtsDataStore(
   };
 }
 
+/** Default corpus id when attaching via `TOME_USER_CONTENT_PATH`. */
+export const DEFAULT_USER_CORPUS_ID = "identity";
+
+/**
+ * Flatfile module template for injecting user corpora into dataStores.
+ * Prefer the primary design flatfile's module/export when available.
+ */
+function flatfileModuleTemplate(
+  dataStores: Record<string, TomeServerModuleConfigEntry>,
+  legacyStore?: TomeServerModuleConfigEntry,
+): Pick<TomeServerModuleConfigEntry, "module" | "export"> {
+  const fromStores = Object.values(dataStores).find(
+    (e) => e.module.includes("flatfile") || e.export.includes("Flatfile"),
+  );
+  if (fromStores) {
+    return { module: fromStores.module, export: fromStores.export };
+  }
+  if (legacyStore) {
+    return { module: legacyStore.module, export: legacyStore.export };
+  }
+  return { module: "tome-flatfile", export: "createFlatfileModule" };
+}
+
+/**
+ * Merge optional user/identity flatfile corpora into dataStores (same ephemeral SQLite).
+ * Sources: config.userCorpora, then TOME_USER_CONTENT_PATH (id `identity` unless already used).
+ */
+export function mergeUserCorporaIntoDataStores(
+  dataStores: Record<string, TomeServerModuleConfigEntry>,
+  options: {
+    userCorpora?: TomeCorpusConfig[];
+    userContentPathEnv?: string;
+    legacyStore?: TomeServerModuleConfigEntry;
+  },
+): Record<string, TomeServerModuleConfigEntry> {
+  const out = { ...dataStores };
+  const template = flatfileModuleTemplate(out, options.legacyStore);
+  const toAdd: TomeCorpusConfig[] = [...(options.userCorpora ?? [])];
+
+  const envPath = options.userContentPathEnv?.trim();
+  if (envPath) {
+    const resolvedEnv = resolve(envPath);
+    if (!toAdd.some((c) => resolve(c.contentPath) === resolvedEnv)) {
+      if (out[DEFAULT_USER_CORPUS_ID] || toAdd.some((c) => c.id === DEFAULT_USER_CORPUS_ID)) {
+        throw new Error(
+          `tome-server config: TOME_USER_CONTENT_PATH needs corpus id "${DEFAULT_USER_CORPUS_ID}" but it is already configured`,
+        );
+      }
+      toAdd.push({
+        id: DEFAULT_USER_CORPUS_ID,
+        contentPath: resolvedEnv,
+        access: "readwrite",
+      });
+    }
+  }
+
+  for (const corpus of toAdd) {
+    if (out[corpus.id]) {
+      throw new Error(
+        `tome-server config: user corpus id "${corpus.id}" conflicts with an existing dataStore`,
+      );
+    }
+    out[corpus.id] = {
+      id: corpus.id,
+      module: template.module,
+      export: template.export,
+      options: {
+        contentPath: corpus.contentPath,
+        access: corpus.access ?? "readwrite",
+      },
+    };
+  }
+  return out;
+}
+
 /**
  * Migrate legacy store+cache(+corpora) into dataStores + sync.
  * Prefer explicit dataStores when present.
  * Always ensures an FTS sink so content-role search (global / table `q`) can open via
  * getSearcherBackend("fts") without requiring every host config to list tome-search-sqlite by hand.
+ * Opt-in user corpora (`userCorpora` / `TOME_USER_CONTENT_PATH`) merge into the same dataStores map
+ * and thus the same ephemeral session SQLite as design corpora.
  */
 export function normalizeServerConfig(config: TomeServerConfig): NormalizedTomeServerConfig {
   let dataStores = config.dataStores ? { ...config.dataStores } : {};
@@ -173,6 +250,12 @@ export function normalizeServerConfig(config: TomeServerConfig): NormalizedTomeS
 
     dataStores[config.cache.id] = { ...config.cache };
   }
+
+  dataStores = mergeUserCorporaIntoDataStores(dataStores, {
+    userCorpora: config.userCorpora,
+    userContentPathEnv: readEnv("TOME_USER_CONTENT_PATH"),
+    legacyStore: config.store,
+  });
 
   dataStores = ensureFtsDataStore(dataStores);
 
@@ -234,6 +317,8 @@ export function parseServerConfig(raw: unknown): TomeServerConfig {
     | TomeAuthorizationConfig
     | undefined;
 
+  const userCorpora = parseCorporaOption(obj.userCorpora);
+
   if (hasDataStores) {
     const dataStores = parseDataStoresMap(obj.dataStores);
     const sync = parseSyncBlock(obj.sync);
@@ -242,7 +327,16 @@ export function parseServerConfig(raw: unknown): TomeServerConfig {
       obj.store != null ? parseModuleEntry(obj.store, "store") : undefined;
     const cache =
       obj.cache != null ? parseModuleEntry(obj.cache, "cache") : undefined;
-    return { version, dataStores, sync, store, cache, services, authorization };
+    return {
+      version,
+      dataStores,
+      sync,
+      store,
+      cache,
+      services,
+      authorization,
+      ...(userCorpora ? { userCorpora } : {}),
+    };
   }
 
   if (!hasLegacy) {
@@ -251,7 +345,15 @@ export function parseServerConfig(raw: unknown): TomeServerConfig {
   const store = parseModuleEntry(obj.store, "store");
   const cache = parseModuleEntry(obj.cache, "cache");
   const sync = obj.sync != null ? parseSyncBlock(obj.sync) : undefined;
-  return { version, store, cache, sync, services, authorization };
+  return {
+    version,
+    store,
+    cache,
+    sync,
+    services,
+    authorization,
+    ...(userCorpora ? { userCorpora } : {}),
+  };
 }
 
 export function loadServerConfig(path = resolveServerConfigPath()): TomeServerConfig {
@@ -405,6 +507,7 @@ export async function startConfiguredServices(
       | null
       | undefined;
     getAuthorizer?: () => import("tome-service-interfaces").TomeAuthorizerPort;
+    validateAccountNodeId?: (accountNodeId: string) => boolean | Promise<boolean>;
   },
 ): Promise<StartedServices> {
   if (config.services.length === 0) {
@@ -431,6 +534,7 @@ export async function startConfiguredServices(
       sessionStore: hostExtras?.sessionStore,
       getAuthenticationProvider: hostExtras?.getAuthenticationProvider,
       getAuthorizer: hostExtras?.getAuthorizer,
+      validateAccountNodeId: hostExtras?.validateAccountNodeId,
     });
     modules.push(service);
     console.log(`[tome-server] started service "${service.id}" from ${entry.module}`);

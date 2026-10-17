@@ -2,6 +2,7 @@ import {
   createAuthorizationModelAuthorizer,
   resolveConstantBuiltInAuthorizer,
   type AuthorizationHost,
+  type AuthorizationModelAuthorizerOptions,
   type Authorizer,
   type BuiltInAuthorizerId,
 } from "tome-interfaces/authorization";
@@ -23,6 +24,11 @@ export type AuthorizationRegistryOptions = {
    * True when ontology.json declares types.authorizationModel for the content dir.
    */
   contentHasAuthorizationModelType?: (contentDir: string) => boolean;
+  /**
+   * Phase 3b: Imp→SQL policy evaluator for node-edit modifications.
+   * When omitted, authorization-model stays fail-closed (always deny).
+   */
+  evaluateModification?: AuthorizationModelAuthorizerOptions["evaluateModification"];
 };
 
 /**
@@ -83,6 +89,7 @@ export class AuthorizationRegistry implements AuthorizationHost {
         }
         return [...ids];
       },
+      evaluateModification: this.#options.evaluateModification,
     });
   }
 }

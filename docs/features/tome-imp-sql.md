@@ -76,6 +76,12 @@ Editor **table-presentation** scope/group related-id reads resolve presentation 
 | `applyLiveNodesConstraint(sql, parameters)` | Rewrite `FROM "nodes"` |
 | `createTomePathOntology` / `bindTomeSemanticPath` | Host semantic path bind (see above) |
 
+### Agent / host Imp resolution (default)
+
+**Default:** compile with `compileImpGraphToTomeSql`, then run on the session query cache via `queryAll`.
+
+**`executeImp` is a last resort** — a Queryable facade that may choose SQL or flatfile backends. New policy/authz and agent work must not treat `executeImp` as the primary API. Prefer compile + `queryAll` so Denial and other hosts stay explicit about the SQL path.
+
 ### Dependencies
 
 Must not depend on `tome-db`. Hosts execute SQL via `queryAll` (or equivalent).

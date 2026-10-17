@@ -10,6 +10,7 @@ const TYPE_KEYS: OntologyTypeKey[] = [
   "predicate",
   "memberScope",
   "authorizationModel",
+  "authorizationPolicy",
 ];
 
 export function emptyOntologyFile(): OntologyFile {

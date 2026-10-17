@@ -96,6 +96,11 @@ export interface TomeServiceHost {
   getAuthenticationProvider?: () => TomeAuthenticationProviderPort | null | undefined;
   /** Denial authorizer (server defaults to deny-everything). */
   getAuthorizer?: () => TomeAuthorizerPort;
+  /**
+   * When a user corpus is configured, validate Account node ids on session create.
+   * Return false → HTTP 400 `unknown_account`.
+   */
+  validateAccountNodeId?: (accountNodeId: string) => boolean | Promise<boolean>;
 }
 
 /**
@@ -140,6 +145,13 @@ export interface TomeServerConfig {
    * allow-everything must be set explicitly (never implied).
    */
   authorization?: TomeAuthorizationConfig;
+  /**
+   * Optional user/identity flatfile corpora (Account, Permission, grants).
+   * Merged into `dataStores` at normalize time and synced into the **same**
+   * ephemeral session SQLite as design corpora. Also set via `TOME_USER_CONTENT_PATH`
+   * (single root, corpus id `identity`).
+   */
+  userCorpora?: TomeCorpusConfig[];
   /**
    * @deprecated Prefer `dataStores`. Still accepted; migrated at parse time.
    */

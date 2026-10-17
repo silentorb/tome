@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "homeNodeId": "01M56A00000000000000000001",
+  "archiveNodeId": "01M56A00000000000000000002",
+  "protectedNodeIds": [
+    "01M56A00000000000000000001",
+    "01M56A00000000000000000002"
+  ],
+  "graphExplorer": {
+    "defaultAnchorNodeId": "01M56A00000000000000000001"
+  },
+  "staticSite": {
+    "homeNodeId": "01M56A00000000000000000001"
+  },
+  "quickLinks": [],
+  "branding": {
+    "appTitle": "Identity"
+  }
+}

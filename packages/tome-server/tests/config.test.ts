@@ -157,6 +157,62 @@ describe("tome-server config", async () => {
     }
   });
 
+  test("merges userCorpora into dataStores for shared session SQLite", () => {
+    const normalized = normalizeServerConfig({
+      version: 2,
+      dataStores: {
+        marloth: {
+          id: "marloth",
+          module: "tome-flatfile",
+          export: "createFlatfileModule",
+          options: { contentPath: "/tmp/m" },
+        },
+        cache: {
+          id: "cache",
+          module: "tome-sqlite",
+          export: "createSqliteModule",
+          options: { dbPath: "/tmp/t.sqlite" },
+        },
+      },
+      userCorpora: [
+        { id: "identity", contentPath: "/tmp/identity/content", access: "readwrite" },
+      ],
+      sync: { queryStoreId: "cache" },
+      services: [],
+    });
+    expect(normalized.dataStores.identity?.module).toBe("tome-flatfile");
+    expect(
+      (normalized.dataStores.identity?.options as { contentPath?: string })?.contentPath,
+    ).toBe("/tmp/identity/content");
+    expect(normalized.dataStores.marloth?.module).toBe("tome-flatfile");
+    expect(normalized.dataStores.cache?.module).toBe("tome-sqlite");
+  });
+
+  test("rejects user corpus id that collides with a design dataStore", () => {
+    expect(() =>
+      normalizeServerConfig({
+        version: 2,
+        dataStores: {
+          identity: {
+            id: "identity",
+            module: "tome-flatfile",
+            export: "createFlatfileModule",
+            options: { contentPath: "/tmp/design" },
+          },
+          cache: {
+            id: "cache",
+            module: "tome-sqlite",
+            export: "createSqliteModule",
+            options: { dbPath: "/tmp/t.sqlite" },
+          },
+        },
+        userCorpora: [{ id: "identity", contentPath: "/tmp/users" }],
+        sync: { queryStoreId: "cache" },
+        services: [],
+      }),
+    ).toThrow(/conflicts/);
+  });
+
   test("default config file parses", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-server-config-"));
     const path = join(dir, "tome-server.json");

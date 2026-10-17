@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "tables": {
+    "01M56A00000000000000000010": {
+      "columns": [
+        {
+          "key": "active",
+          "name": "Active",
+          "type": "checkbox"
+        }
+      ]
+    },
+    "01M56A00000000000000000011": {
+      "columns": [
+        {
+          "key": "key",
+          "name": "Key",
+          "type": "text"
+        }
+      ]
+    }
+  }
+}

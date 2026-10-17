@@ -12,9 +12,11 @@ Charter: [multi-user.md](../docs/features/multi-user.md).
 
 **Subdomains:** Denial | Filtering | Probing.
 
-**Phase 3a (landed):** Denial — single `Authorizer` (`authorizeImpQuery` + `authorizeModification`); core deny-everything (server default), allow-everything (explicit), authorization-model (ontology `types.authorizationModel`, fail-closed until policy children); wired on Imp + modification HTTP paths; extension `authorizationModule` registration (minimal config). Guide: [authorization-authorizers.md](../docs/extensions/authorization-authorizers.md).
+**Phase 3a (landed):** Denial — single `Authorizer` (`authorizeImpQuery` + `authorizeModification`); core deny-everything (server default), allow-everything (explicit), authorization-model (ontology `types.authorizationModel`); wired on Imp + modification HTTP paths; extension `authorizationModule` registration (minimal config). Guide: [authorization-authorizers.md](../docs/extensions/authorization-authorizers.md).
 
-**Remaining:** Filtering (prefer query mutation); probing APIs; catch-all / specialized authorizers for other routes; fold or align `readonly` / `protectedNodeIds`; richer product policies (including Imp against **user corpora** for role/grant relationships — see [multi-user.md](../docs/features/multi-user.md)); Authorization Model related grant/logic node types.
+**Phase 3b (landed):** Opt-in user flatfile corpus (`userCorpora` / `TOME_USER_CONTENT_PATH`) synced into the **shared** ephemeral session SQLite; Account + Permission + direct grants (no Roles yet); session Account validation; `authorization-model` + can-edit-nodes Imp policy via `compileImpGraphToTomeSql` + `queryAll` (not `executeImp`). Imp queries allow; node-edit modifications require the grant.
+
+**Remaining:** Filtering (prefer query mutation); probing APIs; catch-all / specialized authorizers for other routes; fold or align `readonly` / `protectedNodeIds`; Role nodes / richer assignment; load policy Imp from Policy node bodies at runtime (today the can-edit-nodes graph is also built in code).
 
 ## See also
 

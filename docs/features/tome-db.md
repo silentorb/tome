@@ -12,7 +12,7 @@ The design corpus is a **git-tracked content store** under `content/` (`content/
 
 `tome-server` loads store + cache as singular config modules and injects them into `tome-db`. The flatfile store may be a **composite** over multiple corpora (union read, origin / dual-write); see [`multi-corpus.md`](./multi-corpus.md). Solo mode is still one `content/` root + one `data/tome.sqlite`.
 
-Design corpus SQL (this **ephemeral** cache / future Postgres design schema) stays **design-graph-only**. Account/role nodes live in **user corpora** (local: flatfile + identity SQLite cache). Durable IdP bindings and credentials stay in user-corpus text (nodes/relationships first); ephemeral **sessions** may use memory or SQLite locally. Remote Postgres may hold identity schemas plus auth specialty SQL — see [multi-user.md](./multi-user.md).
+**Durable** Account/role nodes live in **user corpora** (separate flatfile roots — not design content). Locally, design and user flatfiles sync into the **same ephemeral session SQLite** (corpus ownership via `locateNode`; see [multi-user.md](./multi-user.md)). Durable IdP bindings and credentials stay in user-corpus text (nodes/relationships first); ephemeral **sessions** may use memory or SQLite locally. Remote Postgres may hold identity schemas plus auth specialty SQL.
 
 ## When to read this
 
