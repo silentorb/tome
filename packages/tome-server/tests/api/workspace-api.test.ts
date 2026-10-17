@@ -28,7 +28,7 @@ describe("GET /api/workspace", async () => {
     await destroyTestContentFixture(fixture);
   });
 
-  test("returns workspace config from content/model/workspace.json", async () => {
+  test("returns workspace config from content/model/corpus.json", async () => {
     const res = await api.handler(new Request("http://127.0.0.1/api/workspace"));
     expect(res.status).toBe(200);
     const body = (await res.json()) as {

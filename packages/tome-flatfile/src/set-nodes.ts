@@ -11,7 +11,7 @@ export function collectSetNodeIds(contentDir?: string): Set<string> {
   try {
     ids.add(archiveNodeId(dir));
   } catch {
-    /* workspace.json optional in tests */
+    /* corpus metadata optional in tests */
   }
   return ids;
 }

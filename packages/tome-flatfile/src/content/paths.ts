@@ -21,6 +21,12 @@ export const DYNAMIC_PROPERTIES_FILENAME = "dynamic-properties.json";
 export const SCHEMA_FILENAME = "schema.json";
 export const VIEWS_FILENAME = "views.json";
 export const TABLE_SCHEMAS_FILENAME = "table-schemas.json";
+/** Preferred on-disk corpus metadata filename under `model/`. */
+export const CORPUS_FILENAME = "corpus.json";
+/**
+ * Legacy corpus metadata filename.
+ * @deprecated Prefer {@link CORPUS_FILENAME}; kept as dual-support fallback when `corpus.json` is absent.
+ */
 export const WORKSPACE_FILENAME = "workspace.json";
 export const SEQUENCING_FILENAME = "sequencing.json";
 export const EXTENSIONS_FILENAME = "extensions.json";
@@ -149,8 +155,34 @@ export function tableSchemasFilePath(contentRoot: string): string {
   return resolve(contentModelDir(contentRoot), TABLE_SCHEMAS_FILENAME);
 }
 
-export function workspaceFilePath(contentRoot: string): string {
+/** Absolute path of preferred `model/corpus.json` (used for writes). */
+export function corpusFilePath(contentRoot: string): string {
+  return resolve(contentModelDir(contentRoot), CORPUS_FILENAME);
+}
+
+/** Absolute path of legacy `model/workspace.json` (may or may not exist). */
+export function legacyWorkspaceFilePath(contentRoot: string): string {
   return resolve(contentModelDir(contentRoot), WORKSPACE_FILENAME);
+}
+
+/**
+ * Resolve corpus metadata path for reads: `corpus.json` if present, else `workspace.json`
+ * if present, else the preferred `corpus.json` path (caller may get ENOENT).
+ */
+export function resolveCorpusMetadataPath(contentRoot: string): string {
+  const preferred = corpusFilePath(contentRoot);
+  if (existsSync(preferred)) return preferred;
+  const legacy = legacyWorkspaceFilePath(contentRoot);
+  if (existsSync(legacy)) return legacy;
+  return preferred;
+}
+
+/**
+ * @deprecated Use {@link resolveCorpusMetadataPath} for reads or {@link corpusFilePath} for writes.
+ * Resolves like {@link resolveCorpusMetadataPath} (corpus.json preferred, workspace.json fallback).
+ */
+export function workspaceFilePath(contentRoot: string): string {
+  return resolveCorpusMetadataPath(contentRoot);
 }
 
 export function sequencingFilePath(contentRoot: string): string {

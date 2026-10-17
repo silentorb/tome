@@ -24,6 +24,7 @@ import {
   SCHEMA_FILENAME,
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
+  CORPUS_FILENAME,
   WORKSPACE_FILENAME,
   SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
@@ -367,6 +368,7 @@ export class CacheSync {
       scanFile(modelDir, DYNAMIC_PROPERTIES_FILENAME);
       scanFile(modelDir, SCHEMA_FILENAME);
       scanFile(modelDir, VIEWS_FILENAME);
+      scanFile(modelDir, CORPUS_FILENAME);
       scanFile(modelDir, WORKSPACE_FILENAME);
       scanFile(modelDir, SEQUENCING_FILENAME);
       scanFile(modelDir, EXTENSIONS_FILENAME);
@@ -609,7 +611,7 @@ export class CacheSync {
       return;
     }
 
-    if (relativeName === WORKSPACE_FILENAME) {
+    if (relativeName === CORPUS_FILENAME || relativeName === WORKSPACE_FILENAME) {
       invalidateWorkspaceCache();
       await this.recomputeArchivedFlags();
       await this.updateCacheMarkers();

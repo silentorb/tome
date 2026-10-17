@@ -77,7 +77,7 @@ describe("workspace quick links", async () => {
     }
   });
 
-  test("removeWorkspaceQuickLink updates workspace.json", async () => {
+  test("removeWorkspaceQuickLink updates corpus.json", async () => {
     const fixture = await createTestContentFixture("tome-quick-link-remove-");
     try {
       await seedTestNode(fixture, { id: NODE_ID, properties: { title: "Page" } });

@@ -130,7 +130,7 @@ Keyboard shortcuts in combobox-style pickers (global search, Relate, record link
 
 ### Entry / navigation
 
-- Default home is configured in `content/model/workspace.json` (`homeNodeId`; Marloth corpus: `01KWN86X6MFZQAJ1V36T95929C`) when that node exists in the graph; open via sidebar **Home** or `?node=` for the home id.
+- Default home is configured in `content/model/corpus.json` (`homeNodeId`; Marloth corpus: `01KWN86X6MFZQAJ1V36T95929C`) when that node exists in the graph; open via sidebar **Home** or `?node=` for the home id.
 - The sidebar **Primary panel** (`PrimarySidePanel`) is the fixed core chrome: **Home**, **Search**, **Graph Explorer**, and **New page** (when the corpus is not readonly). Collapsing the sidebar shows **only** the Primary panel (plus the expand toggle); Quick Links, Recent, and any later sidebar sections are expanded-only by structure.
 - **Quick links** (Features, Scenes, …) are workspace primary index pages configured in `workspace.quickLinks` in the same file (`nodeId` + `label`); they appear in the sidebar without a section header when the sidebar is expanded. Users add or remove quick links from the **page** actions menu (⋯); the sidebar quick-link row menu (⋮) offers only **Remove** — archive, delete, and relate stay on the page (or elsewhere), not in this list. Each quick link row is an `<a href="?node=…">` (native link gestures per **Cross-linking** above). Drag a quick link row to reorder when two or more links exist (persisted via `PUT /api/workspace/quick-links/order`); dnd-kit listeners live on the row wrapper with a 6px activation distance so plain clicks soft-navigate and a completed drag suppresses the synthetic click. Add/remove mutations use `POST` / `DELETE` `/api/nodes/:id/quick-link`.
 - Node pages use URL query `?node={id}` (26-char ULID).
@@ -184,7 +184,7 @@ Design work in Marloth is relational and markdown-heavy. A web editor with `@` l
 
 The webview calls this REST API directly (via shared client in `src/shared/http-client.ts`).
 
-**Workspace config:** `GET /api/workspace` returns parsed `content/model/workspace.json` (home/archive/protected node ids, quick links, branding, graph explorer default anchor). The webview loads this on boot; `GET /api/home` still resolves the effective home node id (workspace home when present, else most recent node).
+**Workspace config:** `GET /api/workspace` returns parsed `content/model/corpus.json` (home/archive/protected node ids, quick links, branding, graph explorer default anchor). The webview loads this on boot; `GET /api/home` still resolves the effective home node id (workspace home when present, else most recent node).
 
 **Document icon / favicon:** The tab icon is resolved from the page (leading emoji, home, Graph Explorer) or falls back to branding. Package default letter is **`T`**. Corpora set `branding.defaultDocumentIcon` (single character) and optionally `branding.documentIconImage` (content-relative `.svg` or `.png` under `model/`, e.g. `model/branding/icon.svg`). When the resolved glyph is the branding default and an image is configured, the favicon uses `GET /api/workspace/document-icon?corpus=…` instead of the generated letter tile.
 

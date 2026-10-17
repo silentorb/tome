@@ -59,7 +59,7 @@ extensions.json + table-schemas.json
 
 ## Workspace configuration
 
-Project-wide diagram options live in `content/model/workspace.json` under `schemaDiagram` (same file as `spatialGraph` settings). Applies to all schema diagram blocks in the editor and static site.
+Project-wide diagram options live in `content/model/corpus.json` under `schemaDiagram` (same file as `spatialGraph` settings). Applies to all schema diagram blocks in the editor and static site.
 
 | Key | Default | Purpose |
 | --- | --- | --- |
@@ -73,7 +73,7 @@ Example:
 }
 ```
 
-Reload the editor or rebuild the static site after changing `workspace.json`.
+Reload the editor or rebuild the static site after changing `corpus.json`.
 
 ## Verification
 

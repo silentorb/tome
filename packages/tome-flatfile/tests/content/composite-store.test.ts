@@ -41,7 +41,7 @@ function seedCorpus(root: string, home: string, archive: string): string {
   mkdirSync(join(content, "model"), { recursive: true });
   mkdirSync(join(content, "data", "nodes"), { recursive: true });
   mkdirSync(join(content, "data", "relationships"), { recursive: true });
-  writeFileSync(join(content, "model", "workspace.json"), serializeWorkspaceFile(workspace(home, archive)));
+  writeFileSync(join(content, "model", "corpus.json"), serializeWorkspaceFile(workspace(home, archive)));
   const associations = emptyRelationshipTypesFile();
   registerBidirectionalType(associations, "Related", "Related", ASSOC);
   writeFileSync(join(content, "model", "associations.json"), serializeRelationshipTypesFile(associations));

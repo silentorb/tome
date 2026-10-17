@@ -26,15 +26,17 @@ The content root is a directory conventionally named `content/`. Tools discover 
     relationships/
       {shard}/
         {digestRest}.json
-  model/                         # workspace model (flat JSON)
-    workspace.json
-    associations.json
+  model/                         # corpus model (flat JSON)
+    corpus.json                  # local metadata (legacy: workspace.json)
+    associations.json            # shared exported model
     schema.json
     table-schemas.json
     views.json
     dynamic-properties.json
     extensions.json
-    redirects.json
+    ontology.json                # optional
+    sequencing.json              # optional
+    redirects.json               # local metadata (static-site paths)
 ```
 
 | Area | Role |
@@ -43,7 +45,14 @@ The content root is a directory conventionally named `content/`. Tools discover 
 | `data/relationships/` | Live relationship instances |
 | `archive/nodes/` | Archived node markdown |
 | `archive/relationships/` | Archived relationship instances |
-| `model/` | Git-tracked workspace configuration |
+| `model/` | Git-tracked corpus configuration (shared exported model + local metadata) |
+
+**Model kinds** (see [multi-corpus.md](../../../docs/features/multi-corpus.md) § Model boundary):
+
+| Kind | Files | Mix behavior |
+| --- | --- | --- |
+| Shared exported model | `associations.json`, `schema.json`, `table-schemas.json`, `views.json`, `dynamic-properties.json`, `extensions.json`, `ontology.json`, `sequencing.json` | Unioned across a multi-corpus session |
+| Local corpus metadata | `corpus.json` (legacy `workspace.json`), `redirects.json` | Per corpus; not flattened into one document |
 
 A sibling query cache (e.g. `{contentRoot}/../data/tome.sqlite`) is **derived** and outside this format.
 
@@ -346,9 +355,9 @@ Strict version **2**. Table tab definitions (custom and generated).
 
 Do not mix generated and custom views for the same `(nodeId, association)` pair (`association` = relationship type ULID). At most one generated view per pair.
 
-### `workspace.json` (version 1)
+### `corpus.json` (version 1)
 
-Strict version **1**. Workspace identity and navigation anchors.
+Strict version **1**. Local corpus metadata: identity and navigation anchors. Preferred filename `corpus.json`; legacy `workspace.json` is accepted on read when `corpus.json` is absent (writes always use `corpus.json`). Same JSON schema either way.
 
 ```json
 {
@@ -501,14 +510,14 @@ Path keys are normalized like static-site `url_alias` (trim, strip slashes, lowe
 | `data/{shard}/{id}.md` | required | Prefer `data/nodes/{shard}/{id}.md` (at least home, archive, and any referenced nodes) |
 | `data/nodes/` + `data/relationships/` | required | Live instance trees (may be empty of relationships) |
 | `archive/nodes/` + `archive/relationships/` | optional | Archived instance trees |
-| `model/associations.json` | required | At least the relationship types you use (ids are ULIDs; legacy filename) |
-| `model/workspace.json` | required | Home, archive, anchors, quick links |
-| `model/schema.json` | optional | Needed when using enums / rules |
-| `model/table-schemas.json` | optional | Needed for type-table columns |
-| `model/views.json` | optional | Needed for custom/generated table tabs (including presentation layers) |
-| `model/dynamic-properties.json` | optional | Computed columns |
-| `model/extensions.json` | optional | Extension packages |
-| `model/redirects.json` | optional | Static-site path → node id redirects |
+| `model/associations.json` | required | Shared model: relationship types you use (ids are ULIDs; legacy filename) |
+| `model/corpus.json` | required | Local metadata: home, archive, anchors, quick links (legacy filename `workspace.json`) |
+| `model/schema.json` | optional | Shared model: enums / rules |
+| `model/table-schemas.json` | optional | Shared model: type-table columns |
+| `model/views.json` | optional | Shared model: custom/generated table tabs (including presentation layers) |
+| `model/dynamic-properties.json` | optional | Shared model: computed columns |
+| `model/extensions.json` | optional | Shared model: extension packages |
+| `model/redirects.json` | optional | Local metadata: static-site path → node id redirects |
 
 A Tome-compatible writer should:
 

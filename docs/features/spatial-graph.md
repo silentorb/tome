@@ -51,7 +51,7 @@ Hosting page node is the `is_a` type table scope.
 
 ## Workspace configuration
 
-Project-wide node geometry is configured in `content/model/workspace.json` (git-tracked). Applies to all spatial graph blocks in the editor and static site build.
+Project-wide node geometry is configured in `content/model/corpus.json` (git-tracked). Applies to all spatial graph blocks in the editor and static site build.
 
 | Key | Default | Purpose |
 | --- | --- | --- |
@@ -70,7 +70,7 @@ Example:
 
 Types and normalization are exported from `tome-spatial-graph/config` (`SpatialGraphWorkspaceConfig`, `normalizeNodeDimensionScale`, `resolveSpatialGraphConfig`).
 
-Reload the editor page or rebuild the static site after changing `workspace.json`.
+Reload the editor page or rebuild the static site after changing `corpus.json`.
 
 ## Graph construction rules
 
@@ -87,7 +87,7 @@ Reload the editor page or rebuild the static site after changing `workspace.json
 | Compound hierarchy + fcose | Supported | Use elements + layout config |
 | Multi-parent duplication | Supported (data pattern) | Supported |
 | Neighbor edges in nested compounds | Supported with **fixed numeric** node `width`/`height` | Do **not** use `width: 'label'` / `height: 'label'` — breaks bezier edge export |
-| Node labels fitting inside shapes | Partially addressed | Baseline 40×40 ellipse; widen/tall via `spatialGraph.nodeDimensionScale` in workspace.json |
+| Node labels fitting inside shapes | Partially addressed | Baseline 40×40 ellipse; widen/tall via `spatialGraph.nodeDimensionScale` in `corpus.json` |
 | Clickable nodes in static SVG | Not in cytoscape-svg | Append-only link rects |
 | Responsive width | Host CSS on figure | `max-width: 100%` on SVG — no SVG root rewriting |
 | Top-aligned compound parent labels | Stylesheet `padding-top` on `:parent` | Configure via `parentHeaderHeight`; escalate if insufficient |

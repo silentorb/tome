@@ -2,7 +2,7 @@
 
 ## Repository purpose
 
-**tome** holds domain-agnostic packages for git-tracked design graphs. Domain-specific node IDs, navigation, and workspace identity belong in each project's `content/model/workspace.json` — not in package source.
+**tome** holds domain-agnostic packages for git-tracked design graphs. Domain-specific node IDs, navigation, and workspace identity belong in each project's `content/model/corpus.json` — not in package source.
 
 The complete workspace package inventory (roles table + dependency diagram) lives in [`packages/README.md`](./packages/README.md). Each package has a brief **`README.md`** (context) and **`AGENTS.md`** (how to work in the package).
 

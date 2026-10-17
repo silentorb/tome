@@ -75,6 +75,7 @@ import {
   SCHEMA_FILENAME,
   VIEWS_FILENAME,
   TABLE_SCHEMAS_FILENAME,
+  CORPUS_FILENAME,
   WORKSPACE_FILENAME,
   SEQUENCING_FILENAME,
   EXTENSIONS_FILENAME,
@@ -91,7 +92,8 @@ import {
   dynamicPropertiesFilePath,
   viewsFilePath,
   tableSchemasFilePath,
-  workspaceFilePath,
+  corpusFilePath,
+  resolveCorpusMetadataPath,
   relationshipFilePath,
   isNodeId,
   nodeFilePath,
@@ -200,7 +202,7 @@ function storeChangeKindForFilename(filename: string): StoreChangeKind {
   if (base === DYNAMIC_PROPERTIES_FILENAME) return "dynamic-properties";
   if (base === VIEWS_FILENAME) return "views";
   if (base === TABLE_SCHEMAS_FILENAME) return "table-schemas";
-  if (base === WORKSPACE_FILENAME) return "workspace";
+  if (base === CORPUS_FILENAME || base === WORKSPACE_FILENAME) return "workspace";
   if (base === SEQUENCING_FILENAME) return "sequencing";
   if (base === EXTENSIONS_FILENAME) return "extensions";
   return "unknown";
@@ -392,6 +394,7 @@ export class ContentStore implements TomeDataStore {
       base === DYNAMIC_PROPERTIES_FILENAME ||
       base === VIEWS_FILENAME ||
       base === TABLE_SCHEMAS_FILENAME ||
+      base === CORPUS_FILENAME ||
       base === WORKSPACE_FILENAME ||
       base === SEQUENCING_FILENAME ||
       base === EXTENSIONS_FILENAME
@@ -872,7 +875,7 @@ export class ContentStore implements TomeDataStore {
   }
 
   readWorkspaceFile(): WorkspaceFile {
-    const path = workspaceFilePath(this.contentDir);
+    const path = resolveCorpusMetadataPath(this.contentDir);
     try {
       return parseWorkspaceFile(readFileSync(path, "utf-8"));
     } catch (err) {
@@ -884,7 +887,7 @@ export class ContentStore implements TomeDataStore {
   }
 
   writeWorkspaceFile(file: WorkspaceFile): void {
-    atomicWrite(workspaceFilePath(this.contentDir), serializeWorkspaceFile(file));
+    atomicWrite(corpusFilePath(this.contentDir), serializeWorkspaceFile(file));
   }
 
   writeWorkspaceFileForCorpus(corpusId: string, file: WorkspaceFile): void {

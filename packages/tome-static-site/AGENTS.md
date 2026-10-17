@@ -35,7 +35,7 @@ CLI overrides environment (see `--help`):
 
 ## Output layout
 
-- `index.html` — landing page (static-site home node from `content/model/workspace.json` → `staticSite.homeNodeId`)
+- `index.html` — landing page (static-site home node from `content/model/corpus.json` → `staticSite.homeNodeId`)
 - `{urlPath}/index.html` — one page per content node (`urlPath` = `url_alias` or lowercase node id)
 - `{urlPath}/tabs/{tabId}/index.html` — extra tab pages for multi-tab type-table hubs only
 - `{redirectPath}/index.html` — HTML redirect stubs from optional `content/model/redirects.json`

@@ -123,13 +123,13 @@ A **member-scope** binds a type-table hub to a predicate that selects its member
 
 Runtime: `loadMemberScopesFromContent` → hub Members / `typeIdsForInstance` / Inspired-by pickers resolve members via the linked predicate. Set-membership edges may still carry row scalars when present.
 
-### Merge and site scope
+### Merge and multi-corpus session scope
 
 1. Compile associations → base runtime
 2. Discover/compile active node predicates → overlay (**node wins** on same predicate id)
-3. A site / composite session **unions** contributions from each corpus’s `ontology.json` + graph (solo corpus is the trivial case)
+3. A multi-corpus session **unions** contributions from each corpus’s `ontology.json` + graph (solo corpus is the trivial case)
 
-`workspace.json` is unchanged; a future `corpus.json` for non-ontology corpus identity is deferred.
+Local corpus metadata lives in `corpus.json` (legacy `workspace.json`) and is not part of this ontology merge — see [multi-corpus.md](./multi-corpus.md) § Model boundary.
 
 ## Package layout
 

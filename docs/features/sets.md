@@ -10,7 +10,7 @@ A **set** is a node that contains other nodes via a relationship whose ontology 
 | **`ordered` trait** | Optional; sequence key defaults to `order` on the edge |
 | **Perspectives** | Exactly two **display labels** per relationship type; set-side vs member-side from trait indices |
 | **Type table** | Set detected via `table-schemas.json` key (and related UI) |
-| **Archive hub** | Set detected via `workspace.json` → `archiveNodeId` |
+| **Archive hub** | Set detected via `corpus.json` → `archiveNodeId` |
 
 **Example (Marloth project relationship types — not Tome defaults):**
 
@@ -171,7 +171,7 @@ flowchart LR
 | `content/model/associations.json` | Set-trait relationship types and perspective labels |
 | `content/model/table-schemas.json` | Type-table set detection, column defs (no membership composite field) |
 | `content/model/views.json` | Set-side perspective / section config for Members tables |
-| `content/model/workspace.json` | `archiveNodeId` for archive set detection |
+| `content/model/corpus.json` | `archiveNodeId` for archive set detection |
 | `packages/tome-db/src/set-membership.ts` | Set query API |
 | `packages/tome-flatfile/src/association-traits.ts` | Set trait helpers (`setRoleRelationshipTypeForNode`, `setRoleIndices`, …) |
 | `packages/tome-db/src/content/relationship-sync-expand.ts` | Perspective-based expansion |

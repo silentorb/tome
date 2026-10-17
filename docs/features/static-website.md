@@ -161,7 +161,7 @@ bun run web:build -- --out-dir=/other-project/public/design --base=/design/
 
 Copy the output directory into the parent project's static assets; internal links include the base prefix.
 
-### Site chrome (`content/model/workspace.json` → `branding`)
+### Site chrome (`content/model/corpus.json` → `branding`)
 
 | Field | Purpose |
 | --- | --- |

@@ -34,7 +34,7 @@ Interface or format change
 
 ### Compat-sensitive surfaces (dual-support applies)
 
-- Content-model files (`schema.json`, `views.json`, `workspace.json`, `associations.json`, `table-schemas.json`, …)
+- Content-model files (`schema.json`, `views.json`, `corpus.json` / legacy `workspace.json`, `associations.json`, `table-schemas.json`, …)
 - Project / server configuration files that control how Tome loads config and data
 - Documented container / env config contracts that shape how Tome loads config/data
 - Canonical flat-file data storage under `content/` (nodes, relationships, archive layout)
@@ -89,6 +89,7 @@ Living table of dual-supported legacy paths.
 | `page-block-missing-roles` | content-model | Page-block component without `roles` | Explicit `roles` array | unreleased (page-block role fences) | TBD | Dual-support default `roles: [component.id]` at resolve time. |
 | `associations-perspectives-key` | content-model | `associations.json` relationship type field `perspectives` (label pair) | `roles` (same label shape) | unreleased (relational role ids) | TBD | Parse accepts `roles` or `perspectives` (`roles` wins if both). Serialize writes `roles` only. Workspace corpora migrated. |
 | `associations-missing-role-ids` | content-model | Relationship type without `roleIds` | Explicit `roleIds: [ulid, ulid]` | unreleased (relational role ids) | TBD | Parse bridges deterministic role ULIDs when omitted; serialize always writes `roleIds`. Workspace corpora minted explicit ids. |
+| `corpus-json-filename` | content-model | `model/workspace.json` | `model/corpus.json` | unreleased (corpus metadata rename) | TBD (follow-up: remove `workspace.json` filename support) | Reads prefer `corpus.json` when present; else fall back to `workspace.json`. Writes always go to `corpus.json`. Do not merge the two files. Workspace corpora migrated to `corpus.json`. |
 
 **Column guidance**
 

@@ -2,25 +2,60 @@
 
 ## Summary
 
-A Tome process may open **one or more corpora** (content roots) behind a single `TomeDataStore` and session SQLite cache so the editor can browse, edit, and cross-link nodes across corpora without merging git trees. Each corpus has its own `content/` layout, `workspace.json` (including a required `homeNodeId`), and optional `readwrite` / `readonly` access. Callers address nodes by ULID; a backend **node → corpus** routing map decides where bytes live.
+A Tome process may open **one or more corpora** (content roots) behind a single `TomeDataStore` and session SQLite cache so the editor can browse, edit, and cross-link nodes across corpora without merging git trees. Each corpus has its own `content/` layout, `corpus.json` (including a required `homeNodeId`; legacy filename `workspace.json`), and optional `readwrite` / `readonly` access. Callers address nodes by ULID; a backend **node → corpus** routing map decides where bytes live.
+
+Mixing is always a **flat** peer set at runtime. Nested corpora (a `corpora` list on corpus metadata) are a designed declaration convenience that flattens into that peer set — see [Declaring a mix](#declaring-a-mix). There is no site settings layer and no nested setting overrides.
 
 ## When to read this
 
 - Configuring more than one content root in `tome-server` / the editor
 - Implementing or changing composite store, cross-corpus relationships, or active-corpus UI
 - Understanding how public wire `corpus` relates to “project” / workspace product language
+- Deciding whether a `content/model` setting is shared exported model vs local corpus metadata
 
 ## Terminology
 
 | Term | Meaning |
 | --- | --- |
 | **Corpus** | One content root (`content/`) with its own nodes, relationships, and `model/`. Unit of mixing, access mode, and editor “active” state. Stable id slug (e.g. `marloth`, `translucence`). |
+| **Site** | Informal user label for a **root** corpus (the one you opened as the session entry). Not an implementation type; no site-specific settings or behavior. |
+| **Server** | Process host config (`tome-server.json` + env): stores, session cache, HTTP, authorizers, profiling. Environmental — not corpus branding or model. |
 | **Store** | Runtime `TomeDataStore`. A **composite store** fronts many corpora. Not user-facing chrome. |
 | **Database** | SQLite cache or type-table “databases” in the editor — **not** a corpus. |
 | **Project** | Workspace / product use case. Often 1:1 with a corpus today; do not equate in APIs. |
 | **Active corpus** | The corpus whose Home, quick links, and branding the editor sidebar shows. |
 
 Public wire field: `corpus` (URL/JSON; use `Id` suffix only when both a corpus object and id appear, e.g. editor `activeCorpusId` beside `activeCorpus`). Config key: `corpora` / dataStores map keys / `id`.
+
+## Model boundary (`content/model`)
+
+Corpus configuration under `model/` falls into two categories:
+
+### Shared exported model
+
+Unioned across the mix in memory (do not write a merged `model/`). Conflicts fail or follow the rules under [Model merge (read)](#model-merge-read). Future work should keep these files seamlessly mixable.
+
+| File | Notes |
+| --- | --- |
+| `associations.json` | Relationship types; union by id |
+| `schema.json` | Enums + legacy relationship rules |
+| `table-schemas.json` | By type-table node id |
+| `views.json` | Union / dedupe |
+| `dynamic-properties.json` | Concat/merge |
+| `extensions.json` | Extension package registration |
+| `ontology.json` | Type-role map + graph overlay (see [ontology.md](./ontology.md)) |
+| `sequencing.json` | Per type-table sequencing config (**intended** shared by node id; some loaders still solo-path today) |
+
+### Local corpus metadata
+
+Not flattened into one document. Editor chrome and publish knobs use the **active** (or owning) corpus only.
+
+| File | Notes |
+| --- | --- |
+| `corpus.json` (legacy `workspace.json`) | Home, archive, protected nodes, quick links, branding, graph explorer, static-site home, editor/spatial/schema-diagram prefs; designed future `corpora` composition list |
+| `redirects.json` | Static-site path → node id map for **that** corpus’s publish surface |
+
+Filename dual-support: prefer `corpus.json`; if absent, load `workspace.json`. Writes always go to `corpus.json`. See [compatibility.md](./compatibility.md) row `corpus-json-filename`.
 
 ## Requirements
 
@@ -73,7 +108,7 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 
 - Union by id: relationship types (`associations.json`), optional node ontology from each corpus’s `ontology.json` + graph (see [ontology.md](./ontology.md)), table-schemas, views, dynamic-properties, extensions.
 - Schema: union relationship rules and enums (with conflict rules above).
-- `workspace.json` is **not** flattened. Each corpus **must** have `homeNodeId`. Session API lists corpora; editor chrome uses the **active** corpus only.
+- `corpus.json` (local metadata) is **not** flattened. Each corpus **must** have `homeNodeId`. Session API lists corpora; editor chrome uses the **active** corpus only.
 - Archive: each corpus’s `archiveNodeId`; archiving uses that node’s hub; cache recompute considers every hub.
 - **Shared relationship types:** corpora that share a relationship type must reuse the **same relationship type ULID** with an identical definition; display titles alone do not merge. Example: Marloth and Translucence both declare plain set membership as `01KXBNPNJDENZ9BXN5BYZ7JKPT` (Members / Membership, `set` trait).
 
@@ -88,7 +123,7 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 - Search / graph may query the union so cross-links resolve; create and chrome stay corpus-scoped.
 - Node search (`GET /api/nodes/search`) accepts optional `activeCorpus`. Hits whose owning corpus differs from that id include `corpusLabel` (workspace `branding.appTitle`, else the corpus id). The editor injects the active corpus into search and shows `corpusLabel` as a muted title suffix in global search, record link pickers, and `@` mentions.
 
-**New corpus branding:** In that corpus’s `content/model/workspace.json` → `branding`, set `defaultDocumentIcon` to the **first letter** of the corpus display name (e.g. Marloth → `"M"`, Translucence → `"T"`). Optionally set `documentIconImage` to a content-relative `.svg` or `.png` under `model/` (served by `GET /api/workspace/document-icon`). If `defaultDocumentIcon` is omitted, the editor falls back to the package letter **`T`** (generic Tome), which is easy to confuse with a corpus named like Translucence — prefer an explicit letter for every corpus.
+**New corpus branding:** In that corpus’s `content/model/corpus.json` → `branding`, set `defaultDocumentIcon` to the **first letter** of the corpus display name (e.g. Marloth → `"M"`, Translucence → `"T"`). Optionally set `documentIconImage` to a content-relative `.svg` or `.png` under `model/` (served by `GET /api/workspace/document-icon`). If `defaultDocumentIcon` is omitted, the editor falls back to the package letter **`T`** (generic Tome), which is easy to confuse with a corpus named like Translucence — prefer an explicit letter for every corpus.
 
 ### HTTP
 
@@ -104,6 +139,37 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 - Dual-written cross-edges keep each git tree self-describing when opened alone.
 - Active-corpus chrome matches “each node belongs to one corpus” without dumping every corpus’s quick links into one sidebar.
 - Decentralization / multi-writer sync are deferred; v1 fails on drift and heals missing dual copies.
+
+## Declaring a mix
+
+Runtime mixing is always a **flat** list of peer corpora (plus session cache). Two declaration paths:
+
+### A. Host / env (implemented)
+
+- `TOME_CORPORA` as `id=/abs/path[:readonly]` pairs (comma-separated), and/or
+- Explicit multi-flatfile `dataStores` / legacy `store.options.corpora`
+
+See [Configuration](#configuration) below. Solo: `TOME_CONTENT_PATH` only.
+
+### B. Nested list on corpus metadata (designed; not implemented yet)
+
+A corpus may declare other corpora to include via local metadata:
+
+```json
+{
+  "version": 1,
+  "homeNodeId": "…",
+  "corpora": [
+    { "id": "translucence", "contentPath": "../translucence/content", "access": "readonly" }
+  ]
+}
+```
+
+- `contentPath` may be absolute or resolved relative to the **declaring corpus’s content root**.
+- Nested `corpora` lists expand recursively, then **dedupe by id** into the same flat peer set used today.
+- The container does **not** own the nested corpora; each remains an independent content root.
+- **No** setting overrides or inheritance across nesting — nesting is only a handy way to specify multiple corpora to mix.
+- Until implemented, use host/env declaration (A).
 
 ## Configuration
 

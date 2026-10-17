@@ -4,7 +4,7 @@
 
 **tome-server** is the process **host** for the design graph: it loads heterogeneous **`dataStores`** (flatfile corpora + sqlite cache) from JSON config, wires observer sync via Imp **`sync.graph`** (see [tome-sync.md](./tome-sync.md)), builds `TomeGraphServices` through `tome-db`, then starts **zero or more** **service modules** (default: `tome-http`). Legacy singular `store` + `cache` still parse and migrate into `dataStores`. The editor webview is a client of the HTTP service, not part of this package.
 
-Multi-corpus sessions use multiple flatfile entries in `dataStores` (or legacy `store.options.corpora` / `TOME_CORPORA`) — see [`multi-corpus.md`](./multi-corpus.md). Mixed sessions must use a dedicated session `TOME_DB_PATH`, not any corpus’s own SQLite cache.
+Multi-corpus sessions use multiple flatfile entries in `dataStores` (or legacy `store.options.corpora` / `TOME_CORPORA`) — see [`multi-corpus.md`](./multi-corpus.md). Mixed sessions must use a dedicated session `TOME_DB_PATH`, not any corpus’s own SQLite cache. Host config stays **environmental** (stores, cache, services, authorizers, profiling); corpus branding and model live under each corpus’s `content/model/` (notably `corpus.json`). A designed alternate mix declaration is a nested `corpora` list on `corpus.json` (flatten-only; not implemented yet) — same multi-corpus doc.
 
 ## When to read this
 

@@ -47,7 +47,7 @@ function seedCorpus(
   mkdirSync(join(content, "data", "nodes"), { recursive: true });
   mkdirSync(join(content, "data", "relationships"), { recursive: true });
   writeFileSync(
-    join(content, "model", "workspace.json"),
+    join(content, "model", "corpus.json"),
     serializeWorkspaceFile(workspace(home, archive, appTitle)),
   );
   const associations = emptyRelationshipTypesFile();

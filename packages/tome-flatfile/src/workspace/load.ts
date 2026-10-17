@@ -1,15 +1,16 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
-import { resolveContentPath, workspaceFilePath } from "../content/paths";
+import { resolveContentPath, resolveCorpusMetadataPath } from "../content/paths";
 import { parseWorkspaceFile, type WorkspaceFile } from "./workspace-file";
 
-let cachedWorkspace: { contentDir: string; mtimeMs: number; file: WorkspaceFile } | null = null;
+let cachedWorkspace: { contentDir: string; mtimeMs: number; file: WorkspaceFile; path: string } | null =
+  null;
 
 export function invalidateWorkspaceCache(): void {
   cachedWorkspace = null;
 }
 
 export function loadWorkspaceFromContent(contentDir: string): WorkspaceFile {
-  const path = workspaceFilePath(contentDir);
+  const path = resolveCorpusMetadataPath(contentDir);
   let mtimeMs = 0;
   if (existsSync(path)) {
     mtimeMs = statSync(path).mtimeMs;
@@ -18,6 +19,7 @@ export function loadWorkspaceFromContent(contentDir: string): WorkspaceFile {
   if (
     cachedWorkspace &&
     cachedWorkspace.contentDir === contentDir &&
+    cachedWorkspace.path === path &&
     cachedWorkspace.mtimeMs === mtimeMs
   ) {
     return cachedWorkspace.file;
@@ -28,13 +30,13 @@ export function loadWorkspaceFromContent(contentDir: string): WorkspaceFile {
     raw = readFileSync(path, "utf-8");
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      throw new Error(`workspace.json not found at ${path}`);
+      throw new Error(`corpus metadata not found at ${path}`);
     }
     throw err;
   }
 
   const file = parseWorkspaceFile(raw);
-  cachedWorkspace = { contentDir, mtimeMs, file };
+  cachedWorkspace = { contentDir, mtimeMs, file, path };
   return file;
 }
 

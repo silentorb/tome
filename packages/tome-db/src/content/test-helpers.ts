@@ -38,7 +38,7 @@ import {
   contentModelDir,
   nodeFilePath,
   relationshipTypesFilePath,
-  workspaceFilePath,
+  corpusFilePath,
 } from "tome-flatfile";
 import {
   connectsEndpoints,
@@ -48,7 +48,7 @@ import {
 } from "tome-flatfile";
 import { relationshipId } from "tome-sqlite";
 
-/** Test workspace ids — match committed content/model/workspace.json. */
+/** Test workspace ids — match committed content/model/corpus.json. */
 export const TEST_HOME_NODE_ID = "00000000000000000000000005";
 export const TEST_ARCHIVE_NODE_ID = "00000000000000000000000002";
 export const TEST_GRAPH_ANCHOR_NODE_ID = "0000000000000000000000002V";
@@ -102,7 +102,7 @@ export function seedTestWorkspace(
   const file = { ...defaultTestWorkspaceFile(), ...overrides };
   mkdirSync(contentModelDir(fixture.ctx.store.contentDir), { recursive: true });
   writeFileSync(
-    workspaceFilePath(fixture.ctx.store.contentDir),
+    corpusFilePath(fixture.ctx.store.contentDir),
     serializeWorkspaceFile(file),
     "utf-8",
   );
@@ -287,7 +287,7 @@ export async function createTestContentFixture(prefix = "tome-content-test-"): P
   mkdirSync(contentDir, { recursive: true });
   mkdirSync(contentModelDir(contentDir), { recursive: true });
   writeFileSync(
-    workspaceFilePath(contentDir),
+    corpusFilePath(contentDir),
     serializeWorkspaceFile(defaultTestWorkspaceFile()),
     "utf-8",
   );

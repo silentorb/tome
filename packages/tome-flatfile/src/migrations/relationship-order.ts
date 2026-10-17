@@ -237,7 +237,7 @@ export function buildRelationshipOrderContext(
     try {
       setNodeIds.add(parseWorkspaceFile(workspaceRaw).archiveNodeId);
     } catch {
-      /* workspace.json optional / partial in some corpora */
+      /* corpus metadata optional / partial in some corpora */
     }
   }
 
