@@ -8,7 +8,7 @@ Support a use case where SQL is the primary / authoritative design store, withou
 
 ## Notes
 
-Aligns with remote multi-user **Postgres design schema** ([multi-user.md](../docs/features/multi-user.md) **phase 7**). Distinct from **local multi-user**, which still uses flatfile + design SQLite while identity lives in **user corpora** (+ auth specialty tables). May interact with [postgresql-support.md](./postgresql-support.md).
+Aligns with remote multi-user **Postgres design schema** ([multi-user.md](../docs/features/multi-user.md) **phase 7**). Distinct from **local multi-user**, which still uses flatfile + ephemeral design SQLite while identity lives in **user corpora** (flatfile + ephemeral identity cache; durable bindings in text/nodes, not SQLite). May interact with [postgresql-support.md](./postgresql-support.md).
 
 ## See also
 

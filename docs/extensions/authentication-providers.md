@@ -86,10 +86,10 @@ Browser clients must use the **UI origin** `/api` proxy (Vite in local `editor:d
 
 `tome-auth-oidc` — generic OIDC authorization code + PKCE. Tests use an in-process mock IdP.
 
-**Account node id:** `createSession` expects `{ accountNodeId }` — the Account **node** id in a user corpus. Until user corpora and IdP↔Account binding tables exist, `tome-auth-oidc` passes the IdP subject claim (default `sub`) as a **provisional** `accountNodeId`. The durable path is claim → auth specialty binding → Account node id → `createSession`.
+**Account node id:** `createSession` expects `{ accountNodeId }` — the Account **node** id in a user corpus. Until user corpora and IdP↔Account bindings exist, `tome-auth-oidc` passes the IdP subject claim (default `sub`) as a **provisional** `accountNodeId`. The durable path is claim → user-corpus binding (local flatfile / nodes first; remote specialty SQL) → Account node id → `createSession`.
 
 ## See also
 
-- [multi-user.md](../features/multi-user.md) — phase 2 SSO; user corpora + auth tables
+- [multi-user.md](../features/multi-user.md) — phase 2 SSO; user corpora + local flatfile identity / remote auth specialty SQL
 - [extensions.md](../features/extensions.md) — kinds and loading
 - [searchers.md](./searchers.md) — similar singleton open pattern

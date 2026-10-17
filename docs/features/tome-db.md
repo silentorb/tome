@@ -12,7 +12,7 @@ The design corpus is a **git-tracked content store** under `content/` (`content/
 
 `tome-server` loads store + cache as singular config modules and injects them into `tome-db`. The flatfile store may be a **composite** over multiple corpora (union read, origin / dual-write); see [`multi-corpus.md`](./multi-corpus.md). Solo mode is still one `content/` root + one `data/tome.sqlite`.
 
-Design corpus SQL (this cache / future Postgres design schema) stays **design-graph-only**. Account/role nodes live in **user corpora**; auth specialty tables (sessions, IdP bindings) sit beside identity SQL — see [multi-user.md](./multi-user.md).
+Design corpus SQL (this **ephemeral** cache / future Postgres design schema) stays **design-graph-only**. Account/role nodes live in **user corpora** (local: flatfile + identity SQLite cache). Durable IdP bindings and credentials stay in user-corpus text (nodes/relationships first); ephemeral **sessions** may use memory or SQLite locally. Remote Postgres may hold identity schemas plus auth specialty SQL — see [multi-user.md](./multi-user.md).
 
 ## When to read this
 
@@ -43,7 +43,7 @@ For **what design nodes mean** (features, inspirations, products, traceability),
 | **Type table** | Node listed in [`table-schemas.json`](./table-schemas.md) and/or receiving set-membership rows. |
 | **Schema** | Workspace model config in `content/model/schema.json` (relationship rules, enums) — see [schema.md](./schema.md). |
 
-API names: `ContentStore`, `openContentGraph`, `TomeWriteContext` (`{ store, sync, cache }`), `getNodeDetail`, `getNodePageDetail`, `GET /api/nodes`, `?node=`. Cache tables: `nodes`, `node_properties`, `relationship_records`, `relationship_projections` (`SCHEMA_VERSION` **12**).
+API names: `ContentStore`, `openContentGraph`, `TomeWriteContext` (`{ store, sync, cache }`), `getNodeDetail`, `getNodePageDetail`, `GET /api/nodes`, `?node=`. Cache tables: `nodes`, `node_properties`, `relationship_records`, `relationship_projections` (`SCHEMA_VERSION` **16**).
 
 ## Editing the graph (agent workflow)
 
@@ -68,10 +68,24 @@ Canonical on-disk layout and file formats: [`packages/tome-flatfile/docs/storage
 | `content/data/relationships/{shard}/{digest}.json` | Live relationship records (one edge per file; path from SHA-256 of composite key) |
 | `content/archive/relationships/{shard}/{digest}.json` | Archived relationship records (tree location is archive status) |
 | `content/model/*.json` | Workspace model (relationship types, schema, views, table schemas, workspace, etc.) — see storage-format doc |
-| `data/tome.sqlite` | Local query cache (gitignored; default path via `TOME_DB_PATH`; legacy `data/marloth.sqlite` / `MARLOTH_DB_PATH` still read when present) |
+| `data/tome.sqlite` | Local **ephemeral** query cache (gitignored; default path via `TOME_DB_PATH`; legacy `data/marloth.sqlite` / `MARLOTH_DB_PATH` still read when present) |
 
 - `TOME_CONTENT_PATH` (or legacy `MARLOTH_CONTENT_PATH`) **must** point at the **content root** (`./content`), not `content/data`, for solo sessions. Multi-corpus sessions use `TOME_CORPORA` / `store.options.corpora` and a dedicated session `TOME_DB_PATH` — see [`multi-corpus.md`](./multi-corpus.md).
 - SQLite WAL sidecar files (`*.sqlite-wal`, `*.sqlite-shm`) **must not** be committed.
+
+#### Local SQLite is ephemeral-only
+
+Within Tome’s **local flat-file** composition, **all durable data lives in text files**. Prefer the word **ephemeral** for SQLite cache and server runtime so “durable” is not overloaded (Base-tier graph contracts, UI-test durability, etc.).
+
+| Durable (source of truth) | Ephemeral only (SQLite / memory) |
+| --- | --- |
+| `content/` graph + model JSON; gitignored text for non-shared prefs/secrets (e.g. `.tome/user-settings.json`) | Graph query cache, FTS index, expression indexes, **sessions**, profiling neighbor DB (`tome-profiling.sqlite`) |
+
+**Ephemeral means:** deleting the SQLite file(s) and reopening from flat files must not lose durable product or user data. Sessions may outlive a process in SQLite and still count as ephemeral relative to the corpus.
+
+**Must not** store canonical accounts, credentials, IdP↔Account bindings, or other durable user/product rows in local SQLite. Local identity durability is user-corpus **flat files** (nodes/relationships first); see [multi-user.md](./multi-user.md).
+
+**Different composition:** remote / SQL-authoritative backends (Postgres design + identity schemas, auth specialty SQL) are chartered separately — [multi-user.md](./multi-user.md), [independent-sql-database.md](../../tasks/independent-sql-database.md), [postgresql-support.md](../../tasks/postgresql-support.md).
 
 ### Legacy compatibility
 
@@ -202,7 +216,7 @@ Writes go to `content/` via `ContentStore`; sync expands to SQLite projections.
 | Path | Role |
 | --- | --- |
 | `content/` | Canonical property graph root (`data/` + `model/`) |
-| `data/marloth.sqlite` | Local query cache |
+| `data/tome.sqlite` | Local ephemeral query cache (legacy `data/marloth.sqlite` when present) |
 | `scripts/consolidate-relationships.ts` | One-time / re-run migration v1 → v2 relationships |
 | `packages/tome-db/scripts/migrate-relationship-order.ts` | Reorder relationship shard tuples for pinned relation endpoints (set-trait membership + per-file layout), audit orientation, rebuild cache |
 | `scripts/migrate-to-includes.ts` | Migrate associative relationship types to `includes` |
@@ -216,7 +230,7 @@ Writes go to `content/` via `ContentStore`; sync expands to SQLite projections.
 # Inspect or edit the graph (Bun, from repo root)
 bun -e "
 import { GraphDatabase } from 'tome-db';
-const db = new GraphDatabase('data/marloth.sqlite');
+const db = new GraphDatabase('data/tome.sqlite');
 console.log(db.counts());
 db.close();
 "
@@ -226,8 +240,8 @@ db.close();
 
 | Setting | CLI | Environment | Default |
 | --- | --- | --- | --- |
-| Content directory | — | `MARLOTH_CONTENT_PATH` | `{repo}/content` |
-| Cache database path | — | `MARLOTH_DB_PATH` | `data/marloth.sqlite` |
+| Content directory | — | `TOME_CONTENT_PATH` (legacy `MARLOTH_CONTENT_PATH`) | `{repo}/content` |
+| Cache database path | — | `TOME_DB_PATH` (legacy `MARLOTH_DB_PATH`) | `data/tome.sqlite` |
 
 ## Verification
 
@@ -259,7 +273,7 @@ db.close();
 - [schema.md](./schema.md) — workspace model config in `content/model/schema.json`
 - [graph-explorer.md](./graph-explorer.md) — anchor-scoped LOD graph visualization
 - [table-presentation.md](./table-presentation.md) — scope tabs, row groups, and automatic sequence on Items tables
-- [multi-user.md](./multi-user.md) — design corpora vs user corpora vs auth tables; identity stays out of the design graph cache
+- [multi-user.md](./multi-user.md) — design corpora vs user corpora; local SQLite ephemeral-only; Postgres auth specialty SQL for remote
 - [`../ontology.md`](../ontology.md) — design domain model (storage-agnostic)
 - [`packages/tome-db/AGENTS.md`](../../packages/tome-db/AGENTS.md)
 - [`AGENTS.md`](../../AGENTS.md) — project purpose, terminology, modeling direction

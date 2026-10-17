@@ -15,7 +15,7 @@ Replaces ad-hoc use of separate `TomeDataStore` + `TomeQueryCache` at call sites
 - Wiring `executeImp` for editor, extensions, or scripts
 - Future SQL-only deployments (single authoritative backend)
 
-Design corpus graph storage (flatfile, SQLite cache, or future Postgres **design/corpus** schema) does **not** host Account/role nodes or auth specialty tables — those use **user corpora** (identity graph) and auth tables; see [multi-user.md](./multi-user.md).
+Design corpus graph storage (flatfile, ephemeral SQLite cache, or future Postgres **design/corpus** schema) does **not** host Account/role nodes or durable auth specialty data — those use **user corpora** (identity graph; local durable = flatfile) and, for remote, auth specialty SQL; see [multi-user.md](./multi-user.md) and [tome-db.md](./tome-db.md) § Local SQLite is ephemeral-only.
 
 ## Requirements
 
@@ -81,7 +81,7 @@ type GraphStoreCapabilities =
 
 ## Design rationale
 
-- Flatfile is canonical for git-tracked corpora; SQLite is a derived query cache today.
+- Flatfile is canonical for git-tracked corpora; SQLite is an ephemeral derived query cache today (see [tome-db.md](./tome-db.md) § Local SQLite is ephemeral-only).
 - Third parties need domain CRUD without warming SQLite.
 - **Imp as read language** avoids mirroring every cache method on flatfile.
 - **`imp-execution`** (successor to [imp-kotlin execution](https://github.com/silentorb/imp-kotlin/tree/master/projects/execution/src/main/kotlin/silentorb/imp/execution)) shares operator semantics with `imp-sql`; hosts supply data only.
@@ -158,4 +158,4 @@ Phase 2 removes direct `searchNodes(cache)` and extension raw SQL for Imp graphs
 - [tome-query.md](./tome-query.md) — Imp query page block
 - [table-presentation.md](./table-presentation.md) — scope/group hops via Imp semantic paths
 - [multi-corpus.md](./multi-corpus.md)
-- [multi-user.md](./multi-user.md) — user corpora + auth tables; design corpus store stays design-graph-only
+- [multi-user.md](./multi-user.md) — user corpora + local flatfile identity / remote auth specialty SQL; design corpus store stays design-graph-only

@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs";
-import type { TomeQueryCache } from "tome-service-interfaces";
 import type { RelationshipReadStore } from "../graph-store/relationship-read";
 import {
   loadDynamicColumnSetsFromContent,
@@ -11,8 +10,6 @@ import {
   resolveContentPath,
   type DynamicColumnSetRecord,
   type DynamicPropertyRecord,
-  type SeedDynamicColumnSetInput,
-  type SeedDynamicPropertyInput,
 } from "tome-flatfile";
 
 export type {
@@ -50,72 +47,4 @@ export function loadDynamicColumnSets(
     return loadDynamicColumnSetsFromContent(fromContent, owner);
   }
   return [];
-}
-
-export async function seedDynamicProperty(
-  db: TomeQueryCache,
-  input: SeedDynamicPropertyInput,
-): Promise<void> {
-  await db.runExec(
-    `INSERT INTO dynamic_fields (id, database_id, column_key, column_name, column_type, resolver_id, docs_path, enabled)
-     VALUES (?, ?, ?, ?, ?, ?, '', 1)
-     ON CONFLICT(id) DO UPDATE SET
-       database_id = excluded.database_id,
-       column_key = excluded.column_key,
-       column_name = excluded.column_name,
-       column_type = excluded.column_type,
-       resolver_id = excluded.resolver_id,
-       docs_path = '',
-       enabled = 1`,
-    input.id,
-    input.owner,
-    input.columnKey,
-    input.columnName,
-    input.columnType ?? "number",
-    input.resolverId,
-  );
-  await db.runExec("DELETE FROM dynamic_field_params WHERE field_id = ?", input.id);
-  for (const [key, value] of Object.entries(input.params ?? {})) {
-    await db.runExec(
-      "INSERT INTO dynamic_field_params (field_id, param_key, param_value) VALUES (?, ?, ?)",
-      input.id,
-      key,
-      JSON.stringify(value),
-    );
-  }
-  await db.runExec("DELETE FROM dynamic_field_view_bindings WHERE field_id = ?", input.id);
-}
-
-export async function seedDynamicColumnSet(
-  db: TomeQueryCache,
-  input: SeedDynamicColumnSetInput,
-): Promise<void> {
-  await db.runExec(
-    `INSERT INTO dynamic_column_sets (id, database_id, column_key_pattern, column_name_pattern, column_type, resolver_id, docs_path, enabled)
-     VALUES (?, ?, ?, ?, ?, ?, '', 1)
-     ON CONFLICT(id) DO UPDATE SET
-       database_id = excluded.database_id,
-       column_key_pattern = excluded.column_key_pattern,
-       column_name_pattern = excluded.column_name_pattern,
-       column_type = excluded.column_type,
-       resolver_id = excluded.resolver_id,
-       docs_path = '',
-       enabled = 1`,
-    input.id,
-    input.owner,
-    input.columnKeyPattern,
-    input.columnNamePattern,
-    input.columnType ?? "number",
-    input.resolverId,
-  );
-  await db.runExec("DELETE FROM dynamic_column_set_params WHERE set_id = ?", input.id);
-  for (const [key, value] of Object.entries(input.params ?? {})) {
-    await db.runExec(
-      "INSERT INTO dynamic_column_set_params (set_id, param_key, param_value) VALUES (?, ?, ?)",
-      input.id,
-      key,
-      JSON.stringify(value),
-    );
-  }
-  await db.runExec("DELETE FROM dynamic_column_set_view_bindings WHERE set_id = ?", input.id);
 }

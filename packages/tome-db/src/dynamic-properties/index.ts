@@ -80,12 +80,7 @@ export async function listDynamicColumnDefs(
   return listDynamicColumnDefsFromEnrich(db, owner, viewName, registry, options);
 }
 
-export {
-  loadDynamicColumnSets,
-  loadDynamicProperties,
-  seedDynamicColumnSet,
-  seedDynamicProperty,
-} from "./overlay";
+export { loadDynamicColumnSets, loadDynamicProperties } from "./overlay";
 export type {
   DynamicColumnSetRecord,
   DynamicPropertyRecord,

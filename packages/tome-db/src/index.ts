@@ -250,8 +250,6 @@ export {
   getDefaultResolverRegistry,
   loadDynamicColumnSets,
   loadDynamicProperties,
-  seedDynamicColumnSet,
-  seedDynamicProperty,
 } from "./dynamic-properties";
 export type {
   DynamicColumnSetRecord,
