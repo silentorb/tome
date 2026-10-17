@@ -14,7 +14,7 @@ Charter: [multi-user.md](../docs/features/multi-user.md). **Phase 2 — SSO (OID
 - Same-site cookie `tome_session` + `Authorization: Session` (no CORS)
 - Reference package `tome-auth-oidc` (auth-code + PKCE; mock IdP in tests)
 
-Still open: dogfood against a real IdP, editor sign-in/out UI (phase 4).
+Still open: dogfood against a real IdP, editor sign-in/out UI (phase 4), IdP subject → Account node id bindings once user corpora exist (today OIDC maps the claim into `accountNodeId` provisionally).
 
 ## See also
 

@@ -153,7 +153,7 @@ async function resolvePrincipalFromRequest(
   if (!sessionId) return null;
   const session = await sessionStore.get(sessionId);
   if (!session) return null;
-  return { subjectId: session.subjectId };
+  return { accountNodeId: session.accountNodeId };
 }
 
 /** Build the HTTP fetch handler against graph services (no DB/path opening). */
@@ -307,12 +307,14 @@ async function dispatchApiRequest(
         if (!body || typeof body !== "object" || Array.isArray(body)) {
           return json({ error: "body must be an object" }, 400);
         }
-        const subjectId = (body as { subjectId?: unknown }).subjectId;
-        if (typeof subjectId !== "string" || !subjectId.trim()) {
-          return json({ error: "subjectId must be a non-empty string" }, 400);
+        const accountNodeId = (body as { accountNodeId?: unknown }).accountNodeId;
+        if (typeof accountNodeId !== "string" || !accountNodeId.trim()) {
+          return json({ error: "accountNodeId must be a non-empty string" }, 400);
         }
         try {
-          const session = await sessionStore.create({ subjectId: subjectId.trim() });
+          const session = await sessionStore.create({
+            accountNodeId: accountNodeId.trim(),
+          });
           return json({ session }, 201, {
             "Set-Cookie": sessionCookieHeader(session.id, req),
           });

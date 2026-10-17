@@ -15,7 +15,7 @@ Replaces ad-hoc use of separate `TomeDataStore` + `TomeQueryCache` at call sites
 - Wiring `executeImp` for editor, extensions, or scripts
 - Future SQL-only deployments (single authoritative backend)
 
-Corpus graph storage (flatfile, SQLite cache, or future Postgres **corpus** schema) does **not** host Account/auth tables — those use a separate user store; see [multi-user.md](./multi-user.md).
+Design corpus graph storage (flatfile, SQLite cache, or future Postgres **design/corpus** schema) does **not** host Account/role nodes or auth specialty tables — those use **user corpora** (identity graph) and auth tables; see [multi-user.md](./multi-user.md).
 
 ## Requirements
 
@@ -158,4 +158,4 @@ Phase 2 removes direct `searchNodes(cache)` and extension raw SQL for Imp graphs
 - [tome-query.md](./tome-query.md) — Imp query page block
 - [table-presentation.md](./table-presentation.md) — scope/group hops via Imp semantic paths
 - [multi-corpus.md](./multi-corpus.md)
-- [multi-user.md](./multi-user.md) — separate user SQL; corpus store stays graph-only
+- [multi-user.md](./multi-user.md) — user corpora + auth tables; design corpus store stays design-graph-only

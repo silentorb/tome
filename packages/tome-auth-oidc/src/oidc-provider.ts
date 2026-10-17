@@ -218,7 +218,11 @@ export function createOidcAuthenticationProvider(
             502,
           );
         }
-        const session = await ctx.createSession({ subjectId: subjectRaw.trim() });
+        // Provisional: IdP claim stands in for Account node id until user corpora
+        // + IdP↔Account bindings exist (see multi-user.md / authentication-providers.md).
+        const session = await ctx.createSession({
+          accountNodeId: subjectRaw.trim(),
+        });
         return redirectResponse(
           pendingAuth.postLoginRedirect,
           ctx.sessionCookieHeader(session.id, req),

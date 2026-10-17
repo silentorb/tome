@@ -61,8 +61,10 @@ export interface LoadedExtensionModules {
 
 export type ExtensionAuthenticationHooks = {
   createSession: (input: {
-    subjectId: string;
-  }) => { id: string; subjectId: string } | Promise<{ id: string; subjectId: string }>;
+    accountNodeId: string;
+  }) =>
+    | { id: string; accountNodeId: string }
+    | Promise<{ id: string; accountNodeId: string }>;
   sessionCookieHeader: (sessionId: string, req: Request) => string;
 };
 

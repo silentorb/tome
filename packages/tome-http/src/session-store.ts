@@ -1,7 +1,7 @@
 import type { Session } from "./identity";
 
 export type SessionCreateInput = {
-  subjectId: string;
+  accountNodeId: string;
 };
 
 export interface SessionStore {
@@ -15,13 +15,13 @@ export class InMemorySessionStore implements SessionStore {
   readonly #sessions = new Map<string, Session>();
 
   create(input: SessionCreateInput): Session {
-    const subjectId = input.subjectId.trim();
-    if (!subjectId) {
-      throw new Error("subjectId must be a non-empty string");
+    const accountNodeId = input.accountNodeId.trim();
+    if (!accountNodeId) {
+      throw new Error("accountNodeId must be a non-empty string");
     }
     const session: Session = {
       id: crypto.randomUUID(),
-      subjectId,
+      accountNodeId,
     };
     this.#sessions.set(session.id, session);
     return session;

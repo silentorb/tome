@@ -30,8 +30,17 @@ export type CacheSyncPublicStatus = {
 
 /** LCD session store port for HTTP identity (implemented by tome-http). */
 export type TomeSessionStorePort = {
-  create(input: { subjectId: string }): { id: string; subjectId: string } | Promise<{ id: string; subjectId: string }>;
-  get(id: string): { id: string; subjectId: string } | null | Promise<{ id: string; subjectId: string } | null>;
+  create(input: {
+    accountNodeId: string;
+  }):
+    | { id: string; accountNodeId: string }
+    | Promise<{ id: string; accountNodeId: string }>;
+  get(
+    id: string,
+  ):
+    | { id: string; accountNodeId: string }
+    | null
+    | Promise<{ id: string; accountNodeId: string } | null>;
   delete(id: string): void | Promise<void>;
 };
 
@@ -47,7 +56,7 @@ export type TomeAuthorizationDecision = "allow" | "deny";
 /** Imp query denial authorizer port (payload-typed; not HTTP verbs). */
 export type TomeImpQueryAuthorizerPort = {
   authorize(
-    principal: { subjectId: string } | null,
+    principal: { accountNodeId: string } | null,
     context: { graph: unknown; context?: unknown },
   ): TomeAuthorizationDecision | Promise<TomeAuthorizationDecision>;
 };
@@ -55,7 +64,7 @@ export type TomeImpQueryAuthorizerPort = {
 /** Modification denial authorizer port. */
 export type TomeModificationAuthorizerPort = {
   authorize(
-    principal: { subjectId: string } | null,
+    principal: { accountNodeId: string } | null,
     context: { modification: string; payload?: unknown },
   ): TomeAuthorizationDecision | Promise<TomeAuthorizationDecision>;
 };

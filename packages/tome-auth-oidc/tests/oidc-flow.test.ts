@@ -89,7 +89,7 @@ describe("tome-auth-oidc authorization code + PKCE", () => {
         }),
       );
       expect(await meRes.json()).toEqual({
-        principal: { subjectId: "alice@example.com" },
+        principal: { accountNodeId: "alice@example.com" },
       });
 
       const headerMe = await handler(
@@ -98,7 +98,7 @@ describe("tome-auth-oidc authorization code + PKCE", () => {
         }),
       );
       expect(await headerMe.json()).toEqual({
-        principal: { subjectId: "alice@example.com" },
+        principal: { accountNodeId: "alice@example.com" },
       });
 
       await handler.close();

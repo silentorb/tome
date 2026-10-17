@@ -40,7 +40,7 @@ describe("web API identity sessions", () => {
         new Request("http://localhost/api/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subjectId: "user-a" }),
+          body: JSON.stringify({ accountNodeId: "user-a" }),
         }),
       );
       expect(createRes.status).toBe(201);
@@ -48,9 +48,9 @@ describe("web API identity sessions", () => {
       expect(setCookie).toContain("tome_session=");
       expect(setCookie).toContain("HttpOnly");
       const created = (await createRes.json()) as {
-        session: { id: string; subjectId: string };
+        session: { id: string; accountNodeId: string };
       };
-      expect(created.session.subjectId).toBe("user-a");
+      expect(created.session.accountNodeId).toBe("user-a");
       expect(created.session.id.length).toBeGreaterThan(0);
 
       const meRes = await handler(
@@ -60,7 +60,7 @@ describe("web API identity sessions", () => {
       );
       expect(meRes.status).toBe(200);
       expect(await meRes.json()).toEqual({
-        principal: { subjectId: "user-a" },
+        principal: { accountNodeId: "user-a" },
       });
 
       const healthRes = await handler(
@@ -71,10 +71,10 @@ describe("web API identity sessions", () => {
       expect(healthRes.status).toBe(200);
       const health = (await healthRes.json()) as {
         ok: boolean;
-        principal: { subjectId: string } | null;
+        principal: { accountNodeId: string } | null;
       };
       expect(health.ok).toBe(true);
-      expect(health.principal).toEqual({ subjectId: "user-a" });
+      expect(health.principal).toEqual({ accountNodeId: "user-a" });
 
       const deleteRes = await handler(
         new Request("http://localhost/api/sessions", {
@@ -102,7 +102,7 @@ describe("web API identity sessions", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-http-identity-als-"));
     try {
       const store = new InMemorySessionStore();
-      const session = store.create({ subjectId: "als-user" });
+      const session = store.create({ accountNodeId: "als-user" });
       let seen: Principal | null | undefined;
 
       const db = {
@@ -130,7 +130,7 @@ describe("web API identity sessions", () => {
         }),
       );
       expect(res.status).toBe(200);
-      expect(seen).toEqual({ subjectId: "als-user" });
+      expect(seen).toEqual({ accountNodeId: "als-user" });
 
       await handler.close();
     } finally {
@@ -138,7 +138,7 @@ describe("web API identity sessions", () => {
     }
   });
 
-  test("POST /api/sessions rejects empty subjectId", async () => {
+  test("POST /api/sessions rejects empty accountNodeId", async () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-http-identity-bad-"));
     try {
       const handler = createApiHandler(
@@ -150,7 +150,7 @@ describe("web API identity sessions", () => {
         new Request("http://localhost/api/sessions", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subjectId: "  " }),
+          body: JSON.stringify({ accountNodeId: "  " }),
         }),
       );
       expect(res.status).toBe(400);
@@ -164,7 +164,7 @@ describe("web API identity sessions", () => {
     const dir = mkdtempSync(join(tmpdir(), "tome-http-identity-cookie-"));
     try {
       const store = new InMemorySessionStore();
-      const session = store.create({ subjectId: "cookie-user" });
+      const session = store.create({ accountNodeId: "cookie-user" });
       const handler = createApiHandler(
         mockGraphServices(),
         new UserSettingsStore(join(dir, "settings.json")),
@@ -177,7 +177,7 @@ describe("web API identity sessions", () => {
         }),
       );
       expect(await meRes.json()).toEqual({
-        principal: { subjectId: "cookie-user" },
+        principal: { accountNodeId: "cookie-user" },
       });
 
       const loginRes = await handler(new Request("http://localhost/api/auth/login"));

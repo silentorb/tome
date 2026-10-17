@@ -12,7 +12,7 @@ The design corpus is a **git-tracked content store** under `content/` (`content/
 
 `tome-server` loads store + cache as singular config modules and injects them into `tome-db`. The flatfile store may be a **composite** over multiple corpora (union read, origin / dual-write); see [`multi-corpus.md`](./multi-corpus.md). Solo mode is still one `content/` root + one `data/tome.sqlite`.
 
-Corpus SQL (this cache / future Postgres corpus schema) stays **graph-only**. User/identity tables live in a **separate** user SQLite file or Postgres user schema — see [multi-user.md](./multi-user.md).
+Design corpus SQL (this cache / future Postgres design schema) stays **design-graph-only**. Account/role nodes live in **user corpora**; auth specialty tables (sessions, IdP bindings) sit beside identity SQL — see [multi-user.md](./multi-user.md).
 
 ## When to read this
 
@@ -259,7 +259,7 @@ db.close();
 - [schema.md](./schema.md) — workspace model config in `content/model/schema.json`
 - [graph-explorer.md](./graph-explorer.md) — anchor-scoped LOD graph visualization
 - [table-presentation.md](./table-presentation.md) — scope tabs, row groups, and automatic sequence on Items tables
-- [multi-user.md](./multi-user.md) — corpus vs user SQL; identity stays out of the graph cache
+- [multi-user.md](./multi-user.md) — design corpora vs user corpora vs auth tables; identity stays out of the design graph cache
 - [`../ontology.md`](../ontology.md) — design domain model (storage-agnostic)
 - [`packages/tome-db/AGENTS.md`](../../packages/tome-db/AGENTS.md)
 - [`AGENTS.md`](../../AGENTS.md) — project purpose, terminology, modeling direction

@@ -1,11 +1,12 @@
 /** LCD session shape for authentication providers (mirrors web API Session). */
 export type AuthenticationSession = {
   id: string;
-  subjectId: string;
+  /** Account node id in a user corpus (provisional IdP claim until bindings exist). */
+  accountNodeId: string;
 };
 
 export type AuthenticationSessionCreateInput = {
-  subjectId: string;
+  accountNodeId: string;
 };
 
 /**

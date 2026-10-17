@@ -8,7 +8,8 @@
 
 /** Subject for authorization decisions (aligns with web API Principal). */
 export type AuthorizationPrincipal = {
-  subjectId: string;
+  /** Account node id in a user corpus. */
+  accountNodeId: string;
 };
 
 export type AuthorizationDecision = "allow" | "deny";
