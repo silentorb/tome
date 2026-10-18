@@ -75,10 +75,13 @@ export function insertPageBlock(ctx: Ctx, component: PublicExtensionComponent): 
   commands.call(clearTextInCurrentBlockCommand.key);
   // Milkdown code_block only has `language` (no fence meta). Encode type= in the language string
   // until prepare-editor-body expands to a tome_page_block embed.
+  // Ontology node-filters must use {#predicate type="node-filter"} so discovery
+  // attaches the selection property to the predicate node.
+  const propertyId = role === "node-filter" ? "predicate" : undefined;
   commands.call(setBlockTypeCommand.key, {
     nodeType: codeBlock,
     attrs: {
-      language: `${PAGE_BLOCK_CONTENT_TYPE_JSON} ${formatPageBlockFenceMeta(role)}`,
+      language: `${PAGE_BLOCK_CONTENT_TYPE_JSON} ${formatPageBlockFenceMeta(role, propertyId)}`,
     },
   });
 

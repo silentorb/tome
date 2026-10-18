@@ -92,7 +92,7 @@ Set semantics are **orthogonal** to edge type. A set node carries interpretation
 | --- | --- | --- |
 | `type_table` | Node id key in `table-schemas.json` | Members table, Properties panel scalars, type filtering |
 | `archive` | `nodeId === workspace.archiveNodeId` | Excluded from search/graph via `nodes.is_archived` |
-| Predicate-scoped type table | Active ontology **member-scope** about the hub ([ontology.md](./ontology.md)) | Hub Members / type checks / typed pickers use the linked predicate; set edges optional for scalars |
+| Predicate-scoped type table | Active ontology **member-scope** about the hub ([ontology.md](./ontology.md)) | **Membership ≡ predicate** (listing, type identity, belongs-to-hub, Members remove). Set edges are optional **scalar carriers** only |
 
 ### Query API
 
@@ -120,7 +120,19 @@ Archive membership uses the same set-trait family as type tables (in Marloth: `m
 
 Linking or creating a type-table row **must** use the set relationship type resolved for that set (`setRoleRelationshipTypeForNode` / view context). Plain tables get no placement metadata. Ordered tables auto-stamp `order` when missing (`ordered-relationships.ts`).
 
-On a **predicate-scoped** type table (e.g. Marloth Inspirations), creating a database row still writes a set-membership edge for optional scalars, but **hub listing / type identity follow the member-scope predicate**. A new Inspiration appears on the hub only after it satisfies the predicate (for Inspirations: hosts ≥1 Inspires edge).
+#### Predicate-scoped hubs
+
+For a type table with an active member-scope ([ontology.md](./ontology.md)):
+
+| Concern | Rule |
+| --- | --- |
+| Membership | Predicate selection only (`isMemberOfTypeTable`). Set edges do **not** make a node a member. |
+| Type identity | Hub id is in `typeIdsForInstance` iff the predicate selects the node (no set∪predicate union for scoped hubs). |
+| Create row | Must **satisfy the predicate in the same action**. For `hosts_projection` filters (e.g. Inspirations): require a first Inspired target and write the defining Inspires edge with the create. Set carrier edges are written only when initial scalars are present (or on first scalar write). |
+| Members remove | Breaks **predicate** membership (delete defining projection edges), not merely the set carrier. Move-to-another-set is disabled. |
+| Broken scope | If the member-scope’s selection filter cannot load/evaluate → **explicit error** (not empty success, not set-membership fallback). A healthy filter that matches nobody still shows an empty table. |
+
+#### Plain (unscoped) hubs
 
 Removing a Members-table row **must** delete the stored set-trait edge between that member and the set. `listSetMemberRowConnections` lists members from **every** set-trait relationship type, while the view payload's `memberSidePerspective` is the **view-resolved** relationship type. When those differ (plain vs ordered, or an inverted tuple that makes an instance look like a set), unlink / move **must** still find and delete any set-trait relationship connecting the same pair rather than returning `not_found`.
 

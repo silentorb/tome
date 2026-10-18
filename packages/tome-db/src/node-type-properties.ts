@@ -138,21 +138,34 @@ export async function buildPropertiesSection(
     }
   }
 
-  let databaseId: string | null = setRowEdge?.targetNodeId ?? null;
-  let storedCells: Record<string, string> = setRowEdge
-    ? cellsFromConnectionProperties(setRowEdge.properties)
-    : {};
+  // Predicate membership decides the hub; set edges are scalar carriers only.
+  const predicateHubs = await predicateScopedTypeIdsForInstance(db, nodeId, dir);
+  let databaseId: string | null = null;
+  const sortedPredicateHubs = predicateHubs.slice().sort((a, b) => a.localeCompare(b));
+  for (const hubId of sortedPredicateHubs) {
+    if (await isTypeTableNode(db, hubId, dir)) {
+      databaseId = hubId;
+      break;
+    }
+  }
 
-  if (!databaseId) {
-    const predicateHubs = await predicateScopedTypeIdsForInstance(db, nodeId, dir);
-    // Prefer lexicographically first hub that is a type table.
-    const sortedHubs = predicateHubs.slice().sort((a, b) => a.localeCompare(b));
-    for (const hubId of sortedHubs) {
-      if (await isTypeTableNode(db, hubId, dir)) {
-        databaseId = hubId;
+  let storedCells: Record<string, string> = {};
+  if (databaseId && setRowEdge?.targetNodeId === databaseId) {
+    storedCells = cellsFromConnectionProperties(setRowEdge.properties);
+  } else if (databaseId && setRowEdge) {
+    // Set edge points at a different hub — look for a carrier to the predicate hub.
+    const registryProjections = memberSideProjectionTypes(registry);
+    for (const type of registryProjections) {
+      const connections = await listRelationshipsFromSource(db, nodeId, type);
+      const toHub = connections.find((c) => c.targetNodeId === databaseId);
+      if (toHub) {
+        storedCells = cellsFromConnectionProperties(toHub.properties);
         break;
       }
     }
+  } else if (!databaseId) {
+    databaseId = setRowEdge?.targetNodeId ?? null;
+    storedCells = setRowEdge ? cellsFromConnectionProperties(setRowEdge.properties) : {};
   }
 
   if (!databaseId) return null;

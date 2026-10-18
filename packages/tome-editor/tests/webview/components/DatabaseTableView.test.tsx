@@ -313,11 +313,11 @@ describe("DatabaseTableView", () => {
     expect(updateInput?.properties).toEqual(["status", "priority"]);
   });
 
-  test("unlinks rows with memberSidePerspective from the view payload", async () => {
-    const unlinkOutgoingRelationship = mock(async () => {});
+  test("removes Members rows via removeDatabaseMember", async () => {
+    const removeDatabaseMember = mock(async () => {});
     const api = {
       ...makeMockEditorApi(),
-      unlinkOutgoingRelationship,
+      removeDatabaseMember,
     };
     const databaseView = makeDatabaseViewDetail({
       viewRelationshipType: "cohort",
@@ -341,10 +341,9 @@ describe("DatabaseTableView", () => {
     fireEvent.click(screen.getByRole("button", { name: "Page actions" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Remove" }));
     await waitFor(() =>
-      expect(unlinkOutgoingRelationship).toHaveBeenCalledWith(
-        FIXTURE_TARGET_ID,
-        "belongs_to_cohort",
+      expect(removeDatabaseMember).toHaveBeenCalledWith(
         FIXTURE_DATABASE_ID,
+        FIXTURE_TARGET_ID,
       ),
     );
   });

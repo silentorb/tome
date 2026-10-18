@@ -18,9 +18,16 @@ import {
 import { isTypeTableNode } from "./node-capabilities";
 import { stampOrderIfMissing } from "./ordered-relationships";
 import {
+  hostsProjectionSpecForTypeTable,
+  memberPredicateIdForTypeTable,
+  UnevaluableMemberScopeError,
+} from "./predicate-membership";
+import { hostsProjectionType } from "tome-ontology";
+import {
   listRelationshipsFromSource,
   listRelationshipsToTarget,
 } from "./graph-store/relationship-read";
+import { normalizeRelationshipType, projectionTypeForEndpoint } from "tome-flatfile";
 import {
   writeStoreGetNode,
   writeStoreListCorpora,
@@ -194,34 +201,78 @@ export async function createNode(
       relations = [],
       orderScopeRelations = [],
     } = input.link;
+    const dbDir = contentDirForGraphStore(store, databaseId);
     const memberProjection = memberProjectionForSetLink(ctx, databaseId, perspective);
 
-    let memberFilter: Set<string> | null = null;
-    if (orderScopeRelations.length > 0) {
-      memberFilter = new Set<string>();
-      for (const edge of await listRelationshipsToTarget(store, databaseId, memberProjection)) {
-        const memberId = edge.sourceNodeId;
-        let matches = true;
-        for (const scopeRel of orderScopeRelations) {
-          const rels = await listRelationshipsFromSource(store, memberId, scopeRel.type);
-          if (!rels.some((rel) => rel.targetNodeId === scopeRel.targetId)) {
-            matches = false;
-            break;
+    let membershipProjection: string | null = null;
+    if (memberPredicateIdForTypeTable(databaseId, dbDir)) {
+      try {
+        const hosts = hostsProjectionSpecForTypeTable(databaseId, dbDir);
+        if (hosts) {
+          membershipProjection = hostsProjectionType(hosts);
+          const matching = relations.filter((relation) => {
+            const normalized = normalizeRelationshipType(relation.type);
+            if (normalized === membershipProjection) return true;
+            // Bare relationship-type ULID counts as the hosts direction.
+            return (
+              relation.type === hosts.relationshipTypeId ||
+              normalized ===
+                normalizeRelationshipType(
+                  projectionTypeForEndpoint(hosts.relationshipTypeId, hosts.direction),
+                )
+            );
+          });
+          if (matching.length === 0) return "membership_relation_required";
+          for (const relation of matching) {
+            if (!relation.targetId?.trim()) return "membership_relation_invalid";
           }
+        } else {
+          // Scoped but not hosts_projection — still require at least one relation
+          // so create cannot leave an invisible set-only row.
+          if (relations.length === 0) return "membership_relation_required";
         }
-        if (matches) memberFilter.add(memberId);
+      } catch (err) {
+        if (err instanceof UnevaluableMemberScopeError) return "unevaluable_member_scope";
+        throw err;
       }
     }
 
-    const relProps = await stampOrderIfMissing(
-      ctx,
-      databaseId,
-      id,
-      { ...rowProps },
-      memberProjection,
-      memberFilter,
-    );
-    await writeStoreUpsertRelationship(store, id, databaseId, memberProjection, relProps);
+    const hasScalarProps = Object.keys(rowProps).some((key) => {
+      const value = rowProps[key];
+      return value !== undefined && value !== null && String(value).trim() !== "";
+    });
+
+    // Predicate-scoped hubs: set edge is an optional scalar carrier only.
+    const writeSetCarrier = !membershipProjection || hasScalarProps;
+
+    if (writeSetCarrier) {
+      let memberFilter: Set<string> | null = null;
+      if (orderScopeRelations.length > 0) {
+        memberFilter = new Set<string>();
+        for (const edge of await listRelationshipsToTarget(store, databaseId, memberProjection)) {
+          const memberId = edge.sourceNodeId;
+          let matches = true;
+          for (const scopeRel of orderScopeRelations) {
+            const rels = await listRelationshipsFromSource(store, memberId, scopeRel.type);
+            if (!rels.some((rel) => rel.targetNodeId === scopeRel.targetId)) {
+              matches = false;
+              break;
+            }
+          }
+          if (matches) memberFilter.add(memberId);
+        }
+      }
+
+      const relProps = await stampOrderIfMissing(
+        ctx,
+        databaseId,
+        id,
+        { ...rowProps },
+        memberProjection,
+        memberFilter,
+      );
+      await writeStoreUpsertRelationship(store, id, databaseId, memberProjection, relProps);
+    }
 
     for (const relation of relations) {
       const nextOrdinal = await nextOutgoingOrdinal(ctx, id, relation.type);
@@ -229,7 +280,17 @@ export async function createNode(
       if (nextOrdinal !== undefined && linkProps.ordinal === undefined) {
         linkProps.ordinal = nextOrdinal;
       }
-      await writeStoreUpsertRelationship(store, id, relation.targetId, relation.type, linkProps);
+      let edgeType = relation.type;
+      if (membershipProjection) {
+        const normalized = normalizeRelationshipType(relation.type);
+        if (
+          normalized === normalizeRelationshipType(membershipProjection) ||
+          relation.type === membershipProjection.split(":")[0]
+        ) {
+          edgeType = membershipProjection;
+        }
+      }
+      await writeStoreUpsertRelationship(store, id, relation.targetId, edgeType, linkProps);
     }
 
     await syncAfterRelationshipsWrite(ctx);

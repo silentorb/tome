@@ -28,6 +28,13 @@ import type {
   MoveRelationshipConnectionInput,
   UnlinkOutgoingRelationshipError,
 } from "tome-graph-interfaces";
+import {
+  hostsProjectionSpecForTypeTable,
+  memberPredicateIdForTypeTable,
+  UnevaluableMemberScopeError,
+} from "./predicate-membership";
+import { hostsProjectionType } from "tome-ontology";
+import { setRoleProjectionTypesForNode } from "tome-flatfile";
 
 export type {
   LinkOutgoingRelationshipError,
@@ -36,6 +43,11 @@ export type {
   MoveRelationshipConnectionInput,
   UnlinkOutgoingRelationshipError,
 } from "tome-graph-interfaces";
+
+export type RemoveDatabaseMemberError =
+  | "not_found"
+  | "unevaluable_member_scope"
+  | UnlinkOutgoingRelationshipError;
 
 /** Preserve ULID / projection type case; only trim. */
 function normalizeLinkType(type: string): string {
@@ -141,6 +153,66 @@ export async function unlinkOutgoingRelationship(
   await writeStoreDeleteRelationship(store, sourceId, targetId, existing.type);
   await syncAfterRelationshipsWrite(ctx);
   return null;
+}
+
+/**
+ * Remove a member from a type-table Members list.
+ * Scoped hubs: delete defining hosts_projection edges (break predicate membership).
+ * Plain hubs: unlink the set-trait membership edge.
+ */
+export async function removeDatabaseMember(
+  ctx: TomeWriteContext,
+  databaseId: string,
+  memberId: string,
+): Promise<RemoveDatabaseMemberError | null> {
+  const store = ctx.graphStore;
+  const contentDir = writeStoreContentDir(store);
+  if (!await writeStoreGetNode(store, memberId) || !await writeStoreGetNode(store, databaseId)) {
+    return "not_found";
+  }
+
+  if (memberPredicateIdForTypeTable(databaseId, contentDir)) {
+    try {
+      const hosts = hostsProjectionSpecForTypeTable(databaseId, contentDir);
+      if (!hosts) return "not_found";
+      const projection = hostsProjectionType(hosts);
+      const edges = await listRelationshipsFromSource(store, memberId, projection);
+      if (edges.length === 0) {
+        // Also try bare relationship type id (some writers store ULID only).
+        const bare = await listRelationshipsFromSource(
+          store,
+          memberId,
+          hosts.relationshipTypeId,
+        );
+        if (bare.length === 0) return "not_found";
+        for (const edge of bare) {
+          await writeStoreDeleteRelationship(
+            store,
+            edge.sourceNodeId,
+            edge.targetNodeId,
+            edge.type,
+          );
+        }
+      } else {
+        for (const edge of edges) {
+          await writeStoreDeleteRelationship(
+            store,
+            edge.sourceNodeId,
+            edge.targetNodeId,
+            edge.type,
+          );
+        }
+      }
+      await syncAfterRelationshipsWrite(ctx);
+      return null;
+    } catch (err) {
+      if (err instanceof UnevaluableMemberScopeError) return "unevaluable_member_scope";
+      throw err;
+    }
+  }
+
+  const [, memberPerspective] = setRoleProjectionTypesForNode(databaseId, contentDir);
+  return unlinkOutgoingRelationship(ctx, memberId, databaseId, memberPerspective);
 }
 
 export async function moveRelationshipConnection(

@@ -12,8 +12,10 @@ import {
   writeStoreContentDir,
   writeStoreFindRelationship,
   writeStoreMergeRelationshipProperties,
+  writeStoreUpsertRelationship,
 } from "./graph-store/relationship-write";
 import type { RelationshipPropertyUpdateError } from "tome-graph-interfaces";
+import { isMemberOfTypeTable } from "./predicate-membership";
 
 export type { RelationshipPropertyUpdateError } from "tome-graph-interfaces";
 
@@ -60,25 +62,41 @@ export async function updateDatabaseRowProperty(
   propertyKey: string,
   value: string | null,
 ): Promise<RelationshipPropertyUpdateError | null> {
-  const [, memberPerspective] = setRoleProjectionTypesForNode(
-    databaseId,
-    writeStoreContentDir(ctx.graphStore),
-  );
-  const connection = await writeStoreFindRelationship(
+  const contentDir = writeStoreContentDir(ctx.graphStore);
+  const [, memberPerspective] = setRoleProjectionTypesForNode(databaseId, contentDir);
+  let connection = await writeStoreFindRelationship(
     ctx.graphStore,
     nodeId,
     databaseId,
     memberPerspective,
   );
-  if (connection) {
-    return updateOutgoingRelationshipProperty(
-      ctx,
+  if (!connection) {
+    // Predicate-scoped members may lack a set carrier until the first scalar write.
+    if (!(await isMemberOfTypeTable(ctx.graphStore, nodeId, databaseId, contentDir))) {
+      return "not_found";
+    }
+    await writeStoreUpsertRelationship(
+      ctx.graphStore,
       nodeId,
       databaseId,
       memberPerspective,
-      propertyKey,
-      value,
+      {},
     );
+    await syncAfterRelationshipsWrite(ctx);
+    connection = await writeStoreFindRelationship(
+      ctx.graphStore,
+      nodeId,
+      databaseId,
+      memberPerspective,
+    );
+    if (!connection) return "not_found";
   }
-  return "not_found";
+  return updateOutgoingRelationshipProperty(
+    ctx,
+    nodeId,
+    databaseId,
+    memberPerspective,
+    propertyKey,
+    value,
+  );
 }

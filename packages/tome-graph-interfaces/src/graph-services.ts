@@ -180,6 +180,11 @@ export interface TomeGraphServices {
     type: string,
     targetId: string,
   ): Promise<UnlinkOutgoingRelationshipError | null>;
+  /** Remove a Members-table row (set unlink or break predicate membership). */
+  removeDatabaseMember(
+    databaseId: string,
+    memberId: string,
+  ): Promise<"not_found" | "unevaluable_member_scope" | UnlinkOutgoingRelationshipError | null>;
   moveRelationshipConnection(input: {
     type: string;
     oldSourceId: string;

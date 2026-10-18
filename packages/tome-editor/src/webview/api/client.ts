@@ -50,6 +50,7 @@ export function createEditorApi(): EditorApi {
     updateOutgoingRelationshipProperty: rest.updateOutgoingRelationshipProperty.bind(rest),
     linkOutgoingRelationship: rest.linkOutgoingRelationship.bind(rest),
     unlinkOutgoingRelationship: rest.unlinkOutgoingRelationship.bind(rest),
+    removeDatabaseMember: rest.removeDatabaseMember.bind(rest),
     moveRelationshipConnection: rest.moveRelationshipConnection.bind(rest),
     deleteNode: rest.deleteNode.bind(rest),
     archiveNode: rest.archiveNode.bind(rest),

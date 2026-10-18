@@ -68,4 +68,16 @@ export interface DatabaseViewDetail {
   groups?: DatabaseRowGroup[];
   /** Metadata for scope/group/reorder presentation layers (add-row, DnD). */
   presentation?: DatabaseViewPresentation;
+  /**
+   * When set, hub membership follows a member-scope predicate (hosts_projection).
+   * Create-row must write a defining relation of `projectionType`; Members-remove
+   * breaks that predicate rather than unlinking the set carrier.
+   */
+  predicateMembership?: {
+    projectionType: string;
+    relationshipTypeId: string;
+    direction: 0 | 1;
+    /** Opposite endpoint type table when declared on the relationship type. */
+    targetTypeId?: string;
+  };
 }

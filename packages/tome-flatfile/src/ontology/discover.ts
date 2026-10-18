@@ -1,6 +1,7 @@
 import {
   NODE_FILTER_BLOCK_ROLE,
   extractStructuredProperties,
+  parsePageBlockFences,
 } from "tome-interfaces/page-block";
 import {
   compileNodePredicates,
@@ -21,9 +22,25 @@ const PREDICATE_PROPERTY_KEY = "predicate";
 
 function nodeFilterFromBody(body: string): ImpGraph | undefined {
   const props = extractStructuredProperties(body, NODE_FILTER_BLOCK_ROLE);
-  const payload = props.get(PREDICATE_PROPERTY_KEY);
-  if (!payload) return undefined;
-  const graph = parseImpGraph(payload.data);
+  const keyed = props.get(PREDICATE_PROPERTY_KEY);
+  if (keyed) {
+    const graph = parseImpGraph(keyed.data);
+    return graph ?? undefined;
+  }
+
+  // Resilience: sole node-filter fence without {#predicate} still counts as
+  // the selection property (legacy / incomplete authoring).
+  const { segments } = parsePageBlockFences(body);
+  const filters = segments.filter(
+    (s) => s.type === "block" && s.payload.blockType === NODE_FILTER_BLOCK_ROLE,
+  );
+  if (filters.length !== 1) return undefined;
+  const sole = filters[0]!;
+  if (sole.type !== "block") return undefined;
+  if (sole.payload.propertyId && sole.payload.propertyId !== PREDICATE_PROPERTY_KEY) {
+    return undefined;
+  }
+  const graph = parseImpGraph(sole.payload.data);
   return graph ?? undefined;
 }
 

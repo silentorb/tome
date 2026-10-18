@@ -478,6 +478,11 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         { method: "DELETE" },
       );
     },
+    async removeDatabaseMember(databaseId: string, memberId: string): Promise<void> {
+      await fetchJson(`/api/databases/${databaseId}/rows/${memberId}`, {
+        method: "DELETE",
+      });
+    },
     async moveRelationshipConnection(input: {
       type: string;
       oldSourceId: string;

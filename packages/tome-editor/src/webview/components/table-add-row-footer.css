@@ -64,3 +64,24 @@
   font-size: 0.8125rem;
   color: var(--tome-danger, #f07178);
 }
+
+.tome-table-add-row-membership {
+  flex: 1 0 100%;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+}
+
+.tome-table-add-row-membership-label {
+  font-size: 0.8125rem;
+  color: var(--tome-text-secondary);
+}
+
+.tome-table-add-row-membership-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+}

@@ -109,6 +109,7 @@ export function makeMockEditorApi(): EditorApi {
     updateOutgoingRelationshipProperty: async () => {},
     linkOutgoingRelationship: async () => {},
     unlinkOutgoingRelationship: async () => {},
+    removeDatabaseMember: async () => {},
     moveRelationshipConnection: async () => {},
     deleteNode: async () => {},
     archiveNode: async () => {},

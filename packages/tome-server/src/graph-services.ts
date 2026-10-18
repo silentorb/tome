@@ -37,6 +37,7 @@ import {
   updateOutgoingRelationshipProperty,
   linkOutgoingRelationship,
   moveRelationshipConnection,
+  removeDatabaseMember as removeDatabaseMemberInDb,
   unlinkOutgoingRelationship,
   loadTableSchemasFromContent,
   type CreateDatabaseColumnInput,
@@ -549,6 +550,9 @@ function buildGraphServices(
       targetId: string,
     ) {
       return unlinkOutgoingRelationship(writeCtx, sourceId, targetId, type);
+    },
+    async removeDatabaseMember(databaseId: string, memberId: string) {
+      return removeDatabaseMemberInDb(writeCtx, databaseId, memberId);
     },
     async moveRelationshipConnection(input: {
       type: string;

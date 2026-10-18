@@ -99,6 +99,7 @@ export {
 export {
   linkOutgoingRelationship,
   moveRelationshipConnection,
+  removeDatabaseMember,
   unlinkOutgoingRelationship,
 } from "./relationship-link-mutations";
 export type {
@@ -106,6 +107,7 @@ export type {
   LinkOutgoingRelationshipInput,
   MoveRelationshipConnectionError,
   MoveRelationshipConnectionInput,
+  RemoveDatabaseMemberError,
   UnlinkOutgoingRelationshipError,
 } from "./relationship-link-mutations";
 export {
@@ -186,13 +188,18 @@ export {
   nodeMatchesTargetTypes,
 } from "./node-capabilities";
 export {
+  UnevaluableMemberScopeError,
   createNodeFilterEvaluator,
+  hostsProjectionSpecForTypeTable,
+  isMemberOfTypeTable,
   listPredicateScopedMemberConnections,
   memberPredicateIdForTypeTable,
   nodesMatchingPredicate,
   predicateScopedMemberIds,
   predicateScopedTypeIdsForInstance,
   predicateSelectsNodeInStore,
+  scopedTypeTableIds,
+  typeTableMemberIds,
 } from "./predicate-membership";
 export { getNodePageDetail, getRelationTableSection } from "./node-page-sections";
 export type {

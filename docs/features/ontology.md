@@ -106,7 +106,7 @@ Optional `{#id}` on page-block meta is the general structured-property conventio
 
 **Editor UI:** [`tome-ontology-ui`](../../packages/tome-ontology-ui/) registers the interactive `node-filter` page block. Authors edit the filter in the host tool panel via shared [`tome-react-flow`](../../packages/tome-react-flow/) (`ImpFlowEditor`); save converts React Flow → Imp so the fence body stays raw Imp. Static HTML shows a short summary (not a full canvas). `ImpFlowEditor` uses `createTomeImpRegistry()` from [`tome-imp-sql`](../../packages/tome-imp-sql/), which catalogs Tome-only `hosts_projection` (ports `association` / `direction` → `value`) so the canvas shows handles — evaluation still uses ontology shape parsers, not Imp SQL lowering.
 
-Predicates without a valid `node-filter` property are skipped (not active in the runtime).
+Predicates without a valid `node-filter` property are not active in the runtime. Slash-insert of `node-filter` stamps `{#predicate …}`. Discovery also accepts a sole `node-filter` fence without `#predicate` as the selection property (read-side resilience).
 
 **Production evaluation (tome-db):** node-filters are evaluated for hub Members, type resolution, and typed pickers. Supported shapes today:
 
@@ -117,7 +117,7 @@ Predicates without a valid `node-filter` property are skipped (not active in the
 
 ### Member-scope instances
 
-A **member-scope** binds a type-table hub to a predicate that selects its members (instead of—or in addition to—set-trait edges for listing / type checks). Authored on the member-scope node:
+A **member-scope** binds a type-table hub to a predicate that **defines** its members (not set-trait edges). Authored on the member-scope node:
 
 ```json {#memberScope type="member-scope"}
 {
@@ -126,7 +126,9 @@ A **member-scope** binds a type-table hub to a predicate that selects its member
 }
 ```
 
-Runtime: `loadMemberScopesFromContent` → hub Members / `typeIdsForInstance` / Inspired-by pickers resolve members via the linked predicate. Set-membership edges may still carry row scalars when present.
+Runtime: `loadMemberScopesFromContent` → hub Members / type identity / belongs-to-hub / pickers use the linked predicate. Set-membership edges are optional **scalar carriers** only — see [sets.md](./sets.md) § Predicate-scoped hubs.
+
+If a member-scope is active but its predicate has **no loadable selection filter**, hub listing and related operations **fail with an explicit error** (`unevaluable_member_scope`). Do not treat that as an empty member list or fall back to set membership.
 
 ### Merge and multi-corpus session scope
 

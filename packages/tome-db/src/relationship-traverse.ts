@@ -1,5 +1,5 @@
 import type { Relationship } from "tome-graph-interfaces";
-import { findSetEdge, setMemberIds } from "./set-membership";
+import { setMemberIds } from "./set-membership";
 import { normalizeRelationshipTypeId } from "tome-flatfile";
 import {
   listRelationshipsFromSource,
@@ -7,6 +7,7 @@ import {
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
 import { expandRelationshipEntry, toDomainRelationship } from "tome-flatfile";
+import { isMemberOfTypeTable } from "./predicate-membership";
 
 export async function rowBelongsToDatabase(
   db: RelationshipReadStore,
@@ -14,7 +15,7 @@ export async function rowBelongsToDatabase(
   databaseId: string,
   contentDir?: string,
 ): Promise<boolean> {
-  return (await findSetEdge(db, rowId, databaseId, contentDir)) !== null;
+  return isMemberOfTypeTable(db, rowId, databaseId, contentDir);
 }
 
 /** Keep incident edges when row is a member of the viewing database. */

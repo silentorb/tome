@@ -69,9 +69,12 @@ import { getCompositionForDatabase } from "./table-presentation/load";
 import { buildComposedDatabaseView } from "./table-presentation/compose";
 import { relationCountSortsFromColumnDefs } from "./member-page-query";
 import {
+  hostsProjectionSpecForTypeTable,
   listPredicateScopedMemberConnections,
+  memberPredicateIdForTypeTable,
   predicateScopedMemberIds,
 } from "./predicate-membership";
+import { hostsProjectionType } from "tome-ontology";
 
 const ROW_META_KEYS = ORDER_META_KEYS;
 const DEFAULT_SET_SECTION_TITLE = "Contents";
@@ -172,6 +175,25 @@ async function evalRowsFromMembershipConnections(
   return evalRows;
 }
 
+function predicateMembershipForHub(
+  databaseId: string,
+  contentDir: string,
+): DatabaseViewDetail["predicateMembership"] {
+  if (!memberPredicateIdForTypeTable(databaseId, contentDir)) return undefined;
+  const hosts = hostsProjectionSpecForTypeTable(databaseId, contentDir);
+  if (!hosts) return undefined;
+  const registry = loadRelationshipTypesFromContent(contentDir);
+  const def = registry.relationshipTypes[hosts.relationshipTypeId];
+  const opposite: 0 | 1 = hosts.direction === 0 ? 1 : 0;
+  const targetTypeId = def?.endpoints?.[opposite]?.typeId?.trim();
+  return {
+    projectionType: hostsProjectionType(hosts),
+    relationshipTypeId: hosts.relationshipTypeId,
+    direction: hosts.direction,
+    targetTypeId: targetTypeId || undefined,
+  };
+}
+
 function finishCustomViewDetail(args: {
   databaseId: string;
   databaseTitle: string;
@@ -251,6 +273,7 @@ function finishCustomViewDetail(args: {
     rowsWindow,
     columnDefs: visibleColumnDefs,
     allColumnDefs,
+    predicateMembership: predicateMembershipForHub(databaseId, contentDir),
   };
 }
 

@@ -289,36 +289,35 @@ function FlatDatabaseTableView({
     [],
   );
 
+  const predicateMembership = databaseView.predicateMembership;
   const rowPageActions = useMemo(
     () =>
       onArchiveNode && onDeleteNode
         ? {
             onArchiveNode,
             onRemoveNode: async (rowNodeId: string) => {
-              await api.unlinkOutgoingRelationship(
-                rowNodeId,
-                databaseView.memberSidePerspective,
-                databaseView.id,
-              );
+              await api.removeDatabaseMember(databaseView.id, rowNodeId);
               refresh();
             },
             onDeleteNode,
-            getMoveConfig: (rowNodeId: string) => ({
-              api,
-              projectionType: databaseView.memberSidePerspective,
-              onlyActivePickingRole: "target" as const,
-              excludedIds: [nodeId, rowNodeId],
-              onMove: async (selectedId: string) => {
-                await api.moveRelationshipConnection({
-                  type: databaseView.memberSidePerspective,
-                  oldSourceId: rowNodeId,
-                  oldTargetId: databaseView.id,
-                  newSourceId: rowNodeId,
-                  newTargetId: selectedId,
-                });
-              },
-              onMoved: refresh,
-            }),
+            getMoveConfig: predicateMembership
+              ? undefined
+              : (rowNodeId: string) => ({
+                  api,
+                  projectionType: databaseView.memberSidePerspective,
+                  onlyActivePickingRole: "target" as const,
+                  excludedIds: [nodeId, rowNodeId],
+                  onMove: async (selectedId: string) => {
+                    await api.moveRelationshipConnection({
+                      type: databaseView.memberSidePerspective,
+                      oldSourceId: rowNodeId,
+                      oldTargetId: databaseView.id,
+                      newSourceId: rowNodeId,
+                      newTargetId: selectedId,
+                    });
+                  },
+                  onMoved: refresh,
+                }),
           }
         : undefined,
     [
@@ -328,6 +327,7 @@ function FlatDatabaseTableView({
       nodeId,
       onArchiveNode,
       onDeleteNode,
+      predicateMembership,
       refresh,
     ],
   );
@@ -335,10 +335,30 @@ function FlatDatabaseTableView({
   return (
     <TableAddRow
       label="New row"
-      onSubmit={async (title) => {
+      membershipTarget={
+        predicateMembership
+          ? {
+              api,
+              allowedTypeIds: predicateMembership.targetTypeId
+                ? [predicateMembership.targetTypeId]
+                : undefined,
+              label: "Inspired target",
+            }
+          : undefined
+      }
+      onSubmit={async (title, membershipTargetId) => {
         await api.createDatabaseRow(databaseView.id, {
           title,
           view: databaseView.view,
+          relations:
+            predicateMembership && membershipTargetId
+              ? [
+                  {
+                    type: predicateMembership.projectionType,
+                    targetId: membershipTargetId,
+                  },
+                ]
+              : undefined,
         });
         refresh();
       }}

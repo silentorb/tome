@@ -17,6 +17,7 @@ import {
   memberSideProjectionTypes,
   resolveContentPath,
 } from "tome-flatfile";
+import { findSetEdge, setMemberIds } from "./set-membership";
 import {
   listRelationshipsFromSource,
   listSourceNodeIdsForProjectionType,
@@ -24,6 +25,23 @@ import {
   readStoreListNodeIds,
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
+
+/** Member-scope is active but the predicate has no loadable selection filter. */
+export class UnevaluableMemberScopeError extends Error {
+  readonly code = "unevaluable_member_scope" as const;
+
+  constructor(
+    readonly typeTableId: string,
+    readonly predicateId: string,
+    message?: string,
+  ) {
+    super(
+      message ??
+        `Member-scope for type table ${typeTableId} references predicate ${predicateId} with no loadable selection filter`,
+    );
+    this.name = "UnevaluableMemberScopeError";
+  }
+}
 
 async function listHostsProjectionSourceIds(
   store: RelationshipReadStore,
@@ -132,19 +150,88 @@ export function memberPredicateIdForTypeTable(
   return memberPredicateForTypeTable(scopes, typeTableId);
 }
 
-/** Member node ids for a type table via member-scope predicate (empty if none). */
+/** Type-table ids that have an active member-scope binding. */
+export function scopedTypeTableIds(contentDir?: string): Set<string> {
+  const dir = contentDir ?? resolveContentPath();
+  return new Set(loadMemberScopesFromContent(dir).map((s) => s.typeTableId));
+}
+
+function requireLoadablePredicateFilter(
+  typeTableId: string,
+  predicateId: string,
+  contentDir: string,
+): ImpGraph {
+  const runtime = loadRelationshipRuntimeFromContent(contentDir);
+  const pred = runtime.predicates.get(predicateId.trim());
+  if (!pred?.nodeFilter) {
+    throw new UnevaluableMemberScopeError(typeTableId, predicateId);
+  }
+  return pred.nodeFilter;
+}
+
+/**
+ * Member node ids for a type table via member-scope predicate.
+ * `null` = no member-scope. Throws if scope is present but filter cannot load.
+ * Empty array = filter applied and matched nobody.
+ */
 export async function predicateScopedMemberIds(
   store: RelationshipReadStore,
   typeTableId: string,
   contentDir?: string,
 ): Promise<string[] | null> {
-  const predicateId = memberPredicateIdForTypeTable(typeTableId, contentDir);
+  const dir = contentDir ?? resolveContentPath();
+  const predicateId = memberPredicateIdForTypeTable(typeTableId, dir);
   if (!predicateId) return null;
-  return nodesMatchingPredicate(store, predicateId, contentDir);
+  requireLoadablePredicateFilter(typeTableId, predicateId, dir);
+  return nodesMatchingPredicate(store, predicateId, dir);
+}
+
+/** hosts_projection spec for a scoped type table, when the filter is that shape. */
+export function hostsProjectionSpecForTypeTable(
+  typeTableId: string,
+  contentDir?: string,
+): HostsProjectionSpec | null {
+  const dir = contentDir ?? resolveContentPath();
+  const predicateId = memberPredicateIdForTypeTable(typeTableId, dir);
+  if (!predicateId) return null;
+  const filter = requireLoadablePredicateFilter(typeTableId, predicateId, dir);
+  return parseHostsProjectionFilter(filter);
+}
+
+/**
+ * Unified membership: predicate when scoped, else set edge.
+ * Throws UnevaluableMemberScopeError when the scope cannot evaluate.
+ */
+export async function isMemberOfTypeTable(
+  store: RelationshipReadStore,
+  nodeId: string,
+  typeTableId: string,
+  contentDir?: string,
+): Promise<boolean> {
+  const dir = contentDir ?? resolveContentPath();
+  const predicateId = memberPredicateIdForTypeTable(typeTableId, dir);
+  if (predicateId) {
+    requireLoadablePredicateFilter(typeTableId, predicateId, dir);
+    return predicateSelectsNodeInStore(store, predicateId, nodeId, dir);
+  }
+  return (await findSetEdge(store, nodeId, typeTableId, dir)) !== null;
+}
+
+/** All member ids of a type table (predicate or set). */
+export async function typeTableMemberIds(
+  store: RelationshipReadStore,
+  typeTableId: string,
+  contentDir?: string,
+): Promise<string[]> {
+  const dir = contentDir ?? resolveContentPath();
+  const scoped = await predicateScopedMemberIds(store, typeTableId, dir);
+  if (scoped !== null) return scoped;
+  return setMemberIds(store, typeTableId, dir);
 }
 
 /**
  * Type-table hubs that select this node via an active member-scope predicate.
+ * Skips scopes whose predicate filter is not loadable (those hubs error on listing).
  */
 export async function predicateScopedTypeIdsForInstance(
   store: RelationshipReadStore,

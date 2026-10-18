@@ -222,6 +222,7 @@ export interface TomeHttpClient {
     type: string,
     targetId: string,
   ): Promise<void>;
+  removeDatabaseMember(databaseId: string, memberId: string): Promise<void>;
   moveRelationshipConnection(input: {
     type: string;
     oldSourceId: string;

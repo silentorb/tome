@@ -838,9 +838,30 @@ async function dispatchApiRequest(
             url.searchParams.get("view") ??
             undefined;
           const rows = tableRowsQueryFromSearchParams(url.searchParams);
-          const databaseView = await db.getDatabaseView(id, tab ?? undefined, rows);
-          if (!databaseView) return json({ error: "not found" }, 404);
-          return json({ databaseView });
+          try {
+            const databaseView = await db.getDatabaseView(id, tab ?? undefined, rows);
+            if (!databaseView) return json({ error: "not found" }, 404);
+            return json({ databaseView });
+          } catch (err) {
+            if (
+              err &&
+              typeof err === "object" &&
+              "code" in err &&
+              (err as { code: string }).code === "unevaluable_member_scope"
+            ) {
+              return json(
+                {
+                  error: "unevaluable_member_scope",
+                  message:
+                    err instanceof Error
+                      ? err.message
+                      : "Member-scope selection filter cannot be evaluated",
+                },
+                422,
+              );
+            }
+            throw err;
+          }
         }
       }
 
@@ -876,6 +897,22 @@ async function dispatchApiRequest(
         });
         if (result === "invalid_title") return json({ error: "invalid title" }, 400);
         if (result === "database_not_found") return json({ error: "not found" }, 404);
+        if (result === "membership_relation_required") {
+          return json(
+            {
+              error: "membership_relation_required",
+              message:
+                "This type table requires a membership relation (e.g. first Inspired target) when creating a row",
+            },
+            400,
+          );
+        }
+        if (result === "membership_relation_invalid") {
+          return json({ error: "membership_relation_invalid" }, 400);
+        }
+        if (result === "unevaluable_member_scope") {
+          return json({ error: "unevaluable_member_scope" }, 422);
+        }
         return json({ node: result });
       }
 
@@ -915,6 +952,20 @@ async function dispatchApiRequest(
 
       const databaseRowMatch =
         /^\/api\/databases\/([0-9A-HJKMNP-TV-Z]{26})\/rows\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
+      if (databaseRowMatch && req.method === "DELETE") {
+        {
+          const denied = await forbiddenIfModificationDenied("database.row.remove");
+          if (denied) return denied;
+        }
+        const databaseId = databaseRowMatch[1]!;
+        const nodeId = databaseRowMatch[2]!;
+        const error = await db.removeDatabaseMember(databaseId, nodeId);
+        if (error === "not_found") return json({ error: "not found" }, 404);
+        if (error === "unevaluable_member_scope") {
+          return json({ error: "unevaluable_member_scope" }, 422);
+        }
+        return json({ ok: true });
+      }
       if (databaseRowMatch && req.method === "PATCH") {
         {
           const denied = await forbiddenIfModificationDenied("database.row.property");

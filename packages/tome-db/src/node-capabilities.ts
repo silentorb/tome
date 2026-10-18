@@ -10,7 +10,10 @@ import {
   readStoreGetNode,
   type RelationshipReadStore,
 } from "./graph-store/relationship-read";
-import { predicateScopedTypeIdsForInstance } from "./predicate-membership";
+import {
+  predicateScopedTypeIdsForInstance,
+  scopedTypeTableIds,
+} from "./predicate-membership";
 
 function titleFromProperties(properties: Record<string, unknown>): string {
   const title = properties.title;
@@ -51,11 +54,15 @@ export async function typeIdsForInstance(
   nodeId: string,
   contentDir?: string,
 ): Promise<string[]> {
-  const fromSets = await memberSetIds(store, nodeId, contentDir);
-  const fromPredicates = await predicateScopedTypeIdsForInstance(store, nodeId, contentDir);
+  const dir = contentDir ?? resolveContentPath();
+  const scopedHubs = scopedTypeTableIds(dir);
+  // Set edges to scoped hubs are scalar carriers only — not type identity.
+  const fromSets = (await memberSetIds(store, nodeId, dir)).filter(
+    (hubId) => !scopedHubs.has(hubId),
+  );
+  const fromPredicates = await predicateScopedTypeIdsForInstance(store, nodeId, dir);
   if (fromPredicates.length === 0) return fromSets;
-  const merged = new Set([...fromSets, ...fromPredicates]);
-  return [...merged];
+  return [...new Set([...fromSets, ...fromPredicates])];
 }
 
 /** Lexicographically first IS_A type title for an instance page, when any. */

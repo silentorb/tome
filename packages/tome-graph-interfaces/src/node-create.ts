@@ -5,7 +5,11 @@ export type CreateNodeError =
   | "source_not_found"
   | "database_not_found"
   | "corpus_not_found"
-  | "corpus_readonly";
+  | "corpus_readonly"
+  /** Scoped hub create requires a relation that satisfies the membership predicate. */
+  | "membership_relation_required"
+  | "membership_relation_invalid"
+  | "unevaluable_member_scope";
 
 export type CreateNodeLink =
   | {
