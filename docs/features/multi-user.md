@@ -63,7 +63,7 @@ Three layers — do not collapse them:
 - Support **mixing user corpora** in one host/session (analogous to design multi-corpus).
 - Support **sharing one user corpus across multiple design corpora / hosts** (one identity graph, many content projects).
 
-**Future infrastructure:** richer Imp policy against Account/permission relationships in the shared cache ([tome-imp-sql.md](./tome-imp-sql.md) — prefer `compileImpGraphToTomeSql` + `queryAll`; Neo4j Imp/Cypher path later); Denial authorizers gate Imp and modifications and consult identity by Account node id.
+**Future infrastructure:** richer Imp policy against Account/permission relationships in the shared cache ([tome-imp-sql.md](./tome-imp-sql.md) — prefer `compileImpGraphToTomeSql` + `queryAll`; Neo4j Imp → Cypher via sibling `imp-cypher` + `tome-neo4j`’s `tome-imp-cypher` binder — compile exists; Bolt execute later); Denial authorizers gate Imp and modifications and consult identity by Account node id.
 
 ### Isolation (core vs extensions)
 

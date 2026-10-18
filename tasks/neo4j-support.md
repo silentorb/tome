@@ -12,10 +12,14 @@ Charter: [multi-user.md](../docs/features/multi-user.md). **Phase 7 — Neo4j** 
 
 Packages and Neo4j Community CI/runtime live under workbench mount `.mnt/tome-neo4j` (optional). Heavy DB tests stay out of tome’s light weighted suite by default. PostgreSQL remains optional / much later — [postgresql-support.md](./postgresql-support.md).
 
+**Imp → Cypher:** generic translator in sibling `imp-cypher` (`.mnt/imp-cypher`; light CI, no Neo4j). Tome binder `tome-imp-cypher` lives in `tome-neo4j` (provisional `:TomeNode` schema). Store CRUD / Bolt execution remain open.
+
 ## See also
 
 - [multi-user.md](../docs/features/multi-user.md)
 - [tome-db.md](../docs/features/tome-db.md)
 - [graph-store.md](../docs/features/graph-store.md)
+- Sibling [imp-cypher](https://github.com/silentorb/imp-cypher) (`docs/features/cypher.md`)
+- Sibling [tome-neo4j](https://github.com/silentorb/tome-neo4j) (`packages/tome-imp-cypher`)
 - [independent-sql-database.md](./independent-sql-database.md)
 - [postgresql-support.md](./postgresql-support.md)
