@@ -61,14 +61,14 @@ Optional `ontology.json` keys (closed `types` map):
 }
 ```
 
-Members of `authorizationModel` are **Authorization Model** instances (containers). Members of `authorizationPolicy` are **Policy** nodes (Imp body documents the grant check). Model data carries this minimal authz footprint so authorization is not fully detachable from the corpus.
+Members of `authorizationModel` are **Authorization Model** instances (containers). Members of `authorizationPolicy` are **Policy** nodes (Imp body documents the grant check). These keys are **optional** on design corpora: solo corpora (e.g. marloth-story) omit them and run under `allow-everything`. They are required only when selecting `authorization-model` (today exercised in tome tests with temp ontology dirs).
 
 ## Node-edit policy (phase 3b)
 
 | Piece | Location |
 | --- | --- |
 | Account / Permission / grant edges | User corpus flatfile (fixture: `tome-server/fixtures/identity-corpus/`) |
-| Policy Imp document | Design corpus under Authorization Model (Marloth) |
+| Policy Imp graph | In-code `buildCanEditNodesPolicyGraph()`; tests use identity-corpus + temp ontology — not marloth-story |
 | Evaluation | Shared ephemeral SQLite via `compileImpGraphToTomeSql` + `queryAll` |
 
 - **View:** `authorizeImpQuery` → allow (when evaluator wired).

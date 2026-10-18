@@ -78,7 +78,7 @@ Three layers — do not collapse them:
 | **Profile** | Optional later (may hang off Account nodes) | None for current product features. |
 | **User administration** | Admin UI / extension ops over Account (and role) nodes | Thin account APIs if needed; “who may administer” via authz policy. |
 
-**Authorizer (Denial):** one `Authorizer` interface with Imp-query and modification methods — not HTTP verbs. Server selects the implementation; `ontology.json` may declare `types.authorizationModel` so model data carries a minimal authz footprint. See [authorization-authorizers.md](../extensions/authorization-authorizers.md).
+**Authorizer (Denial):** one `Authorizer` interface with Imp-query and modification methods — not HTTP verbs. Server selects the implementation; `ontology.json` may declare `types.authorizationModel` when using `authorization-model` (optional on solo design corpora). See [authorization-authorizers.md](../extensions/authorization-authorizers.md).
 
 **Extension kinds:** `page-block`, `searcher`, `authentication-provider` ([extensions.md](./extensions.md)). Denial authorizers register via optional `authorizationModule` (host APIs) with minimal config. Shell/admin kinds may come later.
 
@@ -202,7 +202,7 @@ Prefer citing **this doc + phase id** when starting work. Update this table when
 
 **Phase 3a progress (Denial):** single `Authorizer` (Imp + modification methods); core deny-everything (server default), allow-everything (explicit), and authorization-model (ontology-backed, fail-closed until policy children); wired on Imp + modification HTTP paths; workbench config explicitly sets allow-everything for light solo; extension `authorizationModule` can replace the authorizer. Filtering, probing, catch-all for other APIs, folding `readonly` / `protectedNodeIds` remain later 3x sessions.
 
-**Phase 3b progress (user corpus + node-edit policy):** opt-in user flatfile corpus via `userCorpora` / `TOME_USER_CONTENT_PATH` (corpus id `identity`), synced into the shared session SQLite; Account + Permission fixture; session create validates Account membership when identity is configured; `authorization-model` allows Imp views and allows node modifications when an Imp policy (compiled to SQL) shows the principal holds **can-edit-nodes**. No Role nodes yet (permissions attach directly to Accounts).
+**Phase 3b progress (user corpus + node-edit policy):** opt-in user flatfile corpus via `userCorpora` / `TOME_USER_CONTENT_PATH` (corpus id `identity`), synced into the shared session SQLite; Account + Permission fixture; session create validates Account membership when identity is configured; `authorization-model` allows Imp views and allows node modifications when an Imp policy (compiled to SQL) shows the principal holds **can-edit-nodes**. No Role nodes yet (permissions attach directly to Accounts). Design corpora such as marloth-story omit authz ontology keys and stay on workbench `allow-everything`; Denial dogfood for `authorization-model` lives in tome tests/fixtures for now.
 
 **Not yet implemented:** Role nodes, composite mix of multiple user corpora, local IdP bindings as graph/text, remote auth specialty store, Neo4j design/identity adapters.
 
@@ -236,7 +236,7 @@ Largest surfaces: authorization (3), user corpora + account UI (5), Neo4j graph 
 - **Denial authorizer** in `tome-server.json` `authorization`:
   - `implementationId`: `"deny-everything"` \| `"allow-everything"` \| `"authorization-model"` (omitted → **deny-everything**)
   - Workbench solo: `"allow-everything"` explicitly ([tome-server.workbench.json](../../packages/tome-server/config/tome-server.workbench.json)).
-  - `authorization-model` requires `ontology.json` `types.authorizationModel` in at least one corpus.
+  - `authorization-model` requires `ontology.json` `types.authorizationModel` in at least one corpus (test fixtures today; not marloth-story).
   - Extension `authorizationModule` may replace the authorizer after built-ins apply. See [authorization-authorizers.md](../extensions/authorization-authorizers.md).
 
 No core multi-user / operating-mode enable flag. Surface/dev or test helpers may still expose labeled presets; they are not package APIs.
