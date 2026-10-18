@@ -4,7 +4,7 @@
 
 **Two-tier domain graph API** for integrators and Tome hosts: **`TomeGraphStoreBase`** (imperative CRUD on canonical storage, flatfile-viable without SQL) and **`TomeGraphStoreQueryable`** (read queries via **`executeImp`**, Imp graphs executed by SQL lowering or `imp-execution`).
 
-All I/O-facing store and cache methods return **`Promise`** (Postgres-shaped). The SQLite query cache runs in a **worker** so awaits free the main event loop — see [tome-db.md](./tome-db.md) § Async cache and SQLite worker.
+All I/O-facing store and cache methods return **`Promise`** (async driver–shaped). The SQLite query cache runs in a **worker** so awaits free the main event loop — see [tome-db.md](./tome-db.md) § Async cache and SQLite worker.
 
 Replaces ad-hoc use of separate `TomeDataStore` + `TomeQueryCache` at call sites. Legacy store/cache modules remain host infrastructure during migration.
 
@@ -13,9 +13,9 @@ Replaces ad-hoc use of separate `TomeDataStore` + `TomeQueryCache` at call sites
 - Third-party tools reading/writing `content/` without SQLite
 - Adding graph persistence or query adapters
 - Wiring `executeImp` for editor, extensions, or scripts
-- Future SQL-only deployments (single authoritative backend)
+- Future Neo4j-authoritative deployments (single remote graph backend)
 
-Design corpus graph storage (flatfile, ephemeral SQLite cache, or future Postgres **design/corpus** schema) does **not** host Account/role nodes or durable auth specialty data — those use **user corpora** (identity graph; local durable = flatfile) and, for remote, auth specialty SQL; see [multi-user.md](./multi-user.md) and [tome-db.md](./tome-db.md) § Local SQLite is ephemeral-only.
+Design corpus graph storage (flatfile, ephemeral SQLite cache, or future Neo4j **design/corpus** graph) does **not** host Account/role nodes or durable auth specialty data — those use **user corpora** (identity graph; local durable = flatfile) and, for remote, an auth specialty store; see [multi-user.md](./multi-user.md) and [tome-db.md](./tome-db.md) § Local SQLite is ephemeral-only.
 
 ## Requirements
 

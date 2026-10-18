@@ -4,15 +4,16 @@ Status: open
 
 ## Intent
 
-Support a use case where SQL is the primary / authoritative design store, without requiring the Git-tracked flat-file content database.
+Support a use case where a non-flatfile store is the primary / authoritative design store, without requiring the Git-tracked flat-file content database.
 
 ## Notes
 
-Aligns with remote multi-user **Postgres design schema** ([multi-user.md](../docs/features/multi-user.md) **phase 7**). Distinct from **local multi-user**, which still uses flatfile + ephemeral design SQLite while identity lives in **user corpora** (flatfile + ephemeral identity cache; durable bindings in text/nodes, not SQLite). May interact with [postgresql-support.md](./postgresql-support.md).
+Near-term remote multi-user uses **Neo4j** as the authoritative graph ([multi-user.md](../docs/features/multi-user.md) **phase 7**, [neo4j-support.md](./neo4j-support.md)) — graph-native rather than SQL. This task remains for deployments that want a **SQL** primary store (or related investigations). Distinct from **local multi-user**, which still uses flatfile + ephemeral design SQLite while identity lives in **user corpora** (flatfile + ephemeral identity cache; durable bindings in text/nodes, not SQLite). PostgreSQL remains deferred — [postgresql-support.md](./postgresql-support.md).
 
 ## See also
 
 - [multi-user.md](../docs/features/multi-user.md)
 - [tome-db.md](../docs/features/tome-db.md)
 - [graph-store.md](../docs/features/graph-store.md)
+- [neo4j-support.md](./neo4j-support.md)
 - [postgresql-support.md](./postgresql-support.md)

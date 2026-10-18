@@ -12,7 +12,7 @@ The design corpus is a **git-tracked content store** under `content/` (`content/
 
 `tome-server` loads store + cache as singular config modules and injects them into `tome-db`. The flatfile store may be a **composite** over multiple corpora (union read, origin / dual-write); see [`multi-corpus.md`](./multi-corpus.md). Solo mode is still one `content/` root + one `data/tome.sqlite`.
 
-**Durable** Account/role nodes live in **user corpora** (separate flatfile roots — not design content). Locally, design and user flatfiles sync into the **same ephemeral session SQLite** (corpus ownership via `locateNode`; see [multi-user.md](./multi-user.md)). Durable IdP bindings and credentials stay in user-corpus text (nodes/relationships first); ephemeral **sessions** may use memory or SQLite locally. Remote Postgres may hold identity schemas plus auth specialty SQL.
+**Durable** Account/role nodes live in **user corpora** (separate flatfile roots — not design content). Locally, design and user flatfiles sync into the **same ephemeral session SQLite** (corpus ownership via `locateNode`; see [multi-user.md](./multi-user.md)). Durable IdP bindings and credentials stay in user-corpus text (nodes/relationships first); ephemeral **sessions** may use memory or SQLite locally. Remote Neo4j may hold identity graphs plus an auth specialty store.
 
 ## When to read this
 
@@ -85,7 +85,7 @@ Within Tome’s **local flat-file** composition, **all durable data lives in tex
 
 **Must not** store canonical accounts, credentials, IdP↔Account bindings, or other durable user/product rows in local SQLite. Local identity durability is user-corpus **flat files** (nodes/relationships first); see [multi-user.md](./multi-user.md).
 
-**Different composition:** remote / SQL-authoritative backends (Postgres design + identity schemas, auth specialty SQL) are chartered separately — [multi-user.md](./multi-user.md), [independent-sql-database.md](../../tasks/independent-sql-database.md), [postgresql-support.md](../../tasks/postgresql-support.md).
+**Different composition:** remote / Neo4j-authoritative backends (design + identity graphs, auth specialty store) are chartered separately — [multi-user.md](./multi-user.md), [neo4j-support.md](../../tasks/neo4j-support.md). A non-flatfile authoritative store without Git content is related — [independent-sql-database.md](../../tasks/independent-sql-database.md). PostgreSQL remains optional / much later — [postgresql-support.md](../../tasks/postgresql-support.md).
 
 ### Legacy compatibility
 
@@ -198,7 +198,7 @@ To avoid a long rebuild when starting the API, pre-warm the SQLite cache with `b
 
 ### Async cache and SQLite worker
 
-`TomeQueryCache` and `TomeGraphStoreBase` / `Queryable` methods are **Promise-returning**. Production opens (`createSqliteModule` / `openDataStoreSession`) use a **Bun Worker** that owns sync `bun:sqlite` (`GraphDatabase`); the main thread talks RPC so long SQL does not freeze the HTTP/editor event loop. Multi-step `BEGIN`…`COMMIT` work must use `cache.transaction(fn)` so other RPCs cannot interleave. In-process `wrapSyncGraphDatabase` exists for focused SQL unit tests only (still blocks the event loop). Future Postgres (or other async drivers) should implement the same Promise cache/store shapes.
+`TomeQueryCache` and `TomeGraphStoreBase` / `Queryable` methods are **Promise-returning** (async driver–shaped). Production opens (`createSqliteModule` / `openDataStoreSession`) use a **Bun Worker** that owns sync `bun:sqlite` (`GraphDatabase`); the main thread talks RPC so long SQL does not freeze the HTTP/editor event loop. Multi-step `BEGIN`…`COMMIT` work must use `cache.transaction(fn)` so other RPCs cannot interleave. In-process `wrapSyncGraphDatabase` exists for focused SQL unit tests only (still blocks the event loop). Future Neo4j (or other async drivers) should implement the same Promise cache/store shapes.
 
 `GraphDatabase` (`packages/tome-sqlite/src/graph.ts`) — sync implementation used inside the worker and in unit tests:
 
@@ -273,7 +273,7 @@ db.close();
 - [schema.md](./schema.md) — workspace model config in `content/model/schema.json`
 - [graph-explorer.md](./graph-explorer.md) — anchor-scoped LOD graph visualization
 - [table-presentation.md](./table-presentation.md) — scope tabs, row groups, and automatic sequence on Items tables
-- [multi-user.md](./multi-user.md) — design corpora vs user corpora; local SQLite ephemeral-only; Postgres auth specialty SQL for remote
+- [multi-user.md](./multi-user.md) — design corpora vs user corpora; local SQLite ephemeral-only; Neo4j + auth specialty store for remote
 - [`../ontology.md`](../ontology.md) — design domain model (storage-agnostic)
 - [`packages/tome-db/AGENTS.md`](../../packages/tome-db/AGENTS.md)
 - [`AGENTS.md`](../../AGENTS.md) — project purpose, terminology, modeling direction
