@@ -99,6 +99,18 @@ type GraphStoreCapabilities =
 1. Writes → `FlatfileGraphStore`
 2. Reads → `executeImp` → `imp-execution` → `tome-imp-flatfile` (O(n), opt-in)
 
+## Database adapter family
+
+Graph / query backends load as **store/cache modules** via `tome-server` `dataStores` (not `extensions.json` kinds). Current members:
+
+| Adapter | Location | Imp compile binder |
+| --- | --- | --- |
+| SQLite (integrated) | `packages/tome-sqlite` | `packages/tome-imp-sql` |
+| Neo4j (sibling) | workbench `.mnt/tome-neo4j` → `tome-neo4j` | `tome-imp-cypher` |
+| Postgres (sibling) | workbench `.mnt/tome-postgres` → `tome-postgres` | `tome-imp-postgres` |
+
+**Cross-adapter uniformity (LCD, nice-to-have):** Prefer a lowest-common-denominator shared structure and design patterns across these adapters and any future ones (module factory + `dataStores` seam, Imp compile binder package shape, docs/verify conventions). Uniformity is **not essential** — dialects and packaging may diverge. When making **significant fundamental** changes to one adapter, prefer mirroring those changes in the others when practical.
+
 ## Implementation pointers
 
 | Area | Path |
