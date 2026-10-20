@@ -45,7 +45,7 @@ ensure-deps-release.sh + entrypoint-release.sh ──► GHCR image
 
 1. Compose builds `docker/Dockerfile.dev` from the mounted tome repo.
 2. Source + `tome-node-modules` volume are bind-mounted.
-3. `scripts/dev-start.sh` → `scripts/ensure-node-modules.sh` → `docker/ensure-deps-dev.sh` → `bun install --frozen-lockfile` → `editor:dev`.
+3. `scripts/dev-start.sh` → `scripts/ensure-node-modules.sh` → `docker/ensure-deps-dev.sh` → `bun install --frozen-lockfile` → symlink `imp-ts/node_modules` to tome’s tree and drop dangling per-package Imp `node_modules` links (sibling installs such as `tome-neo4j` can point into an unmounted `.bun` store) → `editor:dev`.
 4. Ports **5173** (Vite) and **3847** (API).
 
 ### Release (GHCR)

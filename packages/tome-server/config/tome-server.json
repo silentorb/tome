@@ -12,6 +12,9 @@
     "export": "createSqliteModule",
     "options": {}
   },
+  "authorization": {
+    "implementationId": "allow-everything"
+  },
   "services": [
     {
       "id": "http",

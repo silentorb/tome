@@ -63,7 +63,7 @@ Preferred (`dataStores` + optional `sync`):
 }
 ```
 
-**Denial authorizer:** `authorization.implementationId` is `"deny-everything"`, `"allow-everything"`, or `"authorization-model"`. Omitted → deny-everything (fail closed). Workbench solo config sets allow-everything explicitly. `authorization-model` reads optional `ontology.json` `types.authorizationModel`. See [multi-user.md](./multi-user.md) and [authorization-authorizers.md](../extensions/authorization-authorizers.md).
+**Denial authorizer:** `authorization.implementationId` is `"deny-everything"`, `"allow-everything"`, or `"authorization-model"`. Omitted → deny-everything (fail closed). The shipped package default [`tome-server.json`](../../packages/tome-server/config/tome-server.json) and workbench solo [`tome-server.workbench.json`](../../packages/tome-server/config/tome-server.workbench.json) both set **allow-everything** explicitly (local/dev light grant). The JSON example above shows deny-everything as the secure-shape illustration — production/remote hosts should set deny or `authorization-model`, not rely on omit alone if they copy the package default. `authorization-model` reads optional `ontology.json` `types.authorizationModel`. See [multi-user.md](./multi-user.md) and [authorization-authorizers.md](../extensions/authorization-authorizers.md).
 
 
 Legacy singular `store` + `cache` (still accepted; normalized at load):

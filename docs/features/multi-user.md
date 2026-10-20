@@ -235,7 +235,7 @@ Largest surfaces: authorization (3), user corpora + account UI (5), Neo4j graph 
 - Distinct **design corpus** path/URI (already exists for content/cache; Neo4j design later via `tome-neo4j` store modules).
 - **Denial authorizer** in `tome-server.json` `authorization`:
   - `implementationId`: `"deny-everything"` \| `"allow-everything"` \| `"authorization-model"` (omitted → **deny-everything**)
-  - Workbench solo: `"allow-everything"` explicitly ([tome-server.workbench.json](../../packages/tome-server/config/tome-server.workbench.json)).
+  - Local/dev light grant: `"allow-everything"` explicitly on the package default ([tome-server.json](../../packages/tome-server/config/tome-server.json), used when `TOME_SERVER_CONFIG` is unset — including workbench multi-corpus via `TOME_CORPORA`) and on solo ([tome-server.workbench.json](../../packages/tome-server/config/tome-server.workbench.json)).
   - `authorization-model` requires `ontology.json` `types.authorizationModel` in at least one corpus (test fixtures today; not marloth-story).
   - Extension `authorizationModule` may replace the authorizer after built-ins apply. See [authorization-authorizers.md](../extensions/authorization-authorizers.md).
 
