@@ -8,7 +8,7 @@ Support a use case where a non-flatfile store is the primary / authoritative des
 
 ## Notes
 
-Near-term remote multi-user uses **Neo4j** as the authoritative graph ([multi-user.md](../docs/features/multi-user.md) **phase 7**, [neo4j-support.md](./neo4j-support.md)) — graph-native rather than SQL. This task remains for deployments that want a **SQL** primary store (or related investigations). Distinct from **local multi-user**, which still uses flatfile + ephemeral design SQLite while identity lives in **user corpora** (flatfile + ephemeral identity cache; durable bindings in text/nodes, not SQLite). PostgreSQL remains deferred — [postgresql-support.md](./postgresql-support.md).
+Near-term remote multi-user uses **Neo4j** as the authoritative graph ([multi-user.md](../docs/features/multi-user.md) **phase 7**, [neo4j-support.md](./neo4j-support.md)) — graph-native rather than SQL. This task remains for deployments that want a **SQL** primary store (or related investigations). Distinct from **local multi-user**, which still uses flatfile + ephemeral design SQLite while identity lives in **user corpora** (flatfile + ephemeral identity cache; durable bindings in text/nodes, not SQLite). PostgreSQL Base B2 (Queryable SoT + model documents) exists in sibling `tome-postgres`; product query SQL and host wiring remain — [postgresql-support.md](./postgresql-support.md).
 
 ## See also
 
