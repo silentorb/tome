@@ -1,6 +1,10 @@
-import type { SQLQueryBindings } from "bun:sqlite";
-import { substituteTokens } from "./bind";
-import type { EmittedSql, MembershipQueryPlan, SqlFragment } from "./types";
+import type {
+  EmittedSql,
+  MembershipQueryPlan,
+  SqlFragment,
+  SqlParam,
+} from "tome-sql";
+import { substituteTokens } from "./sqlite-helpers";
 
 type MembershipCte = SqlFragment;
 
@@ -10,7 +14,7 @@ export function buildMembershipCte(
   pairs: readonly { setProjection: string; memberProjection: string }[],
 ): MembershipCte | null {
   const unionParts: string[] = [];
-  const unionParams: SQLQueryBindings[] = [];
+  const unionParams: SqlParam[] = [];
   for (const pair of pairs) {
     const setProjection = pair.setProjection?.trim();
     const memberProjection = pair.memberProjection?.trim();
@@ -68,7 +72,7 @@ function emptyEmitted(includeGroupId = false): EmittedSql {
 
 function appendScopeFilter(
   withSql: string,
-  params: SQLQueryBindings[],
+  params: SqlParam[],
   scope: { projectionType: string; scopeNodeId: string } | undefined,
   forceIdentity: boolean,
 ): string {
@@ -102,7 +106,7 @@ function appendScopeFilter(
 
 function appendGroupEnrichment(
   withSql: string,
-  params: SQLQueryBindings[],
+  params: SqlParam[],
   groups: NonNullable<MembershipQueryPlan["intent"]["groups"]> | undefined,
 ): string {
   if (!groups) {
@@ -124,7 +128,7 @@ function appendGroupEnrichment(
 
   const groupPairs = groups.groupSetProjections ?? [];
   const groupUnion: string[] = [];
-  const groupParams: SQLQueryBindings[] = [];
+  const groupParams: SqlParam[] = [];
   for (const pair of groupPairs) {
     const setProjection = pair.setProjection?.trim();
     const memberProjection = pair.memberProjection?.trim();
@@ -265,7 +269,7 @@ function buildOrderBy(
   memberIdExpr: string,
 ): SqlFragment {
   const clauses: string[] = [];
-  const params: SQLQueryBindings[] = [];
+  const params: SqlParam[] = [];
   const { catalog, orderKeys } = plan;
 
   for (const key of orderKeys) {
@@ -318,7 +322,7 @@ function displaySelectSql(
   memberRowAlias: string,
 ): SqlFragment & { columns: string[] } {
   const fragments: string[] = [];
-  const params: SQLQueryBindings[] = [];
+  const params: SqlParam[] = [];
   const columns: string[] = [];
   for (const display of plan.catalog.displays) {
     const sql = substituteTokens(display.sql, memberIdExpr, memberRowAlias);
@@ -338,7 +342,7 @@ function emitIdsSql(plan: MembershipQueryPlan): EmittedSql {
 
   // Match listSetMemberNodeIds / listComposedMemberNodeIds: universe (+ optional scope only).
   let withSql = membership.sql.trim();
-  const withParams: SQLQueryBindings[] = [...membership.params];
+  const withParams: SqlParam[] = [...membership.params];
   let fromRelation = "members";
 
   if (intent.scope) {
@@ -384,7 +388,7 @@ export function emitMembershipSql(plan: MembershipQueryPlan): EmittedSql {
   const hasGroups = layers.includes("groupEnrichment");
   const useEnrichedPath = hasScope || hasGroups;
 
-  const withParams: SQLQueryBindings[] = [...membership.params];
+  const withParams: SqlParam[] = [...membership.params];
   let withSql = membership.sql.trim();
 
   if (useEnrichedPath) {
@@ -434,7 +438,7 @@ export function emitMembershipSql(plan: MembershipQueryPlan): EmittedSql {
       ${orderBy.sql}`;
 
   // Param appearance: WITH → SELECT displays → WHERE memberIds → ORDER BY
-  const pageParams: SQLQueryBindings[] = [
+  const pageParams: SqlParam[] = [
     ...withParams,
     ...displays.params,
     ...(filterMemberIds ? [...intent.memberIds!] : []),

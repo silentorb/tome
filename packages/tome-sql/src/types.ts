@@ -1,11 +1,12 @@
-import type { SQLQueryBindings } from "bun:sqlite";
+/** Dialect-agnostic SQL bind parameter (SQLite / Postgres drivers narrow as needed). */
+export type SqlParam = unknown;
 
-export type SqlFragment = { sql: string; params: SQLQueryBindings[] };
+export type SqlFragment = { sql: string; params: SqlParam[] };
 
 /** Bound expression; SQL may contain `{{memberId}}` / `{{memberRow}}` tokens. */
 export type BoundExpr = {
   sql: string;
-  params: SQLQueryBindings[];
+  params: SqlParam[];
   /** may contain {{memberId}} */
 };
 
@@ -44,9 +45,9 @@ export type ExprCatalog = {
     column: string;
     alias: string;
     sql: string;
-    params: SQLQueryBindings[];
+    params: SqlParam[];
   }[];
-  /** MEMBER_DISPLAY_TITLE_SQL without member id (uses nodes alias `n`) */
+  /** Display title SQL fragment (uses nodes alias `n`) */
   titleExpr: string;
   /**
    * Edge property order expression for a column key.
@@ -68,16 +69,16 @@ export type MembershipQueryPlan = {
 };
 
 export type EmittedSql = {
-  /** null when membership projections empty */
+  /** true when membership projections empty or empty memberIds */
   empty: boolean;
   /** full WITH … ending before final SELECT, or empty when empty */
   withSql: string;
-  withParams: SQLQueryBindings[];
+  withParams: SqlParam[];
   /** complete statement or "" */
   countSql: string;
-  countParams: SQLQueryBindings[];
+  countParams: SqlParam[];
   pageSql: string;
-  pageParams: SQLQueryBindings[];
+  pageParams: SqlParam[];
   relationColumns: string[];
   includeGroupId: boolean;
   applyLimitOffset: boolean;

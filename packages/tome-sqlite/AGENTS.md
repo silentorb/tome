@@ -6,7 +6,7 @@ SQLite graph database implementing `TomeQueryCache` / `TomeCacheModule` (used as
 
 ## Dependency rules
 
-- May depend on `tome-graph-interfaces` and `tome-service-interfaces`
+- May depend on `tome-graph-interfaces`, `tome-service-interfaces`, and `tome-sql` (membership Analyze/Plan)
 - Must **not** import content loaders, relationship-type registries, or enum codecs from `tome-db` / `tome-flatfile`
 
 ## Layout
@@ -14,6 +14,7 @@ SQLite graph database implementing `TomeQueryCache` / `TomeCacheModule` (used as
 | File | Contents |
 | --- | --- |
 | `src/graph.ts` | `GraphDatabase`, `relationshipId` |
+| `src/membership-query/` | SQLite Bind/Emit + `compileMemberPage` (Analyze/Plan from `tome-sql`) |
 | `src/schema.ts` | DDL + `SCHEMA_VERSION` (nodes + relationships: promoted columns + EAV; no JSON property bags) |
 | `src/schema-migrate.ts` | Schema migrations |
 | `src/module.ts` | `createSqliteModule()` |

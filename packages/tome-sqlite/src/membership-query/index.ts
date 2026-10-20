@@ -1,4 +1,15 @@
-export { analyzeMemberPage, type MemberPageQueryLike } from "./analyze";
+export {
+  analyzeMemberPage,
+  planMembershipQuery,
+  type MemberPageQueryLike,
+  type BoundExpr,
+  type EmittedSql,
+  type ExprCatalog,
+  type MembershipQueryIntent,
+  type MembershipQueryPlan,
+  type RelationFieldLink,
+  type SqlFragment,
+} from "tome-sql";
 export {
   bindExpressions,
   MEMBER_DISPLAY_TITLE_SQL,
@@ -11,14 +22,4 @@ export {
   isSafeSqlPropertyKey,
 } from "./bind";
 export { buildMembershipCte, emitMembershipSql } from "./emit";
-export { planMembershipQuery } from "./plan";
 export { compileMemberPage } from "./pipeline";
-export type {
-  BoundExpr,
-  EmittedSql,
-  ExprCatalog,
-  MembershipQueryIntent,
-  MembershipQueryPlan,
-  RelationFieldLink,
-  SqlFragment,
-} from "./types";

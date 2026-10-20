@@ -2,11 +2,14 @@ import {
   withProfilingSpan,
   type ProfilingAttributes,
 } from "tome-service-interfaces";
-import { analyzeMemberPage, type MemberPageQueryLike } from "./analyze";
+import {
+  analyzeMemberPage,
+  planMembershipQuery,
+  type MemberPageQueryLike,
+  type EmittedSql,
+} from "tome-sql";
 import { bindExpressions } from "./bind";
 import { emitMembershipSql } from "./emit";
-import { planMembershipQuery } from "./plan";
-import type { EmittedSql } from "./types";
 
 /**
  * Analyze → Bind → Plan → Emit for a unified member-page (or ids) read.

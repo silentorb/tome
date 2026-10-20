@@ -8,6 +8,7 @@ This file is the **sole package inventory**: the table and diagram below must li
 | --- | --- |
 | [`tome-flatfile`](./tome-flatfile/) | Flatfile content store + change watching |
 | [`tome-sqlite`](./tome-sqlite/) | SQLite graph database (query cache today) |
+| [`tome-sql`](./tome-sql/) | Dialect-neutral product SQL IR (membership Analyze/Plan; Bind/Emit stay in dialect packages) |
 | [`tome-db`](./tome-db/) | Domain queries/mutations + content↔cache sync |
 | [`tome-graph-interfaces`](./tome-graph-interfaces/) | Domain DTOs and `TomeGraphServices` contract |
 | [`tome-ontology`](./tome-ontology/) | Store-independent ontology runtime (predicates + patterns); keep deps minimal; optional for minimal Tome |
@@ -56,6 +57,7 @@ flowchart TB
   subgraph storage [Storage]
     SF[tome-flatfile]
     CS[tome-sqlite]
+    TSQL[tome-sql]
   end
 
   SF --> SI
@@ -63,6 +65,7 @@ flowchart TB
   SF --> ON
   CS --> SI
   CS --> GI
+  CS --> TSQL
 
   subgraph impBinders [Imp binders]
     IMPSQL[tome-imp-sql]

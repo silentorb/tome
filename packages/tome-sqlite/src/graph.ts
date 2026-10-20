@@ -33,6 +33,7 @@ import {
   compileMemberPage,
   relationFieldsByRowFromSqlRows,
 } from "./membership-query";
+import { asSqliteBindings } from "./membership-query/sqlite-bindings";
 
 export type {
   Node,
@@ -1171,7 +1172,7 @@ export class GraphDatabase {
         total = withProfilingSpan("memberPage.count", "INTERNAL", {}, () => {
           const totalRow = this.db
             .prepare(emitted.countSql)
-            .get(...emitted.countParams) as { c: number };
+            .get(...asSqliteBindings(emitted.countParams)) as { c: number };
           return totalRow.c;
         });
       }
@@ -1195,11 +1196,13 @@ export class GraphDatabase {
       type Row = ProjectionRow & { resolved_group_id?: string | null };
       const rows = withProfilingSpan("memberPage.page", "INTERNAL", {}, () => {
         if (!emitted.applyLimitOffset || limit === null) {
-          return this.db.prepare(emitted.pageSql).all(...emitted.pageParams) as Row[];
+          return this.db
+            .prepare(emitted.pageSql)
+            .all(...asSqliteBindings(emitted.pageParams)) as Row[];
         }
         return this.db
           .prepare(`${emitted.pageSql} LIMIT ? OFFSET ?`)
-          .all(...emitted.pageParams, limit, offset) as Row[];
+          .all(...asSqliteBindings(emitted.pageParams), limit, offset) as Row[];
       });
 
       if (query.memberIds && query.memberIds.length > 0) {
@@ -1247,7 +1250,10 @@ export class GraphDatabase {
       const rows = withProfilingSpan("memberPage.page", "INTERNAL", {}, () =>
         this.db
           .prepare(emitted.pageSql)
-          .all(...emitted.pageParams) as { member_id?: string; id?: string }[],
+          .all(...asSqliteBindings(emitted.pageParams)) as {
+          member_id?: string;
+          id?: string;
+        }[],
       );
       return rows.map((row) => row.member_id ?? row.id!).filter(Boolean);
     });
@@ -1524,7 +1530,12 @@ export class GraphDatabase {
 
     const rows = this.db
       .prepare(sql)
-      .all(...membership.params, scopeType, scopeType, ...orderParams) as {
+      .all(
+        ...asSqliteBindings(membership.params),
+        scopeType,
+        scopeType,
+        ...orderParams,
+      ) as {
       id: string;
       title: string;
       sort_key: number;
@@ -1583,7 +1594,11 @@ export class GraphDatabase {
       ${scopeFilterSql}
       ORDER BY sort_key ASC, title COLLATE NOCASE ASC, m.member_id ASC`;
 
-    const params: SQLQueryBindings[] = [...membership.params, groupSetId, groupSetId];
+    const params: SQLQueryBindings[] = [
+      ...asSqliteBindings(membership.params),
+      groupSetId,
+      groupSetId,
+    ];
     if (filterByScope && scopeType && scopeId) {
       params.push(scopeType, scopeId, scopeType, scopeId);
     }

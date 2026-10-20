@@ -550,12 +550,21 @@
         "typescript": "5.8.2",
       },
     },
+    "packages/tome-sql": {
+      "name": "tome-sql",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/bun": "1.2.23",
+        "typescript": "5.8.2",
+      },
+    },
     "packages/tome-sqlite": {
       "name": "tome-sqlite",
       "version": "0.7.0",
       "dependencies": {
         "tome-graph-interfaces": "workspace:^0.6.0",
         "tome-service-interfaces": "workspace:^0.7.0",
+        "tome-sql": "workspace:^0.1.0",
       },
       "devDependencies": {
         "@types/bun": "1.2.23",
@@ -1902,6 +1911,8 @@
     "tome-service-interfaces": ["tome-service-interfaces@workspace:packages/tome-service-interfaces"],
 
     "tome-spatial-graph": ["tome-spatial-graph@workspace:packages/tome-spatial-graph"],
+
+    "tome-sql": ["tome-sql@workspace:packages/tome-sql"],
 
     "tome-sqlite": ["tome-sqlite@workspace:packages/tome-sqlite"],
 

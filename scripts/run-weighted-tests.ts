@@ -41,6 +41,7 @@ const PACKAGES: PackageSpec[] = [
   { name: "tome-search-sqlite", bunTestArgs: ["tests"] },
   { name: "tome-graph-interfaces", bunTestArgs: ["tests"] },
   { name: "tome-ontology", bunTestArgs: ["tests"] },
+  { name: "tome-sql", bunTestArgs: ["tests"] },
   { name: "tome-service-interfaces", bunTestArgs: ["tests"] },
   { name: "tome-db", bunTestArgs: ["tests"] },
   { name: "tome-http", bunTestArgs: ["tests"] },
