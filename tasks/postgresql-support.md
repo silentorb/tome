@@ -1,6 +1,6 @@
 # PostgreSQL support
 
-Status: open (connectivity)
+Status: open (Base B1)
 
 ## Intent
 
@@ -10,7 +10,9 @@ Add PostgreSQL as a SQL backend for design corpus / specialty auth storage, impl
 
 Charter: [multi-user.md](../docs/features/multi-user.md). Packages and Postgres CI/runtime live under workbench mount `.mnt/tome-postgres` (optional). Heavy DB tests stay out of tome’s light weighted suite by default.
 
-**Connectivity (current):** Sibling Bun workspace with `tome-postgres` (`createPostgresModule` + thin `pg` handle: provisional DDL, node/relationship upsert, `queryAll`) and `tome-imp-postgres` (Imp → SQL via `imp-sql` `compilePostgres`). Live connectivity tests use Compose/CI `POSTGRES_URI`. **Authoritative Base store and full `TomeQueryCache` parity remain open.** Local MU prototyping uses user-corpus **flatfile** (+ ephemeral design/identity SQLite caches) — not durable auth rows in SQLite; see [tome-db.md](../docs/features/tome-db.md) § Local SQLite is ephemeral-only.
+**Base B1 (current):** Sibling Bun workspace with `tome-postgres` (`openPostgresGraphStore` Queryable single SoT — canonical `relationship_records` + same-DB `relationship_projections` mirrors; core node/relationship CRUD + Imp `executeImp`) and a thin `createPostgresModule` Imp/test pipe over the same tables. Binder: `tome-imp-postgres` (`compilePostgres`). **No full `TomeQueryCache` / CacheSync** — flatfile’s SQLite cache exists mainly for flatfile performance; Postgres does not inherit that dual-store model. Live tests use Compose/CI `POSTGRES_URI`.
+
+**Remaining:** Model config / archive / multi-corpus (B2); optional same-DB product query SQL (member pages, expression indexes, FTS) when a host needs those UX paths. Local MU prototyping uses user-corpus **flatfile** (+ ephemeral design/identity SQLite caches) — not durable auth rows in SQLite; see [tome-db.md](../docs/features/tome-db.md) § Local SQLite is ephemeral-only.
 
 **Adapter family:** Prefer LCD uniformity with integrated SQLite and sibling Neo4j adapters when making significant fundamental changes — see [graph-store.md](../docs/features/graph-store.md).
 
