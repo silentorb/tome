@@ -1,6 +1,6 @@
 # PostgreSQL support
 
-Status: open (scaffold)
+Status: open (connectivity)
 
 ## Intent
 
@@ -10,7 +10,7 @@ Add PostgreSQL as a SQL backend for design corpus / specialty auth storage, impl
 
 Charter: [multi-user.md](../docs/features/multi-user.md). Packages and Postgres CI/runtime live under workbench mount `.mnt/tome-postgres` (optional). Heavy DB tests stay out of tome’s light weighted suite by default.
 
-**Scaffold (current):** Bun workspace with `tome-postgres` (`createPostgresModule` stub) and `tome-imp-postgres` (Imp → SQL against a provisional Postgres schema via `imp-sql`). Store CRUD / driver execution remain open. Local MU prototyping uses user-corpus **flatfile** (+ ephemeral design/identity SQLite caches) — not durable auth rows in SQLite; see [tome-db.md](../docs/features/tome-db.md) § Local SQLite is ephemeral-only.
+**Connectivity (current):** Sibling Bun workspace with `tome-postgres` (`createPostgresModule` + thin `pg` handle: provisional DDL, node/relationship upsert, `queryAll`) and `tome-imp-postgres` (Imp → SQL via `imp-sql` `compilePostgres`). Live connectivity tests use Compose/CI `POSTGRES_URI`. **Authoritative Base store and full `TomeQueryCache` parity remain open.** Local MU prototyping uses user-corpus **flatfile** (+ ephemeral design/identity SQLite caches) — not durable auth rows in SQLite; see [tome-db.md](../docs/features/tome-db.md) § Local SQLite is ephemeral-only.
 
 **Adapter family:** Prefer LCD uniformity with integrated SQLite and sibling Neo4j adapters when making significant fundamental changes — see [graph-store.md](../docs/features/graph-store.md).
 
