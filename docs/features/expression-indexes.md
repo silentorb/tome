@@ -2,7 +2,7 @@
 
 ## Summary
 
-Content-addressed **sort indexes** in the SQLite query cache for expressions that Items tables need before `LIMIT` (fixed dynamic properties and dimension-expanded **column-set** keys). Primary path: registry/IR → digest → lazy-built `expression_index_values`. DynAggregate IR defines the metric; Imp subgraph hashing is the same key shape for a later slice.
+Content-addressed **sort indexes** for expressions that Items tables need before `LIMIT` (fixed dynamic properties and dimension-expanded **column-set** keys). Primary path: registry/IR → digest → lazy-built `expression_index_values`. DynAggregate IR defines the metric; Imp subgraph hashing is the same key shape for a later slice. Catalog tables live in the SQLite query cache and, for independent SQL, on the Postgres SoT via the thin `tome-postgres` cache (same-DB denorm — not flatfile props).
 
 ## When to read this
 
@@ -29,7 +29,7 @@ Content-addressed **sort indexes** in the SQLite query cache for expressions tha
 | Reach types | `packages/tome-db/src/dynamic-properties/expression-index-reach.ts` |
 | Digest | `packages/tome-db/src/dynamic-properties/expression-index-key.ts` |
 | Ensure / plan | `packages/tome-db/src/dynamic-properties/expression-index.ts` |
-| Catalog DDL | `packages/tome-sqlite` schema v15 (`expression_indexes` + `dirty_member_ids`, `expression_index_values`) |
+| Catalog DDL | `packages/tome-sqlite` schema v15 (`expression_indexes` + `dirty_member_ids`, `expression_index_values`); Postgres SoT via sibling `tome-postgres` |
 | Window ORDER BY | `SetMemberWindowQuery.expressionIndexSorts` |
 
 ## See also

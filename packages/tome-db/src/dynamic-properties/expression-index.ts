@@ -191,7 +191,9 @@ export async function ensureDynSortIndexes(
     async () => {
       const cache = getQueryCache(store);
       if (!cache || typeof cache.replaceExpressionIndexValues !== "function") {
-        throw new Error("Expression indexes require a SQLite query cache");
+        throw new Error(
+          "Expression indexes require a query cache that implements replaceExpressionIndexValues",
+        );
       }
 
       const dir =
