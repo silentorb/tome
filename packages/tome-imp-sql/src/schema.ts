@@ -18,7 +18,7 @@ const PROMOTED_NODE_COLUMNS = new Set([
 /** Keep in sync with `PROMOTED_RELATIONSHIP_COLUMNS` in tome-sqlite/schema.ts. */
 const PROMOTED_RELATIONSHIP_COLUMNS = new Set(["ordinal", "order", "priority"]);
 
-/** Rebuild a JSON bag from promoted node columns for Imp traverse `json_patch`. */
+/** Rebuild a JSON bag from promoted node columns for Imp traverse property-bag merge. */
 export function tomeNodePropertiesJson(alias: string): string {
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) {
     throw new Error(`Invalid table alias "${alias}"`);
@@ -27,7 +27,7 @@ export function tomeNodePropertiesJson(alias: string): string {
 }
 
 /**
- * Rebuild a JSON bag from promoted edge columns + EAV for Imp traverse `json_patch`.
+ * Rebuild a JSON bag from promoted edge columns + EAV for Imp traverse property-bag merge.
  * EAV values are already JSON-encoded PropertyValue text.
  */
 export function tomeEdgePropertiesJson(alias: string): string {
@@ -85,6 +85,8 @@ const tomeLiveNodesSchemaBase = {
   table: "nodes",
   column: tomeNodesColumnExpression,
   nodePropertiesJson: tomeNodePropertiesJson,
+  /** Keep archived flag on traverse-with-props selects (SQLite nodes physical column). */
+  traverseKeepColumns: ["is_archived"] as const,
   edges: {
     table: "relationship_projections",
     sourceColumn: "source_node_id",

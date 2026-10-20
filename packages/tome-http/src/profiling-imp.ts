@@ -3,7 +3,7 @@
 import { coreNodeLibrary, type Graph } from "imp-core-types";
 import { collectionTransformsLibrary } from "imp-collection-transforms";
 import { createRegistry, loadLibrary } from "imp-registry";
-import { compileSql, graphToKysely } from "imp-sql";
+import { compileSql, compileSqlite } from "imp-sql";
 import {
   getProfilingStore,
   PROFILING_SPANS_TABLE,
@@ -36,7 +36,7 @@ export function executeProfilingImp(
   if (!store) {
     throw new Error("Profiling store is not open");
   }
-  const compiled = graphToKysely(graph, {
+  const compiled = compileSqlite(graph, {
     registry: profilingRegistry(),
     schema: PROFILING_SCHEMA,
   });

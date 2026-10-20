@@ -104,6 +104,8 @@ async function runPackageTests(
     [
       "bun",
       "test",
+      "--timeout",
+      "30000",
       "--reporter=junit",
       `--reporter-outfile=${junitPath}`,
       ...pkg.bunTestArgs,

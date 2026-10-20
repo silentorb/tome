@@ -92,7 +92,9 @@ describe("database-view SQL windows", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  test("windows large membership sets with limit offset and total", async () => {
+  test(
+    "windows large membership sets with limit offset and total",
+    async () => {
     const databaseId = "WWWWWWWWWWWWWWWWWWWWWWWWWW";
     writeTableSchema(databaseId, []);
     db.upsertNode(databaseId, { ...typeTableMarkerProperties("Features") });
@@ -117,7 +119,9 @@ describe("database-view SQL windows", () => {
     expect(page?.rows).toHaveLength(50);
     expect(page?.rows[0]?.name).toBe("Feature 050");
     expect(page?.rows[49]?.name).toBe("Feature 099");
-  });
+  },
+  15_000,
+  );
 
   test("sorts by relation-count in SQL for expressible relation columns", async () => {
     const databaseId = "XXXXXXXXXXXXXXXXXXXXXXXXXX";

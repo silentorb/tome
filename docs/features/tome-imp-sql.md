@@ -18,11 +18,11 @@
 | --- | --- |
 | Node collection (`schema.table`) | `nodes` |
 | Property columns | `id` / `is_archived` / promoted fields (`title`, `alias`, `body`, `created_at`, `modified_at`) as columns; other names via `(SELECT json_extract(value, '$') FROM node_properties WHERE node_id = nodes.id AND key = '…')` |
-| Traverse node bag | `nodePropertiesJson` rebuilds promoted fields via `json_object(...)` for edge `json_patch` (nodes no longer have a `properties` column) |
+| Traverse node bag | `nodePropertiesJson` rebuilds promoted fields via `json_object(...)` for dialect property-bag merge (nodes no longer have a `properties` column); `traverseKeepColumns: ["is_archived"]` keeps the archived flag on merged selects |
 | Edges (`schema.edges`) | `relationship_projections` with `source_node_id`, `target_node_id`, `type`; promoted edge fields (`ordinal`, `order`, `priority`) as columns; other keys via `relationship_projection_properties` EAV (`schema.edges.property` / `propertiesJson`) |
 | Traverse hop | Imp `association` (relationship type ULID; Imp field name) + `direction` (0\|1) → `schema.edgeType` → `{relationshipTypeId}:{direction}` for `relationship_projections.type` |
 | Optional edge property filter | When `traverse.edge_property` + `edge_equals` are set: `schema.edges.property('path_edges', edge_property) = edge_equals` (promoted column or EAV subquery). When `compileImpGraphToTomeSql` is called with workspace `schema`, enum literals in `edge_equals` (and in `equals` / ordering comparisons against enum columns) are encoded to cache indices via `encodePropertyLiteral` — same mapping as cache sync ([schema.md](./schema.md)). |
-| Traverse edge bag | `propertiesJson` rebuilds promoted edge columns + EAV via `json_object` / `json_group_object` for node↔edge `json_patch` (projections no longer have a `properties` column) |
+| Traverse edge bag | `propertiesJson` rebuilds promoted edge columns + EAV via `json_object` / `json_group_object` for node↔edge property-bag merge (projections no longer have a `properties` column) |
 
 ### Enum property literals (Imp SQL compile)
 
@@ -69,7 +69,7 @@ Editor **table-presentation** scope/group related-id reads resolve presentation 
 
 | Operation | Behavior |
 | --- | --- |
-| `compileImpGraphToTomeSql(graph, options?)` | `graphToKysely` + `compileSql` + live-nodes rewrite; optional `{ schema }` for enum literal encoding; optional `{ pageNodeId, corpus }` for pre-SQL `corpus` operators |
+| `compileImpGraphToTomeSql(graph, options?)` | `compileSqlite` + `compileSql` + live-nodes rewrite; optional `{ schema }` for enum literal encoding; optional `{ pageNodeId, corpus }` for pre-SQL `corpus` operators |
 | `createTomeLiveNodesSchema(schema?)` | `RelationalSchema` with edges, `edgeType`, and optional `encodePropertyLiteral` |
 | `createTomeImpRegistry()` | Standard Imp registry for Tome hosts |
 | `tomeLiveNodesSchema` | Default schema without workspace enum binding |

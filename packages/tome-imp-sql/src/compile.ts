@@ -1,6 +1,6 @@
 import type { Graph } from "imp-core-types";
 import type { SchemaFile } from "tome-flatfile/schema-file";
-import { compileSql, graphToKysely } from "imp-sql";
+import { compileSql, compileSqlite } from "imp-sql";
 import { createTomeImpRegistry } from "./registry";
 import { applyLiveNodesConstraint, createTomeLiveNodesSchema } from "./schema";
 import {
@@ -28,7 +28,7 @@ export async function compileImpGraphToTomeSql(
 ): Promise<CompiledTomeImpSql> {
   const constraint = await resolveCorpusConstraint(graph, options);
   const lowered = spliceCorpusNodes(graph);
-  const compiled = graphToKysely(lowered, {
+  const compiled = compileSqlite(lowered, {
     registry: createTomeImpRegistry(),
     schema: createTomeLiveNodesSchema(options?.schema),
   });
