@@ -1,23 +1,13 @@
 import type { TomeDataStore, TomeQueryCache } from "tome-service-interfaces";
+import type {
+  DataStoreCapabilities,
+  DataStoreKind,
+  SyncEndpoint,
+} from "tome-service-interfaces/sync";
 import type { TomeGraphStoreQueryable } from "tome-graph-interfaces";
-import type { SyncSourceRead, SyncSignal } from "./types";
+import type { TomeSearch } from "tome-interfaces/search";
 
-export type DataStoreKind = "flatfile" | "sqlite" | "fts" | "unknown";
-
-export type DataStoreCapabilities = {
-  canBeObserved: boolean;
-  canObserve: boolean;
-  kind: DataStoreKind;
-};
-
-export interface SyncEndpoint {
-  id: string;
-  capabilities: DataStoreCapabilities;
-  asSource(): SyncSourceRead;
-  apply(signal: SyncSignal): void | Promise<void>;
-  /** Optional: subscribe to underlying change notifications (sources). */
-  subscribe?(listener: (signal: SyncSignal) => void): () => void;
-}
+export type { DataStoreKind, DataStoreCapabilities, SyncEndpoint };
 
 export type OpenedDataStore =
   | {
@@ -36,8 +26,9 @@ export type OpenedDataStore =
   | {
       id: string;
       kind: "fts";
-      endpoint: SyncEndpoint;
-      search: import("tome-interfaces/search").TomeSearch;
+      /** Present when the FTS backend is sync-fed; omitted for same-DB indexes. */
+      endpoint?: SyncEndpoint;
+      search: TomeSearch;
       close: () => void;
     }
   | {
@@ -82,7 +73,24 @@ export class DataStoreRegistry {
       .map((e) => ({ id: e.id, cache: e.cache }));
   }
 
+  /** Sync-capable FTS store ids (same-DB FTS without an endpoint is omitted). */
+  ftsStoreIdsWithSync(): string[] {
+    return this.list()
+      .filter(
+        (e): e is Extract<OpenedDataStore, { kind: "fts" }> =>
+          e.kind === "fts" && e.endpoint != null,
+      )
+      .map((e) => e.id);
+  }
+
   endpoint(id: string): SyncEndpoint {
-    return this.require(id).endpoint;
+    const entry = this.require(id);
+    if (entry.kind === "fts" && entry.endpoint == null) {
+      throw new Error(`Data store "${id}" has no sync endpoint`);
+    }
+    if (!("endpoint" in entry) || entry.endpoint == null) {
+      throw new Error(`Data store "${id}" has no sync endpoint`);
+    }
+    return entry.endpoint;
   }
 }

@@ -1,12 +1,15 @@
 import type { Database } from "bun:sqlite";
 import type {
   TomeSearch,
-  TomeSearchHit,
   TomeSearchRequest,
   TomeSearchWindowRequest,
   TomeSearchWindowResult,
 } from "tome-interfaces/search";
-import { buildSearchMatchPreview } from "tome-db";
+import {
+  isEmptyAllowedNodeIds,
+  mapSearchHitsWithPreview,
+  resolveSearchWindowBounds,
+} from "tome-interfaces/search";
 
 const DISPLAY_TITLE_SQL = `COALESCE(NULLIF(title, ''), NULLIF(alias, ''), 'Untitled')`;
 
@@ -17,26 +20,6 @@ export function buildFtsMatchQuery(raw: string): string | null {
   const escaped = trimmed.replace(/"/g, '""');
   // Phrase match keeps multi-word queries honest; trailing * enables prefix.
   return `"${escaped}"*`;
-}
-
-function resolveWindowBounds(request: TomeSearchWindowRequest): {
-  offset: number;
-  limit: number | null;
-} {
-  const offsetRaw = request.offset;
-  const offset =
-    typeof offsetRaw === "number" && Number.isFinite(offsetRaw) && offsetRaw > 0
-      ? Math.floor(offsetRaw)
-      : 0;
-  const limitRaw = request.limit;
-  if (limitRaw === undefined || limitRaw === null) {
-    return { offset, limit: null };
-  }
-  const limit =
-    typeof limitRaw === "number" && Number.isFinite(limitRaw) && limitRaw > 0
-      ? Math.floor(limitRaw)
-      : null;
-  return { offset, limit };
 }
 
 function buildFtsFilters(
@@ -64,24 +47,11 @@ function buildFtsFilters(
   return { sql: filterParts.join(" "), params };
 }
 
-function mapHits(
-  rows: { id: string; title: string; body: string }[],
-  query: string,
-): TomeSearchHit[] {
-  const trimmed = query.trim();
-  return rows.map((row) => {
-    const hit: TomeSearchHit = { id: row.id, title: row.title };
-    const preview = buildSearchMatchPreview(row.body ?? "", trimmed);
-    if (preview) hit.matchPreview = preview;
-    return hit;
-  });
-}
-
 export function createFtsSearch(db: Database): TomeSearch {
   return {
-    async search(request: TomeSearchRequest): Promise<TomeSearchHit[]> {
+    async search(request: TomeSearchRequest) {
       const { query, limit, allowedTypeIds, allowedNodeIds } = request;
-      if (allowedNodeIds && allowedNodeIds.size === 0) return [];
+      if (isEmptyAllowedNodeIds(allowedNodeIds)) return [];
 
       const cap = Math.max(1, Math.min(limit, 100));
       const matchQuery = buildFtsMatchQuery(query);
@@ -104,12 +74,12 @@ export function createFtsSearch(db: Database): TomeSearch {
         )
         .all(...params) as { id: string; title: string; body: string; rank: number }[];
 
-      return mapHits(rows, query);
+      return mapSearchHitsWithPreview(rows, query);
     },
 
     async searchWindow(request: TomeSearchWindowRequest): Promise<TomeSearchWindowResult> {
       const { query, allowedTypeIds, allowedNodeIds } = request;
-      if (allowedNodeIds && allowedNodeIds.size === 0) {
+      if (isEmptyAllowedNodeIds(allowedNodeIds)) {
         return { hits: [], total: 0 };
       }
 
@@ -117,7 +87,7 @@ export function createFtsSearch(db: Database): TomeSearch {
       if (!matchQuery) return { hits: [], total: 0 };
 
       const filters = buildFtsFilters(allowedTypeIds, allowedNodeIds);
-      const { offset, limit } = resolveWindowBounds(request);
+      const { offset, limit } = resolveSearchWindowBounds(request);
 
       const countRow = db
         .prepare(
@@ -159,7 +129,7 @@ export function createFtsSearch(db: Database): TomeSearch {
           .all(matchQuery, ...filters.params, limit, offset) as typeof rows;
       }
 
-      return { hits: mapHits(rows, query), total };
+      return { hits: mapSearchHitsWithPreview(rows, query), total };
     },
   };
 }

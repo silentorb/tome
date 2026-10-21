@@ -224,9 +224,12 @@ export async function openDataStoreSession(
     }
     const created = (factory as () => {
       open: (opts: Record<string, unknown>) => {
-        endpoint: import("./registry").SyncEndpoint;
         search: import("tome-interfaces/search").TomeSearch;
         close: () => void;
+        /** LCD name for optional sync-fed indexing. */
+        syncEndpoint?: import("./registry").SyncEndpoint;
+        /** Legacy alias used by tome-search-sqlite. */
+        endpoint?: import("./registry").SyncEndpoint;
       };
     })();
     if (!created || typeof created.open !== "function") {
@@ -242,15 +245,18 @@ export async function openDataStoreSession(
             ? `${options.defaultDbPath.replace(/\.sqlite$/, "")}-fts.sqlite`
             : undefined,
     });
+    const rawEndpoint = opened.syncEndpoint ?? opened.endpoint;
     // Ensure endpoint id matches dataStore key for sync.graph storeId refs.
-    const endpoint = {
-      ...opened.endpoint,
-      id,
-      capabilities: {
-        ...opened.endpoint.capabilities,
-        kind: "fts" as const,
-      },
-    };
+    const endpoint = rawEndpoint
+      ? {
+          ...rawEndpoint,
+          id,
+          capabilities: {
+            ...rawEndpoint.capabilities,
+            kind: "fts" as const,
+          },
+        }
+      : undefined;
     registry.set({
       id,
       kind: "fts",
@@ -261,7 +267,8 @@ export async function openDataStoreSession(
     ftsClosers.push(opened.close);
   }
 
-  const ftsStoreIds = sinkEntries.map((e) => e.id);
+  // Only wire observe edges into sync-fed FTS sinks (same-DB FTS omits endpoint).
+  const ftsStoreIds = registry.ftsStoreIdsWithSync();
   const baseGraph =
     options.syncGraph ?? buildDefaultSyncGraph(flatfileIds, queryStoreId, ftsStoreIds);
   const graph = ensureFtsObserveEdges(baseGraph, flatfileIds, ftsStoreIds);

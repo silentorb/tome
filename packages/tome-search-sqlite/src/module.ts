@@ -1,13 +1,12 @@
 import { FtsStore, type SearchSqliteOpenOptions } from "./fts-store";
-import type { SyncEndpoint } from "tome-db/sync";
-import type { TomeSearch } from "tome-interfaces/search";
+import type { TomeSearchBackend } from "tome-interfaces/search";
 
 export type { SearchDocument, SearchSqliteOpenOptions } from "./fts-store";
 
-export type SearchSqliteHandle = {
-  endpoint: SyncEndpoint;
-  search: TomeSearch;
-  close(): void;
+/** @deprecated Prefer `TomeSearchBackend` (`syncEndpoint` field). */
+export type SearchSqliteHandle = TomeSearchBackend & {
+  /** Legacy alias for `syncEndpoint`. */
+  endpoint: NonNullable<TomeSearchBackend["syncEndpoint"]>;
 };
 
 /**
@@ -26,8 +25,10 @@ export function createSearchSqliteModule() {
     id: "tome-search-sqlite",
     open(options: SearchSqliteOpenOptions = {}): SearchSqliteHandle {
       const store = new FtsStore(options);
+      const syncEndpoint = store.asEndpoint();
       return {
-        endpoint: store.asEndpoint(),
+        syncEndpoint,
+        endpoint: syncEndpoint,
         search: store.asSearch(),
         close: () => store.close(),
       };

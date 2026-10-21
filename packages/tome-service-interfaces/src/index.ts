@@ -832,3 +832,21 @@ export {
   type ProfilingSpan,
   type ProfilingSpanKind,
 } from "./profiling";
+
+export type {
+  SyncIdSet,
+  SyncEntityOps,
+  SyncPartialScope,
+  SyncScope,
+  SyncSourceRead,
+  SyncSignal,
+  DataStoreKind,
+  DataStoreCapabilities,
+  SyncEndpoint,
+} from "./sync";
+export {
+  emptySyncEntityOps,
+  emptySyncPartialScope,
+  mergeSyncPartialScope,
+  isSyncPartialScopeEmpty,
+} from "./sync";

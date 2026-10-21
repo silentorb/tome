@@ -1,4 +1,16 @@
 import type { SearchMatchPreview } from "tome-graph-interfaces";
+import type { SyncEndpoint } from "tome-service-interfaces/sync";
+
+export {
+  buildSearchMatchPreview,
+  type SearchMatchPreview,
+  type SearchMatchPreviewPart,
+} from "./match-preview";
+export {
+  resolveSearchWindowBounds,
+  isEmptyAllowedNodeIds,
+  mapSearchHitsWithPreview,
+} from "./window";
 
 /** Use-case slot for mix-and-match searcher binding. */
 export type SearchRole = "title" | "content";
@@ -50,17 +62,27 @@ export interface TomeSearch {
   close?(): void | Promise<void>;
 }
 
+/**
+ * Opened content-search backend handle.
+ * Sync-fed indexes (e.g. SQLite FTS5 sink) set `syncEndpoint`; same-DB indexes omit it.
+ */
+export type TomeSearchBackend = {
+  search: TomeSearch;
+  close(): void;
+  syncEndpoint?: SyncEndpoint;
+};
+
 export type SearcherOpenContext = {
   /** Merged extension + component params. */
   params: Record<string, unknown>;
-  /** Optional host-provided handles (e.g. opened FTS SyncEndpoint id). */
+  /** Optional host-provided handles (e.g. opened FTS dataStore id). */
   dataStoreId?: string;
   /** Opaque host extras (registry lookup, etc.). */
   host?: SearcherHostServices;
 };
 
 export type SearcherHostServices = {
-  /** Resolve an opened sync sink / search index by dataStore id when present. */
+  /** Resolve an opened search backend by dataStore id when present. */
   getSearcherBackend?(dataStoreId: string): unknown;
   /**
    * Session query cache for SQL LIKE searcher.

@@ -1,7 +1,7 @@
 import { Database } from "bun:sqlite";
 import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
-import type { SyncEndpoint, SyncSignal, SyncSourceRead } from "tome-db/sync";
+import type { SyncEndpoint, SyncSignal, SyncSourceRead } from "tome-service-interfaces/sync";
 import { instrumentSqliteDatabaseForProfiling } from "tome-service-interfaces";
 import { allNodesForSearchGraph, nodeByIdForSearchGraph } from "./search-graphs";
 import { createFtsSearch } from "./fts-search";

@@ -242,6 +242,30 @@ describe("SyncGraphWire", () => {
     expect(patched.nodes["sink:fts"]).toBeTruthy();
     expect(patched.edges["obs:marloth->fts"]).toBeTruthy();
   });
+
+  test("fts without sync endpoint is omitted from ftsStoreIdsWithSync", () => {
+    const registry = new DataStoreRegistry();
+    const search = {
+      search: async () => [],
+      searchWindow: async () => ({ hits: [], total: 0 }),
+    };
+    registry.set({
+      id: "fts-same-db",
+      kind: "fts",
+      search,
+      close: () => undefined,
+    });
+    const stub = createStubSyncEndpointRecording("fts-sync");
+    registry.set({
+      id: "fts-sync",
+      kind: "fts",
+      endpoint: stub.endpoint,
+      search,
+      close: () => undefined,
+    });
+    expect(registry.ftsStoreIdsWithSync()).toEqual(["fts-sync"]);
+    expect(() => registry.endpoint("fts-same-db")).toThrow(/no sync endpoint/);
+  });
 });
 
 describe("openDataStoreSession smoke", async () => {

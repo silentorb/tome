@@ -9,12 +9,15 @@ Node search (`GET /api/nodes/search`, Imp `type: "search"`) and **editor table `
 | `title` | `@` mentions, `RecordLinkPicker` (Relate / Move / Link existing / relation cells) | `tome-search-like` |
 | `content` | Global search (Ctrl/Cmd+K), table utility-bar `q` | `tome-search-sqlite` (FTS5) |
 
-Configure bindings in `content/model/extensions.json` via `search.title` / `search.content` (component ids). Indexing for FTS (and future Meilisearch) uses Imp **`sync.graph`** sinks registered as `dataStores`.
+Configure bindings in `content/model/extensions.json` via `search.title` / `search.content` (component ids).
+
+Shared contracts live in `tome-interfaces/search`: `TomeSearch`, helpers (`buildSearchMatchPreview`, `resolveSearchWindowBounds`, …), and **`TomeSearchBackend`** (`search` + `close`, optional `syncEndpoint`). Sync contracts (`SyncEndpoint`, `SyncSignal`, …) live in `tome-service-interfaces/sync`. Sync-fed indexes set `syncEndpoint`; same-DB indexes omit it and observe-edge wiring degrades (skips those sinks).
 
 | Concern | Mechanism |
 | --- | --- |
 | Who answers queries | `kind: "searcher"` + `searcherModule` + `search` role map |
-| Who maintains an FTS index | `dataStores` entry + `sync.graph` observe edges |
+| Who maintains a sync-fed FTS index | `dataStores` entry with `syncEndpoint` + `sync.graph` observe edges |
+| Same-DB FTS (Postgres) | Generated `tsvector` on SoT `nodes`; no sync endpoint |
 | Table utility-bar `q` | **Content** role via `searchWindow` + `allowedNodeIds` |
 
 Shipped backends:
@@ -22,7 +25,8 @@ Shipped backends:
 | Package | Behavior |
 | --- | --- |
 | `tome-search-like` | Title-only SQL `LIKE` filter; TS relevance order (exact → prefix → word-boundary → substring → shorter → localeCompare); `search` + `searchWindow` |
-| `tome-search-sqlite` | SQLite FTS5 sink + searcher (`bm25` over title/alias/body); `search` + `searchWindow` |
+| `tome-search-sqlite` | SQLite FTS5 sync sink + searcher (`bm25` over title/alias/body); `TomeSearchBackend` with `syncEndpoint` |
+| `tome-postgres` `openPostgresFtsSearch` | Same-DB `tsvector` / `ts_rank_cd`; `TomeSearchBackend` without sync (editor host wiring still pending) |
 
 Meilisearch is deferred — see [tasks/tome-meilisearch.md](../../tasks/tome-meilisearch.md).
 
@@ -53,13 +57,15 @@ extensions.json search.{title,content}
 
 HTTP: `GET /api/nodes/search?q=…&role=title|content` (default `content`). Response `searchAvailable` reflects that role.
 
-FTS indexing:
+Sync-fed FTS indexing (SQLite default path):
 
 ```
 dataStores.fts (tome-search-sqlite)
   → SyncEndpoint.apply(SyncSignal)
   ← sync.graph marloth.observeOut → fts.observeIn
 ```
+
+Same-DB Postgres FTS keeps the index warm via SoT node writes (`search_vector` generated column); hosts that only wire observe→fts skip backends without `syncEndpoint`.
 
 ### Table `q` vs Imp `search` vs Recent
 

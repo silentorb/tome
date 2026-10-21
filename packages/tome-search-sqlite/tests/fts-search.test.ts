@@ -7,7 +7,7 @@ import { buildFtsMatchQuery } from "../src/fts-search";
 import { register } from "../src/search";
 import type { SearchDocument } from "../src/fts-store";
 import type { SearcherHost, SearcherRegistration } from "tome-interfaces/search";
-import type { SyncSourceRead } from "tome-db/sync";
+import type { SyncSourceRead } from "tome-service-interfaces/sync";
 
 describe("tome-search-sqlite", async () => {
   let tempDir: string;
