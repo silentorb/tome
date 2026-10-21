@@ -41,8 +41,9 @@ export async function startTomeServer(options?: {
     `[tome-server] dataStores=${Object.keys(config.dataStores).join(",")}`,
   );
 
-  // Inject default paths into store options when omitted (solo / env-driven).
+  // Inject default paths / URIs into store options when omitted.
   const dataStores = { ...config.dataStores };
+  const postgresUri = process.env.POSTGRES_URI?.trim();
   for (const [id, entry] of Object.entries(dataStores)) {
     if (entry.module.includes("flatfile")) {
       const opts =
@@ -65,6 +66,22 @@ export async function startTomeServer(options?: {
         } else {
           opts.dbPath = dbPath;
         }
+        dataStores[id] = { ...entry, options: opts };
+      }
+    }
+    if (
+      entry.module.includes("tome-postgres") ||
+      entry.export.includes("Postgres")
+    ) {
+      const opts =
+        entry.options && typeof entry.options === "object"
+          ? { ...(entry.options as Record<string, unknown>) }
+          : {};
+      const hasUri =
+        (typeof opts.connectionString === "string" && opts.connectionString.trim()) ||
+        (typeof opts.uri === "string" && opts.uri.trim());
+      if (!hasUri && postgresUri) {
+        opts.connectionString = postgresUri;
         dataStores[id] = { ...entry, options: opts };
       }
     }
@@ -95,12 +112,9 @@ export async function startTomeServer(options?: {
     deferReady: true,
   });
 
-  const store = session.writeContext.store;
+  const corpora = session.writeContext.graphStore.listCorpora();
   console.log(
-    `[tome-server] corpora=${store
-      .listCorpora()
-      .map((c) => `${c.id}:${c.access}`)
-      .join(",")}`,
+    `[tome-server] corpora=${corpora.map((c) => `${c.id}:${c.access}`).join(",")}`,
   );
 
   const searchBackends = new Map<string, unknown>();
@@ -111,9 +125,8 @@ export async function startTomeServer(options?: {
   }
 
   const sessionStore = new InMemorySessionStore();
-  const hasUserCorpus = store
-    .listCorpora()
-    .some((c) => c.id === DEFAULT_USER_CORPUS_ID);
+  const flatfileStore = session.writeContext.store;
+  const hasUserCorpus = corpora.some((c) => c.id === DEFAULT_USER_CORPUS_ID);
   const evaluateModification =
     config.authorization.implementationId === "authorization-model" && hasUserCorpus
       ? createCanEditNodesEvaluator({
@@ -121,7 +134,10 @@ export async function startTomeServer(options?: {
         })
       : undefined;
   const authorizationRegistry = new AuthorizationRegistry({
-    listContentDirs: () => store.listCorpora().map((c) => c.contentDir),
+    listContentDirs: () =>
+      flatfileStore
+        ? flatfileStore.listCorpora().map((c) => c.contentDir)
+        : corpora.map((c) => c.contentDir),
     discoverAuthorizationModelInstanceIds,
     contentHasAuthorizationModelType,
     evaluateModification,
@@ -129,7 +145,9 @@ export async function startTomeServer(options?: {
   authorizationRegistry.resetAndApplyBuiltIns(config.authorization);
 
   const deferred = await openTomeGraphServicesDeferred(
-    { store: session.writeContext.store, cache: session.writeContext.cache },
+    flatfileStore
+      ? { store: flatfileStore, cache: session.writeContext.cache }
+      : { cache: session.writeContext.cache },
     {
       progress,
       writeContext: session.writeContext,
@@ -146,9 +164,10 @@ export async function startTomeServer(options?: {
     },
   );
 
-  const validateAccountNodeId = hasUserCorpus
-    ? createAccountNodeValidator(store)
-    : undefined;
+  const validateAccountNodeId =
+    hasUserCorpus && flatfileStore
+      ? createAccountNodeValidator(flatfileStore)
+      : undefined;
 
   const started = await startConfiguredServices(deferred.services, rawConfig, {
     getCacheSyncStatus: () => syncStatus.getStatus(),
@@ -160,10 +179,14 @@ export async function startTomeServer(options?: {
   });
 
   const graphStartedAt = performance.now();
-  console.log("[tome-server] cache sync starting…");
-  await session.writeContext.sync.ensureReady();
-  if (session.wire) {
-    await session.wire.runInitialFull();
+  if (session.writeContext.sync) {
+    console.log("[tome-server] cache sync starting…");
+    await session.writeContext.sync.ensureReady();
+    if (session.wire) {
+      await session.wire.runInitialFull();
+    }
+  } else {
+    console.log("[tome-server] SoT-only session (no CacheSync)…");
   }
   await deferred.extensionsReady;
   syncStatus.markReady();

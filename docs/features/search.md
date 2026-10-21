@@ -26,7 +26,7 @@ Shipped backends:
 | --- | --- |
 | `tome-search-like` | Title-only SQL `LIKE` filter; TS relevance order (exact → prefix → word-boundary → substring → shorter → localeCompare); `search` + `searchWindow` |
 | `tome-search-sqlite` | SQLite FTS5 sync sink + searcher (`bm25` over title/alias/body); `TomeSearchBackend` with `syncEndpoint` |
-| `tome-postgres` `openPostgresFtsSearch` | Same-DB `tsvector` / `ts_rank_cd`; `TomeSearchBackend` without sync (editor host wiring still pending) |
+| `tome-postgres` `createPostgresFtsModule` / `openPostgresFtsSearch` | Same-DB `tsvector` / `ts_rank_cd`; `TomeSearchBackend` without sync; load via `dataStores` (see `tome-server.postgres.example.json`) |
 
 Meilisearch is deferred — see [tasks/tome-meilisearch.md](../../tasks/tome-meilisearch.md).
 
@@ -43,7 +43,7 @@ Meilisearch is deferred — see [tasks/tome-meilisearch.md](../../tasks/tome-mei
 - **Role map:** `extensions.json.search` maps `title` and `content` to enabled searcher component ids (same id may fill both). When `search` is omitted and exactly one searcher is enabled, both roles bind to it. Multiple enabled searchers without `search` fail at load.
 - If a bound searcher fails to open (missing FTS backend / `dbPath`), that role is unavailable (`searchAvailable: false` for requests with that `role`); other extensions keep loading.
 - Empty query is **browse**, not a searcher responsibility. Bare `@` / empty picker / empty global `q` browse by title; typed queries use the role’s searcher.
-- Host normalize **auto-injects** a `tome-search-sqlite` `dataStores` entry (`fts`) when none is configured, and the default sync graph (or `ensureFtsObserveEdges`) wires every flatfile corpus into that sink so FTS stays indexed without every host JSON listing it by hand.
+- Host normalize **auto-injects** a `tome-search-sqlite` `dataStores` entry (`fts`) for the preferred flatfile+sqlite topology when none is configured; the default sync graph (or `ensureFtsObserveEdges`) wires every flatfile corpus into sync-capable FTS sinks. SoT-only / same-DB FTS configs list their own search module and skip sqlite FTS inject.
 - **Content / FTS** must not post-filter/sort the corpus in TypeScript for correctness (presentation-only `matchPreview` enrichment is allowed). **Title / LIKE** may rank title candidates in TypeScript after the SQL filter (intentional relevance).
 
 ## Behavior

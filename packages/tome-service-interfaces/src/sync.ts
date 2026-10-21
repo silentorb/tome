@@ -38,7 +38,13 @@ export type SyncSignal = {
   scope: SyncScope;
 };
 
-export type DataStoreKind = "flatfile" | "sqlite" | "fts" | "unknown";
+export type DataStoreKind =
+  | "flatfile"
+  | "sqlite"
+  /** Queryable SoT (e.g. Postgres) — not a CacheSync sink. */
+  | "queryable"
+  | "fts"
+  | "unknown";
 
 export type DataStoreCapabilities = {
   canBeObserved: boolean;

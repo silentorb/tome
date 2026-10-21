@@ -295,10 +295,48 @@ describe("openDataStoreSession smoke", async () => {
       expect(session.flatfileStoreIds).toEqual(["content"]);
       expect(session.wire?.edges).toHaveLength(1);
       expect(session.writeContext.sync).toBeDefined();
+      expect(session.writeContext.store).toBeDefined();
       session.dispose();
     } finally {
       await destroyTestContentFixture(fixture);
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("opens Queryable SoT-only session without CacheSync or FTS observe edges", async () => {
+    const sotModule = new URL("./fixtures/fake-queryable-sot.ts", import.meta.url).pathname;
+    const session = await openDataStoreSession({
+      dataStores: {
+        sot: {
+          id: "sot",
+          module: sotModule,
+          export: "createFakeQueryableStoreModule",
+          options: {},
+        },
+        fts: {
+          id: "fts",
+          module: sotModule,
+          export: "createFakeFtsModule",
+          options: {},
+        },
+      },
+      queryStoreId: "sot",
+      deferReady: false,
+    });
+    try {
+      expect(session.flatfileStoreIds).toEqual([]);
+      expect(session.writeContext.sync).toBeUndefined();
+      expect(session.writeContext.store).toBeUndefined();
+      expect(session.writeContext.graphStore.contentDir).toBe("fake://sot");
+      expect(session.registry.ftsStoreIdsWithSync()).toEqual([]);
+      expect(session.wire?.edges ?? []).toHaveLength(0);
+      const fts = session.registry.get("fts");
+      expect(fts?.kind).toBe("fts");
+      if (fts?.kind === "fts") {
+        expect(fts.endpoint).toBeUndefined();
+      }
+    } finally {
+      session.dispose();
     }
   });
 });

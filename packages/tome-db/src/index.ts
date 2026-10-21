@@ -247,6 +247,8 @@ export {
   openTomeWriteContext,
   syncAfterRelationshipsWrite,
   syncAfterNodeWrite,
+  syncFileOnContext,
+  syncNodeOnContext,
   contentDirForNode,
   primaryCorpusId,
 } from "./content/write-context";

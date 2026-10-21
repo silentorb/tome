@@ -6,6 +6,7 @@ import {
   updateView,
   updateRelationshipViewProperties,
   reorderViews,
+  syncFileOnContext,
   type ViewSortSpec,
 } from "tome-db";
 import { invalidateViewsCache } from "tome-db";
@@ -28,7 +29,7 @@ export async function createRelationshipView(
   input: { name: string; sorts?: ViewSortSpec[]; properties?: string[] },
 ) {
   invalidateViewsCache();
-  await ctx.sync.syncFile("views.json");
+  await syncFileOnContext(ctx, "views.json");
   return createView(ctx.graphStore, nodeId, relationshipTypeId, input);
 }
 
@@ -40,7 +41,7 @@ export async function updateRelationshipView(
   input: ViewMutationInput,
 ) {
   invalidateViewsCache();
-  await ctx.sync.syncFile("views.json");
+  await syncFileOnContext(ctx, "views.json");
   return updateView(ctx.graphStore, nodeId, relationshipTypeId, viewId, input);
 }
 
@@ -51,7 +52,7 @@ export async function deleteRelationshipView(
   viewId: string,
 ) {
   invalidateViewsCache();
-  await ctx.sync.syncFile("views.json");
+  await syncFileOnContext(ctx, "views.json");
   await deleteView(ctx.graphStore, nodeId, relationshipTypeId, viewId);
 }
 
@@ -62,7 +63,7 @@ export async function patchRelationshipViews(
   input: { viewOrder?: string[]; properties?: string[] },
 ) {
   invalidateViewsCache();
-  await ctx.sync.syncFile("views.json");
+  await syncFileOnContext(ctx, "views.json");
   const response: {
     views?: Awaited<ReturnType<typeof reorderViews>>;
     properties?: string[];

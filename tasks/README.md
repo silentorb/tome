@@ -9,7 +9,7 @@ Optional Git-tracked backlog for Tome ideas and investigations. Not every change
 | SSO login | open | [sso-login.md](./sso-login.md) |
 | Independent SQL database without the flat-file database | open | [independent-sql-database.md](./independent-sql-database.md) |
 | Neo4j support | open | [neo4j-support.md](./neo4j-support.md) |
-| PostgreSQL support | open (FTS Q3) | [postgresql-support.md](./postgresql-support.md) |
+| PostgreSQL support | open (host wiring Q4) | [postgresql-support.md](./postgresql-support.md) |
 | Investigate sites/corpora redesign (uniformity + indefinite nesting) | open | [sites-corpora-nesting-redesign.md](./sites-corpora-nesting-redesign.md) |
 | Investigate association-system redesign (flexibility vs structure) | open | [association-system-redesign.md](./association-system-redesign.md) |
 | Security analysis | open | [security-analysis.md](./security-analysis.md) |

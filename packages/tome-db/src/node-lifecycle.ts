@@ -4,6 +4,7 @@ import {
   flatfileBackendFromContext,
   syncAfterNodeWrite,
   syncAfterRelationshipsWrite,
+  syncNodeOnContext,
 } from "./content/write-context";
 import { isArchivedNode } from "./archive-status";
 import {
@@ -34,7 +35,7 @@ export async function deleteNode(ctx: TomeWriteContext, id: string): Promise<Nod
   await store.deleteNode(id);
   await syncAfterNodeWrite(ctx, id);
   await syncAfterRelationshipsWrite(ctx);
-  await ctx.sync.syncNode(id);
+  await syncNodeOnContext(ctx, id);
   return null;
 }
 

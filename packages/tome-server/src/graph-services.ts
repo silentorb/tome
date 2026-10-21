@@ -92,7 +92,8 @@ export type { PublicExtensionsManifest, WorkspacePublic, TomeGraphServices };
 export type EditorDatabase = TomeGraphServices;
 
 export type OpenTomeGraphServicesArgs = {
-  store: TomeDataStore | FlatfileStore;
+  /** Flatfile (or file SoT) store when CacheSync topology is active. */
+  store?: TomeDataStore | FlatfileStore;
   cache: TomeQueryCache;
 };
 
@@ -159,7 +160,19 @@ function buildGraphServices(
       console.error("[tome-extensions] failed to load:", err);
     });
 
-  const schema = () => loadSchemaFromContent(contentPath);
+  const schema = async (): Promise<SchemaFile> => {
+    if (typeof graphStore.readSchema === "function") {
+      return graphStore.readSchema();
+    }
+    return loadSchemaFromContent(contentPath);
+  };
+
+  const relationshipTypes = async () => {
+    if (typeof graphStore.readRelationshipTypes === "function") {
+      return graphStore.readRelationshipTypes();
+    }
+    return loadRelationshipTypesFromContent(contentPath);
+  };
 
   const corpusMeta = async (nodeId: string, activeCorpus?: string) => {
     const corpora = writeCtx.graphStore.listCorpora();
@@ -187,7 +200,14 @@ function buildGraphServices(
       ? corpora.find((c) => c.id === corpus)
       : corpora[0];
     const contentDir = match?.contentDir ?? contentPath;
-    const ws = match?.workspace ?? loadWorkspaceFromContent(contentDir);
+    let ws = match?.workspace;
+    if (!ws) {
+      if (typeof graphStore.readWorkspace === "function") {
+        ws = await graphStore.readWorkspace();
+      } else {
+        ws = loadWorkspaceFromContent(contentDir);
+      }
+    }
     const archiveNode = await graphStore.getNode(ws.archiveNodeId);
     const archiveTitleRaw = archiveNode?.properties.title ?? archiveNode?.properties.alias;
     const archiveNodeTitle =
@@ -210,7 +230,11 @@ function buildGraphServices(
         ? corpora.find((c) => c.id === corpus)
         : corpora[0];
       const contentDir = match?.contentDir ?? contentPath;
-      const ws = loadWorkspaceFromContent(contentDir);
+      const ws =
+        match?.workspace ??
+        (typeof graphStore.readWorkspace === "function"
+          ? await graphStore.readWorkspace()
+          : loadWorkspaceFromContent(contentDir));
       return readDocumentIconFile(contentDir, ws.branding?.documentIconImage);
     },
     async listCorpora() {
@@ -357,7 +381,10 @@ function buildGraphServices(
       return updateDatabaseColumnInDb(writeCtx, databaseId, columnKey, input);
     },
     async listTypeTables() {
-      const schemas = loadTableSchemasFromContent(writeCtx.graphStore.contentDir);
+      const schemas =
+        typeof graphStore.readTableSchemas === "function"
+          ? await graphStore.readTableSchemas()
+          : loadTableSchemasFromContent(writeCtx.graphStore.contentDir);
       const entries: { id: string; title: string }[] = [];
       for (const id of Object.keys(schemas.tables)) {
         const node = await graphStore.getNode(id);
@@ -376,14 +403,14 @@ function buildGraphServices(
       return schema();
     },
     async listRelationshipTypes() {
-      const registry = loadRelationshipTypesFromContent(contentPath);
+      const registry = await relationshipTypes();
       return labeledRelationshipTypes(
         registry,
         await Promise.resolve(listDistinctProjectionTypes(graphStore)),
       );
     },
     async getRelationshipLinkOptions(sourceId: string, type: string) {
-      const registry = loadRelationshipTypesFromContent(contentPath);
+      const registry = await relationshipTypes();
       const rule = await Promise.resolve(
         relationshipTypeRuleContext(registry, graphStore, sourceId, type, contentPath),
       );
@@ -509,7 +536,7 @@ function buildGraphServices(
       sourceId: string,
       input: { type: string; title: string; properties?: Record<string, string> },
     ) {
-      const registry = loadRelationshipTypesFromContent(contentPath);
+      const registry = await relationshipTypes();
       const rule = await Promise.resolve(
         relationshipTypeRuleContext(
           registry,
@@ -617,11 +644,16 @@ export async function openTomeGraphServices(
   args: OpenTomeGraphServicesArgs | string = resolveDbPath(),
   contentPath = resolveContentPath(),
 ): Promise<TomeGraphServices> {
-  if (typeof args === "object" && args !== null && "store" in args && "cache" in args) {
+  if (
+    typeof args === "object" &&
+    args !== null &&
+    "cache" in args &&
+    args.store != null
+  ) {
     const writeCtx = await openTomeWriteContext(args.store as FlatfileStore, args.cache);
     return buildGraphServices(writeCtx, args.store.contentDir).services;
   }
-  const writeCtx = await openContentGraph(contentPath, args);
+  const writeCtx = await openContentGraph(contentPath, args as string);
   return buildGraphServices(writeCtx, contentPath).services;
 }
 
@@ -641,7 +673,7 @@ export type DeferredTomeGraphServices = {
  * `finishDeferredWriteContextReady` — observers are already wired.
  */
 export async function openTomeGraphServicesDeferred(
-  args: OpenTomeGraphServicesArgs,
+  args: OpenTomeGraphServicesArgs | null | undefined,
   options?: {
     progress?: SyncProgressReporter;
     /** Reuse an existing write context (e.g. from openDataStoreSession). */
@@ -654,13 +686,21 @@ export async function openTomeGraphServicesDeferred(
     authorization?: import("./extensions/runtime").ExtensionAuthorizationOptions;
   },
 ): Promise<DeferredTomeGraphServices> {
-  const writeCtx =
-    options?.writeContext ??
-    (await openTomeWriteContext(args.store as FlatfileStore, args.cache, {
+  let writeCtx = options?.writeContext;
+  if (!writeCtx) {
+    if (!args?.store || !args.cache) {
+      throw new Error(
+        "openTomeGraphServicesDeferred: writeContext or { store, cache } required",
+      );
+    }
+    writeCtx = await openTomeWriteContext(args.store as FlatfileStore, args.cache, {
       deferReady: true,
       progress: options?.progress,
-    }));
-  const built = buildGraphServices(writeCtx, args.store.contentDir, {
+    });
+  }
+  const contentDir =
+    args?.store?.contentDir ?? writeCtx.graphStore.contentDir;
+  const built = buildGraphServices(writeCtx, contentDir, {
     startWatching: false,
     searchBackends: options?.searchBackends,
     authenticationHooks: options?.authenticationHooks,
@@ -669,7 +709,7 @@ export async function openTomeGraphServicesDeferred(
   return {
     services: built.services,
     writeCtx,
-    startWatching: () => writeCtx.graphStore.startWatching(),
+    startWatching: () => writeCtx!.graphStore.startWatching(),
     extensionsReady: built.extensionsReady,
     getAuthenticationProvider: built.getAuthenticationProvider,
   };

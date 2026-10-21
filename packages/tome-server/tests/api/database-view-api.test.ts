@@ -52,7 +52,7 @@ describe("database view API", async () => {
       fixture.ctx.store.contentDir,
       join(fixture.tempDir, "api.sqlite"),
     );
-    await apiCtx.sync.fullRebuild();
+    await apiCtx.sync!.fullRebuild();
     await apiCtx.cache.close();
 
     const createRes = await api.handler(
@@ -84,7 +84,7 @@ describe("database view API", async () => {
       fixture.ctx.store.contentDir,
       join(fixture.tempDir, "api.sqlite"),
     );
-    await apiCtx.sync.fullRebuild();
+    await apiCtx.sync!.fullRebuild();
     await apiCtx.cache.close();
 
     const patchRes = await api.handler(
@@ -117,7 +117,7 @@ describe("database view API", async () => {
       fixture.ctx.store.contentDir,
       join(fixture.tempDir, "api.sqlite"),
     );
-    await apiCtx.sync.fullRebuild();
+    await apiCtx.sync!.fullRebuild();
     await apiCtx.cache.close();
 
     const deleteRes = await api.handler(

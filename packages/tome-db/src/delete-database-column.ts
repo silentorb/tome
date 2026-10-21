@@ -6,7 +6,10 @@ import {
 } from "./database-column-data";
 import { isTypeTableNode } from "./node-capabilities";
 import type { TomeWriteContext } from "./content/write-context";
-import { syncAfterRelationshipsWrite } from "./content/write-context";
+import {
+  syncAfterRelationshipsWrite,
+  syncFileOnContext,
+} from "./content/write-context";
 import { writeStoreContentDir } from "./graph-store/relationship-write";
 import { TABLE_SCHEMAS_FILENAME } from "tome-flatfile";
 import type { TableSchemasFile } from "tome-flatfile";
@@ -92,8 +95,8 @@ export async function deleteDatabaseColumn(
   );
 
   await syncAfterRelationshipsWrite(ctx);
-  await ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
-  await ctx.sync.syncAfterWrite("views.json");
+  await syncFileOnContext(ctx, TABLE_SCHEMAS_FILENAME);
+  await syncFileOnContext(ctx, "views.json");
 
   return { rowsAffected, relationsUnlinked };
 }

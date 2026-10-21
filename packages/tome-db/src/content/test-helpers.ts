@@ -77,9 +77,15 @@ export const TEST_PROP_TYPE_INSPIRATIONS_ASSOCIATION_ID = "000000000000000000000
 export const TEST_OTHER_PARENTS_CHILDREN_ASSOCIATION_ID = "000000000000000000000000BE";
 export const TEST_RELATED_ASSOCIATION_ID = "000000000000000000000000BF";
 
+/** Flatfile+CacheSync write context — always present for content fixtures. */
+export type TestWriteContext = TomeWriteContext & {
+  store: NonNullable<TomeWriteContext["store"]>;
+  sync: NonNullable<TomeWriteContext["sync"]>;
+};
+
 export interface TestContentFixture {
   tempDir: string;
-  ctx: TomeWriteContext;
+  ctx: TestWriteContext;
 }
 
 export function defaultTestWorkspaceFile(): WorkspaceFile {
@@ -293,7 +299,11 @@ export async function createTestContentFixture(prefix = "tome-content-test-"): P
   );
   invalidateWorkspaceCache();
   const dbPath = join(tempDir, "test.sqlite");
-  const ctx = await openContentGraph(contentDir, dbPath);
+  const opened = await openContentGraph(contentDir, dbPath);
+  if (!opened.store || !opened.sync) {
+    throw new Error("createTestContentFixture: expected CacheSync write context");
+  }
+  const ctx: TestWriteContext = opened as TestWriteContext;
   const fixture: TestContentFixture = { tempDir, ctx };
   ctx.store.writeDynamicPropertiesFile(fileFromSeedInputs([], []));
   invalidateDynamicPropertiesCache();

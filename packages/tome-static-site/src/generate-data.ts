@@ -30,7 +30,7 @@ export async function loadNodesFromGraph(config: ResolvedConfig): Promise<SiteDa
   const workspace = loadWorkspaceFromContent(config.contentDir);
   const nodes: SiteNode[] = [];
 
-  for (const id of writeCtx.store.listNodeIds()) {
+  for (const id of await graphStore.listNodeIds()) {
     const node = await buildSiteNode(graphStore, id, config.contentDir, schema);
     if (node) nodes.push(node);
   }

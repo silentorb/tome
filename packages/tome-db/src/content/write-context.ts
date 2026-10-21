@@ -26,10 +26,17 @@ export interface OpenTomeWriteContextOptions {
 export interface TomeWriteContext {
   /** Unified graph store facade (Base + Queryable when composed). */
   graphStore: TomeGraphStoreQueryable;
-  /** Flatfile backend for sync subscription wiring only — prefer graphStore for reads/writes. */
-  store: FlatfileStore;
-  sync: CacheSync;
-  /** SQLite query cache — executeImp SQL backend and CacheSync target only. */
+  /**
+   * Flatfile backend when a CacheSync / file-SoT topology is active.
+   * Absent for Queryable SoT-only sessions (e.g. Postgres).
+   */
+  store?: FlatfileStore;
+  /**
+   * CacheSync when flatfile sources observe a query sink.
+   * Absent for SoT-only sessions — sync helpers no-op.
+   */
+  sync?: CacheSync;
+  /** Query cache / thin SQL surface (executeImp, product windows, auth SQL). */
   cache: TomeQueryCache;
 }
 
@@ -62,15 +69,36 @@ export async function openTomeWriteContext(
 
 /** After deferred `ensureReady`, wire store→cache subscriptions. */
 export function finishDeferredWriteContextReady(ctx: TomeWriteContext): () => void {
+  if (!ctx.store || !ctx.sync) return () => {};
   return subscribeStoreToCacheSync(ctx.store, ctx.sync);
 }
 
 export async function syncAfterNodeWrite(ctx: TomeWriteContext, id: string): Promise<void> {
+  if (!ctx.sync) return;
   await ctx.sync.syncAfterWrite(nodeRelativePath(id));
 }
 
 export async function syncAfterRelationshipsWrite(ctx: TomeWriteContext): Promise<void> {
+  if (!ctx.sync) return;
   await ctx.sync.syncAfterWrite("relationships");
+}
+
+/** Sync a model/config file when CacheSync is present; no-op otherwise. */
+export async function syncFileOnContext(
+  ctx: TomeWriteContext,
+  relativeName: string,
+): Promise<void> {
+  if (!ctx.sync) return;
+  await ctx.sync.syncFile(relativeName);
+}
+
+/** Sync a node into the query cache when CacheSync is present; no-op otherwise. */
+export async function syncNodeOnContext(
+  ctx: TomeWriteContext,
+  id: string,
+): Promise<void> {
+  if (!ctx.sync) return;
+  await ctx.sync.syncNode(id);
 }
 
 export async function mergeNodePropertiesOnContent(
@@ -88,7 +116,10 @@ export function flatfileBackendFromContext(ctx: TomeWriteContext): FlatfileStore
   const gs = ctx.graphStore;
   if (gs instanceof ComposedGraphStore) return gs.flatfileBackend;
   if (gs instanceof FlatfileGraphStore) return gs.backend;
-  return ctx.store;
+  if (ctx.store) return ctx.store;
+  throw new Error(
+    "flatfileBackendFromContext: no flatfile store (Queryable SoT-only session)",
+  );
 }
 
 /** Content root for the corpus that owns `nodeId`, else primary. */

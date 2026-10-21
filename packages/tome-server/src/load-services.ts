@@ -97,24 +97,48 @@ function parseSyncBlock(raw: unknown): TomeServerConfig["sync"] {
   };
 }
 
-function isSearchSqliteModule(entry: TomeServerModuleConfigEntry): boolean {
+function isSearchBackendModule(entry: TomeServerModuleConfigEntry): boolean {
   return (
     entry.module.includes("search-sqlite") ||
     entry.export.includes("SearchSqlite") ||
-    entry.export.includes("createSearchSqliteModule")
+    entry.export.includes("createSearchSqliteModule") ||
+    entry.export.includes("createPostgresFtsModule") ||
+    entry.export.includes("FtsModule")
   );
 }
 
 function isQuerySqliteModule(entry: TomeServerModuleConfigEntry): boolean {
-  if (isSearchSqliteModule(entry)) return false;
+  if (isSearchBackendModule(entry)) return false;
   return entry.module.includes("sqlite") || entry.export.includes("Sqlite");
 }
 
-/** Ensure an FTS5 sink exists so the default searcher can open via getSearcherBackend("fts"). */
+function isQueryableSoTModule(entry: TomeServerModuleConfigEntry): boolean {
+  return (
+    entry.export === "createPostgresStoreModule" ||
+    entry.export.includes("StoreModule")
+  );
+}
+
+function isFlatfileModule(entry: TomeServerModuleConfigEntry): boolean {
+  return entry.module.includes("flatfile") || entry.export.includes("Flatfile");
+}
+
+function isQueryStoreModule(entry: TomeServerModuleConfigEntry): boolean {
+  return isQuerySqliteModule(entry) || isQueryableSoTModule(entry);
+}
+
+/**
+ * Inject sync-fed SQLite FTS for the preferred flatfile→sqlite topology only.
+ * Skips when any search backend is already listed, or when the query store is a SoT module.
+ */
 function ensureFtsDataStore(
   dataStores: Record<string, TomeServerModuleConfigEntry>,
 ): Record<string, TomeServerModuleConfigEntry> {
-  if (Object.values(dataStores).some(isSearchSqliteModule)) return dataStores;
+  if (Object.values(dataStores).some(isSearchBackendModule)) return dataStores;
+  const hasFlatfile = Object.values(dataStores).some(isFlatfileModule);
+  const hasSqliteCache = Object.values(dataStores).some(isQuerySqliteModule);
+  const hasSoT = Object.values(dataStores).some(isQueryableSoTModule);
+  if (!hasFlatfile || !hasSqliteCache || hasSoT) return dataStores;
   const id = dataStores.fts ? "fts-index" : "fts";
   return {
     ...dataStores,
@@ -260,22 +284,31 @@ export function normalizeServerConfig(config: TomeServerConfig): NormalizedTomeS
   dataStores = ensureFtsDataStore(dataStores);
 
   const flatfileIds = Object.entries(dataStores)
-    .filter(([, e]) => e.module.includes("flatfile") || e.export.includes("Flatfile"))
+    .filter(([, e]) => isFlatfileModule(e))
     .map(([id]) => id);
-  const sqliteIds = Object.entries(dataStores)
-    .filter(([, e]) => isQuerySqliteModule(e))
+  const queryStoreIds = Object.entries(dataStores)
+    .filter(([, e]) => isQueryStoreModule(e))
     .map(([id]) => id);
 
-  if (flatfileIds.length === 0) {
-    throw new Error("tome-server config: at least one flatfile dataStore required");
+  if (queryStoreIds.length === 0) {
+    throw new Error(
+      "tome-server config: at least one query dataStore required (sqlite cache or Queryable SoT)",
+    );
   }
-  if (sqliteIds.length === 0) {
-    throw new Error("tome-server config: at least one sqlite dataStore required");
+  if (flatfileIds.length === 0 && !queryStoreIds.some((id) => isQueryableSoTModule(dataStores[id]!))) {
+    throw new Error(
+      "tome-server config: flatfile dataStore required unless a Queryable SoT query store is configured",
+    );
   }
 
-  const queryStoreId = config.sync?.queryStoreId ?? sqliteIds[0]!;
-  const store = dataStores[flatfileIds[0]!]!;
-  const cache = dataStores[queryStoreId] ?? dataStores[sqliteIds[0]!]!;
+  const queryStoreId = config.sync?.queryStoreId ?? queryStoreIds[0]!;
+  if (!dataStores[queryStoreId] || !isQueryStoreModule(dataStores[queryStoreId]!)) {
+    throw new Error(
+      `tome-server config: sync.queryStoreId "${queryStoreId}" is not a query dataStore`,
+    );
+  }
+  const store = flatfileIds[0] ? dataStores[flatfileIds[0]!] : undefined;
+  const cache = dataStores[queryStoreId]!;
 
   return {
     version: config.version,
@@ -287,7 +320,7 @@ export function normalizeServerConfig(config: TomeServerConfig): NormalizedTomeS
     },
     authorization: resolveAuthorizationBuiltIns(config.authorization),
     services: config.services,
-    store,
+    ...(store ? { store } : {}),
     cache,
   };
 }

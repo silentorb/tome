@@ -1,0 +1,41 @@
+{
+  "version": 2,
+  "dataStores": {
+    "sot": {
+      "id": "sot",
+      "module": "tome-postgres",
+      "export": "createPostgresStoreModule",
+      "options": {}
+    },
+    "fts": {
+      "id": "fts",
+      "module": "tome-postgres",
+      "export": "createPostgresFtsModule",
+      "options": {}
+    }
+  },
+  "sync": {
+    "queryStoreId": "sot",
+    "graph": {
+      "nodes": {
+        "sink:sot": {
+          "id": "sink:sot",
+          "type": "tome.sync.store",
+          "inputs": { "storeId": "sot" }
+        }
+      },
+      "edges": {}
+    }
+  },
+  "authorization": {
+    "implementationId": "allow-everything"
+  },
+  "services": [
+    {
+      "id": "http",
+      "module": "tome-http",
+      "export": "createTomeHttpService",
+      "options": { "port": 3847 }
+    }
+  ]
+}

@@ -176,9 +176,12 @@ export interface NormalizedTomeServerConfig {
   /** Resolved built-in authorizer selection (always present; default deny-everything). */
   authorization: TomeAuthorizationConfig;
   services: TomeServerModuleConfigEntry[];
-  /** Convenience: primary flatfile module entry (first flatfile in dataStores). */
-  store: TomeServerModuleConfigEntry;
-  /** Convenience: sqlite module entry. */
+  /**
+   * Convenience: primary flatfile module entry when present.
+   * Absent for Queryable SoT-only configs (no file SoT).
+   */
+  store?: TomeServerModuleConfigEntry;
+  /** Convenience: query store module entry (`sync.queryStoreId`). */
   cache: TomeServerModuleConfigEntry;
 }
 

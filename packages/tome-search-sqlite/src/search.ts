@@ -3,11 +3,11 @@ import type { TomeSearch } from "tome-interfaces/search";
 import { FtsStore } from "./fts-store";
 
 /**
- * Registers the FTS5 searcher (`implementationId: "tome-search-sqlite"`).
+ * Registers the content searcher (`implementationId: "tome-search-sqlite"`).
  *
- * Resolves the opened FTS handle via `host.getSearcherBackend(dataStoreId)`
- * (default dataStore id `"fts"`), or opens a search-only connection from
- * `params.dbPath`.
+ * Prefer host-opened backends via `getSearcherBackend(dataStoreId)` — works for
+ * any `TomeSearch` (SQLite FTS5 or same-DB Postgres). Falls back to opening a
+ * local FTS5 file from `params.dbPath` when no backend is registered.
  */
 export function register(host: SearcherHost): void {
   host.registerSearcher({
@@ -23,7 +23,7 @@ export function register(host: SearcherHost): void {
         typeof ctx.params.dbPath === "string" ? ctx.params.dbPath.trim() : "";
       if (!dbPath) {
         throw new Error(
-          'tome-search-sqlite requires getSearcherBackend("fts") or params.dbPath',
+          `content searcher requires getSearcherBackend("${dataStoreId}") or params.dbPath`,
         );
       }
       const store = new FtsStore({ dbPath });

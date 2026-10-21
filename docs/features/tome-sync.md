@@ -2,11 +2,14 @@
 
 ## Summary
 
-Host sessions open a heterogeneous **`dataStores`** map and a floating Imp **`sync.graph`**. The graph **only initializes observer relationships** between stores (who observes whom). It is **not** a sync executor and is **not** re-run on each change. After wire-up, observers notify sinks with a **`SyncSignal`**: an Imp-queryable **`SyncSourceRead`** plus a **`SyncScope`** (`full` or six normalized id sets). Cross-corpus **dual-write** (git self-description) stays on the flatfile/Composite path and is distinct from cache **observation**.
+Host sessions open a heterogeneous **`dataStores`** map and a floating Imp **`sync.graph`**. Modules are **building blocks**; the graph **only initializes observer relationships** between stores (who observes whom). It is **not** a sync executor and is **not** re-run on each change. After wire-up, observers notify sinks with a **`SyncSignal`**: an Imp-queryable **`SyncSourceRead`** plus a **`SyncScope`** (`full` or six normalized id sets). Cross-corpus **dual-write** (git self-description) stays on the flatfile/Composite path and is distinct from cache **observation**.
+
+**Preferred product hookup:** flatfile sources → SQLite query sink (+ sync-fed FTS) via observe edges / CacheSync. That pairing is **not** hard-coded — it works when those blocks are opened and wired. **Queryable SoT-only** configs (e.g. Postgres) omit flatfile sources and inbound observe edges; Imp wiring still runs with an empty or sink-only graph.
 
 ## When to read this
 
-- Configuring multiple flatfile corpora + SQLite cache
+- Configuring multiple flatfile corpora + SQLite cache (preferred topology)
+- Configuring a Queryable SoT-only session (e.g. Postgres `dataStores`)
 - Changing sync observer contracts or wiring
 - Registering sync Imp node types from packages
 - Relating multi-corpus sessions to the query cache
@@ -27,8 +30,8 @@ Legacy `store` + `cache` (+ nested `corpora` / `TOME_CORPORA`) **must** migrate 
 - Sync graph **must** install observers at boot only.
 - Sync graph **must not** perform ongoing sync via Imp collection execution.
 - Graph **must** be a DAG; cycles fail boot.
-- Flatfile stores are canonical **sources**; SQLite is a derived **sink** (query cache) in the default product topology.
-- Exactly one designated **query** SQLite store for `ComposedGraphStore` / host `executeImp` (`sync.queryStoreId` or the unique sqlite sink).
+- Flatfile stores are canonical **sources** when present; SQLite is a derived **sink** (query cache) in the preferred product topology.
+- Exactly one designated **query** store for host `executeImp` (`sync.queryStoreId`): SQLite cache under CacheSync composition, or a Queryable SoT module when there is no flatfile union.
 
 ### SyncSourceRead
 

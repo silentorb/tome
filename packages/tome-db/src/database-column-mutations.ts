@@ -9,7 +9,10 @@ import { isTypeTableNode } from "./node-capabilities";
 import { normalizeRelationshipTypeId, isRelationshipTypeId, uniqueHostEndpointIndex } from "tome-flatfile";
 import { resolvePropertyEnumFromContent } from "./property-enums";
 import type { TomeWriteContext } from "./content/write-context";
-import { syncAfterRelationshipsWrite } from "./content/write-context";
+import {
+  syncAfterRelationshipsWrite,
+  syncFileOnContext,
+} from "./content/write-context";
 import { writeStoreContentDir } from "./graph-store/relationship-write";
 import { TABLE_SCHEMAS_FILENAME } from "tome-flatfile";
 import { isNodeId } from "tome-flatfile";
@@ -205,8 +208,8 @@ export async function createDatabaseColumn(
     input.viewId,
   );
 
-  await ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
-  await ctx.sync.syncAfterWrite("views.json");
+  await syncFileOnContext(ctx, TABLE_SCHEMAS_FILENAME);
+  await syncFileOnContext(ctx, "views.json");
 
   return {
     column: columnDef,
@@ -370,8 +373,8 @@ export async function updateDatabaseColumn(
   }
 
   await syncAfterRelationshipsWrite(ctx);
-  await ctx.sync.syncAfterWrite(TABLE_SCHEMAS_FILENAME);
-  await ctx.sync.syncAfterWrite("views.json");
+  await syncFileOnContext(ctx, TABLE_SCHEMAS_FILENAME);
+  await syncFileOnContext(ctx, "views.json");
 
   return {
     column: patched,

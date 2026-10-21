@@ -126,7 +126,7 @@ export {
   TEST_CUSTOM_SET_ASSOCIATION_ID,
   projectionTypeForEndpoint,
 } from "./test-helpers";
-export type { TestContentFixture } from "./test-helpers";
+export type { TestContentFixture, TestWriteContext } from "./test-helpers";
 export type { TomeWriteContext, FlatfileStore, OpenTomeWriteContextOptions } from "./write-context";
 export {
   finishDeferredWriteContextReady,
@@ -134,6 +134,8 @@ export {
   openTomeWriteContext,
   syncAfterRelationshipsWrite,
   syncAfterNodeWrite,
+  syncFileOnContext,
+  syncNodeOnContext,
   contentDirForNode,
   primaryCorpusId,
 } from "./write-context";

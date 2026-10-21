@@ -25,6 +25,13 @@ export type OpenedDataStore =
     }
   | {
       id: string;
+      kind: "queryable";
+      graphStore: TomeGraphStoreQueryable;
+      cache: TomeQueryCache;
+      close: () => void | Promise<void>;
+    }
+  | {
+      id: string;
       kind: "fts";
       /** Present when the FTS backend is sync-fed; omitted for same-DB indexes. */
       endpoint?: SyncEndpoint;
@@ -86,6 +93,9 @@ export class DataStoreRegistry {
   endpoint(id: string): SyncEndpoint {
     const entry = this.require(id);
     if (entry.kind === "fts" && entry.endpoint == null) {
+      throw new Error(`Data store "${id}" has no sync endpoint`);
+    }
+    if (entry.kind === "queryable") {
       throw new Error(`Data store "${id}" has no sync endpoint`);
     }
     if (!("endpoint" in entry) || entry.endpoint == null) {

@@ -132,8 +132,39 @@ describe("tome-server config", async () => {
     expect(config.dataStores?.marloth?.module).toBe("tome-flatfile");
     const n = normalizeServerConfig(config);
     expect(n.sync.queryStoreId).toBe("cache");
-    expect(n.store.id).toBe("marloth");
+    expect(n.store?.id).toBe("marloth");
     expect(n.dataStores.fts?.module).toBe("tome-search-sqlite");
+  });
+
+  test("normalizes Queryable SoT-only config without flatfile or sqlite FTS inject", () => {
+    const normalized = normalizeServerConfig({
+      version: 2,
+      dataStores: {
+        sot: {
+          id: "sot",
+          module: "tome-postgres",
+          export: "createPostgresStoreModule",
+          options: {},
+        },
+        fts: {
+          id: "fts",
+          module: "tome-postgres",
+          export: "createPostgresFtsModule",
+          options: {},
+        },
+      },
+      sync: { queryStoreId: "sot" },
+      services: [],
+    });
+    expect(normalized.sync.queryStoreId).toBe("sot");
+    expect(normalized.store).toBeUndefined();
+    expect(normalized.cache.export).toBe("createPostgresStoreModule");
+    expect(normalized.dataStores.fts?.export).toBe("createPostgresFtsModule");
+    expect(
+      Object.values(normalized.dataStores).some(
+        (e) => e.export === "createSearchSqliteModule",
+      ),
+    ).toBe(false);
   });
 
   test("startConfiguredServices warns and continues when empty", async () => {

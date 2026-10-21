@@ -2,7 +2,7 @@
 
 ## Summary
 
-**tome-server** is the process **host** for the design graph: it loads heterogeneous **`dataStores`** (flatfile corpora + sqlite cache) from JSON config, wires observer sync via Imp **`sync.graph`** (see [tome-sync.md](./tome-sync.md)), builds `TomeGraphServices` through `tome-db`, then starts **zero or more** **service modules** (default: `tome-http`). Legacy singular `store` + `cache` still parse and migrate into `dataStores`. The editor webview is a client of the HTTP service, not part of this package.
+**tome-server** is the process **host** for the design graph: it loads heterogeneous **`dataStores`** building blocks from JSON config, wires observer sync via Imp **`sync.graph`** (see [tome-sync.md](./tome-sync.md)), builds `TomeGraphServices` through `tome-db`, then starts **zero or more** **service modules** (default: `tome-http`). The preferred topology is flatfile corpora + sqlite cache + sync-fed FTS; Queryable SoT-only maps (e.g. Postgres) are also valid when configured. Legacy singular `store` + `cache` still parse and migrate into `dataStores`. The editor webview is a client of the HTTP service, not part of this package.
 
 Multi-corpus sessions use multiple flatfile entries in `dataStores` (or legacy `store.options.corpora` / `TOME_CORPORA`) — see [`multi-corpus.md`](./multi-corpus.md). Mixed sessions must use a dedicated session `TOME_DB_PATH`, not any corpus’s own SQLite cache. Host config stays **environmental** (stores, cache, services, authorizers, profiling); corpus branding and model live under each corpus’s `content/model/` (notably `corpus.json`). A designed alternate mix declaration is a nested `corpora` list on `corpus.json` (flatten-only; not implemented yet) — same multi-corpus doc.
 
@@ -87,12 +87,12 @@ Legacy singular `store` + `cache` (still accepted; normalized at load):
 }
 ```
 
-- **`dataStores`** (or legacy **`store` + `cache`**) required. Flatfile entries may omit `contentPath` (host fills `TOME_CONTENT_PATH`); sqlite may omit `dbPath` (`TOME_DB_PATH`).
-- Normalize **auto-injects** an FTS sink (`tome-search-sqlite`, id `fts`) when missing, and does **not** treat FTS modules as the query cache when picking `sync.queryStoreId`.
+- **`dataStores`** (or legacy **`store` + `cache`**) required. Flatfile entries may omit `contentPath` (host fills `TOME_CONTENT_PATH`); sqlite may omit `dbPath` (`TOME_DB_PATH`); Postgres modules may omit URI (`POSTGRES_URI`).
+- Normalize requires a **query** dataStore (`sync.queryStoreId`: sqlite cache or Queryable SoT). Flatfile is required unless a SoT query module is configured. Normalize **auto-injects** sync-fed `tome-search-sqlite` only for the preferred flatfile+sqlite shape; does **not** treat FTS modules as the query cache.
 - `services` may be **empty**: the host logs a warning and stays up.
-- Path defaults and `TOME_CORPORA` expand into flatfile `dataStores` during normalize — see [tome-sync.md](./tome-sync.md) and [multi-corpus.md](./multi-corpus.md). Explicit `dataStores` skip corpora env expansion; use legacy `store`+`cache` (or a multi-corpus `dataStores` map) when relying on `TOME_CORPORA`.
+- Path defaults and `TOME_CORPORA` expand into flatfile `dataStores` during normalize — see [tome-sync.md](./tome-sync.md) and [multi-corpus.md](./multi-corpus.md). Explicit `dataStores` skip corpora env expansion; use legacy `store`+`cache` (or a multi-corpus `dataStores` map) when relying on `TOME_CORPORA`. Example SoT-only config: `packages/tome-server/config/tome-server.postgres.example.json`.
 
-Bootstrap order: normalize config → `openDataStoreSession` (open stores including **worker-backed** SQLite cache, wire Imp sync observers) → open graph services **without** waiting for full cache rebuild or file watchers → **start service modules (HTTP binds)** → await `CacheSync.ensureReady()` → mark ready, `startWatching()` (observers already installed; do not double-subscribe).
+Bootstrap order: normalize config → `openDataStoreSession` (open modules, wire Imp sync observers when the graph has edges) → open graph services **without** waiting for full cache rebuild or file watchers → **start service modules (HTTP binds)** → when CacheSync is present, await `ensureReady()` + initial full sync; SoT-only sessions skip that gate → mark ready, `startWatching()`.
 
 `TomeGraphServices` methods are Promise-returning; HTTP handlers `await` them. Long SQL runs off the main thread (SQLite worker) so other requests and health checks can progress while a heavy query is in flight.
 
