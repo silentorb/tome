@@ -4,7 +4,8 @@ export type OntologyTypeKey =
   | "predicate"
   | "memberScope"
   | "authorizationModel"
-  | "authorizationPolicy";
+  | "authorizationPolicy"
+  | "idpBinding";
 
 export interface OntologyFile {
   version: number;

@@ -25,6 +25,12 @@ export {
   isAccountNodeInUserCorpus,
 } from "./identity/account-validation";
 export {
+  buildIdpBindingResolveGraph,
+  contentHasIdpBindingType,
+  createResolveAccountFromIdpClaim,
+  loadIdpBindingTypeId,
+} from "./identity/idp-binding-resolve";
+export {
   AuthorizationRegistry,
   parseAuthorizationConfig,
   resolveAuthorizationBuiltIns,

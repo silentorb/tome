@@ -16,7 +16,9 @@ Charter: [multi-user.md](../docs/features/multi-user.md).
 
 **Phase 3b (landed):** Opt-in user flatfile corpus (`userCorpora` / `TOME_USER_CONTENT_PATH`) synced into the **shared** ephemeral session SQLite; Account + Permission + direct grants (no Roles yet); session Account validation; `authorization-model` + can-edit-nodes Imp policy via `compileImpGraphToTomeSql` + `queryAll` (not `executeImp`). Imp queries allow; node-edit modifications require the grant. Marloth-story has no authz ontology footprint (allow-everything solo); Denial coverage is test/fixture-only for now.
 
-**Remaining:** Filtering (prefer query mutation); probing APIs; catch-all / specialized authorizers for other routes; fold or align `readonly` / `protectedNodeIds`; Role nodes / richer assignment; load policy Imp from Policy node bodies at runtime (today the can-edit-nodes graph is also built in code).
+**Local IdP bindings (landed):** IdP Binding type table + Account↔Binding in the identity fixture; `ontology.json` `types.idpBinding`; claim → Account resolve via Imp→SQL on the session cache (same query layer as can-edit-nodes).
+
+**Remaining:** Filtering (prefer query mutation); probing APIs; catch-all / specialized authorizers for other routes; fold or align `readonly` / `protectedNodeIds`; Role nodes / richer assignment; load policy Imp from Policy node bodies at runtime (today the can-edit-nodes / IdP-binding graphs are also built in code).
 
 ## See also
 

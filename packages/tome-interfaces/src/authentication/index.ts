@@ -1,12 +1,17 @@
 /** LCD session shape for authentication providers (mirrors web API Session). */
 export type AuthenticationSession = {
   id: string;
-  /** Account node id in a user corpus (provisional IdP claim until bindings exist). */
+  /** Account node id in a user corpus (via IdP binding when identity is configured). */
   accountNodeId: string;
 };
 
 export type AuthenticationSessionCreateInput = {
   accountNodeId: string;
+};
+
+export type AuthenticationIdpClaim = {
+  issuer: string;
+  subject: string;
 };
 
 /**
@@ -29,6 +34,14 @@ export type AuthenticationOpenContext = {
    * Secure flag may depend on the request URL.
    */
   sessionCookieHeader(sessionId: string, req: Request): string;
+  /**
+   * When a user corpus declares `types.idpBinding`, resolve IdP `(issuer, subject)`
+   * to an Account node id via the session SQL cache. Absent when identity is not configured
+   * (providers may fall back to provisional claim → accountNodeId).
+   */
+  resolveAccountNodeId?(
+    claim: AuthenticationIdpClaim,
+  ): string | null | Promise<string | null>;
 };
 
 export type AuthenticationRegistration = {

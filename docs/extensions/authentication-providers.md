@@ -15,7 +15,8 @@ export function register(host: AuthenticationHost): void {
   host.registerAuthenticationProvider({
     implementationId: "my-auth",
     open(ctx) {
-      // ctx.params, ctx.createSession, ctx.sessionCookieHeader
+      // ctx.params, ctx.createSession, ctx.sessionCookieHeader,
+      // optional ctx.resolveAccountNodeId({ issuer, subject })
       return {
         beginLogin(req) {
           return Response.redirect("…");
@@ -86,10 +87,17 @@ Browser clients must use the **UI origin** `/api` proxy (Vite in local `editor:d
 
 `tome-auth-oidc` — generic OIDC authorization code + PKCE. Tests use an in-process mock IdP.
 
-**Account node id:** `createSession` expects `{ accountNodeId }` — the Account **node** id in a user corpus. Until user corpora and IdP↔Account bindings exist, `tome-auth-oidc` passes the IdP subject claim (default `sub`) as a **provisional** `accountNodeId`. The durable path is claim → user-corpus binding (local flatfile / nodes first; remote specialty SQL) → Account node id → `createSession`.
+**Account node id:** `createSession` expects `{ accountNodeId }` — the Account **node** id in a user corpus.
+
+When the host configures a user corpus whose `ontology.json` declares **`types.idpBinding`**, open context includes **`resolveAccountNodeId({ issuer, subject })`**. That resolver runs Imp→SQL against the **shared session cache** (flatfile SoT hydrates the cache; do not walk flatfile for this lookup). `tome-auth-oidc` calls it with the configured OIDC `issuer` and subject claim; unbound → `403` `{ error: "unbound_identity" }`. Auth-hook `createSession` also rejects non-Account ids with `unknown_account` when identity validation is wired.
+
+Without `resolveAccountNodeId` (no user corpus / no `types.idpBinding`), `tome-auth-oidc` keeps the **provisional** path: subject claim → `accountNodeId`. Remote specialty-store bindings remain future work.
+
+Identity fixture: `packages/tome-server/fixtures/identity-corpus/` (IdP Binding type table, Alice sample binding, `types.idpBinding`).
 
 ## See also
 
-- [multi-user.md](../features/multi-user.md) — phase 2 SSO; user corpora + local flatfile identity / remote auth specialty SQL
+- [multi-user.md](../features/multi-user.md) — SSO; user corpora + local IdP bindings / remote auth specialty store
+- [ontology.md](../features/ontology.md) — `types.idpBinding`
 - [extensions.md](../features/extensions.md) — kinds and loading
 - [searchers.md](./searchers.md) — similar singleton open pattern

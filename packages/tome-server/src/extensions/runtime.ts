@@ -66,6 +66,10 @@ export type ExtensionAuthenticationHooks = {
     | { id: string; accountNodeId: string }
     | Promise<{ id: string; accountNodeId: string }>;
   sessionCookieHeader: (sessionId: string, req: Request) => string;
+  resolveAccountNodeId?: (claim: {
+    issuer: string;
+    subject: string;
+  }) => string | null | Promise<string | null>;
 };
 
 export type ExtensionAuthorizationOptions = {
@@ -459,6 +463,7 @@ export class ExtensionServerRuntime {
         params: component.params,
         createSession: this.#authenticationHooks.createSession,
         sessionCookieHeader: this.#authenticationHooks.sessionCookieHeader,
+        resolveAccountNodeId: this.#authenticationHooks.resolveAccountNodeId,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);

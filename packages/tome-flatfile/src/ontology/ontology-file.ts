@@ -11,6 +11,7 @@ const TYPE_KEYS: OntologyTypeKey[] = [
   "memberScope",
   "authorizationModel",
   "authorizationPolicy",
+  "idpBinding",
 ];
 
 export function emptyOntologyFile(): OntologyFile {

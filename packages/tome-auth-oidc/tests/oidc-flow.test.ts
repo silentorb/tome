@@ -124,4 +124,113 @@ describe("tome-auth-oidc authorization code + PKCE", () => {
       rmSync(dir, { recursive: true, force: true });
     }
   });
+
+  test("resolveAccountNodeId maps claim to Account; unbound returns 403", async () => {
+    const accountAlice = "01M56A00000000000000000040";
+    const idp = startMockOidcIdp({ subjectId: "alice@example.com" });
+    const dir = mkdtempSync(join(tmpdir(), "tome-auth-oidc-bind-"));
+    try {
+      const sessionStore = new InMemorySessionStore();
+      const redirectUri = "http://127.0.0.1:5173/api/auth/callback";
+      const boundProvider = createOidcAuthenticationProvider({
+        params: {
+          issuer: idp.issuer,
+          clientId: idp.clientId,
+          clientSecret: idp.clientSecret,
+          redirectUri,
+          postLoginRedirect: "/",
+        },
+        createSession: (input) => sessionStore.create(input),
+        sessionCookieHeader: (sessionId, req) => {
+          const secure = new URL(req.url).protocol === "https:";
+          const parts = [
+            `${SESSION_COOKIE_NAME}=${encodeURIComponent(sessionId)}`,
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax",
+          ];
+          if (secure) parts.push("Secure");
+          return parts.join("; ");
+        },
+        resolveAccountNodeId: async ({ issuer, subject }) => {
+          if (issuer === idp.issuer && subject === "alice@example.com") {
+            return accountAlice;
+          }
+          return null;
+        },
+      });
+
+      const handler = createApiHandler(
+        mockGraphServices(),
+        new UserSettingsStore(join(dir, "settings.json")),
+        {
+          sessionStore,
+          getAuthenticationProvider: () => boundProvider,
+        },
+      );
+
+      const loginRes = await handler(
+        new Request("http://127.0.0.1:5173/api/auth/login"),
+      );
+      const idpRes = await fetch(locationOf(loginRes), { redirect: "manual" });
+      const callbackRes = await handler(new Request(locationOf(idpRes)));
+      expect(callbackRes.status).toBe(302);
+      const setCookie = callbackRes.headers.get("Set-Cookie") ?? "";
+      const cookieMatch = new RegExp(`${SESSION_COOKIE_NAME}=([^;]+)`).exec(setCookie);
+      const sessionId = decodeURIComponent(cookieMatch![1]!);
+      const meRes = await handler(
+        new Request("http://127.0.0.1:5173/api/me", {
+          headers: { Cookie: `${SESSION_COOKIE_NAME}=${sessionId}` },
+        }),
+      );
+      expect(await meRes.json()).toEqual({
+        principal: { accountNodeId: accountAlice },
+      });
+      await handler.close();
+
+      const unboundStore = new InMemorySessionStore();
+      const unboundProvider = createOidcAuthenticationProvider({
+        params: {
+          issuer: idp.issuer,
+          clientId: idp.clientId,
+          clientSecret: idp.clientSecret,
+          redirectUri,
+          postLoginRedirect: "/",
+        },
+        createSession: (input) => unboundStore.create(input),
+        sessionCookieHeader: (sessionId, req) => {
+          const secure = new URL(req.url).protocol === "https:";
+          const parts = [
+            `${SESSION_COOKIE_NAME}=${encodeURIComponent(sessionId)}`,
+            "Path=/",
+            "HttpOnly",
+            "SameSite=Lax",
+          ];
+          if (secure) parts.push("Secure");
+          return parts.join("; ");
+        },
+        resolveAccountNodeId: async () => null,
+      });
+      const unboundHandler = createApiHandler(
+        mockGraphServices(),
+        new UserSettingsStore(join(dir, "settings-unbound.json")),
+        {
+          sessionStore: unboundStore,
+          getAuthenticationProvider: () => unboundProvider,
+        },
+      );
+      const login2 = await unboundHandler(
+        new Request("http://127.0.0.1:5173/api/auth/login"),
+      );
+      const idp2 = await fetch(locationOf(login2), { redirect: "manual" });
+      const callback2 = await unboundHandler(new Request(locationOf(idp2)));
+      expect(callback2.status).toBe(403);
+      expect(await callback2.json()).toEqual({ error: "unbound_identity" });
+      expect(callback2.headers.get("Set-Cookie")).toBeNull();
+      await unboundHandler.close();
+    } finally {
+      idp.stop();
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 });

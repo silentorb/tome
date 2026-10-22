@@ -211,6 +211,12 @@ export function createOidcAuthenticationProvider(
           return errorResponse("token response missing id_token", 502);
         }
         const claims = decodeJwtPayload(tokenJson.id_token);
+        if (
+          typeof claims.iss === "string" &&
+          claims.iss.replace(/\/$/, "") !== config.issuer
+        ) {
+          return errorResponse("id_token issuer mismatch", 502);
+        }
         const subjectRaw = claims[config.subjectClaim];
         if (typeof subjectRaw !== "string" || !subjectRaw.trim()) {
           return errorResponse(
@@ -218,17 +224,31 @@ export function createOidcAuthenticationProvider(
             502,
           );
         }
-        // Provisional: IdP claim stands in for Account node id until user corpora
-        // + IdP↔Account bindings exist (see multi-user.md / authentication-providers.md).
-        const session = await ctx.createSession({
-          accountNodeId: subjectRaw.trim(),
-        });
+        const subject = subjectRaw.trim();
+        let accountNodeId: string;
+        if (ctx.resolveAccountNodeId) {
+          const resolved = await ctx.resolveAccountNodeId({
+            issuer: config.issuer,
+            subject,
+          });
+          if (!resolved) {
+            return errorResponse("unbound_identity", 403);
+          }
+          accountNodeId = resolved;
+        } else {
+          // No user-corpus binding resolver: provisional claim → accountNodeId.
+          accountNodeId = subject;
+        }
+        const session = await ctx.createSession({ accountNodeId });
         return redirectResponse(
           pendingAuth.postLoginRedirect,
           ctx.sessionCookieHeader(session.id, req),
         );
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
+        if (message === "unknown_account") {
+          return errorResponse("unknown_account", 400);
+        }
         return errorResponse(message, 500);
       }
     },

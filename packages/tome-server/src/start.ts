@@ -15,6 +15,10 @@ import { AuthorizationRegistry } from "./authorization/registry";
 import { openTomeGraphServicesDeferred } from "./graph-services";
 import { createAccountNodeValidator } from "./identity/account-validation";
 import {
+  contentHasIdpBindingType,
+  createResolveAccountFromIdpClaim,
+} from "./identity/idp-binding-resolve";
+import {
   DEFAULT_USER_CORPUS_ID,
   loadServerConfig,
   normalizeServerConfig,
@@ -127,6 +131,20 @@ export async function startTomeServer(options?: {
   const sessionStore = new InMemorySessionStore();
   const flatfileStore = session.writeContext.store;
   const hasUserCorpus = corpora.some((c) => c.id === DEFAULT_USER_CORPUS_ID);
+  const userCorpusContentDir =
+    corpora.find((c) => c.id === DEFAULT_USER_CORPUS_ID)?.contentDir ?? null;
+  const validateAccountNodeId =
+    hasUserCorpus && flatfileStore
+      ? createAccountNodeValidator(flatfileStore)
+      : undefined;
+  const resolveAccountNodeId =
+    hasUserCorpus &&
+    userCorpusContentDir &&
+    contentHasIdpBindingType(userCorpusContentDir)
+      ? createResolveAccountFromIdpClaim({
+          queryAll: (sql, ...params) => session.writeContext.cache.queryAll(sql, ...params),
+        })
+      : undefined;
   const evaluateModification =
     config.authorization.implementationId === "authorization-model" && hasUserCorpus
       ? createCanEditNodesEvaluator({
@@ -154,8 +172,17 @@ export async function startTomeServer(options?: {
       skipStoreSyncSubscribe: true,
       searchBackends,
       authenticationHooks: {
-        createSession: (input) => sessionStore.create(input),
+        createSession: (input) => {
+          if (
+            validateAccountNodeId &&
+            !validateAccountNodeId(input.accountNodeId)
+          ) {
+            throw new Error("unknown_account");
+          }
+          return sessionStore.create(input);
+        },
         sessionCookieHeader,
+        resolveAccountNodeId,
       },
       authorization: {
         registry: authorizationRegistry,
@@ -163,11 +190,6 @@ export async function startTomeServer(options?: {
       },
     },
   );
-
-  const validateAccountNodeId =
-    hasUserCorpus && flatfileStore
-      ? createAccountNodeValidator(flatfileStore)
-      : undefined;
 
   const started = await startConfiguredServices(deferred.services, rawConfig, {
     getCacheSyncStatus: () => syncStatus.getStatus(),

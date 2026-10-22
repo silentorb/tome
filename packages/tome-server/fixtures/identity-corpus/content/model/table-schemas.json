@@ -18,6 +18,20 @@
           "type": "text"
         }
       ]
+    },
+    "01M56A00000000000000000012": {
+      "columns": [
+        {
+          "key": "issuer",
+          "name": "Issuer",
+          "type": "text"
+        },
+        {
+          "key": "subject",
+          "name": "Subject",
+          "type": "text"
+        }
+      ]
     }
   }
 }

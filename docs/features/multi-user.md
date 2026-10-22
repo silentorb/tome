@@ -198,13 +198,15 @@ Prefer citing **this doc + phase id** when starting work. Update this table when
 
 **Phase 1 progress:** web API owns `Principal` / `Session` with `accountNodeId`, in-memory `SessionStore`, `POST/DELETE /api/sessions`, `GET /api/me`, request-scoped principal via `Authorization: Session <id>`.
 
-**Phase 2 progress:** `authentication-provider` extension kind + host routes `GET /api/auth/login` / `GET /api/auth/callback`; same-site session cookie `tome_session` (plus `Authorization: Session`); reference package `tome-auth-oidc` (auth-code + PKCE); API has **no CORS**. Editor sign-in UI remains phase 4. OIDC currently maps IdP claim → session `accountNodeId` as a **provisional stand-in** until user corpora + IdP↔Account bindings exist.
+**Phase 2 progress:** `authentication-provider` extension kind + host routes `GET /api/auth/login` / `GET /api/auth/callback`; same-site session cookie `tome_session` (plus `Authorization: Session`); reference package `tome-auth-oidc` (auth-code + PKCE); API has **no CORS**. Editor sign-in UI remains phase 4. When a user corpus declares `types.idpBinding`, OIDC resolves `(issuer, subject)` → Account via Imp→SQL on the session cache (`resolveAccountNodeId`); unbound subjects get `403 unbound_identity`. Without that ontology key, OIDC keeps the provisional claim → `accountNodeId` fallback.
 
 **Phase 3a progress (Denial):** single `Authorizer` (Imp + modification methods); core deny-everything (server default), allow-everything (explicit), and authorization-model (ontology-backed, fail-closed until policy children); wired on Imp + modification HTTP paths; workbench config explicitly sets allow-everything for light solo; extension `authorizationModule` can replace the authorizer. Filtering, probing, catch-all for other APIs, folding `readonly` / `protectedNodeIds` remain later 3x sessions.
 
 **Phase 3b progress (user corpus + node-edit policy):** opt-in user flatfile corpus via `userCorpora` / `TOME_USER_CONTENT_PATH` (corpus id `identity`), synced into the shared session SQLite; Account + Permission fixture; session create validates Account membership when identity is configured; `authorization-model` allows Imp views and allows node modifications when an Imp policy (compiled to SQL) shows the principal holds **can-edit-nodes**. No Role nodes yet (permissions attach directly to Accounts). Design corpora such as marloth-story omit authz ontology keys and stay on workbench `allow-everything`; Denial dogfood for `authorization-model` lives in tome tests/fixtures for now.
 
-**Not yet implemented:** Role nodes, composite mix of multiple user corpora, local IdP bindings as graph/text, remote auth specialty store, Neo4j design/identity adapters.
+**Phase 3b+ progress (local IdP bindings):** identity fixture includes IdP Binding type table + Account↔Binding edges; `ontology.json` `types.idpBinding`; host resolves claims on the shared SQL cache (not flatfile walks). Auth-hook `createSession` also validates Account membership when identity is configured.
+
+**Not yet implemented:** Role nodes, composite mix of multiple user corpora, remote auth specialty store, Neo4j design/identity adapters.
 
 Largest surfaces: authorization (3), user corpora + account UI (5), Neo4j graph (7), and auth UI / profile (4–6) — not core ACL matrices.
 
@@ -229,7 +231,7 @@ Largest surfaces: authorization (3), user corpora + account UI (5), Neo4j graph 
 
 - Phase 1 web API sessions use an **in-memory** store by default (no config). Credentials: `Authorization: Session <sessionId>` **or** same-site cookie `tome_session` (header wins). Create body uses `{ accountNodeId }` (prototype may pass any non-empty string until user corpora enforce real Account nodes); create/delete also set/clear the cookie.
 - **Same-site only:** browser clients call the API via the UI origin `/api` proxy (Vite in `editor:dev`). The application API does **not** speak CORS. OIDC `redirectUri` must be the UI-origin callback (e.g. `http://127.0.0.1:5173/api/auth/callback`). Do not point `VITE_TOME_API_URL` at the API port for cookie SSO.
-- OIDC via `extensions.json` `kind: "authentication-provider"` + `authenticationModule` (at most one enabled). Reference params for `tome-auth-oidc`: `issuer`, `clientId`, `clientSecret` or `clientSecretEnv`, `redirectUri`, optional `scopes` (default `openid`), `subjectClaim` (default `sub`), `postLoginRedirect` (default `/`). See [authentication-providers.md](../extensions/authentication-providers.md). Durable path: claim → user-corpus binding (local) or specialty store (remote) → Account node id → `createSession({ accountNodeId })`.
+- OIDC via `extensions.json` `kind: "authentication-provider"` + `authenticationModule` (at most one enabled). Reference params for `tome-auth-oidc`: `issuer`, `clientId`, `clientSecret` or `clientSecretEnv`, `redirectUri`, optional `scopes` (default `openid`), `subjectClaim` (default `sub`), `postLoginRedirect` (default `/`). See [authentication-providers.md](../extensions/authentication-providers.md). Durable path: claim → user-corpus IdP Binding (local flatfile SoT, resolved via session SQL cache) or specialty store (remote) → Account node id → `createSession({ accountNodeId })`. User corpora declare the binding type table with `ontology.json` `types.idpBinding`.
 - Optional **user corpora**: `userCorpora` on `tome-server.json` and/or `TOME_USER_CONTENT_PATH` (single root → corpus id `identity`). Merged into the same `dataStores` / session SQLite as design corpora. Fixture: `packages/tome-server/fixtures/identity-corpus/`.
 - Optional **ephemeral session** store (memory today; SQLite later, still not corpus SoT). Remote: auth specialty URI beside identity graph.
 - Distinct **design corpus** path/URI (already exists for content/cache; Neo4j design later via `tome-neo4j` store modules).
@@ -253,11 +255,11 @@ Phase 0 is documentation only. Phase 1+: full verify for affected repos + depend
 | `tome-http` denial | Single authorizer consultation (Imp + modification); 403 `forbidden` (phase 3a) |
 | `tome-interfaces/authorization` | `Authorizer` + deny/allow/authorization-model built-ins (`AuthorizationPrincipal.accountNodeId`) |
 | Extension registry/host | `authentication-provider` (phase 2); `authorizationModule` registration (phase 3a); admin/shell kinds as needed (phases 4–5) |
-| `tome-auth-oidc` | Reference OIDC auth-code + PKCE provider (provisional claim → `accountNodeId` until bindings) |
-| `tome-server` | Session store; authn provider; **AuthorizationRegistry** (deny default); passes authorizer to HTTP |
+| `tome-auth-oidc` | Reference OIDC auth-code + PKCE provider (`resolveAccountNodeId` when present; provisional claim fallback otherwise) |
+| `tome-server` | Session store; authn provider; IdP binding resolve (Imp→SQL); **AuthorizationRegistry** (deny default); passes authorizer to HTTP |
 | `tome-service-interfaces` | Session / authentication / authorizer ports on `TomeServiceHost`; `authorization.implementationId` config |
 | `tome-editor` | Shell mount points for sign-in / account / profile (phases 4–6); `/api` proxy for same-site |
-| User corpora open/migrate | Future: identity graph roots (mix + share); never alter design corpus DDL; local durable identity is flatfile |
+| User corpora open/migrate | Identity flatfile roots (mix + share later); never alter design corpus DDL; local durable identity is flatfile |
 | Auth specialty store | Future **remote**: sessions / IdP bindings keyed by Account node id |
 | Design store (`tome-sqlite` / future `tome-neo4j`) | Local: ephemeral design cache; Neo4j phase 7: authoritative design graph (sibling repo) |
 

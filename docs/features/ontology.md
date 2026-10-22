@@ -66,7 +66,8 @@ Optional file: `content/model/ontology.json`
     "ontology": "<ontology-type-node-ulid>",
     "predicate": "<predicate-type-node-ulid>",
     "memberScope": "<member-scope-type-node-ulid>",
-    "authorizationModel": "<authorization-model-type-table-ulid>"
+    "authorizationModel": "<authorization-model-type-table-ulid>",
+    "idpBinding": "<idp-binding-type-table-ulid>"
   }
 }
 ```
@@ -79,6 +80,7 @@ Optional file: `content/model/ontology.json`
 | `types.predicate` | Type-table node whose **members** are predicate instances |
 | `types.memberScope` | Type-table node whose **members** are member-scope instances (optional) |
 | `types.authorizationModel` | Type-table node whose **members** are Authorization Model instances (optional). Couples a minimal authz footprint into the model so authorization is not fully detachable from corpus data. Used by the `authorization-model` server authorizer — see [authorization-authorizers.md](../extensions/authorization-authorizers.md). |
+| `types.idpBinding` | Type-table node whose **members** are IdP Binding instances (optional; typically on a **user corpus**). Used at host wire-up so OIDC can resolve `(issuer, subject)` → Account via the session SQL cache — see [multi-user.md](./multi-user.md) and [authentication-providers.md](../extensions/authentication-providers.md). |
 
 **Taxonomy is relational** (not frontmatter markers):
 
@@ -90,6 +92,7 @@ Optional file: `content/model/ontology.json`
 | Member-scope instance | Member of `types.memberScope` |
 | **Active** member-scope | Member-scope instance **and** member of ≥1 ontology instance, with a valid binding payload |
 | Authorization Model instance | Member of `types.authorizationModel` (container; grant/logic child nodes later) |
+| IdP Binding instance | Member of `types.idpBinding` (local IdP claim → Account binding; user corpora) |
 
 Set-trait relationship types still come from `associations.json` (bootstrap / chicken-egg until typing can be expressed as node-native patterns).
 

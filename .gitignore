@@ -2,7 +2,8 @@ node_modules/
 .bun-install.lock
 **/dist/
 **/dist-webview/
-data/
+# Local corpus SQLite caches at repo root (not content/data/ fixtures).
+/data/
 .DS_Store
 Thumbs.db
 
