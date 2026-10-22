@@ -1,7 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { tmpdir } from "node:os";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -9,13 +7,15 @@ import {
   TEST_HOME_NODE_ID,
 } from "tome-db/content/test-helpers";
 import { recentNodesGraph } from "tome-db";
-import { createTestApi } from "./test-api-setup";
+import {
+  allowEverythingAuthorizerOptions,
+  createApiHandler,
+  UserSettingsStore,
+} from "tome-http";
+import { openTomeGraphServicesDeferred } from "../../src/graph-services";
 
 describe("queryNodes API", async () => {
-  test("POST /api/nodes/query runs recentNodesGraph", async () => {
-    const dir = mkdtempSync(join(tmpdir(), "tome-nodes-query-api-"));
-    const dbPath = join(dir, "api.sqlite");
-
+  test("POST /api/nodes/query runs recentNodesGraph without GraphStore.executeImp", async () => {
     const fixture = await createTestContentFixture("tome-nodes-query-content-");
     await seedTestNode(fixture, {
       id: TEST_HOME_NODE_ID,
@@ -26,9 +26,20 @@ describe("queryNodes API", async () => {
     });
     fixture.ctx.sync.fullRebuild();
 
-    const { handler: apiHandler } = await createTestApi({
-      dbPath,
-      contentDir: fixture.ctx.store.contentDir,
+    let graphStoreExecuteImpCalls = 0;
+    const originalExecuteImp = fixture.ctx.graphStore.executeImp.bind(fixture.ctx.graphStore);
+    fixture.ctx.graphStore.executeImp = async (...args) => {
+      graphStoreExecuteImpCalls += 1;
+      return originalExecuteImp(...args);
+    };
+
+    const deferred = await openTomeGraphServicesDeferred(null, {
+      writeContext: fixture.ctx,
+      skipStoreSyncSubscribe: true,
+    });
+    const settingsPath = join(fixture.tempDir, "user-settings.json");
+    const apiHandler = createApiHandler(deferred.services, new UserSettingsStore(settingsPath), {
+      ...allowEverythingAuthorizerOptions(),
     });
 
     const response = await apiHandler(
@@ -45,9 +56,10 @@ describe("queryNodes API", async () => {
       rows: Array<{ id: string }>;
     };
     expect(payload.rows.some((row) => row.id === TEST_HOME_NODE_ID)).toBe(true);
+    expect(graphStoreExecuteImpCalls).toBe(0);
 
-    apiHandler.close();
+    await apiHandler.close();
+    await deferred.services.close();
     await destroyTestContentFixture(fixture);
-    rmSync(dir, { recursive: true, force: true });
   });
 });

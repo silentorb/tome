@@ -15,7 +15,7 @@ import { withProfilingSpanAsync } from "tome-service-interfaces";
 
 /**
  * Options for product Imp → SQL cache queries.
- * Shaped so `POST /api/nodes/query` can adopt the same helper later
+ * Used by Recent and by {@link queryImpCollection} for non-search graphs
  * (`parameters` / `pageNodeId` match {@link ExecuteImpContext}).
  */
 export type QueryImpSqlOptions = {

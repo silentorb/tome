@@ -28,6 +28,7 @@ import {
   recentNodesGraph,
   searchNodesGraph,
   queryImpSql,
+  queryImpCollection,
   listDistinctProjectionTypes,
   updateNodeBody,
   updateNodeTitle,
@@ -602,7 +603,16 @@ function buildGraphServices(
       );
     },
     async executeImp(graph, context) {
-      return writeCtx.graphStore.executeImp(graph, context);
+      await extensionsReady;
+      const searchRole = context?.searchRole === "title" ? "title" : "content";
+      return queryImpCollection({
+        store: writeCtx.graphStore,
+        cache: writeCtx.cache,
+        graph,
+        context,
+        schema: await schema(),
+        search: extensions.getSearch(searchRole),
+      });
     },
     async getExtensionsManifest(): Promise<PublicExtensionsManifest> {
       await extensionsReady;

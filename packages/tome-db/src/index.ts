@@ -456,7 +456,10 @@ export {
   runExecuteImp,
   runExecuteImpSql,
   queryImpSql,
+  queryImpCollection,
   applyImpParameters,
+  graphHasCorpusNode,
+  lazyCorpusLookupFromStore,
   listDistinctProjectionTypes,
   listNodeIdsForProjectionType,
   listSourceNodeIdsForProjectionType,
@@ -475,6 +478,7 @@ export type {
   RelationshipReadStore,
   RunExecuteImpOptions,
   QueryImpSqlOptions,
+  QueryImpCollectionOptions,
   SemanticPathFromAnchorOptions,
 } from "./graph-store";
 export type {

@@ -7,6 +7,12 @@ export { runExecuteImp, runExecuteImpSql } from "./execute-imp";
 export type { RunExecuteImpOptions } from "./execute-imp";
 export { applyImpParameters, queryImpSql } from "./query-imp-sql";
 export type { QueryImpSqlOptions } from "./query-imp-sql";
+export {
+  graphHasCorpusNode,
+  lazyCorpusLookupFromStore,
+  queryImpCollection,
+} from "./query-imp-collection";
+export type { QueryImpCollectionOptions } from "./query-imp-collection";
 export type { RelationshipReadStore } from "./relationship-read";
 export type { GraphWriteStore } from "./relationship-write";
 export {
