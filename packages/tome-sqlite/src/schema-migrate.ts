@@ -406,6 +406,7 @@ export function migrateSchema(db: Database): void {
   migrateSchemaToV14(db);
   migrateSchemaToV15(db);
   migrateSchemaToV16(db);
+  migrateSchemaToV17(db);
 
   const versionRow = db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get() as
     | { value: string }
@@ -457,6 +458,14 @@ export function migrateSchemaToV16(db: Database): void {
   db.exec("DROP INDEX IF EXISTS idx_rel_proj_source");
   db.exec(
     "CREATE INDEX IF NOT EXISTS idx_rel_proj_source ON relationship_projections(source_node_id, type, ordinal, id)",
+  );
+}
+
+/** Live-node ORDER BY modified_at for Recent / Imp→SQL chrome (v16 → v17). */
+export function migrateSchemaToV17(db: Database): void {
+  if (!tableExists(db, "nodes")) return;
+  db.exec(
+    "CREATE INDEX IF NOT EXISTS idx_nodes_live_modified_at ON nodes(modified_at DESC) WHERE is_archived = 0",
   );
 }
 

@@ -20,6 +20,7 @@ import type { SQLQueryBindings } from "bun:sqlite";
 import { loadSchemaFromContent } from "tome-flatfile";
 import { withProfilingSpan, withProfilingSpanAsync } from "tome-service-interfaces";
 import { graphHasSearchNode, runSearchImpGraphSql } from "./search-graph";
+import { applyImpParameters } from "./query-imp-sql";
 
 export interface RunExecuteImpOptions {
   backend: ImpExecutionBackend;
@@ -33,21 +34,6 @@ export interface RunExecuteImpOptions {
 
 function impGraphToGraph(graph: ImpGraph): Graph {
   return graph as Graph;
-}
-
-function applyParameters(graph: Graph, parameters?: Record<string, unknown>): Graph {
-  if (!parameters || Object.keys(parameters).length === 0) return graph;
-  const nodes = { ...graph.nodes };
-  for (const node of Object.values(nodes)) {
-    if (node.type !== "parameter") continue;
-    const label = node.inputs?.label;
-    if (typeof label !== "string" || !(label in parameters)) continue;
-    nodes[node.id] = {
-      ...node,
-      inputs: { ...node.inputs, value: parameters[label] as string | number | boolean | null },
-    };
-  }
-  return { ...graph, nodes };
 }
 
 async function corpusLookupFromStore(store: TomeGraphStoreBase): Promise<TomeCorpusLookup> {
@@ -77,7 +63,7 @@ function filterRowsByCorpus(
 /** Execute an Imp graph via SQL lowering or imp-execution over flatfile. */
 export async function runExecuteImp(options: RunExecuteImpOptions): Promise<ImpCollectionResult> {
   const corpus = options.corpus ?? (await corpusLookupFromStore(options.store));
-  let graph = applyParameters(impGraphToGraph(options.graph), options.context?.parameters);
+  let graph = applyImpParameters(impGraphToGraph(options.graph), options.context?.parameters);
   const constraint = await resolveCorpusConstraint(graph, {
     pageNodeId: options.context?.pageNodeId,
     corpus,
@@ -152,7 +138,7 @@ export async function runExecuteImpSql(
   search?: import("tome-interfaces/search").TomeSearch | null,
 ): Promise<ImpCollectionResult> {
   const corpus = await corpusLookupFromStore(store);
-  let impGraph = applyParameters(impGraphToGraph(graph), context?.parameters);
+  let impGraph = applyImpParameters(impGraphToGraph(graph), context?.parameters);
   await resolveCorpusConstraint(impGraph, { pageNodeId: context?.pageNodeId, corpus });
   impGraph = spliceCorpusNodes(impGraph);
   const backendAttr = { "imp.backend": "sql" as const };

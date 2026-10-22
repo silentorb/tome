@@ -455,6 +455,8 @@ export {
   openFlatfileQueryableGraphStore,
   runExecuteImp,
   runExecuteImpSql,
+  queryImpSql,
+  applyImpParameters,
   listDistinctProjectionTypes,
   listNodeIdsForProjectionType,
   listSourceNodeIdsForProjectionType,
@@ -472,6 +474,7 @@ export {
 export type {
   RelationshipReadStore,
   RunExecuteImpOptions,
+  QueryImpSqlOptions,
   SemanticPathFromAnchorOptions,
 } from "./graph-store";
 export type {

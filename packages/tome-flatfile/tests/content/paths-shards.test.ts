@@ -73,6 +73,24 @@ describe("entropy-sharded node paths", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  test("locateNode uses path existence without parsing markdown", () => {
+    const root = mkdtempSync(resolve(tmpdir(), "shard-locate-"));
+    try {
+      const store = new ContentStore(root, { corpusId: "solo" });
+      mkdirSync(resolve(root, "data", "nodes", "NB"), { recursive: true });
+      writeFileSync(
+        nodeFilePath(root, ID, false),
+        "not valid frontmatter {{{",
+        "utf-8",
+      );
+      expect(store.locateNode(ID)).toBe("solo");
+      expect(store.locateNode("ZZZZZZZZZZZZZZZZZZZZZZZZZZ")).toBeNull();
+      expect(() => store.readNode(ID)).toThrow();
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
 
 describe("relationship hash paths", () => {

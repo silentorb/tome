@@ -274,6 +274,12 @@ describe("GraphDatabase", () => {
     expect(columnNames).not.toContain("properties");
     expect(columnNames).toContain("title");
     expect(columnNames).toContain("body");
+    const indexNames = db
+      .queryAll<{ name: string }>(
+        "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'nodes'",
+      )
+      .map((row) => row.name);
+    expect(indexNames).toContain("idx_nodes_live_modified_at");
     db.close();
   });
 

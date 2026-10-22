@@ -295,7 +295,15 @@ export class ContentStore implements TomeDataStore {
   }
 
   locateNode(id: string): string | null {
-    return this.readNode(id) ? this.corpusId : null;
+    if (!isNodeId(id)) return null;
+    // Existence only — do not parse markdown (Recent / corpusMeta hot path).
+    if (
+      existsSync(nodeFilePath(this.contentDir, id, false)) ||
+      existsSync(nodeFilePath(this.contentDir, id, true))
+    ) {
+      return this.corpusId;
+    }
+    return null;
   }
 
   listCorpora(): readonly TomeCorpusInfo[] {

@@ -33,7 +33,17 @@ describe("recent nodes API", async () => {
     });
 
     fixture.ctx.sync.fullRebuild();
-    const { handler: apiHandler } = await createTestApi({ dbPath, contentDir: fixture.ctx.store.contentDir });
+    const { handler: apiHandler, services } = await createTestApi({
+      dbPath,
+      contentDir: fixture.ctx.store.contentDir,
+    });
+
+    let executeImpCalls = 0;
+    const originalExecuteImp = services.executeImp.bind(services);
+    services.executeImp = async (...args) => {
+      executeImpCalls += 1;
+      return originalExecuteImp(...args);
+    };
 
     const response = await apiHandler(
       new Request("http://127.0.0.1/api/nodes/recent?limit=8"),
@@ -45,6 +55,7 @@ describe("recent nodes API", async () => {
     };
     expect(payload.results[0]?.id).toBe(newerId);
     expect(payload.results.some((row) => row.id === olderId)).toBe(true);
+    expect(executeImpCalls).toBe(0);
 
     apiHandler.close();
     await destroyTestContentFixture(fixture);

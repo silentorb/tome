@@ -130,7 +130,9 @@ Graph / query backends load as **store/cache modules** via `tome-server` `dataSt
 | **3 — Read-path completion** | Done | Explorer, table views, node page detail on graph store; `listRelationshipProjections`; standard graphs `outgoingRelationships` / `incomingRelationships`; public POST-body Imp query `POST /api/nodes/query` |
 | **4 — Write-path migration** | Done | Domain mutations via imperative `TomeGraphStoreBase` (`graphStore`); `relationship-write.ts` helpers; no Imp write graphs |
 
-Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read paths. Phase 4 routes domain mutations through **`ctx.graphStore`** (Base tier) instead of parallel `ctx.store` persistence and `ctx.cache` read-assist during validation. **`executeImp` remains read-only** — Imp mutation operators are not part of the Tome host v1 design. Editor HTTP use cases stay application-specific ([web-api-design.md](./web-api-design.md)); integrators may call **`POST /api/nodes/query`** (`{ graph, context? }` → `{ columns, rows }`) with the same `executeImp` surface extensions use.
+Phase 3 removes direct `writeCtx.cache` reads from editor `graph-services` read paths. Phase 4 routes domain mutations through **`ctx.graphStore`** (Base tier) instead of parallel `ctx.store` persistence and `ctx.cache` read-assist during validation. **`executeImp` remains read-only** — Imp mutation operators are not part of the Tome host v1 design. Editor HTTP use cases stay application-specific ([web-api-design.md](./web-api-design.md)).
+
+**Product Imp → SQL (preferred on composed flatfile→SQLite hosts):** chrome and HTTP Imp collection queries should use **`queryImpSql(cache, graph, options?)`** — `compileImpGraphToTomeSql` then cache `queryAll` — not `GraphStore.executeImp` (which binds flatfile for corpus lookup). Today: `GET /api/nodes/recent` / home fallback. **Next:** `POST /api/nodes/query` and the HTTP `executeImp` facade should adopt the same helper. `GraphStore.executeImp` stays the Queryable integrator / non-SQL (`imp-execution`) API.
 
 ### Standard Imp graphs (`tome-db`)
 
@@ -138,7 +140,7 @@ Imp hop graphs use bare `association` (relationship type ULID; Imp field name) +
 
 | Graph factory | Purpose |
 | --- | --- |
-| `recentNodesGraph` | Recent nodes by `modified_at` |
+| `recentNodesGraph` | Recent nodes by `modified_at` (product path: `queryImpSql`) |
 | `typeMembersGraph(setNodeId, relationshipTypeId, direction)` | Type-table member rows (set-side hop) |
 | `searchNodesGraph` | Title/body search |
 | `outgoingRelationshipsGraph(nodeId, relationshipTypeId)` | Outgoing projections from a node (direction 0) |

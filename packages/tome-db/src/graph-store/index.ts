@@ -5,6 +5,8 @@ export {
 } from "./composed-graph-store";
 export { runExecuteImp, runExecuteImpSql } from "./execute-imp";
 export type { RunExecuteImpOptions } from "./execute-imp";
+export { applyImpParameters, queryImpSql } from "./query-imp-sql";
+export type { QueryImpSqlOptions } from "./query-imp-sql";
 export type { RelationshipReadStore } from "./relationship-read";
 export type { GraphWriteStore } from "./relationship-write";
 export {

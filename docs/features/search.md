@@ -73,7 +73,7 @@ Same-DB Postgres FTS keeps the index warm via SoT node writes (`search_vector` g
 | --- | --- |
 | Imp `type: "search"` | Collection **operator**; host-delegated; `ExecuteImpContext.searchRole` selects title or content |
 | Editor table `q` | **Content** searcher via `searchWindow` as a **prior query operator** in the [uniform window pipeline](./views.md) |
-| Sidebar Recent | Separate Imp graph `recentNodesGraph` (`sort(modified_at)` → limit) via `GET /api/nodes/recent` |
+| Sidebar Recent | Imp graph `recentNodesGraph` (`sort(modified_at)` → limit) via `GET /api/nodes/recent`, run with `queryImpSql` (compile → cache `queryAll`) — not `GraphStore.executeImp` |
 | Empty global / picker / `@` `q` | Title-ordered **browse** (`listRecentNodes`) — not the Recent sidebar |
 
 **Paradigm:** Title search is a precise **filter + relevance sort** over titles. Content search (FTS / future) is primarily a **weighted sort** over indexed text; non-matches or low scores are an optional **shelf** cutoff. The searcher call owns rank + page; membership SQL only hydrates by hit ids.

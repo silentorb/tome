@@ -27,6 +27,7 @@ import {
   relationshipTypeRuleContext,
   recentNodesGraph,
   searchNodesGraph,
+  queryImpSql,
   listDistinctProjectionTypes,
   updateNodeBody,
   updateNodeTitle,
@@ -255,7 +256,7 @@ function buildGraphServices(
     async getHomeId(corpus?: string) {
       const ws = await workspaceForCorpus(corpus);
       if (await graphStore.getNode(ws.homeNodeId)) return ws.homeNodeId;
-      const recent = await writeCtx.graphStore.executeImp(recentNodesGraph(1));
+      const recent = await queryImpSql(writeCtx.cache, recentNodesGraph(1));
       const rows = recent.rows;
       return rows[0]?.id ? String(rows[0].id) : ws.homeNodeId;
     },
@@ -463,7 +464,7 @@ function buildGraphServices(
     },
     async listRecent(limit?: number) {
       const cap = Math.max(1, Math.min(limit ?? 20, 100));
-      const executed = await writeCtx.graphStore.executeImp(recentNodesGraph(cap));
+      const executed = await queryImpSql(writeCtx.cache, recentNodesGraph(cap));
       const rows = executed.rows;
       const summaries: NodeSummary[] = [];
       for (const row of rows) {
