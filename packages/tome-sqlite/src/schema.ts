@@ -1,4 +1,4 @@
-export const SCHEMA_VERSION = 17;
+export const SCHEMA_VERSION = 18;
 
 /** Hot node fields stored as real columns on `nodes` (never in `node_properties`). */
 export const PROMOTED_NODE_COLUMNS = [
@@ -35,7 +35,14 @@ CREATE TABLE IF NOT EXISTS nodes (
   body TEXT,
   created_at TEXT,
   modified_at TEXT,
-  is_archived INTEGER NOT NULL DEFAULT 0
+  is_archived INTEGER NOT NULL DEFAULT 0,
+  corpus_id TEXT
+);
+
+CREATE TABLE IF NOT EXISTS corpora (
+  id TEXT PRIMARY KEY NOT NULL,
+  access TEXT NOT NULL,
+  workspace_json TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS node_properties (
@@ -83,6 +90,7 @@ CREATE TABLE IF NOT EXISTS relationship_projection_properties (
 
 CREATE INDEX IF NOT EXISTS idx_nodes_is_archived ON nodes(is_archived) WHERE is_archived = 1;
 -- Live modified_at index is created in migrateSchemaToV17 (needs promoted columns on upgrade DBs).
+-- idx_nodes_corpus_id is created in migrateSchemaToV18 (column may be absent on upgrade DBs until migrate).
 CREATE INDEX IF NOT EXISTS idx_node_properties_key ON node_properties(key);
 CREATE INDEX IF NOT EXISTS idx_rel_records_node_a ON relationship_records(node_a);
 CREATE INDEX IF NOT EXISTS idx_rel_records_node_b ON relationship_records(node_b);

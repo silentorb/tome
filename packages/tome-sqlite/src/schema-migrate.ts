@@ -407,6 +407,7 @@ export function migrateSchema(db: Database): void {
   migrateSchemaToV15(db);
   migrateSchemaToV16(db);
   migrateSchemaToV17(db);
+  migrateSchemaToV18(db);
 
   const versionRow = db.prepare("SELECT value FROM meta WHERE key = 'schema_version'").get() as
     | { value: string }
@@ -467,6 +468,26 @@ export function migrateSchemaToV17(db: Database): void {
   db.exec(
     "CREATE INDEX IF NOT EXISTS idx_nodes_live_modified_at ON nodes(modified_at DESC) WHERE is_archived = 0",
   );
+}
+
+/**
+ * Corpus ownership on nodes + ephemeral corpora catalog for chrome / Imp filters
+ * (v17 → v18).
+ */
+export function migrateSchemaToV18(db: Database): void {
+  if (tableExists(db, "nodes") && !columnNames(db, "nodes").includes("corpus_id")) {
+    db.exec("ALTER TABLE nodes ADD COLUMN corpus_id TEXT");
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS corpora (
+      id TEXT PRIMARY KEY NOT NULL,
+      access TEXT NOT NULL,
+      workspace_json TEXT NOT NULL
+    );
+  `);
+  if (tableExists(db, "nodes")) {
+    db.exec("CREATE INDEX IF NOT EXISTS idx_nodes_corpus_id ON nodes(corpus_id)");
+  }
 }
 
 /** @deprecated Use migrateSchema */

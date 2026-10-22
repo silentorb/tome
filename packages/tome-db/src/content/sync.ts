@@ -453,6 +453,28 @@ export class CacheSync {
     await this.cache.recomputeArchivedFlags(archiveIds);
   }
 
+  /** Mirror open corpora (id/access/workspace) into the session SQLite catalog. */
+  private async syncCorporaCatalog(): Promise<void> {
+    await this.cache.clearCorpora();
+    for (const corpus of this.store.listCorpora()) {
+      await this.cache.upsertCorpus({
+        id: corpus.id,
+        access: corpus.access,
+        workspace: corpus.workspace,
+      });
+    }
+  }
+
+  /** Populate `nodes.corpus_id` after schema upgrade or when ownership was never written. */
+  private async backfillMissingCorpusIds(): Promise<void> {
+    const rows = await this.cache.queryAll<{ id: string }>(
+      "SELECT id FROM nodes WHERE corpus_id IS NULL OR corpus_id = ''",
+    );
+    for (const row of rows) {
+      await this.cache.upsertNode(row.id, {}, this.store.locateNode(row.id));
+    }
+  }
+
   /**
    * Full cache rebuild from flatfile content. Yields on progress ticks during startup sync
    * so HTTP can answer gated syncing responses.
@@ -460,6 +482,7 @@ export class CacheSync {
   async fullRebuild(): Promise<void> {
     await this.exclusive(async () => {
       await this.cache.runExec("DELETE FROM nodes");
+      await this.syncCorporaCatalog();
 
       const ids = this.store.listNodeIds();
       const total = ids.length;
@@ -473,7 +496,7 @@ export class CacheSync {
         if (!node) continue;
         const body = bodyFromNode(node);
         const props = { ...node.properties, body };
-        await this.cache.upsertNode(node.id, props);
+        await this.cache.upsertNode(node.id, props, this.store.locateNode(id));
         if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
           this.report({ phase: "rebuild_nodes", current: i + 1, total });
           await Bun.sleep(0);
@@ -500,6 +523,10 @@ export class CacheSync {
       if (await this.cacheNeedsRebuild()) {
         await this.fullRebuild();
       } else {
+        await this.exclusive(async () => {
+          await this.syncCorporaCatalog();
+          await this.backfillMissingCorpusIds();
+        });
         await this.reconcileNodeBodiesFromFiles();
       }
       this.report({
@@ -549,7 +576,11 @@ export class CacheSync {
       return;
     }
     const body = bodyFromNode(node);
-    await this.cache.upsertNode(node.id, { ...node.properties, body });
+    await this.cache.upsertNode(
+      node.id,
+      { ...node.properties, body },
+      this.store.locateNode(id),
+    );
   }
 
   async syncNode(id: string): Promise<void> {
@@ -613,6 +644,7 @@ export class CacheSync {
 
     if (relativeName === CORPUS_FILENAME || relativeName === WORKSPACE_FILENAME) {
       invalidateWorkspaceCache();
+      await this.syncCorporaCatalog();
       await this.recomputeArchivedFlags();
       await this.updateCacheMarkers();
       return;

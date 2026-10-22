@@ -1,6 +1,7 @@
 /**
  * Host-mediated corpus routing for extension page blocks (pre-SQL query scoping).
- * Backed by the store node→corpus map, not the SQLite cache.
+ * Prefer session SQLite `nodes.corpus_id` when a query cache is available; flatfile
+ * routing map is the fallback for cache-less hosts.
  */
 export interface ExtensionCorpusQueryServices {
   corpusIdForNode(nodeId: string): string | null | Promise<string | null>;

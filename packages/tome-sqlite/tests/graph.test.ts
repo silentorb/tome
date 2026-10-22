@@ -46,6 +46,36 @@ describe("GraphDatabase", () => {
     db2.close();
   });
 
+  test("stores corpus_id and corpora catalog", () => {
+    tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
+    dbPath = join(tempDir, "corpus.sqlite");
+    const db = new GraphDatabase(dbPath);
+    db.upsertNode("n1", { title: "One" }, "marloth");
+    db.upsertNode("n2", { title: "Two" }, "translucence");
+    db.upsertCorpus({
+      id: "marloth",
+      access: "readwrite",
+      workspace: {
+        version: 1,
+        homeNodeId: "n1",
+        archiveNodeId: "n1",
+        protectedNodeIds: [],
+        graphExplorer: { defaultAnchorNodeId: "n1" },
+        staticSite: { homeNodeId: "n1" },
+        quickLinks: [],
+      },
+    });
+    expect(db.corpusIdForNode("n1")).toBe("marloth");
+    expect(db.nodeIdsInCorpus("marloth")).toEqual(["n1"]);
+    expect(db.listCorporaFromCache()).toHaveLength(1);
+    expect(db.getCorpus("marloth")?.workspace.homeNodeId).toBe("n1");
+    const columnNames = db
+      .queryAll<{ name: string }>("SELECT name FROM pragma_table_info('nodes')")
+      .map((row) => row.name);
+    expect(columnNames).toContain("corpus_id");
+    db.close();
+  });
+
   test("merges node properties on upsert", () => {
     tempDir = mkdtempSync(join(tmpdir(), "tome-sqlite-test-"));
     dbPath = join(tempDir, "merge.sqlite");

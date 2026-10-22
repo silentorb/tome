@@ -21,6 +21,11 @@ import { loadSchemaFromContent } from "tome-flatfile";
 import { withProfilingSpan, withProfilingSpanAsync } from "tome-service-interfaces";
 import { graphHasSearchNode, runSearchImpGraphSql } from "./search-graph";
 import { applyImpParameters } from "./query-imp-sql";
+import {
+  corpusLookupFromCache,
+  graphHasCorpusNode,
+  lazyCorpusLookupFromStore,
+} from "./query-imp-collection";
 
 export interface RunExecuteImpOptions {
   backend: ImpExecutionBackend;
@@ -36,18 +41,6 @@ function impGraphToGraph(graph: ImpGraph): Graph {
   return graph as Graph;
 }
 
-async function corpusLookupFromStore(store: TomeGraphStoreBase): Promise<TomeCorpusLookup> {
-  const allIds = await store.listNodeIds();
-  return {
-    corpusIdForNode(nodeId: string): string | null {
-      return store.locateNode(nodeId);
-    },
-    nodeIdsInCorpus(corpusId: string): readonly string[] {
-      return allIds.filter((id) => store.locateNode(id) === corpusId);
-    },
-  };
-}
-
 function filterRowsByCorpus(
   result: ImpCollectionResult,
   nodeIds: readonly string[] | null,
@@ -60,13 +53,26 @@ function filterRowsByCorpus(
   };
 }
 
+function resolveCorpusLookup(
+  options: RunExecuteImpOptions,
+  graph: Graph,
+): TomeCorpusLookup | undefined {
+  if (options.corpus) return options.corpus;
+  if (!graphHasCorpusNode(graph)) return undefined;
+  if (options.cache) return corpusLookupFromCache(options.cache);
+  return lazyCorpusLookupFromStore(options.store);
+}
+
 /** Execute an Imp graph via SQL lowering or imp-execution over flatfile. */
 export async function runExecuteImp(options: RunExecuteImpOptions): Promise<ImpCollectionResult> {
-  const corpus = options.corpus ?? (await corpusLookupFromStore(options.store));
   let graph = applyImpParameters(impGraphToGraph(options.graph), options.context?.parameters);
+  const corpus = resolveCorpusLookup(options, graph);
+  // Flatfile hosts and Imp search (post-filter) need an id set; SQL compile uses corpus_id.
+  const materializeNodeIds = options.backend !== "sql" || graphHasSearchNode(graph);
   const constraint = await resolveCorpusConstraint(graph, {
     pageNodeId: options.context?.pageNodeId,
     corpus,
+    materializeNodeIds,
   });
   graph = spliceCorpusNodes(graph);
   const backendAttr = { "imp.backend": options.backend };
@@ -110,10 +116,7 @@ export async function runExecuteImp(options: RunExecuteImpOptions): Promise<ImpC
     const rows = await withProfilingSpanAsync("imp.execute", "INTERNAL", backendAttr, () =>
       options.cache!.queryAll(compiled.sql, ...(compiled.parameters as SQLQueryBindings[])),
     );
-    return filterRowsByCorpus(
-      { columns: rows[0] ? Object.keys(rows[0]) : ["id"], rows },
-      constraint.nodeIds,
-    );
+    return { columns: rows[0] ? Object.keys(rows[0]) : ["id"], rows };
   }
 
   const host = await createFlatfileExecutionHost(options.store, {
@@ -137,10 +140,8 @@ export async function runExecuteImpSql(
   context?: ExecuteImpContext,
   search?: import("tome-interfaces/search").TomeSearch | null,
 ): Promise<ImpCollectionResult> {
-  const corpus = await corpusLookupFromStore(store);
   let impGraph = applyImpParameters(impGraphToGraph(graph), context?.parameters);
-  await resolveCorpusConstraint(impGraph, { pageNodeId: context?.pageNodeId, corpus });
-  impGraph = spliceCorpusNodes(impGraph);
+  const corpus = graphHasCorpusNode(impGraph) ? corpusLookupFromCache(cache) : undefined;
   const backendAttr = { "imp.backend": "sql" as const };
   if (graphHasSearchNode(impGraph)) {
     return withProfilingSpanAsync("imp.search", "INTERNAL", backendAttr, () =>

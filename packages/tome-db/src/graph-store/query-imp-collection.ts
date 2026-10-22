@@ -22,7 +22,7 @@ export type QueryImpCollectionOptions = {
   search?: TomeSearch | null;
   /**
    * Optional corpus lookup. When omitted and the graph has a `corpus` operator,
-   * a lazy lookup is built from {@link store} (no eager `listNodeIds`).
+   * a SQL-backed lookup is used (no flatfile `listNodeIds`).
    */
   corpus?: TomeCorpusLookup;
 };
@@ -39,6 +39,18 @@ export function lazyCorpusLookupFromStore(store: TomeGraphStoreBase): TomeCorpus
     },
     async nodeIdsInCorpus(corpusId: string): Promise<readonly string[]> {
       return (await store.listNodeIds()).filter((id) => store.locateNode(id) === corpusId);
+    },
+  };
+}
+
+/** Corpus lookup from session SQLite `nodes.corpus_id` (preferred on composed hosts). */
+export function corpusLookupFromCache(cache: TomeQueryCache): TomeCorpusLookup {
+  return {
+    corpusIdForNode(nodeId: string): Promise<string | null> {
+      return cache.corpusIdForNode(nodeId);
+    },
+    nodeIdsInCorpus(corpusId: string): Promise<readonly string[]> {
+      return cache.nodeIdsInCorpus(corpusId);
     },
   };
 }
@@ -60,7 +72,7 @@ export async function queryImpCollection(
 
   const corpus =
     options.corpus ??
-    (graphHasCorpusNode(impGraph) ? lazyCorpusLookupFromStore(store) : undefined);
+    (graphHasCorpusNode(impGraph) ? corpusLookupFromCache(cache) : undefined);
 
   return queryImpSql(cache, impGraph as ImpGraph, {
     pageNodeId: context?.pageNodeId,

@@ -8,6 +8,7 @@ export type { RunExecuteImpOptions } from "./execute-imp";
 export { applyImpParameters, queryImpSql } from "./query-imp-sql";
 export type { QueryImpSqlOptions } from "./query-imp-sql";
 export {
+  corpusLookupFromCache,
   graphHasCorpusNode,
   lazyCorpusLookupFromStore,
   queryImpCollection,

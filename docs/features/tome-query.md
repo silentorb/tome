@@ -44,7 +44,7 @@ The Imp React Flow canvas (`ImpFlowEditor`) lives in **`tome-react-flow`**. This
 ### Query semantics
 
 - Input = unresolved enumeration of all live nodes (IEnumerable-style pipeline; corpus rows are not RF nodes)
-- **`corpus` operator (Tome-only, pre-SQL):** pin the input collection to one corpus before Imp SQL lowering. Port `id` is `"page"` (default: corpus that owns the page node), a corpus slug (`translucence`, `marloth`), or `"all"` (session union). The host resolves ids via the store routing map (`locateNode` / `listNodeIds`) and rewrites live `FROM nodes` with `id IN (…)`. `imp-sql` never sees this node type.
+- **`corpus` operator (Tome-only, pre-SQL):** pin the input collection to one corpus before Imp SQL lowering. Port `id` is `"page"` (default: corpus that owns the page node), a corpus slug (`translucence`, `marloth`), or `"all"` (session union). On composed hosts the session SQLite `nodes.corpus_id` column scopes live `FROM nodes` (`AND corpus_id = '…'`). Flatfile-only hosts may still materialize an `id IN (…)` set from the store routing map. `imp-sql` never sees this node type.
 - Supported transforms: Imp collection library (`filter`, `except`, `sort`, `limit`, `offset`, `project`, `group`, predicates, `column`, `literal`)
 - Supported path ops: Imp `traverse` (single hop via `relationship_projections`; Imp inputs are separate bare `association` (relationship type ULID; Imp field name) + `direction` — Tome packs them to projection types only at SQL/execute time)
 - **Ordinary hop authoring:** traverse nodes use ontology tokens (type-table + relation column key) that write ULID + direction into those ports. Free-text relationship type ULIDs are not the default authoring surface when path-hop options load (`listPathHopOptions` invoke). Multi-hop = chain `traverse` nodes, each filled via tokens.
@@ -56,7 +56,7 @@ The Imp React Flow canvas (`ImpFlowEditor`) lives in **`tome-react-flow`**. This
 ### Host services
 
 - Extensions receive `services.executeImp` (`executeImp(graph, context?)` → `{ columns, rows }`) for Imp collection queries
-- Extensions receive `services.corpusQuery` (`corpusIdForNode`, `nodeIdsInCorpus`) so query compile can pin a corpus without a SQLite `corpus_id` column
+- Extensions receive `services.corpusQuery` (`corpusIdForNode`, `nodeIdsInCorpus`) backed by session SQLite `nodes.corpus_id` when a query cache is present (flatfile routing map otherwise)
 - Editor page-block context may expose `openToolPanel` / `closeToolPanel` for the host right panel
 
 ## Design rationale

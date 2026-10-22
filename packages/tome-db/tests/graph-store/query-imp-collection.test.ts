@@ -117,7 +117,7 @@ describe("queryImpCollection", () => {
     }
   });
 
-  test("corpus operator resolves via lazy lookup without eager listNodeIds before compile", async () => {
+  test("corpus operator uses SQLite corpus_id without flatfile listNodeIds", async () => {
     const fixture = await createTestContentFixture("tome-query-imp-collection-corpus-");
     try {
       const nodeId = "DDDDDDDDDDDDDDDDDDDDDDDDDD";
@@ -129,6 +129,7 @@ describe("queryImpCollection", () => {
       const store = fixture.ctx.graphStore;
       const corpusId = store.locateNode(nodeId);
       expect(corpusId).toBeTruthy();
+      expect(await fixture.ctx.cache.corpusIdForNode(nodeId)).toBe(corpusId);
 
       let listNodeIdsCalls = 0;
       const originalList = store.listNodeIds.bind(store);
@@ -143,8 +144,7 @@ describe("queryImpCollection", () => {
         graph: passthroughWithCorpus(corpusId!),
       });
 
-      // Lazy: listNodeIds runs only when resolving membership, not up-front for every query.
-      expect(listNodeIdsCalls).toBe(1);
+      expect(listNodeIdsCalls).toBe(0);
       expect(result.rows.some((row) => String(row.id) === nodeId)).toBe(true);
     } finally {
       await destroyTestContentFixture(fixture);

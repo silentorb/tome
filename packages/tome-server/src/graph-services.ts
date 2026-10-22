@@ -80,6 +80,7 @@ import {
   type SearchNodesOptions,
   type TableRowsQuery,
   type TomeGraphServices,
+  type WorkspaceFile,
   type WorkspacePublic,
 } from "tome-graph-interfaces";
 
@@ -126,7 +127,7 @@ function buildGraphServices(
     () => createExtensionSchemaQueryServices(graphStore, contentPath),
     () => createExtensionExecuteImpServices(writeCtx.graphStore),
     () => createExtensionGraphMutateServices(writeCtx),
-    () => createExtensionCorpusQueryServices(writeCtx.graphStore),
+    () => createExtensionCorpusQueryServices(writeCtx.graphStore, writeCtx.cache),
     {
       getQueryCache: () => writeCtx.cache,
       getSearcherBackend: (dataStoreId: string) => searchBackends.get(dataStoreId),
@@ -176,12 +177,49 @@ function buildGraphServices(
     return loadRelationshipTypesFromContent(contentPath);
   };
 
+  const catalogCorpora = async () => {
+    const cached = await writeCtx.cache.listCorporaFromCache();
+    if (cached.length > 0) return cached;
+    return writeCtx.graphStore.listCorpora().map((c) => ({
+      id: c.id,
+      access: c.access,
+      workspace: c.workspace,
+    }));
+  };
+
+  const catalogCorpus = async (corpus?: string) => {
+    if (corpus) {
+      const cached = await writeCtx.cache.getCorpus(corpus);
+      if (cached) return cached;
+      const ff = writeCtx.graphStore.listCorpora().find((c) => c.id === corpus);
+      return ff
+        ? { id: ff.id, access: ff.access, workspace: ff.workspace }
+        : null;
+    }
+    const list = await catalogCorpora();
+    return list[0] ?? null;
+  };
+
+  const enrichWorkspace = async (ws: WorkspaceFile): Promise<WorkspacePublic> => {
+    const archiveNode = await graphStore.getNode(ws.archiveNodeId);
+    const archiveTitleRaw = archiveNode?.properties.title ?? archiveNode?.properties.alias;
+    const archiveNodeTitle =
+      typeof archiveTitleRaw === "string" && archiveTitleRaw.trim()
+        ? archiveTitleRaw.trim()
+        : "Archive";
+    return {
+      ...ws,
+      archiveNodeTitle,
+    };
+  };
+
   const corpusMeta = async (nodeId: string, activeCorpus?: string) => {
-    const corpora = writeCtx.graphStore.listCorpora();
-    const corpus = writeCtx.graphStore.locateNode(nodeId) ?? undefined;
-    const info = corpus
-      ? corpora.find((c) => c.id === corpus)
-      : undefined;
+    const corpus =
+      (await writeCtx.cache.corpusIdForNode(nodeId)) ??
+      writeCtx.graphStore.locateNode(nodeId) ??
+      undefined;
+    const corpora = await catalogCorpora();
+    const info = corpus ? corpora.find((c) => c.id === corpus) : undefined;
     const corpusLabel =
       corpora.length > 1 &&
       activeCorpus &&
@@ -197,29 +235,18 @@ function buildGraphServices(
   };
 
   const workspaceForCorpus = async (corpus?: string): Promise<WorkspacePublic> => {
-    const corpora = writeCtx.graphStore.listCorpora();
-    const match = corpus
-      ? corpora.find((c) => c.id === corpus)
-      : corpora[0];
-    const contentDir = match?.contentDir ?? contentPath;
+    const match = await catalogCorpus(corpus);
     let ws = match?.workspace;
     if (!ws) {
+      const contentDir =
+        writeCtx.graphStore.listCorpora().find((c) => c.id === corpus)?.contentDir ?? contentPath;
       if (typeof graphStore.readWorkspace === "function") {
         ws = await graphStore.readWorkspace();
       } else {
         ws = loadWorkspaceFromContent(contentDir);
       }
     }
-    const archiveNode = await graphStore.getNode(ws.archiveNodeId);
-    const archiveTitleRaw = archiveNode?.properties.title ?? archiveNode?.properties.alias;
-    const archiveNodeTitle =
-      typeof archiveTitleRaw === "string" && archiveTitleRaw.trim()
-        ? archiveTitleRaw.trim()
-        : "Archive";
-    return {
-      ...ws,
-      archiveNodeTitle,
-    };
+    return enrichWorkspace(ws);
   };
 
   const services: TomeGraphServices = {
@@ -227,6 +254,8 @@ function buildGraphServices(
       return workspaceForCorpus(corpus);
     },
     async getDocumentIcon(corpus?: string) {
+      // Branding icon path + bytes are host filesystem concerns; always read live
+      // corpus metadata from the open store (not the SQLite catalog).
       const corpora = writeCtx.graphStore.listCorpora();
       const match = corpus
         ? corpora.find((c) => c.id === corpus)
@@ -240,9 +269,10 @@ function buildGraphServices(
       return readDocumentIconFile(contentDir, ws.branding?.documentIconImage);
     },
     async listCorpora() {
+      const rows = await catalogCorpora();
       const out = [];
-      for (const c of writeCtx.graphStore.listCorpora()) {
-        const workspace = await workspaceForCorpus(c.id);
+      for (const c of rows) {
+        const workspace = await enrichWorkspace(c.workspace);
         out.push({
           id: c.id,
           access: c.access,

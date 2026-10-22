@@ -458,6 +458,7 @@ export {
   queryImpSql,
   queryImpCollection,
   applyImpParameters,
+  corpusLookupFromCache,
   graphHasCorpusNode,
   lazyCorpusLookupFromStore,
   listDistinctProjectionTypes,

@@ -246,8 +246,8 @@ class WorkerSqliteCache implements TomeQueryCache {
   getMeta(key: string): Promise<string | null> {
     return this.call("getMeta", [key]) as Promise<string | null>;
   }
-  upsertNode(id: string, properties?: Properties): Promise<void> {
-    return this.call("upsertNode", [id, properties]) as Promise<void>;
+  upsertNode(id: string, properties?: Properties, corpusId?: string | null): Promise<void> {
+    return this.call("upsertNode", [id, properties, corpusId]) as Promise<void>;
   }
   mergeNodeProperties(id: string, properties: Properties): Promise<void> {
     return this.call("mergeNodeProperties", [id, properties]) as Promise<void>;
@@ -260,6 +260,28 @@ class WorkerSqliteCache implements TomeQueryCache {
   }
   isNodeArchived(id: string): Promise<boolean> {
     return this.call("isNodeArchived", [id]) as Promise<boolean>;
+  }
+  corpusIdForNode(nodeId: string): Promise<string | null> {
+    return this.call("corpusIdForNode", [nodeId]) as Promise<string | null>;
+  }
+  nodeIdsInCorpus(corpusId: string): Promise<string[]> {
+    return this.call("nodeIdsInCorpus", [corpusId]) as Promise<string[]>;
+  }
+  clearCorpora(): Promise<void> {
+    return this.call("clearCorpora", []) as Promise<void>;
+  }
+  upsertCorpus(info: import("tome-service-interfaces").CachedCorpusInfo): Promise<void> {
+    return this.call("upsertCorpus", [info]) as Promise<void>;
+  }
+  listCorporaFromCache(): Promise<import("tome-service-interfaces").CachedCorpusInfo[]> {
+    return this.call("listCorporaFromCache", []) as Promise<
+      import("tome-service-interfaces").CachedCorpusInfo[]
+    >;
+  }
+  getCorpus(id: string): Promise<import("tome-service-interfaces").CachedCorpusInfo | null> {
+    return this.call("getCorpus", [id]) as Promise<
+      import("tome-service-interfaces").CachedCorpusInfo | null
+    >;
   }
   clearRelationshipCache(): Promise<void> {
     return this.call("clearRelationshipCache", []) as Promise<void>;

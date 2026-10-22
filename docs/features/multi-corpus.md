@@ -127,9 +127,10 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 
 ### HTTP
 
-- `GET /api/corpora` — id, label, home, archive, `access`.
-- `GET /api/workspace/document-icon?corpus=…` — optional branding favicon image for that corpus (`branding.documentIconImage`).
-- Node page and search hits include `corpus` (and whether the corpus is readonly).
+- `GET /api/corpora` — id, label, home, archive, `access`. Served from the session SQLite `corpora` catalog (synced from each corpus’s `corpus.json`); archive titles still come from point `getNode`.
+- `GET /api/workspace` — same catalog for the workspace blob (+ archive title enrichment).
+- `GET /api/workspace/document-icon?corpus=…` — optional branding favicon image for that corpus (`branding.documentIconImage`); icon *bytes* remain filesystem reads under the corpus content root.
+- Node page and search hits include `corpus` (and whether the corpus is readonly), resolved via `nodes.corpus_id` when the cache is warm.
 - Search hits may also include `corpusLabel` when `activeCorpus` is passed and the hit is foreign.
 - `GET /api/nodes/:id` stays id-only; create may take optional `corpus`.
 

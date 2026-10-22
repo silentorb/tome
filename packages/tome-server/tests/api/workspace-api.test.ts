@@ -57,4 +57,21 @@ describe("GET /api/workspace", async () => {
     expect(corpora[0]?.workspace.archiveNodeTitle).toBe("Archive hub");
     expect(await api.services.getHomeId()).toBe(TEST_HOME_NODE_ID);
   });
+
+  test("GET /api/corpora returns synced catalog", async () => {
+    const res = await api.handler(new Request("http://127.0.0.1/api/corpora"));
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      corpora: Array<{
+        id: string;
+        homeNodeId: string;
+        archiveNodeId: string;
+        workspace: { archiveNodeTitle?: string };
+      }>;
+    };
+    expect(body.corpora.length).toBeGreaterThan(0);
+    expect(body.corpora[0]?.homeNodeId).toBe(TEST_HOME_NODE_ID);
+    expect(body.corpora[0]?.archiveNodeId).toBe(TEST_ARCHIVE_NODE_ID);
+    expect(body.corpora[0]?.workspace.archiveNodeTitle).toBe("Archive hub");
+  });
 });

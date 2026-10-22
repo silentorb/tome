@@ -35,9 +35,26 @@ export interface TomeCorpusLookup {
 }
 
 export interface ResolvedCorpusConstraint {
-  /** Null means no extra id filter (`all` or no corpus node). */
+  /**
+   * Resolved corpus slug, or null when there is no corpus filter (`all` / no corpus node).
+   * SQL hosts prefer `corpusColumnPredicateSql(corpusId)` over materializing ids.
+   */
+  corpusId: string | null;
+  /**
+   * Optional id list for flatfile hosts. Null when unused (SQL column predicate) or no filter.
+   */
   nodeIds: readonly string[] | null;
 }
+
+export type ResolveCorpusConstraintOptions = {
+  pageNodeId?: string;
+  corpus?: TomeCorpusLookup;
+  /**
+   * When true, call `nodeIdsInCorpus` after resolving the corpus id (flatfile execute hosts).
+   * SQL compile leaves this false and filters with `nodes.corpus_id`.
+   */
+  materializeNodeIds?: boolean;
+};
 
 function inboundEdge(graph: Graph, nodeId: string, portId: string) {
   return Object.values(graph.edges).find((edge) => edge.to.node === nodeId && edge.to.port === portId);
@@ -59,11 +76,11 @@ function corpusSpecFromNode(graph: Graph, node: Node): string {
 
 export async function resolveCorpusConstraint(
   graph: Graph,
-  options?: { pageNodeId?: string; corpus?: TomeCorpusLookup },
+  options?: ResolveCorpusConstraintOptions,
 ): Promise<ResolvedCorpusConstraint> {
   const corpusNodes = Object.values(graph.nodes).filter((node) => node.type === CORPUS_NODE_TYPE_ID);
   if (corpusNodes.length === 0) {
-    return { nodeIds: null };
+    return { corpusId: null, nodeIds: null };
   }
 
   const specs = corpusNodes.map((node) => corpusSpecFromNode(graph, node));
@@ -75,7 +92,7 @@ export async function resolveCorpusConstraint(
   }
   const spec = unique[0]!;
   if (spec === ALL_CORPORA_SPEC) {
-    return { nodeIds: null };
+    return { corpusId: null, nodeIds: null };
   }
 
   const lookup = options?.corpus;
@@ -96,7 +113,10 @@ export async function resolveCorpusConstraint(
     corpusId = resolved;
   }
 
-  return { nodeIds: [...(await lookup.nodeIdsInCorpus(corpusId))] };
+  if (options?.materializeNodeIds) {
+    return { corpusId, nodeIds: [...(await lookup.nodeIdsInCorpus(corpusId))] };
+  }
+  return { corpusId, nodeIds: null };
 }
 
 function newEdgeId(edges: Graph["edges"], prefix: string): string {
@@ -159,7 +179,19 @@ function sqlStringLiteral(value: string): string {
   return `'${value.replace(/'/g, "''")}'`;
 }
 
-export function corpusIdPredicateSql(nodeIds: readonly string[]): string {
+/** Live-nodes filter by owning corpus column (preferred on SQLite hosts). */
+export function corpusColumnPredicateSql(corpusId: string): string {
+  return `and "corpus_id" = ${sqlStringLiteral(corpusId)}`;
+}
+
+/** Live-nodes filter by explicit id set (flatfile / legacy materialization). */
+export function corpusNodeIdsPredicateSql(nodeIds: readonly string[]): string {
   if (nodeIds.length === 0) return "and 0";
   return `and "id" in (${nodeIds.map(sqlStringLiteral).join(", ")})`;
 }
+
+/**
+ * @deprecated Use {@link corpusNodeIdsPredicateSql} or {@link corpusColumnPredicateSql}.
+ * Kept as an alias of the id-list form for older call sites during migration.
+ */
+export const corpusIdPredicateSql = corpusNodeIdsPredicateSql;

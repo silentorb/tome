@@ -13,10 +13,14 @@ export {
   ALL_CORPORA_SPEC,
   CORPUS_NODE_TYPE_ID,
   PAGE_CORPUS_SPEC,
+  corpusColumnPredicateSql,
   corpusIdPredicateSql,
+  corpusNodeIdsPredicateSql,
   resolveCorpusConstraint,
   spliceCorpusNodes,
   tomeCorpusLibrary,
+  type ResolvedCorpusConstraint,
+  type ResolveCorpusConstraintOptions,
   type TomeCorpusLookup,
 } from "./corpus";
 export { tomeHostsProjectionLibrary } from "./hosts-projection";

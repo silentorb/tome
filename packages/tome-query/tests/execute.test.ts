@@ -424,18 +424,21 @@ describe("tome-query compile + execute", async () => {
         body TEXT,
         created_at TEXT,
         modified_at TEXT,
-        is_archived INTEGER NOT NULL DEFAULT 0
+        is_archived INTEGER NOT NULL DEFAULT 0,
+        corpus_id TEXT
       );
     `);
-    db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
+    db.run(`INSERT INTO nodes (id, title, is_archived, corpus_id) VALUES (?, ?, ?, ?)`, [
       "tl1",
       "Translucence article",
       0,
+      "translucence",
     ]);
-    db.run(`INSERT INTO nodes (id, title, is_archived) VALUES (?, ?, ?)`, [
+    db.run(`INSERT INTO nodes (id, title, is_archived, corpus_id) VALUES (?, ?, ?, ?)`, [
       "ml1",
       "Marloth scene",
       0,
+      "marloth",
     ]);
 
     const reactFlow = {
@@ -482,7 +485,9 @@ describe("tome-query compile + execute", async () => {
         pageNodeId: "home",
         corpus: {
           corpusIdForNode: (id) => (id === "home" ? "translucence" : null),
-          nodeIdsInCorpus: (corpusId) => (corpusId === "translucence" ? ["tl1"] : ["ml1"]),
+          nodeIdsInCorpus: () => {
+            throw new Error("nodeIdsInCorpus should not run for corpus_id SQL filter");
+          },
         },
       }),
       reactFlow,

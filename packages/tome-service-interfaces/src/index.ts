@@ -342,6 +342,13 @@ export interface TomeCorpusInfo {
   workspace: WorkspaceFile;
 }
 
+/** Ephemeral SQLite corpora catalog row (no contentDir — host paths stay on the open store). */
+export interface CachedCorpusInfo {
+  id: string;
+  access: CorpusAccess;
+  workspace: WorkspaceFile;
+}
+
 export interface TomeDataStoreOpenOptions {
   /** Content root (`content/`) for a solo corpus. */
   contentPath?: string;
@@ -604,11 +611,24 @@ export interface TomeQueryCache {
   setMeta(key: string, value: string): Promise<void>;
   getMeta(key: string): Promise<string | null>;
 
-  upsertNode(id: string, properties?: Properties): Promise<void>;
+  /**
+   * Upsert node properties. When `corpusId` is provided (including `null`), updates
+   * `nodes.corpus_id` for Imp corpus filters / ownership lookups.
+   */
+  upsertNode(id: string, properties?: Properties, corpusId?: string | null): Promise<void>;
   mergeNodeProperties(id: string, properties: Properties): Promise<void>;
   getNode(id: string): Promise<Node | null>;
   deleteNode(id: string): Promise<boolean>;
   isNodeArchived(id: string): Promise<boolean>;
+  /** Owning corpus id for a node, or null when unknown / unset. */
+  corpusIdForNode(nodeId: string): Promise<string | null>;
+  /** All node ids in a corpus (including archived). */
+  nodeIdsInCorpus(corpusId: string): Promise<string[]>;
+
+  clearCorpora(): Promise<void>;
+  upsertCorpus(info: CachedCorpusInfo): Promise<void>;
+  listCorporaFromCache(): Promise<CachedCorpusInfo[]>;
+  getCorpus(id: string): Promise<CachedCorpusInfo | null>;
 
   clearRelationshipCache(): Promise<void>;
   upsertRelationshipRecord(record: RelationshipRecordRow): Promise<void>;

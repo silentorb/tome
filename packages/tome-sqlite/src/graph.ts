@@ -3,6 +3,8 @@ import { mkdirSync, rmSync } from "node:fs";
 import { dirname } from "node:path";
 import type { Node, Properties, PropertyValue, Relationship } from "tome-graph-interfaces";
 import type {
+  CachedCorpusInfo,
+  CorpusAccess,
   GraphCounts,
   RelationshipProjectionRow,
   RelationshipProjectionWindowQuery,
@@ -16,6 +18,7 @@ import type {
   ComposedGroupHeadersQuery,
   ComposedGroupHeaderRow,
 } from "tome-service-interfaces";
+import type { WorkspaceFile } from "tome-graph-interfaces";
 import {
   instrumentSqliteDatabaseForProfiling,
   isProfilingEnabled,
@@ -108,6 +111,25 @@ function mergeProperties(base: Properties, patch: Properties): Properties {
     out[k] = v;
   }
   return out;
+}
+
+function mapCorpusRow(row: {
+  id: string;
+  access: string;
+  workspace_json: string;
+}): CachedCorpusInfo | null {
+  let workspace: WorkspaceFile;
+  try {
+    workspace = JSON.parse(row.workspace_json) as WorkspaceFile;
+  } catch {
+    return null;
+  }
+  if (!workspace || typeof workspace !== "object") return null;
+  return {
+    id: row.id,
+    access: row.access === "readonly" ? "readonly" : "readwrite",
+    workspace,
+  };
 }
 
 type NodeRow = {
@@ -270,10 +292,15 @@ export class GraphDatabase {
 
   private insertNodeId!: ReturnType<Database["prepare"]>;
   private updateNodeColumns!: ReturnType<Database["prepare"]>;
+  private updateNodeCorpusId!: ReturnType<Database["prepare"]>;
   private deleteNodeProperties!: ReturnType<Database["prepare"]>;
   private insertNodeProperty!: ReturnType<Database["prepare"]>;
   private selectNodeRow!: ReturnType<Database["prepare"]>;
   private selectNodeProperties!: ReturnType<Database["prepare"]>;
+  private selectNodeCorpusId!: ReturnType<Database["prepare"]>;
+  private upsertCorpusRow!: ReturnType<Database["prepare"]>;
+  private selectCorpusRow!: ReturnType<Database["prepare"]>;
+  private selectAllCorpora!: ReturnType<Database["prepare"]>;
   private insertRecord!: ReturnType<Database["prepare"]>;
   private updateRecordColumns!: ReturnType<Database["prepare"]>;
   private deleteRecordProperties!: ReturnType<Database["prepare"]>;
@@ -385,6 +412,7 @@ export class GraphDatabase {
        SET title = ?, alias = ?, body = ?, created_at = ?, modified_at = ?
        WHERE id = ?`,
     );
+    this.updateNodeCorpusId = this.db.prepare("UPDATE nodes SET corpus_id = ? WHERE id = ?");
     this.deleteNodeProperties = this.db.prepare(
       "DELETE FROM node_properties WHERE node_id = ?",
     );
@@ -397,6 +425,17 @@ export class GraphDatabase {
     );
     this.selectNodeProperties = this.db.prepare(
       "SELECT key, value FROM node_properties WHERE node_id = ?",
+    );
+    this.selectNodeCorpusId = this.db.prepare("SELECT corpus_id FROM nodes WHERE id = ?");
+    this.upsertCorpusRow = this.db.prepare(
+      `INSERT INTO corpora (id, access, workspace_json) VALUES (?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET access = excluded.access, workspace_json = excluded.workspace_json`,
+    );
+    this.selectCorpusRow = this.db.prepare(
+      "SELECT id, access, workspace_json FROM corpora WHERE id = ?",
+    );
+    this.selectAllCorpora = this.db.prepare(
+      "SELECT id, access, workspace_json FROM corpora ORDER BY id",
     );
     this.insertRecord = this.db.prepare(
       `INSERT INTO relationship_records (id, node_a, node_b, composite_type)
@@ -472,13 +511,56 @@ export class GraphDatabase {
     }
   }
 
-  upsertNode(id: string, properties: Properties = {}): void {
+  upsertNode(id: string, properties: Properties = {}, corpusId?: string | null): void {
     this.insertNodeId.run(id);
+    if (corpusId !== undefined) {
+      this.updateNodeCorpusId.run(corpusId, id);
+    }
     const existing = this.getNode(id);
     if (!existing) return;
     if (Object.keys(properties).length === 0) return;
     const merged = mergeProperties(existing.properties, properties);
     this.writeNodeProperties(id, merged);
+  }
+
+  corpusIdForNode(nodeId: string): string | null {
+    const row = this.selectNodeCorpusId.get(nodeId) as { corpus_id: string | null } | undefined;
+    if (!row) return null;
+    const id = row.corpus_id?.trim();
+    return id ? id : null;
+  }
+
+  nodeIdsInCorpus(corpusId: string): string[] {
+    const rows = this.db
+      .prepare("SELECT id FROM nodes WHERE corpus_id = ?")
+      .all(corpusId) as { id: string }[];
+    return rows.map((row) => row.id);
+  }
+
+  clearCorpora(): void {
+    this.db.exec("DELETE FROM corpora");
+  }
+
+  upsertCorpus(info: CachedCorpusInfo): void {
+    const access: CorpusAccess = info.access === "readonly" ? "readonly" : "readwrite";
+    this.upsertCorpusRow.run(info.id, access, JSON.stringify(info.workspace));
+  }
+
+  listCorporaFromCache(): CachedCorpusInfo[] {
+    const rows = this.selectAllCorpora.all() as {
+      id: string;
+      access: string;
+      workspace_json: string;
+    }[];
+    return rows.map((row) => mapCorpusRow(row)).filter((row): row is CachedCorpusInfo => row != null);
+  }
+
+  getCorpus(id: string): CachedCorpusInfo | null {
+    const row = this.selectCorpusRow.get(id) as
+      | { id: string; access: string; workspace_json: string }
+      | undefined;
+    if (!row) return null;
+    return mapCorpusRow(row);
   }
 
   mergeNodeProperties(id: string, properties: Properties): void {

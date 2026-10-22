@@ -122,8 +122,9 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 
 | Table | Role |
 | --- | --- |
-| `nodes` | Hot node fields as columns (`title`, `alias`, `body`, `created_at`, `modified_at`) plus `is_archived` (recomputed on sync) |
+| `nodes` | Hot node fields as columns (`title`, `alias`, `body`, `created_at`, `modified_at`) plus `is_archived` (recomputed on sync) and `corpus_id` (owning corpus slug for Imp filters / chrome) |
 | `node_properties` | EAV leftovers for non-promoted frontmatter keys (`key` + JSON-encoded `value`) |
+| `corpora` | Ephemeral catalog of open corpora (`id`, `access`, workspace JSON from `corpus.json`) for `GET /api/corpora` / workspace chrome |
 | `relationship_records` | Mirror of content records; hot fields `ordinal`, `order`, `priority` as columns |
 | `relationship_projections` | Directed rows `(source, target, local_type)` with the same promoted columns — hot path for queries |
 | `relationship_record_properties` / `relationship_projection_properties` | EAV leftovers for non-promoted relationship keys |
