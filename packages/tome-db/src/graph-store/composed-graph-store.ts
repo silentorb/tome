@@ -1,6 +1,11 @@
 import {
   FlatfileGraphStore,
   openFlatfileGraphStore,
+  normalizeRelationshipTypeId,
+  projectionTypeForFind,
+  relationshipId,
+  relationshipRecordId,
+  relationshipTypeIdFromTypeArg,
   type FlatfileStoreBackend,
 } from "tome-flatfile";
 import type {
@@ -146,12 +151,68 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     return this.flatfile.unarchiveNodeFile(id);
   }
 
-  getRelationshipRecord(a: string, b: string, type: string): Promise<RelationshipRecordRef | null> {
-    return this.flatfile.getRelationshipRecord(a, b, type);
+  async getRelationshipRecord(
+    a: string,
+    b: string,
+    type: string,
+  ): Promise<RelationshipRecordRef | null> {
+    // Live records only — archived edges are not in the SQLite cache.
+    const registry = await this.flatfile.readRelationshipTypes();
+    const composite =
+      relationshipTypeIdFromTypeArg(registry, type) ?? normalizeRelationshipTypeId(type);
+    const forward = await this.cache.getRelationshipRecord(
+      relationshipRecordId(a, b, composite),
+    );
+    const row =
+      forward ??
+      (a !== b
+        ? await this.cache.getRelationshipRecord(relationshipRecordId(b, a, composite))
+        : null);
+    if (!row) return null;
+    return {
+      a: row.nodeA,
+      b: row.nodeB,
+      type: row.compositeType,
+      properties: row.properties,
+    };
   }
 
-  findRelationshipRecord(a: string, b: string, type: string): Promise<Relationship | null> {
-    return this.flatfile.findRelationshipRecord(a, b, type);
+  async findRelationshipRecord(
+    a: string,
+    b: string,
+    type: string,
+  ): Promise<Relationship | null> {
+    // Live records only. Synthesize the oriented Relationship the same way
+    // flatfile findRelationship does (projection type from registry heuristics;
+    // do not require the expand-convention projection row id to exist — inverted
+    // set-side links can disagree with endpoint-0/1 expansion).
+    const registry = await this.flatfile.readRelationshipTypes();
+    const composite = relationshipTypeIdFromTypeArg(registry, type);
+    if (!composite) return null;
+    const forward = await this.cache.getRelationshipRecord(
+      relationshipRecordId(a, b, composite),
+    );
+    const row =
+      forward ??
+      (a !== b
+        ? await this.cache.getRelationshipRecord(relationshipRecordId(b, a, composite))
+        : null);
+    if (!row) return null;
+    const projectionType = projectionTypeForFind(
+      registry,
+      type,
+      a,
+      b,
+      this.flatfile.contentDir,
+    );
+    return {
+      id: relationshipId(a, projectionType, b),
+      sourceNodeId: a,
+      targetNodeId: b,
+      type: projectionType,
+      properties: row.properties,
+      recordId: row.id,
+    };
   }
 
   upsertRelationshipRecord(entry: RelationshipRecordRef): Promise<void> {

@@ -133,10 +133,9 @@ export async function startTomeServer(options?: {
   const hasUserCorpus = corpora.some((c) => c.id === DEFAULT_USER_CORPUS_ID);
   const userCorpusContentDir =
     corpora.find((c) => c.id === DEFAULT_USER_CORPUS_ID)?.contentDir ?? null;
-  const validateAccountNodeId =
-    hasUserCorpus && flatfileStore
-      ? createAccountNodeValidator(flatfileStore)
-      : undefined;
+  const validateAccountNodeId = hasUserCorpus
+    ? createAccountNodeValidator(session.writeContext.cache)
+    : undefined;
   const resolveAccountNodeId =
     hasUserCorpus &&
     userCorpusContentDir &&
@@ -172,10 +171,10 @@ export async function startTomeServer(options?: {
       skipStoreSyncSubscribe: true,
       searchBackends,
       authenticationHooks: {
-        createSession: (input) => {
+        createSession: async (input) => {
           if (
             validateAccountNodeId &&
-            !validateAccountNodeId(input.accountNodeId)
+            !(await validateAccountNodeId(input.accountNodeId))
           ) {
             throw new Error("unknown_account");
           }

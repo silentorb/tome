@@ -1,4 +1,5 @@
-import type { TomeDataStore } from "tome-service-interfaces";
+import { relationshipRecordId } from "tome-flatfile";
+import type { TomeQueryCache } from "tome-service-interfaces";
 import { DEFAULT_USER_CORPUS_ID } from "../load-services";
 
 /** Stable ids from `fixtures/identity-corpus` (Account type + set membership). */
@@ -14,29 +15,45 @@ export type AccountValidationOptions = {
   setRelationshipTypeId?: string;
 };
 
+async function hasLiveRelationshipRecord(
+  cache: TomeQueryCache,
+  a: string,
+  b: string,
+  type: string,
+): Promise<boolean> {
+  if (await cache.getRelationshipRecord(relationshipRecordId(a, b, type))) {
+    return true;
+  }
+  if (a !== b && (await cache.getRelationshipRecord(relationshipRecordId(b, a, type)))) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * True when `accountNodeId` is an Account instance in the user corpus
  * (owned by that corpus and linked via set membership to the Account type-table).
+ * Reads the session SQLite cache (not flatfile).
  */
-export function isAccountNodeInUserCorpus(
-  store: TomeDataStore,
+export async function isAccountNodeInUserCorpus(
+  cache: TomeQueryCache,
   accountNodeId: string,
   options: AccountValidationOptions = {},
-): boolean {
+): Promise<boolean> {
   const userCorpusId = options.userCorpusId ?? DEFAULT_USER_CORPUS_ID;
   const accountTypeId = options.accountTypeId ?? IDENTITY_ACCOUNT_TYPE_ID;
   const setType = options.setRelationshipTypeId ?? IDENTITY_SET_RELATIONSHIP_TYPE_ID;
   const id = accountNodeId.trim();
   if (!id) return false;
-  if (store.locateNode(id) !== userCorpusId) return false;
-  // Set membership tuple: a = type table (set), b = member
-  return store.findContentEntry(accountTypeId, id, setType) != null;
+  if ((await cache.corpusIdForNode(id)) !== userCorpusId) return false;
+  // Set membership tuple: a = type table (set), b = member (either authored order).
+  return hasLiveRelationshipRecord(cache, accountTypeId, id, setType);
 }
 
 /** Build a `validateAccountNodeId` callback for HTTP session create. */
 export function createAccountNodeValidator(
-  store: TomeDataStore,
+  cache: TomeQueryCache,
   options: AccountValidationOptions = {},
-): (accountNodeId: string) => boolean {
-  return (accountNodeId) => isAccountNodeInUserCorpus(store, accountNodeId, options);
+): (accountNodeId: string) => Promise<boolean> {
+  return (accountNodeId) => isAccountNodeInUserCorpus(cache, accountNodeId, options);
 }

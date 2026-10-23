@@ -79,6 +79,11 @@ export {
   perspectiveCountForExpansion,
 } from "./content/relationship-types-file";
 export {
+  orderedEndpointsForRelationshipType,
+  projectionTypeForFind,
+  relationshipTypeIdFromTypeArg,
+} from "./content/resolve-projection-for-find";
+export {
   buildRoleIndex,
   resolveRole,
   roleIdsForRelationshipType,

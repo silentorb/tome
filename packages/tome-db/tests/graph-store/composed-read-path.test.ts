@@ -357,4 +357,29 @@ describe("ComposedGraphStore SQLite read path", async () => {
       spy.restore();
     }
   });
+
+  test("get/findRelationshipRecord use cache without scanning flatfile shards", async () => {
+    const composite = "000000000000000000000000A3";
+    const projection = projectionTypeForEndpoint(composite, 0);
+    const spy = spyRelationshipFileReads(graphStore);
+    try {
+      const record = await graphStore.getRelationshipRecord(scene1, bookA, composite);
+      expect(record).toBeTruthy();
+      expect([record!.a, record!.b].sort()).toEqual([scene1, bookA].sort());
+      expect(record!.type).toBe(composite);
+
+      const byComposite = await graphStore.findRelationshipRecord(scene1, bookA, composite);
+      expect(byComposite?.sourceNodeId).toBe(scene1);
+      expect(byComposite?.targetNodeId).toBe(bookA);
+      expect(byComposite?.type).toBe(projection);
+
+      const byProjection = await graphStore.findRelationshipRecord(scene1, bookA, projection);
+      expect(byProjection?.id).toBe(byComposite?.id);
+
+      expect(await graphStore.findRelationshipRecord(scene1, bookA, "000000000000000000000000ZZ")).toBeNull();
+      expect(spy.scanCount()).toBe(0);
+    } finally {
+      spy.restore();
+    }
+  });
 });

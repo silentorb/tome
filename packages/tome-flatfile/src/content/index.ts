@@ -45,6 +45,11 @@ export {
   isDualPerspectiveType,
   perspectiveCountForExpansion,
 } from "./relationship-types-file";
+export {
+  orderedEndpointsForRelationshipType,
+  projectionTypeForFind,
+  relationshipTypeIdFromTypeArg,
+} from "./resolve-projection-for-find";
 export type {
   RelationshipTypeDefinition,
   RelationshipTypesFile,

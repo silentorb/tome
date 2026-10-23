@@ -72,7 +72,7 @@ type GraphStoreCapabilities =
 | Dynamic runtime | `imp-execution` | Walk Imp DAG; read-only host |
 | Tome flatfile host | `tome-imp-flatfile` | RowSource over flatfile scans |
 | SQL binder | `tome-imp-sql` | Compile to SQL |
-| Composed host | `ComposedGraphStore` | Writes→flatfile; `getNode` / `listNodeIds` / `isNodeArchived` / projection·incident reads→SQLite cache; executeImp→sql; internal `CacheSync`. Model JSON still flatfile. Endpoint relationship-record lookups may still touch flatfile (plan follow-up). |
+| Composed host | `ComposedGraphStore` | Writes→flatfile; `getNode` / `listNodeIds` / `isNodeArchived` / projection·incident reads / live `getRelationshipRecord`·`findRelationshipRecord`→SQLite cache; executeImp→sql; internal `CacheSync`. Model JSON still flatfile. Archived edges (`includeArchived` / archive tree) remain flatfile-only. |
 
 ### Editor vs integrator
 
@@ -158,7 +158,7 @@ Domain modules use helpers in `tome-db/src/graph-store/relationship-read.ts` (`l
 
 **Table-presentation related-id hops** (scope/group membership) use Imp semantic paths instead: `semantic-related-ids.ts` resolves the presentation composite to a table-schema column key on the host type, builds a **minimal** PathOntology for that hop, then `semanticPathFromAnchorGraph` + `executeImp` (Queryable store required). No composite-SQL fallback for those helpers. Relation-cell hydration and other DTO readers still use `listRelationshipsForComposite` until a later slice.
 
-- **`ComposedGraphStore` (editor / tome-server host):** node point-gets (`getNode`), projection and incident reads — including `listRelationshipProjections`, live `forEachRelationshipRecord`, body backlink scans, and composite listing via `queryAll` — are served from the **SQLite query cache** (indexed). Node bags are assembled from promoted `nodes` columns plus `node_properties` EAV rows; relationship bags from promoted record/projection columns plus relationship EAV tables. Flatfile remains the write path and source of truth; sync keeps the cache current. This avoids re-scanning every relationship shard (and re-reading every node markdown file) on each page or table view.
+- **`ComposedGraphStore` (editor / tome-server host):** node point-gets (`getNode`), projection and incident reads — including `listRelationshipProjections`, live `forEachRelationshipRecord`, live endpoint `getRelationshipRecord` / `findRelationshipRecord`, body backlink scans, and composite listing via `queryAll` — are served from the **SQLite query cache** (indexed). Node bags are assembled from promoted `nodes` columns plus `node_properties` EAV rows; relationship bags from promoted record/projection columns plus relationship EAV tables. Flatfile remains the write path and source of truth; sync keeps the cache current. This avoids re-scanning every relationship shard (and re-reading every node markdown file) on each page or table view. Archived relationship files are not synced into SQLite — `forEachRelationshipRecord({ includeArchived: true })` still walks flatfile.
 - **Flatfile-only Base stores** (no SQLite): `listRelationshipProjections` still expands canonical records by scanning flatfile relationship trees.
 
 `listRelationshipsForComposite` prefers `queryAll` whenever the store exposes it, and only falls back to Base `forEachRelationshipRecord` when there is no query cache.

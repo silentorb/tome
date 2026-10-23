@@ -34,16 +34,14 @@ import {
   emptyRelationshipTypesFile,
   normalizeRelationshipTypeId,
   parseRelationshipTypesFile,
-  parseProjectionType,
-  projectionTypeForEndpoint,
   serializeRelationshipTypesFile,
 } from "./relationship-types-file";
 import { LinkResolutionError, resolveRelationshipTypeIdForLink } from "./resolve-composite-for-link";
 import {
-  isSetTraitType,
-  setRoleIndices,
-} from "../relationship-type-traits";
-import { collectSetNodeIds } from "../set-nodes";
+  orderedEndpointsForRelationshipType,
+  projectionTypeForFind,
+  relationshipTypeIdFromTypeArg,
+} from "./resolve-projection-for-find";
 import {
   type DynamicPropertiesFile,
   emptyDynamicPropertiesFile,
@@ -104,18 +102,6 @@ export const DEFAULT_CORPUS_ID = "default";
 
 const DEBOUNCE_MS = 200;
 
-function relationshipTypeIdFromTypeArg(
-  registry: RelationshipTypesFile,
-  relationshipTypeOrProjection: string,
-): string | null {
-  const trimmed = relationshipTypeOrProjection.trim();
-  const parsed = parseProjectionType(trimmed);
-  if (parsed) return parsed.relationshipTypeId;
-  const id = normalizeRelationshipTypeId(trimmed);
-  if (registry.relationshipTypes[id]) return id;
-  return null;
-}
-
 function entryMatchesRelationshipType(
   registry: RelationshipTypesFile,
   entry: RelationshipEntry,
@@ -124,66 +110,6 @@ function entryMatchesRelationshipType(
   const relationshipTypeId = relationshipTypeIdFromTypeArg(registry, relationshipTypeOrProjection);
   if (!relationshipTypeId) return false;
   return normalizeRelationshipTypeId(entry.type) === relationshipTypeId;
-}
-
-/**
- * Place `source`/`target` into the tuple so that `source` occupies `sourceIndex`.
- * When omitted, set-trait heuristics place a set node at the parent index;
- * otherwise source stays at index 0.
- */
-function orderedEndpointsForRelationshipType(
-  registry: RelationshipTypesFile,
-  composite: string,
-  source: string,
-  target: string,
-  relationshipTypeOrProjection: string,
-  contentDir: string,
-): { a: string; b: string } {
-  const parsed = parseProjectionType(relationshipTypeOrProjection);
-  if (parsed) {
-    if (parsed.endpointIndex === 1) return { a: target, b: source };
-    return { a: source, b: target };
-  }
-
-  const def = registry.relationshipTypes[normalizeRelationshipTypeId(composite)];
-  if (def && isSetTraitType(def)) {
-    const { parentIndex, childIndex } = setRoleIndices(def);
-    const setNodeIds = collectSetNodeIds(contentDir);
-    if (setNodeIds.has(source)) {
-      return parentIndex === 0
-        ? { a: source, b: target }
-        : { a: target, b: source };
-    }
-    if (setNodeIds.has(target)) {
-      return childIndex === 0
-        ? { a: source, b: target }
-        : { a: target, b: source };
-    }
-  }
-
-  return { a: source, b: target };
-}
-
-function projectionTypeForFind(
-  registry: RelationshipTypesFile,
-  relationshipTypeOrProjection: string,
-  source: string,
-  target: string,
-  contentDir: string,
-): string {
-  const parsed = parseProjectionType(relationshipTypeOrProjection);
-  if (parsed) return relationshipTypeOrProjection.trim();
-  const relationshipTypeId = relationshipTypeIdFromTypeArg(registry, relationshipTypeOrProjection);
-  if (!relationshipTypeId) return relationshipTypeOrProjection.trim();
-  const { a } = orderedEndpointsForRelationshipType(
-    registry,
-    relationshipTypeId,
-    source,
-    target,
-    relationshipTypeOrProjection,
-    contentDir,
-  );
-  return projectionTypeForEndpoint(relationshipTypeId, a === source ? 0 : 1);
 }
 
 function atomicWrite(filePath: string, content: string): void {

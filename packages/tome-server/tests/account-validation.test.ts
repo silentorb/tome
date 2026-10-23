@@ -1,7 +1,9 @@
-import { describe, expect, test } from "bun:test";
-import { dirname, join, resolve } from "node:path";
+import { describe, expect, test, beforeAll, afterAll } from "bun:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ContentStore } from "tome-flatfile";
+import { openDataStoreSession } from "tome-db/sync";
 import {
   createAccountNodeValidator,
   isAccountNodeInUserCorpus,
@@ -16,28 +18,101 @@ const fixtureContent = resolve(
   "../fixtures/identity-corpus/content",
 );
 
-describe("account validation against identity corpus", () => {
-  test("accepts Account members and rejects unknown ids", () => {
-    const store = new ContentStore(fixtureContent, { corpusId: IDENTITY_CORPUS_ID });
+describe("account validation against identity corpus cache", () => {
+  let session: Awaited<ReturnType<typeof openDataStoreSession>>;
+  let dbPath: string;
+
+  beforeAll(async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tome-account-validation-"));
+    dbPath = join(dir, "session.sqlite");
+    session = await openDataStoreSession({
+      dataStores: {
+        identity: {
+          id: IDENTITY_CORPUS_ID,
+          module: "tome-flatfile",
+          export: "createFlatfileModule",
+          options: { contentPath: fixtureContent },
+        },
+        sqlite: {
+          id: "sqlite",
+          module: "tome-sqlite",
+          export: "createSqliteModule",
+          options: { dbPath },
+        },
+      },
+      queryStoreId: "sqlite",
+      defaultContentPath: fixtureContent,
+      defaultDbPath: dbPath,
+    });
+  });
+
+  afterAll(() => {
+    session.dispose();
+    rmSync(dirname(dbPath), { recursive: true, force: true });
+  });
+
+  test("accepts Account members and rejects unknown ids via session cache", async () => {
+    const cache = session.writeContext.cache;
+    const flatfile = session.writeContext.store;
+    const locateSpy = flatfile
+      ? (() => {
+          let calls = 0;
+          const original = flatfile.locateNode.bind(flatfile);
+          flatfile.locateNode = (id: string) => {
+            calls += 1;
+            return original(id);
+          };
+          return {
+            count: () => calls,
+            restore: () => {
+              flatfile.locateNode = original;
+            },
+          };
+        })()
+      : null;
+    const findSpy = flatfile && "findContentEntry" in flatfile
+      ? (() => {
+          let calls = 0;
+          const store = flatfile as {
+            findContentEntry: (...args: unknown[]) => unknown;
+          };
+          const original = store.findContentEntry.bind(store);
+          store.findContentEntry = (...args: unknown[]) => {
+            calls += 1;
+            return original(...args);
+          };
+          return {
+            count: () => calls,
+            restore: () => {
+              store.findContentEntry = original;
+            },
+          };
+        })()
+      : null;
+
     try {
       expect(
-        isAccountNodeInUserCorpus(store, IDENTITY_CORPUS_IDS.accountAlice),
+        await isAccountNodeInUserCorpus(cache, IDENTITY_CORPUS_IDS.accountAlice),
       ).toBe(true);
       expect(
-        isAccountNodeInUserCorpus(store, IDENTITY_CORPUS_IDS.accountBob),
+        await isAccountNodeInUserCorpus(cache, IDENTITY_CORPUS_IDS.accountBob),
       ).toBe(true);
-      expect(isAccountNodeInUserCorpus(store, IDENTITY_CORPUS_IDS.permCanEdit)).toBe(
-        false,
-      );
-      expect(isAccountNodeInUserCorpus(store, "01M56A00000000000000999999")).toBe(
-        false,
-      );
+      expect(
+        await isAccountNodeInUserCorpus(cache, IDENTITY_CORPUS_IDS.permCanEdit),
+      ).toBe(false);
+      expect(
+        await isAccountNodeInUserCorpus(cache, "01M56A00000000000000999999"),
+      ).toBe(false);
 
-      const validate = createAccountNodeValidator(store);
-      expect(validate(IDENTITY_CORPUS_IDS.accountAlice)).toBe(true);
-      expect(validate("not-an-account")).toBe(false);
+      const validate = createAccountNodeValidator(cache);
+      expect(await validate(IDENTITY_CORPUS_IDS.accountAlice)).toBe(true);
+      expect(await validate("not-an-account")).toBe(false);
+
+      expect(locateSpy?.count() ?? 0).toBe(0);
+      expect(findSpy?.count() ?? 0).toBe(0);
     } finally {
-      store.close();
+      locateSpy?.restore();
+      findSpy?.restore();
     }
   });
 });
