@@ -112,8 +112,10 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
     return this.flatfile.contentDirForNode(nodeId);
   }
 
-  listNodeIds(): Promise<string[]> {
-    return this.flatfile.listNodeIds();
+  async listNodeIds(): Promise<string[]> {
+    // Live + archived rows — matches flatfile's union of data/ and archive/ trees.
+    const rows = await this.cache.listNodesForGraphExport();
+    return rows.map((row) => row.id);
   }
 
   getNode(id: string): Promise<Node | null> {
@@ -244,7 +246,7 @@ export class ComposedGraphStore implements TomeGraphStoreQueryable {
   }
 
   isNodeArchived(id: string): Promise<boolean> {
-    return this.flatfile.isNodeArchived(id);
+    return this.cache.isNodeArchived(id);
   }
 
   async forEachRelationshipRecord(

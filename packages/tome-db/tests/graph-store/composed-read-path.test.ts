@@ -1,7 +1,10 @@
 import { afterAll, describe, expect, test } from "bun:test";
+import { hostsProjectionFilterGraph } from "tome-ontology";
 import { typeTableMarkerProperties } from "../../src/node-capabilities";
 import { getDatabaseViewDetail } from "../../src/database-view";
+import { exportFullGraph } from "../../src/graph-export";
 import { getNodePageMetadata } from "../../src/node-metadata";
+import { createNodeFilterEvaluator } from "../../src/predicate-membership";
 import { ComposedGraphStore } from "../../src/graph-store/composed-graph-store";
 import {
   listRelationshipsFromSource,
@@ -68,6 +71,34 @@ function spyFlatfileNodeReads(store: ComposedGraphStore): {
     readCount: () => reads,
     restore: () => {
       backend.readNode = original;
+    },
+  };
+}
+
+function spyFlatfileListAndArchive(store: ComposedGraphStore): {
+  listCount: () => number;
+  archiveCount: () => number;
+  restore: () => void;
+} {
+  const ff = store.flatfile;
+  let listCalls = 0;
+  let archiveCalls = 0;
+  const originalList = ff.listNodeIds.bind(ff);
+  const originalArchived = ff.isNodeArchived.bind(ff);
+  ff.listNodeIds = async () => {
+    listCalls += 1;
+    return originalList();
+  };
+  ff.isNodeArchived = async (id: string) => {
+    archiveCalls += 1;
+    return originalArchived(id);
+  };
+  return {
+    listCount: () => listCalls,
+    archiveCount: () => archiveCalls,
+    restore: () => {
+      ff.listNodeIds = originalList;
+      ff.isNodeArchived = originalArchived;
     },
   };
 }
@@ -280,6 +311,47 @@ describe("ComposedGraphStore SQLite read path", async () => {
       const meta = await getNodePageMetadata(graphStore, scene1);
       expect(meta?.backlinks.some((b) => b.sourceId === scene3)).toBe(true);
       expect(meta?.backlinks.find((b) => b.sourceId === scene3)?.title).toBe("Scene Three");
+      expect(spy.scanCount()).toBe(0);
+    } finally {
+      spy.restore();
+    }
+  });
+
+  test("listNodeIds and isNodeArchived use cache without flatfile inventory", async () => {
+    const spy = spyFlatfileListAndArchive(graphStore);
+    try {
+      const ids = await graphStore.listNodeIds();
+      expect(ids).toContain(scene1);
+      expect(await graphStore.isNodeArchived(scene1)).toBe(false);
+      expect(spy.listCount()).toBe(0);
+      expect(spy.archiveCount()).toBe(0);
+    } finally {
+      spy.restore();
+    }
+  });
+
+  test("exportFullGraph uses cache inventory without flatfile list/archive probes", async () => {
+    const listSpy = spyFlatfileListAndArchive(graphStore);
+    const relSpy = spyRelationshipFileReads(graphStore);
+    try {
+      const snapshot = await exportFullGraph(graphStore, contentDir);
+      expect(snapshot.nodes.some((n) => n.id === scene1)).toBe(true);
+      expect(listSpy.listCount()).toBe(0);
+      expect(listSpy.archiveCount()).toBe(0);
+      expect(relSpy.scanCount()).toBe(0);
+    } finally {
+      listSpy.restore();
+      relSpy.restore();
+    }
+  });
+
+  test("empty hosts_projection on composed store does not scan flatfile shards", async () => {
+    const spy = spyRelationshipFileReads(graphStore);
+    try {
+      const evaluate = createNodeFilterEvaluator(graphStore, contentDir);
+      // Relationship type with no projections in this fixture — empty is authoritative.
+      const graph = hostsProjectionFilterGraph("000000000000000000000000ZZ", 0);
+      expect(await evaluate(graph, scene1)).toBe(false);
       expect(spy.scanCount()).toBe(0);
     } finally {
       spy.restore();

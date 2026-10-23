@@ -19,6 +19,7 @@ import {
 } from "tome-flatfile";
 import { findSetEdge, setMemberIds } from "./set-membership";
 import {
+  getQueryCache,
   listRelationshipsFromSource,
   listSourceNodeIdsForProjectionType,
   readStoreGetNode,
@@ -50,7 +51,8 @@ async function listHostsProjectionSourceIds(
 ): Promise<string[]> {
   const projection = hostsProjectionType(spec);
   const fromStore = await listSourceNodeIdsForProjectionType(store, projection);
-  if (fromStore.length > 0) return fromStore;
+  // Hydrated composed sessions: empty means no hosts, not "unsynced — scan flatfile".
+  if (fromStore.length > 0 || getQueryCache(store) !== null) return fromStore;
 
   // Flatfile-only / unsynced stores: expand content relationships directly.
   const content = new ContentStore(contentDir);

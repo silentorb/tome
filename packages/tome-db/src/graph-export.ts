@@ -5,7 +5,10 @@ import {
   normalizeExplorerLayerCount,
 } from "./graph-lod-cluster";
 import { archiveNodeId, resolveWorkspace } from "tome-flatfile";
-import { listAllRelationshipProjections } from "./graph-store/relationship-read";
+import {
+  getQueryCache,
+  listAllRelationshipProjections,
+} from "./graph-store/relationship-read";
 
 import type {
   GraphLodSnapshot,
@@ -65,13 +68,29 @@ async function collectActiveGraphData(store: TomeGraphStoreBase, contentDir?: st
   } catch {
     /* workspace optional */
   }
-  for (const id of await store.listNodeIds()) {
-    if (await store.isNodeArchived(id)) excludedIds.add(id);
+
+  const cache = getQueryCache(store);
+  let activeIds: Set<string>;
+  if (cache) {
+    // One cache inventory pass; filter archived via nodes.is_archived (no per-id probes).
+    activeIds = new Set(
+      (
+        await cache.queryAll<{ id: string }>(`SELECT id FROM nodes WHERE is_archived = 0`)
+      )
+        .map((row) => row.id)
+        .filter((id) => !excludedIds.has(id)),
+    );
+  } else {
+    for (const id of await store.listNodeIds()) {
+      if (await store.isNodeArchived(id)) excludedIds.add(id);
+    }
+    activeIds = new Set(
+      (await store.listNodeIds()).filter((id) => !excludedIds.has(id)),
+    );
   }
 
-  const nodeIds = (await store.listNodeIds()).filter((id) => !excludedIds.has(id));
   const nodes: ActiveGraphNode[] = [];
-  for (const id of nodeIds) {
+  for (const id of activeIds) {
     const node = await store.getNode(id);
     const properties = node?.properties ?? {};
     nodes.push({
@@ -84,8 +103,8 @@ async function collectActiveGraphData(store: TomeGraphStoreBase, contentDir?: st
 
   const relationships = (await listAllRelationshipProjections(store)).filter(
     (relationship) =>
-      !excludedIds.has(relationship.sourceNodeId) &&
-      !excludedIds.has(relationship.targetNodeId),
+      activeIds.has(relationship.sourceNodeId) &&
+      activeIds.has(relationship.targetNodeId),
   );
 
   return {

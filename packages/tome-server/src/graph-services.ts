@@ -214,10 +214,7 @@ function buildGraphServices(
   };
 
   const corpusMeta = async (nodeId: string, activeCorpus?: string) => {
-    const corpus =
-      (await writeCtx.cache.corpusIdForNode(nodeId)) ??
-      writeCtx.graphStore.locateNode(nodeId) ??
-      undefined;
+    const corpus = (await writeCtx.cache.corpusIdForNode(nodeId)) ?? undefined;
     const corpora = await catalogCorpora();
     const info = corpus ? corpora.find((c) => c.id === corpus) : undefined;
     const corpusLabel =

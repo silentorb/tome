@@ -138,6 +138,8 @@ Prefer `TOME_*` env vars and `data/tome.sqlite` for new setups. See also [tome-e
 
 **Archived relationships in content:** files under `content/archive/relationships/` are kept in git but **excluded** from SQLite sync (only the live `content/data/relationships/` tree is expanded). Hub membership edges stay live so `nodes.is_archived` can be recomputed. Search and `nodes.is_archived` exclude archived pages; graph export also excludes archived nodes.
 
+**Composed-host inventory reads:** on `ComposedGraphStore`, `listNodeIds` and `isNodeArchived` read from the session SQLite cache (not the flatfile tree). Graph export uses a live-only cache path (`is_archived = 0`) when a query cache is present; pure flatfile hosts still walk `listNodeIds` + per-id archive probes.
+
 **Enum properties in cache:** keys declared in [`content/model/schema.json`](../../content/model/schema.json) `enums` (e.g. `priority`) are stored in SQLite as **0-based indices** into the enum’s `options` array (promoted `priority` column or EAV `value`). Git-tracked relationship shard files keep **string labels**. Encode on cache write and decode on cache read (`packages/tome-db/src/enum-codec.ts` injected as the cache `propertyCodec`). Changing enum `options` order in `schema.json` triggers a relationship cache re-sync (store change events + `enum_config_fingerprint` meta check). After pulling enum-cache changes or a `SCHEMA_VERSION` bump, run `bun run content:sync` (or restart the editor API) to rebuild the cache from content.
 
 Type-table behavior is inferred from `is_a` usage and schema metadata (`isTypeTableNode` in `node-capabilities.ts`).

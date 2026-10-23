@@ -72,7 +72,7 @@ type GraphStoreCapabilities =
 | Dynamic runtime | `imp-execution` | Walk Imp DAG; read-only host |
 | Tome flatfile host | `tome-imp-flatfile` | RowSource over flatfile scans |
 | SQL binder | `tome-imp-sql` | Compile to SQL |
-| Composed host | `ComposedGraphStore` | Writes→flatfile; projection/incident reads→SQLite cache; executeImp→sql; internal `CacheSync` |
+| Composed host | `ComposedGraphStore` | Writes→flatfile; `getNode` / `listNodeIds` / `isNodeArchived` / projection·incident reads→SQLite cache; executeImp→sql; internal `CacheSync`. Model JSON still flatfile. Endpoint relationship-record lookups may still touch flatfile (plan follow-up). |
 
 ### Editor vs integrator
 
@@ -93,6 +93,7 @@ type GraphStoreCapabilities =
 
 1. Writes → `FlatfileGraphStore` → change events → sync observers (Imp **wiring** graph installs observers at boot — see [tome-sync.md](./tome-sync.md)) → `CacheSync` / SQLite
 2. Reads → `executeImp` → `tome-imp-sql` → SQLite `queryAll`
+3. Base inventory / archive status (`listNodeIds`, `isNodeArchived`) → SQLite (`nodes` / `is_archived`); graph export uses a live-only cache path when `queryCache` is present
 
 **Flatfile integrator (no SQL):**
 
