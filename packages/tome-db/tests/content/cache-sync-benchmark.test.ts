@@ -184,8 +184,14 @@ describe("CacheSync timing baseline", () => {
 
       expect(await countRows(cache, "relationship_records")).toBe(expectedRecords);
 
+      // Content-scope path used by watcher (syncFile) after warm ready.
+      const contentStarted = performance.now();
+      await sync.syncFile("relationships");
+      const contentMs = performance.now() - contentStarted;
+      console.log(`${LOG_PREFIX} content_relationships=${contentMs.toFixed(1)}ms`);
+
       console.log(
-        `${LOG_PREFIX} summary cold=${coldMs.toFixed(1)}ms warm=${warmMs.toFixed(1)}ms node=${nodeMs.toFixed(1)}ms rel=${relMs.toFixed(1)}ms`,
+        `${LOG_PREFIX} summary cold=${coldMs.toFixed(1)}ms warm=${warmMs.toFixed(1)}ms node=${nodeMs.toFixed(1)}ms rel=${relMs.toFixed(1)}ms contentRel=${contentMs.toFixed(1)}ms`,
       );
     },
     { timeout: 120_000 },

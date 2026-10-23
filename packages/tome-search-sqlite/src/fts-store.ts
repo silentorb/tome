@@ -121,6 +121,10 @@ export class FtsStore {
       await this.applyFull(signal.source);
       return;
     }
+    // Model/relationship content markers do not change FTS node documents.
+    if (signal.scope.mode === "content") {
+      return;
+    }
 
     const { nodes } = signal.scope.changes;
     for (const id of nodes.deleted) {

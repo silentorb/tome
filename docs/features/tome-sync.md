@@ -48,13 +48,17 @@ Flatfile uses `impExecution: "execute"`; SQLite uses `sql`. Sinks pull current v
 ```typescript
 type SyncEntityOps = { created: SyncIdSet; modified: SyncIdSet; deleted: SyncIdSet };
 type SyncPartialScope = { nodes: SyncEntityOps; relationships: SyncEntityOps };
-type SyncScope = { mode: "full" } | { mode: "partial"; changes: SyncPartialScope };
+type SyncScope =
+  | { mode: "full" }
+  | { mode: "content"; relativeName: string }
+  | { mode: "partial"; changes: SyncPartialScope };
 type SyncSignal = { source: SyncSourceRead; scope: SyncScope };
 ```
 
 - Six id sets: nodes/relationships × created/modified/deleted.
 - Relationship ids are canonical record ids `{a}:{b}:{type}`.
-- Model/config file changes (associations, schema, …) use **`full`**, not fake entity ids.
+- Model/config and coarse relationship markers use **`content`** with the same `relativeName` as `CacheSync.syncFile` (e.g. `relationships`, `associations.json`, `schema.json`) — not fake entity ids and not warm `ensureReady`.
+- **`full`** is for explicit initial sink refresh and unknown paths.
 - `created`/`modified`: sink reads source then upserts; `deleted`: sink removes by id.
 
 ### Package-registered node types
@@ -85,7 +89,7 @@ dataStores → open → DataStoreRegistry
 sync.graph + SyncNodeTypeRegistry → SyncGraphWire (once)
   → for each edge A→B: B observes A
 startup: sinks apply SyncSignal { scope: full, source }
-steady state: source events → SyncPartialScope → sink apply (Imp wiring idle)
+steady state: source events → partial (node/rel ids) or content (model/rel markers) → sink apply (Imp wiring idle)
 ```
 
 ## Configuration

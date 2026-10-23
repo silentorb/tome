@@ -54,7 +54,11 @@ export function createFlatfileSyncEndpoint(options: {
 
 /**
  * SQLite sink wrapping CacheSync.
- * Partial node scopes call syncNode; relationship or full scopes rebuild relationships / ensureReady.
+ * - `full` → ensureReady
+ * - `content` → syncFile (model / coarse relationship markers)
+ * - partial nodes → syncNode; partial relationship ids → syncRelationshipsPartial
+ *
+ * Work is serialized by CacheSync.exclusive (via sync* methods) — never silently dropped.
  */
 export function createSqliteCacheSyncEndpoint(options: {
   id: string;
@@ -64,7 +68,6 @@ export function createSqliteCacheSyncEndpoint(options: {
   inboundSourceIds: () => string[];
 } {
   const inbound = new Map<string, SyncSourceRead>();
-  let applying = false;
 
   const capabilities: DataStoreCapabilities = {
     kind: "sqlite",
@@ -85,30 +88,28 @@ export function createSqliteCacheSyncEndpoint(options: {
       return [...inbound.keys()];
     },
     async apply(signal: SyncSignal) {
-      if (applying || options.sync.isApplying()) return;
-      applying = true;
-      try {
-        if (signal.scope.mode === "full") {
-          await options.sync.ensureReady();
-          return;
-        }
-        const { nodes, relationships } = signal.scope.changes;
-        for (const id of nodes.deleted) {
-          await options.sync.syncNode(id);
-        }
-        for (const id of [...nodes.created, ...nodes.modified]) {
-          await options.sync.syncNode(id);
-        }
-        const relTouched =
-          relationships.created.length +
-            relationships.modified.length +
-            relationships.deleted.length >
-          0;
-        if (relTouched) {
-          await options.sync.syncRelationships();
-        }
-      } finally {
-        applying = false;
+      if (signal.scope.mode === "full") {
+        await options.sync.ensureReady();
+        return;
+      }
+      if (signal.scope.mode === "content") {
+        await options.sync.syncFile(signal.scope.relativeName);
+        return;
+      }
+      const { nodes, relationships } = signal.scope.changes;
+      for (const id of nodes.deleted) {
+        await options.sync.syncNode(id);
+      }
+      for (const id of [...nodes.created, ...nodes.modified]) {
+        await options.sync.syncNode(id);
+      }
+      const relTouched =
+        relationships.created.length +
+          relationships.modified.length +
+          relationships.deleted.length >
+        0;
+      if (relTouched) {
+        await options.sync.syncRelationshipsPartial(relationships);
       }
     },
   };

@@ -1,10 +1,51 @@
-import { NODE_FILE_PATTERN } from "tome-flatfile";
-import type { StoreChangeEvent } from "tome-service-interfaces";
+import {
+  ASSOCIATIONS_FILENAME,
+  DYNAMIC_PROPERTIES_FILENAME,
+  EXTENSIONS_FILENAME,
+  NODE_FILE_PATTERN,
+  RELATIONSHIPS_SYNC_MARKER,
+  SCHEMA_FILENAME,
+  SEQUENCING_FILENAME,
+  TABLE_SCHEMAS_FILENAME,
+  VIEWS_FILENAME,
+  CORPUS_FILENAME,
+  WORKSPACE_FILENAME,
+} from "tome-flatfile";
+import type { StoreChangeEvent, StoreChangeKind } from "tome-service-interfaces";
 import { emptySyncPartialScope, type SyncScope } from "./types";
+
+/** Map a known StoreChangeKind to the syncFile relativeName CacheSync understands. */
+function contentRelativeNameForKind(kind: StoreChangeKind, path: string): string | null {
+  switch (kind) {
+    case "relationships":
+      return RELATIONSHIPS_SYNC_MARKER;
+    case "relationship-types":
+      return ASSOCIATIONS_FILENAME;
+    case "schema":
+      return SCHEMA_FILENAME;
+    case "dynamic-properties":
+      return DYNAMIC_PROPERTIES_FILENAME;
+    case "views":
+      return VIEWS_FILENAME;
+    case "table-schemas":
+      return TABLE_SCHEMAS_FILENAME;
+    case "workspace": {
+      const base = path.includes("/") ? path.split("/").pop()! : path;
+      return base === CORPUS_FILENAME ? CORPUS_FILENAME : WORKSPACE_FILENAME;
+    }
+    case "sequencing":
+      return SEQUENCING_FILENAME;
+    case "extensions":
+      return EXTENSIONS_FILENAME;
+    default:
+      return null;
+  }
+}
 
 /**
  * Map a flatfile store change event into a SyncScope.
- * Coarse relationship/model markers become `full` until incremental apply exists.
+ * Known model/relationship markers use `content` (syncFile); nodes use partial ids;
+ * unknown paths stay `full` (ensureReady).
  */
 export function storeChangeEventToSyncScope(event: StoreChangeEvent): SyncScope {
   if (event.kind === "node") {
@@ -20,6 +61,11 @@ export function storeChangeEventToSyncScope(event: StoreChangeEvent): SyncScope 
         nodes: { created: [], modified: [id], deleted: [] },
       },
     };
+  }
+
+  const relativeName = contentRelativeNameForKind(event.kind, event.path);
+  if (relativeName != null) {
+    return { mode: "content", relativeName };
   }
 
   return { mode: "full" };

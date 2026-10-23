@@ -36,15 +36,20 @@ import {
   contentRelationshipsDir,
   contentRelationshipsArchiveDir,
   nodeFilePath,
+  projectionTypeForEndpoint,
+  relationshipRecordId,
   type DynamicColumnSetRecord,
   type DynamicPropertyRecord,
 } from "tome-flatfile";
 import type { TomeQueryCache } from "tome-sqlite";
 import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum-config-fingerprint";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
-import { expandAllRelationships } from "./relationship-sync-expand";
+import {
+  expandAllRelationships,
+  expandRelationshipEntry,
+} from "./relationship-sync-expand";
 import { openComposedGraphStore } from "../graph-store/open-graph-store";
-import type { TomeDataStore } from "tome-service-interfaces";
+import type { SyncEntityOps, TomeDataStore } from "tome-service-interfaces";
 import type { FlatfileStore, TomeWriteContext } from "./write-context";
 
 export type SyncProgressPhase =
@@ -523,11 +528,12 @@ export class CacheSync {
       if (await this.cacheNeedsRebuild()) {
         await this.fullRebuild();
       } else {
+        // Markers + enum fingerprint already match — trust the cache for node bodies.
+        // Drift from flatfile edits is caught by cacheNeedsRebuild (mtime) → fullRebuild.
         await this.exclusive(async () => {
           await this.syncCorporaCatalog();
           await this.backfillMissingCorpusIds();
         });
-        await this.reconcileNodeBodiesFromFiles();
       }
       this.report({
         phase: "ready",
@@ -541,32 +547,6 @@ export class CacheSync {
   /** @deprecated Prefer {@link ensureReady} — identical async API. */
   ensureReadyAsync(): Promise<void> {
     return this.ensureReady();
-  }
-
-  /** Repair SQLite bodies that drifted from git-tracked node files (e.g. after external edits). */
-  private async reconcileNodeBodiesFromFiles(): Promise<void> {
-    const ids = this.store.listNodeIds();
-    const total = ids.length;
-    if (this.startupSync) {
-      this.report({ phase: "reconcile", total });
-      await Bun.sleep(0);
-    }
-    for (let i = 0; i < ids.length; i += 1) {
-      const id = ids[i]!;
-      const fileNode = this.store.readNode(id);
-      if (!fileNode) continue;
-      const fileBody = bodyFromNode(fileNode);
-      const cacheNode = await this.cache.getNode(id);
-      const cacheBody =
-        typeof cacheNode?.properties.body === "string" ? cacheNode.properties.body : "";
-      if (fileBody !== cacheBody) {
-        await this.syncNode(id);
-      }
-      if (this.startupSync && shouldReportSyncProgress(i + 1, total)) {
-        this.report({ phase: "reconcile", current: i + 1, total });
-        await Bun.sleep(0);
-      }
-    }
   }
 
   private async syncNodeUnlocked(id: string): Promise<void> {
@@ -593,6 +573,69 @@ export class CacheSync {
 
   async syncRelationships(): Promise<void> {
     await this.exclusive(() => this.syncRelationshipsUnlocked());
+  }
+
+  /**
+   * Apply relationship create/modify/delete by canonical record id `{a}:{b}:{type}`.
+   * Reads current entries from flatfile for upserts; deletes remove the SQLite record
+   * (projections CASCADE). Recomputes archived flags after any change.
+   */
+  private async syncRelationshipsPartialUnlocked(ops: SyncEntityOps): Promise<void> {
+    const upsertIds = [...new Set([...ops.created, ...ops.modified])];
+    const deleteIds = [...new Set(ops.deleted)];
+    if (upsertIds.length === 0 && deleteIds.length === 0) return;
+
+    const registry = this.store.readRelationshipTypesFile();
+    const liveById = new Map(
+      this.store
+        .readRelationshipsFile()
+        .relationships.map((entry) => [relationshipRecordId(entry.a, entry.b, entry.type), entry]),
+    );
+    const archiveIds = this.store.listCorpora().map((c) => c.workspace.archiveNodeId);
+
+    if (
+      this.corpusContentDirs().some((dir) => contentHasOntologyTypes(dir))
+    ) {
+      // Membership edges can change which node predicates are active.
+      invalidateRelationshipTypesCache();
+    }
+
+    await this.cache.transaction(async (cache) => {
+      await cache.runExec("BEGIN");
+      try {
+        for (const id of deleteIds) {
+          const existing = await cache.getRelationshipRecord(id);
+          if (!existing) continue;
+          const projType = projectionTypeForEndpoint(existing.compositeType, 0);
+          await cache.deleteRelationship(existing.nodeA, existing.nodeB, projType);
+        }
+        for (const id of upsertIds) {
+          const entry = liveById.get(id);
+          if (!entry) {
+            const existing = await cache.getRelationshipRecord(id);
+            if (existing) {
+              const projType = projectionTypeForEndpoint(existing.compositeType, 0);
+              await cache.deleteRelationship(existing.nodeA, existing.nodeB, projType);
+            }
+            continue;
+          }
+          const { record, projections } = expandRelationshipEntry(entry, registry);
+          await cache.upsertRelationshipRecord(record);
+          for (const projection of projections) {
+            await cache.upsertRelationshipProjection(projection);
+          }
+        }
+        await cache.recomputeArchivedFlags(archiveIds);
+        await cache.runExec("COMMIT");
+      } catch (err) {
+        await cache.runExec("ROLLBACK");
+        throw err;
+      }
+    });
+  }
+
+  async syncRelationshipsPartial(ops: SyncEntityOps): Promise<void> {
+    await this.exclusive(() => this.syncRelationshipsPartialUnlocked(ops));
   }
 
   private async syncFileUnlocked(relativeName: string): Promise<void> {
@@ -652,6 +695,11 @@ export class CacheSync {
 
     if (relativeName === EXTENSIONS_FILENAME) {
       invalidateExtensionsCache();
+      await this.updateCacheMarkers();
+      return;
+    }
+
+    if (relativeName === SEQUENCING_FILENAME) {
       await this.updateCacheMarkers();
       return;
     }

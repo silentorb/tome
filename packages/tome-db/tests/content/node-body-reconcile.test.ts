@@ -1,5 +1,7 @@
 import { describe, expect, test, afterAll } from "bun:test";
+import { utimesSync } from "node:fs";
 import { serializePageBlock } from "tome-interfaces/page-block";
+import { nodeFilePath } from "tome-flatfile";
 import {
   createTestContentFixture,
   destroyTestContentFixture,
@@ -24,9 +26,15 @@ describe("CacheSync node body reconciliation", async () => {
     pageBlockBody,
   );
 
-  test("repairs SQLite body when it drifted from the node file", async () => {
+  test("repairs SQLite body via rebuild when content mtime is newer than markers", async () => {
     await fixture.ctx.cache.upsertNode(nodeId, { title: "Locations", body: "" });
     expect((await getNodeDetail(fixture.ctx.cache, nodeId))?.body).toBe("");
+
+    // Stale markers (file newer than content_mtime_ms) force fullRebuild, which
+    // reloads bodies from flatfile. Warm ensureReady no longer scans all bodies.
+    const filePath = nodeFilePath(fixture.ctx.store.contentDir, nodeId);
+    const now = Date.now() / 1000 + 1;
+    utimesSync(filePath, now, now);
 
     const reopened = await openContentGraph(
       fixture.ctx.store.contentDir,

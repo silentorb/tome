@@ -23,6 +23,8 @@ export type SyncPartialScope = {
 /** Scope of the notification — not a data payload / changeset body. */
 export type SyncScope =
   | { mode: "full" }
+  /** Flatfile model/relationship marker — sink runs CacheSync.syncFile(relativeName). */
+  | { mode: "content"; relativeName: string }
   | { mode: "partial"; changes: SyncPartialScope };
 
 /** Imp-queryable pull surface for sync observers. */
