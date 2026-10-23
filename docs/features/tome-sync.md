@@ -122,6 +122,7 @@ Non-SQLite sinks (e.g. `tome-search-sqlite` FTS) are additional `dataStores` ent
 ## Verification
 
 - Package tests under `packages/tome-db/tests/sync/` and `packages/tome-server/tests/`.
+- Always-on CacheSync timing baseline: `packages/tome-db/tests/content/cache-sync-benchmark.test.ts` (cold/warm `ensureReady`, `syncNode`, `syncRelationships`; logs `[cache-sync-benchmark]` elapsed ms; no env skip).
 - Full suite: `bash scripts/run-in-tome.sh run test` from the workbench.
 
 ## Implementation pointers

@@ -13,6 +13,8 @@ Tome’s root `bun run test` (and release-image `test`) uses **weighted gating**
 
 Helpers and gate math live in [`tome-test-support`](../../packages/tome-test-support/). Orchestration: [`scripts/run-weighted-tests.ts`](../../scripts/run-weighted-tests.ts).
 
+**Timing / benchmark tests:** Dedicated CacheSync timing baselines (`packages/tome-db/tests/content/cache-sync-benchmark.test.ts`) always run in the suite and assert correctness while logging elapsed ms — they do not use an env skip. The relation-window query bench (`relation-window-benchmark.test.ts`) is the exception that opts out via `TOME_BENCHMARK=0` because of its large seed.
+
 ## When to read this
 
 - Adding or changing UI / happy-dom tests
