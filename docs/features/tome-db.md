@@ -73,19 +73,21 @@ Canonical on-disk layout and file formats: [`packages/tome-flatfile/docs/storage
 - `TOME_CONTENT_PATH` (or legacy `MARLOTH_CONTENT_PATH`) **must** point at the **content root** (`./content`), not `content/data`, for solo sessions. Multi-corpus sessions use `TOME_CORPORA` / `store.options.corpora` and a dedicated session `TOME_DB_PATH` — see [`multi-corpus.md`](./multi-corpus.md).
 - SQLite WAL sidecar files (`*.sqlite-wal`, `*.sqlite-shm`) **must not** be committed.
 
-#### Local SQLite is ephemeral-only
+#### Local SQLite is ephemeral-only (transitional)
 
-Within Tome’s **local flat-file** composition, **all durable data lives in text files**. Prefer the word **ephemeral** for SQLite cache and server runtime so “durable” is not overloaded (Base-tier graph contracts, UI-test durability, etc.).
+Within Tome’s **current local flat-file** composition, **all durable data lives in text files**. Prefer the word **ephemeral** for today’s SQLite **query cache** and server runtime so “durable” is not overloaded (Base-tier graph contracts, UI-test durability, etc.).
 
-| Durable (source of truth) | Ephemeral only (SQLite / memory) |
+| Durable (source of truth) today | Ephemeral only today (SQLite / memory) |
 | --- | --- |
 | `content/` graph + model JSON; gitignored text for non-shared prefs/secrets (e.g. `.tome/user-settings.json`) | Graph query cache, FTS index, expression indexes, **sessions**, profiling neighbor DB (`tome-profiling.sqlite`) |
 
-**Ephemeral means:** deleting the SQLite file(s) and reopening from flat files must not lose durable product or user data. Sessions may outlive a process in SQLite and still count as ephemeral relative to the corpus.
+**Ephemeral means (today):** deleting the SQLite file(s) and reopening from flat files must not lose durable product or user data. Sessions may outlive a process in SQLite and still count as ephemeral relative to the corpus.
 
-**Must not** store canonical accounts, credentials, IdP↔Account bindings, or other durable user/product rows in local SQLite. Local identity durability is user-corpus **flat files** (nodes/relationships first); see [multi-user.md](./multi-user.md).
+**Target (not implemented here):** SQLite becomes a **canonical-capable** SQL store aligned with Postgres SoT; flatfile remains **Git packaging**. See [sql-graph-store.md](./sql-graph-store.md). Until that migration and dual-write land, the ephemeral-cache rules above still govern running code.
 
-**Different composition:** remote / Neo4j-authoritative backends (design + identity graphs, auth specialty store) are chartered separately — [multi-user.md](./multi-user.md), [neo4j-support.md](../../tasks/neo4j-support.md). A non-flatfile authoritative store without Git content is related — [independent-sql-database.md](../../tasks/independent-sql-database.md). PostgreSQL remains optional / much later — [postgresql-support.md](../../tasks/postgresql-support.md).
+**Must not** store canonical accounts, credentials, IdP↔Account bindings, or other durable user/product rows in local SQLite **while** identity durability is defined as user-corpus flat files; see [multi-user.md](./multi-user.md). Revisit with SQL SoT / dual-write plans if identity moves.
+
+**Different composition:** remote / Neo4j-authoritative backends (design + identity graphs, auth specialty store) are chartered separately — [multi-user.md](./multi-user.md), [neo4j-support.md](../../tasks/neo4j-support.md). Independent SQL without Git content — [independent-sql-database.md](../../tasks/independent-sql-database.md). PostgreSQL — [postgresql-support.md](../../tasks/postgresql-support.md).
 
 ### Legacy compatibility
 
@@ -276,7 +278,8 @@ db.close();
 - [schema.md](./schema.md) — workspace model config in `content/model/schema.json`
 - [graph-explorer.md](./graph-explorer.md) — anchor-scoped LOD graph visualization
 - [table-presentation.md](./table-presentation.md) — scope tabs, row groups, and automatic sequence on Items tables
-- [multi-user.md](./multi-user.md) — design corpora vs user corpora; local SQLite ephemeral-only; Neo4j + auth specialty store for remote
+- [sql-graph-store.md](./sql-graph-store.md) — SQLite as canonical candidate (design); Postgres parity; LCD + capabilities
+- [multi-user.md](./multi-user.md) — design corpora vs user corpora; local SQLite ephemeral-only (transitional); Neo4j + auth specialty store for remote
 - [`../ontology.md`](../ontology.md) — design domain model (storage-agnostic)
 - [`packages/tome-db/AGENTS.md`](../../packages/tome-db/AGENTS.md)
 - [`AGENTS.md`](../../AGENTS.md) — project purpose, terminology, modeling direction

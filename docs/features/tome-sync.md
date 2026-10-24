@@ -4,7 +4,9 @@
 
 Host sessions open a heterogeneous **`dataStores`** map and a floating Imp **`sync.graph`**. Modules are **building blocks**; the graph **only initializes observer relationships** between stores (who observes whom). It is **not** a sync executor and is **not** re-run on each change. After wire-up, observers notify sinks with a **`SyncSignal`**: an Imp-queryable **`SyncSourceRead`** plus a **`SyncScope`** (`full` or six normalized id sets). Cross-corpus **dual-write** (git self-description) stays on the flatfile/Composite path and is distinct from cache **observation**.
 
-**Preferred product hookup:** flatfile sources → SQLite query sink (+ sync-fed FTS) via observe edges / CacheSync. That pairing is **not** hard-coded — it works when those blocks are opened and wired. **Queryable SoT-only** configs (e.g. Postgres) omit flatfile sources and inbound observe edges; Imp wiring still runs with an empty or sink-only graph.
+**Preferred product hookup (transitional):** flatfile sources → SQLite query sink (+ sync-fed FTS) via observe edges / CacheSync. That pairing is **not** hard-coded — it works when those blocks are opened and wired. **Queryable SoT-only** configs (e.g. Postgres) omit flatfile sources and inbound observe edges; Imp wiring still runs with an empty or sink-only graph.
+
+**Target (design):** flatfile is Git packaging; SQLite is a canonical-capable SQL store; product edits **dual-write** SQL + flatfile so CacheSync is not on the hot path — see [sql-graph-store.md](./sql-graph-store.md). This sync doc still describes the **running** observe topology until that lands.
 
 ## When to read this
 
@@ -139,7 +141,8 @@ Non-SQLite sinks (e.g. `tome-search-sqlite` FTS) are additional `dataStores` ent
 
 ## See also
 
+- [sql-graph-store.md](./sql-graph-store.md) — target: SQLite SoT + dual-write; CacheSync off hot path
 - [multi-corpus.md](./multi-corpus.md) — corpora as flatfile dataStores; dual-write ≠ observation
-- [tome-db.md](./tome-db.md) — content ↔ cache
+- [tome-db.md](./tome-db.md) — content ↔ cache (transitional ephemeral SQLite)
 - [graph-store.md](./graph-store.md) — Base / Queryable / executeImp
 - [tome-server.md](./tome-server.md) — host config

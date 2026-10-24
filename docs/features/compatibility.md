@@ -4,6 +4,8 @@
 
 Tome is still in a **prototype** phase, but external projects consume its **configuration** and **canonical flat-file data storage**. Agents must treat changes to those surfaces as **compatibility-sensitive**: default to **dual-support** (new path + legacy path for a few versions), register every kept legacy path in this doc’s **Legacy registry**, and migrate workspace dependents to the new path in the same change.
 
+**Role of flatfile:** the `content/` tree is the **Git-oriented durable encoding** of a corpus (and the dual-support surface for on-disk layout). It is **not** the preferred live human/agent edit API — see [sql-graph-store.md](./sql-graph-store.md). Compatibility still protects the bytes-on-disk contract for import, tooling, and Git workflows.
+
 This is **not** a promise of full semver stability. Package public APIs, HTTP/editor API shapes, TypeScript export names, and similar runtime/client contracts are **not** dual-supported at this stage — hard-break them and migrate workspace dependents in the same change. HTTP/package compat may return later; do not register package/HTTP legacy rows yet.
 
 Hard-breaks on compat-sensitive surfaces remain allowed when dual-support is costly or unclear — after asking the user.

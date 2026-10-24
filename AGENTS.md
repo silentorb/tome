@@ -15,7 +15,7 @@ The complete workspace package inventory (roles table + dependency diagram) live
 - Package notes: each package's `README.md` (context) and `AGENTS.md` (implementation).
 - **Package inventory:** When adding, removing, or renaming a `packages/*` workspace package, update the table **and** mermaid diagram in [`packages/README.md`](./packages/README.md) in the same change (see the checklist there). Do not maintain a second package table or diagram in the root README.
 - TypeScript-to-TypeScript imports are extensionless (no `.ts` suffix).
-- **SQLite schema:** do not add JSON bag columns for structured maps by default — see [`packages/tome-sqlite/AGENTS.md`](./packages/tome-sqlite/AGENTS.md) (user approval required for exceptions).
+- **SQLite schema:** do not add JSON bag columns for structured maps by default on the **current cache DDL** — see [`packages/tome-sqlite/AGENTS.md`](./packages/tome-sqlite/AGENTS.md). Approved SoT target (JSON property bags aligned with Postgres) is design-only in [`docs/features/sql-graph-store.md`](./docs/features/sql-graph-store.md); implement only under a dedicated schema plan.
 - **Regression tests:** When fixing table views, dynamic fields, or related API bugs, add a regression test in the same change. Prefer an **essential**, durable assertion; do not mark regression coverage nonessential unless the user waives a hard gate.
 - **UI tests:** New or changed React UI (editor webview, interactive page blocks, extension components) should include tests using **`bun:test`**, **`@testing-library/react`**, and **happy-dom** (`@happy-dom/global-registrator` via `--preload`). Follow the setup in `tome-editor` or `tome-query` (`tests/test-setup.ts`). Do not introduce a different DOM test runner for Tome UI packages.
 
