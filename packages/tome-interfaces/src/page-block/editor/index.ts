@@ -57,6 +57,11 @@ export interface EditorPageBlockRegistration {
   Component: EditorPageBlockComponent;
   /** When true, the editor mounts `Component` in the page-block embed instead of static HTML. */
   interactive?: boolean;
+  /**
+   * Table-schema structured column types this component can edit on property
+   * page sections (e.g. `imp_graph`). Presentation maps data nature → UI.
+   */
+  propertyColumnTypes?: string[];
   slashMenu?: EditorSlashMenuSpec;
   insertDefaultData?: () => unknown;
 }

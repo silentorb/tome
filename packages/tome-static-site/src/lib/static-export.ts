@@ -45,6 +45,7 @@ function toStaticSections(
   const out: StaticNodeSection[] = [];
   for (const section of detail.sections) {
     if (section.type === "markdown") continue;
+    if (section.type === "property") continue; // Editor/API property sections; not in static v1
     if (section.type === "database") {
       out.push({
         type: "database",

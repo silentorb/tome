@@ -4,6 +4,7 @@ import { coalescePriorityValue, enrichColumnDefs, isPriorityColumnKey } from "./
 import { getNodeDetail } from "./queries";
 import { getNodePageMetadata } from "./node-metadata";
 import { buildPropertiesSection } from "./node-type-properties";
+import { buildPropertyFieldSections } from "./node-property-sections";
 import {
   relationSectionSupportsLinkExisting,
   relationshipTypeRuleContext,
@@ -605,6 +606,10 @@ export async function getNodePageDetail(
       rowsQuery,
     })),
   );
+
+  if (!node.isTypeTable) {
+    sections.push(...(await buildPropertyFieldSections(db, id, contentDir)));
+  }
 
   const properties = node.isTypeTable ? null : await buildPropertiesSection(db, id, contentDir);
 

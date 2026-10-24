@@ -91,8 +91,11 @@ export type {
 
 export type {
   TableColumnScalarType,
+  TableColumnStructuredType,
+  TableColumnStorage,
   TableColumnType,
   TableScalarColumn,
+  TableStructuredColumn,
   TableRelationColumn,
   TableColumnDef,
   TableSchema,
@@ -187,6 +190,7 @@ export type {
   RelationRow,
   RelationTableAddMode,
   RelationTableSection,
+  PropertyFieldSection,
   NodeSection,
   EditorNodeSection,
   NodePageDetail,

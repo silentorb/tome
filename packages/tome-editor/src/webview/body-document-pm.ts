@@ -202,7 +202,6 @@ function blocksToPm(blocks: readonly NodeBodyBlock[]): PmNode[] {
               blockType: block.blockType,
               contentType: "json",
               data: block.data,
-              ...(block.propertyId ? { propertyId: block.propertyId } : {}),
             }),
             html: block.editorHtml ?? "",
           },
@@ -415,7 +414,6 @@ function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
               type: "page_block",
               blockType: payload.blockType,
               data: payload.data,
-              ...(payload.propertyId ? { propertyId: payload.propertyId } : {}),
             });
             break;
           }
@@ -429,14 +427,12 @@ function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
               info.blockType,
               text,
               PAGE_BLOCK_CONTENT_TYPE_JSON,
-              info.propertyId,
             );
             if (payload) {
               out.push({
                 type: "page_block",
                 blockType: payload.blockType,
                 data: payload.data,
-                ...(payload.propertyId ? { propertyId: payload.propertyId } : {}),
               });
               break;
             }
@@ -472,7 +468,6 @@ function blocksFromPm(nodes: readonly PmNode[] | undefined): NodeBodyBlock[] {
           type: "page_block",
           blockType: payload.blockType,
           data: payload.data,
-          ...(payload.propertyId ? { propertyId: payload.propertyId } : {}),
           editorHtml: String(node.attrs?.html ?? ""),
         });
         break;

@@ -5,6 +5,7 @@ import { PageActionsMenu } from "./PageActionsMenu";
 import { PageTitle } from "./PageTitle";
 import { NodeMetadataPanel } from "./NodeMetadataPanel";
 import { RelationSectionView } from "./RelationSectionView";
+import { PropertyFieldSectionView } from "./PropertyFieldSectionView";
 import { AddRelationshipDialog } from "./AddRelationshipDialog";
 import type { EditorApi } from "../api/client";
 import type { DatabaseViewDetail, EditorNodePageDetail } from "../../shared/types";
@@ -196,6 +197,17 @@ export function NodePageView({
                   archiveHubTitle={archiveHubTitle}
                 />
               </section>
+            );
+          }
+          if (section.type === "property") {
+            return (
+              <PropertyFieldSectionView
+                key={`property-${section.key}-${index}`}
+                api={api}
+                nodeId={node.id}
+                section={section}
+                onUpdated={onTableCellUpdated ?? (() => {})}
+              />
             );
           }
           return (

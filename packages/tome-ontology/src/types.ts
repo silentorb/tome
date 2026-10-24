@@ -10,8 +10,8 @@ export interface Predicate {
   id: string;
   perspectives: PerspectivePair;
   /**
-   * Optional Imp node→boolean filter from a structured body property
-   * (`{#predicate type="node-filter"}`).
+   * Optional Imp node→boolean filter from the predicate node's `predicate`
+   * property (table-schema type `imp_graph`, typically `storage: "node"`).
    */
   nodeFilter?: ImpGraph;
 }

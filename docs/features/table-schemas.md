@@ -39,7 +39,9 @@ See also [tome-db.md](./tome-db.md), [views.md](./views.md), and [schema.md](./s
 | Rule | Detail |
 | --- | --- |
 | **Identity** | Column identity is `key` (slug), not legacy property ids |
-| **Scalars** | `select`, `multi_select`, `checkbox`, `number`, `text`, `date`, `url`, `email`, `phone_number` |
+| **Scalars** | Form-friendly: `select`, `multi_select`, `checkbox`, `number`, `text`, `date`, `url`, `email`, `phone_number`, `rich_text`, `files`, `status` — typically shown in the compact Properties form / Items cells |
+| **Structured** | Data-nature types: `imp_graph` (Imp selection graphs), `json` (opaque objects). Presentation (e.g. below-body property sections) is inferred by the node page API / editor from the type — **not** a schema layout flag |
+| **Storage** | Optional `storage`: `"edge"` (default — membership / set-carrier properties) or `"node"` (frontmatter / node properties). Ontology intrinsics usually use `"node"` |
 | **Relations** | `"association"` (legacy field name) is a registered **relationship type** ULID in [`associations.json`](../../content/model/associations.json); **`endpoint` is `0` or `1`** (which relational role / endpoint this column hosts). Role labels are display-only and must not be used as keys; Imp pathing may also hop by the role’s global ULID (`roleIds[endpoint]`). Directed projection identity is `{relationshipTypeId}:{endpoint}`. Authored relationship tuples must place the **endpoint-0 host at `a`** (and endpoint 1 at `b`); the Members table only hydrates outgoing `{relationshipTypeId}:{endpoint}` from each row. Empty relation cells after pinning `endpoint` usually mean inverted `a`/`b` order, not missing links — re-run `bun packages/tome-db/scripts/migrate-relationship-order.ts <contentDir>`. |
 | **Enums** | `enumId` references [`schema.json`](../../content/model/schema.json) `enums` |
 | **Computed** | Formula/rollup columns are **not** stored here; use [`dynamic-properties.json`](./dynamic-properties.md) |

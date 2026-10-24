@@ -583,6 +583,37 @@ async function dispatchApiRequest(
         return json({ section });
       }
 
+      const structuredPropertyMatch =
+        /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})\/properties$/i.exec(path);
+      if (structuredPropertyMatch && req.method === "PATCH") {
+        {
+          const denied = await forbiddenIfModificationDenied("node.property");
+          if (denied) return denied;
+        }
+        const nodeId = structuredPropertyMatch[1]!;
+        const payload = (await req.json()) as {
+          databaseId?: string;
+          property?: string;
+          value?: unknown;
+        };
+        if (typeof payload.databaseId !== "string" || !payload.databaseId.trim()) {
+          return json({ error: "databaseId required" }, 400);
+        }
+        if (typeof payload.property !== "string" || !payload.property.trim()) {
+          return json({ error: "property required" }, 400);
+        }
+        const error = await db.updateStructuredProperty(
+          nodeId,
+          payload.databaseId.trim(),
+          payload.property.trim(),
+          payload.value ?? null,
+        );
+        if (error === "not_found") return json({ error: "not found" }, 404);
+        if (error === "invalid_column") return json({ error: "invalid column" }, 400);
+        if (error === "invalid_value") return json({ error: "invalid value" }, 400);
+        return json({ ok: true });
+      }
+
       const nodeMatch = /^\/api\/nodes\/([0-9A-HJKMNP-TV-Z]{26})$/i.exec(path);
       if (nodeMatch) {
         const id = nodeMatch[1]!;

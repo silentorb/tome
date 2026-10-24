@@ -36,6 +36,7 @@ import {
   createDatabaseColumn as createDatabaseColumnInDb,
   updateDatabaseColumn as updateDatabaseColumnInDb,
   updateDatabaseRowProperty,
+  updateStructuredProperty,
   updateOutgoingRelationshipProperty,
   linkOutgoingRelationship,
   moveRelationshipConnection,
@@ -523,6 +524,14 @@ function buildGraphServices(
       return Promise.resolve(
         updateDatabaseRowProperty(writeCtx, databaseId, nodeId, propertyKey, value),
       );
+    },
+    async updateStructuredProperty(
+      nodeId: string,
+      databaseId: string,
+      propertyKey: string,
+      value: unknown,
+    ) {
+      return updateStructuredProperty(writeCtx, nodeId, databaseId, propertyKey, value);
     },
     async updateOutgoingRelationshipProperty(
       nodeId: string,

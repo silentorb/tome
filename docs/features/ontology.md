@@ -96,20 +96,19 @@ Optional file: `content/model/ontology.json`
 
 Set-trait relationship types still come from `associations.json` (bootstrap / chicken-egg until typing can be expressed as node-native patterns).
 
-### Imp node-filter structured properties
+### Imp node-filter properties
 
-Active predicate nodes carry selection logic as a fenced structured body property:
+Active predicate nodes carry selection logic as a **node property**:
 
-- Fence language: `json`
-- Info string: `{#predicate type="node-filter"}`
-- Body: **raw Imp Graph JSON** (canonical on disk / for agents; not a React Flow envelope)
-- Property key `predicate` means conceptually `node.predicate`
+- Frontmatter / node property key: `predicate`
+- Value: **raw Imp Graph JSON** (canonical on disk / for agents; not a React Flow envelope)
+- Declared on the predicate type table in `table-schemas.json` as `type: "imp_graph"` with `storage: "node"`
 
-Optional `{#id}` on page-block meta is the general structured-property convention — see [page-blocks.md](../extensions/page-blocks.md).
+Page presentation maps structured column types (`imp_graph`, `json`) to below-body property sections; that mapping is presentation logic (node page API / editor), not a schema layout flag — see [table-schemas.md](./table-schemas.md).
 
-**Editor UI:** [`tome-ontology-ui`](../../packages/tome-ontology-ui/) registers the interactive `node-filter` page block. Authors edit the filter in the host tool panel via shared [`tome-react-flow`](../../packages/tome-react-flow/) (`ImpFlowEditor`); save converts React Flow → Imp so the fence body stays raw Imp. Static HTML shows a short summary (not a full canvas). `ImpFlowEditor` uses `createTomeImpRegistry()` from [`tome-imp-sql`](../../packages/tome-imp-sql/), which catalogs Tome-only `hosts_projection` (ports `association` / `direction` → `value`) so the canvas shows handles — evaluation still uses ontology shape parsers, not Imp SQL lowering.
+**Editor UI:** [`tome-ontology-ui`](../../packages/tome-ontology-ui/) registers an interactive editor for `imp_graph` property sections (tool panel via shared [`tome-react-flow`](../../packages/tome-react-flow/) `ImpFlowEditor`). Saves write the node property via `PATCH /api/nodes/:id/properties`. `ImpFlowEditor` uses `createTomeImpRegistry()` from [`tome-imp-sql`](../../packages/tome-imp-sql/), which catalogs Tome-only `hosts_projection` (ports `association` / `direction` → `value`) so the canvas shows handles — evaluation still uses ontology shape parsers, not Imp SQL lowering.
 
-Predicates without a valid `node-filter` property are not active in the runtime. Slash-insert of `node-filter` stamps `{#predicate …}`. Discovery also accepts a sole `node-filter` fence without `#predicate` as the selection property (read-side resilience).
+Predicates without a valid `predicate` Imp graph property are not active in the runtime.
 
 **Production evaluation (tome-db):** node-filters are evaluated for hub Members, type resolution, and typed pickers. Supported shapes today:
 
@@ -120,13 +119,12 @@ Predicates without a valid `node-filter` property are not active in the runtime.
 
 ### Member-scope instances
 
-A **member-scope** binds a type-table hub to a predicate that **defines** its members (not set-trait edges). Authored on the member-scope node:
+A **member-scope** binds a type-table hub to a predicate that **defines** its members (not set-trait edges). Authored as a **node property** on the member-scope instance (`memberScope`, table-schema `type: "json"`, `storage: "node"`):
 
-```json {#memberScope type="member-scope"}
-{
-  "typeTableId": "<type-table-hub-ulid>",
-  "predicateId": "<predicate-node-ulid>"
-}
+```yaml
+memberScope:
+  typeTableId: "<type-table-hub-ulid>"
+  predicateId: "<predicate-node-ulid>"
 ```
 
 Runtime: `loadMemberScopesFromContent` → hub Members / type identity / belongs-to-hub / pickers use the linked predicate. Set-membership edges are optional **scalar carriers** only — see [sets.md](./sets.md) § Predicate-scoped hubs.
@@ -146,10 +144,10 @@ Local corpus metadata lives in `corpus.json` (legacy `workspace.json`) and is no
 | Package | Owns |
 | --- | --- |
 | `tome-ontology` | Runtime types, match/query, `compileAssociationConfig`, `compileNodePredicates`, merge. **Keep dependencies minimal** (no React / React Flow / page-block hosts). Deepens semantic interpretation but is **optional** — Tome can run with minimal structure and minimal interpretation of relationship semantics without this package. |
-| `tome-ontology-ui` | Client viewing/editing (interactive `node-filter` page block; future ontology UI). Depends on `tome-ontology` + `tome-react-flow`. Never the reverse. |
+| `tome-ontology-ui` | Client viewing/editing (`imp_graph` property sections; future ontology UI). Depends on `tome-ontology` + `tome-react-flow`. Never the reverse. |
 | `tome-flatfile` | associations + ontology.json I/O; discovery; mtime-cached runtime load |
-| `tome-interfaces` | Page-block fence parse including optional `{#id}` |
-| `tome-db` | Domain use + sync invalidation when ontology config / membership / filter bodies change |
+| `tome-interfaces` | Page-block fence parse (in-body embeds only) |
+| `tome-db` | Domain use + sync invalidation when ontology config / membership / filter properties change |
 
 Storage/editor/server hosts must not hard-require `tome-ontology` or `tome-ontology-ui` for a basic boot.
 

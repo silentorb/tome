@@ -442,6 +442,22 @@ export function createHttpClient(baseUrl: string): TomeHttpClient {
         body: JSON.stringify({ property: propertyKey, value }),
       });
     },
+    async updateStructuredProperty(
+      nodeId: string,
+      databaseId: string,
+      propertyKey: string,
+      value: unknown,
+    ): Promise<void> {
+      await fetchJson(`/api/nodes/${nodeId}/properties`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          databaseId,
+          property: propertyKey,
+          value,
+        }),
+      });
+    },
     async updateOutgoingRelationshipProperty(
       nodeId: string,
       type: string,

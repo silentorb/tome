@@ -2,8 +2,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { serializePageBlock } from "tome-interfaces/page-block";
 import { hostsProjectionFilterGraph } from "tome-ontology";
+import type { Properties } from "tome-graph-interfaces";
 import {
   ContentStore,
   contentHasAuthorizationModelType,
@@ -34,12 +34,17 @@ const TYPE_TABLE_HUB = "000000000000000000000000C9";
 const AUTH_MODEL_TYPE = "000000000000000000000000D1";
 const AUTH_MODEL_INST = "000000000000000000000000D2";
 
-function writeNode(contentDir: string, id: string, title: string, body = ""): void {
+function writeNode(
+  contentDir: string,
+  id: string,
+  title: string,
+  extras: Properties = {},
+): void {
   const path = nodeFilePath(contentDir, id);
   mkdirSync(join(path, ".."), { recursive: true });
   writeFileSync(
     path,
-    serializeNodeFile({ id, properties: { title } }, body),
+    serializeNodeFile({ id, properties: { title, ...extras } }, ""),
     "utf-8",
   );
 }
@@ -82,18 +87,18 @@ describe("node ontology runtime overlay", () => {
     writeNode(contentDir, ONTOLOGY_TYPE, "Ontology type");
     writeNode(contentDir, PREDICATE_TYPE, "Predicate type");
     writeNode(contentDir, ONTOLOGY_INST, "Demo ontology");
-    const filterBody = serializePageBlock(
-      "node-filter",
-      {
-        nodes: {
-          lit: { id: "lit", type: "literal", inputs: { value: true } },
-        },
-        edges: {},
+    const filter = {
+      nodes: {
+        lit: { id: "lit", type: "literal", inputs: { value: true } },
       },
-      "predicate",
-    );
-    writeNode(contentDir, PRED_ACTIVE, "Active predicate", `${filterBody}\n`);
-    writeNode(contentDir, PRED_INACTIVE, "Inactive predicate", `${filterBody}\n`);
+      edges: {},
+    };
+    writeNode(contentDir, PRED_ACTIVE, "Active predicate", {
+      predicate: filter as unknown as Properties[string],
+    });
+    writeNode(contentDir, PRED_INACTIVE, "Inactive predicate", {
+      predicate: filter as unknown as Properties[string],
+    });
 
     const store = new ContentStore(contentDir);
     store.writeRelationshipsFile({
@@ -149,19 +154,16 @@ describe("node ontology runtime overlay", () => {
     writeNode(contentDir, ONTOLOGY_INST, "Demo ontology");
     writeNode(contentDir, TYPE_TABLE_HUB, "Inspirations hub");
 
-    const filterBody = serializePageBlock(
-      "node-filter",
-      hostsProjectionFilterGraph("01KXBNPNJDENZ9BXN5BYZ7JKPR", 0),
-      "predicate",
-    );
-    writeNode(contentDir, PRED_ACTIVE, "Inspiration", `${filterBody}\n`);
+    writeNode(contentDir, PRED_ACTIVE, "Inspiration", {
+      predicate: hostsProjectionFilterGraph(
+        "01KXBNPNJDENZ9BXN5BYZ7JKPR",
+        0,
+      ) as unknown as Properties[string],
+    });
 
-    const scopeBody = serializePageBlock(
-      "member-scope",
-      { typeTableId: TYPE_TABLE_HUB, predicateId: PRED_ACTIVE },
-      "memberScope",
-    );
-    writeNode(contentDir, MEMBER_SCOPE_INST, "Inspirations member scope", `${scopeBody}\n`);
+    writeNode(contentDir, MEMBER_SCOPE_INST, "Inspirations member scope", {
+      memberScope: { typeTableId: TYPE_TABLE_HUB, predicateId: PRED_ACTIVE },
+    });
 
     const store = new ContentStore(contentDir);
     store.writeRelationshipsFile({

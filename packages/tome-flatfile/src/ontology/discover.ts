@@ -1,15 +1,9 @@
 import {
-  NODE_FILTER_BLOCK_ROLE,
-  extractStructuredProperties,
-  parsePageBlockFences,
-} from "tome-interfaces/page-block";
-import {
   compileNodePredicates,
   type NodePredicateInput,
 } from "tome-ontology";
-import type { ImpGraph } from "tome-graph-interfaces";
+import type { ImpGraph, PropertyValue } from "tome-graph-interfaces";
 import { ContentStore } from "../content/store";
-import { bodyFromNode } from "../content/node-file";
 import { loadOntologyFileFromContent } from "./load";
 import { parseImpGraph } from "./imp-graph";
 import {
@@ -20,27 +14,12 @@ import {
 
 const PREDICATE_PROPERTY_KEY = "predicate";
 
-function nodeFilterFromBody(body: string): ImpGraph | undefined {
-  const props = extractStructuredProperties(body, NODE_FILTER_BLOCK_ROLE);
-  const keyed = props.get(PREDICATE_PROPERTY_KEY);
-  if (keyed) {
-    const graph = parseImpGraph(keyed.data);
-    return graph ?? undefined;
-  }
-
-  // Resilience: sole node-filter fence without {#predicate} still counts as
-  // the selection property (legacy / incomplete authoring).
-  const { segments } = parsePageBlockFences(body);
-  const filters = segments.filter(
-    (s) => s.type === "block" && s.payload.blockType === NODE_FILTER_BLOCK_ROLE,
-  );
-  if (filters.length !== 1) return undefined;
-  const sole = filters[0]!;
-  if (sole.type !== "block") return undefined;
-  if (sole.payload.propertyId && sole.payload.propertyId !== PREDICATE_PROPERTY_KEY) {
-    return undefined;
-  }
-  const graph = parseImpGraph(sole.payload.data);
+function nodeFilterFromProperties(
+  properties: Record<string, PropertyValue>,
+): ImpGraph | undefined {
+  const raw = properties[PREDICATE_PROPERTY_KEY];
+  if (raw === undefined || raw === null) return undefined;
+  const graph = parseImpGraph(raw);
   return graph ?? undefined;
 }
 
@@ -69,8 +48,7 @@ export function discoverActiveNodePredicates(contentDir: string): NodePredicateI
     if (!activeInOntology.has(predicateId)) continue;
     const node = store.readNode(predicateId);
     if (!node) continue;
-    const body = bodyFromNode(node);
-    const nodeFilter = nodeFilterFromBody(body);
+    const nodeFilter = nodeFilterFromProperties(node.properties);
     if (!nodeFilter) {
       // Skip incomplete predicate nodes (no valid filter) per plan.
       continue;

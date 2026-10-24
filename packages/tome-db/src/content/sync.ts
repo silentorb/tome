@@ -764,7 +764,7 @@ export class CacheSync {
     if (match) {
       const id = base.slice(0, -3);
       if (this.corpusContentDirs().some((dir) => contentHasOntologyTypes(dir))) {
-        // Predicate node-filter bodies live on node markdown.
+        // Predicate / member-scope structured properties live on node files.
         invalidateRelationshipTypesCache();
       }
       await this.syncNodeUnlocked(id);

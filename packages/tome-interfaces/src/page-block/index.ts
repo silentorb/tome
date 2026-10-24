@@ -8,7 +8,6 @@ export {
   NODE_FILTER_BLOCK_ROLE,
   MEMBER_SCOPE_BLOCK_ROLE,
   PAGE_BLOCK_CONTENT_TYPE_JSON,
-  extractStructuredProperties,
   formatPageBlockFenceMeta,
   normalizeLegacyBlockType,
   parsePageBlockFenceBody,

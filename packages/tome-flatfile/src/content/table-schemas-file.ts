@@ -3,25 +3,30 @@ import { isRelationshipTypeId, normalizeRelationshipTypeId } from "./relationshi
 import type {
   TableColumnDef,
   TableColumnScalarType,
+  TableColumnStorage,
+  TableColumnStructuredType,
   TableColumnType,
   TableRelationColumn,
   TableScalarColumn,
   TableSchema,
   TableSchemasFile,
+  TableStructuredColumn,
 } from "tome-graph-interfaces";
 
 export type {
   TableColumnDef,
   TableColumnScalarType,
+  TableColumnStorage,
+  TableColumnStructuredType,
   TableColumnType,
   TableRelationColumn,
   TableScalarColumn,
   TableSchema,
   TableSchemasFile,
+  TableStructuredColumn,
 } from "tome-graph-interfaces";
 
 export const TABLE_SCHEMAS_FILE_VERSION = 1;
-
 
 const SCALAR_TYPES = new Set<string>([
   "checkbox",
@@ -37,6 +42,16 @@ const SCALAR_TYPES = new Set<string>([
   "text",
   "url",
 ]);
+
+const STRUCTURED_TYPES = new Set<string>(["imp_graph", "json"]);
+
+function parseStorage(raw: unknown, path: string): TableColumnStorage | undefined {
+  if (raw === undefined) return undefined;
+  if (raw !== "node" && raw !== "edge") {
+    throw new Error(`${path}: column.storage must be "node" or "edge"`);
+  }
+  return raw;
+}
 
 function parseScalarColumn(raw: unknown, path: string): TableScalarColumn {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
@@ -63,6 +78,32 @@ function parseScalarColumn(raw: unknown, path: string): TableScalarColumn {
     }
     column.enumId = obj.enumId.trim();
   }
+  const storage = parseStorage(obj.storage, path);
+  if (storage) column.storage = storage;
+  return column;
+}
+
+function parseStructuredColumn(raw: unknown, path: string): TableStructuredColumn {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+    throw new Error(`${path}: column must be an object`);
+  }
+  const obj = raw as Record<string, unknown>;
+  if (typeof obj.key !== "string" || !obj.key.trim()) {
+    throw new Error(`${path}: column.key is required`);
+  }
+  if (typeof obj.name !== "string" || !obj.name.trim()) {
+    throw new Error(`${path}: column.name is required`);
+  }
+  if (typeof obj.type !== "string" || !STRUCTURED_TYPES.has(obj.type)) {
+    throw new Error(`${path}: column.type must be a structured type (imp_graph | json)`);
+  }
+  const column: TableStructuredColumn = {
+    key: obj.key.trim(),
+    name: obj.name.trim(),
+    type: obj.type as TableColumnStructuredType,
+  };
+  const storage = parseStorage(obj.storage, path);
+  if (storage) column.storage = storage;
   return column;
 }
 
@@ -105,6 +146,9 @@ function parseColumn(raw: unknown, path: string): TableColumnDef {
   }
   const type = (raw as Record<string, unknown>).type;
   if (type === "relation") return parseRelationColumn(raw, path);
+  if (typeof type === "string" && STRUCTURED_TYPES.has(type)) {
+    return parseStructuredColumn(raw, path);
+  }
   return parseScalarColumn(raw, path);
 }
 

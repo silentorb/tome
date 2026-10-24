@@ -150,6 +150,13 @@ export interface TomeGraphServices {
     propertyKey: string,
     value: string | null,
   ): Promise<RelationshipPropertyUpdateError | null>;
+  /** Update a structured table-schema column (`imp_graph` / `json`) by storage locus. */
+  updateStructuredProperty(
+    nodeId: string,
+    databaseId: string,
+    propertyKey: string,
+    value: unknown,
+  ): Promise<RelationshipPropertyUpdateError | "invalid_column" | "invalid_value" | null>;
   updateOutgoingRelationshipProperty(
     nodeId: string,
     type: string,

@@ -1,6 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
 import { readFileSync, writeFileSync } from "node:fs";
-import { serializePageBlock } from "tome-interfaces/page-block";
 import { hostsProjectionFilterGraph } from "tome-ontology";
 import {
   invalidateOntologyCache,
@@ -50,10 +49,10 @@ const FEATURE = "01M4539SE0J97VZKF5BS4KTP1X";
 
 async function seedScopedInspirationFixture(
   fixture: TestContentFixture,
-  options?: { predicateFence?: "canonical" | "role-only" | "missing" },
+  options?: { predicateProperty?: "present" | "missing" },
 ): Promise<string> {
   const contentDir = fixture.ctx.store.contentDir;
-  const fenceMode = options?.predicateFence ?? "canonical";
+  const predicateMode = options?.predicateProperty ?? "present";
 
   const registry = parseRelationshipTypesFile(
     readFileSync(relationshipTypesFilePath(contentDir), "utf-8"),
@@ -105,6 +104,26 @@ async function seedScopedInspirationFixture(
             },
           ],
         },
+        [PREDICATE_TYPE]: {
+          columns: [
+            {
+              key: "predicate",
+              name: "Selection filter",
+              type: "imp_graph",
+              storage: "node",
+            },
+          ],
+        },
+        [MEMBER_SCOPE_TYPE]: {
+          columns: [
+            {
+              key: "memberScope",
+              name: "Member scope",
+              type: "json",
+              storage: "node",
+            },
+          ],
+        },
       },
     }),
   );
@@ -116,19 +135,28 @@ async function seedScopedInspirationFixture(
   await seedTestNode(fixture, { id: MEMBER_SCOPE_TYPE, properties: { title: "Member scope" } });
   await seedTestNode(fixture, { id: ONTOLOGY_INST, properties: { title: "Demo ontology" } });
 
-  let predicateBody = "";
-  if (fenceMode === "canonical") {
-    predicateBody = `${serializePageBlock("node-filter", hostsProjectionFilterGraph(INSPIRES, 0), "predicate")}\n`;
-  } else if (fenceMode === "role-only") {
-    predicateBody = `${serializePageBlock("node-filter", hostsProjectionFilterGraph(INSPIRES, 0))}\n`;
-  }
+  const predicateProps =
+    predicateMode === "present"
+      ? {
+          title: "Inspiration",
+          predicate: hostsProjectionFilterGraph(INSPIRES, 0) as unknown as Record<
+            string,
+            unknown
+          >,
+        }
+      : { title: "Inspiration" };
 
-  await seedTestNode(fixture, { id: PRED, properties: { title: "Inspiration" } }, predicateBody);
-  await seedTestNode(
-    fixture,
-    { id: SCOPE, properties: { title: "Inspirations member scope" } },
-    `${serializePageBlock("member-scope", { typeTableId: HUB, predicateId: PRED }, "memberScope")}\n`,
-  );
+  await seedTestNode(fixture, {
+    id: PRED,
+    properties: predicateProps as import("tome-graph-interfaces").Properties,
+  });
+  await seedTestNode(fixture, {
+    id: SCOPE,
+    properties: {
+      title: "Inspirations member scope",
+      memberScope: { typeTableId: HUB, predicateId: PRED },
+    },
+  });
   await seedTestNode(fixture, { id: INSP_A, properties: { title: "Work A" } });
   await seedTestNode(fixture, { id: INSP_B, properties: { title: "Work B (no inspires)" } });
   await seedTestNode(fixture, { id: FEATURE, properties: { title: "Feature X" } });
@@ -186,25 +214,11 @@ describe("predicate-scoped type table membership", () => {
   );
 
   test(
-    "role-only node-filter fence still loads via discovery resilience",
-    async () => {
-      fixture = await createTestContentFixture("tome-member-scope-role-only-");
-      const contentDir = await seedScopedInspirationFixture(fixture, {
-        predicateFence: "role-only",
-      });
-      const store = fixture.ctx.graphStore;
-      const members = await predicateScopedMemberIds(store, HUB, contentDir);
-      expect(members?.sort()).toEqual([INSP_A]);
-    },
-    30_000,
-  );
-
-  test(
     "unevaluable member-scope throws instead of empty success",
     async () => {
       fixture = await createTestContentFixture("tome-member-scope-unevaluable-");
       const contentDir = await seedScopedInspirationFixture(fixture, {
-        predicateFence: "missing",
+        predicateProperty: "missing",
       });
       const store = fixture.ctx.graphStore;
       await expect(predicateScopedMemberIds(store, HUB, contentDir)).rejects.toBeInstanceOf(

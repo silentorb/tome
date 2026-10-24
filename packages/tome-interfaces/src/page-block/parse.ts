@@ -2,24 +2,22 @@ import type { MarkdownSegment, PageBlockPayload, ParsedPageBlockMarkdown } from 
 
 export const PAGE_BLOCK_CONTENT_TYPE_JSON = "json";
 
-/** Role for Imp node→boolean filter graphs stored as structured body properties. */
+/** @deprecated Prefer table-schema `imp_graph` node properties for ontology filters. */
 export const NODE_FILTER_BLOCK_ROLE = "node-filter";
 
-/** Role for member-scope binding payloads (`{#memberScope type="member-scope"}`). */
+/** @deprecated Prefer table-schema `json` node properties for member-scope bindings. */
 export const MEMBER_SCOPE_BLOCK_ROLE = "member-scope";
 
 const FENCE_CLOSE = /\n```/;
-/** New format: ```json {type="role"} or ```json {#id type="role"} */
+/** New format: ```json {type="role"} */
 const JSON_FENCE_OPEN = /^```json\s+(\{[\s\S]*?\})\s*\n/;
 /** Legacy format: ```tome-block */
 const LEGACY_FENCE_OPEN = /^```tome-block\s*\n/;
 const TYPE_ATTR_RE = /\btype\s*=\s*"([^"]+)"/;
-const PROPERTY_ID_RE = /#([A-Za-z][A-Za-z0-9_-]*)/;
 const KIND_SUFFIX_RE = /\.(block|searcher)$/;
 
 export interface PageBlockInfoMeta {
   blockType: string;
-  propertyId?: string;
 }
 
 /** Strip trailing `.block` / `.searcher` from legacy component ids used as block types. */
@@ -33,15 +31,12 @@ function payloadFromRole(
   blockType: string,
   data: unknown = {},
   contentType = PAGE_BLOCK_CONTENT_TYPE_JSON,
-  propertyId?: string,
 ): PageBlockPayload {
-  const payload: PageBlockPayload = {
+  return {
     blockType: blockType.trim(),
     contentType,
     data: data ?? {},
   };
-  if (propertyId) payload.propertyId = propertyId;
-  return payload;
 }
 
 /**
@@ -61,11 +56,7 @@ export function parsePageBlockPayload(raw: string): PageBlockPayload | null {
         typeof obj.contentType === "string" && obj.contentType.trim()
           ? obj.contentType.trim()
           : PAGE_BLOCK_CONTENT_TYPE_JSON;
-      const propertyId =
-        typeof obj.propertyId === "string" && obj.propertyId.trim()
-          ? obj.propertyId.trim()
-          : undefined;
-      return payloadFromRole(obj.blockType, obj.data ?? {}, contentType, propertyId);
+      return payloadFromRole(obj.blockType, obj.data ?? {}, contentType);
     }
 
     // Legacy nested fence / old embed comment
@@ -84,18 +75,17 @@ export function parsePageBlockFenceBody(
   blockType: string,
   raw: string,
   contentType = PAGE_BLOCK_CONTENT_TYPE_JSON,
-  propertyId?: string,
 ): PageBlockPayload | null {
   const role = blockType.trim();
   if (!role) return null;
   const trimmed = raw.trim();
   if (!trimmed) {
-    return payloadFromRole(role, {}, contentType, propertyId);
+    return payloadFromRole(role, {}, contentType);
   }
   try {
     const parsed = JSON.parse(trimmed) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    return payloadFromRole(role, parsed, contentType, propertyId);
+    return payloadFromRole(role, parsed, contentType);
   } catch {
     return null;
   }
@@ -104,10 +94,7 @@ export function parsePageBlockFenceBody(
 export function parsePageBlockInfoMeta(meta: string): PageBlockInfoMeta | null {
   const typeMatch = TYPE_ATTR_RE.exec(meta);
   if (!typeMatch?.[1]?.trim()) return null;
-  const blockType = typeMatch[1].trim();
-  const idMatch = PROPERTY_ID_RE.exec(meta);
-  const propertyId = idMatch?.[1]?.trim() || undefined;
-  return propertyId ? { blockType, propertyId } : { blockType };
+  return { blockType: typeMatch[1].trim() };
 }
 
 /** Pretty-printed flattened data JSON for the fence body. */
@@ -115,21 +102,14 @@ export function serializePageBlockInner(_blockType: string, data: unknown = {}):
   return JSON.stringify(data ?? {}, null, 2);
 }
 
-export function formatPageBlockFenceMeta(blockType: string, propertyId?: string): string {
+export function formatPageBlockFenceMeta(blockType: string): string {
   const role = blockType.trim();
-  if (propertyId?.trim()) {
-    return `{#${propertyId.trim()} type="${role}"}`;
-  }
   return `{type="${role}"}`;
 }
 
-export function serializePageBlock(
-  blockType: string,
-  data: unknown = {},
-  propertyId?: string,
-): string {
+export function serializePageBlock(blockType: string, data: unknown = {}): string {
   const role = blockType.trim();
-  const open = `\`\`\`${PAGE_BLOCK_CONTENT_TYPE_JSON} ${formatPageBlockFenceMeta(role, propertyId)}`;
+  const open = `\`\`\`${PAGE_BLOCK_CONTENT_TYPE_JSON} ${formatPageBlockFenceMeta(role)}`;
   return [open, serializePageBlockInner(role, data), "```"].join("\n");
 }
 
@@ -179,7 +159,6 @@ export function parsePageBlockFences(markdown: string): ParsedPageBlockMarkdown 
         info.blockType,
         inner,
         PAGE_BLOCK_CONTENT_TYPE_JSON,
-        info.propertyId,
       );
       if (payload) {
         segments.push({ type: "block", payload, raw: rawFence });
@@ -258,24 +237,4 @@ export function substitutePageBlockPlaceholders(
     result = result.replace(placeholder, fragments[index] ?? "");
   }
   return result;
-}
-
-/**
- * Extract structured body properties: fences with `{#id type="…"}` keyed by property id.
- * When `role` is set, only blocks with that role are included.
- */
-export function extractStructuredProperties(
-  markdown: string,
-  role?: string,
-): Map<string, PageBlockPayload> {
-  const out = new Map<string, PageBlockPayload>();
-  const { segments } = parsePageBlockFences(markdown);
-  for (const segment of segments) {
-    if (segment.type !== "block") continue;
-    const { payload } = segment;
-    if (!payload.propertyId) continue;
-    if (role && payload.blockType !== role) continue;
-    out.set(payload.propertyId, payload);
-  }
-  return out;
 }

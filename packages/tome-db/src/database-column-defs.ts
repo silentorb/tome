@@ -57,7 +57,7 @@ function databaseColumnFromTableColumn(
     name: col.name,
     type: col.type,
   };
-  if (col.enumId) {
+  if ("enumId" in col && col.enumId) {
     base.enumId = col.enumId;
   }
   return enrichColumnDef(base, schema);

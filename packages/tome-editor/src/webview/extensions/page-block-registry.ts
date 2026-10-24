@@ -51,6 +51,13 @@ class ClientEditorPageBlockHost implements EditorPageBlockHost {
     return this.#blocks.get(implementationId);
   }
 
+  /** Registrations that handle structured property column types. */
+  listPropertyFieldRegistrations(): EditorPageBlockRegistration[] {
+    return [...this.#blocks.values()].filter(
+      (reg) => (reg.propertyColumnTypes?.length ?? 0) > 0 && reg.Component,
+    );
+  }
+
   clear(): void {
     this.#blocks.clear();
   }
@@ -164,6 +171,25 @@ export function getInteractivePageBlockRegistration(
   const component = resolvePageBlockRole(roleOrComponentId);
   if (!component?.interactive) return undefined;
   return host.get(component.implementationId);
+}
+
+/** Find an interactive registration that handles a structured property column type. */
+export function getPropertyFieldRegistration(
+  columnType: string,
+): { registration: EditorPageBlockRegistration; component: PublicExtensionComponent } | null {
+  const trimmed = columnType.trim();
+  if (!trimmed) return null;
+  for (const registration of host.listPropertyFieldRegistrations()) {
+    if (!registration.propertyColumnTypes?.includes(trimmed)) continue;
+    const component =
+      componentsOrdered.find((c) => c.implementationId === registration.implementationId) ??
+      [...componentsById.values()].find(
+        (c) => c.implementationId === registration.implementationId,
+      );
+    if (!component) continue;
+    return { registration, component };
+  }
+  return null;
 }
 
 /** Resolve how an embed should mount: React, explicit error, or static HTML. */

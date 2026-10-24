@@ -47,15 +47,36 @@ export interface RelationTableSection {
   rowsWindow: TableRowsWindow;
 }
 
+/**
+ * Below-body section for a structured property (e.g. `imp_graph`, `json`).
+ * Assembled by page presentation from column data nature — not a schema layout flag.
+ */
+export interface PropertyFieldSection {
+  type: "property";
+  /** Column / property key. */
+  key: string;
+  title: string;
+  /** Structured column type (`imp_graph` | `json`). */
+  columnType: string;
+  /** Resolved storage locus for mutations. */
+  storage: "node" | "edge";
+  /** Type-table hub that declared the column (for edge-storage mutations). */
+  databaseId: string;
+  /** Current value (object / Imp graph), or null when unset. */
+  value: unknown;
+}
+
 export type NodeSection =
   | MarkdownSection
   | DatabaseTableSection
-  | RelationTableSection;
+  | RelationTableSection
+  | PropertyFieldSection;
 
 export type EditorNodeSection =
   | EditorMarkdownSection
   | DatabaseTableSection
-  | RelationTableSection;
+  | RelationTableSection
+  | PropertyFieldSection;
 
 export interface NodePageDetail extends NodeDetail {
   metadata: NodePageMetadata;

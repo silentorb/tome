@@ -178,6 +178,11 @@ export { getNodePageMetadata } from "./node-metadata";
 export type { NodeBacklink, NodePageMetadata } from "./node-metadata";
 export { buildPropertiesSection } from "./node-type-properties";
 export type { PropertiesSection } from "./node-type-properties";
+export { buildPropertyFieldSections } from "./node-property-sections";
+export {
+  updateStructuredProperty,
+  type StructuredPropertyUpdateError,
+} from "./structured-property-update";
 export {
   graphGroupForNode,
   graphLabelsForNode,

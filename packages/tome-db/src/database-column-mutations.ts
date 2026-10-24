@@ -260,14 +260,14 @@ async function applyColumnPatch(
     const enumId =
       input.enumId !== undefined
         ? input.enumId?.trim() || undefined
-        : existing.type !== "relation"
+        : existing.type !== "relation" && "enumId" in existing
           ? existing.enumId
           : undefined;
     if (!enumId) return null;
     column.enumId = enumId;
   } else if (input.enumId !== undefined && input.enumId?.trim()) {
     column.enumId = input.enumId.trim();
-  } else if (existing.type !== "relation" && existing.enumId) {
+  } else if (existing.type !== "relation" && "enumId" in existing && existing.enumId) {
     column.enumId = existing.enumId;
   }
 

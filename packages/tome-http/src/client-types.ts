@@ -206,6 +206,12 @@ export interface TomeHttpClient {
     propertyKey: string,
     value: string | null,
   ): Promise<void>;
+  updateStructuredProperty(
+    nodeId: string,
+    databaseId: string,
+    propertyKey: string,
+    value: unknown,
+  ): Promise<void>;
   updateOutgoingRelationshipProperty(
     nodeId: string,
     type: string,

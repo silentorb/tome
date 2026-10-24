@@ -7,9 +7,9 @@ import { dedupeInboundReactFlowEdges } from "tome-react-flow/config";
 
 export const IMPLEMENTATION_ID = "tome-ontology-ui";
 export const COMPONENT_ID = "tome-ontology-ui";
-/** Fence `type=` role resolved via component `roles`. */
+/** @deprecated In-body node-filter page blocks removed; Imp filters are node properties. */
 export const BLOCK_ROLE = NODE_FILTER_BLOCK_ROLE;
-/** Structured-property id for predicate selection logic (`{#predicate type="node-filter"}`). */
+/** Node property key for predicate selection Imp graphs. */
 export const PREDICATE_PROPERTY_ID = "predicate";
 
 /**

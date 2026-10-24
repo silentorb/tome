@@ -106,6 +106,7 @@ export function makeMockEditorApi(): EditorApi {
     saveDocument: async () => {},
     saveTitle: async () => {},
     updateDatabaseRowProperty: async () => {},
+    updateStructuredProperty: async () => {},
     updateOutgoingRelationshipProperty: async () => {},
     linkOutgoingRelationship: async () => {},
     unlinkOutgoingRelationship: async () => {},

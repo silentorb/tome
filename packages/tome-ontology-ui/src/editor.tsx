@@ -116,7 +116,8 @@ export function register(host: EditorPageBlockHost): void {
   host.registerPageBlock({
     implementationId: IMPLEMENTATION_ID,
     interactive: true,
-    slashMenu: { label: "Node filter", group: "custom", order: 55 },
+    /** Edit Imp filters as property page sections (data nature `imp_graph`). */
+    propertyColumnTypes: ["imp_graph"],
     insertDefaultData: () => defaultBlockData(),
     Component: NodeFilterBlockComponent,
   });

@@ -1,10 +1,6 @@
-import {
-  MEMBER_SCOPE_BLOCK_ROLE,
-  extractStructuredProperties,
-} from "tome-interfaces/page-block";
 import type { MemberScope } from "tome-ontology";
+import type { PropertyValue } from "tome-graph-interfaces";
 import { ContentStore } from "../content/store";
-import { bodyFromNode } from "../content/node-file";
 import { isNodeId } from "../node-id";
 import { loadOntologyFileFromContent } from "./load";
 import {
@@ -28,20 +24,19 @@ function parseMemberScopePayload(data: unknown): {
   return { typeTableId: typeTableId.trim(), predicateId: predicateId.trim() };
 }
 
-function memberScopeFromBody(body: string): {
+function memberScopeFromProperties(
+  properties: Record<string, PropertyValue>,
+): {
   typeTableId: string;
   predicateId: string;
 } | null {
-  const props = extractStructuredProperties(body, MEMBER_SCOPE_BLOCK_ROLE);
-  const payload = props.get(MEMBER_SCOPE_PROPERTY_KEY);
-  if (!payload) return null;
-  return parseMemberScopePayload(payload.data);
+  return parseMemberScopePayload(properties[MEMBER_SCOPE_PROPERTY_KEY]);
 }
 
 /**
  * Discover active member-scope instances:
  * members of types.memberScope that are also members of ≥1 ontology instance,
- * with a valid `{#memberScope type="member-scope"}` binding payload.
+ * with a valid `memberScope` node property binding payload.
  */
 export function discoverActiveMemberScopes(contentDir: string): MemberScope[] {
   const ontology = loadOntologyFileFromContent(contentDir);
@@ -62,7 +57,7 @@ export function discoverActiveMemberScopes(contentDir: string): MemberScope[] {
     if (!activeInOntology.has(scopeId)) continue;
     const node = store.readNode(scopeId);
     if (!node) continue;
-    const binding = memberScopeFromBody(bodyFromNode(node));
+    const binding = memberScopeFromProperties(node.properties);
     if (!binding) continue;
     const title =
       typeof node.properties.title === "string" ? node.properties.title : undefined;

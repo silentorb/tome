@@ -141,7 +141,7 @@ Removing a Members-table row **must** delete the stored set-trait edge between t
 | Page kind | Set UI |
 | --- | --- |
 | **Set / type-table node** | Single members (or ordered-members) table section (`database` or `ordered-collection`) — full columns, tabs, editing via `getDatabaseViewDetail` |
-| **Member instance node** | **Properties** panel in metadata (edge scalars) **and** one set-membership relation section below the markdown body |
+| **Member instance node** | **Properties** panel in metadata (form-friendly edge scalars); below-body **relation** sections; and **property** sections for structured columns (`imp_graph` / `json`) inferred from table-schema data nature |
 
 The auto-generated inverse set-side relation section is **not** emitted on set pages — listing there uses the rich Members table only. The membership section header does **not** link to a single parent set (rows link to each parent).
 

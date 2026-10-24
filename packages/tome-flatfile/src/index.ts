@@ -214,7 +214,13 @@ export {
   parseTableSchemasFile,
   serializeTableSchemasFile,
 } from "./content/table-schemas-file";
-export type { TableColumnDef, TableSchemasFile } from "./content/table-schemas-file";
+export type {
+  TableColumnDef,
+  TableColumnStorage,
+  TableColumnStructuredType,
+  TableSchemasFile,
+  TableStructuredColumn,
+} from "./content/table-schemas-file";
 
 export {
   NODE_ID_RE_SRC,
@@ -409,11 +415,15 @@ export {
 
 export {
   STORED_SCALAR_COLUMN_TYPES,
+  STRUCTURED_COLUMN_TYPES,
   slugifyPropertyKey,
   isStoredScalarColumnType,
+  isStructuredColumnType,
+  columnStorage,
   getTableSchema,
   findColumnByKey,
   storedScalarColumns,
+  structuredColumns,
   relationColumns,
 } from "./table-schema";
 

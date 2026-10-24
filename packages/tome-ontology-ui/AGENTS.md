@@ -1,34 +1,13 @@
-# tome-ontology-ui — agent notes
+# tome-ontology-ui
 
-**Feature spec:** [`docs/features/ontology.md`](../../docs/features/ontology.md)
+Client-side ontology viewing/editing. First surface: interactive **`imp_graph` property sections** (Imp node→boolean graphs on predicate nodes).
 
-Client-side ontology viewing/editing. First surface: interactive `node-filter` page blocks (Imp node→boolean graphs on predicate nodes).
+## Boundaries
 
-## Boundary vs `tome-ontology`
-
-| Package | Owns |
-| --- | --- |
-| `tome-ontology` | Store-independent runtime (predicates, patterns). Keep deps minimal. Optional for minimal Tome. |
-| `tome-ontology-ui` | Editor/HTML/server page-block modules and any future ontology UI |
-
-Never add React / React Flow deps to `tome-ontology`. This package depends on `tome-ontology` (types/vocabulary); never the reverse.
+- Depends on `tome-ontology` + `tome-react-flow` (+ Imp packages).
+- Never inverted: `tome-ontology` must not import this package.
+- Registers via the page-block editor host with `propertyColumnTypes: ["imp_graph"]` so the node page can mount the Imp editor on structured property sections (not in-body page-block fences).
 
 ## Storage
 
-Fence body is **raw Imp** `{ nodes, edges }` (property `{#predicate type="node-filter"}`). React Flow is editor-only via `impToReactFlow` / `reactFlowToImp`.
-
-`ImpFlowEditor` receives `createRegistry={createTomeImpRegistry}` so Tome-only `hosts_projection` (and other registry ops) get port handles in the tool panel.
-
-## Layout
-
-| Path | Role |
-| --- | --- |
-| `src/config.ts` | Parse/default Imp filter; Imp↔RF adapters |
-| `src/editor.tsx` | Interactive block + tool panel (`ImpFlowEditor`) |
-| `src/html.ts` / `server.ts` | Static summary / thin register |
-
-## Tests
-
-```bash
-bun test   # from this package, or: bun run --filter tome-ontology-ui test
-```
+Predicate selection graphs live on the node property key `predicate` (table-schema `type: "imp_graph"`, `storage: "node"`). React Flow is editor-only via `impToReactFlow` / `reactFlowToImp`.

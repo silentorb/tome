@@ -323,14 +323,12 @@ function convertBlocks(nodes: readonly (BlockContent | RootContent)[]): NodeBody
               info.blockType,
               code.value,
               PAGE_BLOCK_CONTENT_TYPE_JSON,
-              info.propertyId,
             );
             if (payload) {
               out.push({
                 type: "page_block",
                 blockType: payload.blockType,
                 data: payload.data,
-                ...(payload.propertyId ? { propertyId: payload.propertyId } : {}),
               });
               break;
             }
@@ -343,7 +341,6 @@ function convertBlocks(nodes: readonly (BlockContent | RootContent)[]): NodeBody
               type: "page_block",
               blockType: payload.blockType,
               data: payload.data,
-              ...(payload.propertyId ? { propertyId: payload.propertyId } : {}),
             });
             break;
           }
@@ -551,7 +548,7 @@ function blocksToMdast(blocks: readonly NodeBodyBlock[]): BlockContent[] {
         out.push({
           type: "code",
           lang: PAGE_BLOCK_CONTENT_TYPE_JSON,
-          meta: formatPageBlockFenceMeta(block.blockType, block.propertyId),
+          meta: formatPageBlockFenceMeta(block.blockType),
           value: serializePageBlockInner(block.blockType, block.data),
         });
         break;

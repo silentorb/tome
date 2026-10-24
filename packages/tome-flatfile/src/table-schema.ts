@@ -1,6 +1,12 @@
-import type { TableColumnDef, TableScalarColumn, TableSchema } from "./content/table-schemas-file";
+import type {
+  TableColumnDef,
+  TableColumnStorage,
+  TableScalarColumn,
+  TableSchema,
+  TableStructuredColumn,
+} from "./content/table-schemas-file";
 
-/** Stored scalar column types (values live on is_a relationship properties). */
+/** Form-friendly scalar column types (compact Properties / Items cells). */
 export const STORED_SCALAR_COLUMN_TYPES = new Set([
   "checkbox",
   "date",
@@ -16,6 +22,9 @@ export const STORED_SCALAR_COLUMN_TYPES = new Set([
   "url",
 ]);
 
+/** Structured column types — page presentation typically promotes these to sections. */
+export const STRUCTURED_COLUMN_TYPES = new Set(["imp_graph", "json"]);
+
 export function slugifyPropertyKey(label: string): string {
   let s = label.trim().toLowerCase();
   s = s.replace(/[^a-z0-9_]+/g, "_");
@@ -27,6 +36,16 @@ export function slugifyPropertyKey(label: string): string {
 
 export function isStoredScalarColumnType(type: string): boolean {
   return STORED_SCALAR_COLUMN_TYPES.has(type);
+}
+
+export function isStructuredColumnType(type: string): boolean {
+  return STRUCTURED_COLUMN_TYPES.has(type);
+}
+
+export function columnStorage(col: {
+  storage?: TableColumnStorage;
+}): TableColumnStorage {
+  return col.storage ?? "edge";
 }
 
 export function getTableSchema(
@@ -45,6 +64,12 @@ export function storedScalarColumns(schema: TableSchema): TableScalarColumn[] {
   return schema.columns.filter(
     (col): col is TableScalarColumn =>
       col.type !== "relation" && isStoredScalarColumnType(col.type),
+  );
+}
+
+export function structuredColumns(schema: TableSchema): TableStructuredColumn[] {
+  return schema.columns.filter(
+    (col): col is TableStructuredColumn => isStructuredColumnType(col.type),
   );
 }
 
