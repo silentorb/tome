@@ -131,6 +131,20 @@ export class FtsStore {
       this.deleteDocument(id);
     }
     for (const id of [...nodes.created, ...nodes.modified]) {
+      const previewProps = signal.preview?.nodes?.[id];
+      if (previewProps === null) {
+        this.deleteDocument(id);
+        continue;
+      }
+      if (previewProps) {
+        this.upsertDocument({
+          id,
+          title: stringField(previewProps.title) || null,
+          alias: stringField(previewProps.alias) || null,
+          body: stringField(previewProps.body) || null,
+        });
+        continue;
+      }
       const doc = await this.resolveDocument(signal.source, id);
       if (doc) this.upsertDocument(doc);
       else this.deleteDocument(id);

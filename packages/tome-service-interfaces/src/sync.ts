@@ -2,6 +2,7 @@ import type {
   ExecuteImpContext,
   ImpCollectionResult,
   ImpGraph,
+  Properties,
 } from "tome-graph-interfaces";
 
 /** Ids only — sink pulls current values via `source` for create/modify. */
@@ -35,9 +36,41 @@ export interface SyncSourceRead {
   ): ImpCollectionResult | Promise<ImpCollectionResult>;
 }
 
+/**
+ * Eager values for API mutation fan-out so sinks need not wait on durable I/O.
+ * Watch/Git paths omit preview and pull via {@link SyncSourceRead}.
+ */
+export type SyncMutationPreview = {
+  /**
+   * Node id → properties bag for cache upsert (include `body` when present).
+   * `null` means the node is deleted.
+   */
+  nodes?: Readonly<Record<string, Properties | null>>;
+  /**
+   * Canonical relationship record id `{a}:{b}:{type}` → entry for expand/upsert.
+   * `null` means the relationship is deleted.
+   */
+  relationships?: Readonly<
+    Record<
+      string,
+      | {
+          a: string;
+          b: string;
+          type: string;
+          properties?: Properties;
+        }
+      | null
+    >
+  >;
+  /** Optional corpus id per node id (for multi-corpus cache upsert). */
+  nodeCorpusIds?: Readonly<Record<string, string | null | undefined>>;
+};
+
 export type SyncSignal = {
   source: SyncSourceRead;
   scope: SyncScope;
+  /** Present on API mutation publish; absent on FS/Git watch pulls. */
+  preview?: SyncMutationPreview;
 };
 
 export type DataStoreKind =

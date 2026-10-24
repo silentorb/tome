@@ -1,13 +1,19 @@
 import type { Properties } from "tome-sqlite";
 import type { TomeWriteContext } from "./content/write-context";
-import { syncAfterRelationshipsWrite } from "./content/write-context";
+import {
+  syncAfterRelationshipChange,
+  syncAfterRelationshipsWrite,
+} from "./content/write-context";
 import {
   LinkResolutionError,
   UnknownRelationshipTypeError,
   isRelationshipTypeId,
   isMemberSideProjectionType,
   loadRelationshipTypesFromContent,
+  orderedEndpointsForRelationshipType,
   parseProjectionType,
+  relationshipRecordId,
+  resolveRelationshipTypeIdForLink,
 } from "tome-flatfile";
 import { isTypeTableNode, nodeMatchesTargetTypes } from "./node-capabilities";
 import { relationshipTypeRuleContext } from "./relationship-type-endpoints";
@@ -121,15 +127,48 @@ export async function linkOutgoingRelationship(
     }
   }
 
+  let compositeType: string;
   try {
-    await writeStoreUpsertRelationship(store, sourceId, targetId, normalizedType, relProps);
+    compositeType = resolveRelationshipTypeIdForLink(
+      registry,
+      [],
+      contentDir,
+      sourceId,
+      targetId,
+      normalizedType,
+    );
   } catch (err) {
     if (err instanceof LinkResolutionError || err instanceof UnknownRelationshipTypeError) {
       return "unresolvable_type";
     }
     throw err;
   }
-  await syncAfterRelationshipsWrite(ctx);
+
+  const { a, b } = orderedEndpointsForRelationshipType(
+    registry,
+    compositeType,
+    sourceId,
+    targetId,
+    normalizedType,
+    contentDir,
+  );
+
+  try {
+    await syncAfterRelationshipChange(ctx, {
+      write: () =>
+        writeStoreUpsertRelationship(store, sourceId, targetId, normalizedType, relProps),
+      a,
+      b,
+      type: compositeType,
+      entry: { a, b, type: compositeType, properties: relProps },
+      existed: false,
+    });
+  } catch (err) {
+    if (err instanceof LinkResolutionError || err instanceof UnknownRelationshipTypeError) {
+      return "unresolvable_type";
+    }
+    throw err;
+  }
   return null;
 }
 
@@ -150,8 +189,30 @@ export async function unlinkOutgoingRelationship(
     normalizedType,
   );
   if (!existing) return "not_found";
-  await writeStoreDeleteRelationship(store, sourceId, targetId, existing.type);
-  await syncAfterRelationshipsWrite(ctx);
+  const contentDir = writeStoreContentDir(store);
+  const { a, b } = orderedEndpointsForRelationshipType(
+    registry,
+    existing.type,
+    sourceId,
+    targetId,
+    existing.type,
+    contentDir,
+  );
+  // Cache / sync scopes key by composite type; Relationship.type may be a projection.
+  const compositeType =
+    parseProjectionType(existing.type)?.relationshipTypeId ?? existing.type;
+  const recordId = existing.recordId ?? relationshipRecordId(a, b, compositeType);
+  await syncAfterRelationshipChange(ctx, {
+    write: async () => {
+      await writeStoreDeleteRelationship(store, sourceId, targetId, existing.type);
+    },
+    a,
+    b,
+    type: compositeType,
+    recordId,
+    entry: null,
+    existed: true,
+  });
   return null;
 }
 

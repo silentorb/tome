@@ -2,16 +2,25 @@
 
 ## Summary
 
-Host sessions open a heterogeneous **`dataStores`** map and a floating Imp **`sync.graph`**. Modules are **building blocks**; the graph **only initializes observer relationships** between stores (who observes whom). It is **not** a sync executor and is **not** re-run on each change. After wire-up, observers notify sinks with a **`SyncSignal`**: an Imp-queryable **`SyncSourceRead`** plus a **`SyncScope`** (`full` or six normalized id sets). Cross-corpus **dual-write** (git self-description) stays on the flatfile/Composite path and is distinct from cache **observation**.
+Host sessions open a heterogeneous **`dataStores`** map and a floating Imp **`sync.graph`**. Modules are **building blocks**; the graph installs **who observes whom** and which **watch form** is active. It is **not** a sync executor and is **not** re-run on each change.
 
-**Preferred product hookup:** flatfile sources → SQLite query sink (+ sync-fed FTS) via observe edges / CacheSync. That pairing is **not** hard-coded — it works when those blocks are opened and wired. **Queryable SoT-only** configs (e.g. Postgres) omit flatfile sources and inbound observe edges; Imp wiring still runs with an empty or sink-only graph.
+After wire-up:
+
+- **Cold sync** — sinks apply `SyncSignal { scope: full, source }` (`runInitialFull` / CacheSync `ensureReady`).
+- **API mutations** — `publishMutation` fans out the same signal (optional **preview** snapshots) to wired sinks **in parallel** with the flatfile Git persist.
+- **External Git tip changes** — optional `tome.sync.gitWatch` observe source watches `.git/HEAD` (+ symbolic ref) and applies incremental scopes from `git diff`.
+- **Content-tree FS watch** — `tome.sync.store` `observeOut` still means content-directory subscribe (tests / non-git corpora).
+
+Flatfile’s product role is **optimal Git storage**, not a live write API for agents. Cross-corpus **dual-write** (git self-description) stays on the flatfile/Composite path and is distinct from cache **observation**.
+
+**Preferred product hookup:** flatfile `dataStores` + SQLite query sink (+ sync-fed FTS) via observe edges. Workspace hosts typically use **`tome.sync.gitWatch`** → sinks so API disk writes do not double-apply through content FS watch. **Queryable SoT-only** configs omit flatfile sources and inbound observe edges.
 
 ## When to read this
 
 - Configuring multiple flatfile corpora + SQLite cache (preferred topology)
+- Choosing content-FS vs Git watch observe sources
 - Configuring a Queryable SoT-only session (e.g. Postgres `dataStores`)
 - Changing sync observer contracts or wiring
-- Registering sync Imp node types from packages
 - Relating multi-corpus sessions to the query cache
 
 ## Requirements
@@ -30,10 +39,21 @@ Legacy `store` + `cache` (+ nested `corpora` / `TOME_CORPORA`) **must** migrate 
 - Sync graph **must** install observers at boot only.
 - Sync graph **must not** perform ongoing sync via Imp collection execution.
 - Graph **must** be a DAG; cycles fail boot.
-- Flatfile stores are canonical **sources** when present; SQLite is a derived **sink** (query cache) in the preferred product topology.
+- Flatfile stores are the Git-backed **persist** surface when present; SQLite is a derived **sink** (query cache) in the preferred product topology.
 - Exactly one designated **query** store for host `executeImp` (`sync.queryStoreId`): SQLite cache under CacheSync composition, or a Queryable SoT module when there is no flatfile union.
 
-### SyncSourceRead
+### Observe source forms
+
+| Form | Node type | Steady-state trigger |
+| --- | --- | --- |
+| Content FS | `tome.sync.store` `observeOut` | Files under the corpus content tree |
+| Git tip | `tome.sync.gitWatch` `observeOut` | Resolved commit hash change (HEAD / ref file) |
+
+Pick **one** watch form per corpus. With Git watch, the sync graph is `gitWatch` → sink store nodes; the flatfile corpus remains a **`dataStores`** entry (CRUD / `asSource`) and does **not** need a flatfile `tome.sync.store` graph node.
+
+Git watch persists last-synced tip in the session query store `meta` table as `git_watch_commit:<storeId>` (dynamic key/value — no schema migration). After cold/`full`, record the current tip as baseline.
+
+### SyncSourceRead / SyncSignal
 
 Observable sources **must** expose Imp queries:
 
@@ -41,30 +61,23 @@ Observable sources **must** expose Imp queries:
 executeImp(graph, context?) → ImpCollectionResult | Promise<…>
 ```
 
-Flatfile uses `impExecution: "execute"`; SQLite uses `sql`. Sinks pull current values via `source` — signals carry **ids**, not row bodies.
-
-### SyncScope
-
 ```typescript
-type SyncEntityOps = { created: SyncIdSet; modified: SyncIdSet; deleted: SyncIdSet };
-type SyncPartialScope = { nodes: SyncEntityOps; relationships: SyncEntityOps };
-type SyncScope =
-  | { mode: "full" }
-  | { mode: "content"; relativeName: string }
-  | { mode: "partial"; changes: SyncPartialScope };
-type SyncSignal = { source: SyncSourceRead; scope: SyncScope };
+type SyncSignal = {
+  source: SyncSourceRead;
+  scope: SyncScope;
+  preview?: SyncMutationPreview; // API publish only
+};
 ```
 
-- Six id sets: nodes/relationships × created/modified/deleted.
-- Relationship ids are canonical record ids `{a}:{b}:{type}`.
-- Model/config and coarse relationship markers use **`content`** with the same `relativeName` as `CacheSync.syncFile` (e.g. `relationships`, `associations.json`, `schema.json`) — not fake entity ids and not warm `ensureReady`.
-- **`full`** is for explicit initial sink refresh and unknown paths.
-- `created`/`modified`: sink reads source then upserts; `deleted`: sink removes by id.
+- Watch paths omit `preview` and pull via `source`.
+- API `publishMutation` may include **preview** (node/relationship snapshots) so sinks apply without waiting on disk.
+- Six id sets: nodes/relationships × created/modified/deleted (**incremental** apply).
+- Model/config markers use **`content`**; **`full`** for cold sync and unknown paths.
 
 ### Package-registered node types
 
-- Packages **may** register `SyncNodeLibrary` catalogs (ports + signal types).
-- Built-in: **`tome.sync.store`** with `storeId` input and observe in/out ports typed for `tome.sync.signal`.
+- Built-in: **`tome.sync.store`** (`storeId`, observe in/out).
+- Built-in: **`tome.sync.gitWatch`** (`storeId`, observe out only).
 - Wire-up **must** reject unknown node types and incompatible port/capability pairs.
 
 ### Fan-in
@@ -78,23 +91,24 @@ Multi-flatfile sessions still derive `CompositeStore` (or solo `ContentStore`) f
 ## Design rationale
 
 - Separating store settings from wiring keeps Imp graphs small and reusable.
-- Observer wire-up matches a floating topology better than treating sync as Imp collection data-flow.
-- Imp `executeImp` is already the shared read language across flatfile and SQL.
-- Six normalized id sets keep partial notifications cheap and unambiguous.
+- Mutation fan-out and Git watch share the same edge list so topology stays Imp-configured.
+- Preview-bearing API signals enable parallel flatfile + cache/FTS updates.
+- Git watch matches “flatfile = Git storage” without treating hand-edited markdown as an API.
 
 ## Behavior / pipeline
 
 ```
 dataStores → open → DataStoreRegistry
-sync.graph + SyncNodeTypeRegistry → SyncGraphWire (once)
-  → for each edge A→B: B observes A
-startup: sinks apply SyncSignal { scope: full, source }
-steady state: source events → partial (node/rel ids) or content (model/rel markers) → sink apply (Imp wiring idle)
+sync.graph → SyncGraphWire (once)
+  → observe edges: store FS subscribe and/or gitWatch HEAD/ref subscribe → sink.apply
+startup: ensureReady + runInitialFull; gitWatch records tip baseline
+API edit: publishMutation(write ∥ sink.apply with preview)
+Git tip change: git diff → incremental/content scopes → sink.apply (pull)
 ```
 
 ## Configuration
 
-See [tome-server.md](./tome-server.md). Example:
+See [tome-server.md](./tome-server.md). Git-watch example (workspace style):
 
 ```json
 {
@@ -112,30 +126,40 @@ See [tome-server.md](./tome-server.md). Example:
     }
   },
   "sync": {
-    "graph": { "nodes": { "…": "tome.sync.store + storeId" }, "edges": { "…": "observeOut → observeIn" } },
-    "queryStoreId": "session-cache"
-  },
-  "services": []
+    "queryStoreId": "session-cache",
+    "graph": {
+      "nodes": {
+        "git:marloth": { "type": "tome.sync.gitWatch", "inputs": { "storeId": "marloth" } },
+        "sink:session-cache": { "type": "tome.sync.store", "inputs": { "storeId": "session-cache" } }
+      },
+      "edges": {
+        "obs:marloth->cache": {
+          "from": { "node": "git:marloth", "port": "observeOut" },
+          "to": { "node": "sink:session-cache", "port": "observeIn" }
+        }
+      }
+    }
+  }
 }
 ```
 
-Default when `sync.graph` omitted: each flatfile storeId → query sqlite storeId.
+Default when `sync.graph` omitted: each flatfile storeId → query sqlite storeId (**content FS** watch).
 
-Non-SQLite sinks (e.g. `tome-search-sqlite` FTS) are additional `dataStores` entries wired with explicit observe edges (e.g. marloth → fts) so indexing can be corpus-selective. See [search.md](./search.md).
+Non-SQLite sinks (e.g. `tome-search-sqlite` FTS) are additional `dataStores` entries wired with explicit observe edges. See [search.md](./search.md).
 
 ## Verification
 
 - Package tests under `packages/tome-db/tests/sync/` and `packages/tome-server/tests/`.
-- Always-on CacheSync timing baseline: `packages/tome-db/tests/content/cache-sync-benchmark.test.ts` (cold/warm `ensureReady`, `syncNode`, `syncRelationships`; logs `[cache-sync-benchmark]` elapsed ms; no env skip).
+- Always-on CacheSync timing baseline: `packages/tome-db/tests/content/cache-sync-benchmark.test.ts`.
 - Full suite: `bash scripts/run-in-tome.sh run test` from the workbench.
 
 ## Implementation pointers
 
 | Area | Path |
 | --- | --- |
-| Types / wire-up / adapters | `packages/tome-db/src/sync/` |
+| Types / wire-up / adapters / git watch / publish | `packages/tome-db/src/sync/` |
 | Server config parse | `packages/tome-server/src/load-services.ts` |
-| Legacy CacheSync | `packages/tome-db/src/content/sync.ts` (wrapped by sqlite observer) |
+| Legacy CacheSync | `packages/tome-db/src/content/sync.ts` (sqlite observer + preview apply) |
 
 ## See also
 

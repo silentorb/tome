@@ -1,12 +1,8 @@
 import { ContentStore, loadSchemaFromContent, loadRelationshipTypesFromContent, setTraitProjectionTypes } from "tome-flatfile";
-import { FlatfileGraphStore } from "tome-flatfile";
 import { GraphDatabase, wrapSyncGraphDatabase } from "tome-sqlite";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
-import {
-  CacheSync,
-  subscribeStoreToCacheSync,
-} from "../content/sync";
 import type { TomeWriteContext } from "../content/write-context";
+import { openTomeWriteContext } from "../content/write-context";
 import { ComposedGraphStore } from "./composed-graph-store";
 
 /** Open composed graph store + write context (flatfile + SQLite + sync). */
@@ -19,7 +15,6 @@ export async function openComposedGraphStore(
   writeContext: TomeWriteContext;
 }> {
   const flatfileBackend = new ContentStore(contentDir);
-  const flatfile = new FlatfileGraphStore(flatfileBackend);
   const db = new GraphDatabase(dbPath, {
     propertyCodec: {
       encode: (properties) => encodeEnumProperties(properties, loadSchemaFromContent(contentDir)),
@@ -29,19 +24,12 @@ export async function openComposedGraphStore(
       setTraitProjectionTypes(loadRelationshipTypesFromContent(contentDir)),
   });
   const cache = wrapSyncGraphDatabase(db);
-  const sync = new CacheSync(flatfileBackend, cache);
-  if (!options?.deferReady) {
-    await sync.ensureReady();
-    subscribeStoreToCacheSync(flatfileBackend, sync);
+  const writeContext = await openTomeWriteContext(flatfileBackend, cache, {
+    deferReady: options?.deferReady,
+  });
+  const graphStore = writeContext.graphStore;
+  if (!(graphStore instanceof ComposedGraphStore)) {
+    throw new Error("openComposedGraphStore: expected ComposedGraphStore");
   }
-  const graphStore = new ComposedGraphStore(flatfile, cache, sync);
-  return {
-    graphStore,
-    writeContext: {
-      graphStore,
-      store: flatfileBackend,
-      sync,
-      cache,
-    },
-  };
+  return { graphStore, writeContext };
 }

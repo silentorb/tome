@@ -205,6 +205,7 @@ export async function startTomeServer(options?: {
     await session.writeContext.sync.ensureReady();
     if (session.wire) {
       await session.wire.runInitialFull();
+      await session.wire.recordGitWatchBaselines();
     }
   } else {
     console.log("[tome-server] SoT-only session (no CacheSync)…");

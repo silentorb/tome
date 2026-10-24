@@ -6,6 +6,7 @@ import type {
 } from "tome-graph-interfaces";
 import type { TomeDataStore, StoreChangeEvent } from "tome-service-interfaces";
 import type { CacheSync } from "../content/sync";
+import type { Properties } from "tome-graph-interfaces";
 import type { SyncEndpoint, DataStoreCapabilities } from "./registry";
 import type { SyncSignal, SyncSourceRead } from "./types";
 import { storeChangeEventToSyncScope } from "./scope-from-events";
@@ -97,11 +98,20 @@ export function createSqliteCacheSyncEndpoint(options: {
         return;
       }
       const { nodes, relationships } = signal.scope.changes;
+      const preview = signal.preview;
       for (const id of nodes.deleted) {
-        await options.sync.syncNode(id);
+        await options.sync.syncNode(id, {
+          previewProps: null,
+        });
       }
       for (const id of [...nodes.created, ...nodes.modified]) {
-        await options.sync.syncNode(id);
+        const previewProps = preview?.nodes?.[id];
+        const corpusId = preview?.nodeCorpusIds?.[id];
+        await options.sync.syncNode(id, {
+          previewProps:
+            previewProps === undefined ? undefined : (previewProps as Properties | null),
+          corpusId,
+        });
       }
       const relTouched =
         relationships.created.length +
@@ -109,7 +119,7 @@ export function createSqliteCacheSyncEndpoint(options: {
           relationships.deleted.length >
         0;
       if (relTouched) {
-        await options.sync.syncRelationshipsPartial(relationships);
+        await options.sync.syncRelationshipsPartial(relationships, preview?.relationships);
       }
     },
   };

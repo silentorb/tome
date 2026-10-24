@@ -2,6 +2,8 @@ import type { NodeLibrary, Port, SignalType } from "imp-core-types";
 
 export const SYNC_SIGNAL_TYPE_ID = "tome.sync.signal";
 export const SYNC_STORE_NODE_TYPE = "tome.sync.store";
+/** Observe source: Git HEAD/ref watch for a flatfile corpus (`storeId`). */
+export const SYNC_GIT_WATCH_NODE_TYPE = "tome.sync.gitWatch";
 export const SYNC_OBSERVE_OUT_PORT = "observeOut";
 export const SYNC_OBSERVE_IN_PORT = "observeIn";
 export const SYNC_STORE_ID_INPUT = "storeId";
@@ -23,6 +25,15 @@ export function createTomeSyncNodeLibrary(): NodeLibrary {
         inputs: {
           [SYNC_STORE_ID_INPUT]: port(SYNC_STORE_ID_INPUT, stringType),
           [SYNC_OBSERVE_IN_PORT]: port(SYNC_OBSERVE_IN_PORT, syncSignal),
+        },
+        outputs: {
+          [SYNC_OBSERVE_OUT_PORT]: port(SYNC_OBSERVE_OUT_PORT, syncSignal),
+        },
+      },
+      {
+        id: SYNC_GIT_WATCH_NODE_TYPE,
+        inputs: {
+          [SYNC_STORE_ID_INPUT]: port(SYNC_STORE_ID_INPUT, stringType),
         },
         outputs: {
           [SYNC_OBSERVE_OUT_PORT]: port(SYNC_OBSERVE_OUT_PORT, syncSignal),

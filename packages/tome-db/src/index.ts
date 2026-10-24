@@ -241,11 +241,17 @@ export type {
   DatabaseViewPresentation,
   RewriteDatabaseSequenceParams,
 } from "tome-graph-interfaces";
-export type { TomeWriteContext, FlatfileStore } from "./content/write-context";
+export type {
+  TomeWriteContext,
+  FlatfileStore,
+  MutationPublisher,
+} from "./content/write-context";
 export {
   mergeNodePropertiesOnContent,
   openTomeWriteContext,
+  publishGraphMutation,
   syncAfterRelationshipsWrite,
+  syncAfterRelationshipChange,
   syncAfterNodeWrite,
   syncFileOnContext,
   syncNodeOnContext,

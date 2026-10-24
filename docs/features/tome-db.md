@@ -47,11 +47,10 @@ API names: `ContentStore`, `openContentGraph`, `TomeWriteContext` (`{ store, syn
 
 ## Editing the graph (agent workflow)
 
-**Default:** change files under `content/`.
+Flatfile under `content/` is **Git storage** for the design corpus. Prefer the **editor HTTP API** / `TomeWriteContext` for mutations (parallel Imp sync fan-out into the session cache). Do not treat hand-editing markdown as a supported live write API.
 
-- Use `ContentStore` / `TomeWriteContext` (via editor API or `openContentGraph`), or edit `content/data/nodes/**/*.md`, `content/data/relationships/**/*.json`, and `content/model/associations.json` directly.
 - Commit changes under `content/`; do not commit `data/tome.sqlite` or legacy `data/marloth.sqlite`.
-- Run `bun run content:sync` after bulk file edits if the editor API is not running (otherwise the store watcher emits changes and `CacheSync` updates SQLite).
+- After bulk Git updates outside a running editor (or if the session cache is wiped), restart the editor API or run `bun run content:sync` so sinks cold-sync from the tree. Workspace hosts typically use **Git tip watch** (`tome.sync.gitWatch`) for pull/branch refresh — see [tome-sync.md](./tome-sync.md).
 
 **Schema changes:** bump `SCHEMA_VERSION` in `tome-sqlite` `schema.ts`, migrate existing rows in place, document steps here or in commit notes.
 

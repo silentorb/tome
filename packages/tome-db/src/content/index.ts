@@ -127,12 +127,19 @@ export {
   projectionTypeForEndpoint,
 } from "./test-helpers";
 export type { TestContentFixture, TestWriteContext } from "./test-helpers";
-export type { TomeWriteContext, FlatfileStore, OpenTomeWriteContextOptions } from "./write-context";
+export type {
+  TomeWriteContext,
+  FlatfileStore,
+  OpenTomeWriteContextOptions,
+  MutationPublisher,
+} from "./write-context";
 export {
   finishDeferredWriteContextReady,
   mergeNodePropertiesOnContent,
   openTomeWriteContext,
+  publishGraphMutation,
   syncAfterRelationshipsWrite,
+  syncAfterRelationshipChange,
   syncAfterNodeWrite,
   syncFileOnContext,
   syncNodeOnContext,

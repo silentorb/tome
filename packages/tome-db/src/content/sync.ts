@@ -42,6 +42,8 @@ import {
   type DynamicPropertyRecord,
 } from "tome-flatfile";
 import type { TomeQueryCache } from "tome-sqlite";
+import type { Properties } from "tome-graph-interfaces";
+import type { RelationshipEntry } from "tome-service-interfaces";
 import { ENUM_CONFIG_FINGERPRINT_META_KEY, enumConfigFingerprint } from "../enum-config-fingerprint";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
 import {
@@ -549,7 +551,25 @@ export class CacheSync {
     return this.ensureReady();
   }
 
-  private async syncNodeUnlocked(id: string): Promise<void> {
+  private async syncNodeUnlocked(
+    id: string,
+    options?: {
+      previewProps?: Properties | null;
+      corpusId?: string | null;
+    },
+  ): Promise<void> {
+    if (options && "previewProps" in options && options.previewProps === null) {
+      await this.cache.deleteNode(id);
+      return;
+    }
+    if (options?.previewProps) {
+      await this.cache.upsertNode(
+        id,
+        options.previewProps,
+        options.corpusId !== undefined ? options.corpusId : this.store.locateNode(id),
+      );
+      return;
+    }
     const node = this.store.readNode(id);
     if (!node) {
       await this.cache.deleteNode(id);
@@ -563,8 +583,14 @@ export class CacheSync {
     );
   }
 
-  async syncNode(id: string): Promise<void> {
-    await this.exclusive(() => this.syncNodeUnlocked(id));
+  async syncNode(
+    id: string,
+    options?: {
+      previewProps?: Properties | null;
+      corpusId?: string | null;
+    },
+  ): Promise<void> {
+    await this.exclusive(() => this.syncNodeUnlocked(id, options));
   }
 
   private async syncRelationshipsUnlocked(): Promise<void> {
@@ -577,20 +603,33 @@ export class CacheSync {
 
   /**
    * Apply relationship create/modify/delete by canonical record id `{a}:{b}:{type}`.
-   * Reads current entries from flatfile for upserts; deletes remove the SQLite record
-   * (projections CASCADE). Recomputes archived flags after any change.
+   * Prefers preview entries when provided; otherwise reads flatfile for upserts.
+   * Deletes remove the SQLite record (projections CASCADE). Recomputes archived flags.
    */
-  private async syncRelationshipsPartialUnlocked(ops: SyncEntityOps): Promise<void> {
+  private async syncRelationshipsPartialUnlocked(
+    ops: SyncEntityOps,
+    previewRelationships?: Readonly<Record<string, RelationshipEntry | null>>,
+  ): Promise<void> {
     const upsertIds = [...new Set([...ops.created, ...ops.modified])];
     const deleteIds = [...new Set(ops.deleted)];
     if (upsertIds.length === 0 && deleteIds.length === 0) return;
 
     const registry = this.store.readRelationshipTypesFile();
-    const liveById = new Map(
-      this.store
-        .readRelationshipsFile()
-        .relationships.map((entry) => [relationshipRecordId(entry.a, entry.b, entry.type), entry]),
-    );
+    const previewCoversAllUpserts =
+      previewRelationships != null &&
+      upsertIds.every((id) => Object.prototype.hasOwnProperty.call(previewRelationships, id));
+
+    let liveById: Map<string, RelationshipEntry> | null = null;
+    if (!previewCoversAllUpserts) {
+      liveById = new Map(
+        this.store
+          .readRelationshipsFile()
+          .relationships.map((entry) => [
+            relationshipRecordId(entry.a, entry.b, entry.type),
+            entry,
+          ]),
+      );
+    }
     const archiveIds = this.store.listCorpora().map((c) => c.workspace.archiveNodeId);
 
     if (
@@ -604,13 +643,24 @@ export class CacheSync {
       await cache.runExec("BEGIN");
       try {
         for (const id of deleteIds) {
+          if (previewRelationships && previewRelationships[id] === null) {
+            const existing = await cache.getRelationshipRecord(id);
+            if (!existing) continue;
+            const projType = projectionTypeForEndpoint(existing.compositeType, 0);
+            await cache.deleteRelationship(existing.nodeA, existing.nodeB, projType);
+            continue;
+          }
           const existing = await cache.getRelationshipRecord(id);
           if (!existing) continue;
           const projType = projectionTypeForEndpoint(existing.compositeType, 0);
           await cache.deleteRelationship(existing.nodeA, existing.nodeB, projType);
         }
         for (const id of upsertIds) {
-          const entry = liveById.get(id);
+          const fromPreview = previewRelationships?.[id];
+          const entry =
+            fromPreview !== undefined && fromPreview !== null
+              ? fromPreview
+              : liveById?.get(id);
           if (!entry) {
             const existing = await cache.getRelationshipRecord(id);
             if (existing) {
@@ -634,8 +684,13 @@ export class CacheSync {
     });
   }
 
-  async syncRelationshipsPartial(ops: SyncEntityOps): Promise<void> {
-    await this.exclusive(() => this.syncRelationshipsPartialUnlocked(ops));
+  async syncRelationshipsPartial(
+    ops: SyncEntityOps,
+    previewRelationships?: Readonly<Record<string, RelationshipEntry | null>>,
+  ): Promise<void> {
+    await this.exclusive(() =>
+      this.syncRelationshipsPartialUnlocked(ops, previewRelationships),
+    );
   }
 
   private async syncFileUnlocked(relativeName: string): Promise<void> {

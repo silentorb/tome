@@ -5,6 +5,7 @@ export type {
   SyncScope,
   SyncSourceRead,
   SyncSignal,
+  SyncMutationPreview,
 } from "./types";
 export {
   emptySyncEntityOps,
@@ -16,6 +17,7 @@ export {
 export {
   SYNC_SIGNAL_TYPE_ID,
   SYNC_STORE_NODE_TYPE,
+  SYNC_GIT_WATCH_NODE_TYPE,
   SYNC_OBSERVE_OUT_PORT,
   SYNC_OBSERVE_IN_PORT,
   SYNC_STORE_ID_INPUT,
@@ -50,6 +52,19 @@ export {
 
 export { wireSyncGraph, buildDefaultSyncGraph, ensureFtsObserveEdges } from "./wire";
 export type { WiredObserveEdge, SyncGraphWireResult, WireSyncGraphOptions } from "./wire";
+
+export { publishMutation, sinkStoreIdsForSource } from "./publish-mutation";
+export type { PublishMutationOptions } from "./publish-mutation";
+
+export {
+  createGitWatchSyncEndpoint,
+  findGitDir,
+  findRepoRoot,
+  gitWatchCommitMetaKey,
+  gitPathsToSyncScopes,
+  resolveGitHead,
+  GIT_WATCH_COMMIT_META_PREFIX,
+} from "./git-watch";
 
 export {
   openDataStoreSession,

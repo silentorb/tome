@@ -5,6 +5,7 @@ export type {
   SyncScope,
   SyncSourceRead,
   SyncSignal,
+  SyncMutationPreview,
 } from "tome-service-interfaces/sync";
 export {
   emptySyncEntityOps,

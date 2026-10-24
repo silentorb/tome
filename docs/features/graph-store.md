@@ -91,7 +91,7 @@ type GraphStoreCapabilities =
 
 **Tome host (composed):**
 
-1. Writes → `FlatfileGraphStore` → change events → sync observers (Imp **wiring** graph installs observers at boot — see [tome-sync.md](./tome-sync.md)) → `CacheSync` / SQLite
+1. Writes → `publishMutation` (flatfile Git persist ∥ Imp-wired sink apply with preview; see [tome-sync.md](./tome-sync.md)) → `CacheSync` / SQLite (+ FTS when wired). External Git tip changes use `tome.sync.gitWatch` (or content-FS `tome.sync.store` observeOut).
 2. Reads → `executeImp` → `tome-imp-sql` → SQLite `queryAll`
 3. Base inventory / archive status (`listNodeIds`, `isNodeArchived`) → SQLite (`nodes` / `is_archived`); graph export uses a live-only cache path when `queryCache` is present
 

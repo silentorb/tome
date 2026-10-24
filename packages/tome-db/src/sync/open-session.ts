@@ -19,10 +19,12 @@ import { openWorkerSqliteCache } from "tome-sqlite";
 import { FlatfileQueryableGraphStore, ComposedGraphStore } from "../graph-store/composed-graph-store";
 import { CacheSync, type SyncProgressReporter } from "../content/sync";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
-import type { FlatfileStore, TomeWriteContext } from "../content/write-context";
+import type { FlatfileStore, MutationPublisher, TomeWriteContext } from "../content/write-context";
 import { DataStoreRegistry, type SyncEndpoint } from "./registry";
 import {
   createDefaultSyncNodeTypeRegistry,
+  SYNC_GIT_WATCH_NODE_TYPE,
+  SYNC_STORE_ID_INPUT,
   type SyncNodeTypeRegistry,
 } from "./node-registry";
 import {
@@ -30,6 +32,7 @@ import {
   createSqliteCacheSyncEndpoint,
   syncSourceFromQueryable,
 } from "./adapters";
+import { createGitWatchSyncEndpoint } from "./git-watch";
 import { buildDefaultSyncGraph, ensureFtsObserveEdges, wireSyncGraph, type SyncGraphWireResult } from "./wire";
 
 export type OpenDataStoreSessionOptions = {
@@ -399,13 +402,61 @@ export async function openDataStoreSession(
     options.syncGraph ?? buildDefaultSyncGraph(flatfileIds, queryStoreId, ftsStoreIds);
   const graph = ensureFtsObserveEdges(baseGraph, flatfileIds, ftsStoreIds);
 
+  const observeSourcesByNodeId = new Map<string, SyncEndpoint>();
+  if (writeContext.sync && writeContext.cache) {
+    for (const node of Object.values(graph.nodes)) {
+      if (node.type !== SYNC_GIT_WATCH_NODE_TYPE) continue;
+      const raw = node.inputs?.[SYNC_STORE_ID_INPUT];
+      const storeId = typeof raw === "string" ? raw.trim() : "";
+      if (!storeId) {
+        throw new Error(`gitWatch node "${node.id}" missing storeId`);
+      }
+      const flat = registry.require(storeId);
+      if (flat.kind !== "flatfile") {
+        throw new Error(`gitWatch storeId "${storeId}" must be a flatfile dataStore`);
+      }
+      const contentDir = flat.store.contentDir;
+      const gitEp = createGitWatchSyncEndpoint({
+        id: node.id,
+        storeId,
+        contentDir,
+        source: syncSourceFromQueryable(flat.queryable),
+        queryCache: writeContext.cache,
+      });
+      observeSourcesByNodeId.set(node.id, gitEp);
+    }
+  }
+
   const hasObserveEdges = Object.keys(graph.edges).length > 0;
   let wire: SyncGraphWireResult | null = null;
   if (hasObserveEdges || Object.keys(graph.nodes).length > 0) {
-    wire = wireSyncGraph({ graph, registry, nodeTypes });
+    wire = wireSyncGraph({
+      graph,
+      registry,
+      nodeTypes,
+      observeSourcesByNodeId,
+    });
     if (!options.deferReady && hasObserveEdges) {
       await wire.runInitialFull();
+      await wire.recordGitWatchBaselines();
     }
+  }
+
+  if (wire && writeContext.sync) {
+    const defaultStoreId = flatfileIds[0] ?? "default";
+    const publisher: MutationPublisher = {
+      defaultStoreId,
+      edges: wire.edges,
+      endpoint: (id) => registry.endpoint(id),
+      sourceForStore: (storeId) => {
+        const entry = registry.get(storeId);
+        if (entry?.kind === "flatfile") {
+          return syncSourceFromQueryable(entry.queryable);
+        }
+        return syncSourceFromQueryable(writeContext.graphStore);
+      },
+    };
+    writeContext = { ...writeContext, publisher };
   }
 
   return {

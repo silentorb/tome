@@ -92,7 +92,7 @@ Legacy singular `store` + `cache` (still accepted; normalized at load):
 - `services` may be **empty**: the host logs a warning and stays up.
 - Path defaults and `TOME_CORPORA` expand into flatfile `dataStores` during normalize — see [tome-sync.md](./tome-sync.md) and [multi-corpus.md](./multi-corpus.md). Explicit `dataStores` skip corpora env expansion; use legacy `store`+`cache` (or a multi-corpus `dataStores` map) when relying on `TOME_CORPORA`. Example SoT-only config: `packages/tome-server/config/tome-server.postgres.example.json`.
 
-Bootstrap order: normalize config → `openDataStoreSession` (open modules, wire Imp sync observers when the graph has edges) → open graph services **without** waiting for full cache rebuild or file watchers → **start service modules (HTTP binds)** → when CacheSync is present, await `ensureReady()` + initial full sync; SoT-only sessions skip that gate → mark ready, `startWatching()`.
+Bootstrap order: normalize config → `openDataStoreSession` (open modules, wire Imp sync observers when the graph has edges; create `gitWatch` endpoints when configured) → open graph services **without** waiting for full cache rebuild → **start service modules (HTTP binds)** → when CacheSync is present, await `ensureReady()` + `runInitialFull` + Git tip baselines; SoT-only sessions skip that gate → mark ready, `startWatching()` (content-FS and/or Git HEAD/ref watches per `sync.graph`).
 
 `TomeGraphServices` methods are Promise-returning; HTTP handlers `await` them. Long SQL runs off the main thread (SQLite worker) so other requests and health checks can progress while a heavy query is in flight.
 

@@ -31,9 +31,9 @@
     "queryStoreId": "session-cache",
     "graph": {
       "nodes": {
-        "src:marloth": {
-          "id": "src:marloth",
-          "type": "tome.sync.store",
+        "git:marloth": {
+          "id": "git:marloth",
+          "type": "tome.sync.gitWatch",
           "inputs": { "storeId": "marloth" }
         },
         "sink:session-cache": {
@@ -49,11 +49,11 @@
       },
       "edges": {
         "obs:marloth->cache": {
-          "from": { "node": "src:marloth", "port": "observeOut" },
+          "from": { "node": "git:marloth", "port": "observeOut" },
           "to": { "node": "sink:session-cache", "port": "observeIn" }
         },
         "obs:marloth->fts": {
-          "from": { "node": "src:marloth", "port": "observeOut" },
+          "from": { "node": "git:marloth", "port": "observeOut" },
           "to": { "node": "sink:fts", "port": "observeIn" }
         }
       }
