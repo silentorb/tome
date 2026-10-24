@@ -1,8 +1,8 @@
 # Tome flatfile storage format
 
-Normative on-disk contract for a Tome **content root**. The tree’s product purpose is **optimal Git storage** of graph + model (clone, review, diff/merge). It is **not** the preferred live edit API for humans or agents — editor mutations go through Tome APIs; see [sql-graph-store.md](../../../docs/features/sql-graph-store.md) for store-role charter. Parsers under `packages/tome-flatfile/src/` implement this contract; compatible trees remain readable for import, tooling, and transitional sync.
+Normative on-disk contract for a Tome **content root**. External projects can author a compatible tree without using Tome packages; Tome’s parsers under `packages/tome-flatfile/src/` implement this contract.
 
-This document specifies **bytes under `content/`**. It does not cover SQLite/Postgres SQL stores, HTTP APIs, or editor UI behavior. For tooling semantics (set membership expansion, table views, etc.), see the feature docs under `docs/features/`.
+This document specifies **bytes under `content/`**. It does not cover SQLite caches, HTTP APIs, or editor UI behavior. For tooling semantics (set membership expansion, table views, etc.), see the feature docs under `docs/features/`.
 
 **Terminology:** Prefer **relationship type** for the registry definition (ULID + perspectives + traits + endpoints). **Relationship** is an edge instance. On-disk legacy names (`associations.json`, JSON key `associations`, content-model fields named `"association"`) remain as filenames/keys only — not the conceptual term. **Association** is also reserved for a possible future node-type pairing concept (not implemented).
 

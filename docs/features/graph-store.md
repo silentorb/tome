@@ -15,7 +15,7 @@ Replaces ad-hoc use of separate `TomeDataStore` + `TomeQueryCache` at call sites
 - Wiring `executeImp` for editor, extensions, or scripts
 - Future Neo4j-authoritative deployments (single remote graph backend)
 
-Design corpus graph storage (flatfile Git tree, transitional ephemeral SQLite cache, Postgres SoT, or future Neo4j **design/corpus** graph) does **not** host Account/role nodes or durable auth specialty data — those use **user corpora** (identity graph; local durable = flatfile today) and, for remote, an auth specialty store; see [multi-user.md](./multi-user.md) and [tome-db.md](./tome-db.md) § Local SQLite is ephemeral-only. **Target** SQL roles (SQLite as canonical candidate, LCD + capabilities): [sql-graph-store.md](./sql-graph-store.md).
+Design corpus graph storage (flatfile, ephemeral SQLite cache, or future Neo4j **design/corpus** graph) does **not** host Account/role nodes or durable auth specialty data — those use **user corpora** (identity graph; local durable = flatfile) and, for remote, an auth specialty store; see [multi-user.md](./multi-user.md) and [tome-db.md](./tome-db.md) § Local SQLite is ephemeral-only.
 
 ## Requirements
 
@@ -81,9 +81,8 @@ type GraphStoreCapabilities =
 
 ## Design rationale
 
-- **Today:** flatfile is canonical for git-tracked corpora; SQLite is an ephemeral derived query cache (see [tome-db.md](./tome-db.md) § Local SQLite is ephemeral-only).
-- **Target:** flatfile is **Git storage** only; SQLite and Postgres share a SoT-shaped SQL schema (engine differences only); product edits dual-write — [sql-graph-store.md](./sql-graph-store.md). Multi-implementation interfaces prefer an **essential LCD** plus **optional capabilities** with graceful degradation (same doc).
-- Third parties may still need domain CRUD against flatfile trees without warming SQLite during the transitional period.
+- Flatfile is canonical for git-tracked corpora; SQLite is an ephemeral derived query cache today (see [tome-db.md](./tome-db.md) § Local SQLite is ephemeral-only).
+- Third parties need domain CRUD without warming SQLite.
 - **Imp as read language** avoids mirroring every cache method on flatfile.
 - **`imp-execution`** (successor to [imp-kotlin execution](https://github.com/silentorb/imp-kotlin/tree/master/projects/execution/src/main/kotlin/silentorb/imp/execution)) shares operator semantics with `imp-sql`; hosts supply data only.
 - Imp effects stay **discrete** — default execute path is read-only ([execution.md](../../../imp-ts/docs/features/execution.md)). Imp v1 has **no mutation operators**; Tome keeps imperative Base-tier CRUD for writes while Queryable tier stays read-only Imp.
@@ -169,7 +168,6 @@ Phase 2 removes direct `searchNodes(cache)` and extension raw SQL for Imp graphs
 ## See also
 
 - [tome-db.md](./tome-db.md) — storage and sync
-- [sql-graph-store.md](./sql-graph-store.md) — SQLite as canonical candidate; schema inventory; LCD + capabilities
 - [tome-sync.md](./tome-sync.md) — dataStores registry + Imp observer wiring
 - [tome-imp-sql.md](./tome-imp-sql.md) — SQL binder
 - [tome-query.md](./tome-query.md) — Imp query page block

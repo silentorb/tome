@@ -40,7 +40,6 @@ Each file in this directory is the **authoritative design spec** for one major w
 | Multi-corpus editor sessions | [multi-corpus.md](./multi-corpus.md) |
 | Multi-user (use cases, identity, LCD authz charter) | [multi-user.md](./multi-user.md) |
 | Graph store API (Base / Queryable, executeImp) | [graph-store.md](./graph-store.md) |
-| SQL graph store (SQLite as canonical candidate) | [sql-graph-store.md](./sql-graph-store.md) |
 | Imp sync wiring + dataStores registry | [tome-sync.md](./tome-sync.md) |
 | Node search (searcher extensions + FTS) | [search.md](./search.md) |
 | Dev / release containers (GHCR) | [container.md](./container.md) |
