@@ -12,14 +12,17 @@ import {
   invalidateRelationshipTypesCache,
   loadMemberScopesFromContent,
   loadRelationshipRuntimeFromContent,
+  loadRelationshipTypesFromContent,
   nodeFilePath,
   ontologyFilePath,
   relationshipTypesFilePath,
+  requireRelationshipTypeId,
   serializeNodeFile,
   serializeOntologyFile,
   serializeRelationshipTypesFile,
   emptyRelationshipTypesFile,
   registerSetRelationshipType,
+  UnknownRelationshipTypeError,
 } from "../src/index";
 
 const SET_TYPE = "000000000000000000000000C1";
@@ -33,6 +36,17 @@ const MEMBER_SCOPE_INST = "000000000000000000000000C8";
 const TYPE_TABLE_HUB = "000000000000000000000000C9";
 const AUTH_MODEL_TYPE = "000000000000000000000000D1";
 const AUTH_MODEL_INST = "000000000000000000000000D2";
+const RT_TYPE_HUB = "000000000000000000000000E1";
+const RT_NODE_ONLY = "000000000000000000000000E2";
+const RT_SHARED_ID = "000000000000000000000000E3";
+const RT_INCOMPLETE = "000000000000000000000000E4";
+const RT_ROLE_0 = "000000000000000000000000F1";
+const RT_ROLE_1 = "000000000000000000000000F2";
+const RT_ROLE_0B = "000000000000000000000000F3";
+const RT_ROLE_1B = "000000000000000000000000F4";
+const INSPIRES_TYPE = "01KXBNPNJDENZ9BXN5BYZ7JKPR";
+const INSPIRES_ROLE_0 = "01M4PPCCVG03JT6SJE2B82V1HG";
+const INSPIRES_ROLE_1 = "01M4PPCCVGMBQW1AX1YCCRZR6P";
 
 function writeNode(
   contentDir: string,
@@ -261,5 +275,218 @@ describe("node ontology runtime overlay", () => {
     );
     expect(contentHasAuthorizationModelType(contentDir)).toBe(false);
     expect(discoverAuthorizationModelInstanceIds(contentDir)).toEqual([]);
+  });
+
+  test("loads node-only relationship types into merged registry; skips incomplete", () => {
+    const contentDir = mkdtempSync(join(tmpdir(), "tome-rt-node-"));
+    dirs.push(contentDir);
+    mkdirSync(join(contentDir, "model"), { recursive: true });
+
+    const registry = emptyRelationshipTypesFile();
+    registerSetRelationshipType(registry, {
+      id: SET_TYPE,
+      perspectives: ["Members", "Membership"],
+    });
+    writeFileSync(
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile(registry),
+      "utf-8",
+    );
+    writeFileSync(
+      ontologyFilePath(contentDir),
+      serializeOntologyFile({
+        version: 1,
+        types: {
+          ontology: ONTOLOGY_TYPE,
+          relationshipType: RT_TYPE_HUB,
+        },
+      }),
+      "utf-8",
+    );
+
+    writeNode(contentDir, ONTOLOGY_TYPE, "Ontology type");
+    writeNode(contentDir, RT_TYPE_HUB, "Relationship type");
+    writeNode(contentDir, ONTOLOGY_INST, "Demo ontology");
+    writeNode(contentDir, RT_NODE_ONLY, "Inspires", {
+      relationshipType: {
+        roles: ["Inspires", "Inspired by"],
+        roleIds: [RT_ROLE_0, RT_ROLE_1],
+        endpoints: { 0: { typeId: TYPE_TABLE_HUB }, 1: {} },
+      },
+    });
+    writeNode(contentDir, RT_INCOMPLETE, "Broken", {
+      relationshipType: { roles: ["Only one"] },
+    });
+    writeNode(contentDir, TYPE_TABLE_HUB, "Hub");
+
+    const store = new ContentStore(contentDir);
+    store.writeRelationshipsFile({
+      version: 1,
+      relationships: [
+        { a: ONTOLOGY_TYPE, b: ONTOLOGY_INST, type: SET_TYPE },
+        { a: RT_TYPE_HUB, b: RT_NODE_ONLY, type: SET_TYPE },
+        { a: RT_TYPE_HUB, b: RT_INCOMPLETE, type: SET_TYPE },
+        { a: ONTOLOGY_INST, b: RT_NODE_ONLY, type: SET_TYPE },
+        { a: ONTOLOGY_INST, b: RT_INCOMPLETE, type: SET_TYPE },
+      ],
+    });
+
+    const merged = loadRelationshipTypesFromContent(contentDir);
+    expect(merged.relationshipTypes[RT_NODE_ONLY]?.perspectives).toEqual([
+      "Inspires",
+      "Inspired by",
+    ]);
+    expect(merged.relationshipTypes[RT_NODE_ONLY]?.roleIds).toEqual([RT_ROLE_0, RT_ROLE_1]);
+    expect(merged.relationshipTypes[RT_NODE_ONLY]?.endpoints?.[0]?.typeId).toBe(TYPE_TABLE_HUB);
+    expect(merged.relationshipTypes[RT_INCOMPLETE]).toBeUndefined();
+    expect(requireRelationshipTypeId(merged, RT_NODE_ONLY)).toBe(RT_NODE_ONLY);
+    expect(() => requireRelationshipTypeId(merged, RT_INCOMPLETE)).toThrow(
+      UnknownRelationshipTypeError,
+    );
+
+    const runtime = loadRelationshipRuntimeFromContent(contentDir);
+    expect(runtime.predicates.get(RT_NODE_ONLY)?.perspectives).toEqual([
+      "Inspires",
+      "Inspired by",
+    ]);
+    expect(runtime.predicates.has(SET_TYPE)).toBe(true);
+  });
+
+  test("node relationship type wins over associations entry on same id", () => {
+    const contentDir = mkdtempSync(join(tmpdir(), "tome-rt-merge-"));
+    dirs.push(contentDir);
+    mkdirSync(join(contentDir, "model"), { recursive: true });
+
+    const registry = emptyRelationshipTypesFile();
+    registerSetRelationshipType(registry, {
+      id: SET_TYPE,
+      perspectives: ["Members", "Membership"],
+    });
+    registry.relationshipTypes[RT_SHARED_ID] = {
+      perspectives: ["Old0", "Old1"],
+      roleIds: [RT_ROLE_0, RT_ROLE_1],
+    };
+    writeFileSync(
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile(registry),
+      "utf-8",
+    );
+    writeFileSync(
+      ontologyFilePath(contentDir),
+      serializeOntologyFile({
+        version: 1,
+        types: {
+          ontology: ONTOLOGY_TYPE,
+          relationshipType: RT_TYPE_HUB,
+        },
+      }),
+      "utf-8",
+    );
+
+    writeNode(contentDir, ONTOLOGY_TYPE, "Ontology type");
+    writeNode(contentDir, RT_TYPE_HUB, "Relationship type");
+    writeNode(contentDir, ONTOLOGY_INST, "Demo ontology");
+    writeNode(contentDir, RT_SHARED_ID, "Renamed", {
+      relationshipType: {
+        roles: ["New0", "New1"],
+        roleIds: [RT_ROLE_0B, RT_ROLE_1B],
+      },
+    });
+
+    const store = new ContentStore(contentDir);
+    store.writeRelationshipsFile({
+      version: 1,
+      relationships: [
+        { a: ONTOLOGY_TYPE, b: ONTOLOGY_INST, type: SET_TYPE },
+        { a: RT_TYPE_HUB, b: RT_SHARED_ID, type: SET_TYPE },
+        { a: ONTOLOGY_INST, b: RT_SHARED_ID, type: SET_TYPE },
+      ],
+    });
+
+    const merged = loadRelationshipTypesFromContent(contentDir);
+    expect(merged.relationshipTypes[RT_SHARED_ID]?.perspectives).toEqual(["New0", "New1"]);
+    expect(merged.relationshipTypes[RT_SHARED_ID]?.roleIds).toEqual([RT_ROLE_0B, RT_ROLE_1B]);
+  });
+
+  test("Inspiration hosts_projection still resolves when Inspires is node-only", () => {
+    const contentDir = mkdtempSync(join(tmpdir(), "tome-rt-inspires-"));
+    dirs.push(contentDir);
+    mkdirSync(join(contentDir, "model"), { recursive: true });
+
+    const registry = emptyRelationshipTypesFile();
+    registerSetRelationshipType(registry, {
+      id: SET_TYPE,
+      perspectives: ["Members", "Membership"],
+    });
+    writeFileSync(
+      relationshipTypesFilePath(contentDir),
+      serializeRelationshipTypesFile(registry),
+      "utf-8",
+    );
+    writeFileSync(
+      ontologyFilePath(contentDir),
+      serializeOntologyFile({
+        version: 1,
+        types: {
+          ontology: ONTOLOGY_TYPE,
+          predicate: PREDICATE_TYPE,
+          memberScope: MEMBER_SCOPE_TYPE,
+          relationshipType: RT_TYPE_HUB,
+        },
+      }),
+      "utf-8",
+    );
+
+    writeNode(contentDir, ONTOLOGY_TYPE, "Ontology type");
+    writeNode(contentDir, PREDICATE_TYPE, "Predicate type");
+    writeNode(contentDir, MEMBER_SCOPE_TYPE, "Member scope type");
+    writeNode(contentDir, RT_TYPE_HUB, "Relationship type");
+    writeNode(contentDir, ONTOLOGY_INST, "Demo ontology");
+    writeNode(contentDir, TYPE_TABLE_HUB, "Inspirations hub");
+    writeNode(contentDir, INSPIRES_TYPE, "Inspires", {
+      relationshipType: {
+        roles: ["Inspires", "Inspired by"],
+        roleIds: [INSPIRES_ROLE_0, INSPIRES_ROLE_1],
+        endpoints: { 0: { typeId: TYPE_TABLE_HUB }, 1: {} },
+      },
+    });
+    writeNode(contentDir, PRED_ACTIVE, "Inspiration", {
+      predicate: hostsProjectionFilterGraph(
+        INSPIRES_TYPE,
+        0,
+      ) as unknown as Properties[string],
+    });
+    writeNode(contentDir, MEMBER_SCOPE_INST, "Inspirations member scope", {
+      memberScope: { typeTableId: TYPE_TABLE_HUB, predicateId: PRED_ACTIVE },
+    });
+
+    const store = new ContentStore(contentDir);
+    store.writeRelationshipsFile({
+      version: 1,
+      relationships: [
+        { a: ONTOLOGY_TYPE, b: ONTOLOGY_INST, type: SET_TYPE },
+        { a: RT_TYPE_HUB, b: INSPIRES_TYPE, type: SET_TYPE },
+        { a: PREDICATE_TYPE, b: PRED_ACTIVE, type: SET_TYPE },
+        { a: MEMBER_SCOPE_TYPE, b: MEMBER_SCOPE_INST, type: SET_TYPE },
+        { a: ONTOLOGY_INST, b: INSPIRES_TYPE, type: SET_TYPE },
+        { a: ONTOLOGY_INST, b: PRED_ACTIVE, type: SET_TYPE },
+        { a: ONTOLOGY_INST, b: MEMBER_SCOPE_INST, type: SET_TYPE },
+      ],
+    });
+
+    const merged = loadRelationshipTypesFromContent(contentDir);
+    expect(requireRelationshipTypeId(merged, INSPIRES_TYPE)).toBe(INSPIRES_TYPE);
+    expect(merged.relationshipTypes[INSPIRES_TYPE]?.roleIds).toEqual([
+      INSPIRES_ROLE_0,
+      INSPIRES_ROLE_1,
+    ]);
+
+    const scopes = loadMemberScopesFromContent(contentDir);
+    expect(scopes[0]?.predicateId).toBe(PRED_ACTIVE);
+    const runtime = loadRelationshipRuntimeFromContent(contentDir);
+    expect(runtime.predicates.has(INSPIRES_TYPE)).toBe(true);
+    const assocLiteral =
+      runtime.predicates.get(PRED_ACTIVE)?.nodeFilter?.nodes.association?.inputs.value;
+    expect(assocLiteral).toBe(INSPIRES_TYPE);
   });
 });

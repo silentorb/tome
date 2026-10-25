@@ -3,6 +3,7 @@ export type OntologyTypeKey =
   | "ontology"
   | "predicate"
   | "memberScope"
+  | "relationshipType"
   | "authorizationModel"
   | "authorizationPolicy"
   | "idpBinding";

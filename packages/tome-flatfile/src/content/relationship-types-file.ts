@@ -408,6 +408,102 @@ function serializePerspectiveConfig(config: PerspectiveLabelConfig): Perspective
   return out;
 }
 
+/**
+ * Parse one relationship-type definition object (associations entry or node
+ * `relationshipType` property). Throws on invalid shape.
+ */
+export function parseRelationshipTypeDefinition(
+  value: unknown,
+  typeKey: string,
+  sourceLabel = "associations.json",
+): RelationshipTypeDefinition {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${sourceLabel}: type ${typeKey} must be an object`);
+  }
+  const row = value as Record<string, unknown>;
+  if (row.perspectiveLabels !== undefined) {
+    throw new Error(
+      `${sourceLabel}: type ${typeKey} perspectiveLabels is removed; put labels in roles`,
+    );
+  }
+  const labelRaw = row.roles !== undefined ? row.roles : row.perspectives;
+  const labelKey = row.roles !== undefined ? "roles" : "perspectives";
+  if (!Array.isArray(labelRaw) || labelRaw.length !== 2) {
+    throw new Error(
+      `${sourceLabel}: type ${typeKey} must define exactly two ${labelKey} (relational role labels)`,
+    );
+  }
+  const perspectives: PerspectivePair = [
+    parsePerspectiveLabelConfig(labelRaw[0], `type ${typeKey} ${labelKey}[0]`),
+    parsePerspectiveLabelConfig(labelRaw[1], `type ${typeKey} ${labelKey}[1]`),
+  ];
+  const parsedRoleIds = parseRoleIdPair(row.roleIds, typeKey);
+  const roleIds = ensureRoleIds(typeKey, parsedRoleIds);
+  const linkExisting = parseLinkExisting(row.linkExisting, `type ${typeKey}.linkExisting`);
+  const traits = parseTraits(row.traits, typeKey);
+  const endpoints = parseEndpoints(row.endpoints, typeKey);
+  return {
+    perspectives,
+    roleIds,
+    ...(linkExisting !== undefined ? { linkExisting } : {}),
+    ...(traits ? { traits } : {}),
+    ...(endpoints ? { endpoints } : {}),
+  };
+}
+
+/** Soft-parse for node discovery — returns null when the payload is incomplete/invalid. */
+export function tryParseRelationshipTypeDefinition(
+  value: unknown,
+  typeKey: string,
+): RelationshipTypeDefinition | null {
+  try {
+    return parseRelationshipTypeDefinition(value, typeKey, "relationshipType property");
+  } catch {
+    return null;
+  }
+}
+
+function assertUniqueRoleIds(
+  relationshipTypes: Record<string, RelationshipTypeDefinition>,
+  sourceLabel = "associations.json",
+): void {
+  const seenRoles = new Map<string, string>();
+  for (const [typeId, def] of Object.entries(relationshipTypes)) {
+    const pair = ensureRoleIds(typeId, def.roleIds);
+    def.roleIds = pair;
+    for (let endpoint = 0; endpoint < 2; endpoint++) {
+      const roleId = pair[endpoint as 0 | 1]!;
+      const prev = seenRoles.get(roleId);
+      if (prev) {
+        throw new Error(
+          `${sourceLabel}: duplicate relational role id "${roleId}" (${prev} and ${typeId}:${endpoint})`,
+        );
+      }
+      seenRoles.set(roleId, `${typeId}:${endpoint}`);
+    }
+  }
+}
+
+/**
+ * Overlay `overlay` onto `base`. Overlay entries win on the same relationship type id.
+ * Re-checks role-id uniqueness on the merged map.
+ */
+export function mergeRelationshipTypesFiles(
+  base: RelationshipTypesFile,
+  overlay: RelationshipTypesFile,
+): RelationshipTypesFile {
+  if (Object.keys(overlay.relationshipTypes).length === 0) return base;
+  const relationshipTypes = {
+    ...base.relationshipTypes,
+    ...overlay.relationshipTypes,
+  };
+  assertUniqueRoleIds(relationshipTypes, "merged relationship types");
+  return {
+    version: base.version || overlay.version || RELATIONSHIP_TYPES_FILE_VERSION,
+    relationshipTypes,
+  };
+}
+
 export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
   const data = JSON.parse(raw) as unknown;
   if (!data || typeof data !== "object" || Array.isArray(data)) {
@@ -433,56 +529,10 @@ export function parseRelationshipTypesFile(raw: string): RelationshipTypesFile {
         `associations.json: relationship type key "${rawKey}" must be a ULID`,
       );
     }
-    if (!value || typeof value !== "object" || Array.isArray(value)) {
-      throw new Error(`associations.json: type ${key} must be an object`);
-    }
-    const row = value as Record<string, unknown>;
-    if (row.perspectiveLabels !== undefined) {
-      throw new Error(
-        `associations.json: type ${key} perspectiveLabels is removed; put labels in roles`,
-      );
-    }
-    const labelRaw = row.roles !== undefined ? row.roles : row.perspectives;
-    const labelKey = row.roles !== undefined ? "roles" : "perspectives";
-    if (!Array.isArray(labelRaw) || labelRaw.length !== 2) {
-      throw new Error(
-        `associations.json: type ${key} must define exactly two ${labelKey} (relational role labels)`,
-      );
-    }
-    const perspectives: PerspectivePair = [
-      parsePerspectiveLabelConfig(labelRaw[0], `type ${key} ${labelKey}[0]`),
-      parsePerspectiveLabelConfig(labelRaw[1], `type ${key} ${labelKey}[1]`),
-    ];
-    const parsedRoleIds = parseRoleIdPair(row.roleIds, key);
-    const roleIds = ensureRoleIds(key, parsedRoleIds);
-    const linkExisting = parseLinkExisting(row.linkExisting, `type ${key}.linkExisting`);
-    const traits = parseTraits(row.traits, key);
-    const endpoints = parseEndpoints(row.endpoints, key);
-    relationshipTypes[key] = {
-      perspectives,
-      roleIds,
-      ...(linkExisting !== undefined ? { linkExisting } : {}),
-      ...(traits ? { traits } : {}),
-      ...(endpoints ? { endpoints } : {}),
-    };
+    relationshipTypes[key] = parseRelationshipTypeDefinition(value, key);
   }
 
-  // Enforce global uniqueness of role ids across the file.
-  const seenRoles = new Map<string, string>();
-  for (const [typeId, def] of Object.entries(relationshipTypes)) {
-    const pair = ensureRoleIds(typeId, def.roleIds);
-    def.roleIds = pair;
-    for (let endpoint = 0; endpoint < 2; endpoint++) {
-      const roleId = pair[endpoint as 0 | 1]!;
-      const prev = seenRoles.get(roleId);
-      if (prev) {
-        throw new Error(
-          `associations.json: duplicate relational role id "${roleId}" (${prev} and ${typeId}:${endpoint})`,
-        );
-      }
-      seenRoles.set(roleId, `${typeId}:${endpoint}`);
-    }
-  }
+  assertUniqueRoleIds(relationshipTypes);
 
   return { version: obj.version, relationshipTypes };
 }

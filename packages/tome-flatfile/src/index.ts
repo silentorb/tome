@@ -49,8 +49,11 @@ export {
   emptyRelationshipTypesFile,
   generateRelationshipTypeId,
   isRelationshipTypeId,
+  mergeRelationshipTypesFiles,
   normalizeRelationshipTypeId,
+  parseRelationshipTypeDefinition,
   parseRelationshipTypesFile,
+  tryParseRelationshipTypeDefinition,
   parseProjectionType,
   relationshipTypeIdFromProjectionType,
   endpointIndexFromProjectionType,
@@ -314,6 +317,10 @@ export {
   compileDiscoveredNodePredicates,
 } from "./ontology/discover";
 export { discoverActiveMemberScopes } from "./ontology/discover-member-scopes";
+export {
+  discoverActiveRelationshipTypes,
+  RELATIONSHIP_TYPE_PROPERTY_KEY,
+} from "./ontology/discover-relationship-types";
 export {
   contentHasAuthorizationModelType,
   discoverAuthorizationModelInstanceIds,

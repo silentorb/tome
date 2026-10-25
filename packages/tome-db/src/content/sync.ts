@@ -635,7 +635,7 @@ export class CacheSync {
     if (
       this.corpusContentDirs().some((dir) => contentHasOntologyTypes(dir))
     ) {
-      // Membership edges can change which node predicates are active.
+      // Membership edges can change which node predicates / relationship types are active.
       invalidateRelationshipTypesCache();
     }
 
@@ -706,7 +706,7 @@ export class CacheSync {
         relativeName === RELATIONSHIPS_SYNC_MARKER &&
         this.corpusContentDirs().some((dir) => contentHasOntologyTypes(dir))
       ) {
-        // Membership edges can change which node predicates are active.
+        // Membership edges can change which node predicates / relationship types are active.
         invalidateRelationshipTypesCache();
       }
       await this.syncRelationshipsUnlocked();
@@ -764,7 +764,7 @@ export class CacheSync {
     if (match) {
       const id = base.slice(0, -3);
       if (this.corpusContentDirs().some((dir) => contentHasOntologyTypes(dir))) {
-        // Predicate / member-scope structured properties live on node files.
+        // Predicate / member-scope / relationship-type structured properties live on node files.
         invalidateRelationshipTypesCache();
       }
       await this.syncNodeUnlocked(id);

@@ -8,10 +8,12 @@ import {
 import { ontologyFilePath, relationshipTypesFilePath } from "../content/paths";
 import {
   emptyRelationshipTypesFile,
+  mergeRelationshipTypesFiles,
   parseRelationshipTypesFile,
   type RelationshipTypesFile,
 } from "../content/relationship-types-file";
 import { compileDiscoveredNodePredicates } from "../ontology/discover";
+import { discoverActiveRelationshipTypes } from "../ontology/discover-relationship-types";
 import { contentHasOntologyTypes, loadOntologyFileFromContent } from "../ontology/load";
 import { invalidateMemberScopesCache } from "../ontology/member-scopes-load";
 
@@ -54,15 +56,22 @@ function loadCached(contentDir: string): {
     return { file: cachedTypes.file, runtime: cachedTypes.runtime };
   }
 
-  let file: RelationshipTypesFile;
+  let associationsFile: RelationshipTypesFile;
   try {
-    file = parseRelationshipTypesFile(readFileSync(path, "utf-8"));
+    associationsFile = parseRelationshipTypesFile(readFileSync(path, "utf-8"));
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
-      file = emptyRelationshipTypesFile();
+      associationsFile = emptyRelationshipTypesFile();
     } else {
       throw err;
     }
+  }
+
+  let file = associationsFile;
+  if (contentHasOntologyTypes(contentDir)) {
+    loadOntologyFileFromContent(contentDir);
+    const nodeTypes = discoverActiveRelationshipTypes(contentDir);
+    file = mergeRelationshipTypesFiles(associationsFile, nodeTypes);
   }
 
   let runtime =
@@ -71,7 +80,6 @@ function loadCached(contentDir: string): {
       : compileAssociationConfig(file);
 
   if (contentHasOntologyTypes(contentDir)) {
-    loadOntologyFileFromContent(contentDir);
     runtime = mergeRelationshipRuntimes(runtime, compileDiscoveredNodePredicates(contentDir));
   }
 
@@ -85,11 +93,18 @@ function loadCached(contentDir: string): {
   return { file, runtime };
 }
 
+/**
+ * Associations.json merged with active node-authored relationship types
+ * (`types.relationshipType`). Node entries win on the same id.
+ */
 export function loadRelationshipTypesFromContent(contentDir: string): RelationshipTypesFile {
   return loadCached(contentDir).file;
 }
 
-/** Associations.json (+ optional node ontology overlay) → RelationshipRuntime. */
+/**
+ * Merged relationship-types registry compiled to RelationshipRuntime, plus
+ * optional node-predicate overlay (selection filters).
+ */
 export function loadRelationshipRuntimeFromContent(contentDir: string): RelationshipRuntime {
   return loadCached(contentDir).runtime;
 }

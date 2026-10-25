@@ -6,8 +6,11 @@ Tome’s corpus model is an **ontology**: semantic-driven configuration of relat
 
 That runtime is compiled from:
 
-1. **`associations.json`** — legacy relationship-types file (unchanged on disk)
-2. **Node-authored ontology** (optional) — declared via `ontology.json` and graph membership, with Imp **node-filter** selection logic on predicate nodes
+1. **`associations.json`** — relationship-types file (still supported; dual-support with nodes)
+2. **Node-authored ontology** (optional) — declared via `ontology.json` and graph membership:
+   - **Relationship type** nodes — full edge-kind definitions (roles, roleIds, endpoints, traits)
+   - **Predicate** nodes — Imp **node-filter** selection logic (modular filters; not edge-kind defs)
+   - **Member-scope** nodes — bind a type-table hub to a predicate for membership
 
 ## Schema vs ontology (terminology)
 
@@ -53,7 +56,7 @@ Match context today is `{ predicateId }` (optional `endpointIndex` for link-exis
 1. For each `[id, def]` in `file.relationshipTypes`, emit predicate `{ id, perspectives }`.
 2. Emit one pattern `{ id: "ac:"+id, match: { predicateId: id }, traits, linkExisting, endpoints }` from the same entry.
 
-Flatfile loads associations (`loadRelationshipTypesFromContent`) and caches the compiled runtime (`loadRelationshipRuntimeFromContent`).
+Flatfile merges associations with active node-authored relationship types into one registry (`loadRelationshipTypesFromContent`) and caches the compiled runtime (`loadRelationshipRuntimeFromContent`). **Node wins** on the same relationship type id. Prefer preserving association ULIDs (and `roleIds`) when porting a type from JSON to a node so existing edges and model hardcodes stay valid.
 
 ### ontology.json (node-authored)
 
@@ -66,6 +69,7 @@ Optional file: `content/model/ontology.json`
     "ontology": "<ontology-type-node-ulid>",
     "predicate": "<predicate-type-node-ulid>",
     "memberScope": "<member-scope-type-node-ulid>",
+    "relationshipType": "<relationship-type-type-table-ulid>",
     "authorizationModel": "<authorization-model-type-table-ulid>",
     "idpBinding": "<idp-binding-type-table-ulid>"
   }
@@ -77,8 +81,9 @@ Optional file: `content/model/ontology.json`
 | Field | Meaning |
 | --- | --- |
 | `types.ontology` | Type-table node whose **members** are ontology instances |
-| `types.predicate` | Type-table node whose **members** are predicate instances |
+| `types.predicate` | Type-table node whose **members** are predicate instances (selection filters) |
 | `types.memberScope` | Type-table node whose **members** are member-scope instances (optional) |
+| `types.relationshipType` | Type-table node whose **members** are relationship-type definitions (optional; dual-support with `associations.json`) |
 | `types.authorizationModel` | Type-table node whose **members** are Authorization Model instances (optional). Couples a minimal authz footprint into the model so authorization is not fully detachable from corpus data. Used by the `authorization-model` server authorizer — see [authorization-authorizers.md](../extensions/authorization-authorizers.md). |
 | `types.idpBinding` | Type-table node whose **members** are IdP Binding instances (optional; typically on a **user corpus**). Used at host wire-up so OIDC can resolve `(issuer, subject)` → Account via the session SQL cache — see [multi-user.md](./multi-user.md) and [authentication-providers.md](../extensions/authentication-providers.md). |
 
@@ -88,13 +93,26 @@ Optional file: `content/model/ontology.json`
 | --- | --- |
 | Ontology instance | Member of `types.ontology` (set-trait membership) |
 | Predicate instance | Member of `types.predicate` |
-| **Active** predicate | Predicate instance **and** member of ≥1 ontology instance |
+| **Active** predicate | Predicate instance **and** member of ≥1 ontology instance, with a valid `predicate` Imp filter |
 | Member-scope instance | Member of `types.memberScope` |
 | **Active** member-scope | Member-scope instance **and** member of ≥1 ontology instance, with a valid binding payload |
+| Relationship-type instance | Member of `types.relationshipType` |
+| **Active** relationship type | Relationship-type instance **and** member of ≥1 ontology instance, with a valid `relationshipType` property |
 | Authorization Model instance | Member of `types.authorizationModel` (container; grant/logic child nodes later) |
 | IdP Binding instance | Member of `types.idpBinding` (local IdP claim → Account binding; user corpora) |
 
 Set-trait relationship types still come from `associations.json` (bootstrap / chicken-egg until typing can be expressed as node-native patterns).
+
+### Relationship-type node properties
+
+Active relationship-type nodes carry edge-kind metadata as a **node property**:
+
+- Frontmatter / node property key: `relationshipType`
+- Value: JSON object matching an `associations.json` entry (`roles` / legacy `perspectives`, `roleIds`, optional `endpoints` / `traits` / `linkExisting`)
+- Declared on the relationship-type type table in `table-schemas.json` as `type: "json"` with `storage: "node"`
+- **Node id = relationship type id** — when migrating from associations, reuse the JSON key ULID and existing `roleIds`
+
+Incomplete or unparseable payloads are skipped (type not active). Predicates remain separate modular filters; do not put selection Imp graphs on relationship-type nodes.
 
 ### Imp node-filter properties
 
@@ -133,9 +151,10 @@ If a member-scope is active but its predicate has **no loadable selection filter
 
 ### Merge and multi-corpus session scope
 
-1. Compile associations → base runtime
-2. Discover/compile active node predicates → overlay (**node wins** on same predicate id)
-3. A multi-corpus session **unions** contributions from each corpus’s `ontology.json` + graph (solo corpus is the trivial case)
+1. Load associations.json → base `RelationshipTypesFile`
+2. Discover/compile active relationship-type nodes → merge into registry (**node wins** on same type id)
+3. Compile merged registry → base runtime; discover/compile active node predicates → overlay (**node wins** on same predicate id)
+4. A multi-corpus session **unions** contributions from each corpus’s `ontology.json` + graph (solo corpus is the trivial case)
 
 Local corpus metadata lives in `corpus.json` (legacy `workspace.json`) and is not part of this ontology merge — see [multi-corpus.md](./multi-corpus.md) § Model boundary.
 
@@ -153,7 +172,7 @@ Storage/editor/server hosts must not hard-require `tome-ontology` or `tome-ontol
 
 ## Sync / invalidation
 
-Invalidating the relationship-types runtime cache also covers node ontology overlay. Triggers include `associations.json`, `ontology.json`, set-membership relationship changes (when ontology types are configured), and predicate node body edits (when ontology types are configured).
+Invalidating the relationship-types runtime cache also covers node ontology overlay. Triggers include `associations.json`, `ontology.json`, set-membership relationship changes (when ontology types are configured), and predicate / member-scope / relationship-type node property edits (when ontology types are configured).
 
 ## See also
 

@@ -9,6 +9,7 @@ const TYPE_KEYS: OntologyTypeKey[] = [
   "ontology",
   "predicate",
   "memberScope",
+  "relationshipType",
   "authorizationModel",
   "authorizationPolicy",
   "idpBinding",
@@ -62,5 +63,10 @@ export function serializeOntologyFile(file: OntologyFile): string {
 }
 
 export function ontologyTypesConfigured(file: OntologyFile): boolean {
-  return Boolean(file.types.ontology || file.types.predicate || file.types.memberScope);
+  return Boolean(
+    file.types.ontology ||
+      file.types.predicate ||
+      file.types.memberScope ||
+      file.types.relationshipType,
+  );
 }

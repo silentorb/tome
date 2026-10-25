@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { PropertyFieldSection } from "tome-graph-interfaces";
+import type { EditorPageBlockProps } from "tome-interfaces/page-block/editor";
 import type { EditorApi } from "../api/client";
 import {
   closePageBlockToolPanel,
@@ -162,36 +163,35 @@ function ImpGraphPropertyFieldSection({
   }
 
   const { registration, component } = match;
-  const FieldComponent = registration.Component;
+  // Same cast as PageBlockWithUserSettings — EditorPageBlockComponent returns `unknown`.
+  const FieldComponent = registration.Component as (p: EditorPageBlockProps) => ReactNode;
 
-  const ctx = {
-    component: {
-      id: component.id,
-      extensionId: component.extensionId,
-      implementationId: component.implementationId,
-      label: component.label || section.title,
-      params: {} as Record<string, unknown>,
+  const props: EditorPageBlockProps = {
+    ctx: {
+      component: {
+        id: component.id,
+        extensionId: component.extensionId,
+        implementationId: component.implementationId,
+        label: component.label || section.title,
+        params: {} as Record<string, unknown>,
+      },
+      blockType: section.columnType,
+      nodeId,
+      invoke: (input: unknown) => invokePageBlockExtension(component.id, input, nodeId),
+      openToolPanel: openPageBlockToolPanel,
+      closeToolPanel: closePageBlockToolPanel,
     },
-    blockType: section.columnType,
-    nodeId,
-    invoke: (input: unknown) => invokePageBlockExtension(component.id, input, nodeId),
-    openToolPanel: openPageBlockToolPanel,
-    closeToolPanel: closePageBlockToolPanel,
+    blockData: value ?? {},
+    onBlockDataChange: (data: unknown) => {
+      void persist(data);
+    },
+    readOnly,
   };
 
   return (
     <section className="tome-record-section tome-property-field-section">
       <h2 className="tome-section-title">{section.title}</h2>
-      {
-        FieldComponent({
-          ctx,
-          blockData: value ?? {},
-          onBlockDataChange: (data: unknown) => {
-            void persist(data);
-          },
-          readOnly,
-        }) as ReactNode
-      }
+      <FieldComponent {...props} />
       {error ? <p className="tome-property-field-error">{error}</p> : null}
     </section>
   );
