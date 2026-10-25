@@ -40,6 +40,11 @@ describe("workspace quick links", async () => {
         label: "Features hub",
       });
       expect(isWorkspaceQuickLink(workspace, NODE_ID)).toBe(true);
+
+      const catalog = await fixture.ctx.cache.listCorporaFromCache();
+      expect(catalog[0]?.workspace.quickLinks).toEqual([
+        { nodeId: NODE_ID, label: "Features hub" },
+      ]);
     } finally {
       await destroyTestContentFixture(fixture);
     }
@@ -90,6 +95,8 @@ describe("workspace quick links", async () => {
       const raw = readFileSync(workspaceFilePath(fixture.ctx.store.contentDir), "utf-8");
       const workspace = parseWorkspaceFile(raw);
       expect(workspace.quickLinks).toEqual([]);
+      const catalog = await fixture.ctx.cache.listCorporaFromCache();
+      expect(catalog[0]?.workspace.quickLinks).toEqual([]);
       expect(await removeWorkspaceQuickLink(fixture.ctx, NODE_ID)).toBe("not_a_quick_link");
     } finally {
       await destroyTestContentFixture(fixture);
@@ -112,6 +119,11 @@ describe("workspace quick links", async () => {
 
       const workspace = loadWorkspaceFromContent(fixture.ctx.store.contentDir);
       expect(workspace.quickLinks.map((link) => link.nodeId)).toEqual([
+        OTHER_NODE_ID,
+        NODE_ID,
+      ]);
+      const catalog = await fixture.ctx.cache.listCorporaFromCache();
+      expect(catalog[0]?.workspace.quickLinks.map((link) => link.nodeId)).toEqual([
         OTHER_NODE_ID,
         NODE_ID,
       ]);

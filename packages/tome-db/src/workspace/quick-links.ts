@@ -1,5 +1,8 @@
 import type { TomeWriteContext } from "../content/write-context";
-import { contentDirForGraphStore } from "../content/write-context";
+import {
+  contentDirForGraphStore,
+  primaryCorpusIdFromGraphStore,
+} from "../content/write-context";
 import {
   invalidateWorkspaceCache,
   loadWorkspaceFromContent,
@@ -27,17 +30,24 @@ async function nodeTitle(ctx: TomeWriteContext, nodeId: string): Promise<string 
   return "Untitled";
 }
 
+/** Persist corpus.json and write through the session SQLite corpora catalog. */
 async function writeWorkspaceForNode(
   ctx: TomeWriteContext,
   nodeId: string,
   workspace: WorkspaceFile,
 ): Promise<void> {
-  const corpusId = writeStoreLocateNode(ctx.graphStore, nodeId);
-  if (corpusId) {
+  const located = writeStoreLocateNode(ctx.graphStore, nodeId);
+  const corpusId = located ?? primaryCorpusIdFromGraphStore(ctx.graphStore);
+  if (located) {
     await writeStoreWriteWorkspaceForCorpus(ctx.graphStore, corpusId, workspace);
-    return;
+  } else {
+    await ctx.graphStore.writeWorkspace(workspace);
   }
-  await ctx.graphStore.writeWorkspace(workspace);
+
+  invalidateWorkspaceCache();
+  const access =
+    ctx.graphStore.listCorpora().find((c) => c.id === corpusId)?.access ?? "readwrite";
+  await ctx.cache.upsertCorpus({ id: corpusId, access, workspace });
 }
 
 function workspaceForNode(ctx: TomeWriteContext, nodeId: string): WorkspaceFile {
@@ -69,7 +79,6 @@ export async function addWorkspaceQuickLink(
   };
 
   await writeWorkspaceForNode(ctx, normalizedId, next);
-  invalidateWorkspaceCache();
   return null;
 }
 
@@ -87,7 +96,6 @@ export async function removeWorkspaceQuickLink(
   };
 
   await writeWorkspaceForNode(ctx, normalizedId, next);
-  invalidateWorkspaceCache();
   return null;
 }
 
@@ -118,6 +126,5 @@ export async function reorderWorkspaceQuickLinks(
   };
 
   await writeWorkspaceForNode(ctx, nodeIds[0]!, next);
-  invalidateWorkspaceCache();
   return null;
 }

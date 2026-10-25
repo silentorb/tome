@@ -36,6 +36,15 @@ describe("quick links API", async () => {
         { nodeId: NODE_ID, label: "Features" },
       ]);
 
+      const corporaAfterAdd = await handler(new Request("http://127.0.0.1/api/corpora"));
+      expect(corporaAfterAdd.status).toBe(200);
+      const corporaAddBody = (await corporaAfterAdd.json()) as {
+        corpora: { workspace: { quickLinks: { nodeId: string; label: string }[] } }[];
+      };
+      expect(corporaAddBody.corpora[0]?.workspace.quickLinks).toEqual([
+        { nodeId: NODE_ID, label: "Features" },
+      ]);
+
       const duplicate = await handler(
         new Request(`http://127.0.0.1/api/nodes/${NODE_ID}/quick-link`, { method: "POST" }),
       );
@@ -50,6 +59,13 @@ describe("quick links API", async () => {
         readFileSync(workspaceFilePath(fixture.ctx.store.contentDir), "utf-8"),
       );
       expect(workspaceAfterRemove.quickLinks).toEqual([]);
+
+      const corporaAfterRemove = await handler(new Request("http://127.0.0.1/api/corpora"));
+      expect(corporaAfterRemove.status).toBe(200);
+      const corporaRemoveBody = (await corporaAfterRemove.json()) as {
+        corpora: { workspace: { quickLinks: { nodeId: string; label: string }[] } }[];
+      };
+      expect(corporaRemoveBody.corpora[0]?.workspace.quickLinks).toEqual([]);
     } finally {
       await destroyTestContentFixture(fixture);
     }
@@ -91,6 +107,16 @@ describe("quick links API", async () => {
         readFileSync(workspaceFilePath(fixture.ctx.store.contentDir), "utf-8"),
       );
       expect(workspace.quickLinks.map((link) => link.nodeId)).toEqual([
+        OTHER_NODE_ID,
+        NODE_ID,
+      ]);
+
+      const corpora = await handler(new Request("http://127.0.0.1/api/corpora"));
+      expect(corpora.status).toBe(200);
+      const corporaBody = (await corpora.json()) as {
+        corpora: { workspace: { quickLinks: { nodeId: string }[] } }[];
+      };
+      expect(corporaBody.corpora[0]?.workspace.quickLinks.map((link) => link.nodeId)).toEqual([
         OTHER_NODE_ID,
         NODE_ID,
       ]);

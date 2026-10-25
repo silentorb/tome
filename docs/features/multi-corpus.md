@@ -127,7 +127,7 @@ Union in memory via composite `read*File()` — do not write a merged `model/`.
 
 ### HTTP
 
-- `GET /api/corpora` — id, label, home, archive, `access`. Served from the session SQLite `corpora` catalog (synced from each corpus’s `corpus.json`); archive titles still come from point `getNode`.
+- `GET /api/corpora` — id, label, home, archive, `access`. Served from the session SQLite `corpora` catalog (populated at startup / file-watch from each corpus’s `corpus.json`, and write-through on in-process workspace edits such as quick links); archive titles still come from point `getNode`.
 - `GET /api/workspace` — same catalog for the workspace blob (+ archive title enrichment).
 - `GET /api/workspace/document-icon?corpus=…` — optional branding favicon image for that corpus (`branding.documentIconImage`); icon *bytes* remain filesystem reads under the corpus content root.
 - Node page and search hits include `corpus` (and whether the corpus is readonly), resolved via `nodes.corpus_id` when the cache is warm.
