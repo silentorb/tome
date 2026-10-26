@@ -51,7 +51,7 @@ Legacy `store` + `cache` (+ nested `corpora` / `TOME_CORPORA`) **must** migrate 
 
 Pick **one** watch form per corpus. With Git watch, the sync graph is `gitWatch` → sink store nodes; the flatfile corpus remains a **`dataStores`** entry (CRUD / `asSource`) and does **not** need a flatfile `tome.sync.store` graph node.
 
-Git watch persists last-synced tip in the session query store `meta` table as `git_watch_commit:<storeId>` (dynamic key/value — no schema migration). After cold/`full`, record the current tip as baseline.
+Git watch persists last-synced tip in the session query store `meta` table as `git_watch_commit:<storeId>` (dynamic key/value — no schema migration). After cold/`full`, record the current tip as baseline. The host must have a `git` binary on `PATH` (`git diff --name-only`); release images install it via `docker/install-runtime.sh`.
 
 ### SyncSourceRead / SyncSignal
 

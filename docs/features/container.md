@@ -144,7 +144,7 @@ Enable profiling on a running container without rebuilding, e.g. `docker run -e 
 
 | Path | Role |
 | --- | --- |
-| [`docker/install-runtime.sh`](../../docker/install-runtime.sh) | apt + Bun pin (base + dev + release base stage) |
+| [`docker/install-runtime.sh`](../../docker/install-runtime.sh) | apt + Bun pin (base + dev + release base stage); includes `git` for git-watch sync |
 | [`docker/bake-deps.sh`](../../docker/bake-deps.sh) | Release-only dependency bake |
 | [`docker/ensure-deps-dev.sh`](../../docker/ensure-deps-dev.sh) | Runtime install for workbench |
 | [`docker/ensure-deps-release.sh`](../../docker/ensure-deps-release.sh) | Offline seed / lockfile check |

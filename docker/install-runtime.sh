@@ -9,8 +9,10 @@ BUN_INSTALL="${BUN_INSTALL:-/usr/local/bun}"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
+# `git` is required at runtime for corpus git-watch sync (`git diff --name-only`)
+# and for release-image tests that exercise that path.
 apt-get install -y --no-install-recommends \
-  ca-certificates curl unzip python3 \
+  ca-certificates curl unzip python3 git \
   build-essential pkg-config \
   libcairo2-dev libjpeg-dev libpango1.0-dev libgif-dev librsvg2-dev libpixman-1-dev
 apt-get upgrade -y
