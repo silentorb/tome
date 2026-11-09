@@ -1,93 +1,19 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmSync } from "node:fs";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
 import {
   buildDefaultSyncGraph,
   ensureFtsObserveEdges,
   createDefaultSyncNodeTypeRegistry,
   createStubSyncEndpointRecording,
   DataStoreRegistry,
-  emptySyncPartialScope,
-  mergeSyncPartialScope,
-  openDataStoreSession,
-  storeChangeEventToSyncScope,
-  syncScopeForNodeDelete,
   syncScopeForNodeUpsert,
-  syncScopeForRelationshipUpsert,
   wireSyncGraph,
   SYNC_OBSERVE_IN_PORT,
   SYNC_OBSERVE_OUT_PORT,
   SYNC_STORE_ID_INPUT,
   SYNC_STORE_NODE_TYPE,
-} from "../../src/sync";
-import type { SyncEndpoint, SyncSignal } from "../../src/sync";
-import {
-  createTestContentFixture,
-  destroyTestContentFixture,
-} from "../../src/content/test-helpers";
-
-describe("SyncPartialScope", () => {
-  test("helpers distinguish create modify delete", () => {
-    expect(syncScopeForNodeUpsert("n1", false)).toEqual({
-      mode: "partial",
-      changes: {
-        ...emptySyncPartialScope(),
-        nodes: { created: ["n1"], modified: [], deleted: [] },
-      },
-    });
-    expect(syncScopeForNodeUpsert("n1", true).mode).toBe("partial");
-    const modifiedScope = syncScopeForNodeUpsert("n1", true);
-    expect(modifiedScope.mode).toBe("partial");
-    if (modifiedScope.mode === "partial") {
-      expect(modifiedScope.changes.nodes.modified).toEqual(["n1"]);
-    }
-    expect(syncScopeForNodeDelete("n1")).toMatchObject({
-      mode: "partial",
-      changes: { nodes: { deleted: ["n1"] } },
-    });
-    expect(syncScopeForRelationshipUpsert("a:b:t", false).mode).toBe("partial");
-  });
-
-  test("merge combines id sets", () => {
-    const a = emptySyncPartialScope();
-    const b = emptySyncPartialScope();
-    const merged = mergeSyncPartialScope(
-      { ...a, nodes: { created: ["a"], modified: [], deleted: [] } },
-      { ...b, nodes: { created: ["b"], modified: ["c"], deleted: [] } },
-    );
-    expect([...merged.nodes.created].sort()).toEqual(["a", "b"]);
-    expect(merged.nodes.modified).toEqual(["c"]);
-  });
-
-  test("storeChangeEventToSyncScope maps nodes and content markers", () => {
-    const nodeScope = storeChangeEventToSyncScope({
-      path: "01KWN86X6MFZQAJ1V36T95928S.md",
-      kind: "node",
-    });
-    expect(nodeScope.mode).toBe("partial");
-    if (nodeScope.mode === "partial") {
-      expect(nodeScope.changes.nodes.modified).toEqual(["01KWN86X6MFZQAJ1V36T95928S"]);
-    }
-    expect(storeChangeEventToSyncScope({ path: "relationships", kind: "relationships" })).toEqual({
-      mode: "content",
-      relativeName: "relationships",
-    });
-    expect(
-      storeChangeEventToSyncScope({ path: "associations.json", kind: "relationship-types" }),
-    ).toEqual({
-      mode: "content",
-      relativeName: "associations.json",
-    });
-    expect(storeChangeEventToSyncScope({ path: "schema.json", kind: "schema" })).toEqual({
-      mode: "content",
-      relativeName: "schema.json",
-    });
-    expect(storeChangeEventToSyncScope({ path: "mystery.bin", kind: "unknown" })).toEqual({
-      mode: "full",
-    });
-  });
-});
+  type SyncEndpoint,
+  type SyncSignal,
+} from "../src/index";
 
 describe("SyncGraphWire", () => {
   test("wires A→B and A→C fan-out", async () => {
@@ -120,7 +46,6 @@ describe("SyncGraphWire", () => {
 
     const b = createStubSyncEndpointRecording("B");
     const c = createStubSyncEndpointRecording("C");
-    // replace apply to also track
     const bEp = {
       ...b.endpoint,
       apply(s: SyncSignal) {
@@ -194,7 +119,6 @@ describe("SyncGraphWire", () => {
 
     const a = createStubSyncEndpointRecording("A2");
     const b = createStubSyncEndpointRecording("B2");
-    // make both observe and be observed for cycle test
     const epA: SyncEndpoint = {
       ...a.endpoint,
       capabilities: { kind: "unknown", canBeObserved: true, canObserve: true },
@@ -257,16 +181,11 @@ describe("SyncGraphWire", () => {
     expect(patched.edges["obs:marloth->fts"]).toBeTruthy();
   });
 
-  test("fts without sync endpoint is omitted from ftsStoreIdsWithSync", () => {
+  test("idsWithEndpoint omits stores without an endpoint", () => {
     const registry = new DataStoreRegistry();
-    const search = {
-      search: async () => [],
-      searchWindow: async () => ({ hits: [], total: 0 }),
-    };
     registry.set({
       id: "fts-same-db",
       kind: "fts",
-      search,
       close: () => undefined,
     });
     const stub = createStubSyncEndpointRecording("fts-sync");
@@ -274,83 +193,9 @@ describe("SyncGraphWire", () => {
       id: "fts-sync",
       kind: "fts",
       endpoint: stub.endpoint,
-      search,
       close: () => undefined,
     });
-    expect(registry.ftsStoreIdsWithSync()).toEqual(["fts-sync"]);
+    expect(registry.idsWithEndpoint()).toEqual(["fts-sync"]);
     expect(() => registry.endpoint("fts-same-db")).toThrow(/no sync endpoint/);
-  });
-});
-
-describe("openDataStoreSession smoke", async () => {
-  test("opens solo flatfile + sqlite and wires default graph", async () => {
-    const fixture = await createTestContentFixture();
-    const dir = mkdtempSync(join(tmpdir(), "tome-sync-session-"));
-    const dbPath = join(dir, "cache.sqlite");
-    try {
-      const session = await openDataStoreSession({
-        dataStores: {
-          content: {
-            id: "content",
-            module: "tome-flatfile",
-            export: "createFlatfileModule",
-            options: { contentPath: fixture.ctx.store.contentDir },
-          },
-          cache: {
-            id: "cache",
-            module: "tome-sqlite",
-            export: "createSqliteModule",
-            options: { dbPath },
-          },
-        },
-        queryStoreId: "cache",
-        deferReady: false,
-      });
-      expect(session.flatfileStoreIds).toEqual(["content"]);
-      expect(session.wire?.edges).toHaveLength(1);
-      expect(session.writeContext.sync).toBeDefined();
-      expect(session.writeContext.store).toBeDefined();
-      session.dispose();
-    } finally {
-      await destroyTestContentFixture(fixture);
-      rmSync(dir, { recursive: true, force: true });
-    }
-  });
-
-  test("opens Queryable SoT-only session without CacheSync or FTS observe edges", async () => {
-    const sotModule = new URL("./fixtures/fake-queryable-sot.ts", import.meta.url).pathname;
-    const session = await openDataStoreSession({
-      dataStores: {
-        sot: {
-          id: "sot",
-          module: sotModule,
-          export: "createFakeQueryableStoreModule",
-          options: {},
-        },
-        fts: {
-          id: "fts",
-          module: sotModule,
-          export: "createFakeFtsModule",
-          options: {},
-        },
-      },
-      queryStoreId: "sot",
-      deferReady: false,
-    });
-    try {
-      expect(session.flatfileStoreIds).toEqual([]);
-      expect(session.writeContext.sync).toBeUndefined();
-      expect(session.writeContext.store).toBeUndefined();
-      expect(session.writeContext.graphStore.contentDir).toBe("fake://sot");
-      expect(session.registry.ftsStoreIdsWithSync()).toEqual([]);
-      expect(session.wire?.edges ?? []).toHaveLength(0);
-      const fts = session.registry.get("fts");
-      expect(fts?.kind).toBe("fts");
-      if (fts?.kind === "fts") {
-        expect(fts.endpoint).toBeUndefined();
-      }
-    } finally {
-      session.dispose();
-    }
   });
 });

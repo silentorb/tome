@@ -1,26 +1,17 @@
 import type {
-  ExecuteImpContext,
-  ImpCollectionResult,
-  ImpGraph,
   TomeGraphStoreQueryable,
+  Properties,
 } from "tome-graph-interfaces";
 import type { TomeDataStore, StoreChangeEvent } from "tome-service-interfaces";
+import type {
+  DataStoreCapabilities,
+  SyncEndpoint,
+  SyncSignal,
+  SyncSourceRead,
+} from "tome-service-interfaces/sync";
+import { syncSourceFromQueryable } from "tome-mir";
 import type { CacheSync } from "../content/sync";
-import type { Properties } from "tome-graph-interfaces";
-import type { SyncEndpoint, DataStoreCapabilities } from "./registry";
-import type { SyncSignal, SyncSourceRead } from "./types";
 import { storeChangeEventToSyncScope } from "./scope-from-events";
-
-export function syncSourceFromQueryable(store: TomeGraphStoreQueryable): SyncSourceRead {
-  return {
-    executeImp(
-      graph: ImpGraph,
-      context?: ExecuteImpContext,
-    ): ImpCollectionResult | Promise<ImpCollectionResult> {
-      return store.executeImp(graph, context);
-    },
-  };
-}
 
 /** Flatfile source endpoint — watches store and emits SyncSignals. */
 export function createFlatfileSyncEndpoint(options: {
@@ -123,31 +114,4 @@ export function createSqliteCacheSyncEndpoint(options: {
       }
     },
   };
-}
-
-/** Test stub that records applied signals (fan-out tests). */
-export function createStubSyncEndpointRecording(id: string): {
-  endpoint: SyncEndpoint;
-  applied: SyncSignal[];
-} {
-  const applied: SyncSignal[] = [];
-  const endpoint: SyncEndpoint = {
-    id,
-    capabilities: {
-      kind: "unknown",
-      canBeObserved: true,
-      canObserve: true,
-    },
-    asSource() {
-      return {
-        executeImp() {
-          return { columns: ["id"], rows: [] };
-        },
-      };
-    },
-    apply(signal) {
-      applied.push(signal);
-    },
-  };
-  return { endpoint, applied };
 }

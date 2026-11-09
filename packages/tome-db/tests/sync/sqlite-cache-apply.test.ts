@@ -9,7 +9,7 @@ import {
 } from "../../src/content/test-helpers";
 import { createSqliteCacheSyncEndpoint } from "../../src/sync";
 import { relationshipRecordId, RELATIONSHIPS_SYNC_MARKER } from "tome-flatfile";
-import type { SyncSourceRead } from "../../src/sync";
+import type { SyncSourceRead } from "tome-service-interfaces/sync";
 
 const stubSource: SyncSourceRead = {
   executeImp() {

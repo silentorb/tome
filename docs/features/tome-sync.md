@@ -147,9 +147,21 @@ Default when `sync.graph` omitted: each flatfile storeId → query sqlite storeI
 
 Non-SQLite sinks (e.g. `tome-search-sqlite` FTS) are additional `dataStores` entries wired with explicit observe edges. See [search.md](./search.md).
 
+## Package split
+
+| Role | Package / import |
+| --- | --- |
+| Imp sync fabric (node catalog, wire, publish, handle-free registry) | `tome-mir` — `import { wireSyncGraph, … } from "tome-mir"` |
+| Host session open, flatfile/sqlite adapters, git tip watch | `tome-db/sync-session` — `import { openDataStoreSession } from "tome-db/sync-session"` |
+| CacheSync apply engine | `tome-db` `packages/tome-db/src/content/sync.ts` |
+| Sync contracts (`SyncEndpoint`, `SyncSignal`, scopes) | `tome-service-interfaces/sync` |
+
+The fabric registry holds endpoints only. Host handles (search backends, flatfile stores) live on `DataStoreSession` (e.g. `searchBackends`), not on registry payloads.
+
 ## Verification
 
-- Package tests under `packages/tome-db/tests/sync/` and `packages/tome-server/tests/`.
+- Fabric tests: `packages/tome-mir/tests/`.
+- Host session / git-watch / CacheSync apply tests: `packages/tome-db/tests/sync/` and `packages/tome-server/tests/`.
 - Always-on CacheSync timing baseline: `packages/tome-db/tests/content/cache-sync-benchmark.test.ts`.
 - Full suite: `bash scripts/run-in-tome.sh run test` from the workbench.
 
@@ -157,9 +169,10 @@ Non-SQLite sinks (e.g. `tome-search-sqlite` FTS) are additional `dataStores` ent
 
 | Area | Path |
 | --- | --- |
-| Types / wire-up / adapters / git watch / publish | `packages/tome-db/src/sync/` |
+| Imp fabric (wire / publish / node catalog / thin registry) | `packages/tome-mir/src/` |
+| Host session / flatfile+sqlite adapters / git watch | `packages/tome-db/src/sync/` (`tome-db/sync-session`) |
 | Server config parse | `packages/tome-server/src/load-services.ts` |
-| Legacy CacheSync | `packages/tome-db/src/content/sync.ts` (sqlite observer + preview apply) |
+| CacheSync | `packages/tome-db/src/content/sync.ts` (sqlite observer + preview apply) |
 
 ## See also
 

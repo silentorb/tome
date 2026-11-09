@@ -1,9 +1,16 @@
 import { existsSync, readFileSync, watch, type FSWatcher } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import type { TomeQueryCache } from "tome-service-interfaces";
-import type { SyncScope, SyncSignal, SyncSourceRead } from "./types";
-import { emptySyncPartialScope, mergeSyncPartialScope } from "./types";
-import type { SyncEndpoint } from "./registry";
+import type {
+  SyncEndpoint,
+  SyncScope,
+  SyncSignal,
+  SyncSourceRead,
+} from "tome-service-interfaces/sync";
+import {
+  emptySyncPartialScope,
+  mergeSyncPartialScope,
+} from "tome-service-interfaces/sync";
 import { storeChangeEventToSyncScope } from "./scope-from-events";
 import {
   NODE_FILE_PATTERN,

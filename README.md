@@ -1,6 +1,6 @@
 # Tome
 
-Tome is a semantic graph corpus application.
+Tome is a semantic graph documentation application.
 
 Tome is written in TypeScript and largely consists of a Bun server and a React web editor.
 

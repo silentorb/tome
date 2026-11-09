@@ -4,7 +4,7 @@ import {
   createCacheSyncStatusTracker,
   createConsoleSyncProgressReporter,
 } from "tome-db/content";
-import { openDataStoreSession } from "tome-db/sync";
+import { openDataStoreSession } from "tome-db/sync-session";
 import {
   contentHasAuthorizationModelType,
   discoverAuthorizationModelInstanceIds,
@@ -121,12 +121,7 @@ export async function startTomeServer(options?: {
     `[tome-server] corpora=${corpora.map((c) => `${c.id}:${c.access}`).join(",")}`,
   );
 
-  const searchBackends = new Map<string, unknown>();
-  for (const entry of session.registry.list()) {
-    if (entry.kind === "fts") {
-      searchBackends.set(entry.id, entry.search);
-    }
-  }
+  const searchBackends = new Map<string, unknown>(session.searchBackends);
 
   const sessionStore = new InMemorySessionStore();
   const flatfileStore = session.writeContext.store;

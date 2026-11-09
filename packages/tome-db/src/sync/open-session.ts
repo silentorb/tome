@@ -11,29 +11,34 @@ import {
 } from "tome-flatfile";
 import type {
   TomeCorpusConfig,
+  TomeDataStore,
   TomeQueryCache,
   TomeQueryCacheOpenOptions,
   TomeServerModuleConfigEntry,
 } from "tome-service-interfaces";
+import type { SyncEndpoint } from "tome-service-interfaces/sync";
 import { openWorkerSqliteCache } from "tome-sqlite";
+import {
+  DataStoreRegistry,
+  buildDefaultSyncGraph,
+  createDefaultSyncNodeTypeRegistry,
+  ensureFtsObserveEdges,
+  syncSourceFromQueryable,
+  wireSyncGraph,
+  SYNC_GIT_WATCH_NODE_TYPE,
+  SYNC_STORE_ID_INPUT,
+  type SyncGraphWireResult,
+  type SyncNodeTypeRegistry,
+} from "tome-mir";
 import { FlatfileQueryableGraphStore, ComposedGraphStore } from "../graph-store/composed-graph-store";
 import { CacheSync, type SyncProgressReporter } from "../content/sync";
 import { decodeEnumProperties, encodeEnumProperties } from "../enum-codec";
 import type { FlatfileStore, MutationPublisher, TomeWriteContext } from "../content/write-context";
-import { DataStoreRegistry, type SyncEndpoint } from "./registry";
-import {
-  createDefaultSyncNodeTypeRegistry,
-  SYNC_GIT_WATCH_NODE_TYPE,
-  SYNC_STORE_ID_INPUT,
-  type SyncNodeTypeRegistry,
-} from "./node-registry";
 import {
   createFlatfileSyncEndpoint,
   createSqliteCacheSyncEndpoint,
-  syncSourceFromQueryable,
 } from "./adapters";
 import { createGitWatchSyncEndpoint } from "./git-watch";
-import { buildDefaultSyncGraph, ensureFtsObserveEdges, wireSyncGraph, type SyncGraphWireResult } from "./wire";
 
 export type OpenDataStoreSessionOptions = {
   /** Normalized data store module entries keyed by id. */
@@ -53,15 +58,23 @@ export type OpenDataStoreSessionOptions = {
 };
 
 export type DataStoreSession = {
+  /** Handle-free Imp sync fabric registry (endpoints only). */
   registry: DataStoreRegistry;
   writeContext: TomeWriteContext;
   wire: SyncGraphWireResult | null;
   queryStoreId: string;
   flatfileStoreIds: string[];
+  /** Opened search backends keyed by dataStore id (host session bag). */
+  searchBackends: ReadonlyMap<string, TomeSearch>;
   dispose: () => void;
 };
 
 type ModuleFactory = () => { open: (opts?: Record<string, unknown>) => unknown };
+
+type FlatfileHandle = {
+  store: TomeDataStore;
+  queryable: TomeGraphStoreQueryable;
+};
 
 function optionsRecord(options: unknown): Record<string, unknown> {
   if (options && typeof options === "object" && !Array.isArray(options)) {
@@ -177,6 +190,8 @@ export async function openDataStoreSession(
   options: OpenDataStoreSessionOptions,
 ): Promise<DataStoreSession> {
   const registry = new DataStoreRegistry();
+  const flatfileHandles = new Map<string, FlatfileHandle>();
+  const searchBackends = new Map<string, TomeSearch>();
   const nodeTypes = options.nodeTypes ?? createDefaultSyncNodeTypeRegistry();
   const entries = Object.entries(options.dataStores);
   if (entries.length === 0) {
@@ -262,6 +277,7 @@ export async function openDataStoreSession(
   const otherClosers: Array<() => void | Promise<void>> = [];
   let writeContext: TomeWriteContext;
   let composedClose: (() => void | Promise<void>) | null = null;
+  const ftsStoreIdsWithSync: string[] = [];
 
   if (sotEntry) {
     const factory = await loadModuleFactory(sotEntry.id, sotEntry.entry);
@@ -280,8 +296,6 @@ export async function openDataStoreSession(
     registry.set({
       id: sotEntry.id,
       kind: "queryable",
-      graphStore: opened.graphStore,
-      cache: opened.cache,
       close: opened.close,
     });
     otherClosers.push(opened.close);
@@ -345,11 +359,10 @@ export async function openDataStoreSession(
         dataStore: child,
         queryable: q,
       });
+      flatfileHandles.set(child.corpusId, { store: child, queryable: q });
       registry.set({
         id: child.corpusId,
         kind: "flatfile",
-        store: child,
-        queryable: q,
         endpoint,
       });
     }
@@ -361,7 +374,6 @@ export async function openDataStoreSession(
     registry.set({
       id: queryStoreId,
       kind: "sqlite",
-      cache,
       endpoint: sqliteEndpoint,
     });
 
@@ -386,21 +398,22 @@ export async function openDataStoreSession(
           },
         }
       : undefined;
+    searchBackends.set(id, opened.search as TomeSearch);
     registry.set({
       id,
       kind: "fts",
       endpoint,
-      search: opened.search as TomeSearch,
       close: opened.close,
     });
+    if (endpoint) ftsStoreIdsWithSync.push(id);
     ftsClosers.push(opened.close);
   }
 
   // Only wire observe edges into sync-fed FTS sinks (same-DB FTS omits endpoint).
-  const ftsStoreIds = registry.ftsStoreIdsWithSync();
   const baseGraph =
-    options.syncGraph ?? buildDefaultSyncGraph(flatfileIds, queryStoreId, ftsStoreIds);
-  const graph = ensureFtsObserveEdges(baseGraph, flatfileIds, ftsStoreIds);
+    options.syncGraph ??
+    buildDefaultSyncGraph(flatfileIds, queryStoreId, ftsStoreIdsWithSync);
+  const graph = ensureFtsObserveEdges(baseGraph, flatfileIds, ftsStoreIdsWithSync);
 
   const observeSourcesByNodeId = new Map<string, SyncEndpoint>();
   if (writeContext.sync && writeContext.cache) {
@@ -411,16 +424,17 @@ export async function openDataStoreSession(
       if (!storeId) {
         throw new Error(`gitWatch node "${node.id}" missing storeId`);
       }
-      const flat = registry.require(storeId);
-      if (flat.kind !== "flatfile") {
+      const handle = flatfileHandles.get(storeId);
+      const entry = registry.get(storeId);
+      if (!handle || entry?.kind !== "flatfile") {
         throw new Error(`gitWatch storeId "${storeId}" must be a flatfile dataStore`);
       }
-      const contentDir = flat.store.contentDir;
+      const contentDir = handle.store.contentDir;
       const gitEp = createGitWatchSyncEndpoint({
         id: node.id,
         storeId,
         contentDir,
-        source: syncSourceFromQueryable(flat.queryable),
+        source: syncSourceFromQueryable(handle.queryable),
         queryCache: writeContext.cache,
       });
       observeSourcesByNodeId.set(node.id, gitEp);
@@ -449,9 +463,9 @@ export async function openDataStoreSession(
       edges: wire.edges,
       endpoint: (id) => registry.endpoint(id),
       sourceForStore: (storeId) => {
-        const entry = registry.get(storeId);
-        if (entry?.kind === "flatfile") {
-          return syncSourceFromQueryable(entry.queryable);
+        const handle = flatfileHandles.get(storeId);
+        if (handle) {
+          return syncSourceFromQueryable(handle.queryable);
         }
         return syncSourceFromQueryable(writeContext.graphStore);
       },
@@ -465,6 +479,7 @@ export async function openDataStoreSession(
     wire,
     queryStoreId,
     flatfileStoreIds: flatfileIds,
+    searchBackends,
     dispose() {
       wire?.dispose();
       for (const close of ftsClosers) close();
@@ -475,6 +490,8 @@ export async function openDataStoreSession(
 }
 
 /** Re-export helper for adapters that need a SyncSourceRead over the union queryable. */
-export function unionSyncSource(session: DataStoreSession): ReturnType<typeof syncSourceFromQueryable> {
+export function unionSyncSource(
+  session: DataStoreSession,
+): ReturnType<typeof syncSourceFromQueryable> {
   return syncSourceFromQueryable(session.writeContext.graphStore);
 }

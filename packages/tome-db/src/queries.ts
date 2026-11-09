@@ -12,7 +12,7 @@ import {
   type Properties,
   type SearchNodesOptions,
 } from "tome-graph-interfaces";
-import { syncScopeForNodeUpsert } from "./sync/scope-from-events";
+import { syncScopeForNodeUpsert } from "tome-mir";
 import {
   listRecentNodes,
   listRecentNodesByModifiedAt,

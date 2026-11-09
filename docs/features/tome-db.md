@@ -196,7 +196,7 @@ While startup sync is in progress:
 
 Progress is also logged to **stderr** with the **`[tome-sync]`** prefix. Inject a custom `SyncProgressReporter` via `openTomeWriteContext(…, { progress })` or `new CacheSync(…, reporter)`; server combines the console reporter with `createCacheSyncStatusTracker()` for HTTP.
 
-To avoid a long rebuild when starting the API, pre-warm the SQLite cache with `bash scripts/content-sync.sh` (same sync path as startup, no HTTP).
+To avoid a long rebuild when starting the API, pre-warm the SQLite cache with `bash scripts/content-sync.sh` (force `fullRebuild` from flatfile, no HTTP). For the workbench multi-corpus editor session (`tome-session.sqlite`), use workbench `bash scripts/session-content-sync.sh` (stop the tome service if SQLite reports the database is locked).
 
 ### Async cache and SQLite worker
 

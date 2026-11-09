@@ -2,7 +2,8 @@
 
 ## What it is
 - Domain query/mutation layer + **content↔SQLite sync** (`CacheSync`, `TomeWriteContext`).
-- Depends on `tome-flatfile` (canonical content) and `tome-sqlite` (query cache).
+- Depends on `tome-flatfile` (canonical content), `tome-sqlite` (query cache), and `tome-mir` (Imp sync fabric).
+- Host sync session: `openDataStoreSession` from `tome-db/sync-session` (flatfile/sqlite adapters, git watch). Fabric wire/publish/registry: `tome-mir`.
 - Convenience: `openContentGraph(contentDir, dbPath)` opens both and wires sync + store subscriptions.
 
 ## Terminology
@@ -22,7 +23,7 @@ Cache tables (in `tome-sqlite`): `nodes`, `relationship_records`, `relationship_
 ## Editing data
 
 - **Canonical store:** `content/` via `tome-flatfile` `ContentStore`.
-- Rebuild cache: `bun run content:sync` from repo root.
+- Rebuild cache: `bash scripts/content-sync.sh` from the tome repo (or corpus `bun run content:sync`). Always force-rebuilds — does not trust `content_mtime_ms`. Multi-corpus editor session: workbench `bash scripts/session-content-sync.sh` (stop the tome service if the DB is locked).
 - **Do not** edit `data/tome.sqlite` directly for routine updates.
 
 ## Repo-wide context

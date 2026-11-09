@@ -1,4 +1,8 @@
-import type { SyncMutationPreview, SyncScope, SyncSourceRead } from "./types";
+import type {
+  SyncMutationPreview,
+  SyncScope,
+  SyncSourceRead,
+} from "tome-service-interfaces/sync";
 import type { SyncEndpoint } from "./registry";
 import type { WiredObserveEdge } from "./wire";
 

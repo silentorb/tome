@@ -43,6 +43,7 @@ const PACKAGES: PackageSpec[] = [
   { name: "tome-ontology", bunTestArgs: ["tests"] },
   { name: "tome-sql", bunTestArgs: ["tests"] },
   { name: "tome-service-interfaces", bunTestArgs: ["tests"] },
+  { name: "tome-mir", bunTestArgs: ["tests"] },
   { name: "tome-db", bunTestArgs: ["tests"] },
   { name: "tome-http", bunTestArgs: ["tests"] },
   { name: "tome-server", bunTestArgs: ["tests"] },

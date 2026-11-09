@@ -14,17 +14,21 @@ import {
   subscribeStoreToCacheSync,
   type SyncProgressReporter,
 } from "./sync";
-import type { SyncMutationPreview, SyncScope, SyncSourceRead } from "../sync/types";
+import type {
+  SyncEndpoint,
+  SyncMutationPreview,
+  SyncScope,
+  SyncSourceRead,
+  WiredObserveEdge,
+} from "tome-mir";
 import {
+  publishMutation,
   syncScopeForNodeDelete,
   syncScopeForNodeUpsert,
   syncScopeForRelationshipDelete,
   syncScopeForRelationshipUpsert,
-} from "../sync/scope-from-events";
-import { publishMutation } from "../sync/publish-mutation";
-import type { WiredObserveEdge } from "../sync/wire";
-import type { SyncEndpoint } from "../sync/registry";
-import { syncSourceFromQueryable } from "../sync/adapters";
+  syncSourceFromQueryable,
+} from "tome-mir";
 
 /** Solo or composite flatfile store used by domain write/sync paths. */
 export type FlatfileStore = ContentStore | CompositeStore;

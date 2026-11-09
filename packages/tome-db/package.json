@@ -14,7 +14,7 @@
     "./row-sort-helpers": "./src/row-sort-helpers.ts",
     "./search-relevance": "./src/search-relevance.ts",
     "./table-rows-window": "./src/table-rows-window.ts",
-    "./sync": "./src/sync/index.ts"
+    "./sync-session": "./src/sync/index.ts"
   },
   "scripts": {
     "test": "bun test tests",
@@ -27,6 +27,7 @@
     "tome-graph-interfaces": "workspace:^0.7.0",
     "tome-interfaces": "workspace:^0.7.0",
     "tome-service-interfaces": "workspace:^0.8.0",
+    "tome-mir": "workspace:^0.1.0",
     "remark-gfm": "4.0.1",
     "remark-parse": "11.0.0",
     "remark-stringify": "11.0.0",

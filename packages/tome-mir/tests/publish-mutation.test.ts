@@ -5,7 +5,7 @@ import {
   syncScopeForNodeUpsert,
   type SyncEndpoint,
   type SyncSignal,
-} from "../../src/sync";
+} from "../src/index";
 
 describe("publishMutation", () => {
   test("runs write and sink applies in parallel and joins", async () => {

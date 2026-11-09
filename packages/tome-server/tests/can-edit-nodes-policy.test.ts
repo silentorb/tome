@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { openDataStoreSession } from "tome-db/sync";
+import { openDataStoreSession } from "tome-db/sync-session";
 import { createAuthorizationModelAuthorizer } from "tome-interfaces/authorization";
 import { createCanEditNodesEvaluator } from "../src/authorization/can-edit-nodes-policy";
 import {

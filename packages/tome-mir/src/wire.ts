@@ -1,4 +1,5 @@
 import type { Graph, Node } from "imp-core-types";
+import type { SyncSignal, SyncSourceRead } from "tome-service-interfaces/sync";
 import type { DataStoreRegistry, SyncEndpoint } from "./registry";
 import type { SyncNodeTypeRegistry } from "./node-registry";
 import {
@@ -9,7 +10,6 @@ import {
   SYNC_STORE_ID_INPUT,
   SYNC_STORE_NODE_TYPE,
 } from "./node-registry";
-import type { SyncSignal, SyncSourceRead } from "./types";
 
 export type WiredObserveEdge = {
   /** Flatfile (or other) corpus storeId associated with the observe source. */
