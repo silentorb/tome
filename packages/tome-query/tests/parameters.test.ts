@@ -1,32 +1,28 @@
 import { describe, expect, test } from "bun:test";
-import type { ReactFlowGraph } from "imp-react-flow";
+import type { Graph } from "imp-core-types";
 import {
   bindGraphParameters,
   listGraphParameters,
   resolveGraphParameterValues,
 } from "../src/parameters";
 
-const sampleGraph: ReactFlowGraph = {
-  nodes: [
-    {
+const sampleGraph: Graph = {
+  nodes: {
+    includeConsiderations: {
       id: "includeConsiderations",
       type: "parameter",
-      position: { x: 0, y: 0 },
-      data: {
-        inputValues: {
-          label: "Include Consideration arcs",
-          value: true,
-        },
+      inputs: {
+        label: "Include Consideration arcs",
+        value: true,
       },
     },
-    {
+    lit: {
       id: "lit",
       type: "literal",
-      position: { x: 0, y: 0 },
-      data: { inputValues: { value: "x" } },
+      inputs: { value: "x" },
     },
-  ],
-  edges: [],
+  },
+  edges: {},
 };
 
 describe("graph parameters", () => {
@@ -51,8 +47,7 @@ describe("graph parameters", () => {
 
   test("bindGraphParameters writes values onto parameter nodes", () => {
     const bound = bindGraphParameters(sampleGraph, { includeConsiderations: false });
-    const node = bound.nodes.find((n) => n.id === "includeConsiderations");
-    expect(node?.data?.inputValues?.value).toBe(false);
-    expect(sampleGraph.nodes[0]?.data?.inputValues?.value).toBe(true);
+    expect(bound.nodes.includeConsiderations?.inputs?.value).toBe(false);
+    expect(sampleGraph.nodes.includeConsiderations?.inputs?.value).toBe(true);
   });
 });

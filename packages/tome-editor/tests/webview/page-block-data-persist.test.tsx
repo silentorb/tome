@@ -10,7 +10,9 @@ import {
   parsePageBlockFenceBody,
 } from "tome-interfaces/page-block";
 import type { EditorToolPanelSession } from "tome-interfaces/page-block/editor";
-import { defaultBlockData, defaultReactFlowGraph } from "tome-query/config";
+import { defaultBlockData, defaultImpGraph, defaultLayout } from "tome-query/config";
+import type { Graph } from "imp-core-types";
+import type { GraphLayout } from "tome-imp-view/layout";
 import { documentToStorageBody } from "tome-db/document-to-storage-body";
 import { editorViewCtx } from "@milkdown/kit/core";
 import { pmNodeToDocument } from "../../src/webview/body-document-pm";
@@ -37,9 +39,8 @@ mock.module("svg-pan-zoom", () => ({
   }),
 }));
 
-mock.module("tome-react-flow/editor", () => ({
-  ImpFlowEditor: () => <div data-testid="query-flow-stub" />,
-  impFlowDeleteKeyCode: () => null,
+mock.module("tome-imp-view/editor", () => ({
+  TomeImpView: () => <div data-testid="query-flow-stub" />,
 }));
 
 const { pageBlockEmbed } = await import("../../src/webview/extensions/page-block-embed");
@@ -66,7 +67,7 @@ describe("interactive page-block data persistence", () => {
     resetPageBlockRegistryForTests();
   });
 
-  test("Edit query graph change writes reactFlow into getMarkdown / normalize fence", async () => {
+  test("Edit query layout change writes graph+layout into getMarkdown / normalize fence", async () => {
     resetPageBlockRegistryForTests();
     let session: EditorToolPanelSession | null = null;
     setPageBlockToolPanelHandlers({
@@ -113,14 +114,12 @@ describe("interactive page-block data persistence", () => {
       expect(session).toBeTruthy();
     });
 
-    const nextGraph = {
-      ...defaultReactFlowGraph(),
-      nodes: defaultReactFlowGraph().nodes.map((node) =>
-        node.id === "in" ? { ...node, position: { x: 12, y: 34 } } : node,
-      ),
+    const onLayoutChange = session!.props.onLayoutChange as (layout: GraphLayout) => void;
+    const nextLayout: GraphLayout = {
+      ...defaultLayout(),
+      in: { x: 12, y: 34 },
     };
-    const onGraphChange = session!.props.onGraphChange as (graph: unknown) => void;
-    onGraphChange(nextGraph);
+    onLayoutChange(nextLayout);
 
     await waitFor(async () => {
       const markdown = await editor.action(getMarkdown());
@@ -133,13 +132,15 @@ describe("interactive page-block data persistence", () => {
     });
     expect(stored).toContain('"x": 12');
     expect(stored).not.toContain('"viewMode"');
+    expect(stored).not.toContain('"reactFlow"');
     expect(stored).toContain('{type="query"}');
 
     const match = /```json[^\n]*\n([\s\S]*?)\n```/.exec(stored);
     expect(match).toBeTruthy();
     const payload = parsePageBlockFenceBody("query", match![1]!);
-    const data = payload?.data as { reactFlow?: { nodes?: { id: string; position: { x: number } }[] } };
-    expect(data?.reactFlow?.nodes?.find((n) => n.id === "in")?.position.x).toBe(12);
+    const data = payload?.data as { graph?: Graph; layout?: GraphLayout };
+    expect(data?.layout?.in?.x).toBe(12);
+    expect(data?.graph?.nodes?.in?.type).toBe("input");
 
     await editor.destroy();
   });
@@ -210,12 +211,10 @@ describe("interactive page-block data persistence", () => {
     await waitFor(() => {
       expect(session).toBeTruthy();
     });
-    const onGraphChange = session!.props.onGraphChange as (graph: unknown) => void;
-    onGraphChange({
-      ...defaultReactFlowGraph(),
-      nodes: defaultReactFlowGraph().nodes.map((node) =>
-        node.id === "out" ? { ...node, position: { x: 99, y: 88 } } : node,
-      ),
+    const onLayoutChange = session!.props.onLayoutChange as (layout: GraphLayout) => void;
+    onLayoutChange({
+      ...defaultLayout(),
+      out: { x: 99, y: 88 },
     });
 
     await waitFor(

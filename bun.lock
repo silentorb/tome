@@ -5,6 +5,26 @@
     "": {
       "name": "tome",
     },
+    "../imp-graph-view": {
+      "name": "imp-graph-view",
+      "version": "0.5.0",
+      "dependencies": {
+        "imp-core-types": "workspace:^0.5.0",
+      },
+      "devDependencies": {
+        "@types/react": "19.0.12",
+        "@types/react-dom": "19.0.4",
+        "@xyflow/react": "^12.8.2",
+        "bun-types": "^1.4.4",
+        "imp-registry": "workspace:^0.5.0",
+        "typescript": "5.8.2",
+      },
+      "peerDependencies": {
+        "@xyflow/react": "^12.0.0",
+        "react": "^19.0.0",
+        "react-dom": "^19.0.0",
+      },
+    },
     "../imp-ts/packages/imp-collection-transforms": {
       "name": "imp-collection-transforms",
       "version": "0.5.0",
@@ -72,21 +92,6 @@
         "imp-registry": "workspace:^0.5.0",
         "imp-sql": "workspace:^0.8.0",
         "typescript": "5.8.2",
-      },
-    },
-    "../imp-ts/packages/imp-react-flow": {
-      "name": "imp-react-flow",
-      "version": "0.5.0",
-      "dependencies": {
-        "imp-core-types": "workspace:^0.5.0",
-      },
-      "devDependencies": {
-        "@xyflow/react": "^12.8.2",
-        "imp-registry": "workspace:^0.5.0",
-        "typescript": "5.8.2",
-      },
-      "peerDependencies": {
-        "@xyflow/react": "^12.0.0",
       },
     },
     "../imp-ts/packages/imp-registry": {
@@ -317,6 +322,27 @@
         "typescript": "5.8.2",
       },
     },
+    "packages/tome-imp-view": {
+      "name": "tome-imp-view",
+      "version": "0.1.0",
+      "dependencies": {
+        "@xyflow/react": "12.8.2",
+        "imp-core-types": "workspace:^0.5.0",
+        "imp-graph-view": "workspace:^0.5.0",
+        "imp-registry": "workspace:^0.5.0",
+        "react": "19.0.0",
+      },
+      "devDependencies": {
+        "@happy-dom/global-registrator": "17.4.4",
+        "@testing-library/react": "16.2.0",
+        "@types/bun": "1.2.23",
+        "@types/react": "19.0.12",
+        "@types/react-dom": "19.0.4",
+        "happy-dom": "17.4.4",
+        "react-dom": "19.0.0",
+        "typescript": "5.8.2",
+      },
+    },
     "packages/tome-interfaces": {
       "name": "tome-interfaces",
       "version": "0.7.0",
@@ -358,12 +384,11 @@
       "version": "0.3.0",
       "dependencies": {
         "imp-core-types": "workspace:^0.5.0",
-        "imp-react-flow": "workspace:^0.5.0",
         "react": "19.0.0",
         "tome-imp-sql": "workspace:^0.12.0",
+        "tome-imp-view": "workspace:^0.1.0",
         "tome-interfaces": "workspace:^0.7.0",
         "tome-ontology": "workspace:^0.3.0",
-        "tome-react-flow": "workspace:^0.1.0",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "17.4.4",
@@ -381,12 +406,11 @@
       "version": "0.13.0",
       "dependencies": {
         "imp-core-types": "workspace:^0.5.0",
-        "imp-react-flow": "workspace:^0.5.0",
         "react": "19.0.0",
         "tome-flatfile": "workspace:^0.8.0",
         "tome-imp-sql": "workspace:^0.12.0",
+        "tome-imp-view": "workspace:^0.1.0",
         "tome-interfaces": "workspace:^0.7.0",
-        "tome-react-flow": "workspace:^0.1.0",
       },
       "devDependencies": {
         "@happy-dom/global-registrator": "17.4.4",
@@ -397,27 +421,6 @@
         "happy-dom": "17.4.4",
         "react-dom": "19.0.0",
         "tome-test-support": "workspace:^0.2.0",
-        "typescript": "5.8.2",
-      },
-    },
-    "packages/tome-react-flow": {
-      "name": "tome-react-flow",
-      "version": "0.1.0",
-      "dependencies": {
-        "@xyflow/react": "12.8.2",
-        "imp-core-types": "workspace:^0.5.0",
-        "imp-react-flow": "workspace:^0.5.0",
-        "imp-registry": "workspace:^0.5.0",
-        "react": "19.0.0",
-      },
-      "devDependencies": {
-        "@happy-dom/global-registrator": "17.4.4",
-        "@testing-library/react": "16.2.0",
-        "@types/bun": "1.2.23",
-        "@types/react": "19.0.12",
-        "@types/react-dom": "19.0.4",
-        "happy-dom": "17.4.4",
-        "react-dom": "19.0.0",
         "typescript": "5.8.2",
       },
     },
@@ -473,13 +476,12 @@
         "@visx/shape": "3.12.0",
         "@visx/zoom": "3.12.0",
         "imp-core-types": "workspace:^0.5.0",
-        "imp-react-flow": "workspace:^0.5.0",
         "react": "19.0.0",
         "tome-flatfile": "workspace:^0.8.0",
         "tome-imp-sql": "workspace:^0.12.0",
+        "tome-imp-view": "workspace:^0.1.0",
         "tome-interfaces": "workspace:^0.7.0",
         "tome-query": "workspace:^0.13.0",
-        "tome-react-flow": "workspace:^0.1.0",
         "tome-sequencing-interfaces": "workspace:^0.1.0",
         "tome-sequencing-resolution": "workspace:^0.1.0",
       },
@@ -1202,7 +1204,7 @@
 
     "buffer": ["buffer@5.7.1", "", { "dependencies": { "base64-js": "^1.3.1", "ieee754": "^1.1.13" } }, "sha512-EHcyIPBQ4BSGlvjB16k5KgAJ27CIsHY/2JBmCRReo48y9rQ3MaUzWX3KVlBa4U7MyX02HdVj0K7C3WaB3ju7FQ=="],
 
-    "bun-types": ["bun-types@1.2.23", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-R9f0hKAZXgFU3mlrA0YpE/fiDvwV0FT9rORApt2aQVWSuJDzZOyB5QLc0N/4HF57CS8IXJ6+L5E4W1bW6NS2Aw=="],
+    "bun-types": ["bun-types@1.4.5", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-ECHn+9dhL3wv0G6u0+7dQvrnaimXiRDxxerYBmhTaLyJEEuvTPWk2Fye3XIf5Y++JIIiHKfQw4Z7V5D8KuiXbg=="],
 
     "camelcase": ["camelcase@8.0.0", "", {}, "sha512-8WB3Jcas3swSvjIeA2yvCJ+Miyz5l1ZmB6HFb9R1317dt9LCQoswg/BGrmAmkWVEszSrrg4RwmO46qIm2OEnSA=="],
 
@@ -1466,9 +1468,9 @@
 
     "imp-graph-resolve": ["imp-graph-resolve@workspace:../imp-ts/packages/imp-graph-resolve"],
 
-    "imp-pathing": ["imp-pathing@workspace:../imp-ts/packages/imp-pathing"],
+    "imp-graph-view": ["imp-graph-view@workspace:../imp-graph-view"],
 
-    "imp-react-flow": ["imp-react-flow@workspace:../imp-ts/packages/imp-react-flow"],
+    "imp-pathing": ["imp-pathing@workspace:../imp-ts/packages/imp-pathing"],
 
     "imp-registry": ["imp-registry@workspace:../imp-ts/packages/imp-registry"],
 
@@ -1906,6 +1908,8 @@
 
     "tome-imp-sql": ["tome-imp-sql@workspace:packages/tome-imp-sql"],
 
+    "tome-imp-view": ["tome-imp-view@workspace:packages/tome-imp-view"],
+
     "tome-interfaces": ["tome-interfaces@workspace:packages/tome-interfaces"],
 
     "tome-mir": ["tome-mir@workspace:packages/tome-mir"],
@@ -1915,8 +1919,6 @@
     "tome-ontology-ui": ["tome-ontology-ui@workspace:packages/tome-ontology-ui"],
 
     "tome-query": ["tome-query@workspace:packages/tome-query"],
-
-    "tome-react-flow": ["tome-react-flow@workspace:packages/tome-react-flow"],
 
     "tome-schema-diagram": ["tome-schema-diagram@workspace:packages/tome-schema-diagram"],
 
@@ -2088,6 +2090,8 @@
 
     "@testing-library/dom/aria-query": ["aria-query@5.3.0", "", { "dependencies": { "dequal": "^2.0.3" } }, "sha512-b0P0sZPKtyu8HkeRAfCq0IfURZK+SuwMjY1UXGBU27wpAiTwQAIlq56IbIO+ytk/JjS1fMR14ee5WBBfKi5J6A=="],
 
+    "@types/bun/bun-types": ["bun-types@1.2.23", "", { "dependencies": { "@types/node": "*" }, "peerDependencies": { "@types/react": "^19" } }, "sha512-R9f0hKAZXgFU3mlrA0YpE/fiDvwV0FT9rORApt2aQVWSuJDzZOyB5QLc0N/4HF57CS8IXJ6+L5E4W1bW6NS2Aw=="],
+
     "@types/d3-interpolate/@types/d3-color": ["@types/d3-color@3.1.3", "", {}, "sha512-iO90scth9WAbmgv7ogoq57O9YpKmFBbmoEoCHDB2xMBY0+/KVrqAaCDyCE16dUspeOvIxFFRI+0sEtqDqy2b4A=="],
 
     "@visx/vendor/@types/d3-interpolate": ["@types/d3-interpolate@3.0.1", "", { "dependencies": { "@types/d3-color": "*" } }, "sha512-jx5leotSeac3jr0RePOH1KdR9rISG91QIE4Q2PYTu4OymLTZfA3SrnURSLzKH48HmXVUru50b8nje4E79oQSQw=="],
@@ -2120,7 +2124,7 @@
 
     "strip-ansi/ansi-regex": ["ansi-regex@6.4.0", "", {}, "sha512-KzTVk2tCWAHtYrvvvaP8bJKJq2pVinhLcGEQdtLIYPbmNGNyYe8QwNaTUYQp2J7/vIsUKt5QCqAfUkYyG9DkOw=="],
 
-    "tome-react-flow/@xyflow/react": ["@xyflow/react@12.8.2", "", { "dependencies": { "@xyflow/system": "0.0.66", "classcat": "^5.0.3", "zustand": "^4.4.0" }, "peerDependencies": { "react": ">=17", "react-dom": ">=17" } }, "sha512-VifLpxOy74ck283NQOtBn1e8igmB7xo7ADDKxyBHkKd8IKpyr16TgaYOhzqVwNMdB4NT+m++zfkic530L+gEXw=="],
+    "tome-imp-view/@xyflow/react": ["@xyflow/react@12.8.2", "", { "dependencies": { "@xyflow/system": "0.0.66", "classcat": "^5.0.3", "zustand": "^4.4.0" }, "peerDependencies": { "react": ">=17", "react-dom": ">=17" } }, "sha512-VifLpxOy74ck283NQOtBn1e8igmB7xo7ADDKxyBHkKd8IKpyr16TgaYOhzqVwNMdB4NT+m++zfkic530L+gEXw=="],
 
     "wrap-ansi/ansi-styles": ["ansi-styles@6.2.3", "", {}, "sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg=="],
 
@@ -2136,6 +2140,6 @@
 
     "node-fetch/whatwg-url/webidl-conversions": ["webidl-conversions@3.0.1", "", {}, "sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ=="],
 
-    "tome-react-flow/@xyflow/react/@xyflow/system": ["@xyflow/system@0.0.66", "", { "dependencies": { "@types/d3-drag": "^3.0.7", "@types/d3-interpolate": "^3.0.4", "@types/d3-selection": "^3.0.10", "@types/d3-transition": "^3.0.8", "@types/d3-zoom": "^3.0.8", "d3-drag": "^3.0.0", "d3-interpolate": "^3.0.1", "d3-selection": "^3.0.0", "d3-zoom": "^3.0.0" } }, "sha512-TTxESDwPsATnuDMUeYYtKe4wt9v8bRO29dgYBhR8HyhSCzipnAdIL/1CDfFd+WqS1srVreo24u6zZeVIDk4r3Q=="],
+    "tome-imp-view/@xyflow/react/@xyflow/system": ["@xyflow/system@0.0.66", "", { "dependencies": { "@types/d3-drag": "^3.0.7", "@types/d3-interpolate": "^3.0.4", "@types/d3-selection": "^3.0.10", "@types/d3-transition": "^3.0.8", "@types/d3-zoom": "^3.0.8", "d3-drag": "^3.0.0", "d3-interpolate": "^3.0.1", "d3-selection": "^3.0.0", "d3-zoom": "^3.0.0" } }, "sha512-TTxESDwPsATnuDMUeYYtKe4wt9v8bRO29dgYBhR8HyhSCzipnAdIL/1CDfFd+WqS1srVreo24u6zZeVIDk4r3Q=="],
   }
 }

@@ -9,19 +9,50 @@ import {
 describe("sequencing block config", () => {
   test("default includes page node sentinel", () => {
     const data = defaultBlockData();
-    const lit = data.reactFlow.nodes.find((n) => n.id === "lit");
-    expect(lit?.data?.inputValues?.value).toBe(PAGE_NODE_ID_LITERAL);
+    expect(data.graph.nodes.lit?.inputs?.value).toBe(PAGE_NODE_ID_LITERAL);
   });
 
   test("bindPageNodeId replaces sentinel", () => {
     const data = defaultBlockData();
-    const bound = bindPageNodeId(data.reactFlow, "01KWN86X6MFZQAJ1V36T9592A9");
-    const lit = bound.nodes.find((n) => n.id === "lit");
-    expect(lit?.data?.inputValues?.value).toBe("01KWN86X6MFZQAJ1V36T9592A9");
+    const bound = bindPageNodeId(data.graph, "01KWN86X6MFZQAJ1V36T9592A9");
+    expect(bound.nodes.lit?.inputs?.value).toBe("01KWN86X6MFZQAJ1V36T9592A9");
   });
 
   test("parse falls back to default", () => {
     const parsed = parseSequencingBlockData(null);
-    expect(parsed.reactFlow.nodes.length).toBeGreaterThan(0);
+    expect(Object.keys(parsed.graph.nodes).length).toBeGreaterThan(0);
+  });
+
+  test("parse dual-supports legacy reactFlow fences", () => {
+    const parsed = parseSequencingBlockData({
+      version: 1,
+      reactFlow: {
+        nodes: [
+          {
+            id: "in",
+            type: "input",
+            position: { x: 0, y: 0 },
+            data: { inputValues: {} },
+          },
+          {
+            id: "out",
+            type: "output",
+            position: { x: 10, y: 0 },
+            data: { inputValues: {} },
+          },
+        ],
+        edges: [
+          {
+            id: "e",
+            source: "in",
+            target: "out",
+            sourceHandle: "value",
+            targetHandle: "value",
+          },
+        ],
+      },
+    });
+    expect(Object.keys(parsed.graph.nodes).sort()).toEqual(["in", "out"]);
+    expect(parsed.layout.in).toEqual({ x: 0, y: 0 });
   });
 });

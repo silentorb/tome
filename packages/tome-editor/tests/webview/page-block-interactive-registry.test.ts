@@ -16,13 +16,13 @@ import {
 
 describe("page-block interactive registry", async () => {
   test("embed comment round-trips block data for persistence", () => {
-    const comment = formatPageBlockEmbedComment({ blockType: "query", contentType: "json", data: { version: 1, reactFlow: { nodes: [], edges: [] } },
+    const comment = formatPageBlockEmbedComment({ blockType: "query", contentType: "json", data: { version: 1, graph: { nodes: {}, edges: {} }, layout: {} },
     });
     const match = /^<!-- tome-page-block (\{[\s\S]*\}) -->$/.exec(comment.trim());
     expect(match).toBeTruthy();
     const payload = parsePageBlockPayload(match![1]!);
     expect(payload?.blockType).toBe("query");
-    expect(payload?.data).toEqual({ version: 1, reactFlow: { nodes: [], edges: [] } });
+    expect(payload?.data).toEqual({ version: 1, graph: { nodes: {}, edges: {} }, layout: {} });
   });
 
   test("loadEditorBundles records public components and interactive lookup", async () => {

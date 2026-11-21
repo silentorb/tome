@@ -17,13 +17,13 @@ import {
   parsePageBlockPayload,
   serializePageBlock,
 } from "tome-interfaces/page-block";
-import { defaultBlockData, defaultReactFlowGraph, parseQueryBlockData } from "tome-query/config";
+import { defaultBlockData, defaultLayout, parseQueryBlockData } from "tome-query/config";
+import type { GraphLayout } from "tome-imp-view/layout";
 import { createTestApiFromContent } from "../src/harness/create-test-api";
 import { createHandlerClient } from "../src/harness/handler-client";
 
-mock.module("tome-react-flow/editor", () => ({
-  ImpFlowEditor: () => <div data-testid="query-flow-stub" />,
-  impFlowDeleteKeyCode: () => null,
+mock.module("tome-imp-view/editor", () => ({
+  TomeImpView: () => <div data-testid="query-flow-stub" />,
 }));
 
 const { QueryBlockComponent } = await import("tome-query/editor");
@@ -100,23 +100,14 @@ describe("query-block data client↔API round trip", async () => {
     await destroyTestContentFixture(fixture);
   });
 
-  test("graph edit survives normalize → saveBody → prepare → remount", async () => {
-    const invoke = mock(async (input: unknown) => {
-      const record =
-        input && typeof input === "object" && !Array.isArray(input)
-          ? (input as Record<string, unknown>)
-          : {};
-      if (record.action === "listPathHopOptions") {
-        return { ok: true, typeTables: [], relationsByType: {} };
-      }
-      return {
-        ok: true,
-        columns: ["id"],
-        rows: [],
-      };
-    });
+  test("layout edit survives normalize → saveBody → prepare → remount", async () => {
+    const invoke = mock(async () => ({
+      ok: true,
+      columns: ["id"],
+      rows: [],
+    }));
     const written: unknown[] = [];
-    let onGraphChange: ((graph: unknown) => void) | undefined;
+    let onLayoutChange: ((layout: GraphLayout) => void) | undefined;
 
     const { unmount } = render(
       <QueryBlockComponent
@@ -125,7 +116,7 @@ describe("query-block data client↔API round trip", async () => {
           nodeId: NODE_ID,
           invoke,
           openToolPanel: (session) => {
-            onGraphChange = session.props.onGraphChange as (graph: unknown) => void;
+            onLayoutChange = session.props.onLayoutChange as (layout: GraphLayout) => void;
           },
         }}
         blockData={defaultBlockData()}
@@ -141,20 +132,15 @@ describe("query-block data client↔API round trip", async () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Edit query" }));
     await waitFor(() => {
-      expect(onGraphChange).toBeDefined();
+      expect(onLayoutChange).toBeDefined();
     });
-    const nextGraph = {
-      ...defaultReactFlowGraph(),
-      nodes: defaultReactFlowGraph().nodes.map((node) =>
-        node.id === "in" ? { ...node, position: { x: 42, y: 24 } } : node,
-      ),
-    };
-    onGraphChange?.(nextGraph);
+    onLayoutChange?.({
+      ...defaultLayout(),
+      in: { x: 42, y: 24 },
+    });
     expect(written.length).toBeGreaterThan(0);
     const blockData = written.at(-1);
-    expect(parseQueryBlockData(blockData).reactFlow.nodes.find((n) => n.id === "in")?.position.x).toBe(
-      42,
-    );
+    expect(parseQueryBlockData(blockData).layout.in?.x).toBe(42);
     expect("viewMode" in parseQueryBlockData(blockData)).toBe(false);
 
     unmount();
@@ -172,22 +158,17 @@ describe("query-block data client↔API round trip", async () => {
     expect(fence).toContain("```json");
     expect(fence).toContain('"x": 42');
     expect(fence).not.toContain('"viewMode"');
+    expect(fence).not.toContain('"reactFlow"');
 
     await client.saveBody(NODE_ID, fence);
 
     const stored = await client.getNodeBody(NODE_ID);
-    expect(
-      parseQueryBlockData(payloadFromPreparedMarkdown(stored)).reactFlow.nodes.find(
-        (n) => n.id === "in",
-      )?.position.x,
-    ).toBe(42);
+    expect(parseQueryBlockData(payloadFromPreparedMarkdown(stored)).layout.in?.x).toBe(42);
 
     const prepared = await client.prepareEditorBody(NODE_ID, stored);
     expect(prepared).toContain("<!-- tome-page-block ");
     const restoredData = payloadFromPreparedMarkdown(prepared);
-    expect(parseQueryBlockData(restoredData).reactFlow.nodes.find((n) => n.id === "in")?.position.x).toBe(
-      42,
-    );
+    expect(parseQueryBlockData(restoredData).layout.in?.x).toBe(42);
 
     const invokeAfterReload = mock(async () => ({
       ok: true,

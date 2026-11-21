@@ -4,9 +4,8 @@ import {
   BLOCK_ROLE,
   PREDICATE_PROPERTY_ID,
   defaultBlockData,
-  nodeFilterToReactFlow,
+  defaultNodeFilterLayout,
   parseNodeFilterBlockData,
-  reactFlowToNodeFilter,
   summarizeNodeFilter,
 } from "../src/config";
 
@@ -23,28 +22,17 @@ describe("node-filter config", () => {
     expect(Object.keys(data.edges)).toHaveLength(0);
   });
 
-  test("round-trips Imp → React Flow → Imp", () => {
-    const original = defaultBlockData();
-    const rf = nodeFilterToReactFlow(original);
-    expect(rf.nodes.length).toBeGreaterThan(0);
-    const back = reactFlowToNodeFilter(rf);
-    expect(back.nodes.lit?.type).toBe("literal");
-    expect(back.nodes.lit?.inputs.value).toBe(true);
+  test("defaultNodeFilterLayout places nodes", () => {
+    const layout = defaultNodeFilterLayout();
+    expect(layout.lit).toEqual({ x: 80, y: 120 });
   });
 
-  test("round-trips hosts_projection Inspiration-shaped filter", () => {
+  test("hosts_projection Inspiration-shaped filter parses", () => {
     const original = hostsProjectionFilterGraph("01KXBNPNJDENZ9BXN5BYZ7JKPR", 0);
-    const rf = nodeFilterToReactFlow(original);
-    expect(rf.nodes.map((n) => n.type).sort()).toEqual([
-      HOSTS_PROJECTION_NODE_TYPE,
-      "literal",
-      "literal",
-    ]);
-    const back = reactFlowToNodeFilter(rf);
-    expect(back.nodes.hosts?.type).toBe(HOSTS_PROJECTION_NODE_TYPE);
-    expect(back.nodes.association?.inputs.value).toBe("01KXBNPNJDENZ9BXN5BYZ7JKPR");
-    expect(back.nodes.direction?.inputs.value).toBe(0);
-    expect(Object.keys(back.edges)).toHaveLength(2);
+    expect(original.nodes.hosts?.type).toBe(HOSTS_PROJECTION_NODE_TYPE);
+    expect(original.nodes.association?.inputs.value).toBe("01KXBNPNJDENZ9BXN5BYZ7JKPR");
+    expect(original.nodes.direction?.inputs.value).toBe(0);
+    expect(Object.keys(original.edges)).toHaveLength(2);
   });
 
   test("parse falls back to default for invalid payloads", () => {

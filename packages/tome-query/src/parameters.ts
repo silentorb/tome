@@ -1,5 +1,4 @@
-import type { PrimitiveValue } from "imp-core-types";
-import type { ReactFlowGraph } from "imp-react-flow";
+import type { Graph, PrimitiveValue } from "imp-core-types";
 
 export type GraphParameterValue = string | number | boolean | null;
 
@@ -18,17 +17,15 @@ function isParameterValue(value: unknown): value is GraphParameterValue {
   );
 }
 
-/** Discover Imp `parameter` nodes in a React Flow graph. */
-export function listGraphParameters(reactFlow: ReactFlowGraph): GraphParameterSpec[] {
+/** Discover Imp `parameter` nodes in a graph. */
+export function listGraphParameters(graph: Graph): GraphParameterSpec[] {
   const params: GraphParameterSpec[] = [];
-  for (const node of reactFlow.nodes) {
+  for (const node of Object.values(graph.nodes)) {
     if (node.type !== "parameter") continue;
-    const values = node.data?.inputValues ?? {};
+    const values = node.inputs ?? {};
     const labelRaw = values.label;
     const label =
-      typeof labelRaw === "string" && labelRaw.trim()
-        ? labelRaw.trim()
-        : node.id;
+      typeof labelRaw === "string" && labelRaw.trim() ? labelRaw.trim() : node.id;
     const defaultRaw = values.value;
     const defaultValue = isParameterValue(defaultRaw) ? defaultRaw : null;
     params.push({ id: node.id, label, defaultValue });
@@ -38,11 +35,11 @@ export function listGraphParameters(reactFlow: ReactFlowGraph): GraphParameterSp
 
 /** Effective values: user overrides layered on graph defaults. */
 export function resolveGraphParameterValues(
-  reactFlow: ReactFlowGraph,
+  graph: Graph,
   overrides: Record<string, GraphParameterValue> | undefined,
 ): Record<string, GraphParameterValue> {
   const resolved: Record<string, GraphParameterValue> = {};
-  for (const param of listGraphParameters(reactFlow)) {
+  for (const param of listGraphParameters(graph)) {
     if (overrides && Object.prototype.hasOwnProperty.call(overrides, param.id)) {
       const raw = overrides[param.id];
       resolved[param.id] = isParameterValue(raw) ? raw : param.defaultValue;
@@ -53,30 +50,27 @@ export function resolveGraphParameterValues(
   return resolved;
 }
 
-/** Write resolved parameter values into RF parameter node inputValues.value. */
+/** Write resolved parameter values into parameter node inputs.value. */
 export function bindGraphParameters(
-  reactFlow: ReactFlowGraph,
+  graph: Graph,
   values: Record<string, GraphParameterValue>,
-): ReactFlowGraph {
+): Graph {
   let changed = false;
-  const nodes = reactFlow.nodes.map((node) => {
-    if (node.type !== "parameter") return node;
-    if (!Object.prototype.hasOwnProperty.call(values, node.id)) return node;
-    const nextValue = values[node.id] as PrimitiveValue;
-    const prev = node.data?.inputValues?.value;
-    if (prev === nextValue) return node;
+  const nodes: Graph["nodes"] = { ...graph.nodes };
+  for (const [id, node] of Object.entries(graph.nodes)) {
+    if (node.type !== "parameter") continue;
+    if (!Object.prototype.hasOwnProperty.call(values, id)) continue;
+    const nextValue = values[id] as PrimitiveValue;
+    if (node.inputs?.value === nextValue) continue;
     changed = true;
-    return {
+    nodes[id] = {
       ...node,
-      data: {
-        ...node.data,
-        inputValues: {
-          ...(node.data?.inputValues ?? {}),
-          value: nextValue,
-        },
+      inputs: {
+        ...node.inputs,
+        value: nextValue,
       },
     };
-  });
-  if (!changed) return reactFlow;
-  return { nodes, edges: reactFlow.edges };
+  }
+  if (!changed) return graph;
+  return { ...graph, nodes };
 }

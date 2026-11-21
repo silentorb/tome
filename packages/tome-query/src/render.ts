@@ -1,6 +1,6 @@
+import type { Graph } from "imp-core-types";
 import type { ExtensionCorpusQueryServices } from "tome-interfaces/extension-services/corpus-query";
 import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
-import type { ReactFlowGraph } from "imp-react-flow";
 import type { SchemaFile } from "tome-flatfile/schema-file";
 import { buildQueryImpGraph, rowsToTable, type QueryResultTable } from "./execute";
 import { parseQueryBlockData } from "./config";
@@ -13,7 +13,7 @@ import { queryNodePageHref } from "./node-links";
 
 export async function executeQueryBlock(
   executeImp: ExtensionExecuteImpServices | undefined,
-  reactFlow: ReactFlowGraph,
+  graph: Graph,
   parameters?: Record<string, GraphParameterValue>,
   schema?: SchemaFile,
   corpus?: { pageNodeId?: string; lookup?: ExtensionCorpusQueryServices },
@@ -21,17 +21,17 @@ export async function executeQueryBlock(
   if (!executeImp) {
     throw new Error("executeImp host service is not available");
   }
-  const values = resolveGraphParameterValues(reactFlow, parameters);
-  const bound = bindGraphParameters(reactFlow, values);
-  const graph = buildQueryImpGraph(bound, {
+  const values = resolveGraphParameterValues(graph, parameters);
+  const bound = bindGraphParameters(graph, values);
+  const prepared = buildQueryImpGraph(bound, {
     schema,
     pageNodeId: corpus?.pageNodeId,
     corpus: corpus?.lookup,
   });
-  const executed = await executeImp.executeImp(graph, {
-      pageNodeId: corpus?.pageNodeId,
-      parameters: values,
-    });
+  const executed = await executeImp.executeImp(prepared, {
+    pageNodeId: corpus?.pageNodeId,
+    parameters: values,
+  });
   return rowsToTable(executed.rows);
 }
 
@@ -43,7 +43,7 @@ export async function executeQueryBlockData(
   corpus?: { pageNodeId?: string; lookup?: ExtensionCorpusQueryServices },
 ): Promise<QueryResultTable> {
   const parsed = parseQueryBlockData(data);
-  return executeQueryBlock(executeImp, parsed.reactFlow, parameters, schema, corpus);
+  return executeQueryBlock(executeImp, parsed.graph, parameters, schema, corpus);
 }
 
 export function escapeHtml(value: string): string {

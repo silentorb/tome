@@ -56,6 +56,10 @@ const PACKAGES: PackageSpec[] = [
   { name: "tome-schema-diagram", bunTestArgs: ["tests"] },
   { name: "tome-imp-sql", bunTestArgs: ["tests"] },
   {
+    name: "tome-imp-view",
+    bunTestArgs: ["--preload", "./tests/test-setup.ts", "tests"],
+  },
+  {
     name: "tome-query",
     bunTestArgs: ["--preload", "./tests/test-setup.ts", "tests"],
   },

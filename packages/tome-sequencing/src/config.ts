@@ -1,8 +1,13 @@
-import type { ReactFlowGraph } from "imp-react-flow";
-import { impToReactFlow } from "imp-react-flow";
 import type { Graph } from "imp-core-types";
-import { dedupeInboundReactFlowEdges } from "tome-react-flow/config";
-import { defaultReactFlowGraph as defaultQueryReactFlow } from "tome-query/config";
+import {
+  isImpGraph,
+  isReactFlowEnvelope,
+  layoutForImpGraph,
+  parseLayout,
+  reactFlowToImpAndLayout,
+  type GraphLayout,
+} from "tome-imp-view/layout";
+import { defaultImpGraph as defaultQueryImpGraph } from "tome-query/config";
 
 export const SEQUENCING_BLOCK_VERSION = 1;
 export const IMPLEMENTATION_ID = "tome-sequencing";
@@ -15,7 +20,8 @@ export const PAGE_NODE_ID_LITERAL = "$pageNodeId";
 
 export interface SequencingBlockData {
   version: typeof SEQUENCING_BLOCK_VERSION;
-  reactFlow: ReactFlowGraph;
+  graph: Graph;
+  layout: GraphLayout;
 }
 
 /**
@@ -57,29 +63,22 @@ export function defaultPageScopedImpGraph(): Graph {
   };
 }
 
-export function defaultReactFlowGraph(): ReactFlowGraph {
-  const rf = impToReactFlow(defaultPageScopedImpGraph());
-  const positions: Record<string, { x: number; y: number }> = {
+export function defaultLayout(): GraphLayout {
+  return layoutForImpGraph(defaultPageScopedImpGraph(), {
     in: { x: 40, y: 120 },
     col: { x: 40, y: 240 },
     lit: { x: 40, y: 360 },
     eq: { x: 220, y: 300 },
     filter: { x: 400, y: 120 },
     out: { x: 600, y: 120 },
-  };
-  return {
-    nodes: rf.nodes.map((node) => ({
-      ...node,
-      position: positions[node.id] ?? node.position,
-    })),
-    edges: rf.edges,
-  };
+  });
 }
 
 export function defaultBlockData(): SequencingBlockData {
   return {
     version: SEQUENCING_BLOCK_VERSION,
-    reactFlow: defaultReactFlowGraph(),
+    graph: defaultPageScopedImpGraph(),
+    layout: defaultLayout(),
   };
 }
 
@@ -88,48 +87,48 @@ export function parseSequencingBlockData(raw: unknown): SequencingBlockData {
     return defaultBlockData();
   }
   const record = raw as Record<string, unknown>;
-  const reactFlow = record.reactFlow;
-  if (!reactFlow || typeof reactFlow !== "object" || Array.isArray(reactFlow)) {
-    return defaultBlockData();
+
+  if (isImpGraph(record.graph)) {
+    return {
+      version: SEQUENCING_BLOCK_VERSION,
+      graph: record.graph,
+      layout: parseLayout(record.layout),
+    };
   }
-  const rf = reactFlow as Record<string, unknown>;
-  if (!Array.isArray(rf.nodes) || !Array.isArray(rf.edges)) {
-    return defaultBlockData();
+
+  if (isReactFlowEnvelope(record.reactFlow)) {
+    const { graph, layout } = reactFlowToImpAndLayout(record.reactFlow);
+    return {
+      version: SEQUENCING_BLOCK_VERSION,
+      graph,
+      layout,
+    };
   }
-  return {
-    version: SEQUENCING_BLOCK_VERSION,
-    reactFlow: {
-      nodes: rf.nodes as ReactFlowGraph["nodes"],
-      edges: dedupeInboundReactFlowEdges(rf.edges as ReactFlowGraph["edges"]),
-    },
-  };
+
+  return defaultBlockData();
 }
 
-/** Replace `$pageNodeId` string literals in React Flow node input values. */
-export function bindPageNodeId(
-  reactFlow: ReactFlowGraph,
-  pageNodeId: string,
-): ReactFlowGraph {
-  return {
-    nodes: reactFlow.nodes.map((node) => {
-      const values = node.data?.inputValues;
-      if (!values || typeof values !== "object") return node;
-      let changed = false;
-      const next = { ...values };
-      for (const [key, value] of Object.entries(values)) {
-        if (value === PAGE_NODE_ID_LITERAL) {
-          next[key] = pageNodeId;
-          changed = true;
-        }
+/** Replace `$pageNodeId` string literals in Imp node inputs. */
+export function bindPageNodeId(graph: Graph, pageNodeId: string): Graph {
+  let changed = false;
+  const nodes: Graph["nodes"] = { ...graph.nodes };
+  for (const [id, node] of Object.entries(graph.nodes)) {
+    const values = node.inputs;
+    if (!values || typeof values !== "object") continue;
+    let nodeChanged = false;
+    const next = { ...values };
+    for (const [key, value] of Object.entries(values)) {
+      if (value === PAGE_NODE_ID_LITERAL) {
+        next[key] = pageNodeId;
+        nodeChanged = true;
       }
-      if (!changed) return node;
-      return {
-        ...node,
-        data: { ...node.data, inputValues: next },
-      };
-    }),
-    edges: reactFlow.edges,
-  };
+    }
+    if (!nodeChanged) continue;
+    changed = true;
+    nodes[id] = { ...node, inputs: next };
+  }
+  if (!changed) return graph;
+  return { ...graph, nodes };
 }
 
-export { defaultQueryReactFlow };
+export { defaultQueryImpGraph };

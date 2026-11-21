@@ -1,13 +1,8 @@
 import type { ServerPageBlockHost } from "tome-interfaces/page-block/server";
 import { loadSchemaFromContent } from "tome-flatfile/schema-load";
-import {
-  loadRelationshipTypesFromContent,
-  loadTableSchemasFromContent,
-} from "tome-flatfile";
 import { resolve } from "node:path";
 import { IMPLEMENTATION_ID, parseQueryBlockData } from "./config";
 import type { GraphParameterValue } from "./parameters";
-import { buildPathHopOptions } from "./path-hop-options";
 import { executeQueryBlock } from "./render";
 
 function parseParameterOverrides(raw: unknown): Record<string, GraphParameterValue> | undefined {
@@ -47,27 +42,6 @@ export function register(host: ServerPageBlockHost): void {
           : {};
       const action = typeof record.action === "string" ? record.action : "execute";
 
-      if (action === "listPathHopOptions") {
-        const dir = contentDirFromEnv();
-        if (!dir) {
-          return { ok: false, error: "TOME_CONTENT_PATH is not set" };
-        }
-        try {
-          const relationshipTypes = loadRelationshipTypesFromContent(resolve(dir));
-          const tableSchemas = loadTableSchemasFromContent(resolve(dir));
-          const titleMap = new Map<string, string>();
-          if (ctx.services.schemaQuery) {
-            const tables = await ctx.services.schemaQuery.listTypeTables();
-            for (const t of tables) titleMap.set(t.id, t.title);
-          }
-          const options = buildPathHopOptions(relationshipTypes, tableSchemas, titleMap);
-          return { ok: true, ...options };
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : String(err);
-          return { ok: false, error: message };
-        }
-      }
-
       if (action !== "execute") {
         throw new Error(`Unknown tome-query action "${action}"`);
       }
@@ -78,7 +52,7 @@ export function register(host: ServerPageBlockHost): void {
       try {
         const table = await executeQueryBlock(
           ctx.services.executeImp,
-          parsed.reactFlow,
+          parsed.graph,
           parameters,
           schemaFromEnv(),
           { pageNodeId: ctx.nodeId, lookup: ctx.services.corpusQuery },

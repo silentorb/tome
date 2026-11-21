@@ -5,7 +5,7 @@
 ## Dependencies
 
 - `tome-interfaces`, `tome-sequencing-interfaces`, `tome-sequencing-resolution`
-- `tome-imp-sql` / Imp via `tome-query` execute helpers; Imp canvas via `tome-react-flow` (`ImpFlowEditor`)
+- `tome-imp-sql` / Imp via `tome-query` execute helpers; Imp canvas via `tome-imp-view` (`TomeImpView`)
 - Local `sequencing.json` parse/load (flatfile owns store watching of the same file)
 - visx for the timeline canvas
 
@@ -13,7 +13,7 @@ Do not import `tome-editor` / `tome-db`.
 
 ## Page-scoped Imp query
 
-Block fence `data.reactFlow` is canonical. At execute time, string literals equal to `$pageNodeId` are replaced with the host page node id (unlike tome-query v1). Imp `parameter` node values are bound from user settings / invoke `parameters` before compile.
+Block fence `data.graph` + `data.layout` is canonical (legacy `reactFlow` dual-read). At execute time, string literals equal to `$pageNodeId` are replaced with the host page node id (unlike tome-query v1). Imp `parameter` node values are bound from user settings / invoke `parameters` before compile.
 
 ## Timeline settings
 

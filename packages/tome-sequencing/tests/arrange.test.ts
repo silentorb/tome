@@ -5,7 +5,7 @@ import { describe, expect, test } from "bun:test";
 import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import { arrangeTimeline } from "../src/arrange";
-import { defaultReactFlowGraph } from "../src/config";
+import { defaultBlockData } from "../src/config";
 import { invalidateSequencingCache } from "../src/sequencing-file";
 
 const PAGE_ID = "01KWN86X6MFZQAJ1V36T9592A9";
@@ -49,33 +49,31 @@ function writeSequencingDir(): string {
 function groupedBlockData() {
   return {
     version: 1,
-    reactFlow: {
-      nodes: [
-        { id: "in", type: "input", position: { x: 0, y: 0 }, data: { inputValues: {} } },
-        {
+    graph: {
+      nodes: {
+        in: { id: "in", type: "input", inputs: {} },
+        group: {
           id: "group",
           type: "group",
-          position: { x: 0, y: 0 },
-          data: { inputValues: { column: "priority", direction: "desc" } },
+          inputs: { column: "priority", direction: "desc" },
         },
-        { id: "out", type: "output", position: { x: 0, y: 0 }, data: { inputValues: {} } },
-      ],
-      edges: [
-        {
-          id: "e1",
-          source: "in",
-          sourceHandle: "value",
-          target: "group",
-          targetHandle: "collection",
+        out: { id: "out", type: "output", inputs: {} },
+      },
+      edges: {
+        e1: {
+          from: { node: "in", port: "value" },
+          to: { node: "group", port: "collection" },
         },
-        {
-          id: "e2",
-          source: "group",
-          sourceHandle: "collection",
-          target: "out",
-          targetHandle: "value",
+        e2: {
+          from: { node: "group", port: "collection" },
+          to: { node: "out", port: "value" },
         },
-      ],
+      },
+    },
+    layout: {
+      in: { x: 0, y: 0 },
+      group: { x: 0, y: 0 },
+      out: { x: 0, y: 0 },
     },
   };
 }
@@ -99,7 +97,7 @@ describe("arrangeTimeline grouping", async () => {
   test("flat query still packs overlapping events onto distinct lanes", async () => {
     const layout = await arrangeTimeline({
       pageNodeId: PAGE_ID,
-      blockData: { version: 1, reactFlow: defaultReactFlowGraph() },
+      blockData: defaultBlockData(),
       executeImp: mockExecuteImp([
         { id: "a", title: "A" },
         { id: "b", title: "B" },

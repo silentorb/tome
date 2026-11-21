@@ -124,7 +124,7 @@ Active predicate nodes carry selection logic as a **node property**:
 
 Page presentation maps structured column types (`imp_graph`, `json`) to below-body property sections; that mapping is presentation logic (node page API / editor), not a schema layout flag — see [table-schemas.md](./table-schemas.md).
 
-**Editor UI:** [`tome-ontology-ui`](../../packages/tome-ontology-ui/) registers an interactive editor for `imp_graph` property sections (tool panel via shared [`tome-react-flow`](../../packages/tome-react-flow/) `ImpFlowEditor`). Saves write the node property via `PATCH /api/nodes/:id/properties`. `ImpFlowEditor` uses `createTomeImpRegistry()` from [`tome-imp-sql`](../../packages/tome-imp-sql/), which catalogs Tome-only `hosts_projection` (ports `association` / `direction` → `value`) so the canvas shows handles — evaluation still uses ontology shape parsers, not Imp SQL lowering.
+**Editor UI:** [`tome-ontology-ui`](../../packages/tome-ontology-ui/) registers an interactive editor for `imp_graph` property sections (tool panel via shared [`tome-imp-view`](../../packages/tome-imp-view/) `TomeImpView`). Saves write the node property via `PATCH /api/nodes/:id/properties`. `TomeImpView` uses `createTomeImpRegistry()` from [`tome-imp-sql`](../../packages/tome-imp-sql/), which catalogs Tome-only `hosts_projection` (ports `association` / `direction` → `value`) so the canvas shows handles — evaluation still uses ontology shape parsers, not Imp SQL lowering.
 
 Predicates without a valid `predicate` Imp graph property are not active in the runtime.
 
@@ -163,7 +163,7 @@ Local corpus metadata lives in `corpus.json` (legacy `workspace.json`) and is no
 | Package | Owns |
 | --- | --- |
 | `tome-ontology` | Runtime types, match/query, `compileAssociationConfig`, `compileNodePredicates`, merge. **Keep dependencies minimal** (no React / React Flow / page-block hosts). Deepens semantic interpretation but is **optional** — Tome can run with minimal structure and minimal interpretation of relationship semantics without this package. |
-| `tome-ontology-ui` | Client viewing/editing (`imp_graph` property sections; future ontology UI). Depends on `tome-ontology` + `tome-react-flow`. Never the reverse. |
+| `tome-ontology-ui` | Client viewing/editing (`imp_graph` property sections; future ontology UI). Depends on `tome-ontology` + `tome-imp-view`. Never the reverse. |
 | `tome-flatfile` | associations + ontology.json I/O; discovery; mtime-cached runtime load |
 | `tome-interfaces` | Page-block fence parse (in-body embeds only) |
 | `tome-db` | Domain use + sync invalidation when ontology config / membership / filter properties change |
@@ -180,4 +180,4 @@ Invalidating the relationship-types runtime cache also covers node ontology over
 - [schema.md](./schema.md) — workspace `schema.json` enums
 - [tome-db.md](./tome-db.md)
 - Package notes: [`packages/tome-ontology/AGENTS.md`](../../packages/tome-ontology/AGENTS.md), [`packages/tome-ontology-ui/AGENTS.md`](../../packages/tome-ontology-ui/AGENTS.md)
-- Shared Imp canvas: [`packages/tome-react-flow/AGENTS.md`](../../packages/tome-react-flow/AGENTS.md)
+- Shared Imp canvas: [`packages/tome-imp-view/AGENTS.md`](../../packages/tome-imp-view/AGENTS.md)

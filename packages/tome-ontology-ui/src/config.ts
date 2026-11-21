@@ -1,9 +1,7 @@
 import type { Graph } from "imp-core-types";
-import type { ReactFlowGraph } from "imp-react-flow";
-import { impToReactFlow, reactFlowToImp } from "imp-react-flow";
+import { layoutForImpGraph, type GraphLayout } from "tome-imp-view/layout";
 import { NODE_FILTER_BLOCK_ROLE } from "tome-interfaces/page-block";
 import type { Predicate } from "tome-ontology";
-import { dedupeInboundReactFlowEdges } from "tome-react-flow/config";
 
 export const IMPLEMENTATION_ID = "tome-ontology-ui";
 export const COMPONENT_ID = "tome-ontology-ui";
@@ -14,7 +12,7 @@ export const PREDICATE_PROPERTY_ID = "predicate";
 
 /**
  * Fence body shape — same Imp graph stored on {@link Predicate.nodeFilter}.
- * Canonical on disk; React Flow is editor-only.
+ * Canonical on disk; layout is editor session / optional companion state.
  */
 export type NodeFilterBlockData = NonNullable<Predicate["nodeFilter"]>;
 
@@ -32,28 +30,19 @@ export function defaultBlockData(): NodeFilterBlockData {
   return defaultNodeFilterImpGraph() as NodeFilterBlockData;
 }
 
+export function defaultNodeFilterLayout(graph: Graph = defaultNodeFilterImpGraph()): GraphLayout {
+  const positions: Record<string, { x: number; y: number }> = {};
+  let index = 0;
+  for (const id of Object.keys(graph.nodes)) {
+    positions[id] = { x: 80 + index * 200, y: 120 };
+    index += 1;
+  }
+  return layoutForImpGraph(graph, positions);
+}
+
 export function parseNodeFilterBlockData(raw: unknown): NodeFilterBlockData {
   const graph = coerceImpGraph(raw);
   return graph ?? defaultBlockData();
-}
-
-export function nodeFilterToReactFlow(graph: NodeFilterBlockData): ReactFlowGraph {
-  const rf = impToReactFlow(graph as Graph);
-  return {
-    nodes: rf.nodes.map((node, index) => {
-      if (node.position.x !== 0 || node.position.y !== 0) return node;
-      return {
-        ...node,
-        position: { x: 80 + index * 200, y: 120 },
-      };
-    }),
-    edges: dedupeInboundReactFlowEdges(rf.edges),
-  };
-}
-
-export function reactFlowToNodeFilter(reactFlow: ReactFlowGraph): NodeFilterBlockData {
-  const edges = dedupeInboundReactFlowEdges(reactFlow.edges);
-  return reactFlowToImp(reactFlow.nodes, edges) as NodeFilterBlockData;
 }
 
 export function summarizeNodeFilter(graph: NodeFilterBlockData): string {

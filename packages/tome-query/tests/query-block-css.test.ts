@@ -4,8 +4,8 @@ import { join } from "node:path";
 
 const cssPath = join(import.meta.dir, "../src/query-block.css");
 const css = readFileSync(cssPath, "utf8");
-const rfCssPath = join(import.meta.dir, "../../tome-react-flow/src/imp-flow-css.css");
-const rfCss = readFileSync(rfCssPath, "utf8");
+const viewCssPath = join(import.meta.dir, "../../tome-imp-view/src/styles.css");
+const viewCss = readFileSync(viewCssPath, "utf8");
 
 describe("query-block CSS", () => {
   test("does not include Milkdown Crepe specificity override for port inputs", () => {
@@ -14,10 +14,10 @@ describe("query-block CSS", () => {
     expect(css).not.toContain("Beat Crepe");
   });
 
-  test("tool panel hosts shared tome-react-flow canvas classes", () => {
-    expect(css).toMatch(/\.tome-query-tool-panel\s+\.tome-rf-flow/);
-    expect(css).toMatch(/\.tome-query-tool-panel\s+\.tome-rf-flow-canvas/);
-    expect(rfCss).toMatch(/\.tome-rf-port-input\s*\{/);
+  test("tool panel hosts shared tome-imp-view canvas classes", () => {
+    expect(css).toMatch(/\.tome-query-tool-panel\s+\.tome-imp-view/);
+    expect(css).toMatch(/\.tome-query-tool-panel\s+\.tome-imp-view-canvas/);
+    expect(viewCss).toMatch(/\.tome-imp-view-canvas\s*\{/);
   });
 
   test("result table grows with rows instead of an inner scroll viewport", () => {

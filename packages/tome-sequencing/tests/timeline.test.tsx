@@ -61,7 +61,7 @@ describe("timeline layout height", () => {
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
-        blockData={{ version: 1, reactFlow: { nodes: [], edges: [] } }}
+        blockData={{ version: 1, graph: { nodes: {}, edges: {} }, layout: {} }}
         onBlockDataChange={() => {}}
       />,
     );

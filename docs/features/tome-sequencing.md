@@ -2,7 +2,7 @@
 
 ## Summary
 
-**tome-sequencing** is a page-block extension that arranges related events on a relative timeline. Event membership comes from a **page-scoped Imp query** (React Flow fence data, like tome-query). Interpretation (depends relationship type, default duration, optional duration/parallel Imp graphs) comes from per–type-table [`content/model/sequencing.json`](../../packages/tome-flatfile/src/sequencing/sequencing-file.ts). **Layout** (non-overlapping ASAP placements + concurrency lanes) comes from [`tome-sequencing-resolution`](./tome-sequencing-resolution.md)—the display is a thin renderer of that output.
+**tome-sequencing** is a page-block extension that arranges related events on a relative timeline. Event membership comes from a **page-scoped Imp query** (Imp graph + layout fence data, like tome-query). Interpretation (depends relationship type, default duration, optional duration/parallel Imp graphs) comes from per–type-table [`content/model/sequencing.json`](../../packages/tome-flatfile/src/sequencing/sequencing-file.ts). **Layout** (non-overlapping ASAP placements + concurrency lanes) comes from [`tome-sequencing-resolution`](./tome-sequencing-resolution.md)—the display is a thin renderer of that output.
 
 ## When to read this
 
@@ -23,8 +23,8 @@
 ### Block storage
 
 - Fence role: `type="tome-sequencing"` (component id `tome-sequencing`, `roles: ["tome-sequencing"]`)
-- Block `data`: `{ version: 1, reactFlow: { nodes, edges } }`
-- At execute time, Imp/React Flow string literals equal to `$pageNodeId` are replaced with the host page node id (unlike tome-query v1, which ignores `nodeId`); Imp `parameter` nodes are bound from invoke `parameters` / user settings
+- Block `data`: `{ version: 1, graph, layout }` (legacy `reactFlow` dual-supported on parse; see [compatibility.md](./compatibility.md) `page-block-reactflow-fence`)
+- At execute time, Imp string literals equal to `$pageNodeId` are replaced with the host page node id (unlike tome-query v1, which ignores `nodeId`); Imp `parameter` nodes are bound from invoke `parameters` / user settings
 
 ### sequencing.json
 
@@ -48,12 +48,12 @@
 
 ### Editor UX
 
-- `interactive: true` embed with Refresh + **Edit query** (host tool panel uses shared `ImpFlowEditor` from **`tome-react-flow`**); shows an explicit load error if the browser bundle is unavailable
+- `interactive: true` embed with Refresh + **Edit query** (host tool panel uses shared `TomeImpView` from **`tome-imp-view`**); shows an explicit load error if the browser bundle is unavailable
 - Server `invoke` actions:
   - `arrange` / `execute` — layout DTO
   - `addDepends` / `removeDepends` — `{ prerequisiteId, dependentId, from, to, data, parameters? }` mutates one start/end combo on the `dependsRelationshipType` row (direction 0 = prerequisite → dependent; `properties.endpoints` is `{ from, to }[]`) then re-arranges. Missing `endpoints` fails arrange. On resolve failure, returns `{ ok: false, error, depends }` so the client can keep previous placements and still list the new edge.
 - Client may pass `parameters` (resolved graph parameter values) on invoke
-- At execute time, Imp/React Flow string literals equal to `$pageNodeId` are replaced with the host page node id, and `parameter` node values are bound from user settings (defaults from the graph when unset)
+- At execute time, Imp string literals equal to `$pageNodeId` are replaced with the host page node id, and `parameter` node values are bound from user settings (defaults from the graph when unset)
 
 ## Design rationale
 

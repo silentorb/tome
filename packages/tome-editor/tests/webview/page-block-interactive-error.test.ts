@@ -37,7 +37,7 @@ describe("interactive page-block load error", async () => {
     );
 
     const embed =
-      `${formatPageBlockEmbedComment({ blockType: "tome-sequencing", contentType: "json", data: { version: 1, reactFlow: { nodes: [], edges: [] } },
+      `${formatPageBlockEmbedComment({ blockType: "tome-sequencing", contentType: "json", data: { version: 1, graph: { nodes: {}, edges: {} }, layout: {} },
       })}\n` +
       '<figure class="tome-sequencing-block"><ul class="tome-sequencing-static-list">' +
       "<li>should not appear</li></ul></figure>";

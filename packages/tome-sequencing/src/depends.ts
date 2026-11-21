@@ -36,7 +36,7 @@ async function eventIdsForPage(input: {
   const parsed = parseSequencingBlockData(input.blockData);
   const rows = await runEventQuery({
     executeImp: input.executeImp,
-    reactFlow: parsed.reactFlow,
+    graph: parsed.graph,
     pageNodeId: input.pageNodeId,
     parameters: input.parameters,
     contentDir: input.contentDir,

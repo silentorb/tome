@@ -20,7 +20,7 @@ describe("tome-imp-sql hosts_projection catalog", () => {
     expect(signalId(def!.outputs.value!.type)).toBe("boolean");
   });
 
-  test("createTomeImpRegistry exposes hosts_projection for ImpFlowEditor", () => {
+  test("createTomeImpRegistry exposes hosts_projection for Imp graph view", () => {
     const registry = createTomeImpRegistry();
     const def = getNodeDefinition(registry, HOSTS_PROJECTION_NODE_TYPE);
     expect(def).toBeDefined();

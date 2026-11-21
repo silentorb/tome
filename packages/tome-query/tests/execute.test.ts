@@ -1,11 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
-import { reactFlowToImp } from "imp-react-flow";
+import {
+  withoutInboundToPort,
+  type ReactFlowGraph,
+} from "imp-graph-view";
+import { reactFlowToImpAndLayout } from "tome-imp-view/layout";
 import {
   defaultBlockData,
-  defaultReactFlowGraph,
+  defaultImpGraph,
+  defaultLayout,
   parseQueryBlockData,
-  withoutInboundToPort,
 } from "../src/config";
 import {
   applyLiveNodesConstraint,
@@ -19,12 +23,38 @@ import {
   compileReactFlowQuery,
   ensureIdentityTitleProjection,
   ensureTitleColumnInSelectStar,
-  findTerminalGroupSpecFromReactFlow,
+  findTerminalGroupSpec,
   partitionRowsIntoGroups,
   rowsToTable,
 } from "../src/execute";
 import { executeQueryBlock, renderQueryTableHtml } from "../src/render";
 import type { SchemaFile } from "tome-flatfile/schema-file";
+
+function toGraph(rf: ReactFlowGraph) {
+  return reactFlowToImpAndLayout(rf).graph;
+}
+
+function defaultReactFlowGraph(): ReactFlowGraph {
+  const data = defaultBlockData();
+  return {
+    nodes: Object.values(data.graph.nodes).map((node) => ({
+      id: node.id,
+      type: node.type,
+      position: {
+        x: data.layout[node.id]?.x ?? 0,
+        y: data.layout[node.id]?.y ?? 0,
+      },
+      data: { inputValues: { ...node.inputs } },
+    })),
+    edges: Object.entries(data.graph.edges).map(([id, edge]) => ({
+      id,
+      source: edge.from.node,
+      target: edge.to.node,
+      sourceHandle: edge.from.port,
+      targetHandle: edge.to.port,
+    })),
+  };
+}
 
 const MARLOTH_LIKE_SCHEMA: SchemaFile = {
   version: 1,
@@ -65,25 +95,34 @@ function sqliteExecuteImp(
 }
 
 describe("tome-query config", () => {
-  test("default block data has input → output react flow graph", () => {
+  test("default block data has input → output Imp graph", () => {
     const data = defaultBlockData();
     expect(data.version).toBe(1);
-    expect(data.reactFlow.nodes.map((n) => n.type).sort()).toEqual(["input", "output"]);
-    const graph = reactFlowToImp(data.reactFlow.nodes, data.reactFlow.edges);
-    expect(Object.keys(graph.nodes)).toContain("in");
-    expect(Object.keys(graph.nodes)).toContain("out");
+    expect(Object.values(data.graph.nodes).map((n) => n.type).sort()).toEqual(["input", "output"]);
+    expect(Object.keys(data.graph.nodes)).toContain("in");
+    expect(Object.keys(data.graph.nodes)).toContain("out");
+    expect(data.layout.in).toBeDefined();
   });
 
   test("parseQueryBlockData falls back on invalid input", () => {
     const parsed = parseQueryBlockData({ version: 1 });
-    expect(parsed.reactFlow.nodes.length).toBe(2);
+    expect(Object.keys(parsed.graph.nodes).length).toBe(2);
   });
 
   test("parseQueryBlockData strips legacy viewMode", () => {
     const base = defaultBlockData();
     const parsed = parseQueryBlockData({ ...base, viewMode: "query" });
-    expect(parsed.reactFlow).toEqual(base.reactFlow);
+    expect(parsed.graph).toEqual(base.graph);
     expect("viewMode" in parsed).toBe(false);
+  });
+
+  test("parseQueryBlockData dual-supports legacy reactFlow fences", () => {
+    const parsed = parseQueryBlockData({
+      version: 1,
+      reactFlow: defaultReactFlowGraph(),
+    });
+    expect(Object.keys(parsed.graph.nodes).sort()).toEqual(["in", "out"]);
+    expect(parsed.layout.in).toBeDefined();
   });
 
   test("parseQueryBlockData keeps last inbound edge per target handle", () => {
@@ -109,15 +148,12 @@ describe("tome-query config", () => {
         ],
       },
     });
-    expect(parsed.reactFlow.edges).toEqual([
-      {
-        id: "e_keep",
-        source: "in",
-        target: "out",
-        sourceHandle: "value",
-        targetHandle: "value",
+    expect(parsed.graph.edges).toEqual({
+      e_keep: {
+        from: { node: "in", port: "value" },
+        to: { node: "out", port: "value" },
       },
-    ]);
+    });
   });
 
   test("withoutInboundToPort drops edges to the same target handle", () => {
@@ -164,7 +200,7 @@ describe("tome-query schema", () => {
 
 describe("tome-query compile + execute", async () => {
   test("compiles default graph over nodes", async () => {
-    const { sql } = await compileReactFlowQuery(defaultReactFlowGraph());
+    const { sql } = await compileReactFlowQuery(toGraph(defaultReactFlowGraph()));
     expect(sql.toLowerCase()).toContain("nodes");
     expect(sql).toContain('is_archived" = 0');
     expect(sql.toLowerCase()).toContain("select *");
@@ -209,14 +245,14 @@ describe("tome-query compile + execute", async () => {
         },
       ],
     };
-    const { sql } = await compileReactFlowQuery(reactFlow);
+    const { sql } = await compileReactFlowQuery(toGraph(reactFlow));
     expect(sql.toLowerCase()).toContain("title");
     expect(sql.toLowerCase()).toContain('"id"');
   });
 
   test("ensureIdentityTitleProjection merges id and title into project", () => {
-    const graph = reactFlowToImp(
-      [
+    const graph = toGraph({
+      nodes: [
         {
           id: "in",
           type: "input",
@@ -236,7 +272,7 @@ describe("tome-query compile + execute", async () => {
           data: { inputValues: {} },
         },
       ],
-      [
+      edges: [
         {
           id: "e1",
           source: "in",
@@ -252,7 +288,7 @@ describe("tome-query compile + execute", async () => {
           targetHandle: "value",
         },
       ],
-    );
+    });
     const ensured = ensureIdentityTitleProjection(graph);
     expect(ensured.nodes.project?.inputs?.columns).toBe("id,title");
   });
@@ -264,7 +300,7 @@ describe("tome-query compile + execute", async () => {
 
   test("compiles when multiple edges target the same input port", async () => {
     const base = defaultReactFlowGraph();
-    const { sql } = await compileReactFlowQuery({
+    const { sql } = await compileReactFlowQuery(toGraph({
       ...base,
       edges: [
         ...base.edges,
@@ -276,7 +312,7 @@ describe("tome-query compile + execute", async () => {
           targetHandle: "value",
         },
       ],
-    });
+    }));
     expect(sql.toLowerCase()).toContain("nodes");
   });
 
@@ -372,7 +408,7 @@ describe("tome-query compile + execute", async () => {
       ],
     };
 
-    const { sql, parameters } = await compileReactFlowQuery(reactFlow);
+    const { sql, parameters } = await compileReactFlowQuery(toGraph(reactFlow));
     expect(sql.toLowerCase()).toContain("where");
     expect(sql.toLowerCase()).toContain("title");
     expect(parameters).toContain("Alpha");
@@ -402,10 +438,7 @@ describe("tome-query compile + execute", async () => {
       1,
     ]);
 
-    const table = await executeQueryBlock(
-      sqliteExecuteImp(db),
-      defaultReactFlowGraph(),
-    );
+    const table = await executeQueryBlock(sqliteExecuteImp(db), toGraph(defaultReactFlowGraph()));
 
     const ids = table.rows.map((row) => row.id);
     expect(ids).toContain("live1");
@@ -480,8 +513,7 @@ describe("tome-query compile + execute", async () => {
       ],
     };
 
-    const table = await executeQueryBlock(
-      sqliteExecuteImp(db, {
+    const table = await executeQueryBlock(sqliteExecuteImp(db, {
         pageNodeId: "home",
         corpus: {
           corpusIdForNode: (id) => (id === "home" ? "translucence" : null),
@@ -489,9 +521,7 @@ describe("tome-query compile + execute", async () => {
             throw new Error("nodeIdsInCorpus should not run for corpus_id SQL filter");
           },
         },
-      }),
-      reactFlow,
-    );
+      }), toGraph(reactFlow));
 
     const ids = table.rows.map((row) => row.id);
     expect(ids).toEqual(["tl1"]);
@@ -554,10 +584,7 @@ describe("tome-query compile + execute", async () => {
         },
       ],
     };
-    const table = await executeQueryBlock(
-      sqliteExecuteImp(db),
-      reactFlow,
-    );
+    const table = await executeQueryBlock(sqliteExecuteImp(db), toGraph(reactFlow));
     expect(table.columns).toEqual(["title"]);
     expect(table.rows[0]?.id).toBe("n1");
     expect(table.rows[0]?.title).toBe("Alpha");
@@ -624,7 +651,7 @@ describe("tome-query compile + execute", async () => {
       ],
     };
 
-    const { sql, parameters } = await compileReactFlowQuery(reactFlow);
+    const { sql, parameters } = await compileReactFlowQuery(toGraph(reactFlow));
     expect(sql).toContain("relationship_projections");
     expect(sql).toContain("source_node_id");
     expect(parameters).toContain(expectedType);
@@ -726,10 +753,7 @@ describe("tome-query compile + execute", async () => {
       ],
     };
 
-    const table = await executeQueryBlock(
-      sqliteExecuteImp(db),
-      reactFlow,
-    );
+    const table = await executeQueryBlock(sqliteExecuteImp(db), toGraph(reactFlow));
 
     const ids = table.rows.map((row) => row.id);
     expect(ids).toContain("b");
@@ -882,10 +906,7 @@ describe("tome-query compile + execute", async () => {
       ],
     };
 
-    const table = await executeQueryBlock(
-      sqliteExecuteImp(db),
-      reactFlow,
-    );
+    const table = await executeQueryBlock(sqliteExecuteImp(db), toGraph(reactFlow));
 
     const ids = table.rows.map((row) => row.id);
     expect(ids).toEqual(["orphan"]);
@@ -991,15 +1012,10 @@ describe("tome-query compile + execute", async () => {
       ],
     };
 
-    const withoutSchema = await executeQueryBlock(sqliteExecuteImp(db), reactFlow);
+    const withoutSchema = await executeQueryBlock(sqliteExecuteImp(db), toGraph(reactFlow));
     expect(withoutSchema.rows.map((row) => row.id).sort()).toEqual(["consideration", "regular"]);
 
-    const withSchema = await executeQueryBlock(
-      sqliteExecuteImp(db, { schema: MARLOTH_LIKE_SCHEMA }),
-      reactFlow,
-      undefined,
-      MARLOTH_LIKE_SCHEMA,
-    );
+    const withSchema = await executeQueryBlock(sqliteExecuteImp(db, { schema: MARLOTH_LIKE_SCHEMA }), toGraph(reactFlow), undefined, MARLOTH_LIKE_SCHEMA);
     expect(withSchema.rows.map((row) => row.id)).toEqual(["regular"]);
   });
 });
@@ -1019,7 +1035,7 @@ describe("query grouping", () => {
   };
 
   test("findTerminalGroupSpecFromReactFlow reads a terminal group node", () => {
-    const spec = findTerminalGroupSpecFromReactFlow({
+    const spec = findTerminalGroupSpec(toGraph({
       nodes: [
         { id: "in", type: "input", position: { x: 0, y: 0 }, data: { inputValues: {} } },
         {
@@ -1046,12 +1062,12 @@ describe("query grouping", () => {
           targetHandle: "value",
         },
       ],
-    });
+    }));
     expect(spec).toEqual({ column: "priority", direction: "desc" });
   });
 
   test("findTerminalGroupSpecFromReactFlow is null without a terminal group", () => {
-    expect(findTerminalGroupSpecFromReactFlow(defaultReactFlowGraph())).toBeNull();
+    expect(findTerminalGroupSpec(toGraph(defaultReactFlowGraph()))).toBeNull();
   });
 
   test("partitionRowsIntoGroups sorts priority groups by values descending", () => {
@@ -1088,7 +1104,7 @@ describe("query grouping", () => {
   });
 
   test("compileReactFlowQuery with group emits ORDER BY", async () => {
-    const { sql } = await compileReactFlowQuery({
+    const { sql } = await compileReactFlowQuery(toGraph({
       nodes: [
         { id: "in", type: "input", position: { x: 0, y: 0 }, data: { inputValues: {} } },
         {
@@ -1128,7 +1144,7 @@ describe("query grouping", () => {
           targetHandle: "value",
         },
       ],
-    });
+    }));
     expect(sql.toLowerCase()).toContain("order by");
     expect(sql.toLowerCase()).toContain("desc");
   });

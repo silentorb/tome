@@ -7,8 +7,10 @@ import {
   type MouseEvent,
   type ReactNode,
 } from "react";
+import type { Graph } from "imp-core-types";
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
-import type { ReactFlowGraph } from "imp-react-flow";
+import type { GraphLayout } from "tome-imp-view/layout";
+import { TomeImpView } from "tome-imp-view/editor";
 import {
   BLOCK_ROLE,
   COMPONENT_ID,
@@ -18,7 +20,6 @@ import {
   parseQueryBlockData,
   type TomeQueryBlockData,
 } from "./config";
-import { ImpFlowEditor } from "tome-react-flow/editor";
 import type { QueryResultTable } from "./execute";
 import { createQueryRegistry } from "./execute";
 import { GraphParameterControls } from "./graph-parameter-controls";
@@ -27,38 +28,41 @@ import {
   resolveGraphParameterValues,
   type GraphParameterValue,
 } from "./parameters";
-import type { PathHopOptions } from "./path-hop-options";
 import { formatCellText } from "./render";
 import { queryNodePageHref } from "./node-links";
 import "./query-block.css";
 
-function toBlockData(reactFlow: ReactFlowGraph): TomeQueryBlockData {
+function toBlockData(graph: Graph, layout: GraphLayout): TomeQueryBlockData {
   return {
     version: QUERY_BLOCK_VERSION,
-    reactFlow,
+    graph,
+    layout,
   };
 }
 
-/** Panel body for the host right tool panel (React Flow only). */
+/** Panel body for the host right tool panel. */
 export function QueryToolPanelContent({
   graph,
+  layout,
   readOnly,
   onGraphChange,
-  pathHopOptions,
+  onLayoutChange,
 }: {
-  graph: ReactFlowGraph;
+  graph: Graph;
+  layout: GraphLayout;
   readOnly?: boolean;
-  onGraphChange: (graph: ReactFlowGraph) => void;
-  pathHopOptions?: PathHopOptions | null;
+  onGraphChange: (graph: Graph) => void;
+  onLayoutChange: (layout: GraphLayout) => void;
 }) {
   return (
     <div className="tome-query-tool-panel">
-      <ImpFlowEditor
+      <TomeImpView
         graph={graph}
+        layout={layout}
         readOnly={readOnly}
         onGraphChange={onGraphChange}
+        onLayoutChange={onLayoutChange}
         createRegistry={createQueryRegistry}
-        pathHopOptions={pathHopOptions}
       />
     </div>
   );
@@ -94,7 +98,8 @@ export function QueryBlockComponent({
   readOnly?: boolean;
 }) {
   const parsed = parseQueryBlockData(blockData);
-  const [graph, setGraph] = useState<ReactFlowGraph>(parsed.reactFlow);
+  const [graph, setGraph] = useState<Graph>(parsed.graph);
+  const [layout, setLayout] = useState<GraphLayout>(parsed.layout);
   const [table, setTable] = useState<QueryResultTable | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -104,7 +109,8 @@ export function QueryBlockComponent({
 
   useEffect(() => {
     const next = parseQueryBlockData(blockData);
-    setGraph(next.reactFlow);
+    setGraph(next.graph);
+    setLayout(next.layout);
   }, [blockData]);
 
   const parameterSpecs = useMemo(() => listGraphParameters(graph), [graph]);
@@ -114,12 +120,27 @@ export function QueryBlockComponent({
     return resolveGraphParameterValues(graph, overrides);
   }, [ctx, graph, paramTick]);
 
-  const persistGraph = useCallback(
-    (next: ReactFlowGraph) => {
-      setGraph(next);
-      onBlockDataChange(toBlockData(next));
+  const persist = useCallback(
+    (nextGraph: Graph, nextLayout: GraphLayout) => {
+      setGraph(nextGraph);
+      setLayout(nextLayout);
+      onBlockDataChange(toBlockData(nextGraph, nextLayout));
     },
     [onBlockDataChange],
+  );
+
+  const persistGraph = useCallback(
+    (next: Graph) => {
+      persist(next, layout);
+    },
+    [layout, persist],
+  );
+
+  const persistLayout = useCallback(
+    (next: GraphLayout) => {
+      persist(graph, next);
+    },
+    [graph, persist],
   );
 
   const runQuery = useCallback(async () => {
@@ -133,7 +154,7 @@ export function QueryBlockComponent({
       const overrides = ctx.getBlockParameters?.() ?? {};
       const result = await ctx.invoke({
         action: "execute",
-        data: toBlockData(graph),
+        data: toBlockData(graph, layout),
         parameters: resolveGraphParameterValues(graph, overrides),
       });
       const record =
@@ -158,7 +179,7 @@ export function QueryBlockComponent({
     } finally {
       setLoading(false);
     }
-  }, [ctx, graph]);
+  }, [ctx, graph, layout]);
 
   const runQueryRef = useRef(runQuery);
   runQueryRef.current = runQuery;
@@ -203,53 +224,21 @@ export function QueryBlockComponent({
       setError("Query editor panel is not available");
       return;
     }
-
-    const openWithOptions = (pathHopOptions: PathHopOptions | null) => {
-      ctx.openToolPanel!({
-        title: "Edit query",
-        Component: QueryToolPanelContent as (props: Record<string, unknown>) => unknown,
-        props: {
-          graph,
-          readOnly: Boolean(readOnly),
-          onGraphChange: persistGraph,
-          pathHopOptions,
-        },
-        onClose: () => {
-          void runQueryRef.current();
-        },
-      });
-    };
-
-    if (!ctx.invoke) {
-      openWithOptions(null);
-      return;
-    }
-
-    void (async () => {
-      try {
-        const result = await ctx.invoke!({ action: "listPathHopOptions" });
-        const record =
-          result && typeof result === "object" && !Array.isArray(result)
-            ? (result as Record<string, unknown>)
-            : {};
-        if (
-          record.ok === true &&
-          Array.isArray(record.typeTables) &&
-          record.relationsByType &&
-          typeof record.relationsByType === "object"
-        ) {
-          openWithOptions({
-            typeTables: record.typeTables as PathHopOptions["typeTables"],
-            relationsByType: record.relationsByType as PathHopOptions["relationsByType"],
-          });
-          return;
-        }
-      } catch {
-        // Fall through to editor without ontology hop assist.
-      }
-      openWithOptions(null);
-    })();
-  }, [ctx, graph, persistGraph, readOnly]);
+    ctx.openToolPanel({
+      title: "Edit query",
+      Component: QueryToolPanelContent as (props: Record<string, unknown>) => unknown,
+      props: {
+        graph,
+        layout,
+        readOnly: Boolean(readOnly),
+        onGraphChange: persistGraph,
+        onLayoutChange: persistLayout,
+      },
+      onClose: () => {
+        void runQueryRef.current();
+      },
+    });
+  }, [ctx, graph, layout, persistGraph, persistLayout, readOnly]);
 
   return (
     <div className="tome-query-block-ui" data-component-id={ctx.component.id}>
@@ -364,7 +353,6 @@ function renderCell(column: string, row: Record<string, unknown>): ReactNode {
   return formatCellText(row[column]);
 }
 
-/** Lucide refresh-cw (ISC) — inline stroke icon for re-run. */
 function RefreshCwIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -386,10 +374,6 @@ function RefreshCwIcon({ className }: { className?: string }) {
   );
 }
 
-/**
- * ProseMirror marks selected atom embeds `draggable`; Chromium then starts a native
- * drag of the whole block instead of text selection. Clear that for the gesture.
- */
 function allowTextSelectionAgainstDraggableAncestors(
   event: MouseEvent<HTMLTextAreaElement>,
 ): void {

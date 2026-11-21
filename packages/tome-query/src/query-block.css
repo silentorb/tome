@@ -125,11 +125,11 @@
   background: var(--tome-surface, #1c1c1c);
 }
 
-.tome-query-tool-panel .tome-rf-flow {
+.tome-query-tool-panel .tome-imp-view {
   padding: 0.75rem;
 }
 
-.tome-query-tool-panel .tome-rf-flow-canvas {
+.tome-query-tool-panel .tome-imp-view-canvas {
   min-height: 0;
 }
 

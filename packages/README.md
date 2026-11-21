@@ -27,8 +27,8 @@ This file is the **sole package inventory**: the table and diagram below must li
 | [`tome-schema-diagram`](./tome-schema-diagram/) | Schema diagram page block (ELK → SVG) |
 | [`tome-imp-sql`](./tome-imp-sql/) | Imp → Tome SQL schema/registry binder (above tome-db) |
 | [`tome-imp-flatfile`](./tome-imp-flatfile/) | Imp flatfile execution host over git-tracked content (used by tome-db) |
-| [`tome-react-flow`](./tome-react-flow/) | Shared Imp React Flow canvas (`ImpFlowEditor`) |
-| [`tome-query`](./tome-query/) | Imp-backed custom table page block (React Flow → SQL) |
+| [`tome-imp-view`](./tome-imp-view/) | Thin Tome embed around `imp-graph-view` (`TomeImpView`) |
+| [`tome-query`](./tome-query/) | Imp-backed custom table page block (Imp graph → SQL) |
 | [`tome-sequencing-interfaces`](./tome-sequencing-interfaces/) | Shared sequencing domain types |
 | [`tome-sequencing-resolution`](./tome-sequencing-resolution/) | Relative chronology constraint resolution |
 | [`tome-sequencing`](./tome-sequencing/) | Timeline page block (Imp query + visx) |
@@ -51,8 +51,8 @@ flowchart TB
   ONUI[tome-ontology-ui]
   ONUI --> ON
   ONUI --> EI
-  TRF[tome-react-flow]
-  ONUI --> TRF
+  TIV[tome-imp-view]
+  ONUI --> TIV
 
   subgraph storage [Storage]
     SF[tome-flatfile]
@@ -132,13 +132,13 @@ flowchart TB
   SSQ --> SI
   Q --> EI
   Q --> IMPSQL
-  Q --> TRF
+  Q --> TIV
   SEQR --> SEQI
   SEQ --> EI
   SEQ --> SEQI
   SEQ --> SEQR
   SEQ --> Q
-  SEQ --> TRF
+  SEQ --> TIV
   SRV --> SL
   SRV --> SSQ
   SRV --> SP

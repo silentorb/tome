@@ -77,7 +77,8 @@ describe("page block embed rendering", async () => {
   test("setNodeMarkup block data updates survive getMarkdown normalize", async () => {
     const initialData = {
       version: 1,
-      reactFlow: { nodes: [], edges: [] },
+      graph: { nodes: {}, edges: {} },
+      layout: {},
     };
     const embed =
       `${formatPageBlockEmbedComment({ blockType: "query", contentType: "json", data: initialData })}\n` +
@@ -98,10 +99,11 @@ describe("page block embed rendering", async () => {
       const node = view.state.doc.nodeAt(blockPos!)!;
       const nextComment = formatPageBlockEmbedComment({ blockType: "query", contentType: "json", data: {
           ...initialData,
-          reactFlow: {
-            nodes: [{ id: "in", type: "input", position: { x: 7, y: 8 }, data: {} }],
-            edges: [],
+          graph: {
+            nodes: { in: { id: "in", type: "input", inputs: {} } },
+            edges: {},
           },
+          layout: { in: { x: 7, y: 8 } },
         },
       });
       view.dispatch(
@@ -118,6 +120,7 @@ describe("page block embed rendering", async () => {
     });
     expect(stored).toContain('"x": 7');
     expect(stored).not.toContain('"viewMode"');
+    expect(stored).not.toContain('"reactFlow"');
 
     await editor.destroy();
   });

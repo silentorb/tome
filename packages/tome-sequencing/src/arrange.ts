@@ -1,14 +1,14 @@
 import { resolve } from "node:path";
 import type { ExtensionGraphQueryServices } from "tome-interfaces/extension-services/graph-query";
 import type { ExtensionExecuteImpServices } from "tome-interfaces/extension-services/execute-imp";
-import type { ReactFlowGraph } from "imp-react-flow";
+import type { Graph } from "imp-core-types";
 import { projectionType } from "tome-imp-sql";
 import type { DependsConstraint, SequencingProblem } from "tome-sequencing-interfaces";
 import { resolve as resolveSequence } from "tome-sequencing-resolution";
 import type { ResolvedEvent } from "tome-sequencing-resolution";
 import {
   buildQueryImpGraph,
-  findTerminalGroupSpecFromReactFlow,
+  findTerminalGroupSpec,
   partitionRowsIntoGroups,
 } from "tome-query/execute";
 import { loadSchemaFromContent } from "tome-flatfile/schema-load";
@@ -40,13 +40,13 @@ function schemaFromContentDir(contentDir?: string) {
 }
 
 function bindEventQuery(input: {
-  reactFlow: ReactFlowGraph;
+  graph: Graph;
   pageNodeId: string;
   parameters?: Record<string, GraphParameterValue>;
   contentDir?: string;
 }) {
-  const values = resolveGraphParameterValues(input.reactFlow, input.parameters);
-  const withParams = bindGraphParameters(input.reactFlow, values);
+  const values = resolveGraphParameterValues(input.graph, input.parameters);
+  const withParams = bindGraphParameters(input.graph, values);
   const bound = bindPageNodeId(withParams, input.pageNodeId);
   const schema = schemaFromContentDir(input.contentDir);
   return { bound, schema };
@@ -54,17 +54,17 @@ function bindEventQuery(input: {
 
 export async function runEventQuery(input: {
   executeImp: ExtensionExecuteImpServices;
-  reactFlow: ReactFlowGraph;
+  graph: Graph;
   pageNodeId: string;
   parameters?: Record<string, GraphParameterValue>;
   contentDir?: string;
 }): Promise<Record<string, unknown>[]> {
   const { bound, schema } = bindEventQuery(input);
-  const graph = buildQueryImpGraph(bound, { schema, pageNodeId: input.pageNodeId });
-  const executed = await input.executeImp.executeImp(graph, {
-      pageNodeId: input.pageNodeId,
-      parameters: input.parameters,
-    });
+  const prepared = buildQueryImpGraph(bound, { schema, pageNodeId: input.pageNodeId });
+  const executed = await input.executeImp.executeImp(prepared, {
+    pageNodeId: input.pageNodeId,
+    parameters: input.parameters,
+  });
   return executed.rows;
 }
 
@@ -180,7 +180,7 @@ export async function arrangeTimeline(input: {
   const parsed = parseSequencingBlockData(input.blockData);
   const rows = await runEventQuery({
     executeImp: input.executeImp,
-    reactFlow: parsed.reactFlow,
+    graph: parsed.graph,
     pageNodeId: input.pageNodeId,
     parameters: input.parameters,
     contentDir,
@@ -194,12 +194,12 @@ export async function arrangeTimeline(input: {
   );
 
   const boundQuery = bindEventQuery({
-    reactFlow: parsed.reactFlow,
+    graph: parsed.graph,
     pageNodeId: input.pageNodeId,
     parameters: input.parameters,
     contentDir,
   });
-  const groupSpec = findTerminalGroupSpecFromReactFlow(boundQuery.bound);
+  const groupSpec = findTerminalGroupSpec(boundQuery.bound);
   if (!groupSpec) {
     const problem: SequencingProblem = {
       events: eventIds.map((id) => ({ id })),

@@ -90,6 +90,7 @@ Living table of dual-supported legacy paths.
 | `associations-perspectives-key` | content-model | `associations.json` relationship type field `perspectives` (label pair) | `roles` (same label shape) | unreleased (relational role ids) | TBD | Parse accepts `roles` or `perspectives` (`roles` wins if both). Serialize writes `roles` only. Workspace corpora migrated. |
 | `associations-missing-role-ids` | content-model | Relationship type without `roleIds` | Explicit `roleIds: [ulid, ulid]` | unreleased (relational role ids) | TBD | Parse bridges deterministic role ULIDs when omitted; serialize always writes `roleIds`. Workspace corpora minted explicit ids. |
 | `corpus-json-filename` | content-model | `model/workspace.json` | `model/corpus.json` | unreleased (corpus metadata rename) | TBD (follow-up: remove `workspace.json` filename support) | Reads prefer `corpus.json` when present; else fall back to `workspace.json`. Writes always go to `corpus.json`. Do not merge the two files. Workspace corpora migrated to `corpus.json`. |
+| `page-block-reactflow-fence` | flat-file storage | Query/sequencing fence `data.reactFlow: { nodes, edges }` | `data.graph` (Imp) + `data.layout` (positions by node id) | unreleased (imp-graph-view adopt) | TBD | Parse prefers `graph`+`layout`; else converts legacy `reactFlow` via `reactFlowToImpAndLayout`. Serialize writes graph+layout only. Workspace corpora migrated. |
 
 **Column guidance**
 

@@ -1,9 +1,12 @@
-import type { ReactFlowGraph } from "imp-react-flow";
-import { impToReactFlow } from "imp-react-flow";
 import type { Graph } from "imp-core-types";
-import { dedupeInboundReactFlowEdges } from "tome-react-flow/config";
-
-export { dedupeInboundReactFlowEdges, withoutInboundToPort } from "tome-react-flow/config";
+import {
+  isImpGraph,
+  isReactFlowEnvelope,
+  layoutForImpGraph,
+  parseLayout,
+  reactFlowToImpAndLayout,
+  type GraphLayout,
+} from "tome-imp-view/layout";
 
 export const QUERY_BLOCK_VERSION = 1;
 export const IMPLEMENTATION_ID = "tome-query";
@@ -13,7 +16,8 @@ export const BLOCK_ROLE = "query";
 
 export interface TomeQueryBlockData {
   version: typeof QUERY_BLOCK_VERSION;
-  reactFlow: ReactFlowGraph;
+  graph: Graph;
+  layout: GraphLayout;
 }
 
 /** Default Imp pipeline: input → output (all live nodes, no transforms). */
@@ -32,22 +36,18 @@ export function defaultImpGraph(): Graph {
   };
 }
 
-export function defaultReactFlowGraph(): ReactFlowGraph {
-  const rf = impToReactFlow(defaultImpGraph());
-  return {
-    nodes: rf.nodes.map((node) => {
-      if (node.id === "in") return { ...node, position: { x: 80, y: 120 } };
-      if (node.id === "out") return { ...node, position: { x: 360, y: 120 } };
-      return node;
-    }),
-    edges: rf.edges,
-  };
+export function defaultLayout(): GraphLayout {
+  return layoutForImpGraph(defaultImpGraph(), {
+    in: { x: 80, y: 120 },
+    out: { x: 360, y: 120 },
+  });
 }
 
 export function defaultBlockData(): TomeQueryBlockData {
   return {
     version: QUERY_BLOCK_VERSION,
-    reactFlow: defaultReactFlowGraph(),
+    graph: defaultImpGraph(),
+    layout: defaultLayout(),
   };
 }
 
@@ -56,19 +56,24 @@ export function parseQueryBlockData(raw: unknown): TomeQueryBlockData {
     return defaultBlockData();
   }
   const record = raw as Record<string, unknown>;
-  const reactFlow = record.reactFlow;
-  if (!reactFlow || typeof reactFlow !== "object" || Array.isArray(reactFlow)) {
-    return defaultBlockData();
+
+  if (isImpGraph(record.graph)) {
+    return {
+      version: QUERY_BLOCK_VERSION,
+      graph: record.graph,
+      layout: parseLayout(record.layout),
+    };
   }
-  const rf = reactFlow as Record<string, unknown>;
-  if (!Array.isArray(rf.nodes) || !Array.isArray(rf.edges)) {
-    return defaultBlockData();
+
+  // Legacy fence: { reactFlow: { nodes, edges } }
+  if (isReactFlowEnvelope(record.reactFlow)) {
+    const { graph, layout } = reactFlowToImpAndLayout(record.reactFlow);
+    return {
+      version: QUERY_BLOCK_VERSION,
+      graph,
+      layout,
+    };
   }
-  return {
-    version: QUERY_BLOCK_VERSION,
-    reactFlow: {
-      nodes: rf.nodes as ReactFlowGraph["nodes"],
-      edges: dedupeInboundReactFlowEdges(rf.edges as ReactFlowGraph["edges"]),
-    },
-  };
+
+  return defaultBlockData();
 }

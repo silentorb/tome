@@ -19,7 +19,7 @@ export function register(host: HtmlPageBlockHost): void {
         const schema = ctx.contentDir ? loadSchemaFromContent(ctx.contentDir) : undefined;
         const table = await executeQueryBlock(
           ctx.services.executeImp,
-          parsed.reactFlow,
+          parsed.graph,
           undefined,
           schema,
           { pageNodeId: ctx.nodeId, lookup: ctx.services.corpusQuery },

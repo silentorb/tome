@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { defaultBlockData, defaultReactFlowGraph } from "../src/config";
+import { defaultBlockData, defaultImpGraph } from "../src/config";
 import { QueryBlockComponent } from "../src/editor";
 
 const baseCtx = {
@@ -141,30 +141,8 @@ describe("QueryBlockComponent", () => {
     });
   });
 
-  test("Edit query opens the host tool panel with ImpFlowEditor props", async () => {
-    const invoke = mock(async (input: unknown) => {
-      const record =
-        input && typeof input === "object" && !Array.isArray(input)
-          ? (input as Record<string, unknown>)
-          : {};
-      if (record.action === "listPathHopOptions") {
-        return {
-          ok: true,
-          typeTables: [{ id: "type-a", title: "Type A" }],
-          relationsByType: {
-            "type-a": [
-              {
-                token: "deps",
-                label: "Deps",
-                association: "01KXBNPNJDENZ9BXN5BYZ7JKPD",
-                direction: 1,
-              },
-            ],
-          },
-        };
-      }
-      return { ok: true, columns: ["id"], rows: [] };
-    });
+  test("Edit query opens the host tool panel with Imp graph props", async () => {
+    const invoke = mock(async () => ({ ok: true, columns: ["id"], rows: [] }));
     type OpenedSession = {
       title: string;
       props: Record<string, unknown>;
@@ -194,38 +172,18 @@ describe("QueryBlockComponent", () => {
     });
     expect(opened).not.toBeNull();
     expect(opened!.title).toBe("Edit query");
-    expect(opened!.props.graph).toEqual(defaultReactFlowGraph());
+    expect(opened!.props.graph).toEqual(defaultImpGraph());
     expect(typeof opened!.props.onGraphChange).toBe("function");
-    expect(opened!.props.pathHopOptions).toEqual({
-      typeTables: [{ id: "type-a", title: "Type A" }],
-      relationsByType: {
-        "type-a": [
-          {
-            token: "deps",
-            label: "Deps",
-            association: "01KXBNPNJDENZ9BXN5BYZ7JKPD",
-            direction: 1,
-          },
-        ],
-      },
-    });
+    expect(typeof opened!.props.onLayoutChange).toBe("function");
+    expect(opened!.props.pathHopOptions).toBeUndefined();
   });
 
   test("panel onClose re-runs the query", async () => {
-    const invoke = mock(async (input: unknown) => {
-      const record =
-        input && typeof input === "object" && !Array.isArray(input)
-          ? (input as Record<string, unknown>)
-          : {};
-      if (record.action === "listPathHopOptions") {
-        return { ok: true, typeTables: [], relationsByType: {} };
-      }
-      return {
-        ok: true,
-        columns: ["id"],
-        rows: [],
-      };
-    });
+    const invoke = mock(async () => ({
+      ok: true,
+      columns: ["id"],
+      rows: [],
+    }));
     let onClose: (() => void) | undefined;
     const openToolPanel = mock(
       (session: { onClose?: () => void }) => {
@@ -252,26 +210,17 @@ describe("QueryBlockComponent", () => {
     onClose!();
 
     await waitFor(() => {
-      // mount execute + listPathHopOptions + onClose execute
-      expect(invoke).toHaveBeenCalledTimes(3);
+      // mount execute + onClose execute
+      expect(invoke).toHaveBeenCalledTimes(2);
     });
   });
 
-  test("graph change from panel persists reactFlow without viewMode", async () => {
-    const invoke = mock(async (input: unknown) => {
-      const record =
-        input && typeof input === "object" && !Array.isArray(input)
-          ? (input as Record<string, unknown>)
-          : {};
-      if (record.action === "listPathHopOptions") {
-        return { ok: true, typeTables: [], relationsByType: {} };
-      }
-      return {
-        ok: true,
-        columns: ["id"],
-        rows: [],
-      };
-    });
+  test("graph change from panel persists Imp graph + layout", async () => {
+    const invoke = mock(async () => ({
+      ok: true,
+      columns: ["id"],
+      rows: [],
+    }));
     const calls: unknown[] = [];
     let onGraphChange: ((graph: unknown) => void) | undefined;
     const openToolPanel = mock(
@@ -299,14 +248,17 @@ describe("QueryBlockComponent", () => {
       expect(onGraphChange).toBeDefined();
     });
     const nextGraph = {
-      nodes: [{ id: "in", type: "input", position: { x: 0, y: 0 }, data: { inputValues: {} } }],
-      edges: [],
+      nodes: {
+        in: { id: "in", type: "input", inputs: {} },
+      },
+      edges: {},
     };
     onGraphChange?.(nextGraph);
 
     expect(calls.length).toBeGreaterThan(0);
-    const last = calls.at(-1) as { reactFlow?: unknown; viewMode?: unknown };
-    expect(last.reactFlow).toEqual(nextGraph);
+    const last = calls.at(-1) as { graph?: unknown; layout?: unknown; viewMode?: unknown };
+    expect(last.graph).toEqual(nextGraph);
+    expect(last.layout).toBeDefined();
     expect(last.viewMode).toBeUndefined();
   });
 });

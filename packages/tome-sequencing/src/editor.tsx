@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type { Graph } from "imp-core-types";
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
-import type { ReactFlowGraph } from "imp-react-flow";
-import { ImpFlowEditor } from "tome-react-flow/editor";
+import type { GraphLayout } from "tome-imp-view/layout";
+import { TomeImpView } from "tome-imp-view/editor";
 import { createQueryRegistry } from "tome-query/execute";
 import {
   listGraphParameters,
@@ -22,28 +23,35 @@ import { SequencingTimelineView } from "./timeline";
 import type { TimelineLayout } from "./layout";
 import "./sequencing-block.css";
 
-function toBlockData(reactFlow: ReactFlowGraph): SequencingBlockData {
+function toBlockData(graph: Graph, graphLayout: GraphLayout): SequencingBlockData {
   return {
     version: SEQUENCING_BLOCK_VERSION,
-    reactFlow,
+    graph,
+    layout: graphLayout,
   };
 }
 
 export function SequencingToolPanelContent({
   graph,
+  graphLayout,
   readOnly,
   onGraphChange,
+  onLayoutChange,
 }: {
-  graph: ReactFlowGraph;
+  graph: Graph;
+  graphLayout: GraphLayout;
   readOnly?: boolean;
-  onGraphChange: (graph: ReactFlowGraph) => void;
+  onGraphChange: (graph: Graph) => void;
+  onLayoutChange: (layout: GraphLayout) => void;
 }) {
   return (
     <div className="tome-sequencing-tool-panel">
-      <ImpFlowEditor
+      <TomeImpView
         graph={graph}
+        layout={graphLayout}
         readOnly={readOnly}
         onGraphChange={onGraphChange}
+        onLayoutChange={onLayoutChange}
         createRegistry={createQueryRegistry}
       />
     </div>
@@ -81,7 +89,8 @@ export function SequencingBlockComponent({
   readOnly?: boolean;
 }) {
   const parsed = parseSequencingBlockData(blockData);
-  const [graph, setGraph] = useState<ReactFlowGraph>(parsed.reactFlow);
+  const [graph, setGraph] = useState<Graph>(parsed.graph);
+  const [graphLayout, setGraphLayout] = useState<GraphLayout>(parsed.layout);
   const [layout, setLayout] = useState<TimelineLayout | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -89,7 +98,8 @@ export function SequencingBlockComponent({
 
   useEffect(() => {
     const next = parseSequencingBlockData(blockData);
-    setGraph(next.reactFlow);
+    setGraph(next.graph);
+    setGraphLayout(next.layout);
   }, [blockData]);
 
   const blockParametersRevision = ctx.getBlockParametersRevision?.() ?? 0;
@@ -102,12 +112,27 @@ export function SequencingBlockComponent({
     return resolveGraphParameterValues(graph, overrides);
   }, [ctx, graph, paramTick, blockParametersRevision]);
 
-  const persistGraph = useCallback(
-    (next: ReactFlowGraph) => {
-      setGraph(next);
-      onBlockDataChange(toBlockData(next));
+  const persist = useCallback(
+    (nextGraph: Graph, nextLayout: GraphLayout) => {
+      setGraph(nextGraph);
+      setGraphLayout(nextLayout);
+      onBlockDataChange(toBlockData(nextGraph, nextLayout));
     },
     [onBlockDataChange],
+  );
+
+  const persistGraph = useCallback(
+    (next: Graph) => {
+      persist(next, graphLayout);
+    },
+    [graphLayout, persist],
+  );
+
+  const persistGraphLayout = useCallback(
+    (next: GraphLayout) => {
+      persist(graph, next);
+    },
+    [graph, persist],
   );
 
   const applyInvokeResult = useCallback(
@@ -153,7 +178,7 @@ export function SequencingBlockComponent({
       const result = await ctx.invoke({
         action: "arrange",
         nodeId: ctx.nodeId,
-        data: toBlockData(graph),
+        data: toBlockData(graph, graphLayout),
         parameters: resolveGraphParameterValues(graph, overrides),
       });
       applyInvokeResult(result, null);
@@ -163,7 +188,7 @@ export function SequencingBlockComponent({
     } finally {
       setLoading(false);
     }
-  }, [applyInvokeResult, ctx, graph]);
+  }, [applyInvokeResult, ctx, graph, graphLayout]);
 
   useEffect(() => {
     void runArrange();
@@ -203,7 +228,7 @@ export function SequencingBlockComponent({
         const result = await ctx.invoke({
           action,
           nodeId: ctx.nodeId,
-          data: toBlockData(graph),
+          data: toBlockData(graph, graphLayout),
           parameters: resolveGraphParameterValues(graph, overrides),
           prerequisiteId,
           dependentId,
@@ -217,7 +242,7 @@ export function SequencingBlockComponent({
         setLoading(false);
       }
     },
-    [applyInvokeResult, ctx, graph, layout],
+    [applyInvokeResult, ctx, graph, graphLayout, layout],
   );
 
   const showDependencyEdges = ctx.getSequencingShowDependencyEdges?.() ?? false;
@@ -229,8 +254,10 @@ export function SequencingBlockComponent({
       Component: SequencingToolPanelContent as (props: Record<string, unknown>) => unknown,
       props: {
         graph,
+        graphLayout,
         readOnly,
         onGraphChange: persistGraph,
+        onLayoutChange: persistGraphLayout,
       },
       onClose: () => {
         void runArrange();

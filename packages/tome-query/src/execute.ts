@@ -1,18 +1,15 @@
 import type { Graph } from "imp-core-types";
-import type { ReactFlowGraph } from "imp-react-flow";
 import type { SchemaFile } from "tome-flatfile/schema-file";
 import {
   decodePropertyLiteral,
   enumIdForPropertyKey,
 } from "tome-flatfile/enum-property-codec";
 import { resolvePropertyEnum } from "tome-flatfile/property-enums-core";
-import { reactFlowToImp } from "imp-react-flow";
 import {
   compileImpGraphToTomeSql,
   createTomeImpRegistry,
   type TomeCorpusLookup,
 } from "tome-imp-sql";
-import { dedupeInboundReactFlowEdges } from "./config";
 
 export { createTomeImpRegistry as createQueryRegistry };
 
@@ -75,26 +72,28 @@ export function ensureTitleColumnInSelectStar(sql: string): string {
   return sql;
 }
 
-export interface CompileReactFlowQueryOptions {
+export interface CompileQueryOptions {
   schema?: SchemaFile;
   pageNodeId?: string;
   corpus?: TomeCorpusLookup;
 }
 
+/** @deprecated Use CompileQueryOptions */
+export type CompileReactFlowQueryOptions = CompileQueryOptions;
+
 export function buildQueryImpGraph(
-  reactFlow: ReactFlowGraph,
-  options?: CompileReactFlowQueryOptions,
+  graph: Graph,
+  _options?: CompileQueryOptions,
 ): Graph {
-  const edges = dedupeInboundReactFlowEdges(reactFlow.edges);
-  return ensureIdentityTitleProjection(reactFlowToImp(reactFlow.nodes, edges));
+  return ensureIdentityTitleProjection(graph);
 }
 
-export async function compileReactFlowQuery(
-  reactFlow: ReactFlowGraph,
-  options?: CompileReactFlowQueryOptions,
+export async function compileQueryGraph(
+  graph: Graph,
+  options?: CompileQueryOptions,
 ): Promise<CompiledTomeQuery> {
-  const graph = buildQueryImpGraph(reactFlow, options);
-  const compiled = await compileImpGraphToTomeSql(graph, {
+  const prepared = buildQueryImpGraph(graph, options);
+  const compiled = await compileImpGraphToTomeSql(prepared, {
     schema: options?.schema,
     pageNodeId: options?.pageNodeId,
     corpus: options?.corpus,
@@ -103,6 +102,14 @@ export async function compileReactFlowQuery(
     sql: ensureTitleColumnInSelectStar(compiled.sql),
     parameters: compiled.parameters,
   };
+}
+
+/** @deprecated Use compileQueryGraph */
+export async function compileReactFlowQuery(
+  graph: Graph,
+  options?: CompileQueryOptions,
+): Promise<CompiledTomeQuery> {
+  return compileQueryGraph(graph, options);
 }
 
 export interface QueryResultTable {
@@ -180,13 +187,6 @@ export function findTerminalGroupSpec(graph: Graph): QueryGroupSpec | null {
   const direction: GroupDirection =
     directionRaw === "desc" || directionRaw === "asc" ? directionRaw : "asc";
   return { column: columnRaw.trim(), direction };
-}
-
-export function findTerminalGroupSpecFromReactFlow(
-  reactFlow: ReactFlowGraph,
-): QueryGroupSpec | null {
-  const edges = dedupeInboundReactFlowEdges(reactFlow.edges);
-  return findTerminalGroupSpec(reactFlowToImp(reactFlow.nodes, edges));
 }
 
 function valueFromProperties(properties: unknown, column: string): unknown {

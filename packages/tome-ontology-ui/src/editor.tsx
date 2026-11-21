@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
-import type { ReactFlowGraph } from "imp-react-flow";
+import type { Graph } from "imp-core-types";
 import { createTomeImpRegistry } from "tome-imp-sql";
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
-import { ImpFlowEditor } from "tome-react-flow/editor";
+import type { GraphLayout } from "tome-imp-view/layout";
+import { TomeImpView } from "tome-imp-view/editor";
 import {
   BLOCK_ROLE,
   COMPONENT_ID,
   IMPLEMENTATION_ID,
   defaultBlockData,
-  nodeFilterToReactFlow,
+  defaultNodeFilterLayout,
   parseNodeFilterBlockData,
-  reactFlowToNodeFilter,
   summarizeNodeFilter,
   type NodeFilterBlockData,
 } from "./config";
@@ -18,19 +18,25 @@ import "./ontology-ui-block.css";
 
 export function NodeFilterToolPanelContent({
   graph,
+  layout,
   readOnly,
   onGraphChange,
+  onLayoutChange,
 }: {
-  graph: ReactFlowGraph;
+  graph: Graph;
+  layout: GraphLayout;
   readOnly?: boolean;
-  onGraphChange: (graph: ReactFlowGraph) => void;
+  onGraphChange: (graph: Graph) => void;
+  onLayoutChange: (layout: GraphLayout) => void;
 }) {
   return (
     <div className="tome-ontology-ui-tool-panel">
-      <ImpFlowEditor
+      <TomeImpView
         graph={graph}
+        layout={layout}
         readOnly={readOnly}
         onGraphChange={onGraphChange}
+        onLayoutChange={onLayoutChange}
         createRegistry={createTomeImpRegistry}
       />
     </div>
@@ -61,22 +67,21 @@ export function NodeFilterBlockComponent({
   const [impGraph, setImpGraph] = useState<NodeFilterBlockData>(() =>
     parseNodeFilterBlockData(blockData),
   );
-  const [rfGraph, setRfGraph] = useState<ReactFlowGraph>(() =>
-    nodeFilterToReactFlow(parseNodeFilterBlockData(blockData)),
+  const [layout, setLayout] = useState<GraphLayout>(() =>
+    defaultNodeFilterLayout(parseNodeFilterBlockData(blockData) as Graph),
   );
 
   useEffect(() => {
     const next = parseNodeFilterBlockData(blockData);
     setImpGraph(next);
-    setRfGraph(nodeFilterToReactFlow(next));
+    setLayout(defaultNodeFilterLayout(next as Graph));
   }, [blockData]);
 
-  const persistReactFlow = useCallback(
-    (next: ReactFlowGraph) => {
-      setRfGraph(next);
-      const imp = reactFlowToNodeFilter(next);
-      setImpGraph(imp);
-      onBlockDataChange(imp);
+  const persistGraph = useCallback(
+    (next: Graph) => {
+      const asFilter = next as NodeFilterBlockData;
+      setImpGraph(asFilter);
+      onBlockDataChange(asFilter);
     },
     [onBlockDataChange],
   );
@@ -87,9 +92,11 @@ export function NodeFilterBlockComponent({
       title: "Edit node filter",
       Component: NodeFilterToolPanelContent as (props: Record<string, unknown>) => unknown,
       props: {
-        graph: rfGraph,
+        graph: impGraph as Graph,
+        layout,
         readOnly,
-        onGraphChange: persistReactFlow,
+        onGraphChange: persistGraph,
+        onLayoutChange: setLayout,
       },
     });
   };

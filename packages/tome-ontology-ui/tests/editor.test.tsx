@@ -2,9 +2,8 @@ import { describe, expect, mock, test } from "bun:test";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { defaultBlockData } from "../src/config";
 
-mock.module("tome-react-flow/editor", () => ({
-  ImpFlowEditor: () => <div data-testid="imp-flow-stub" />,
-  impFlowDeleteKeyCode: () => null,
+mock.module("tome-imp-view/editor", () => ({
+  TomeImpView: () => <div data-testid="tome-imp-view-stub" />,
 }));
 
 const { NodeFilterBlockComponent, register } = await import("../src/editor");
