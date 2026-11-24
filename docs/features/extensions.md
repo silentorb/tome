@@ -55,6 +55,7 @@ For contract details: [page-blocks.md](../extensions/page-blocks.md), [searchers
 - Editor API reloads extension modules when config mtime changes (`ExtensionServerRuntime.ensureLoaded()`).
 - Browser `editor.js` bundles **must** rebuild when the extension package source tree mtime changes (not only when `extensions.json` changes), and responses use `Cache-Control: no-store`.
 - Editor bundles are built in a **subprocess** (not in-process `Bun.build`) so `bun --watch` on the API server does not break bundling.
+- Dev start sets `NODE_PATH` to tome’s `node_modules` and prunes **dangling** peer symlinks under sibling workspace packages such as `imp-graph-view` (absolute links from another workbench container that do not resolve here). Bun’s `import()` prefers a broken local link over `NODE_PATH`, which otherwise surfaces as opaque `Bun.build failed … Bundle failed` for editor modules that pull those peers.
 
 ### Out of scope (v1)
 

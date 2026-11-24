@@ -43,10 +43,15 @@ try {
   });
 } catch (err) {
   const message = err instanceof Error ? err.message : String(err);
-  const logs =
+  const fromLogs =
     err && typeof err === "object" && Array.isArray(err.logs)
       ? err.logs.map((log) => (typeof log?.message === "string" ? log.message : String(log)))
       : [];
+  const fromAggregate =
+    err instanceof AggregateError
+      ? err.errors.map((e) => (e instanceof Error ? e.message : String(e)))
+      : [];
+  const logs = [...fromLogs, ...fromAggregate];
   await Bun.write(
     resultPath,
     JSON.stringify({ ok: false, error: [message, ...logs].filter(Boolean).join("\\n") || "Bundle failed" }),
@@ -79,10 +84,16 @@ await Bun.write(resultPath, JSON.stringify({ ok: true, js, css }));
 
   try {
     writeFileSync(workerPath, workerSource, "utf-8");
+    // Ensure the build worker can resolve peer deps (react, @xyflow, …) from the
+    // host install even when a sibling package's node_modules has broken absolute
+    // symlinks from another workbench (e.g. aura → imp-graph-view).
+    const hostNodeModules = join(process.cwd(), "node_modules");
+    const nodePath = [hostNodeModules, process.env.NODE_PATH].filter(Boolean).join(":");
     const proc = Bun.spawn(["bun", workerPath], {
       stdout: "pipe",
       stderr: "pipe",
       cwd: process.cwd(),
+      env: { ...process.env, NODE_PATH: nodePath },
     });
     const [stdout, stderr, exitCode] = await Promise.all([
       new Response(proc.stdout).text(),
