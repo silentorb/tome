@@ -1,12 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { graphSource, type Graph } from "imp-core-types";
-import {
-  ImpGraphView,
-  addImpNode,
-  applyGraphEdits,
-  type GraphEdit,
-  type LayoutBox,
-} from "imp-graph-view";
+import { ImpGraphView, applyGraphEdits, type GraphEdit } from "imp-graph-view";
 import "imp-graph-view/styles.css";
 import "@xyflow/react/dist/style.css";
 import {
@@ -29,12 +23,16 @@ export interface TomeImpViewProps {
   createRegistry: CreateRegistry;
   fitViewKey?: string;
   className?: string;
+  /**
+   * Offer the add-node picker (Shift+A over the canvas, double-click empty canvas, or the
+   * + control). Default true; ignored when `readOnly`.
+   */
   showPalette?: boolean;
 }
 
 /**
- * Tome tool-panel embed around ImpGraphView: registry→resolvePorts, optional palette,
- * and layout bridging for page-block fences.
+ * Tome tool-panel embed around ImpGraphView: registry→resolvePorts, the add-node picker's
+ * node types, and layout bridging for page-block fences.
  */
 export function TomeImpView({
   graph,
@@ -87,40 +85,12 @@ export function TomeImpView({
     [onLayoutChange],
   );
 
-  const addNode = (typeId: string) => {
-    if (readOnly) return;
-    const nextGraph = addImpNode(graph, typeId);
-    const addedId = Object.keys(nextGraph.nodes).find((id) => !graph.nodes[id]);
-    onGraphChange(nextGraph);
-    if (addedId) {
-      const count = Object.keys(nextGraph.nodes).length;
-      const box: LayoutBox = {
-        x: 160 + count * 24,
-        y: 80 + count * 24,
-      };
-      emitLayout({ ...localLayout, [addedId]: box });
-    }
-  };
-
   return (
     <div className={["tome-imp-view", className].filter(Boolean).join(" ")}>
-      {palette.length > 0 ? (
-        <div className="tome-imp-view-palette">
-          {palette.map((type) => (
-            <button
-              key={type.id}
-              type="button"
-              className="tome-imp-view-palette-btn"
-              onClick={() => addNode(type.id)}
-            >
-              {type.id}
-            </button>
-          ))}
-        </div>
-      ) : null}
       <div className="tome-imp-view-canvas">
         <ImpGraphView
           source={source}
+          addableNodeTypes={palette}
           layout={localLayout}
           resolvePorts={resolvePorts}
           readOnly={readOnly}

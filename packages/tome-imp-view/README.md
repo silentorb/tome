@@ -1,6 +1,6 @@
 # tome-imp-view
 
-Tome page / tool-panel embedding for Imp graphs. Wraps `imp-graph-view` with a registry factory, optional operator palette, and layout helpers for fence persistence.
+Tome page / tool-panel embedding for Imp graphs. Wraps `imp-graph-view` with a registry factory, the add-node picker's node types, and layout helpers for fence persistence.
 
 ```ts
 import { TomeImpView } from "tome-imp-view/editor"
