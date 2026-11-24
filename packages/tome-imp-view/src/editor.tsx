@@ -1,6 +1,12 @@
-import { useCallback, useMemo, useState } from "react";
-import type { Graph } from "imp-core-types";
-import { ImpGraphView, addImpNode, type LayoutBox } from "imp-graph-view";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { graphSource, type Graph } from "imp-core-types";
+import {
+  ImpGraphView,
+  addImpNode,
+  applyGraphEdits,
+  type GraphEdit,
+  type LayoutBox,
+} from "imp-graph-view";
 import "imp-graph-view/styles.css";
 import "@xyflow/react/dist/style.css";
 import {
@@ -48,6 +54,20 @@ export function TomeImpView({
   const palette = useMemo(
     () => (showPalette && !readOnly ? listPaletteNodeTypes(createRegistry) : []),
     [createRegistry, readOnly, showPalette],
+  );
+
+  // Tome pages hold one Imp document; edits apply to it. Latest emitted graph, so edits that
+  // arrive before the host re-renders still compose.
+  const latestGraph = useRef(graph);
+  latestGraph.current = graph;
+  const source = useMemo(() => graphSource(graph), [graph]);
+  const applyEdits = useCallback(
+    (edits: GraphEdit[]) => {
+      const next = applyGraphEdits(latestGraph.current, edits);
+      latestGraph.current = next;
+      onGraphChange(next);
+    },
+    [onGraphChange],
   );
 
   const [localLayout, setLocalLayout] = useState<GraphLayout>(layout);
@@ -100,12 +120,12 @@ export function TomeImpView({
       ) : null}
       <div className="tome-imp-view-canvas">
         <ImpGraphView
-          graph={graph}
+          source={source}
           layout={localLayout}
           resolvePorts={resolvePorts}
           readOnly={readOnly}
           nodesDraggable={!readOnly}
-          onGraphChange={readOnly ? undefined : onGraphChange}
+          onEdit={readOnly ? undefined : applyEdits}
           onLayoutChange={readOnly ? undefined : emitLayout}
           fitViewOnLoad
           fitViewKey={fitViewKey}
