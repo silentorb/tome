@@ -1,15 +1,15 @@
 /** Tome-only Imp corpus operator. Catalog + pre-SQL rewrite — not lowered by imp-sql. */
 
-import type { Graph, Node, NodeLibrary, Port, SignalType } from "imp-core-types";
+import type { Graph, Node, NodeLibrary, Port, Type } from "imp-core-types";
 
 export const CORPUS_NODE_TYPE_ID = "corpus";
 export const PAGE_CORPUS_SPEC = "page";
 export const ALL_CORPORA_SPEC = "all";
 
-const collection: SignalType = { id: "collection" };
-const string: SignalType = { id: "string" };
+const collection: Type = { id: "collection" };
+const string: Type = { id: "string" };
 
-function port(id: string, type: SignalType, defaultValue?: Port["defaultValue"]): Port {
+function port(id: string, type: Type, defaultValue?: Port["defaultValue"]): Port {
   return defaultValue === undefined ? { id, type } : { id, type, defaultValue };
 }
 

@@ -14,7 +14,7 @@ export function resolvePortsFromRegistry(createRegistry: CreateRegistry): Resolv
       inputs: Object.values(definition.inputs).map((port) => ({
         id: port.id,
         variadic: port.variadic,
-        signalType: port.type,
+        type: port.type,
         defaultValue: port.defaultValue,
       })),
       outputs: Object.values(definition.outputs).map((port) => ({

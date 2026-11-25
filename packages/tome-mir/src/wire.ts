@@ -116,8 +116,8 @@ export function wireSyncGraph(options: WireSyncGraphOptions): SyncGraphWireResul
       throw new Error(`Sync graph edge "${edgeId}" references missing nodes`);
     }
 
-    const outType = nodeTypes.portSignalTypeId(fromNode.type, edge.from.port, "output");
-    const inType = nodeTypes.portSignalTypeId(toNode.type, edge.to.port, "input");
+    const outType = nodeTypes.portTypeId(fromNode.type, edge.from.port, "output");
+    const inType = nodeTypes.portTypeId(toNode.type, edge.to.port, "input");
     if (edge.from.port !== SYNC_OBSERVE_OUT_PORT || edge.to.port !== SYNC_OBSERVE_IN_PORT) {
       throw new Error(
         `Sync graph edge "${edgeId}" must connect ${SYNC_OBSERVE_OUT_PORT} → ${SYNC_OBSERVE_IN_PORT}`,

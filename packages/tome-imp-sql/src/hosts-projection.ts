@@ -3,14 +3,14 @@
  * Evaluated by tome-ontology / tome-db shape parsers — not lowered by imp-sql.
  */
 
-import type { NodeLibrary, Port, SignalType } from "imp-core-types";
+import type { NodeLibrary, Port, Type } from "imp-core-types";
 import { HOSTS_PROJECTION_NODE_TYPE } from "tome-ontology";
 
-const string: SignalType = { id: "string" };
-const number: SignalType = { id: "number" };
-const boolean: SignalType = { id: "boolean" };
+const string: Type = { id: "string" };
+const number: Type = { id: "number" };
+const boolean: Type = { id: "boolean" };
 
-function port(id: string, type: SignalType): Port {
+function port(id: string, type: Type): Port {
   return { id, type };
 }
 

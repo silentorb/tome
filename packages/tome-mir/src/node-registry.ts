@@ -1,4 +1,4 @@
-import type { NodeLibrary, Port, SignalType } from "imp-core-types";
+import type { NodeLibrary, Port, Type } from "imp-core-types";
 
 export const SYNC_SIGNAL_TYPE_ID = "tome.sync.signal";
 export const SYNC_STORE_NODE_TYPE = "tome.sync.store";
@@ -8,10 +8,10 @@ export const SYNC_OBSERVE_OUT_PORT = "observeOut";
 export const SYNC_OBSERVE_IN_PORT = "observeIn";
 export const SYNC_STORE_ID_INPUT = "storeId";
 
-const syncSignal: SignalType = { id: SYNC_SIGNAL_TYPE_ID };
-const stringType: SignalType = { id: "string" };
+const syncSignal: Type = { id: SYNC_SIGNAL_TYPE_ID };
+const stringType: Type = { id: "string" };
 
-function port(id: string, type: SignalType, defaultValue?: Port["defaultValue"]): Port {
+function port(id: string, type: Type, defaultValue?: Port["defaultValue"]): Port {
   return defaultValue === undefined ? { id, type } : { id, type, defaultValue };
 }
 
@@ -73,7 +73,7 @@ export class SyncNodeTypeRegistry {
   }
 
   /** Port type id for a node type + port direction, or null if unknown. */
-  portSignalTypeId(
+  portTypeId(
     nodeTypeId: string,
     portId: string,
     direction: "input" | "output",
