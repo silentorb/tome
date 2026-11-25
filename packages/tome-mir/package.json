@@ -1,6 +1,6 @@
 {
   "name": "tome-mir",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "imp-core-types": "workspace:^0.5.0",
+    "imp-core-types": "workspace:^0.6.0",
     "tome-graph-interfaces": "workspace:^0.7.0",
     "tome-service-interfaces": "workspace:^0.8.0"
   },
