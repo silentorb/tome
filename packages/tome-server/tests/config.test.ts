@@ -44,12 +44,22 @@ describe("tome-server config", async () => {
   });
 
   test("normalizes legacy store+cache into dataStores", () => {
-    const normalized = normalizeServerConfig({
-      version: 1,
-      store: STORE_ENTRY,
-      cache: CACHE_ENTRY,
-      services: [],
-    });
+    // Without corpora (options or TOME_CORPORA) the legacy store keeps its own id;
+    // workbench containers set TOME_CORPORA, so clear it for this case.
+    const savedCorpora = process.env.TOME_CORPORA;
+    delete process.env.TOME_CORPORA;
+    let normalized: ReturnType<typeof normalizeServerConfig>;
+    try {
+      normalized = normalizeServerConfig({
+        version: 1,
+        store: STORE_ENTRY,
+        cache: CACHE_ENTRY,
+        services: [],
+      });
+    } finally {
+      if (savedCorpora === undefined) delete process.env.TOME_CORPORA;
+      else process.env.TOME_CORPORA = savedCorpora;
+    }
     expect(normalized.dataStores.default?.module).toBe("tome-flatfile");
     expect(normalized.dataStores.sqlite?.module).toBe("tome-sqlite");
     expect(normalized.dataStores.fts?.module).toBe("tome-search-sqlite");

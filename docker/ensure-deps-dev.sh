@@ -39,3 +39,23 @@ install_lock="${_root}/.bun-install.lock"
 )
 
 tome_imp_symlink "${_root}" "${IMP_ROOT:-}"
+
+# Sibling workspace packages outside this repo (e.g. imp-graph-view) keep their
+# node_modules on the shared host checkout. Another workbench's install (e.g.
+# imp-lab's link-graph-view-peers postinstall in aura) can leave absolute peer
+# symlinks into its own container paths that do not resolve here. tsc and Bun
+# resolve peers from the package directory (not NODE_PATH), so re-point missing
+# or dangling peers at tome's copies to keep one React / React Flow root.
+tome_relink_sibling_peers() {
+  local root="$1" pkg_nm="$2" name link target
+  [[ -d "$pkg_nm" ]] || return 0
+  for name in react react-dom @xyflow @types/react @types/react-dom; do
+    link="${pkg_nm}/${name}"
+    target="${root}/node_modules/${name}"
+    if [[ ! -e "$link" && -e "$target" ]]; then
+      mkdir -p "$(dirname "$link")"
+      ln -sfn "$target" "$link"
+    fi
+  done
+}
+tome_relink_sibling_peers "${_root}" "$(cd "${_root}/.." && pwd)/imp-graph-view/node_modules"
