@@ -35,6 +35,13 @@ jobs:
           path: imp-ts-checkout
           ref: ${{ vars.IMP_REF || 'main' }}
 
+      - name: Checkout imp-graph-view
+        uses: actions/checkout@v4
+        with:
+          repository: silentorb/imp-graph-view
+          path: imp-graph-view-checkout
+          ref: ${{ vars.IMP_GRAPH_VIEW_REF || 'main' }}
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -63,6 +70,7 @@ jobs:
           build-contexts: |
             tome=.
             imp=./imp-ts-checkout
+            imp-graph-view=./imp-graph-view-checkout
           load: true
           tags: tome-release:ci
           cache-from: type=gha
@@ -81,6 +89,7 @@ jobs:
           build-contexts: |
             tome=.
             imp=./imp-ts-checkout
+            imp-graph-view=./imp-graph-view-checkout
           push: true
           # Plain single-arch image (not an attestation-bearing OCI index).
           platforms: linux/amd64

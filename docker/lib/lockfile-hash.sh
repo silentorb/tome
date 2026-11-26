@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Compute a stable fingerprint of tome (+ optional imp-ts) lockfiles.
-# Usage: tome_lockfile_hash <tome_root> [imp_root]
+# Compute a stable fingerprint of tome (+ optional imp-ts / imp-graph-view) lockfiles.
+# Usage: tome_lockfile_hash <tome_root> [imp_root] [imp_graph_view_root]
 tome_lockfile_hash() {
   local tome_root="$1"
   local imp_root="${2:-}"
+  local imp_graph_view_root="${3:-}"
   local files=()
 
   if [[ -f "${tome_root}/bun.lock" ]]; then
@@ -17,6 +18,12 @@ tome_lockfile_hash() {
   fi
   if [[ -n "${imp_root}" && -f "${imp_root}/package.json" ]]; then
     files+=("${imp_root}/package.json")
+  fi
+  if [[ -n "${imp_graph_view_root}" && -f "${imp_graph_view_root}/bun.lock" ]]; then
+    files+=("${imp_graph_view_root}/bun.lock")
+  fi
+  if [[ -n "${imp_graph_view_root}" && -f "${imp_graph_view_root}/package.json" ]]; then
+    files+=("${imp_graph_view_root}/package.json")
   fi
 
   if [[ ${#files[@]} -eq 0 ]]; then

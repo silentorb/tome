@@ -8,6 +8,7 @@ _root="$(cd "${_script_dir}/.." && pwd)"
 
 BAKED_ROOT="${TOME_BAKED_ROOT:-/opt/tome-baked}"
 IMP_ROOT="${IMP_ROOT:-/opt/imp-ts}"
+IMP_GRAPH_VIEW_ROOT="${IMP_GRAPH_VIEW_ROOT:-/opt/imp-graph-view}"
 
 # Prefer helpers from the immutable bake (survive bind mounts over /opt/tome).
 _lib_dir="${BAKED_ROOT}/docker/lib"
@@ -25,7 +26,7 @@ if [[ ! -f "${BAKED_ROOT}/.baked-lock-hash" ]]; then
 fi
 
 expected="$(cat "${BAKED_ROOT}/.baked-lock-hash")"
-actual="$(tome_lockfile_hash "${_root}" "${IMP_ROOT}")"
+actual="$(tome_lockfile_hash "${_root}" "${IMP_ROOT}" "${IMP_GRAPH_VIEW_ROOT}")"
 
 if [[ "${actual}" != "${expected}" ]]; then
   cat >&2 <<EOF
@@ -51,3 +52,4 @@ if [[ ! -d "${_root}/node_modules/.bin" ]]; then
 fi
 
 tome_imp_symlink "${_root}" "${IMP_ROOT}"
+tome_imp_graph_view_symlink "${_root}" "${IMP_GRAPH_VIEW_ROOT}"

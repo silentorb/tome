@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # Release image: offline-capable after build (all deps baked).
 #
-# Requires BuildKit named contexts `tome` and `imp` (imp-ts checkout).
+# Requires BuildKit named contexts `tome`, `imp` (imp-ts checkout), and `imp-graph-view`.
 # Prefer: bash docker/build-release.sh
 
 FROM debian:bookworm-slim AS base
@@ -15,18 +15,20 @@ FROM base AS deps
 WORKDIR /opt
 COPY --from=tome . /opt/tome
 COPY --from=imp . /opt/imp-ts
+COPY --from=imp-graph-view . /opt/imp-graph-view
 COPY docker/bake-deps.sh /opt/tome/docker/bake-deps.sh
 COPY docker/lib/lockfile-hash.sh docker/lib/imp-symlink.sh /opt/tome/docker/lib/
 RUN chmod +x /opt/tome/docker/bake-deps.sh \
-  && TOME_ROOT=/opt/tome IMP_ROOT=/opt/imp-ts bash /opt/tome/docker/bake-deps.sh
+  && TOME_ROOT=/opt/tome IMP_ROOT=/opt/imp-ts IMP_GRAPH_VIEW_ROOT=/opt/imp-graph-view bash /opt/tome/docker/bake-deps.sh
 
 FROM base AS release
 RUN useradd --create-home --uid 1000 --shell /bin/bash tome \
-  && mkdir -p /opt/tome /opt/tome-baked /opt/imp-ts \
+  && mkdir -p /opt/tome /opt/tome-baked /opt/imp-ts /opt/imp-graph-view \
   && chown -R tome:tome /opt
 
 COPY --from=deps --chown=tome:tome /opt/tome /opt/tome
 COPY --from=deps --chown=tome:tome /opt/imp-ts /opt/imp-ts
+COPY --from=deps --chown=tome:tome /opt/imp-graph-view /opt/imp-graph-view
 COPY --from=deps --chown=tome:tome /opt/tome /opt/tome-baked
 
 COPY --chown=tome:tome docker/ensure-deps-release.sh /opt/tome/scripts/ensure-node-modules.sh
@@ -45,6 +47,7 @@ ENV PATH="${BUN_INSTALL}/bin:${PATH}"
 ENV TOME_ROOT=/opt/tome
 ENV TOME_BAKED_ROOT=/opt/tome-baked
 ENV IMP_ROOT=/opt/imp-ts
+ENV IMP_GRAPH_VIEW_ROOT=/opt/imp-graph-view
 ENV TOME_EDITOR_DEV_HOST=0.0.0.0
 WORKDIR /opt/tome
 
