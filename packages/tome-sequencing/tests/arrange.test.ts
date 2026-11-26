@@ -50,25 +50,27 @@ function groupedBlockData() {
   return {
     version: 1,
     graph: {
-      nodes: {
-        in: { id: "in", type: "input", inputs: {} },
-        group: {
+      nodes: [
+        { id: "in", type: "input", inputs: {} },
+        {
           id: "group",
           type: "group",
           inputs: { column: "priority", direction: "desc" },
         },
-        out: { id: "out", type: "output", inputs: {} },
-      },
-      edges: {
-        e1: {
+        { id: "out", type: "output", inputs: {} },
+      ],
+      edges: [
+        {
+          id: "e1",
           from: { node: "in", port: "value" },
           to: { node: "group", port: "collection" },
         },
-        e2: {
+        {
+          id: "e2",
           from: { node: "group", port: "collection" },
           to: { node: "out", port: "value" },
         },
-      },
+      ],
     },
     layout: {
       in: { x: 0, y: 0 },

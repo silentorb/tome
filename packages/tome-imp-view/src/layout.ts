@@ -1,4 +1,5 @@
-import type { Graph } from "imp-core-types";
+import type { Graph, ImpFile } from "imp-core-types";
+import { assertImpFileSections, impFileFromGraph, impFileGraph, parseImpFile } from "imp-file";
 import {
   dedupeInboundReactFlowEdges,
   impToReactFlow,
@@ -57,16 +58,27 @@ export function isReactFlowEnvelope(value: unknown): value is ReactFlowGraph {
   return Array.isArray(record.nodes) && Array.isArray(record.edges);
 }
 
-export function isImpGraph(value: unknown): value is Graph {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+/**
+ * A stored Imp value (an Imp file holding only `nodes` / `edges`, as Tome records and page blocks
+ * keep them) as an in-memory graph, or `null` when the value is not one.
+ */
+export function impGraphFromStored(value: unknown): Graph | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   const record = value as Record<string, unknown>;
-  if (!record.nodes || typeof record.nodes !== "object" || Array.isArray(record.nodes)) {
-    return false;
+  // Imp file parsing ignores unknown keys; require Imp content so unrelated objects fall back.
+  if (!("nodes" in record) && !("edges" in record) && record.format !== "imp") return null;
+  try {
+    const file = parseImpFile(value);
+    assertImpFileSections(file, ["nodes", "edges"]);
+    return impFileGraph(file);
+  } catch {
+    return null;
   }
-  if (!record.edges || typeof record.edges !== "object" || Array.isArray(record.edges)) {
-    return false;
-  }
-  return true;
+}
+
+/** The stored form of an in-memory graph: a topology-only Imp file (no `id`; the record owns identity). */
+export function storedFromImpGraph(graph: Graph): ImpFile {
+  return impFileFromGraph(graph);
 }
 
 export function parseLayout(raw: unknown): GraphLayout {

@@ -11,7 +11,7 @@ import {
 } from "tome-interfaces/page-block";
 import type { EditorToolPanelSession } from "tome-interfaces/page-block/editor";
 import { defaultBlockData, defaultImpGraph, defaultLayout } from "tome-query/config";
-import type { Graph } from "imp-core-types";
+import type { ImpFile } from "imp-core-types";
 import type { GraphLayout } from "tome-imp-view/layout";
 import { documentToStorageBody } from "tome-db/document-to-storage-body";
 import { editorViewCtx } from "@milkdown/kit/core";
@@ -138,9 +138,9 @@ describe("interactive page-block data persistence", () => {
     const match = /```json[^\n]*\n([\s\S]*?)\n```/.exec(stored);
     expect(match).toBeTruthy();
     const payload = parsePageBlockFenceBody("query", match![1]!);
-    const data = payload?.data as { graph?: Graph; layout?: GraphLayout };
+    const data = payload?.data as { graph?: ImpFile; layout?: GraphLayout };
     expect(data?.layout?.in?.x).toBe(12);
-    expect(data?.graph?.nodes?.in?.type).toBe("input");
+    expect(data?.graph?.nodes?.find((n) => n.id === "in")?.type).toBe("input");
 
     await editor.destroy();
   });

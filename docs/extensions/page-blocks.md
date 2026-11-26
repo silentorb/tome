@@ -20,7 +20,11 @@ A logical block **may** implement editor only, html only, server only, or any co
 
 ````markdown
 ```json {type="query"}
-{"version":1,"graph":{"nodes":{},"edges":{}},"layout":{}}
+{
+  "version": 1,
+  "graph": {},
+  "layout": {}
+}
 ```
 ````
 

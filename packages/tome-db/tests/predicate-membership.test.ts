@@ -135,14 +135,15 @@ async function seedScopedInspirationFixture(
   await seedTestNode(fixture, { id: MEMBER_SCOPE_TYPE, properties: { title: "Member scope" } });
   await seedTestNode(fixture, { id: ONTOLOGY_INST, properties: { title: "Demo ontology" } });
 
+  const filterGraph = hostsProjectionFilterGraph(INSPIRES, 0);
   const predicateProps =
     predicateMode === "present"
       ? {
           title: "Inspiration",
-          predicate: hostsProjectionFilterGraph(INSPIRES, 0) as unknown as Record<
-            string,
-            unknown
-          >,
+          predicate: {
+            nodes: Object.values(filterGraph.nodes),
+            edges: Object.entries(filterGraph.edges).map(([id, edge]) => ({ id, ...edge })),
+          } as unknown as Record<string, unknown>,
         }
       : { title: "Inspiration" };
 

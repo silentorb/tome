@@ -35,18 +35,19 @@ function toGraph(rf: ReactFlowGraph) {
 }
 
 function defaultReactFlowGraph(): ReactFlowGraph {
-  const data = defaultBlockData();
+  const graph = defaultImpGraph();
+  const layout = defaultLayout();
   return {
-    nodes: Object.values(data.graph.nodes).map((node) => ({
+    nodes: Object.values(graph.nodes).map((node) => ({
       id: node.id,
       type: node.type,
       position: {
-        x: data.layout[node.id]?.x ?? 0,
-        y: data.layout[node.id]?.y ?? 0,
+        x: layout[node.id]?.x ?? 0,
+        y: layout[node.id]?.y ?? 0,
       },
       data: { inputValues: { ...node.inputs } },
     })),
-    edges: Object.entries(data.graph.edges).map(([id, edge]) => ({
+    edges: Object.entries(graph.edges).map(([id, edge]) => ({
       id,
       source: edge.from.node,
       target: edge.to.node,
@@ -95,12 +96,13 @@ function sqliteExecuteImp(
 }
 
 describe("tome-query config", () => {
-  test("default block data has input → output Imp graph", () => {
+  test("default block data has input → output Imp file", () => {
     const data = defaultBlockData();
     expect(data.version).toBe(1);
-    expect(Object.values(data.graph.nodes).map((n) => n.type).sort()).toEqual(["input", "output"]);
-    expect(Object.keys(data.graph.nodes)).toContain("in");
-    expect(Object.keys(data.graph.nodes)).toContain("out");
+    const nodes = data.graph.nodes ?? [];
+    expect(nodes.map((n) => n.type).sort()).toEqual(["input", "output"]);
+    expect(nodes.map((n) => n.id)).toContain("in");
+    expect(nodes.map((n) => n.id)).toContain("out");
     expect(data.layout.in).toBeDefined();
   });
 
@@ -112,7 +114,7 @@ describe("tome-query config", () => {
   test("parseQueryBlockData strips legacy viewMode", () => {
     const base = defaultBlockData();
     const parsed = parseQueryBlockData({ ...base, viewMode: "query" });
-    expect(parsed.graph).toEqual(base.graph);
+    expect(parsed.graph).toEqual(defaultImpGraph());
     expect("viewMode" in parsed).toBe(false);
   });
 

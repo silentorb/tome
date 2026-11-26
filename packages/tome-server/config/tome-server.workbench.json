@@ -30,33 +30,53 @@
   "sync": {
     "queryStoreId": "session-cache",
     "graph": {
-      "nodes": {
-        "git:marloth": {
+      "nodes": [
+        {
           "id": "git:marloth",
           "type": "tome.sync.gitWatch",
-          "inputs": { "storeId": "marloth" }
+          "inputs": {
+            "storeId": "marloth"
+          }
         },
-        "sink:session-cache": {
+        {
           "id": "sink:session-cache",
           "type": "tome.sync.store",
-          "inputs": { "storeId": "session-cache" }
+          "inputs": {
+            "storeId": "session-cache"
+          }
         },
-        "sink:fts": {
+        {
           "id": "sink:fts",
           "type": "tome.sync.store",
-          "inputs": { "storeId": "fts" }
+          "inputs": {
+            "storeId": "fts"
+          }
         }
-      },
-      "edges": {
-        "obs:marloth->cache": {
-          "from": { "node": "git:marloth", "port": "observeOut" },
-          "to": { "node": "sink:session-cache", "port": "observeIn" }
+      ],
+      "edges": [
+        {
+          "id": "obs:marloth->cache",
+          "from": {
+            "node": "git:marloth",
+            "port": "observeOut"
+          },
+          "to": {
+            "node": "sink:session-cache",
+            "port": "observeIn"
+          }
         },
-        "obs:marloth->fts": {
-          "from": { "node": "git:marloth", "port": "observeOut" },
-          "to": { "node": "sink:fts", "port": "observeIn" }
+        {
+          "id": "obs:marloth->fts",
+          "from": {
+            "node": "git:marloth",
+            "port": "observeOut"
+          },
+          "to": {
+            "node": "sink:fts",
+            "port": "observeIn"
+          }
         }
-      }
+      ]
     }
   },
   "authorization": {
@@ -67,7 +87,9 @@
       "id": "http",
       "module": "tome-http",
       "export": "createTomeHttpService",
-      "options": { "port": 3847 }
+      "options": {
+        "port": 3847
+      }
     }
   ]
 }

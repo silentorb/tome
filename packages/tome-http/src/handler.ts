@@ -173,20 +173,26 @@ export function createApiHandler(
     const principal = await resolvePrincipalFromRequest(req, sessionStore);
 
     if (!isProfilingEnabled()) {
-      return runWithRequestPrincipalAsync(principal, () =>
-        dispatchApiRequest(
-          req,
-          url,
-          path,
-          db,
-          settingsStore,
-          getCacheSyncStatus,
-          sessionStore,
-          getAuthenticationProvider,
-          getAuthorizer,
-          validateAccountNodeId,
-        ),
-      );
+      try {
+        return await runWithRequestPrincipalAsync(principal, () =>
+          dispatchApiRequest(
+            req,
+            url,
+            path,
+            db,
+            settingsStore,
+            getCacheSyncStatus,
+            sessionStore,
+            getAuthenticationProvider,
+            getAuthorizer,
+            validateAccountNodeId,
+          ),
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`[tome-http] ${req.method} ${path} → 500:`, err);
+        return json({ error: message }, 500);
+      }
     }
 
     return runInProfilingTraceAsync(async () => {

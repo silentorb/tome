@@ -5,12 +5,36 @@ import { join } from "node:path";
 import type { TomeServiceHost } from "tome-service-interfaces";
 import { getProfilingStore, resetProfilingForTests } from "tome-service-interfaces";
 import { createTomeHttpService } from "../src/service";
+import { createApiHandler } from "../src/handler";
+import { UserSettingsStore } from "../src/user-settings-store";
 
 describe("tome-http", () => {
   test("createTomeHttpService returns a service module", () => {
     const mod = createTomeHttpService();
     expect(mod.id).toBe("http");
     expect(typeof mod.start).toBe("function");
+  });
+
+  test("uncaught route error returns 500 JSON when profiling is disabled", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "tome-http-err-"));
+    try {
+      const handler = createApiHandler(
+        {
+          getNode: async () => {
+            throw new Error("boom from route");
+          },
+        } as unknown as TomeServiceHost["services"],
+        new UserSettingsStore(join(dir, "settings.json")),
+      );
+      const res = await handler(
+        new Request("http://127.0.0.1/api/nodes/01KWN86X6NJZMP5ZESZTNDXXW0"),
+      );
+      expect(res.status).toBe(500);
+      expect(res.headers.get("content-type")).toContain("application/json");
+      expect(await res.json()).toEqual({ error: "boom from route" });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 

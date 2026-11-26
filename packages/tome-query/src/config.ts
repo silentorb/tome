@@ -1,10 +1,11 @@
-import type { Graph } from "imp-core-types";
+import type { Graph, ImpFile } from "imp-core-types";
 import {
-  isImpGraph,
+  impGraphFromStored,
   isReactFlowEnvelope,
   layoutForImpGraph,
   parseLayout,
   reactFlowToImpAndLayout,
+  storedFromImpGraph,
   type GraphLayout,
 } from "tome-imp-view/layout";
 
@@ -14,10 +15,23 @@ export const COMPONENT_ID = "tome-query";
 /** Fence `type=` role resolved via component `roles`. */
 export const BLOCK_ROLE = "query";
 
+/** Parsed (in-memory) query block. */
 export interface TomeQueryBlockData {
   version: typeof QUERY_BLOCK_VERSION;
   graph: Graph;
   layout: GraphLayout;
+}
+
+/** Query block as stored in a page fence: the graph is a topology-only Imp file. */
+export interface StoredQueryBlockData {
+  version: typeof QUERY_BLOCK_VERSION;
+  graph: ImpFile;
+  layout: GraphLayout;
+}
+
+/** The stored form of a parsed query block. */
+export function toStoredBlockData(data: TomeQueryBlockData): StoredQueryBlockData {
+  return { version: data.version, graph: storedFromImpGraph(data.graph), layout: data.layout };
 }
 
 /** Default Imp pipeline: input → output (all live nodes, no transforms). */
@@ -43,7 +57,8 @@ export function defaultLayout(): GraphLayout {
   });
 }
 
-export function defaultBlockData(): TomeQueryBlockData {
+/** The default query block, parsed. */
+export function defaultQueryBlock(): TomeQueryBlockData {
   return {
     version: QUERY_BLOCK_VERSION,
     graph: defaultImpGraph(),
@@ -51,16 +66,22 @@ export function defaultBlockData(): TomeQueryBlockData {
   };
 }
 
+/** The default query block as stored (inserted into new pages). */
+export function defaultBlockData(): StoredQueryBlockData {
+  return toStoredBlockData(defaultQueryBlock());
+}
+
 export function parseQueryBlockData(raw: unknown): TomeQueryBlockData {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return defaultBlockData();
+    return defaultQueryBlock();
   }
   const record = raw as Record<string, unknown>;
 
-  if (isImpGraph(record.graph)) {
+  const graph = impGraphFromStored(record.graph);
+  if (graph) {
     return {
       version: QUERY_BLOCK_VERSION,
-      graph: record.graph,
+      graph,
       layout: parseLayout(record.layout),
     };
   }
@@ -75,5 +96,5 @@ export function parseQueryBlockData(raw: unknown): TomeQueryBlockData {
     };
   }
 
-  return defaultBlockData();
+  return defaultQueryBlock();
 }

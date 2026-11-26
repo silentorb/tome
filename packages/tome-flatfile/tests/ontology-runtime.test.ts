@@ -3,7 +3,14 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { hostsProjectionFilterGraph } from "tome-ontology";
-import type { Properties } from "tome-graph-interfaces";
+import type { ImpGraph, Properties } from "tome-graph-interfaces";
+
+function storedImpFile(graph: ImpGraph): Properties[string] {
+  return {
+    nodes: Object.values(graph.nodes),
+    edges: Object.entries(graph.edges).map(([id, edge]) => ({ id, ...edge })),
+  } as unknown as Properties[string];
+}
 import {
   ContentStore,
   contentHasAuthorizationModelType,
@@ -102,10 +109,8 @@ describe("node ontology runtime overlay", () => {
     writeNode(contentDir, PREDICATE_TYPE, "Predicate type");
     writeNode(contentDir, ONTOLOGY_INST, "Demo ontology");
     const filter = {
-      nodes: {
-        lit: { id: "lit", type: "literal", inputs: { value: true } },
-      },
-      edges: {},
+      nodes: [{ id: "lit", type: "literal", inputs: { value: true } }],
+      edges: [],
     };
     writeNode(contentDir, PRED_ACTIVE, "Active predicate", {
       predicate: filter as unknown as Properties[string],
@@ -169,10 +174,7 @@ describe("node ontology runtime overlay", () => {
     writeNode(contentDir, TYPE_TABLE_HUB, "Inspirations hub");
 
     writeNode(contentDir, PRED_ACTIVE, "Inspiration", {
-      predicate: hostsProjectionFilterGraph(
-        "01KXBNPNJDENZ9BXN5BYZ7JKPR",
-        0,
-      ) as unknown as Properties[string],
+      predicate: storedImpFile(hostsProjectionFilterGraph("01KXBNPNJDENZ9BXN5BYZ7JKPR", 0)),
     });
 
     writeNode(contentDir, MEMBER_SCOPE_INST, "Inspirations member scope", {
@@ -451,10 +453,7 @@ describe("node ontology runtime overlay", () => {
       },
     });
     writeNode(contentDir, PRED_ACTIVE, "Inspiration", {
-      predicate: hostsProjectionFilterGraph(
-        INSPIRES_TYPE,
-        0,
-      ) as unknown as Properties[string],
+      predicate: storedImpFile(hostsProjectionFilterGraph(INSPIRES_TYPE, 0)),
     });
     writeNode(contentDir, MEMBER_SCOPE_INST, "Inspirations member scope", {
       memberScope: { typeTableId: TYPE_TABLE_HUB, predicateId: PRED_ACTIVE },

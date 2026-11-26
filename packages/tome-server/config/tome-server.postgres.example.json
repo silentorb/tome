@@ -17,14 +17,15 @@
   "sync": {
     "queryStoreId": "sot",
     "graph": {
-      "nodes": {
-        "sink:sot": {
+      "nodes": [
+        {
           "id": "sink:sot",
           "type": "tome.sync.store",
-          "inputs": { "storeId": "sot" }
+          "inputs": {
+            "storeId": "sot"
+          }
         }
-      },
-      "edges": {}
+      ]
     }
   },
   "authorization": {
@@ -35,7 +36,9 @@
       "id": "http",
       "module": "tome-http",
       "export": "createTomeHttpService",
-      "options": { "port": 3847 }
+      "options": {
+        "port": 3847
+      }
     }
   ]
 }

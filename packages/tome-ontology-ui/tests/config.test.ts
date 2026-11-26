@@ -4,6 +4,7 @@ import {
   BLOCK_ROLE,
   PREDICATE_PROPERTY_ID,
   defaultBlockData,
+  defaultNodeFilterImpGraph,
   defaultNodeFilterLayout,
   parseNodeFilterBlockData,
   summarizeNodeFilter,
@@ -15,11 +16,12 @@ describe("node-filter config", () => {
     expect(PREDICATE_PROPERTY_ID).toBe("predicate");
   });
 
-  test("default is literal true Imp graph", () => {
+  test("default is literal true Imp file", () => {
     const data = defaultBlockData();
-    expect(data.nodes.lit?.type).toBe("literal");
-    expect(data.nodes.lit?.inputs.value).toBe(true);
-    expect(Object.keys(data.edges)).toHaveLength(0);
+    const lit = data.nodes?.find((n) => n.id === "lit");
+    expect(lit?.type).toBe("literal");
+    expect(lit?.inputs.value).toBe(true);
+    expect(data.edges ?? []).toHaveLength(0);
   });
 
   test("defaultNodeFilterLayout places nodes", () => {
@@ -36,14 +38,16 @@ describe("node-filter config", () => {
   });
 
   test("parse falls back to default for invalid payloads", () => {
-    expect(parseNodeFilterBlockData(null)).toEqual(defaultBlockData());
+    const fallback = defaultNodeFilterImpGraph();
+    expect(parseNodeFilterBlockData(null)).toEqual(fallback);
     expect(parseNodeFilterBlockData({ version: 1, reactFlow: { nodes: [], edges: [] } })).toEqual(
-      defaultBlockData(),
+      fallback,
     );
   });
 
   test("summarize lists operator and edge counts", () => {
-    expect(summarizeNodeFilter(defaultBlockData())).toContain("1 operator");
-    expect(summarizeNodeFilter(defaultBlockData())).toContain("literal");
+    const graph = defaultNodeFilterImpGraph();
+    expect(summarizeNodeFilter(graph)).toContain("1 operator");
+    expect(summarizeNodeFilter(graph)).toContain("literal");
   });
 });

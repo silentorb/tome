@@ -1,11 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { Graph } from "imp-core-types";
 import {
-  isImpGraph,
+  impGraphFromStored,
   isReactFlowEnvelope,
   layoutForImpGraph,
   parseLayout,
   reactFlowToImpAndLayout,
+  storedFromImpGraph,
 } from "../src/layout";
 
 const sampleGraph: Graph = {
@@ -62,8 +63,10 @@ describe("tome-imp-view layout helpers", () => {
     expect(layout.out).toEqual({ x: 100, y: 20 });
   });
 
-  test("detects Imp vs React Flow envelopes", () => {
-    expect(isImpGraph(sampleGraph)).toBe(true);
+  test("round-trips stored Imp files and detects React Flow envelopes", () => {
+    const stored = storedFromImpGraph(sampleGraph);
+    expect(impGraphFromStored(stored)).toEqual(sampleGraph);
+    expect(impGraphFromStored(sampleGraph)).toBeNull();
     expect(isReactFlowEnvelope({ nodes: [], edges: [] })).toBe(true);
     expect(isReactFlowEnvelope(sampleGraph)).toBe(false);
   });

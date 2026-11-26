@@ -1,49 +1,67 @@
 import type { ImpGraph } from "tome-graph-interfaces";
 
-/** Validate / coerce unknown JSON into an Imp graph shape (nodes + edges records). */
+type ImpNode = ImpGraph["nodes"][string];
+type ImpEdge = ImpGraph["edges"][string];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return !!value && typeof value === "object" && !Array.isArray(value);
+}
+
+function parseNode(raw: unknown): ImpNode | null {
+  if (!isRecord(raw)) return null;
+  if (typeof raw.id !== "string" || typeof raw.type !== "string") return null;
+  if (!isRecord(raw.inputs)) return null;
+  const inputs: ImpNode["inputs"] = {};
+  for (const [port, value] of Object.entries(raw.inputs)) {
+    if (
+      value !== null &&
+      typeof value !== "string" &&
+      typeof value !== "number" &&
+      typeof value !== "boolean"
+    ) {
+      return null;
+    }
+    inputs[port] = value as string | number | boolean | null;
+  }
+  return { id: raw.id, type: raw.type, inputs };
+}
+
+function parsePortReference(raw: unknown): { node: string; port: string } | null {
+  if (!isRecord(raw) || typeof raw.node !== "string" || typeof raw.port !== "string") return null;
+  return { node: raw.node, port: raw.port };
+}
+
+/**
+ * Validate a stored Imp value — an Imp file holding only `nodes` / `edges` arrays (see imp-spec
+ * `imp-files.md`) — and return it as an in-memory Imp graph (id-keyed maps). Returns `null` for
+ * anything else, including files that carry `types` or `definitions`.
+ */
 export function parseImpGraph(data: unknown): ImpGraph | null {
-  if (!data || typeof data !== "object" || Array.isArray(data)) return null;
-  const obj = data as Record<string, unknown>;
-  if (!obj.nodes || typeof obj.nodes !== "object" || Array.isArray(obj.nodes)) return null;
-  if (!obj.edges || typeof obj.edges !== "object" || Array.isArray(obj.edges)) return null;
+  if (!isRecord(data)) return null;
+  if (data.format !== undefined && data.format !== "imp") return null;
+  for (const section of ["types", "definitions"]) {
+    const value = data[section];
+    if (value !== undefined && (!Array.isArray(value) || value.length > 0)) return null;
+  }
+  const rawNodes = data.nodes ?? [];
+  const rawEdges = data.edges ?? [];
+  if (!Array.isArray(rawNodes) || !Array.isArray(rawEdges)) return null;
 
   const nodes: ImpGraph["nodes"] = {};
-  for (const [id, rawNode] of Object.entries(obj.nodes as Record<string, unknown>)) {
-    if (!rawNode || typeof rawNode !== "object" || Array.isArray(rawNode)) return null;
-    const n = rawNode as Record<string, unknown>;
-    if (typeof n.id !== "string" || typeof n.type !== "string") return null;
-    if (!n.inputs || typeof n.inputs !== "object" || Array.isArray(n.inputs)) return null;
-    const inputs: ImpGraph["nodes"][string]["inputs"] = {};
-    for (const [port, value] of Object.entries(n.inputs as Record<string, unknown>)) {
-      if (
-        value !== null &&
-        typeof value !== "string" &&
-        typeof value !== "number" &&
-        typeof value !== "boolean"
-      ) {
-        return null;
-      }
-      inputs[port] = value as string | number | boolean | null;
-    }
-    nodes[id] = { id: n.id, type: n.type, inputs };
+  for (const raw of rawNodes) {
+    const node = parseNode(raw);
+    if (!node || node.id in nodes) return null;
+    nodes[node.id] = node;
   }
 
   const edges: ImpGraph["edges"] = {};
-  for (const [id, rawEdge] of Object.entries(obj.edges as Record<string, unknown>)) {
-    if (!rawEdge || typeof rawEdge !== "object" || Array.isArray(rawEdge)) return null;
-    const e = rawEdge as Record<string, unknown>;
-    const from = e.from;
-    const to = e.to;
-    if (!from || typeof from !== "object" || Array.isArray(from)) return null;
-    if (!to || typeof to !== "object" || Array.isArray(to)) return null;
-    const f = from as Record<string, unknown>;
-    const t = to as Record<string, unknown>;
-    if (typeof f.node !== "string" || typeof f.port !== "string") return null;
-    if (typeof t.node !== "string" || typeof t.port !== "string") return null;
-    edges[id] = {
-      from: { node: f.node, port: f.port },
-      to: { node: t.node, port: t.port },
-    };
+  for (const raw of rawEdges) {
+    if (!isRecord(raw) || typeof raw.id !== "string" || raw.id in edges) return null;
+    const from = parsePortReference(raw.from);
+    const to = parsePortReference(raw.to);
+    if (!from || !to) return null;
+    const edge: ImpEdge = { from, to };
+    edges[raw.id] = edge;
   }
 
   return { nodes, edges };

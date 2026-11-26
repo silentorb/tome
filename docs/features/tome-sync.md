@@ -117,27 +117,49 @@ See [tome-server.md](./tome-server.md). Git-watch example (workspace style):
     "marloth": {
       "module": "tome-flatfile",
       "export": "createFlatfileModule",
-      "options": { "contentPath": "…/marloth-story/content", "access": "readwrite" }
+      "options": {
+        "contentPath": "…/marloth-story/content",
+        "access": "readwrite"
+      }
     },
     "session-cache": {
       "module": "tome-sqlite",
       "export": "createSqliteModule",
-      "options": { "dbPath": "…/session.sqlite" }
+      "options": {
+        "dbPath": "…/session.sqlite"
+      }
     }
   },
   "sync": {
     "queryStoreId": "session-cache",
     "graph": {
-      "nodes": {
-        "git:marloth": { "type": "tome.sync.gitWatch", "inputs": { "storeId": "marloth" } },
-        "sink:session-cache": { "type": "tome.sync.store", "inputs": { "storeId": "session-cache" } }
-      },
-      "edges": {
-        "obs:marloth->cache": {
-          "from": { "node": "git:marloth", "port": "observeOut" },
-          "to": { "node": "sink:session-cache", "port": "observeIn" }
+      "nodes": [
+        {
+          "type": "tome.sync.gitWatch",
+          "inputs": {
+            "storeId": "marloth"
+          }
+        },
+        {
+          "type": "tome.sync.store",
+          "inputs": {
+            "storeId": "session-cache"
+          }
         }
-      }
+      ],
+      "edges": [
+        {
+          "id": "obs:marloth->cache",
+          "from": {
+            "node": "git:marloth",
+            "port": "observeOut"
+          },
+          "to": {
+            "node": "sink:session-cache",
+            "port": "observeIn"
+          }
+        }
+      ]
     }
   }
 }

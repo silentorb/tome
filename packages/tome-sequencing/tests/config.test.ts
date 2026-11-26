@@ -3,18 +3,19 @@ import {
   PAGE_NODE_ID_LITERAL,
   bindPageNodeId,
   defaultBlockData,
+  defaultPageScopedImpGraph,
   parseSequencingBlockData,
 } from "../src/config";
 
 describe("sequencing block config", () => {
   test("default includes page node sentinel", () => {
     const data = defaultBlockData();
-    expect(data.graph.nodes.lit?.inputs?.value).toBe(PAGE_NODE_ID_LITERAL);
+    const lit = data.graph.nodes?.find((n) => n.id === "lit");
+    expect(lit?.inputs?.value).toBe(PAGE_NODE_ID_LITERAL);
   });
 
   test("bindPageNodeId replaces sentinel", () => {
-    const data = defaultBlockData();
-    const bound = bindPageNodeId(data.graph, "01KWN86X6MFZQAJ1V36T9592A9");
+    const bound = bindPageNodeId(defaultPageScopedImpGraph(), "01KWN86X6MFZQAJ1V36T9592A9");
     expect(bound.nodes.lit?.inputs?.value).toBe("01KWN86X6MFZQAJ1V36T9592A9");
   });
 

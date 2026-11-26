@@ -18,7 +18,8 @@ import {
   QUERY_BLOCK_VERSION,
   defaultBlockData,
   parseQueryBlockData,
-  type TomeQueryBlockData,
+  toStoredBlockData,
+  type StoredQueryBlockData,
 } from "./config";
 import type { QueryResultTable } from "./execute";
 import { createQueryRegistry } from "./execute";
@@ -32,12 +33,8 @@ import { formatCellText } from "./render";
 import { queryNodePageHref } from "./node-links";
 import "./query-block.css";
 
-function toBlockData(graph: Graph, layout: GraphLayout): TomeQueryBlockData {
-  return {
-    version: QUERY_BLOCK_VERSION,
-    graph,
-    layout,
-  };
+function toBlockData(graph: Graph, layout: GraphLayout): StoredQueryBlockData {
+  return toStoredBlockData({ version: QUERY_BLOCK_VERSION, graph, layout });
 }
 
 /** Panel body for the host right tool panel. */

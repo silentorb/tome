@@ -257,7 +257,10 @@ describe("QueryBlockComponent", () => {
 
     expect(calls.length).toBeGreaterThan(0);
     const last = calls.at(-1) as { graph?: unknown; layout?: unknown; viewMode?: unknown };
-    expect(last.graph).toEqual(nextGraph);
+    expect(last.graph).toEqual({
+      nodes: [{ id: "in", type: "input", inputs: {} }],
+      edges: [],
+    });
     expect(last.layout).toBeDefined();
     expect(last.viewMode).toBeUndefined();
   });

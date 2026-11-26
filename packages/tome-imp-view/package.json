@@ -12,6 +12,7 @@
   "dependencies": {
     "@xyflow/react": "12.8.2",
     "imp-core-types": "workspace:^0.6.0",
+    "imp-file": "workspace:^0.3.0",
     "imp-graph-view": "workspace:^0.6.0",
     "imp-registry": "workspace:^0.6.0",
     "react": "19.0.0"

@@ -41,7 +41,7 @@ describe("SequencingBlockComponent", () => {
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
-        blockData={{ version: 1, graph: { nodes: {}, edges: {} }, layout: {} }}
+        blockData={{ version: 1, graph: { nodes: [], edges: [] }, layout: {} }}
         onBlockDataChange={() => {}}
       />,
     );
@@ -63,7 +63,7 @@ describe("SequencingBlockComponent", () => {
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
-        blockData={{ version: 1, graph: { nodes: {}, edges: {} }, layout: {} }}
+        blockData={{ version: 1, graph: { nodes: [], edges: [] }, layout: {} }}
         onBlockDataChange={() => {}}
       />,
     );
@@ -83,7 +83,7 @@ describe("SequencingBlockComponent", () => {
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
-        blockData={{ version: 1, graph: { nodes: {}, edges: {} }, layout: {} }}
+        blockData={{ version: 1, graph: { nodes: [], edges: [] }, layout: {} }}
         onBlockDataChange={() => {}}
       />,
     );
@@ -110,7 +110,7 @@ describe("SequencingBlockComponent", () => {
             saved.push(value);
           },
         }}
-        blockData={{ version: 1, graph: { nodes: {}, edges: {} }, layout: {} }}
+        blockData={{ version: 1, graph: { nodes: [], edges: [] }, layout: {} }}
         onBlockDataChange={() => {}}
       />,
     );
@@ -131,7 +131,7 @@ describe("SequencingBlockComponent", () => {
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
-        blockData={{ version: 1, graph: { nodes: {}, edges: {} }, layout: {} }}
+        blockData={{ version: 1, graph: { nodes: [], edges: [] }, layout: {} }}
         onBlockDataChange={() => {}}
       />,
     );
@@ -154,8 +154,8 @@ describe("SequencingBlockComponent", () => {
     const blockData = {
       version: 1,
       graph: {
-        nodes: {
-          includeConsiderations: {
+        nodes: [
+          {
             id: "includeConsiderations",
             type: "parameter",
             inputs: {
@@ -163,8 +163,8 @@ describe("SequencingBlockComponent", () => {
               value: true,
             },
           },
-        },
-        edges: {},
+        ],
+        edges: [],
       },
       layout: { includeConsiderations: { x: 0, y: 0 } },
     };
@@ -220,8 +220,8 @@ describe("SequencingBlockComponent", () => {
     const blockData = {
       version: 1,
       graph: {
-        nodes: {
-          includeConsiderations: {
+        nodes: [
+          {
             id: "includeConsiderations",
             type: "parameter",
             inputs: {
@@ -229,8 +229,8 @@ describe("SequencingBlockComponent", () => {
               value: true,
             },
           },
-        },
-        edges: {},
+        ],
+        edges: [],
       },
       layout: { includeConsiderations: { x: 0, y: 0 } },
     };
@@ -289,7 +289,7 @@ describe("timeline dependency popup", () => {
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
-        blockData={{ version: 1, graph: { nodes: {}, edges: {} }, layout: {} }}
+        blockData={{ version: 1, graph: { nodes: [], edges: [] }, layout: {} }}
         onBlockDataChange={() => {}}
       />,
     );
@@ -345,7 +345,7 @@ describe("timeline dependency popup", () => {
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
-        blockData={{ version: 1, graph: { nodes: {}, edges: {} }, layout: {} }}
+        blockData={{ version: 1, graph: { nodes: [], edges: [] }, layout: {} }}
         onBlockDataChange={() => {}}
       />,
     );
@@ -403,7 +403,7 @@ describe("timeline dependency popup", () => {
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
-        blockData={{ version: 1, graph: { nodes: {}, edges: {} }, layout: {} }}
+        blockData={{ version: 1, graph: { nodes: [], edges: [] }, layout: {} }}
         onBlockDataChange={() => {}}
       />,
     );
@@ -424,7 +424,7 @@ describe("timeline dependency popup", () => {
           nodeId: "01KWN86X6MFZQAJ1V36T9592A9",
           invoke,
         }}
-        blockData={{ version: 1, graph: { nodes: {}, edges: {} }, layout: {} }}
+        blockData={{ version: 1, graph: { nodes: [], edges: [] }, layout: {} }}
         onBlockDataChange={() => {}}
       />,
     );

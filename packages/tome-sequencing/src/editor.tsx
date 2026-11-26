@@ -16,19 +16,16 @@ import {
   SEQUENCING_BLOCK_VERSION,
   defaultBlockData,
   parseSequencingBlockData,
-  type SequencingBlockData,
+  toStoredBlockData,
+  type StoredSequencingBlockData,
 } from "./config";
 import type { DependsConstraint, SequenceEndpoint } from "tome-sequencing-interfaces";
 import { SequencingTimelineView } from "./timeline";
 import type { TimelineLayout } from "./layout";
 import "./sequencing-block.css";
 
-function toBlockData(graph: Graph, graphLayout: GraphLayout): SequencingBlockData {
-  return {
-    version: SEQUENCING_BLOCK_VERSION,
-    graph,
-    layout: graphLayout,
-  };
+function toBlockData(graph: Graph, graphLayout: GraphLayout): StoredSequencingBlockData {
+  return toStoredBlockData({ version: SEQUENCING_BLOCK_VERSION, graph, layout: graphLayout });
 }
 
 export function SequencingToolPanelContent({

@@ -1,4 +1,5 @@
 import type { Graph } from "imp-core-types";
+import { assertImpFileSections, impFileGraph, parseImpFile } from "imp-file";
 import {
   composeSyncProgressReporters,
   createCacheSyncStatusTracker,
@@ -97,10 +98,7 @@ export async function startTomeServer(options?: {
     syncStatus.report,
   );
 
-  const syncGraph =
-    config.sync.graph && typeof config.sync.graph === "object"
-      ? (config.sync.graph as Graph)
-      : undefined;
+  const syncGraph = syncGraphFromConfig(config.sync.graph);
 
   console.log(
     "[tome-server] opening graph services (HTTP will listen during cache sync)…",
@@ -222,4 +220,12 @@ export async function startTomeServer(options?: {
       session.dispose();
     },
   };
+}
+
+/** `sync.graph` is a topology-only Imp file (nodes and edges); absent means no sync wiring. */
+function syncGraphFromConfig(value: unknown): Graph | undefined {
+  if (value === undefined || value === null) return undefined;
+  const file = parseImpFile(value);
+  assertImpFileSections(file, ["nodes", "edges"]);
+  return impFileGraph(file);
 }

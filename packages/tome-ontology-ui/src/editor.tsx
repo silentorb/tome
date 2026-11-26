@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import type { Graph } from "imp-core-types";
 import { createTomeImpRegistry } from "tome-imp-sql";
 import type { EditorPageBlockHost } from "tome-interfaces/page-block/editor";
-import type { GraphLayout } from "tome-imp-view/layout";
+import { storedFromImpGraph, type GraphLayout } from "tome-imp-view/layout";
 import { TomeImpView } from "tome-imp-view/editor";
 import {
   BLOCK_ROLE,
@@ -81,7 +81,7 @@ export function NodeFilterBlockComponent({
     (next: Graph) => {
       const asFilter = next as NodeFilterBlockData;
       setImpGraph(asFilter);
-      onBlockDataChange(asFilter);
+      onBlockDataChange(storedFromImpGraph(next));
     },
     [onBlockDataChange],
   );

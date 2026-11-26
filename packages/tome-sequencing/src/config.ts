@@ -1,10 +1,11 @@
-import type { Graph } from "imp-core-types";
+import type { Graph, ImpFile } from "imp-core-types";
 import {
-  isImpGraph,
+  impGraphFromStored,
   isReactFlowEnvelope,
   layoutForImpGraph,
   parseLayout,
   reactFlowToImpAndLayout,
+  storedFromImpGraph,
   type GraphLayout,
 } from "tome-imp-view/layout";
 import { defaultImpGraph as defaultQueryImpGraph } from "tome-query/config";
@@ -18,10 +19,23 @@ export const BLOCK_ROLE = "tome-sequencing";
 /** Sentinel replaced with the host page node id at execute time. */
 export const PAGE_NODE_ID_LITERAL = "$pageNodeId";
 
+/** Parsed (in-memory) sequencing block. */
 export interface SequencingBlockData {
   version: typeof SEQUENCING_BLOCK_VERSION;
   graph: Graph;
   layout: GraphLayout;
+}
+
+/** Sequencing block as stored in a page fence: the graph is a topology-only Imp file. */
+export interface StoredSequencingBlockData {
+  version: typeof SEQUENCING_BLOCK_VERSION;
+  graph: ImpFile;
+  layout: GraphLayout;
+}
+
+/** The stored form of a parsed sequencing block. */
+export function toStoredBlockData(data: SequencingBlockData): StoredSequencingBlockData {
+  return { version: data.version, graph: storedFromImpGraph(data.graph), layout: data.layout };
 }
 
 /**
@@ -74,7 +88,8 @@ export function defaultLayout(): GraphLayout {
   });
 }
 
-export function defaultBlockData(): SequencingBlockData {
+/** The default sequencing block, parsed. */
+export function defaultSequencingBlock(): SequencingBlockData {
   return {
     version: SEQUENCING_BLOCK_VERSION,
     graph: defaultPageScopedImpGraph(),
@@ -82,16 +97,22 @@ export function defaultBlockData(): SequencingBlockData {
   };
 }
 
+/** The default sequencing block as stored (inserted into new pages). */
+export function defaultBlockData(): StoredSequencingBlockData {
+  return toStoredBlockData(defaultSequencingBlock());
+}
+
 export function parseSequencingBlockData(raw: unknown): SequencingBlockData {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
-    return defaultBlockData();
+    return defaultSequencingBlock();
   }
   const record = raw as Record<string, unknown>;
 
-  if (isImpGraph(record.graph)) {
+  const graph = impGraphFromStored(record.graph);
+  if (graph) {
     return {
       version: SEQUENCING_BLOCK_VERSION,
-      graph: record.graph,
+      graph,
       layout: parseLayout(record.layout),
     };
   }
@@ -105,7 +126,7 @@ export function parseSequencingBlockData(raw: unknown): SequencingBlockData {
     };
   }
 
-  return defaultBlockData();
+  return defaultSequencingBlock();
 }
 
 /** Replace `$pageNodeId` string literals in Imp node inputs. */
