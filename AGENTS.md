@@ -51,7 +51,7 @@ Essential tests should be **deterministic, reliable, and durable**. Prefer essen
 
 ## Workbench integration
 
-In **silentorb-workbench**, this repo mounts at `.mnt/tome/` (container path: `/workspaces/silentorb-workbench/.mnt/tome`). The Compose `tome` service builds [`docker/Dockerfile.dev`](./docker/Dockerfile.dev) locally and runs `editor:dev` with `TOME_CONTENT_PATH` pointing at the domain repo (e.g. marloth-story `content/`). Rebuild that image after changing `docker/install-runtime.sh` or related toolchain files — not after every lockfile bump (dev installs deps at runtime).
+In **silentorb-workbench**, this repo is a sibling checkout (`../tome`; container path `/workspaces/tome`). The Compose `tome` service builds [`docker/Dockerfile.dev`](./docker/Dockerfile.dev) locally and runs `editor:dev` with `TOME_CONTENT_PATH` pointing at the domain repo (e.g. marloth-story `content/`). Rebuild that image after changing `docker/install-runtime.sh` or related toolchain files — not after every lockfile bump (dev installs deps at runtime).
 
 Root `package.json` workspaces also include `../imp-ts/packages/*` so `tome-query` can depend on Imp (`imp-core-types`, `imp-sql`, …) while Imp remains a sibling repo mounted at `.mnt/imp-ts/`.
 
@@ -69,7 +69,7 @@ Internal workspace dependencies use caret-locked ranges: `"tome-db": "workspace:
 
 **Root `tome` version** (repo-root `package.json`) is the **release / container** version. Bump it only on **bump** / **commit and bump** (with the local `v*` tag) — not on plain **commit**. Git tag `v<version>` must match the root version; see [`docs/features/container.md`](./docs/features/container.md).
 
-**Agent flow (packages):** on **bump**, review commits since the last `v*` tag, classify each touched package (`minor` or `patch`), then run `bash scripts/bump-version.sh <package> <level>` from **silentorb-workbench** (or the thin delegator in this repo: `bun scripts/bump-version.ts`). The script scans tome and imp-ts packages for range updates and cascades on `minor`. Refresh lockfiles with `--install` or manually: `bun install` in both `.mnt/tome` and `.mnt/imp-ts` when imp packages change. Reconcile bump levels at bump time — see workbench [`plan-commit-workflow.mdc`](../../.cursor/rules/plan-commit-workflow.mdc). Plain **commit** does not bump versions.
+**Agent flow (packages):** on **bump**, review commits since the last `v*` tag, classify each touched package (`minor` or `patch`), then run `bash scripts/bump-version.sh <package> <level>` from **silentorb-workbench** (or the thin delegator in this repo: `bun scripts/bump-version.ts`). The script scans tome and imp-ts packages for range updates and cascades on `minor`. Refresh lockfiles with `--install` or manually: `bun install` in both `../tome` and `../imp-ts` when imp packages change. Reconcile bump levels at bump time — see workbench [`plan-commit-workflow.mdc`](../../.cursor/rules/plan-commit-workflow.mdc). Plain **commit** does not bump versions.
 
 **Agent flow (after plan implementation):** before awaiting commit approval, print a **bump preview** for this repo when the change set is tag-relevant: workspace packages (current → proposed next + `minor`/`patch` why), cascades, proposed root `tome` version, and resulting `v*` tag **if** the user later says **bump** or **commit and bump**. Do not bump or tag until asked. Details: workbench `plan-commit-workflow.mdc` § After plan implementation.
 

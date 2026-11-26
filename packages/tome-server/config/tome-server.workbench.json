@@ -6,7 +6,7 @@
       "module": "tome-flatfile",
       "export": "createFlatfileModule",
       "options": {
-        "contentPath": "/workspaces/silentorb-workbench/.mnt/marloth-story/content",
+        "contentPath": "/workspaces/marloth-story/content",
         "access": "readwrite"
       }
     },
@@ -15,7 +15,7 @@
       "module": "tome-sqlite",
       "export": "createSqliteModule",
       "options": {
-        "dbPath": "/workspaces/silentorb-workbench/.mnt/marloth-story/data/tome.sqlite"
+        "dbPath": "/workspaces/marloth-story/data/tome.sqlite"
       }
     },
     "fts": {
@@ -23,7 +23,7 @@
       "module": "tome-search-sqlite",
       "export": "createSearchSqliteModule",
       "options": {
-        "dbPath": "/workspaces/silentorb-workbench/.mnt/marloth-story/data/tome-fts.sqlite"
+        "dbPath": "/workspaces/marloth-story/data/tome-fts.sqlite"
       }
     }
   },

@@ -184,7 +184,7 @@ Preferred host shape uses **`dataStores`** + optional **`sync`** (see [tome-sync
       "module": "tome-flatfile",
       "export": "createFlatfileModule",
       "options": {
-        "contentPath": "/workspaces/silentorb-workbench/.mnt/marloth-story/content",
+        "contentPath": "/workspaces/marloth-story/content",
         "access": "readwrite"
       }
     },
@@ -192,7 +192,7 @@ Preferred host shape uses **`dataStores`** + optional **`sync`** (see [tome-sync
       "module": "tome-flatfile",
       "export": "createFlatfileModule",
       "options": {
-        "contentPath": "/workspaces/silentorb-workbench/.mnt/translucence/content",
+        "contentPath": "/workspaces/translucence/content",
         "access": "readonly"
       }
     },
@@ -212,15 +212,15 @@ Legacy store options (via `tome-server.json` `store.options` or env) still migra
 ```json
 {
   "corpora": [
-    { "id": "marloth", "contentPath": "/workspaces/silentorb-workbench/.mnt/marloth-story/content", "access": "readwrite" },
-    { "id": "translucence", "contentPath": "/workspaces/silentorb-workbench/.mnt/translucence/content", "access": "readonly" }
+    { "id": "marloth", "contentPath": "/workspaces/marloth-story/content", "access": "readwrite" },
+    { "id": "translucence", "contentPath": "/workspaces/translucence/content", "access": "readonly" }
   ]
 }
 ```
 
 Env convenience: `TOME_CORPORA` as `id=/abs/path[:readonly]` pairs (comma-separated). Solo: `TOME_CONTENT_PATH` only.
 
-Session cache: set `TOME_DB_PATH` to a path outside every corpus **and inside a tree the host process can write** — in the workbench devcontainer the `tome` service mounts corpus repos plus tome and imp under `.mnt/`, so use `/workspaces/silentorb-workbench/.mnt/tome/data/tome-session.sqlite` (gitignored). A path in an unmounted tree fails at boot with `EACCES` from `mkdir`.
+Session cache: set `TOME_DB_PATH` to a path outside every corpus **and inside a tree the host process can write** — in the workbench devcontainer the `tome` service mounts corpus repos plus tome and imp under `/workspaces/`, so use `/workspaces/tome/data/tome-session.sqlite` (gitignored). A path in an unmounted tree fails at boot with `EACCES` from `mkdir`.
 
 ## Verification
 
