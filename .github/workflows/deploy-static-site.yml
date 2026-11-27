@@ -1,0 +1,72 @@
+name: Deploy static site
+
+# Reusable workflow for Tome corpus sites (marloth-story, silentorb-web, ...).
+#
+# The site repo owns its build: a Dockerfile whose `FROM ghcr.io/silentorb/tome:<x.y>`
+# pins the Tome release, and a build script that runs `web:build` in that image offline.
+# Locally the same script runs against a tome image built from working trees
+# (silentorb-workbench scripts/ci-local.sh); here it uses the pinned published image.
+#
+# Caller:
+#   jobs:
+#     deploy:
+#       uses: silentorb/tome/.github/workflows/deploy-static-site.yml@<tag>
+#       permissions: { id-token: write, contents: read }
+#       with:
+#         aws-role-arn: ${{ vars.AWS_ROLE_ARN }}
+#         aws-region: ${{ vars.AWS_REGION }}
+#         s3-bucket: ${{ vars.S3_BUCKET }}
+#         cloudfront-distribution-id: ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}
+#         dist-dir: dist/web
+on:
+  workflow_call:
+    inputs:
+      build-script:
+        description: Site build script, relative to the site repo root
+        type: string
+        default: scripts/ci-build-static-site.sh
+      dist-dir:
+        description: Built site output folder, relative to the site repo root
+        type: string
+        required: true
+      aws-role-arn:
+        type: string
+        required: true
+      aws-region:
+        type: string
+        required: true
+      s3-bucket:
+        type: string
+        required: true
+      cloudfront-distribution-id:
+        type: string
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout site
+        uses: actions/checkout@v4
+
+      - name: Build site in the pinned tome image
+        run: bash "${{ inputs.build-script }}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ inputs.aws-role-arn }}
+          aws-region: ${{ inputs.aws-region }}
+
+      - name: Sync to S3
+        run: aws s3 sync "${{ inputs.dist-dir }}/" "s3://${{ inputs.s3-bucket }}/" --delete
+
+      - name: Invalidate CloudFront
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ inputs.cloudfront-distribution-id }}" \
+            --paths "/*"

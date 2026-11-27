@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1
 # Release image: offline-capable after build (all deps baked).
 #
-# Requires BuildKit named contexts `tome`, `imp` (imp-ts checkout), and `imp-graph-view`.
+# Requires BuildKit named contexts `tome`, `imp` (imp-ts), and `imp-graph-view`.
+# Each may be a local folder or a git URL (`https://github.com/<owner>/<repo>.git#<ref>`).
 # Prefer: bash docker/build-release.sh
 
 FROM debian:bookworm-slim AS base
@@ -11,15 +12,35 @@ ENV DEBIAN_FRONTEND=noninteractive
 COPY docker/install-runtime.sh /tmp/install-runtime.sh
 RUN bash /tmp/install-runtime.sh && rm /tmp/install-runtime.sh
 
-FROM base AS deps
-WORKDIR /opt
+# Full sources, normalized so a local folder and a git URL yield the same tree:
+# no host node_modules (bake-deps installs fresh) and no .git (git URL contexts have none).
+FROM base AS sources
 COPY --from=tome . /opt/tome
 COPY --from=imp . /opt/imp-ts
 COPY --from=imp-graph-view . /opt/imp-graph-view
+RUN find /opt/tome /opt/imp-ts /opt/imp-graph-view \
+      \( -name node_modules -o -name .git \) -prune -exec rm -rf {} +
+
+# Install inputs only (package.json files, lockfiles, bunfig). A source-only change
+# leaves this tree byte-identical, so the install layer below stays cached.
+FROM sources AS manifests
+RUN find /opt/tome /opt/imp-ts /opt/imp-graph-view -type f \
+      ! -name package.json ! -name bun.lock ! -name bunfig.toml -delete \
+  && find /opt/tome /opt/imp-ts /opt/imp-graph-view -mindepth 1 -type d -empty -delete
+
+FROM base AS deps
+WORKDIR /opt
+COPY --from=manifests /opt/tome /opt/tome
+COPY --from=manifests /opt/imp-ts /opt/imp-ts
+COPY --from=manifests /opt/imp-graph-view /opt/imp-graph-view
 COPY docker/bake-deps.sh /opt/tome/docker/bake-deps.sh
 COPY docker/lib/lockfile-hash.sh docker/lib/imp-symlink.sh /opt/tome/docker/lib/
 RUN chmod +x /opt/tome/docker/bake-deps.sh \
   && TOME_ROOT=/opt/tome IMP_ROOT=/opt/imp-ts IMP_GRAPH_VIEW_ROOT=/opt/imp-graph-view bash /opt/tome/docker/bake-deps.sh
+# Source on top of the installed tree (sources has no node_modules, so nothing installed is replaced).
+COPY --from=sources /opt/tome /opt/tome
+COPY --from=sources /opt/imp-ts /opt/imp-ts
+COPY --from=sources /opt/imp-graph-view /opt/imp-graph-view
 
 FROM base AS release
 RUN useradd --create-home --uid 1000 --shell /bin/bash tome \

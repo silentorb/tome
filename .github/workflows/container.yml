@@ -1,8 +1,12 @@
 name: Container
 
-# Build and publish the offline-capable release image to GHCR.
+# Build, validate and publish the offline-capable release image to GHCR.
 # Dev image (docker/Dockerfile.dev) is built locally by workbench Compose — not published.
 # Images are published only for git tags matching v* (the root package version).
+#
+# The build and validate steps are the same scripts a local run uses
+# (docker/build-release.sh, docker/validate-release.sh). Locally the imp sources are
+# sibling working trees; here they are git URLs at vars.IMP_TS_REF / vars.IMP_GRAPH_VIEW_REF.
 on:
   push:
     tags:
@@ -19,6 +23,7 @@ permissions:
 
 env:
   IMAGE_NAME: ghcr.io/${{ github.repository }}
+  IMAGE_TAG: tome-release:ci
 
 jobs:
   release:
@@ -28,29 +33,11 @@ jobs:
       - name: Checkout tome
         uses: actions/checkout@v4
 
-      - name: Checkout imp-ts
-        uses: actions/checkout@v4
-        with:
-          repository: silentorb/imp-ts
-          path: imp-ts-checkout
-          ref: ${{ vars.IMP_REF || 'main' }}
-
-      - name: Checkout imp-graph-view
-        uses: actions/checkout@v4
-        with:
-          repository: silentorb/imp-graph-view
-          path: imp-graph-view-checkout
-          ref: ${{ vars.IMP_GRAPH_VIEW_REF || 'main' }}
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Expose GitHub Actions cache to buildx
+        uses: crazy-max/ghaction-github-runtime@v3
 
       - name: Docker metadata
         id: meta
@@ -62,40 +49,43 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
 
       - name: Build release image
-        id: build
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: docker/Dockerfile.release
-          build-contexts: |
-            tome=.
-            imp=./imp-ts-checkout
-            imp-graph-view=./imp-graph-view-checkout
-          load: true
-          tags: tome-release:ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+        env:
+          TOME_SOURCE: .
+          # IMP_REF is the legacy variable name (see docs/features/compatibility.md).
+          IMP_TS_SOURCE: https://github.com/silentorb/imp-ts.git#${{ vars.IMP_TS_REF || vars.IMP_REF || 'main' }}
+          IMP_GRAPH_VIEW_SOURCE: https://github.com/silentorb/imp-graph-view.git#${{ vars.IMP_GRAPH_VIEW_REF || 'main' }}
+          LABELS: ${{ steps.meta.outputs.labels }}
+        run: |
+          label_args=()
+          while IFS= read -r label; do
+            [[ -n "${label}" ]] && label_args+=(--label "${label}")
+          done <<<"${LABELS}"
+          # Plain single-arch image (not an attestation-bearing OCI index).
+          bash docker/build-release.sh -- \
+            --platform linux/amd64 \
+            --provenance=false \
+            --sbom=false \
+            --cache-from type=gha \
+            --cache-to type=gha,mode=max \
+            "${label_args[@]}"
 
       - name: Validate offline (network none)
-        run: |
-          docker run --rm --network none tome-release:ci ensure-deps
-          docker run --rm --network none tome-release:ci test
+        run: bash docker/validate-release.sh "${IMAGE_TAG}"
 
-      - name: Push to GHCR
-        uses: docker/build-push-action@v6
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
         with:
-          context: .
-          file: docker/Dockerfile.release
-          build-contexts: |
-            tome=.
-            imp=./imp-ts-checkout
-            imp-graph-view=./imp-graph-view-checkout
-          push: true
-          # Plain single-arch image (not an attestation-bearing OCI index).
-          platforms: linux/amd64
-          provenance: false
-          sbom: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Push the image that was validated, not a rebuild.
+      - name: Push to GHCR
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          while IFS= read -r tag; do
+            [[ -n "${tag}" ]] || continue
+            docker tag "${IMAGE_TAG}" "${tag}"
+            docker push "${tag}"
+          done <<<"${TAGS}"
